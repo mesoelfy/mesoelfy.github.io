@@ -7,3 +7,4 @@ dist/
 *.pem
 .env
 .env.local
+_MISC_IGNORE/
