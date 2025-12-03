@@ -1,0 +1,2018 @@
++---------------------------------+
+|      M E S O E L F Y _ O S      |
+|   Next.js / R3F Source Context  |
++---------------------------------+
+Generated on: Wed Dec  3 17:18:55 CST 2025
+
+=====================================
+PROJECT DIRECTORY STRUCTURE:
+=====================================
+.
+├── Icon\015
+├── _MISC_IGNORE
+│   ├── 9776943-KKLCIZVI-7 copy.jpg
+│   ├── Generated Image September 28, 2025 - 3_04PM.png
+│   ├── Nintendo Game Boy Color.png
+│   ├── Nintendo Super Game Boy 2.png
+│   ├── Nintendo Super Game Boy.png
+│   ├── Screenshot 2023-10-28 at 10.41.26 AM copy.png
+│   ├── Sega Genesis.png
+│   ├── Sega Mega Drive.png
+│   ├── Sega Saturn.png
+│   ├── Update 2.0 - Sega Mega CD.png
+│   ├── background
+│   │   └── 2.jpg
+│   ├── cheap_cable copy.png
+│   ├── chrome-silver-question-mark copy.png
+│   ├── frosted-glass-green-triangle-render copy.png
+│   └── https ::underkactuscard.carrd.co + three frame animations.png
+├── docs
+│   ├── MESOELFY_OS_AI_INSTRUCTIONS.md
+│   ├── TODO.md
+│   └── all_source_code.txt
+├── next-env.d.ts
+├── next.config.js
+├── package.json
+├── postcss.config.js
+├── public
+│   ├── assets
+│   │   ├── audio
+│   │   ├── images
+│   │   │   └── social-card.jpg
+│   │   ├── models
+│   │   ├── textures
+│   │   └── videos
+│   └── favicon.ico
+├── scripts
+│   └── create_source_context.command
+├── src
+│   ├── app
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── core
+│   │   ├── audio
+│   │   ├── hooks
+│   │   ├── math
+│   │   ├── store
+│   │   │   └── useStore.ts
+│   │   └── utils
+│   ├── data
+│   │   ├── feed.json
+│   │   ├── gallery.json
+│   │   ├── identity.json
+│   │   └── socials.json
+│   ├── features
+│   │   ├── contact
+│   │   │   └── ContactModal.tsx
+│   │   ├── feed
+│   │   │   └── FeedModal.tsx
+│   │   ├── gallery
+│   │   │   └── GalleryModal.tsx
+│   │   ├── identity
+│   │   │   └── AboutModal.tsx
+│   │   └── intro
+│   │       └── MatrixBootSequence.tsx
+│   ├── scene
+│   │   ├── canvas
+│   │   │   └── SceneCanvas.tsx
+│   │   ├── effects
+│   │   │   ├── FireTransition.tsx
+│   │   │   └── MatrixGrid.tsx
+│   │   ├── props
+│   │   │   ├── MiniCrystalCanvas.tsx
+│   │   │   └── SoulCrystal.tsx
+│   │   └── shaders
+│   ├── styles
+│   │   └── globals.css
+│   └── ui
+│       ├── atoms
+│       │   └── GlassPanel.tsx
+│       ├── molecules
+│       │   ├── HoloCommLog.tsx
+│       │   ├── LiveArtGrid.tsx
+│       │   └── SocialRow.tsx
+│       ├── organisms
+│       │   ├── Footer.tsx
+│       │   └── Header.tsx
+│       └── overlays
+│           └── ModalContainer.tsx
+├── tailwind.config.ts
+└── tsconfig.json
+
+38 directories, 53 files
+
+=====================================
+FILE: ./next.config.js
+=====================================
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+  reactStrictMode: true,
+  transpilePackages: ['three'],
+  
+  // IGNORE BUILD ERRORS (The "Just Ship It" Settings)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+}
+
+module.exports = nextConfig
+
+
+=====================================
+FILE: ./docs/TODO.md
+=====================================
+# MESOELFY_OS // DEVELOPMENT ROADMAP
+
+## PHASE 1: VISUAL & LAYOUT POLISH (In Progress)
+- [x] **Panel Sizing:** Fixed Art Grid density and HoloComm video aspect ratios.
+- [x] **Intro Sequence:** Implemented "Matrix Bootloader" with narrative typing and bespoke UI headers.
+- [ ] **Intro Refinement:** 
+    - Fine-tune specific timing of "dots" blinking vs text appearance.
+    - Polish the "Breach" transition physics.
+- [ ] **Bug Fix:** Investigate "White Flash" on browser refresh (FOUC). 
+    - *Note: `theme-color` meta tag was added, but next.js hydration might still be causing a flash.*
+
+## PHASE 2: THE AUDIO ENGINE (Generative)
+- [ ] **Synth System:** Create `src/core/audio/useSynth.ts`.
+    - Web Audio API implementation (No mp3 files).
+    - Sounds: Hover (Sine blip), Click (Sawtooth), Error (Sawtooth drop), Open (Sweep).
+- [ ] **Music Player:**
+    - Hidden HTML5 Audio element.
+    - Header UI: `<< [TRACK_NAME] >>` controls.
+
+## PHASE 3: THE GAME LAYER ("Latent Defense")
+- [ ] **Overlay System:** Create a 2D Canvas layer that sits **ON TOP** of the DOM UI.
+- [ ] **Player:** Custom Reticle cursor + Auto-fire logic.
+- [ ] **Enemies:** "Seekers" (Chase Player) and "Eaters" (Attack Panels).
+- [ ] **Juiciness:** Particle bursts and screen shake.
+
+## PHASE 4: PERSISTENCE & DESTRUCTION (Tamagotchi Logic)
+- [ ] **Health System:** Track HP for Player + 4 Panels. Persist to `localStorage`.
+- [ ] **Visual Corruption:** CSS filters/glitch effects on damaged panels.
+- [ ] **The Reset:** Konami Code protocol to restore system health.
+
+## PHASE 5: CONTENT INJECTION
+- [ ] **Identity:** Real Bio/Stats.
+- [ ] **Feed:** Real X posts.
+- [ ] **Gallery:** Real X image links.
+- [ ] **Videos:** Final Anime/Esper clip IDs.
+
+
+=====================================
+FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
+=====================================
+I am developing "MESOELFY_OS," a 3D interactive portfolio site with a Cyberpunk/Hacker/Demoscene aesthetic. 
+
+I have attached "all_source_code.txt" which contains the full project tree and code. Please ingest this to understand the current architecture.
+
+***CORE IDENTITY & AESTHETIC***
+*   **Persona:** You are assisting "Elfy," a Latent Space Bandit. The vibe is Y2K Hacker, Matrix, Geometry Wars, and High-Tech Demoscene.
+*   **Palette:** Electric Green (#78F654) is dominant. Deep Purple (#9E4EA5) is secondary. Red/Yellow for alerts. Black backgrounds.
+*   **Current Status:** The site is live at `mesoelfy.github.io`. The "Intro Boot Sequence" and "Main Dashboard" are built and polished.
+
+***TECHNICAL STACK***
+*   **Framework:** Next.js 14 (App Router) + TypeScript.
+*   **Styling:** Tailwind CSS + Framer Motion (for UI animations).
+*   **3D:** React Three Fiber (R3F) + Drei.
+*   **Deployment:** GitHub Pages (Static Export).
+
+***WORKFLOW RULES (CRITICAL)***
+1.  **Terminal Only:** Do not ask me to manually create files. Provide full terminal commands using `cat << 'EOF' > path/to/file` to create or overwrite files.
+2.  **No Placeholders:** Unless specified, write complete, functional code.
+3.  **Atomic Commits:** After a successful feature implementation, provide the specific `git add .`, `git commit -m "..."`, and `git push` commands.
+4.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
+
+Working directory:
+stevencasteel@Stevens-Mac-mini mesoelfy-site % 
+
+
+Please acknowledge you have analyzed the codebase.
+
+=====================================
+FILE: ./next-env.d.ts
+=====================================
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/basic-features/typescript for more information.
+
+
+=====================================
+FILE: ./tailwind.config.ts
+=====================================
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        elfy: {
+          green: {
+            light: '#C2FE9A',
+            DEFAULT: '#78F654',
+            dim: '#0BD426',
+            dark: '#15530A',
+          },
+          purple: {
+            light: '#BC86BA',
+            DEFAULT: '#9E4EA5',
+            dim: '#822B8A',
+            deep: '#350E3A',
+          },
+          yellow: {
+            DEFAULT: '#F7D277',
+          },
+          red: '#FF003C', 
+          gray: '#27282A',
+          black: '#050505',
+        },
+      },
+      fontFamily: {
+        mono: ['Courier New', 'Courier', 'monospace'],
+      },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+      },
+    },
+  },
+  plugins: [],
+}
+export default config
+
+
+=====================================
+FILE: ./package.json
+=====================================
+{
+  "name": "mesoelfy-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.100.0",
+    "@react-three/fiber": "^8.15.0",
+    "@react-three/postprocessing": "^2.16.0",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.300.0",
+    "maath": "^0.10.0",
+    "next": "14.1.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^2.2.0",
+    "three": "^0.160.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/three": "^0.160.0",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  }
+}
+
+
+=====================================
+FILE: ./tsconfig.json
+=====================================
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
+
+=====================================
+FILE: ./postcss.config.js
+=====================================
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+
+
+=====================================
+FILE: ./src/ui/molecules/SocialRow.tsx
+=====================================
+import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon } from 'lucide-react';
+import socials from '@/data/socials.json';
+
+const IconMap: Record<string, any> = {
+  twitter: Twitter,
+  youtube: Youtube,
+  github: Github,
+  video: Video,
+  crosshair: Crosshair,
+  image: ImageIcon,
+};
+
+export const SocialRow = () => {
+  return (
+    // Added py-2 to give vertical breathing room
+    <div className="grid grid-cols-3 gap-2 h-full content-center py-2">
+      {socials.map((social) => {
+        const Icon = IconMap[social.icon] || Crosshair;
+        return (
+          <a
+            key={social.name}
+            href={social.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col items-center justify-center p-2 border border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-green/10 hover:border-elfy-green transition-all duration-300"
+          >
+            <Icon 
+              className="w-5 h-5 mb-1 text-elfy-green-dim group-hover:text-elfy-green group-hover:scale-110 transition-transform" 
+              style={{ filter: 'drop-shadow(0 0 2px rgba(120,246,84,0.3))' }}
+            />
+            <span className="text-[10px] uppercase text-elfy-green-dim/60 group-hover:text-elfy-green tracking-wider">
+              {social.name.split(' ')[0]}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/molecules/HoloCommLog.tsx
+=====================================
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { ExternalLink, Radio } from 'lucide-react';
+
+const VIDEO_POOL = [
+  "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
+  "bHUcvHx9zlA", "Eq6EYcpWB_c", "sJyWgks1ZtA", 
+  "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
+];
+
+const VideoSlot = ({ 
+  slotIndex, 
+  initialVideo, 
+  getNextVideo 
+}: { 
+  slotIndex: number, 
+  initialVideo: string, 
+  getNextVideo: () => string 
+}) => {
+  const [videoId, setVideoId] = useState(initialVideo);
+  const [isMasked, setIsMasked] = useState(true);
+
+  useEffect(() => {
+    setIsMasked(true);
+    const unmaskTimer = setTimeout(() => {
+      setIsMasked(false);
+    }, 5000);
+    return () => clearTimeout(unmaskTimer);
+  }, []); 
+
+  useEffect(() => {
+    const duration = 30000 + (Math.random() * 15000);
+
+    const timer = setTimeout(() => {
+      setIsMasked(true);
+
+      setTimeout(() => {
+        const next = getNextVideo();
+        if (next) setVideoId(next);
+
+        setTimeout(() => {
+          setIsMasked(false);
+        }, 5000);
+
+      }, 1000); 
+
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [videoId, getNextVideo]);
+
+  return (
+    // FIX: Added 'aspect-video' to force 16:9 ratio.
+    // 'w-full' ensures it fills width, height adjusts automatically.
+    // 'min-h-[140px]' is a safety fallback for mobile.
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+      <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
+      
+      <a 
+        href={`https://www.youtube.com/watch?v=${videoId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute inset-0 z-40 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
+      >
+        <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm">
+          <span>OPEN_SOURCE</span>
+          <ExternalLink size={12} />
+        </div>
+      </a>
+
+      {/* THE MASK */}
+      <div 
+        className={`absolute inset-0 z-20 bg-black flex flex-col items-center justify-center transition-opacity duration-500 ${isMasked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      >
+        <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
+        <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
+      </div>
+
+      {/* YOUTUBE IFRAME */}
+      <div className="absolute inset-0 z-10">
+        <iframe 
+          width="100%" 
+          height="100%" 
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
+          title="HOLO_COMM" 
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          className="w-full h-full object-cover grayscale"
+        />
+      </div>
+
+      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
+         CAM_0{slotIndex + 1}
+      </div>
+    </div>
+  );
+};
+
+export const HoloCommLog = () => {
+  const deckRef = useRef<string[]>([...VIDEO_POOL]);
+
+  const [initialVideos] = useState(() => {
+    const init: string[] = [];
+    for(let i=0; i<3; i++) {
+      const randomIndex = Math.floor(Math.random() * deckRef.current.length);
+      const vid = deckRef.current[randomIndex];
+      deckRef.current.splice(randomIndex, 1);
+      init.push(vid);
+    }
+    return init;
+  });
+
+  const getNextVideo = useCallback(() => {
+    if (deckRef.current.length === 0) {
+      deckRef.current = [...VIDEO_POOL];
+    }
+    const randomIndex = Math.floor(Math.random() * deckRef.current.length);
+    const selected = deckRef.current[randomIndex];
+    deckRef.current.splice(randomIndex, 1);
+    return selected || VIDEO_POOL[0];
+  }, []);
+
+  return (
+    // FIX: Using 'justify-center' to vertically center them if there's extra space
+    <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
+      {initialVideos.map((vid, i) => (
+        <VideoSlot 
+          key={i} 
+          slotIndex={i} 
+          initialVideo={vid} 
+          getNextVideo={getNextVideo} 
+        />
+      ))}
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/molecules/LiveArtGrid.tsx
+=====================================
+import { useEffect, useState } from 'react';
+import { useStore } from '@/core/store/useStore';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const randomId = () => Math.floor(Math.random() * 899) + 100;
+
+export const LiveArtGrid = () => {
+  const { openModal } = useStore();
+  const [slots, setSlots] = useState<number[]>([]);
+
+  useEffect(() => {
+    // UPDATED: 12 slots (4 rows x 3 columns)
+    setSlots(Array.from({ length: 12 }, randomId));
+
+    const interval = setInterval(() => {
+      setSlots(prev => {
+        const newSlots = [...prev];
+        const randomIndex = Math.floor(Math.random() * 12);
+        newSlots[randomIndex] = randomId();
+        return newSlots;
+      });
+    }, 800);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="grid grid-cols-3 gap-1 w-full p-2 content-start">
+      <AnimatePresence mode='popLayout'>
+        {slots.map((id, index) => (
+          <motion.button
+            key={`${index}-${id}`}
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            
+            onClick={() => openModal('gallery')}
+            className="w-full aspect-square relative bg-black/50 border border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)] group overflow-hidden flex items-center justify-center rounded-[1px]"
+          >
+            <div className="absolute inset-0 bg-elfy-green/5 group-hover:bg-elfy-green/10 transition-colors" />
+            
+            <span className="relative z-10 text-[9px] font-mono text-elfy-green-dim group-hover:text-elfy-yellow transition-colors">
+              IMG_{id}
+            </span>
+
+            <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-elfy-green-dim/50 group-hover:border-elfy-yellow" />
+          </motion.button>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/atoms/GlassPanel.tsx
+=====================================
+import { clsx } from 'clsx';
+import { motion } from 'framer-motion';
+import { ReactNode } from 'react';
+
+interface GlassPanelProps {
+  children: ReactNode;
+  className?: string;
+  title?: string;
+}
+
+const panelVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
+
+export const GlassPanel = ({ children, className, title }: GlassPanelProps) => {
+  return (
+    <motion.div 
+      variants={panelVariants} // Will inherit 'hidden'/'visible' from parent
+      className={clsx(
+        "relative overflow-hidden flex flex-col",
+        "bg-black border border-elfy-green-dim/30",
+        "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
+        "rounded-sm",
+        className
+      )}
+    >
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+      
+      {title && (
+        <div className="flex items-center justify-between px-3 py-1 border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0">
+          <span className="text-xs font-mono font-bold text-elfy-green uppercase tracking-widest drop-shadow-md">
+            {title}
+          </span>
+          <div className="flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-elfy-green" />
+            <div className="w-2 h-2 rounded-full border border-elfy-purple-dim" />
+          </div>
+        </div>
+      )}
+
+      <div className="relative z-10 p-4 h-full">
+        {children}
+      </div>
+    </motion.div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/overlays/ModalContainer.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
+
+interface ModalContainerProps {
+  children: React.ReactNode;
+  title: string;
+  type: string;
+}
+
+export const ModalContainer = ({ children, title, type }: ModalContainerProps) => {
+  const { activeModal, closeModal } = useStore();
+  const isOpen = activeModal === type;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
+          
+          {/* Backdrop Blur */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeModal}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
+          />
+
+          {/* The Window */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+            className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-elfy-neon shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden"
+          >
+            {/* Window Header */}
+            <div className="flex items-center justify-between px-4 py-2 bg-elfy-neon/10 border-b border-elfy-neon/30">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-elfy-alert rounded-full animate-pulse" />
+                <span className="font-mono font-bold text-elfy-neon text-lg tracking-widest">
+                  {title}
+                </span>
+              </div>
+              <button 
+                onClick={closeModal}
+                className="p-1 hover:bg-elfy-alert hover:text-black text-elfy-neon transition-colors"
+              >
+                <X />
+              </button>
+            </div>
+
+            {/* Window Content */}
+            <div className="flex-1 overflow-auto p-6 relative">
+              {/* Scanline Background for Modal */}
+              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20" />
+              <div className="relative z-10">
+                {children}
+              </div>
+            </div>
+
+            {/* Window Footer */}
+            <div className="px-4 py-1 bg-black border-t border-elfy-dim/30 text-xs text-elfy-dim font-mono text-right">
+              MODE: SECURE // ENCRYPTION: ENABLED
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/organisms/Footer.tsx
+=====================================
+export const Footer = () => {
+  return (
+    <footer className="w-full h-10 border-t border-elfy-green-dim/30 bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] text-elfy-green-dim font-mono">
+      <div className="flex items-center gap-2">
+        <span>BUILD_VER: [v2.0.4]</span>
+        <span>//</span>
+        {/* UPDATED: Story status */}
+        <span className="text-elfy-red animate-pulse">STATUS: UNSAFE // MONITORING</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span>LATENT_CORE:</span>
+        <div className="w-4 h-4 flex items-center justify-center">
+          <div className="w-2.5 h-2.5 border border-elfy-green bg-elfy-green/20 rotate-45 animate-spin-slow shadow-[0_0_8px_#78F654]" />
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/organisms/Header.tsx
+=====================================
+import { Volume2, VolumeX } from 'lucide-react';
+import { useStore } from '@/core/store/useStore';
+
+export const Header = () => {
+  const { musicEnabled, toggleMusic } = useStore();
+
+  return (
+    <header className="w-full h-12 border-b border-elfy-green-dim/30 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
+      {/* Left */}
+      <div className="flex items-center gap-4">
+        <span className="font-mono font-bold text-elfy-green text-lg tracking-tight drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
+          MESOELFY_OS
+        </span>
+        <div className="flex items-center gap-2">
+          {/* UPDATED: Red Pulse for "Unsafe" story */}
+          <div className="w-2 h-2 bg-elfy-red rounded-full animate-pulse shadow-[0_0_8px_#ff003c]" />
+          <span className="text-[10px] text-elfy-red font-bold tracking-wider uppercase">UNSECURE</span>
+        </div>
+      </div>
+
+      {/* Right */}
+      <button 
+        onClick={toggleMusic}
+        className="flex items-center gap-2 text-xs font-mono text-elfy-green-dim hover:text-elfy-green transition-colors"
+      >
+        <span>AUDIO: [{musicEnabled ? 'ON' : 'OFF'}]</span>
+        {musicEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+      </button>
+    </header>
+  );
+};
+
+
+=====================================
+FILE: ./src/core/store/useStore.ts
+=====================================
+import { create } from 'zustand';
+
+type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
+
+interface AppState {
+  introDone: boolean;
+  activeModal: ModalType;
+  hoveredItem: string | null;
+  musicEnabled: boolean;
+  volume: number;
+  setIntroDone: (done: boolean) => void;
+  openModal: (modal: ModalType) => void;
+  closeModal: () => void;
+  setHovered: (item: string | null) => void;
+  toggleMusic: () => void;
+}
+
+export const useStore = create<AppState>((set) => ({
+  introDone: false,
+  activeModal: 'none',
+  hoveredItem: null,
+  musicEnabled: false,
+  volume: 0.5,
+
+  setIntroDone: (done) => set({ introDone: done }),
+  openModal: (modal) => set({ activeModal: modal }),
+  closeModal: () => set({ activeModal: 'none' }),
+  setHovered: (item) => set({ hoveredItem: item }),
+  toggleMusic: () => set((state) => ({ musicEnabled: !state.musicEnabled })),
+}));
+
+
+=====================================
+FILE: ./src/app/layout.tsx
+=====================================
+import type { Metadata, Viewport } from 'next';
+import '@/styles/globals.css';
+
+export const metadata: Metadata = {
+  title: 'MESOELFY // LATENT SPACE BANDIT',
+  description: 'The official digital HQ of Mesoelfy. Art, Lore, and Neural Network Injections.',
+  icons: {
+    icon: '/favicon.ico',
+  },
+  openGraph: {
+    title: 'MESOELFY_OS',
+    description: 'Access the terminal. View the art. Breach the firewall.',
+    url: 'https://mesoelfy.github.io',
+    siteName: 'MESOELFY',
+    images: [
+      {
+        url: 'https://mesoelfy.github.io/assets/images/social-card.jpg',
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MESOELFY // LATENT SPACE BANDIT',
+    description: 'Access the terminal. View the art. Breach the firewall.',
+    images: ['https://mesoelfy.github.io/assets/images/social-card.jpg'],
+  },
+};
+
+// FIX: Force browser UI to be black to prevent white flash on reload
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  colorScheme: 'dark',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body className="bg-black text-elfy-green selection:bg-elfy-green selection:text-black">
+        <div className="relative w-full h-full">
+          {children}
+        </div>
+      </body>
+    </html>
+  );
+}
+
+
+=====================================
+FILE: ./src/app/page.tsx
+=====================================
+'use client';
+
+import { useStore } from '@/core/store/useStore';
+import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
+import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
+import { GlassPanel } from '@/ui/atoms/GlassPanel';
+import { SocialRow } from '@/ui/molecules/SocialRow';
+import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
+import { HoloCommLog } from '@/ui/molecules/HoloCommLog';
+import { Header } from '@/ui/organisms/Header';
+import { Footer } from '@/ui/organisms/Footer';
+import { AboutModal } from '@/features/identity/AboutModal';
+import { FeedModal } from '@/features/feed/FeedModal';
+import { GalleryModal } from '@/features/gallery/GalleryModal';
+import { ContactModal } from '@/features/contact/ContactModal';
+import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
+import identity from '@/data/identity.json';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+
+export default function Home() {
+  const { openModal } = useStore();
+  const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
+
+  const handleBootComplete = () => {
+    // UPDATED: Reduced to 1.0s hold time
+    setTimeout(() => {
+      setBootState('active');
+    }, 1000);
+  };
+
+  return (
+    <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
+      
+      <SceneCanvas className="opacity-100 blur-0" />
+
+      <AboutModal />
+      <FeedModal />
+      <GalleryModal />
+      <ContactModal />
+
+      {bootState === 'standby' && (
+        <MatrixBootSequence onComplete={handleBootComplete} />
+      )}
+
+      <div className={`flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        
+        <Header />
+
+        <motion.div 
+          className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 overflow-y-auto md:overflow-hidden max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black"
+          initial="hidden"
+          animate={bootState === 'active' ? "visible" : "hidden"}
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { 
+              opacity: 1, 
+              transition: { 
+                staggerChildren: 0.3, // UPDATED: Slower stagger for dramatic effect
+                delayChildren: 0.2 
+              } 
+            }
+          }}
+        >
+          {/* ... Rest of Layout (Unchanged) ... */}
+          
+          <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+            <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0">
+              <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
+                <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
+                   <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <MiniCrystalCanvas />
+                   </div>
+                </div>
+                <div className="text-center space-y-1">
+                  <h2 className="text-3xl md:text-4xl font-bold text-elfy-green tracking-tight drop-shadow-md">{identity.name}</h2>
+                  <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
+                </div>
+                <div className="flex w-full gap-3 mt-2">
+                  <button onClick={() => openModal('about')} className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-xs uppercase clip-corner-btn">About Me</button>
+                  <button onClick={() => openModal('contact')} className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs uppercase clip-corner-btn">Contact</button>
+                </div>
+              </div>
+            </GlassPanel>
+
+            <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0">
+               <SocialRow />
+            </GlassPanel>
+          </div>
+
+          <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+            <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0">
+              <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
+                <p className="animate-pulse mb-4">> ESTABLISHING UPLINK...</p>
+                <button onClick={() => openModal('feed')} className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider">[ ACCESS TERMINAL ]</button>
+              </div>
+            </GlassPanel>
+
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+              <GlassPanel title="ART_DB" className="flex-1 h-auto">
+                 <LiveArtGrid />
+              </GlassPanel>
+
+              <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto">
+                 <HoloCommLog />
+              </GlassPanel>
+            </div>
+          </div>
+        </motion.div>
+        
+        <Footer />
+      </div>
+    </main>
+  );
+}
+
+
+=====================================
+FILE: ./src/features/contact/ContactModal.tsx
+=====================================
+import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import { Send } from 'lucide-react';
+
+export const ContactModal = () => {
+  return (
+    <ModalContainer title="ENCRYPTED_UPLINK // CONTACT" type="contact">
+      <div className="max-w-2xl mx-auto h-full flex flex-col justify-center">
+        <div className="p-1 border border-elfy-yellow/30 bg-elfy-yellow/5 mb-6 text-center">
+          <p className="text-xs text-elfy-yellow font-mono">
+            WARNING: TRANSMISSIONS ARE MONITORED BY THE AI OVERLORD.
+          </p>
+        </div>
+
+        <form 
+          action="https://formspree.io/f/xkgdbkpz" 
+          method="POST"
+          className="space-y-6 font-mono"
+        >
+          <div className="space-y-1">
+            <label className="text-sm text-elfy-green-dim uppercase tracking-wider">Codename</label>
+            <input 
+              type="text" 
+              name="name"
+              required
+              placeholder="Enter your handle..."
+              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm text-elfy-green-dim uppercase tracking-wider">Frequency (Email)</label>
+            <input 
+              type="email" 
+              name="email"
+              required
+              placeholder="Enter return frequency..."
+              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm text-elfy-green-dim uppercase tracking-wider">Payload</label>
+            <textarea 
+              name="message"
+              required
+              rows={5}
+              placeholder="Type your message..."
+              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all resize-none"
+            />
+          </div>
+
+          <button 
+            type="submit"
+            className="w-full py-4 bg-elfy-green text-black font-bold uppercase tracking-widest hover:bg-white transition-colors flex items-center justify-center gap-2 group"
+          >
+            <span>Send Transmission</span>
+            <Send size={16} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </form>
+      </div>
+    </ModalContainer>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/identity/AboutModal.tsx
+=====================================
+import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import identity from '@/data/identity.json';
+
+export const AboutModal = () => {
+  return (
+    <ModalContainer title="IDENTITY_DATABASE // ELFY" type="about">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+        
+        {/* LEFT: The Avatar Grid */}
+        <div className="space-y-4">
+          {/* Main Frame - Light Purple */}
+          <div className="aspect-square w-full border border-elfy-purple-light/50 bg-elfy-purple-deep/30 relative overflow-hidden group shadow-[0_0_20px_rgba(188,134,186,0.2)]">
+            <div className="absolute inset-0 flex items-center justify-center text-elfy-purple-light/50 font-bold text-2xl group-hover:text-elfy-purple-light transition-colors">
+              [ COMPOSITE_IMAGE_LOADING ]
+            </div>
+            {/* Corner Markers - Light Purple */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-elfy-purple-light" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-elfy-purple-light" />
+          </div>
+          
+          <div className="grid grid-cols-4 gap-2">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="aspect-square border border-elfy-purple-dim/30 hover:bg-elfy-purple-light/20 hover:border-elfy-purple-light cursor-pointer transition-colors" />
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT: The Data */}
+        <div className="font-mono space-y-6">
+          <div>
+            <h2 className="text-4xl font-bold text-elfy-green mb-2">HI, I'M ELFY.</h2>
+            <div className="h-1 w-20 bg-elfy-purple-light mb-4" />
+            <p className="text-lg text-white/90 leading-relaxed">
+              {identity.bio}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-elfy-purple-light uppercase tracking-wider text-sm">Capabilities</h3>
+            <ul className="space-y-1">
+              {identity.abilities.map((ability, i) => (
+                 <li key={i} className="flex items-center gap-2 text-elfy-green">
+                   <span className="text-elfy-purple-light">></span> {ability}
+                 </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="p-4 border border-elfy-purple-dim/30 bg-elfy-purple-deep/20 text-sm text-elfy-purple-light">
+            <p>> SYSTEM NOTE: Generated via Latent Space Injection.</p>
+            <p>> STATUS: 100% Hype.</p>
+          </div>
+        </div>
+      </div>
+    </ModalContainer>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/intro/MatrixBootSequence.tsx
+=====================================
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface Props {
+  onComplete: () => void;
+}
+
+const ASCII_TITLE = `
+ ███▄ ▄███▓▓█████  ██████  ▒█████  ▓█████  ██▓      █████▒▓██   ██▓
+▓██▒▀█▀ ██▒▓█   ▀▒██    ▒ ▒██▒  ██▒▓█   ▀ ▓██▒    ▓██   ▒  ▒██  ██▒
+▓██    ▓██░▒███  ░ ▓██▄   ▒██░  ██▒▒███   ▒██░    ▒████ ░   ▒██ ██░
+▒██    ▒██ ▒▓█  ▄  ▒   ██▒▒██   ██░▒▓█  ▄ ▒██░    ░▓█▒  ░   ░ ▐██▓░
+▒██▒   ░██▒░▒████▒██████▒▒░ ████▓▒░░▒████▒░██████▒░▒█░      ░ ██▒▓░
+░ ▒░   ░  ░░░ ▒░ ░ ▒░▓  ░ ░ ▒░▒░▒░ ░░ ▒░ ░░ ▒░▓  ░ ▒ ░       ██▒▒▒ 
+░  ░      ░ ░ ░  ░ ░ ▒  ░   ░ ▒ ▒░  ░ ░  ░░ ░ ▒  ░ ░       ▓██ ░▒░ 
+░      ░      ░    ░ ░    ░ ░ ░ ▒     ░     ░ ░    ░ ░     ▒ ▒ ░░  
+       ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
+                                                           ░ ░     
+`;
+
+// --- Components ---
+
+const BootHeader = () => (
+  <div className="flex items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
+    <span className="text-[10px] text-elfy-green-dim font-mono tracking-widest uppercase translate-y-[1px]">BOOT_LOADER.SYS</span>
+    <div className="flex gap-1 items-center">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="w-1 bg-elfy-green/50 animate-pulse" style={{ height: `${i * 4 + 4}px`, animationDelay: `${i * 0.1}s` }} />
+      ))}
+    </div>
+  </div>
+);
+
+const CoreHeader = () => (
+  <div className="flex items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
+    <span className="text-[10px] text-elfy-green font-mono tracking-widest uppercase font-bold translate-y-[1px]">MESOELFY_CORE</span>
+    <div className="relative w-3 h-3 flex items-center justify-center">
+      <div className="absolute inset-0 border border-elfy-green rounded-full animate-spin-slow border-t-transparent" />
+      <div className="w-1 h-1 bg-elfy-green rounded-full animate-pulse" />
+    </div>
+  </div>
+);
+
+const LoadingDots = () => {
+  const [dots, setDots] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(d => d.length >= 3 ? "" : d + ".");
+    }, 300);
+    return () => clearInterval(interval);
+  }, []);
+  return <span>{dots}</span>;
+}
+
+const TypedLog = ({ text, color, speed = 20, showDots = false }: { text: string, color: string, speed?: number, showDots?: boolean }) => {
+  const [displayed, setDisplayed] = useState("");
+  const [isDone, setIsDone] = useState(false);
+  
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      setDisplayed(text.substring(0, i + 1));
+      i++;
+      if (i >= text.length) {
+        setIsDone(true);
+        clearInterval(interval);
+      }
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, speed]);
+
+  return (
+    <div className={`whitespace-nowrap ${color}`}>
+      {displayed}
+      {isDone && showDots && <LoadingDots />}
+    </div>
+  );
+};
+
+// --- LOGIC ---
+
+// Define the content. Note: "..." are handled by the LoadingDots component dynamically
+const LOG_DATA = [
+  { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40 },
+  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20 },
+  { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40 },
+  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20 },
+  { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40 },
+  { text: "> DECRYPTED.", color: "text-elfy-purple-light", speed: 20 },
+  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20 },
+];
+
+export const MatrixBootSequence = ({ onComplete }: Props) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Timeline State
+  const [step, setStep] = useState(0); 
+  const [isBreaching, setIsBreaching] = useState(false);
+
+  // --- DERIVED STATE ---
+  const logsToShow = LOG_DATA.slice(0, step);
+  
+  // Logic to determine which line gets the blinking dots
+  // Dots appear on:
+  // Step 1 (INITIALIZE) -> Stop at Step 2
+  // Step 3 (MOUNT)      -> Stop at Step 4
+  // Step 5 (BYPASSING)  -> Stop at Step 6
+  const getShowDots = (index: number) => {
+    if (index === 0 && step === 1) return true;
+    if (index === 2 && step === 3) return true;
+    if (index === 4 && step === 5) return true;
+    return false;
+  };
+
+  const showMatrix = step >= 2;       // After dots blink on line 1
+  const showPayloadWindow = step >= 3; // Start of Mount
+  const showAscii = step >= 3;         // With Window
+  const showWarningBox = step >= 4;    // Unsafe
+  const showButton = step >= 7;        // End
+
+  // 1. THE DIRECTOR (Timeline)
+  useEffect(() => {
+    const sequence = [
+      { t: 1000, step: 1 }, // 0s-1s: Blink Cursor. 1s: Start Typing Line 1
+      // Line 1 types (approx 800ms) + 0.5s wait = 1.3s
+      { t: 2300, step: 2 }, // 2.3s: Matrix Start + Connected Log
+      { t: 3300, step: 3 }, // 3.3s: Mount Core (Window 2 appears)
+      { t: 5300, step: 4 }, // 5.3s (2s hold): Unsafe + Warning
+      { t: 6300, step: 5 }, // 6.3s (1s hold): Bypassing
+      { t: 8300, step: 6 }, // 8.3s (2s hold): Decrypted
+      { t: 9300, step: 7 }, // 9.3s (1s hold): Proceed + Button
+    ];
+
+    const timeouts = sequence.map(({ t, step }) => {
+      return setTimeout(() => {
+        if (!isBreaching) setStep(step);
+      }, t);
+    });
+
+    return () => timeouts.forEach(clearTimeout);
+  }, [isBreaching]);
+
+  // 2. MATRIX RAIN
+  useEffect(() => {
+    if (!showMatrix && !isBreaching) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const cols = Math.floor(canvas.width / 20);
+    const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
+
+    const matrixEffect = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0';
+      ctx.font = '14px "Courier New"';
+
+      ypos.forEach((y, ind) => {
+        const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
+        const text = String.fromCharCode(charSet + Math.random() * 64);
+        const x = ind * 20;
+        ctx.fillText(text, x, y);
+        const speed = isBreaching ? 100 : 20; 
+        if (y > canvas.height + Math.random() * 10000) ypos[ind] = 0;
+        else ypos[ind] = y + speed;
+      });
+    };
+    const interval = setInterval(matrixEffect, 50);
+    return () => clearInterval(interval);
+  }, [showMatrix, isBreaching]);
+
+  // 3. SHORTCUT
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isBreaching) handleInitialize();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isBreaching]);
+
+  // 4. BREACH
+  const handleInitialize = () => {
+    setIsBreaching(true);
+    setStep(7);
+    // Instant timeline jump
+    setTimeout(onComplete, 800); 
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono overflow-hidden">
+      
+      <canvas 
+        ref={canvasRef} 
+        className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} 
+      />
+
+      {/* CONTAINER */}
+      <motion.div 
+        className="relative z-10 flex flex-col gap-4 items-center w-full max-w-2xl px-4"
+        animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
+        transition={{ 
+          scale: { duration: 0.8, ease: "easeIn" },
+          opacity: { duration: 0.2, ease: "easeIn" },
+          filter: { duration: 0.2 }
+        }}
+      >
+
+        {/* WINDOW 1: BOOT LOADER */}
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden"
+        >
+          <BootHeader />
+          <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+            {logsToShow.map((line, i) => (
+              <TypedLog 
+                key={i} 
+                text={line.text} 
+                color={line.color} 
+                speed={line.speed}
+                showDots={getShowDots(i)}
+              />
+            ))}
+            {/* Blinking Cursor: Show always unless breaching */}
+            {!isBreaching && <div className="animate-pulse text-elfy-green font-bold text-lg mt-1">_</div>}
+          </div>
+        </motion.div>
+
+        {/* WINDOW 2: PAYLOAD */}
+        <AnimatePresence>
+          {showPayloadWindow && (
+            <motion.div 
+              layout 
+              initial={{ y: 50, opacity: 0, height: 0 }}
+              animate={{ y: 0, opacity: 1, height: "auto" }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+              className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden"
+            >
+              <CoreHeader />
+              
+              <div className="p-6 flex flex-col items-center gap-8">
+                
+                {/* ASCII Title */}
+                <pre className="text-[6px] md:text-[10px] leading-[6px] md:leading-[10px] text-elfy-green font-bold text-center whitespace-pre overflow-x-hidden select-none">
+                  {ASCII_TITLE}
+                </pre>
+
+                {/* WARNING BOX */}
+                {showWarningBox && (
+                  <motion.div 
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: 1,
+                      boxShadow: [
+                        "0 0 0px rgba(255, 0, 60, 0)",
+                        "0 0 40px rgba(255, 0, 60, 0.7)", // Larger, brighter glow
+                        "0 0 10px rgba(255, 0, 60, 0.3)",
+                        "0 0 40px rgba(255, 0, 60, 0.7)",
+                        "0 0 0px rgba(255, 0, 60, 0)"
+                      ]
+                    }}
+                    transition={{ 
+                      opacity: { duration: 0.3 },
+                      scale: { duration: 0.3 },
+                      boxShadow: { duration: 1.0, repeat: Infinity, ease: "easeInOut" } // Faster pulse
+                    }}
+                    className="relative border border-elfy-red bg-elfy-red/10 px-8 py-3 text-xs font-bold tracking-[0.15em] text-center text-elfy-red select-none"
+                  >
+                    <span className="animate-ping absolute left-3 top-3 opacity-75 text-lg">⚠</span>
+                    UNSAFE CONNECTION DETECTED
+                    <span className="animate-ping absolute right-3 top-3 opacity-75 text-lg">⚠</span>
+                  </motion.div>
+                )}
+
+                {/* BUTTON */}
+                {showButton && (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  >
+                    <button 
+                      onClick={handleInitialize}
+                      className="group relative px-10 py-4 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
+                    >
+                      <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                      <span className="relative z-10 font-mono text-lg font-bold text-elfy-green group-hover:text-black transition-colors">
+                        [ INITIALIZE_SYSTEM.EXE ]
+                      </span>
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+      </motion.div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/gallery/GalleryModal.tsx
+=====================================
+import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import gallery from '@/data/gallery.json';
+import { ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { useState } from 'react';
+
+export const GalleryModal = () => {
+  const [filter, setFilter] = useState('ALL');
+  
+  // Get unique categories
+  const categories = ['ALL', ...Array.from(new Set(gallery.map(item => item.category)))];
+
+  const filteredGallery = filter === 'ALL' 
+    ? gallery 
+    : gallery.filter(item => item.category === filter);
+
+  return (
+    <ModalContainer title="ART_DATABASE // VISUALS" type="gallery">
+      <div className="flex flex-col h-full gap-6">
+        
+        {/* Category Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-elfy-green-dim/30">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setFilter(cat)}
+              className={`px-4 py-1 font-mono text-sm border transition-all ${
+                filter === cat 
+                  ? 'bg-elfy-green text-black border-elfy-green' 
+                  : 'text-elfy-green-dim border-elfy-green-dim/30 hover:text-elfy-green hover:border-elfy-green'
+              }`}
+            >
+              [{cat}]
+            </button>
+          ))}
+        </div>
+
+        {/* The Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredGallery.map((item) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative aspect-video bg-black border border-elfy-green-dim/30 hover:border-elfy-green transition-all overflow-hidden"
+            >
+              {/* Placeholder Graphic (Since we have no images yet) */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-elfy-green-dark/10 group-hover:bg-elfy-green-dark/20 transition-colors">
+                <ImageIcon className="w-12 h-12 text-elfy-green-dim/20 group-hover:text-elfy-green group-hover:scale-110 transition-all duration-500" />
+                <span className="mt-2 text-xs text-elfy-green-dim/40 font-mono">ENCRYPTED_IMG</span>
+              </div>
+
+              {/* Overlay Info */}
+              <div className="absolute inset-x-0 bottom-0 p-3 bg-black/80 backdrop-blur-sm border-t border-elfy-green-dim/30 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <h4 className="text-elfy-green font-bold text-sm">{item.title}</h4>
+                <div className="flex items-center gap-1 text-[10px] text-elfy-purple-light mt-1">
+                  <span>OPEN_ON_X</span>
+                  <ExternalLink size={10} />
+                </div>
+              </div>
+              
+              {/* Corner accent */}
+              <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-elfy-green/20 border-l-[20px] border-l-transparent" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </ModalContainer>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/feed/FeedModal.tsx
+=====================================
+import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import feed from '@/data/feed.json';
+import { ExternalLink } from 'lucide-react';
+
+export const FeedModal = () => {
+  return (
+    <ModalContainer title="SYSTEM_LOGS // FEED" type="feed">
+      <div className="space-y-6 font-mono">
+        {feed.map((post) => (
+          <div key={post.id} className="border-l-2 border-elfy-green-dim pl-4 py-2 hover:bg-elfy-green/5 transition-colors group">
+            <div className="flex items-center gap-4 mb-2">
+              <span className="text-xs text-elfy-green-dim bg-elfy-green-dark/30 px-2 py-1 rounded">
+                [{post.date}]
+              </span>
+              <h3 className="text-xl font-bold text-elfy-green group-hover:text-elfy-yellow transition-colors">
+                {post.title}
+              </h3>
+            </div>
+            
+            <p className="text-elfy-green-dim/80 mb-3 max-w-2xl">
+              {post.desc}
+            </p>
+
+            <a 
+              href={post.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-elfy-purple-light hover:text-elfy-green underline decoration-elfy-purple-dim decoration-dashed underline-offset-4"
+            >
+              <span>VIEW_SOURCE</span>
+              <ExternalLink size={14} />
+            </a>
+          </div>
+        ))}
+        
+        {/* End of Log Marker */}
+        <div className="text-center py-8 text-elfy-green-dim/30 animate-pulse">
+          -- END OF STREAM --
+        </div>
+      </div>
+    </ModalContainer>
+  );
+};
+
+
+=====================================
+FILE: ./src/styles/globals.css
+=====================================
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 255, 65;
+}
+
+body {
+  color: #78F654;
+  background: black;
+  overflow: hidden; /* We handle scrolling in page.tsx */
+  font-family: 'Courier New', monospace;
+}
+
+/* --- HACKER SCROLLBAR --- */
+/* Works on Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505; 
+  border-left: 1px solid #15530A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0BD426; 
+  border: 1px solid #000;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #78F654;
+}
+
+/* Utilities */
+.glitch-text {
+  text-shadow: 2px 0 #ff003c, -2px 0 #008f11;
+}
+
+.clip-corner-btn {
+  clip-path: polygon(
+    0 0, 
+    100% 0, 
+    100% 70%, 
+    90% 100%, 
+    0 100%
+  );
+}
+
+
+=====================================
+FILE: ./src/scene/props/MiniCrystalCanvas.tsx
+=====================================
+'use client';
+
+import { Canvas } from '@react-three/fiber';
+import { Float, MeshDistortMaterial } from '@react-three/drei';
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+
+const SpinningGem = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (meshRef.current) {
+      // Smooth rotation logic
+      meshRef.current.rotation.y += 0.01;
+      meshRef.current.rotation.z += 0.005;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <mesh ref={meshRef} scale={1.8}>
+        <octahedronGeometry args={[1, 0]} />
+        {/* Using the Elfy Green/Purple logic for the material */}
+        <MeshDistortMaterial
+          color="#78F654"
+          emissive="#15530A"
+          roughness={0.1}
+          metalness={0.8}
+          distort={0.3}
+          speed={2}
+          wireframe
+        />
+      </mesh>
+    </Float>
+  );
+};
+
+export const MiniCrystalCanvas = () => {
+  return (
+    <div className="w-full h-full">
+      <Canvas camera={{ position: [0, 0, 5] }} gl={{ alpha: true }}>
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={1} color="#C2FE9A" />
+        <SpinningGem />
+      </Canvas>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/scene/props/SoulCrystal.tsx
+=====================================
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Float, MeshDistortMaterial } from '@react-three/drei';
+import * as THREE from 'three';
+
+export const SoulCrystal = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (meshRef.current) {
+      const t = state.clock.getElapsedTime();
+      meshRef.current.rotation.y = t * 0.5;
+      meshRef.current.rotation.z = t * 0.2;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
+      <mesh ref={meshRef} scale={1.5}>
+        <octahedronGeometry args={[1, 0]} />
+        <MeshDistortMaterial
+          color="#00ff41"
+          emissive="#003300"
+          roughness={0}
+          metalness={1}
+          distort={0.4}
+          speed={2}
+          wireframe
+        />
+      </mesh>
+      {/* Inner Core Glow */}
+      <mesh scale={0.8}>
+        <octahedronGeometry args={[1, 0]} />
+        <meshBasicMaterial color="#ccffcc" transparent opacity={0.5} />
+      </mesh>
+    </Float>
+  );
+};
+
+
+=====================================
+FILE: ./src/scene/canvas/SceneCanvas.tsx
+=====================================
+'use client';
+
+import { Canvas } from '@react-three/fiber';
+import { MatrixGrid } from '../effects/MatrixGrid';
+import { Suspense } from 'react';
+import { clsx } from 'clsx';
+
+interface SceneCanvasProps {
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
+  return (
+    <div className={clsx("fixed inset-0 w-full h-full -z-10 bg-black transition-all duration-[2000ms] ease-out", className)}>
+      <Canvas 
+        camera={{ position: [0, 2, 10], fov: 45 }}
+        gl={{ antialias: true, alpha: false }}
+        dpr={[1, 2]}
+      >
+        <color attach="background" args={['#000']} />
+        <fog attach="fog" args={['#000', 2, 30]} />
+        
+        <MatrixGrid />
+        
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={1} color="#78F654" />
+        
+        <Suspense fallback={null}>
+           {children}
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/scene/effects/FireTransition.tsx
+=====================================
+import { useRef, useMemo } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+import { useStore } from '@/core/store/useStore';
+
+// Vertex Shader: Standard full-screen quad
+const vertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position, 1.0);
+  }
+`;
+
+// Fragment Shader: The Burn Logic
+const fragmentShader = `
+  uniform float uTime;
+  uniform float uProgress;
+  uniform vec2 uResolution;
+  varying vec2 vUv;
+
+  // Simplex Noise 2D
+  vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+  float snoise(vec2 v){
+    const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+             -0.577350269189626, 0.024390243902439);
+    vec2 i  = floor(v + dot(v, C.yy) );
+    vec2 x0 = v -   i + dot(i, C.xx);
+    vec2 i1;
+    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec4 x12 = x0.xyxy + C.xxzz;
+    x12.xy -= i1;
+    i = mod(i, 289.0);
+    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+    + i.x + vec3(0.0, i1.x, 1.0 ));
+    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+    m = m*m ;
+    m = m*m ;
+    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+    vec3 h = abs(x) - 0.5;
+    vec3 ox = floor(x + 0.5);
+    vec3 a0 = x - ox;
+    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+    vec3 g;
+    g.x  = a0.x  * x0.x  + h.x  * x0.y;
+    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+    return 130.0 * dot(m, g);
+  }
+
+  void main() {
+    // Noise Scale
+    float noise = snoise(vUv * 3.0 + vec2(0.0, uTime * 0.2));
+    
+    // Calculate Burn Edge
+    // We modify progress to ensure it goes fully from black (-1) to clear (1)
+    float prog = (uProgress * 2.5) - 1.0; 
+    
+    float alpha = smoothstep(prog, prog + 0.2, noise);
+    
+    // Edge Color (The Green Flame)
+    float edge = 1.0 - smoothstep(prog, prog + 0.05, noise);
+    vec3 flameColor = vec3(0.47, 0.96, 0.33); // #78F654
+    
+    vec3 finalColor = mix(vec3(0.0), flameColor, edge);
+
+    if (alpha <= 0.01) discard; // Cut out the transparent parts
+
+    gl_FragColor = vec4(finalColor, alpha);
+  }
+`;
+
+export const FireTransition = () => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const { introDone } = useStore();
+  const { viewport } = useThree();
+
+  // Animation State
+  const animState = useRef({ value: 0 }); // 0 = Black, 1 = Clear
+
+  useFrame((state, delta) => {
+    if (!materialRef.current) return;
+
+    // Update Time
+    materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+
+    // Logic: If Intro is DONE, animate progress 0 -> 1
+    // If Intro is NOT DONE, keep progress at 0 (Solid Black)
+    const target = introDone ? 1 : 0;
+    
+    // Linear Interpolation (Lerp) for smoothness
+    // Adjust 1.5 to make fire faster/slower
+    animState.current.value = THREE.MathUtils.lerp(animState.current.value, target, delta * 1.5);
+    
+    materialRef.current.uniforms.uProgress.value = animState.current.value;
+
+    // Disable rendering if fully cleared to save GPU
+    if (meshRef.current) {
+        meshRef.current.visible = animState.current.value < 0.99;
+    }
+  });
+
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uProgress: { value: 0 }, // Starts Black
+      uResolution: { value: new THREE.Vector2(viewport.width, viewport.height) },
+    }),
+    [viewport]
+  );
+
+  return (
+    <mesh ref={meshRef} position={[0, 0, 1]}> 
+      {/* Plane fills the screen */}
+      <planeGeometry args={[viewport.width, viewport.height]} />
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
+        transparent={true}
+        depthTest={false} // Always draw on top
+      />
+    </mesh>
+  );
+};
+
+
+=====================================
+FILE: ./src/scene/effects/MatrixGrid.tsx
+=====================================
+import { Grid } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { useRef } from 'react';
+import * as THREE from 'three';
+
+export const MatrixGrid = () => {
+  const groupRef = useRef<THREE.Group>(null);
+
+  const SECTION_SIZE = 5;   
+  const SPEED = 0.5;
+
+  useFrame((state, delta) => {
+    if (groupRef.current) {
+      groupRef.current.position.z += SPEED * delta;
+      
+      if (groupRef.current.position.z >= SECTION_SIZE) {
+        groupRef.current.position.z = 0;
+      }
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, -2, 0]}>
+      <Grid
+        renderOrder={-1}
+        infiniteGrid
+        cellSize={1}
+        sectionSize={SECTION_SIZE}
+        
+        // FIX 1: Fade out sooner (25) to hide far-away aliasing
+        fadeDistance={25}      
+        
+        // FIX 2: Much darker colors to reduce "Shimmer" and visual weight
+        sectionColor="#003300" // Very subtle dark green
+        cellColor="#044d0f"    // Darker dim green (less contrast = less aliasing)
+        
+        sectionThickness={1.2} 
+        cellThickness={1.1}
+      />
+    </group>
+  );
+};
+
+
+=====================================
+FILE: ./src/data/gallery.json
+=====================================
+[
+  {
+    "id": "art_001",
+    "title": "ELFY_GENESIS",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#78F654"
+  },
+  {
+    "id": "art_002",
+    "title": "NEON_HEIST",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#9E4EA5"
+  },
+  {
+    "id": "art_003",
+    "title": "VOID_WALKER",
+    "url": "https://x.com/mesoelfy",
+    "category": "ROGUES",
+    "color": "#FF003C"
+  },
+  {
+    "id": "art_004",
+    "title": "LATENT_GHOST",
+    "url": "https://x.com/mesoelfy",
+    "category": "COLLEAGUES",
+    "color": "#F7D277"
+  },
+  {
+    "id": "art_005",
+    "title": "ZERO_DAY",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#78F654"
+  },
+  {
+    "id": "art_006",
+    "title": "SYSTEM_CRASH",
+    "url": "https://x.com/mesoelfy",
+    "category": "ROGUES",
+    "color": "#FF003C"
+  }
+]
+
+
+=====================================
+FILE: ./src/data/identity.json
+=====================================
+{
+  "name": "Elfy",
+  "class": "Latent Space Bandit",
+  "abilities": ["Green Flame", "Digital Heist", "Prompt Craft"],
+  "stats": {
+    "STR": "ERROR",
+    "INT": 9001,
+    "CHA": 50
+  },
+  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters."
+}
+
+
+=====================================
+FILE: ./src/data/socials.json
+=====================================
+[
+  { "name": "X / Twitter", "url": "https://x.com/mesoelfy", "icon": "twitter", "color": "#1DA1F2" },
+  { "name": "YouTube", "url": "https://youtube.com/@mesoelfy", "icon": "youtube", "color": "#FF0000" },
+  { "name": "TikTok", "url": "https://tiktok.com/@mesoelfy", "icon": "video", "color": "#00f2ea" },
+  { "name": "GitHub", "url": "https://github.com/mesoelfy", "icon": "github", "color": "#ffffff" },
+  { "name": "Newgrounds", "url": "https://mesoelfy.newgrounds.com/", "icon": "crosshair", "color": "#ffa500" },
+  { "name": "DeviantArt", "url": "https://www.deviantart.com/mesoelfy", "icon": "image", "color": "#05cc47" }
+]
+
+
+=====================================
+FILE: ./src/data/feed.json
+=====================================
+[
+  {
+    "id": 1,
+    "date": "2023-10-27",
+    "title": "Elfy vs. RoboGhoul",
+    "desc": "The final showdown. Green flame algorithm engaged.",
+    "link": "https://x.com/mesoelfy/status/123456"
+  },
+  {
+    "id": 2,
+    "date": "2023-10-20",
+    "title": "Latent Space Update",
+    "desc": "Exploring the void. Found some weird artifacts.",
+    "link": "https://x.com/mesoelfy/status/789012"
+  }
+]
+
+
