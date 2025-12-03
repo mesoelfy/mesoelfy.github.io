@@ -9,12 +9,13 @@ export const LiveArtGrid = () => {
   const [slots, setSlots] = useState<number[]>([]);
 
   useEffect(() => {
-    setSlots(Array.from({ length: 9 }, randomId));
+    // UPDATED: 12 slots (4 rows x 3 columns)
+    setSlots(Array.from({ length: 12 }, randomId));
 
     const interval = setInterval(() => {
       setSlots(prev => {
         const newSlots = [...prev];
-        const randomIndex = Math.floor(Math.random() * 9);
+        const randomIndex = Math.floor(Math.random() * 12);
         newSlots[randomIndex] = randomId();
         return newSlots;
       });
@@ -24,8 +25,6 @@ export const LiveArtGrid = () => {
   }, []);
 
   return (
-    // FIX: Removed 'h-full' and 'grid-rows-3'. 
-    // Now the grid grows vertically based on the width of the squares.
     <div className="grid grid-cols-3 gap-1 w-full p-2 content-start">
       <AnimatePresence mode='popLayout'>
         {slots.map((id, index) => (
@@ -38,7 +37,6 @@ export const LiveArtGrid = () => {
             transition={{ duration: 0.2 }}
             
             onClick={() => openModal('gallery')}
-            // FIX: Added 'aspect-square'. This forces perfect 1:1 ratio.
             className="w-full aspect-square relative bg-black/50 border border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)] group overflow-hidden flex items-center justify-center rounded-[1px]"
           >
             <div className="absolute inset-0 bg-elfy-green/5 group-hover:bg-elfy-green/10 transition-colors" />

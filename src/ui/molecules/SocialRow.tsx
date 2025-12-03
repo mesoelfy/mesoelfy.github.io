@@ -12,7 +12,8 @@ const IconMap: Record<string, any> = {
 
 export const SocialRow = () => {
   return (
-    <div className="grid grid-cols-3 gap-2 h-full content-center">
+    // Added py-2 to give vertical breathing room
+    <div className="grid grid-cols-3 gap-2 h-full content-center py-2">
       {socials.map((social) => {
         const Icon = IconMap[social.icon] || Crosshair;
         return (

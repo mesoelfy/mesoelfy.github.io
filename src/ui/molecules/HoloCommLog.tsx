@@ -1,14 +1,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ExternalLink, Radio } from 'lucide-react';
 
-// UPDATED: New Safe Video IDs
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
   "bHUcvHx9zlA", "Eq6EYcpWB_c", "sJyWgks1ZtA", 
   "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
 ];
 
-// --- The Single Video Slot ---
 const VideoSlot = ({ 
   slotIndex, 
   initialVideo, 
@@ -21,7 +19,6 @@ const VideoSlot = ({
   const [videoId, setVideoId] = useState(initialVideo);
   const [isMasked, setIsMasked] = useState(true);
 
-  // Initial Load Routine
   useEffect(() => {
     setIsMasked(true);
     const unmaskTimer = setTimeout(() => {
@@ -30,7 +27,6 @@ const VideoSlot = ({
     return () => clearTimeout(unmaskTimer);
   }, []); 
 
-  // The Rotation Loop
   useEffect(() => {
     const duration = 30000 + (Math.random() * 15000);
 
@@ -53,8 +49,10 @@ const VideoSlot = ({
   }, [videoId, getNextVideo]);
 
   return (
-    // FIX: Added md:min-h-0 to reset height on desktop
-    <div className="relative flex-1 w-full min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+    // FIX: Added 'aspect-video' to force 16:9 ratio.
+    // 'w-full' ensures it fills width, height adjusts automatically.
+    // 'min-h-[140px]' is a safety fallback for mobile.
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
       <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
       
       <a 
@@ -97,7 +95,6 @@ const VideoSlot = ({
   );
 };
 
-// --- Main Component ---
 export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
 
@@ -123,7 +120,8 @@ export const HoloCommLog = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full gap-2 overflow-hidden p-1">
+    // FIX: Using 'justify-center' to vertically center them if there's extra space
+    <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
       {initialVideos.map((vid, i) => (
         <VideoSlot 
           key={i} 
