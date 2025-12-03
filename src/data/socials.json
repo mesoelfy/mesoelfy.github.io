@@ -3,6 +3,6 @@
   { "name": "YouTube", "url": "https://youtube.com/@mesoelfy", "icon": "youtube", "color": "#FF0000" },
   { "name": "TikTok", "url": "https://tiktok.com/@mesoelfy", "icon": "video", "color": "#00f2ea" },
   { "name": "GitHub", "url": "https://github.com/mesoelfy", "icon": "github", "color": "#ffffff" },
-  { "name": "Newgrounds", "url": "#", "icon": "crosshair", "color": "#ffa500" },
-  { "name": "DeviantArt", "url": "#", "icon": "image", "color": "#05cc47" }
+  { "name": "Newgrounds", "url": "https://mesoelfy.newgrounds.com/", "icon": "crosshair", "color": "#ffa500" },
+  { "name": "DeviantArt", "url": "https://www.deviantart.com/mesoelfy", "icon": "image", "color": "#05cc47" }
 ]

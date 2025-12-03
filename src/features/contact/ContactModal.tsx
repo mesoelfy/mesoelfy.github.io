@@ -12,7 +12,6 @@ export const ContactModal = () => {
         </div>
 
         <form 
-          // UPDATE THIS WITH YOUR REAL ID
           action="https://formspree.io/f/xkgdbkpz" 
           method="POST"
           className="space-y-6 font-mono"
