@@ -1,0 +1,44 @@
+[
+  {
+    "id": "art_001",
+    "title": "ELFY_GENESIS",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#78F654"
+  },
+  {
+    "id": "art_002",
+    "title": "NEON_HEIST",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#9E4EA5"
+  },
+  {
+    "id": "art_003",
+    "title": "VOID_WALKER",
+    "url": "https://x.com/mesoelfy",
+    "category": "ROGUES",
+    "color": "#FF003C"
+  },
+  {
+    "id": "art_004",
+    "title": "LATENT_GHOST",
+    "url": "https://x.com/mesoelfy",
+    "category": "COLLEAGUES",
+    "color": "#F7D277"
+  },
+  {
+    "id": "art_005",
+    "title": "ZERO_DAY",
+    "url": "https://x.com/mesoelfy",
+    "category": "ELFY_MAIN",
+    "color": "#78F654"
+  },
+  {
+    "id": "art_006",
+    "title": "SYSTEM_CRASH",
+    "url": "https://x.com/mesoelfy",
+    "category": "ROGUES",
+    "color": "#FF003C"
+  }
+]

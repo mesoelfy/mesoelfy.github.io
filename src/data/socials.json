@@ -1,0 +1,8 @@
+[
+  { "name": "X / Twitter", "url": "https://x.com/mesoelfy", "icon": "twitter", "color": "#1DA1F2" },
+  { "name": "YouTube", "url": "https://youtube.com/@mesoelfy", "icon": "youtube", "color": "#FF0000" },
+  { "name": "TikTok", "url": "https://tiktok.com/@mesoelfy", "icon": "video", "color": "#00f2ea" },
+  { "name": "GitHub", "url": "https://github.com/mesoelfy", "icon": "github", "color": "#ffffff" },
+  { "name": "Newgrounds", "url": "#", "icon": "crosshair", "color": "#ffa500" },
+  { "name": "DeviantArt", "url": "#", "icon": "image", "color": "#05cc47" }
+]

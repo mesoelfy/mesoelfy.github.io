@@ -1,0 +1,11 @@
+{
+  "name": "Elfy",
+  "class": "Latent Space Bandit",
+  "abilities": ["Green Flame", "Digital Heist", "Prompt Craft"],
+  "stats": {
+    "STR": "ERROR",
+    "INT": 9001,
+    "CHA": 50
+  },
+  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters."
+}

@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 255, 65;
+}
+
+body {
+  color: #78F654;
+  background: black;
+  overflow: hidden; /* We handle scrolling in page.tsx */
+  font-family: 'Courier New', monospace;
+}
+
+/* --- HACKER SCROLLBAR --- */
+/* Works on Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505; 
+  border-left: 1px solid #15530A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0BD426; 
+  border: 1px solid #000;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #78F654;
+}
+
+/* Utilities */
+.glitch-text {
+  text-shadow: 2px 0 #ff003c, -2px 0 #008f11;
+}
+
+.clip-corner-btn {
+  clip-path: polygon(
+    0 0, 
+    100% 0, 
+    100% 70%, 
+    90% 100%, 
+    0 100%
+  );
+}
