@@ -15,8 +15,8 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
     <div className={clsx("fixed inset-0 w-full h-full -z-10 bg-black transition-all duration-[2000ms] ease-out", className)}>
       <Canvas 
         camera={{ position: [0, 2, 10], fov: 45 }}
-        gl={{ antialias: true, alpha: false }} // Enforce smooth edges
-        dpr={[1, 2]} // Handle high-DPI screens (Retina) for sharpness
+        gl={{ antialias: true, alpha: false }}
+        dpr={[1, 2]}
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />

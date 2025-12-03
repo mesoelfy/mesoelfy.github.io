@@ -13,35 +13,43 @@ import { AboutModal } from '@/features/identity/AboutModal';
 import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
+import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import identity from '@/data/identity.json';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 export default function Home() {
   const { openModal } = useStore();
-  const [bootState, setBootState] = useState<'standby' | 'booting' | 'active'>('standby');
+  const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
-  const handleBoot = () => {
-    setBootState('booting');
-    setTimeout(() => setBootState('active'), 1200);
+  const handleBootComplete = () => {
+    // UPDATED: Wait 1.5 seconds after breach before showing UI
+    // This allows the user to see the moving grid clearly
+    setTimeout(() => {
+      setBootState('active');
+    }, 1500);
   };
 
   return (
     <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
       
-      <SceneCanvas className={bootState === 'standby' ? 'opacity-0 blur-sm' : 'opacity-100 blur-0'} />
+      {/* 1. BACKGROUND GRID */}
+      <SceneCanvas className="opacity-100 blur-0" />
 
+      {/* 2. MODALS */}
       <AboutModal />
       <FeedModal />
       <GalleryModal />
       <ContactModal />
 
-      <div className={`absolute inset-0 z-50 bg-black flex flex-col items-center justify-center transition-opacity duration-1000 ${bootState === 'standby' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <h1 className="text-4xl md:text-9xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-elfy-green to-elfy-green-dark mb-8 glitch-text filter drop-shadow-[0_0_10px_rgba(120,246,84,0.5)]">MESOELFY</h1>
-        <button onClick={handleBoot} className="px-8 py-3 border border-elfy-green text-lg md:text-xl font-mono text-elfy-green hover:bg-elfy-green hover:text-black transition-all shadow-[0_0_20px_rgba(120,246,84,0.3)]">[ INITIALIZE SYSTEM ]</button>
-      </div>
+      {/* 3. INTRO */}
+      {bootState === 'standby' && (
+        <MatrixBootSequence onComplete={handleBootComplete} />
+      )}
 
-      <div className={`flex-1 flex flex-col h-full transition-all duration-500 ${bootState === 'active' ? 'opacity-100' : 'opacity-0'}`}>
+      {/* 4. MAIN UI */}
+      <div className={`flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        
         <Header />
 
         <motion.div 
@@ -56,32 +64,24 @@ export default function Home() {
           
           {/* LEFT COL */}
           <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-            {/* Identity: h-auto (natural size), min-h removed to let it shrink if needed */}
-            <GlassPanel title="IDENTITY_CORE" className="h-auto">
-              <div className="flex flex-col items-center h-full justify-between py-2 gap-6">
-                
-                {/* Top Section */}
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
-                     <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <MiniCrystalCanvas />
-                     </div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <h2 className="text-3xl md:text-4xl font-bold text-elfy-green tracking-tight drop-shadow-md">{identity.name}</h2>
-                    <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
-                  </div>
+            <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0">
+              <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
+                <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
+                   <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <MiniCrystalCanvas />
+                   </div>
                 </div>
-
-                {/* Bottom Buttons: mt-auto pushes them to the bottom of the container */}
-                <div className="flex w-full gap-3 mt-auto">
+                <div className="text-center space-y-1">
+                  <h2 className="text-3xl md:text-4xl font-bold text-elfy-green tracking-tight drop-shadow-md">{identity.name}</h2>
+                  <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
+                </div>
+                <div className="flex w-full gap-3 mt-2">
                   <button onClick={() => openModal('about')} className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-xs uppercase clip-corner-btn">About Me</button>
                   <button onClick={() => openModal('contact')} className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs uppercase clip-corner-btn">Contact</button>
                 </div>
               </div>
             </GlassPanel>
 
-            {/* Socials: h-auto allows it to grow to fit buttons without cutting off */}
             <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0">
                <SocialRow />
             </GlassPanel>
@@ -101,7 +101,7 @@ export default function Home() {
                  <LiveArtGrid />
               </GlassPanel>
 
-              <GlassPanel title="HOLO_COMM" className="w-full md:w-[40%] shrink-0 h-auto">
+              <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto">
                  <HoloCommLog />
               </GlassPanel>
             </div>
