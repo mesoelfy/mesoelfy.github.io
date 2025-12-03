@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -28,6 +28,12 @@ export const metadata: Metadata = {
     description: 'Access the terminal. View the art. Breach the firewall.',
     images: ['https://mesoelfy.github.io/assets/images/social-card.jpg'],
   },
+};
+
+// FIX: Force browser UI to be black to prevent white flash on reload
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({

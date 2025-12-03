@@ -4,14 +4,14 @@ export const Footer = () => {
       <div className="flex items-center gap-2">
         <span>BUILD_VER: [v2.0.4]</span>
         <span>//</span>
-        <span className="text-elfy-green">STATUS: STABLE</span>
+        {/* UPDATED: Story status */}
+        <span className="text-elfy-red animate-pulse">STATUS: UNSAFE // MONITORING</span>
       </div>
 
       <div className="flex items-center gap-2">
         <span>LATENT_CORE:</span>
         <div className="w-4 h-4 flex items-center justify-center">
-          {/* Smooth Rotation Square */}
-          <div className="w-2.5 h-2.5 border border-elfy-green bg-elfy-green/20 animate-spin-slow shadow-[0_0_8px_#78F654]" />
+          <div className="w-2.5 h-2.5 border border-elfy-green bg-elfy-green/20 rotate-45 animate-spin-slow shadow-[0_0_8px_#78F654]" />
         </div>
       </div>
     </footer>

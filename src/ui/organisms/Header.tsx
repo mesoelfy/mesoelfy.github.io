@@ -11,9 +11,10 @@ export const Header = () => {
         <span className="font-mono font-bold text-elfy-green text-lg tracking-tight drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
           MESOELFY_OS
         </span>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 bg-elfy-green animate-pulse" />
-          <span className="text-[10px] text-elfy-green-dim uppercase">Online</span>
+        <div className="flex items-center gap-2">
+          {/* UPDATED: Red Pulse for "Unsafe" story */}
+          <div className="w-2 h-2 bg-elfy-red rounded-full animate-pulse shadow-[0_0_8px_#ff003c]" />
+          <span className="text-[10px] text-elfy-red font-bold tracking-wider uppercase">UNSECURE</span>
         </div>
       </div>
 

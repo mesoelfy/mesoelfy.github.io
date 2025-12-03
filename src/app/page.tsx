@@ -23,31 +23,26 @@ export default function Home() {
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
-    // UPDATED: Wait 1.5 seconds after breach before showing UI
-    // This allows the user to see the moving grid clearly
+    // UPDATED: Reduced to 1.0s hold time
     setTimeout(() => {
       setBootState('active');
-    }, 1500);
+    }, 1000);
   };
 
   return (
     <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
       
-      {/* 1. BACKGROUND GRID */}
       <SceneCanvas className="opacity-100 blur-0" />
 
-      {/* 2. MODALS */}
       <AboutModal />
       <FeedModal />
       <GalleryModal />
       <ContactModal />
 
-      {/* 3. INTRO */}
       {bootState === 'standby' && (
         <MatrixBootSequence onComplete={handleBootComplete} />
       )}
 
-      {/* 4. MAIN UI */}
       <div className={`flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         
         <Header />
@@ -58,11 +53,17 @@ export default function Home() {
           animate={bootState === 'active' ? "visible" : "hidden"}
           variants={{
             hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.2 } }
+            visible: { 
+              opacity: 1, 
+              transition: { 
+                staggerChildren: 0.3, // UPDATED: Slower stagger for dramatic effect
+                delayChildren: 0.2 
+              } 
+            }
           }}
         >
+          {/* ... Rest of Layout (Unchanged) ... */}
           
-          {/* LEFT COL */}
           <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
             <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0">
               <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
@@ -87,7 +88,6 @@ export default function Home() {
             </GlassPanel>
           </div>
 
-          {/* RIGHT COL */}
           <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
             <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0">
               <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
