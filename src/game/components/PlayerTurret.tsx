@@ -7,41 +7,62 @@ import * as THREE from 'three';
 export const PlayerTurret = () => {
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
+  const coreRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Sprite>(null);
   const { viewport } = useThree();
+
+  const colorTurret = new THREE.Color(GAME_THEME.turret.base);
+  const colorRepair = new THREE.Color(GAME_THEME.turret.repair);
 
   useFrame((state) => {
     if (!groupRef.current) return;
 
-    // 1. Map Mouse to Viewport
     const x = (state.pointer.x * viewport.width) / 2;
     const y = (state.pointer.y * viewport.height) / 2;
-
-    // 2. Position Visuals
     groupRef.current.position.x = x;
     groupRef.current.position.y = y;
 
-    // 3. REPORT TO ENGINE (Targeting System)
     GameEngine.updateCursor(x, y);
 
-    // 4. Rotate Reticle
+    const isRepairing = GameEngine.isRepairing;
+    
+    // Rotate Reticle
     if (ringRef.current) {
-      ringRef.current.rotation.z -= 0.05;
+      if (isRepairing) {
+        ringRef.current.rotation.z += 0.2; 
+        ringRef.current.material.color.lerp(colorRepair, 0.2);
+        const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.1;
+        ringRef.current.scale.setScalar(pulse);
+      } else {
+        ringRef.current.rotation.z -= 0.02; 
+        ringRef.current.material.color.lerp(colorTurret, 0.1);
+        ringRef.current.scale.setScalar(1);
+      }
+    }
+
+    if (coreRef.current) {
+      coreRef.current.material.color.lerp(isRepairing ? colorRepair : colorTurret, 0.2);
+    }
+    if (glowRef.current) {
+      glowRef.current.material.color.lerp(isRepairing ? colorRepair : colorTurret, 0.2);
     }
   });
 
   return (
     <group ref={groupRef}>
-      <mesh>
-        <circleGeometry args={[0.15, 16]} />
+      {/* Central Core */}
+      <mesh ref={coreRef}>
+        <circleGeometry args={[0.1, 16]} />
         <meshBasicMaterial color={GAME_THEME.turret.base} />
       </mesh>
 
-      <mesh ref={ringRef}>
-        <ringGeometry args={[0.3, 0.35, 32]} />
-        <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.6} />
+      {/* SQUARE RING (4 Segments) */}
+      <mesh ref={ringRef} rotation={[0, 0, Math.PI / 4]}>
+        <ringGeometry args={[0.4, 0.45, 4]} /> 
+        <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
       </mesh>
 
-      <sprite scale={[1.5, 1.5, 1]}>
+      <sprite ref={glowRef} scale={[2, 2, 1]}>
         <spriteMaterial 
           color={GAME_THEME.turret.glow} 
           transparent 

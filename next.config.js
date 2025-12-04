@@ -18,6 +18,12 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['three'],
   
+  // Disable the Dev Tool Indicators (Bottom Left)
+  devIndicators: {
+    buildActivity: false,
+    appIsrStatus: false,
+  },
+  
   // Inject the hash into the app
   env: {
     NEXT_PUBLIC_COMMIT_HASH: commitHash,

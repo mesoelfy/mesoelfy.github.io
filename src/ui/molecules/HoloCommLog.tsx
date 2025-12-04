@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { ExternalLink, Radio } from 'lucide-react';
+import { ExternalLink, Radio, WifiOff } from 'lucide-react';
+import { useGameStore } from '@/game/store/useGameStore';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
@@ -7,18 +8,38 @@ const VIDEO_POOL = [
   "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
 ];
 
+// Reusable Offline Static Component
+const OfflineStatic = () => (
+  <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center border border-elfy-red/20">
+    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-10 bg-cover mix-blend-screen pointer-events-none" />
+    <WifiOff className="text-elfy-red animate-pulse w-8 h-8 mb-2" />
+    <span className="text-[10px] font-mono text-elfy-red animate-pulse tracking-widest">SIGNAL_LOST</span>
+  </div>
+);
+
+// Loading Placeholder (To prevent Hydration Mismatch)
+const LoadingPlaceholder = () => (
+  <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/20 bg-black flex flex-col items-center justify-center">
+    <Radio className="text-elfy-green-dim/50 animate-pulse w-6 h-6 mb-2" />
+    <span className="text-[10px] font-mono text-elfy-green-dim/50 animate-pulse">INITIALIZING_FEED...</span>
+  </div>
+);
+
 const VideoSlot = ({ 
   slotIndex, 
   initialVideo, 
-  getNextVideo 
+  getNextVideo,
+  isOffline 
 }: { 
   slotIndex: number, 
   initialVideo: string, 
-  getNextVideo: () => string 
+  getNextVideo: () => string,
+  isOffline: boolean
 }) => {
   const [videoId, setVideoId] = useState(initialVideo);
   const [isMasked, setIsMasked] = useState(true);
 
+  // HOOK 1: Initial Mask
   useEffect(() => {
     setIsMasked(true);
     const unmaskTimer = setTimeout(() => {
@@ -27,32 +48,32 @@ const VideoSlot = ({
     return () => clearTimeout(unmaskTimer);
   }, []); 
 
+  // HOOK 2: Video Rotation
   useEffect(() => {
-    const duration = 30000 + (Math.random() * 15000);
+    if (isOffline) return; // Logic check inside hook (Safe)
 
+    const duration = 30000 + (Math.random() * 15000);
     const timer = setTimeout(() => {
       setIsMasked(true);
-
       setTimeout(() => {
         const next = getNextVideo();
         if (next) setVideoId(next);
-
-        setTimeout(() => {
-          setIsMasked(false);
-        }, 5000);
-
+        setTimeout(() => setIsMasked(false), 5000);
       }, 1000); 
-
     }, duration);
-
     return () => clearTimeout(timer);
-  }, [videoId, getNextVideo]);
+  }, [videoId, getNextVideo, isOffline]);
 
-  return (
-    // FIX: Added 'aspect-video' to force 16:9 ratio.
-    // 'w-full' ensures it fills width, height adjusts automatically.
-    // 'min-h-[140px]' is a safety fallback for mobile.
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+  // Conditional Rendering Logic (Must be after all hooks)
+  const content = isOffline ? (
+    <>
+      <OfflineStatic />
+      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
+         CAM_0{slotIndex + 1} [ERR]
+      </div>
+    </>
+  ) : (
+    <>
       <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
       
       <a 
@@ -67,7 +88,7 @@ const VideoSlot = ({
         </div>
       </a>
 
-      {/* THE MASK */}
+      {/* The Loading/Mask Overlay */}
       <div 
         className={`absolute inset-0 z-20 bg-black flex flex-col items-center justify-center transition-opacity duration-500 ${isMasked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
@@ -75,7 +96,6 @@ const VideoSlot = ({
         <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
       </div>
 
-      {/* YOUTUBE IFRAME */}
       <div className="absolute inset-0 z-10">
         <iframe 
           width="100%" 
@@ -91,23 +111,41 @@ const VideoSlot = ({
       <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
          CAM_0{slotIndex + 1}
       </div>
+    </>
+  );
+
+  return (
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+      {content}
     </div>
   );
 };
 
 export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
+  
+  // Game Store Subscription
+  const panelState = useGameStore((state) => state.panels['video']);
+  const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
 
-  const [initialVideos] = useState(() => {
+  // Hydration Safe State
+  const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
+
+  // Initialize Random Videos on Client Only
+  useEffect(() => {
+    // Reset deck
+    deckRef.current = [...VIDEO_POOL];
     const init: string[] = [];
+    
+    // Pick 3 random videos
     for(let i=0; i<3; i++) {
       const randomIndex = Math.floor(Math.random() * deckRef.current.length);
       const vid = deckRef.current[randomIndex];
-      deckRef.current.splice(randomIndex, 1);
+      deckRef.current.splice(randomIndex, 1); // Remove selected to avoid dupes
       init.push(vid);
     }
-    return init;
-  });
+    setInitialVideos(init);
+  }, []);
 
   const getNextVideo = useCallback(() => {
     if (deckRef.current.length === 0) {
@@ -119,15 +157,24 @@ export const HoloCommLog = () => {
     return selected || VIDEO_POOL[0];
   }, []);
 
+  // If waiting for client hydration, show placeholders
+  if (!initialVideos) {
+    return (
+      <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
+        {[0, 1, 2].map((i) => <LoadingPlaceholder key={i} />)}
+      </div>
+    );
+  }
+
   return (
-    // FIX: Using 'justify-center' to vertically center them if there's extra space
     <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
       {initialVideos.map((vid, i) => (
         <VideoSlot 
           key={i} 
           slotIndex={i} 
           initialVideo={vid} 
-          getNextVideo={getNextVideo} 
+          getNextVideo={getNextVideo}
+          isOffline={isOffline} 
         />
       ))}
     </div>

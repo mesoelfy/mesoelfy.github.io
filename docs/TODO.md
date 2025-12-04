@@ -9,21 +9,25 @@
 ## PHASE 2: THE AUDIO ENGINE (COMPLETE)
 - [x] **The "Golden Key":** AudioContext unlocks on `[ INITIALIZE_SYSTEM ]`.
 - [x] **Synth System:** Generative Web Audio API implementation.
-    - Boot Sound: Deep drone + glitch.
-    - UI Sounds: Hover blips and Click thuds.
 - [x] **Soundscaping:** Wired SFX to all interactive elements.
 
-## PHASE 3: THE GAME LAYER ("Latent Defense")
-- [ ] **Overlay System:** `GameOverlayCanvas` (Z-Index 50) sitting ON TOP of the DOM.
-- [ ] **The Turret Cursor:** 
-    - Custom cursor component.
-    - Auto-fire logic (Raycasting 2D) when enemies are within range.
-- [ ] **Panel Registry:** System to map DOM elements to Canvas coordinates.
-- [ ] **Health System:** Visual glitch effects on damaged panels.
+## PHASE 3: THE GAME LAYER (IN PROGRESS)
+- [x] **Overlay System:** `GameOverlayCanvas` (Z-Index 50).
+- [x] **The Turret Cursor:** 
+    - Custom cursor component (Square Reticle).
+    - Auto-fire logic (Raycasting 2D).
+- [x] **Panel Registry:** System to map DOM elements to Canvas coordinates.
+- [x] **Health System:** Visual glitch effects and Health Bars on panels.
+- [x] **Enemy AI:**
+    - Seekers (Attack Panels).
+    - Hunters (Dynamic Bio-Orbit around Player).
+    - Kamikazes (Chase Player).
+- [x] **Repair Mechanic:** Hovering active panels heals them with visual feedback.
+- [x] **Combat Physics:** Collision detection, particles, and destruction logic.
 
 ## PHASE 4: PERSISTENCE & CONTENT
 - [ ] **Save State:** Track high scores and system health in `localStorage`.
 - [ ] **Content Injection:** Fill JSON files with final text/links.
 
 ## KNOWN BUGS
-- [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload before the WebGL context initializes, despite CSS background settings. Needs investigation into Next.js/R3F hydration order.
+- [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.

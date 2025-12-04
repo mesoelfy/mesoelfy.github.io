@@ -2,10 +2,10 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameEngine } from '../core/GameEngine';
-import { GAME_THEME } from '../theme';
 
 const MAX_PARTICLES = 1000;
 const tempObj = new THREE.Object3D();
+const tempColor = new THREE.Color();
 
 export const ParticleRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -23,24 +23,27 @@ export const ParticleRenderer = () => {
       if (count >= MAX_PARTICLES) break;
 
       tempObj.position.set(p.x, p.y, 0);
-      // Scale down as life decreases
       const scale = p.life / p.maxLife; 
       tempObj.scale.set(scale, scale, 1);
       
+      // FIXED: Apply instance color
+      tempColor.set(p.color);
+      
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
-      // We can also update color per instance if we used custom shaders, 
-      // but for MVP white/orange sparks are fine.
+      meshRef.current.setColorAt(count, tempColor);
+      
       count++;
     }
 
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
   return (
     <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_PARTICLES]}>
-      <meshBasicMaterial color={GAME_THEME.vfx.spark} />
+      <meshBasicMaterial color="white" />
     </instancedMesh>
   );
 };

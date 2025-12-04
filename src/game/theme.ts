@@ -1,8 +1,8 @@
-// Single source of truth for Game Colors (matches Tailwind config)
 export const GAME_THEME = {
   turret: {
     base: '#78F654',
     glow: '#C2FE9A',
+    repair: '#00F0FF', // <-- NEW: Repair Mode
   },
   bullet: {
     plasma: '#FFFFFF',
@@ -20,5 +20,6 @@ export const GAME_THEME = {
   vfx: {
     spark: '#FFFFFF',
     damage: '#FF003C',
+    heal: '#00F0FF', // <-- NEW: Healing sparks
   }
 };

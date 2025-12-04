@@ -3,17 +3,16 @@ import { GameEngine } from '../core/GameEngine';
 import { useEffect } from 'react';
 
 export const GameDirector = () => {
-  const { viewport } = useThree();
+  const { viewport, size } = useThree();
 
-  // Sync Viewport dimensions to Engine (for spawn logic)
+  // FIXED: Using single updateViewport method
   useEffect(() => {
-    GameEngine.updateDimensions(viewport.width, viewport.height);
-  }, [viewport]);
+    GameEngine.updateViewport(viewport.width, viewport.height, size.width, size.height);
+  }, [viewport, size]);
 
   useFrame((state, delta) => {
-    // Run the logic simulation
     GameEngine.update(delta, state.clock.elapsedTime);
   });
 
-  return null; // Invisible Logic Component
+  return null;
 };

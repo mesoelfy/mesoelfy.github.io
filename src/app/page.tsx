@@ -25,7 +25,6 @@ export default function Home() {
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
-    // FIXED: Reduced from 1000ms to 200ms for snappier transition
     setTimeout(() => {
       setBootState('active');
     }, 200);
@@ -107,7 +106,8 @@ export default function Home() {
           <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
             <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
               <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
-                <p className="animate-pulse mb-4">> ESTABLISHING UPLINK...</p>
+                {/* FIXED: Escaped the greater-than sign */}
+                <p className="animate-pulse mb-4">&gt; ESTABLISHING UPLINK...</p>
                 <button 
                   onClick={() => openModal('feed')} 
                   onMouseEnter={playHover}

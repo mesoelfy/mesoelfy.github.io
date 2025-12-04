@@ -20,19 +20,21 @@ const panelVariants = {
   }
 };
 
+const MAX_HEALTH = 1000;
+
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   
-  // Subscribe to health only if gameId exists
   const panelState = useGameStore((state) => 
     gameId ? state.panels[gameId] : null
   );
 
-  const health = panelState ? panelState.health : 100;
-  const isDamaged = health < 100;
-  const isCritical = health < 30;
+  const health = panelState ? panelState.health : MAX_HEALTH;
+  const healthPercent = (health / MAX_HEALTH) * 100; // Normalized for CSS width
+  
+  const isDamaged = health < MAX_HEALTH;
+  const isCritical = health < (MAX_HEALTH * 0.3);
 
-  // Determine Border Color based on health
   let borderColor = "border-elfy-green-dim/30";
   if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
@@ -44,7 +46,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       className={clsx(
         "relative overflow-hidden flex flex-col",
         "bg-black border",
-        borderColor, // Dynamic Border
+        borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
         "rounded-sm",
         className
@@ -64,16 +66,15 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
             </div>
           </div>
 
-          {/* HEALTH BAR (Only if registered in game) */}
           {gameId && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
                 className={clsx("h-full transition-colors duration-300", 
-                  health > 60 ? "bg-elfy-green" : 
-                  health > 30 ? "bg-elfy-yellow" : "bg-elfy-red"
+                  healthPercent > 60 ? "bg-elfy-green" : 
+                  healthPercent > 30 ? "bg-elfy-yellow" : "bg-elfy-red"
                 )}
                 initial={{ width: "100%" }}
-                animate={{ width: `${health}%` }}
+                animate={{ width: `${healthPercent}%` }}
                 transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
               />
             </div>
@@ -82,7 +83,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* If Destroyed, show static overlay */}
         {health <= 0 && (
           <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
             <span className="text-elfy-red font-header font-black text-xl animate-pulse">OFFLINE</span>

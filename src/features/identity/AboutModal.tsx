@@ -41,15 +41,15 @@ export const AboutModal = () => {
             <ul className="space-y-1">
               {identity.abilities.map((ability, i) => (
                  <li key={i} className="flex items-center gap-2 text-elfy-green font-mono">
-                   <span className="text-elfy-purple-light">></span> {ability}
+                   <span className="text-elfy-purple-light">&gt;</span> {ability}
                  </li>
               ))}
             </ul>
           </div>
 
           <div className="p-4 border border-elfy-purple-dim/30 bg-elfy-purple-deep/20 text-sm text-elfy-purple-light font-mono">
-            <p>> SYSTEM NOTE: Generated via Latent Space Injection.</p>
-            <p>> STATUS: 100% Hype.</p>
+            <p>&gt; SYSTEM NOTE: Generated via Latent Space Injection.</p>
+            <p>&gt; STATUS: 100% Hype.</p>
           </div>
         </div>
       </div>
