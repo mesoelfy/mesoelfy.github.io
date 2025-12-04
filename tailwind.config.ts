@@ -7,6 +7,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // --- BRAND CORE (Existing UI) ---
         elfy: {
           green: {
             light: '#7FF65F',
@@ -27,6 +28,32 @@ const config: Config = {
           gray: '#27282A',
           black: '#050505',
         },
+        
+        // --- LATENT DEFENSE (Game Layer) ---
+        // Bespoke values for fine-tuning without affecting UI
+        game: {
+          turret: {
+            base: '#78F654', // Player color
+            glow: '#C2FE9A',
+          },
+          bullet: {
+            plasma: '#FFFFFF', 
+            trail: '#78F654',
+          },
+          enemy: {
+            seeker: '#9E4EA5', // Fast unit (Purple)
+            eater: '#FF003C',  // Tank unit (Red)
+            boss: '#F7D277',   // Boss unit (Yellow)
+          },
+          hud: {
+            text: '#78F654',
+            warning: '#FF003C',
+          },
+          vfx: {
+            spark: '#FFFFFF',
+            damage: '#FF003C',
+          }
+        }
       },
       fontFamily: {
         header: ['var(--font-montserrat)', 'sans-serif'],
@@ -35,7 +62,7 @@ const config: Config = {
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',
-        'spin-diamond': 'spin-diamond 3s linear infinite', // NEW: Custom Diamond Spin
+        'spin-diamond': 'spin-diamond 3s linear infinite',
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
@@ -43,7 +70,7 @@ const config: Config = {
       keyframes: {
         'spin-diamond': {
           '0%': { transform: 'rotate(45deg)' },
-          '100%': { transform: 'rotate(405deg)' }, // 360 + 45 = Full loop maintaining diamond shape
+          '100%': { transform: 'rotate(405deg)' },
         },
         'matrix-green': {
           '0%, 100%': { color: '#14630bff' },
