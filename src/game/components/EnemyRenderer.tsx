@@ -41,13 +41,13 @@ export const EnemyRenderer = () => {
         tempObj.scale.set(1.5, 1.5, 1); // Bigger
         tempColor.set(GAME_THEME.enemy.boss); // Orange/Yellow
       } else {
-        // Seeker (Standard)
+        // Muncher (Standard)
         const angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
         tempObj.rotation.z = angle;
         // Pulse if eating
         const scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
         tempObj.scale.set(scale, scale, 1);
-        tempColor.set(GAME_THEME.enemy.seeker); // Purple
+        tempColor.set(GAME_THEME.enemy.muncher); // Purple
       }
 
       tempObj.updateMatrix();

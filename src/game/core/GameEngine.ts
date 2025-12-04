@@ -15,7 +15,7 @@ export interface Enemy extends Entity {
   vx: number;
   vy: number;
   hp: number;
-  type: 'seeker' | 'kamikaze' | 'hunter';
+  type: 'muncher' | 'kamikaze' | 'hunter';
   targetId?: string; 
   isEating?: boolean;
   orbitAngle?: number; 
@@ -27,7 +27,6 @@ export interface Bullet extends Entity {
   life: number;
 }
 
-// Particles will be moved to FXManager in Phase 2, keeping here for rendering compat for now
 export interface Particle extends Entity {
   vx: number;
   vy: number;
@@ -58,7 +57,6 @@ class GameEngineCore {
   private screenSize = { width: 1, height: 1 };
 
   constructor() {
-    // Initialize Systems
     FXManager.init();
   }
 
@@ -138,13 +136,8 @@ class GameEngineCore {
         isHoveringPanel = true;
         healFn(p.id, 10); 
         this.lastRepairTime = time;
-        
-        // EMIT EVENT
         GameEventBus.emit('PANEL_HEALED', { id: p.id, amount: 10 });
-        
-        if (Math.random() > 0.6) {
-           this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
-        }
+        if (Math.random() > 0.6) this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
         break; 
       }
     }
@@ -162,7 +155,6 @@ class GameEngineCore {
       let targetX = 0;
       let targetY = 0;
 
-      // 1. KAMIKAZE: Chases Player
       if (e.type === 'kamikaze') {
         targetX = this.cursor.x;
         targetY = this.cursor.y;
@@ -174,14 +166,10 @@ class GameEngineCore {
         if (dist < 1.0) {
            e.active = false;
            this.explode(e.x, e.y, 20, '#FF003C');
-           
-           // EMIT EVENT
            GameEventBus.emit('PLAYER_HIT', { damage: 10 });
            continue; 
         }
       } 
-      
-      // --- 2. HUNTER: Dynamic Orbit ---
       else if (e.type === 'hunter') {
         if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
         const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
@@ -192,9 +180,8 @@ class GameEngineCore {
         targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
         targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
       }
-      
-      // 3. SEEKER: Targets Panels
       else {
+        // MUNCHER LOGIC
         let nearestDist = Infinity;
         let bestPanel: any = null;
 
@@ -220,11 +207,9 @@ class GameEngineCore {
 
           if (distToEdge < 0.5) { 
             e.isEating = true;
-            if (e.type === 'seeker' && doDamageTick) {
+            if (doDamageTick) {
               damageFn(bestPanel.id, 5); 
               this.explode(targetX, targetY, 1, '#9E4EA5');
-              
-              // EMIT EVENT
               GameEventBus.emit('PANEL_DAMAGED', { 
                 id: bestPanel.id, 
                 amount: 5, 
@@ -235,22 +220,19 @@ class GameEngineCore {
             e.isEating = false;
           }
         } else {
-          // Wander
           targetX = Math.sin(time) * 5;
           targetY = Math.cos(time) * 5;
         }
       }
 
-      // Physics Move (Smoothing)
       if (!e.isEating) {
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        let speed = 0;
-        if (e.type === 'hunter') speed = 12; // Moderate to allow drift
+        let speed = 8;
+        if (e.type === 'hunter') speed = 12; 
         else if (e.type === 'kamikaze') speed = 12; 
-        else speed = 8; 
 
         if (dist > 0.1) {
           e.vx = (dx / dist) * speed * delta;
@@ -269,20 +251,23 @@ class GameEngineCore {
     const radius = 60; 
     const rand = Math.random();
     
-    let type: Enemy['type'] = 'seeker';
+    let type: Enemy['type'] = 'muncher';
     let hp = 2;
     let radiusHit = 0.5;
 
-    // Equal Spawns for Dev
-    if (rand < 0.33) {
-      type = 'seeker';
+    // SPAWN RATES
+    // 50% Muncher
+    // 30% Kamikaze
+    // 20% Hunter (Boss/Sniper)
+    if (rand < 0.50) {
+      type = 'muncher';
       hp = 2;
-    } else if (rand < 0.66) {
-      type = 'hunter';
-      hp = 3;
-    } else {
+    } else if (rand < 0.80) {
       type = 'kamikaze';
       hp = 1; 
+    } else {
+      type = 'hunter';
+      hp = 3;
     }
 
     const enemy: Enemy = {
@@ -298,8 +283,6 @@ class GameEngineCore {
     };
 
     this.enemies.push(enemy);
-    
-    // EMIT EVENT
     GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
   }
 
@@ -336,8 +319,6 @@ class GameEngineCore {
         active: true,
         life: 1.5
       });
-      
-      // EMIT EVENT
       GameEventBus.emit('PLAYER_FIRED', { x: this.cursor.x, y: this.cursor.y });
     }
   }
@@ -367,14 +348,11 @@ class GameEngineCore {
           e.hp--;
           b.active = false;
           
-          // EMIT EVENT
           GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
 
           if (e.hp <= 0) {
             e.active = false;
             this.explode(e.x, e.y, 8, e.type === 'hunter' ? '#F7D277' : e.type === 'kamikaze' ? '#FF003C' : '#9E4EA5');
-            
-            // EMIT EVENT
             GameEventBus.emit('ENEMY_DESTROYED', { id: e.id, type: e.type, x: e.x, y: e.y });
           } else {
             this.explode(b.x, b.y, 2, '#FFF');
