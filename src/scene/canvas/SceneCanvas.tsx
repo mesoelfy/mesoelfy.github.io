@@ -12,11 +12,12 @@ interface SceneCanvasProps {
 
 export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
   return (
-    <div className={clsx("fixed inset-0 w-full h-full -z-10 bg-black transition-all duration-[2000ms] ease-out", className)}>
+    <div className={clsx("fixed inset-0 w-full h-full z-0 pointer-events-none transition-all duration-[2000ms] ease-out", className)}>
       <Canvas 
         camera={{ position: [0, 2, 10], fov: 45 }}
-        gl={{ antialias: true, alpha: false }}
+        gl={{ antialias: true, alpha: false }} // Alpha false = performance gain + no transparency issues
         dpr={[1, 2]}
+        style={{ background: '#000000' }} // <--- THE FIX: Force canvas to be black instantly
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />

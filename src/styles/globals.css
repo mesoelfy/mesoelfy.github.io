@@ -6,15 +6,18 @@
   --foreground-rgb: 0, 255, 65;
 }
 
+html {
+  background-color: #000000; /* Ensure root is black */
+}
+
 body {
   color: #78F654;
-  background: black;
-  overflow: hidden; /* We handle scrolling in page.tsx */
+  background-color: #000000; /* Ensure body is black */
+  overflow: hidden; 
   font-family: 'Courier New', monospace;
 }
 
 /* --- HACKER SCROLLBAR --- */
-/* Works on Chrome, Edge, Safari */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

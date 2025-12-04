@@ -24,3 +24,6 @@
 ## PHASE 4: PERSISTENCE & CONTENT
 - [ ] **Save State:** Track high scores and system health in `localStorage`.
 - [ ] **Content Injection:** Fill JSON files with final text/links.
+
+## KNOWN BUGS
+- [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload before the WebGL context initializes, despite CSS background settings. Needs investigation into Next.js/R3F hydration order.

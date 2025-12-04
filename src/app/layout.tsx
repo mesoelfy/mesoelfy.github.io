@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Montserrat, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
 
-// 1. Montserrat: Loading the HEAVY weights (900 = Ultra/Black)
 const montserrat = Montserrat({ 
   subsets: ['latin'],
   weight: ['400', '700', '900'], 
@@ -10,7 +9,6 @@ const montserrat = Montserrat({
   display: 'swap',
 });
 
-// 2. JetBrains Mono: Loading technical weights
 const jetbrains = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '700'],
@@ -59,8 +57,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
-      {/* Defaulting to JetBrains (mono) for the body */}
-      <body className="bg-black text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
+      <body 
+        className="bg-black text-elfy-green selection:bg-elfy-green selection:text-black font-mono"
+        style={{ backgroundColor: '#000000' }} // Hardcode black to prevent FOUC
+      >
         <div className="relative w-full h-full">
           {children}
         </div>

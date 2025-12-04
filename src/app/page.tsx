@@ -14,7 +14,7 @@ import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
-import { AudioSystem } from '@/core/audio/AudioSystem'; // Import Audio
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import identity from '@/data/identity.json';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -29,13 +29,15 @@ export default function Home() {
     }, 1000);
   };
 
-  const playHover = () => AudioSystem.playHover(); // Helper
+  const playHover = () => AudioSystem.playHover();
 
   return (
     <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
       
+      {/* Z-0: The Grid */}
       <SceneCanvas className="opacity-100 blur-0" />
 
+      {/* Z-50: Modals & Boot (Overlays) */}
       <AboutModal />
       <FeedModal />
       <GalleryModal />
@@ -45,7 +47,8 @@ export default function Home() {
         <MatrixBootSequence onComplete={handleBootComplete} />
       )}
 
-      <div className={`flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      {/* Z-10: Main UI (Floats above Grid) */}
+      <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         
         <Header />
 
