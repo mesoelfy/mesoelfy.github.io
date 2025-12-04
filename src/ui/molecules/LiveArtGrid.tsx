@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const randomId = () => Math.floor(Math.random() * 899) + 100;
@@ -9,7 +10,6 @@ export const LiveArtGrid = () => {
   const [slots, setSlots] = useState<number[]>([]);
 
   useEffect(() => {
-    // UPDATED: 12 slots (4 rows x 3 columns)
     setSlots(Array.from({ length: 12 }, randomId));
 
     const interval = setInterval(() => {
@@ -37,6 +37,8 @@ export const LiveArtGrid = () => {
             transition={{ duration: 0.2 }}
             
             onClick={() => openModal('gallery')}
+            onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
+            
             className="w-full aspect-square relative bg-black/50 border border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)] group overflow-hidden flex items-center justify-center rounded-[1px]"
           >
             <div className="absolute inset-0 bg-elfy-green/5 group-hover:bg-elfy-green/10 transition-colors" />

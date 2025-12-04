@@ -14,6 +14,7 @@ import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
+import { AudioSystem } from '@/core/audio/AudioSystem'; // Import Audio
 import identity from '@/data/identity.json';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -27,6 +28,8 @@ export default function Home() {
       setBootState('active');
     }, 1000);
   };
+
+  const playHover = () => AudioSystem.playHover(); // Helper
 
   return (
     <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
@@ -75,8 +78,20 @@ export default function Home() {
                   <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
                 </div>
                 <div className="flex w-full gap-3 mt-2">
-                  <button onClick={() => openModal('about')} className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn">About Me</button>
-                  <button onClick={() => openModal('contact')} className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn">Contact</button>
+                  <button 
+                    onClick={() => openModal('about')} 
+                    onMouseEnter={playHover}
+                    className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
+                  >
+                    About Me
+                  </button>
+                  <button 
+                    onClick={() => openModal('contact')} 
+                    onMouseEnter={playHover}
+                    className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
+                  >
+                    Contact
+                  </button>
                 </div>
               </div>
             </GlassPanel>
@@ -91,7 +106,13 @@ export default function Home() {
             <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0">
               <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
                 <p className="animate-pulse mb-4">> ESTABLISHING UPLINK...</p>
-                <button onClick={() => openModal('feed')} className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg">[ ACCESS TERMINAL ]</button>
+                <button 
+                  onClick={() => openModal('feed')} 
+                  onMouseEnter={playHover}
+                  className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg"
+                >
+                  [ ACCESS TERMINAL ]
+                </button>
               </div>
             </GlassPanel>
 

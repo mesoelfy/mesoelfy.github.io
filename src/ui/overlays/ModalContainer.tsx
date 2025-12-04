@@ -1,4 +1,5 @@
 import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -41,13 +42,14 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
               </div>
               <button 
                 onClick={closeModal}
+                onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
                 className="p-1 hover:bg-elfy-red hover:text-black text-elfy-green transition-colors"
               >
                 <X />
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-6 relative">
+            <div className="flex-1 overflow-auto p-6 relative scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
               <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20" />
               <div className="relative z-10">
                 {children}
