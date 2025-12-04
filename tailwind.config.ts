@@ -29,7 +29,14 @@ const config: Config = {
         },
       },
       fontFamily: {
+        // HIGH: The Gotham/Ultra Look
+        header: ['var(--font-montserrat)', 'sans-serif'],
+        
+        // LOW: The Raw Typewriter/Hacker Look (Default Mono)
         mono: ['Courier New', 'Courier', 'monospace'],
+        
+        // TECH: Clean Modern Mono (Optional use)
+        tech: ['var(--font-jetbrains)', 'monospace'],
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',

@@ -1,4 +1,4 @@
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, ShieldAlert } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 
 export const Header = () => {
@@ -6,24 +6,36 @@ export const Header = () => {
 
   return (
     <header className="w-full h-12 border-b border-elfy-green-dim/30 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
-      {/* Left */}
       <div className="flex items-center gap-4">
-        <span className="font-mono font-bold text-elfy-green text-lg tracking-tight drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
+        {/* Logo */}
+        <span className="font-header font-black text-elfy-green text-xl md:text-2xl tracking-wide drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
           MESOELFY_OS
         </span>
-        <div className="flex items-center gap-2">
-          {/* UPDATED: Red Pulse for "Unsafe" story */}
-          <div className="w-2 h-2 bg-elfy-red rounded-full animate-pulse shadow-[0_0_8px_#ff003c]" />
-          <span className="text-[10px] text-elfy-red font-bold tracking-wider uppercase">UNSECURE</span>
+        
+        {/* NEW DESIGN: Unsecure Status Badge */}
+        <div className="hidden md:flex items-center gap-2 px-3 py-1 border border-elfy-red/40 bg-elfy-red/5 rounded-full shadow-[0_0_10px_rgba(255,0,60,0.1)]">
+          {/* Blinking LED */}
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-elfy-red opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-elfy-red"></span>
+          </div>
+          
+          {/* Text - aligned with flex items-center */}
+          <span className="text-[10px] text-elfy-red font-bold tracking-widest uppercase leading-none">
+            SYSTEM_UNSECURE
+          </span>
         </div>
+        
+        {/* Mobile simplified version */}
+        <div className="md:hidden w-3 h-3 bg-elfy-red rounded-full animate-pulse shadow-[0_0_8px_#ff003c]" />
       </div>
 
-      {/* Right */}
       <button 
         onClick={toggleMusic}
         className="flex items-center gap-2 text-xs font-mono text-elfy-green-dim hover:text-elfy-green transition-colors"
       >
-        <span>AUDIO: [{musicEnabled ? 'ON' : 'OFF'}]</span>
+        <span className="hidden md:inline">AUDIO: [{musicEnabled ? 'ON' : 'OFF'}]</span>
+        <span className="md:hidden">[{musicEnabled ? 'ON' : 'OFF'}]</span>
         {musicEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
       </button>
     </header>

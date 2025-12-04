@@ -23,7 +23,6 @@ export default function Home() {
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
-    // UPDATED: Reduced to 1.0s hold time
     setTimeout(() => {
       setBootState('active');
     }, 1000);
@@ -56,14 +55,13 @@ export default function Home() {
             visible: { 
               opacity: 1, 
               transition: { 
-                staggerChildren: 0.3, // UPDATED: Slower stagger for dramatic effect
+                staggerChildren: 0.3,
                 delayChildren: 0.2 
               } 
             }
           }}
         >
-          {/* ... Rest of Layout (Unchanged) ... */}
-          
+          {/* LEFT COLUMN */}
           <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
             <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0">
               <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
@@ -73,12 +71,12 @@ export default function Home() {
                    </div>
                 </div>
                 <div className="text-center space-y-1">
-                  <h2 className="text-3xl md:text-4xl font-bold text-elfy-green tracking-tight drop-shadow-md">{identity.name}</h2>
+                  <h2 className="text-4xl md:text-5xl font-header font-black text-elfy-green tracking-wide drop-shadow-md">{identity.name}</h2>
                   <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
                 </div>
                 <div className="flex w-full gap-3 mt-2">
-                  <button onClick={() => openModal('about')} className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-xs uppercase clip-corner-btn">About Me</button>
-                  <button onClick={() => openModal('contact')} className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs uppercase clip-corner-btn">Contact</button>
+                  <button onClick={() => openModal('about')} className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn">About Me</button>
+                  <button onClick={() => openModal('contact')} className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn">Contact</button>
                 </div>
               </div>
             </GlassPanel>
@@ -88,11 +86,12 @@ export default function Home() {
             </GlassPanel>
           </div>
 
+          {/* RIGHT COLUMN */}
           <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
             <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0">
               <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
                 <p className="animate-pulse mb-4">> ESTABLISHING UPLINK...</p>
-                <button onClick={() => openModal('feed')} className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider">[ ACCESS TERMINAL ]</button>
+                <button onClick={() => openModal('feed')} className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg">[ ACCESS TERMINAL ]</button>
               </div>
             </GlassPanel>
 

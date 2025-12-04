@@ -7,22 +7,20 @@ interface Props {
 
 const ASCII_TITLE = `
  ███▄ ▄███▓▓█████  ██████  ▒█████  ▓█████  ██▓      █████▒▓██   ██▓
-▓██▒▀█▀ ██▒▓█   ▀▒██    ▒ ▒██▒  ██▒▓█   ▀ ▓██▒    ▓██   ▒  ▒██  ██▒
-▓██    ▓██░▒███  ░ ▓██▄   ▒██░  ██▒▒███   ▒██░    ▒████ ░   ▒██ ██░
-▒██    ▒██ ▒▓█  ▄  ▒   ██▒▒██   ██░▒▓█  ▄ ▒██░    ░▓█▒  ░   ░ ▐██▓░
-▒██▒   ░██▒░▒████▒██████▒▒░ ████▓▒░░▒████▒░██████▒░▒█░      ░ ██▒▓░
-░ ▒░   ░  ░░░ ▒░ ░ ▒░▓  ░ ░ ▒░▒░▒░ ░░ ▒░ ░░ ▒░▓  ░ ▒ ░       ██▒▒▒ 
+▓██▒▀█▀ ██▒▓█   ▀▒██    ▒ ▒██▒  ██▒▓█   ▀ ▓██▒    ▒▓█   ▒  ▒██  ██▒
+▓██    ▓██░▒███  ░ ▓██▄   ▒██░  ██▒▒███   ▒██░    ▒▓███ ░   ▒██ ██░
+▒██    ▒██ ▒▓█  ▄  ▒   ██▒▒██   ██░▒▓█  ▄ ▒██░    ░▓█▒  ░   ░ ▐██░░
+▒██▒   ░██▒░▒████▒██████▒▒░ ████▓▒░░▒████▒░██████▒░▒█░      ░ ██▒░░
+░ ▒░   ░  ░░░ ▒░ ░ ▒░▒  ░ ░ ▒░▒░▒░ ░░ ▒░ ░░ ▒░▒  ░ ▒ ░       ██▒▒▒
 ░  ░      ░ ░ ░  ░ ░ ▒  ░   ░ ▒ ▒░  ░ ░  ░░ ░ ▒  ░ ░       ▓██ ░▒░ 
 ░      ░      ░    ░ ░    ░ ░ ░ ▒     ░     ░ ░    ░ ░     ▒ ▒ ░░  
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
-                                                           ░ ░     
+                                                                 
 `;
-
-// --- Components ---
 
 const BootHeader = () => (
   <div className="flex items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
-    <span className="text-[10px] text-elfy-green-dim font-mono tracking-widest uppercase translate-y-[1px]">BOOT_LOADER.SYS</span>
+    <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
     <div className="flex gap-1 items-center">
       {[1, 2, 3].map(i => (
         <div key={i} className="w-1 bg-elfy-green/50 animate-pulse" style={{ height: `${i * 4 + 4}px`, animationDelay: `${i * 0.1}s` }} />
@@ -33,7 +31,7 @@ const BootHeader = () => (
 
 const CoreHeader = () => (
   <div className="flex items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
-    <span className="text-[10px] text-elfy-green font-mono tracking-widest uppercase font-bold translate-y-[1px]">MESOELFY_CORE</span>
+    <span className="text-sm text-elfy-green font-mono font-bold tracking-widest uppercase">MESOELFY_CORE</span>
     <div className="relative w-3 h-3 flex items-center justify-center">
       <div className="absolute inset-0 border border-elfy-green rounded-full animate-spin-slow border-t-transparent" />
       <div className="w-1 h-1 bg-elfy-green rounded-full animate-pulse" />
@@ -70,41 +68,30 @@ const TypedLog = ({ text, color, speed = 20, showDots = false }: { text: string,
   }, [text, speed]);
 
   return (
-    <div className={`whitespace-nowrap ${color}`}>
+    <div className={`whitespace-nowrap font-mono ${color}`}>
       {displayed}
       {isDone && showDots && <LoadingDots />}
     </div>
   );
 };
 
-// --- LOGIC ---
-
-// Define the content. Note: "..." are handled by the LoadingDots component dynamically
 const LOG_DATA = [
   { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40 },
   { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20 },
   { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40 },
   { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20 },
   { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40 },
-  { text: "> DECRYPTED.", color: "text-elfy-purple-light", speed: 20 },
+  { text: "> DECRYPTED.", color: "text-elfy-green", speed: 20 },
   { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20 },
 ];
 
 export const MatrixBootSequence = ({ onComplete }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  // Timeline State
   const [step, setStep] = useState(0); 
   const [isBreaching, setIsBreaching] = useState(false);
 
-  // --- DERIVED STATE ---
   const logsToShow = LOG_DATA.slice(0, step);
   
-  // Logic to determine which line gets the blinking dots
-  // Dots appear on:
-  // Step 1 (INITIALIZE) -> Stop at Step 2
-  // Step 3 (MOUNT)      -> Stop at Step 4
-  // Step 5 (BYPASSING)  -> Stop at Step 6
   const getShowDots = (index: number) => {
     if (index === 0 && step === 1) return true;
     if (index === 2 && step === 3) return true;
@@ -112,23 +99,20 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return false;
   };
 
-  const showMatrix = step >= 2;       // After dots blink on line 1
-  const showPayloadWindow = step >= 3; // Start of Mount
-  const showAscii = step >= 3;         // With Window
-  const showWarningBox = step >= 4;    // Unsafe
-  const showButton = step >= 7;        // End
+  const showMatrix = step >= 2;       
+  const showPayloadWindow = step >= 3; 
+  const showWarningBox = step >= 4;    
+  const showButton = step >= 7;        
 
-  // 1. THE DIRECTOR (Timeline)
   useEffect(() => {
     const sequence = [
-      { t: 1000, step: 1 }, // 0s-1s: Blink Cursor. 1s: Start Typing Line 1
-      // Line 1 types (approx 800ms) + 0.5s wait = 1.3s
-      { t: 2300, step: 2 }, // 2.3s: Matrix Start + Connected Log
-      { t: 3300, step: 3 }, // 3.3s: Mount Core (Window 2 appears)
-      { t: 5300, step: 4 }, // 5.3s (2s hold): Unsafe + Warning
-      { t: 6300, step: 5 }, // 6.3s (1s hold): Bypassing
-      { t: 8300, step: 6 }, // 8.3s (2s hold): Decrypted
-      { t: 9300, step: 7 }, // 9.3s (1s hold): Proceed + Button
+      { t: 1000, step: 1 }, 
+      { t: 2300, step: 2 }, 
+      { t: 3300, step: 3 }, 
+      { t: 5300, step: 4 }, 
+      { t: 6300, step: 5 }, 
+      { t: 8300, step: 6 }, 
+      { t: 9300, step: 7 }, 
     ];
 
     const timeouts = sequence.map(({ t, step }) => {
@@ -140,7 +124,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => timeouts.forEach(clearTimeout);
   }, [isBreaching]);
 
-  // 2. MATRIX RAIN
   useEffect(() => {
     if (!showMatrix && !isBreaching) return;
     const canvas = canvasRef.current;
@@ -173,7 +156,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  // 3. SHORTCUT
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !isBreaching) handleInitialize();
@@ -182,23 +164,24 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isBreaching]);
 
-  // 4. BREACH
   const handleInitialize = () => {
     setIsBreaching(true);
     setStep(7);
-    // Instant timeline jump
     setTimeout(onComplete, 800); 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono overflow-hidden">
+    <motion.div 
+      animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center font-mono overflow-hidden"
+    >
       
       <canvas 
         ref={canvasRef} 
         className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} 
       />
 
-      {/* CONTAINER */}
       <motion.div 
         className="relative z-10 flex flex-col gap-4 items-center w-full max-w-2xl px-4"
         animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
@@ -209,7 +192,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
         }}
       >
 
-        {/* WINDOW 1: BOOT LOADER */}
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -226,12 +208,10 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                 showDots={getShowDots(i)}
               />
             ))}
-            {/* Blinking Cursor: Show always unless breaching */}
             {!isBreaching && <div className="animate-pulse text-elfy-green font-bold text-lg mt-1">_</div>}
           </div>
         </motion.div>
 
-        {/* WINDOW 2: PAYLOAD */}
         <AnimatePresence>
           {showPayloadWindow && (
             <motion.div 
@@ -245,12 +225,10 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
               
               <div className="p-6 flex flex-col items-center gap-8">
                 
-                {/* ASCII Title */}
-                <pre className="text-[6px] md:text-[10px] leading-[6px] md:leading-[10px] text-elfy-green font-bold text-center whitespace-pre overflow-x-hidden select-none">
+                <pre className="text-[6px] md:text-[8px] leading-[6px] md:leading-[8px] font-mono text-elfy-green font-bold text-center whitespace-pre overflow-x-hidden select-none">
                   {ASCII_TITLE}
                 </pre>
 
-                {/* WARNING BOX */}
                 {showWarningBox && (
                   <motion.div 
                     layout
@@ -259,27 +237,40 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                       opacity: 1, 
                       scale: 1,
                       boxShadow: [
-                        "0 0 0px rgba(255, 0, 60, 0)",
-                        "0 0 40px rgba(255, 0, 60, 0.7)", // Larger, brighter glow
-                        "0 0 10px rgba(255, 0, 60, 0.3)",
-                        "0 0 40px rgba(255, 0, 60, 0.7)",
-                        "0 0 0px rgba(255, 0, 60, 0)"
+                        "0 0 10px rgba(255, 0, 60, 0.2)",    
+                        "0 0 40px rgba(255, 0, 60, 0.6)",    
+                        "0 0 10px rgba(255, 0, 60, 0.2)"
                       ]
                     }}
                     transition={{ 
                       opacity: { duration: 0.3 },
                       scale: { duration: 0.3 },
-                      boxShadow: { duration: 1.0, repeat: Infinity, ease: "easeInOut" } // Faster pulse
+                      boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
                     }}
-                    className="relative border border-elfy-red bg-elfy-red/10 px-8 py-3 text-xs font-bold tracking-[0.15em] text-center text-elfy-red select-none"
+                    className="relative border border-elfy-red bg-elfy-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none"
                   >
-                    <span className="animate-ping absolute left-3 top-3 opacity-75 text-lg">⚠</span>
-                    UNSAFE CONNECTION DETECTED
-                    <span className="animate-ping absolute right-3 top-3 opacity-75 text-lg">⚠</span>
+                    <motion.span 
+                      animate={{ opacity: [1, 0.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      className="text-3xl text-elfy-red"
+                    >
+                      ⚠
+                    </motion.span>
+
+                    <span className="text-sm font-header font-black tracking-widest text-center text-elfy-red whitespace-nowrap pb-0.5">
+                       UNSAFE CONNECTION DETECTED
+                    </span>
+
+                    <motion.span 
+                      animate={{ opacity: [1, 0.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      className="text-3xl text-elfy-red"
+                    >
+                      ⚠
+                    </motion.span>
                   </motion.div>
                 )}
 
-                {/* BUTTON */}
                 {showButton && (
                   <motion.div
                     layout
@@ -289,10 +280,11 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                   >
                     <button 
                       onClick={handleInitialize}
-                      className="group relative px-10 py-4 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
+                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
                     >
                       <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                      <span className="relative z-10 font-mono text-lg font-bold text-elfy-green group-hover:text-black transition-colors">
+                      {/* REDUCED SIZE + WHITESPACE NOWRAP */}
+                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
                         [ INITIALIZE_SYSTEM.EXE ]
                       </span>
                     </button>
@@ -304,6 +296,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
         </AnimatePresence>
 
       </motion.div>
-    </div>
+    </motion.div>
   );
 };

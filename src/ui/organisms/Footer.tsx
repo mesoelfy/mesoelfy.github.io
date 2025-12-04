@@ -4,8 +4,7 @@ export const Footer = () => {
       <div className="flex items-center gap-2">
         <span>BUILD_VER: [v2.0.4]</span>
         <span>//</span>
-        {/* UPDATED: Story status */}
-        <span className="text-elfy-red animate-pulse">STATUS: UNSAFE // MONITORING</span>
+        <span className="text-elfy-red font-bold animate-pulse">STATUS: UNSAFE // MONITORING</span>
       </div>
 
       <div className="flex items-center gap-2">

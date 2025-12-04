@@ -20,7 +20,7 @@ const panelVariants = {
 export const GlassPanel = ({ children, className, title }: GlassPanelProps) => {
   return (
     <motion.div 
-      variants={panelVariants} // Will inherit 'hidden'/'visible' from parent
+      variants={panelVariants} 
       className={clsx(
         "relative overflow-hidden flex flex-col",
         "bg-black border border-elfy-green-dim/30",
@@ -33,7 +33,7 @@ export const GlassPanel = ({ children, className, title }: GlassPanelProps) => {
       
       {title && (
         <div className="flex items-center justify-between px-3 py-1 border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0">
-          <span className="text-xs font-mono font-bold text-elfy-green uppercase tracking-widest drop-shadow-md">
+          <span className="text-sm md:text-base font-header font-bold text-elfy-green uppercase tracking-wider drop-shadow-md">
             {title}
           </span>
           <div className="flex gap-1">
