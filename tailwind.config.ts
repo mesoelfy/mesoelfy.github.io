@@ -37,6 +37,7 @@ const config: Config = {
         'spin-slow': 'spin 3s linear infinite',
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
+        'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite', // Slower (1.2s)
       },
       keyframes: {
         'matrix-green': {
@@ -47,6 +48,11 @@ const config: Config = {
           '0%, 100%': { color: '#9E4EA5' }, 
           '33%': { color: '#BC86BA' },      
           '66%': { color: '#350E3A' },      
+        },
+        'cursor-blink': {
+          '0%, 30%': { opacity: '1' }, // Hold full opacity longer
+          '50%': { opacity: '0' },     // Fade out
+          '100%': { opacity: '1' },    // Fade back in
         }
       }
     },

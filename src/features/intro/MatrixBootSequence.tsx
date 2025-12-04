@@ -27,16 +27,12 @@ const AsciiRenderer = () => {
 
       let animClass = '';
       
-      // Solids -> Dark Green Pulse
       if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        // Starts dark (#15530A), pulses to dim (#0BD426)
         animClass = 'animate-matrix-green text-elfy-green-dark';
       } 
-      // Shades -> Purple Cycle
       else if (['░', '▒', '▓'].includes(char)) {
         animClass = 'animate-matrix-purple text-elfy-purple';
       } 
-      // Fallback
       else {
         animClass = 'text-elfy-green-dark';
       }
@@ -56,14 +52,14 @@ const AsciiRenderer = () => {
   }, []);
 
   return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px]">
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
       {renderedChars}
     </div>
   );
 };
 
 const BootHeader = () => (
-  <div className="flex items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
+  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
     <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
     <div className="flex gap-1 items-center">
       {[1, 2, 3].map(i => (
@@ -74,7 +70,7 @@ const BootHeader = () => (
 );
 
 const CoreHeader = () => (
-  <div className="flex items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
+  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
     <span className="text-sm text-elfy-green font-mono font-bold tracking-widest uppercase">MESOELFY_CORE</span>
     <div className="relative w-3 h-3 flex items-center justify-center">
       <div className="absolute inset-0 border border-elfy-green rounded-full animate-spin-slow border-t-transparent" />
@@ -83,13 +79,12 @@ const CoreHeader = () => (
   </div>
 );
 
-// UPDATED: LoadingDots now supports freezing
 const LoadingDots = ({ isFrozen }: { isFrozen: boolean }) => {
   const [dots, setDots] = useState("");
   
   useEffect(() => {
     if (isFrozen) {
-      setDots("..."); // Force static
+      setDots("..."); 
       return;
     }
     const interval = setInterval(() => {
@@ -101,7 +96,6 @@ const LoadingDots = ({ isFrozen }: { isFrozen: boolean }) => {
   return <span>{dots}</span>;
 }
 
-// UPDATED: TypedLog handles cursor and frozen dots
 const TypedLog = ({ 
   text, 
   color, 
@@ -122,7 +116,6 @@ const TypedLog = ({
   
   useEffect(() => {
     let i = 0;
-    // Reset if re-mounting or step changing (optional safety)
     setDisplayed("");
     setIsDoneTyping(false);
 
@@ -137,30 +130,25 @@ const TypedLog = ({
     return () => clearInterval(interval);
   }, [text, speed]);
 
-  // If line is 'past', show full text immediately (optimization)
   if (isPast && displayed !== text) {
     setDisplayed(text);
     setIsDoneTyping(true);
   }
 
   return (
-    <div className={`whitespace-nowrap font-mono ${color} flex items-center`}>
+    <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
-      
-      {/* Dots: Animate if active+done, Freeze if past */}
       {isDoneTyping && showDots && (
         <LoadingDots isFrozen={isPast} />
       )}
-
-      {/* Cursor: Only show if this is the ACTIVE line */}
       {isActive && (
-        <span className="ml-1 animate-pulse text-elfy-green font-bold">_</span>
+        // FIXED: Using custom 'animate-cursor-blink' instead of pulse
+        <span className="ml-1 animate-cursor-blink text-elfy-green font-bold">_</span>
       )}
     </div>
   );
 };
 
-// DATA: explicit 'hasDots' field
 const LOG_DATA = [
   { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
   { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20, hasDots: false },
@@ -176,33 +164,28 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
   const [step, setStep] = useState(0); 
   const [isBreaching, setIsBreaching] = useState(false);
 
-  const logsToShow = LOG_DATA.slice(0, step + 1); // +1 because we use step as index
+  const logsToShow = LOG_DATA.slice(0, step + 1);
   
+  const getShowDots = (index: number) => {
+    if (index === 0 && step === 1) return true;
+    if (index === 2 && step === 3) return true;
+    if (index === 4 && step === 5) return true;
+    return false;
+  };
+
   const showMatrix = step >= 1;       
   const showPayloadWindow = step >= 2; 
   const showWarningBox = step >= 3;    
   const showButton = step >= 6;        
 
   useEffect(() => {
-    // TIMELINE: Adjusted for "breathers"
     const sequence = [
-      // Step 0: Initialize... (Types for ~1s, then waits)
-      { t: 3000, step: 1 }, // 2s Breather for dots
-      
-      // Step 1: Connected. (Types fast)
-      { t: 4000, step: 2 }, // 1s later
-      
-      // Step 2: Mount... (Types for ~1s)
-      { t: 7000, step: 3 }, // 2s Breather for dots
-      
-      // Step 3: Unsafe Warning
-      { t: 8500, step: 4 }, // 1.5s later
-
-      // Step 4: Bypassing... (Types for ~1s)
-      { t: 11500, step: 5 }, // 2s Breather for dots
-
-      // Step 5: Decrypted
-      { t: 12500, step: 6 }, // 1s later
+      { t: 3000, step: 1 }, 
+      { t: 4000, step: 2 }, 
+      { t: 8000, step: 3 }, 
+      { t: 9500, step: 4 }, 
+      { t: 12500, step: 5 }, 
+      { t: 13500, step: 6 }, 
     ];
 
     const timeouts = sequence.map(({ t, step: s }) => {
@@ -256,7 +239,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
 
   const handleInitialize = () => {
     setIsBreaching(true);
-    setStep(6); // Jump to end
+    setStep(6);
     setTimeout(onComplete, 800); 
   };
 
@@ -264,7 +247,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     <motion.div 
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center font-mono overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden"
     >
       
       <canvas 
@@ -285,7 +268,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden"
+          className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0"
         >
           <BootHeader />
           <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
@@ -296,8 +279,8 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                 color={line.color} 
                 speed={line.speed}
                 showDots={line.hasDots}
-                isActive={i === step && !isBreaching} // Only the last line is active
-                isPast={i < step} // Older lines are past
+                isActive={i === step && !isBreaching}
+                isPast={i < step}
               />
             ))}
           </div>
@@ -306,11 +289,10 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
         <AnimatePresence>
           {showPayloadWindow && (
             <motion.div 
-              layout 
               initial={{ y: 50, opacity: 0, height: 0 }}
               animate={{ y: 0, opacity: 1, height: "auto" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden"
+              className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
               <CoreHeader />
               
@@ -320,7 +302,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
 
                 {showWarningBox && (
                   <motion.div 
-                    layout
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ 
                       opacity: 1, 
@@ -336,7 +317,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                       scale: { duration: 0.3 },
                       boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
                     }}
-                    className="relative border border-elfy-red bg-elfy-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none"
+                    className="relative border border-elfy-red bg-elfy-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
                   >
                     <motion.span 
                       animate={{ opacity: [1, 0.2, 1] }}
@@ -366,6 +347,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="shrink-0"
                   >
                     <button 
                       onClick={handleInitialize}
