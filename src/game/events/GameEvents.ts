@@ -7,6 +7,7 @@ export type GameEventType =
   | 'ENEMY_SPAWNED'          // Payload: { type: string, id: number }
   | 'ENEMY_DAMAGED'          // Payload: { id: number, damage: number, type: string }
   | 'ENEMY_DESTROYED'        // Payload: { id: number, type: string, x: number, y: number }
+  | 'PROJECTILE_CLASH'       // Payload: { x: number, y: number }
   
   // --- PANEL EVENTS ---
   | 'PANEL_DAMAGED'          // Payload: { id: string, amount: number, currentHealth: number }
@@ -24,6 +25,7 @@ export interface GameEventPayloads {
   ENEMY_SPAWNED: { type: string; id: number };
   ENEMY_DAMAGED: { id: number; damage: number; type: string };
   ENEMY_DESTROYED: { id: number; type: string; x: number; y: number };
+  PROJECTILE_CLASH: { x: number; y: number };
   PANEL_DAMAGED: { id: string; amount: number; currentHealth: number };
   PANEL_HEALED: { id: string; amount: number };
   PANEL_DESTROYED: { id: string };

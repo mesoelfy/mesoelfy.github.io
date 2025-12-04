@@ -5,7 +5,8 @@ import { PlayerTurret } from './components/PlayerTurret';
 import { GameDirector } from './components/GameDirector';
 import { EnemyRenderer } from './components/EnemyRenderer';
 import { BulletRenderer } from './components/BulletRenderer';
-import { ParticleRenderer } from './components/ParticleRenderer'; // <-- NEW
+import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
+import { ParticleRenderer } from './components/ParticleRenderer';
 
 export const GameOverlay = () => {
   return (
@@ -21,6 +22,7 @@ export const GameOverlay = () => {
 
         <PlayerTurret />
         <BulletRenderer />
+        <EnemyBulletRenderer />
         <EnemyRenderer />
         <ParticleRenderer /> 
       </Canvas>

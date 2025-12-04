@@ -16,6 +16,11 @@ export interface Enemy extends Entity {
   vy: number;
   hp: number;
   type: 'muncher' | 'kamikaze' | 'hunter';
+  
+  // AI State
+  state?: 'orbit' | 'charge' | 'fire';
+  stateTimer?: number;
+  
   targetId?: string; 
   isEating?: boolean;
   orbitAngle?: number; 
@@ -25,6 +30,7 @@ export interface Bullet extends Entity {
   vx: number;
   vy: number;
   life: number;
+  isEnemy?: boolean; // Distinguish player vs enemy shots
 }
 
 export interface Particle extends Entity {
@@ -38,6 +44,7 @@ export interface Particle extends Entity {
 class GameEngineCore {
   public enemies: Enemy[] = [];
   public bullets: Bullet[] = [];
+  public enemyBullets: Bullet[] = []; // Separate array for easier collision logic
   public particles: Particle[] = [];
   
   public isRepairing = false;
@@ -107,8 +114,10 @@ class GameEngineCore {
     if (doDamageTick) this.lastDamageTime = time;
 
     this.updateEnemies(delta, time, doDamageTick);
-    this.updateBullets(delta);
+    this.updateBullets(this.bullets, delta);
+    this.updateBullets(this.enemyBullets, delta);
     this.updateParticles(delta);
+    
     this.checkCollisions();
   }
 
@@ -155,6 +164,7 @@ class GameEngineCore {
       let targetX = 0;
       let targetY = 0;
 
+      // --- 1. KAMIKAZE ---
       if (e.type === 'kamikaze') {
         targetX = this.cursor.x;
         targetY = this.cursor.y;
@@ -170,18 +180,53 @@ class GameEngineCore {
            continue; 
         }
       } 
+      
+      // --- 2. HUNTER (State Machine) ---
       else if (e.type === 'hunter') {
-        if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
-        const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
-        e.orbitAngle += delta * speedVar; 
-        const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
-        const orbitRadius = 12.5 + breathe; 
-        
-        targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
-        targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
+        if (!e.state) e.state = 'orbit';
+        if (!e.stateTimer) e.stateTimer = 2.0 + Math.random() * 2.0;
+
+        e.stateTimer -= delta;
+
+        // STATE TRANSITIONS
+        if (e.state === 'orbit') {
+          // Movement Logic
+          if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
+          const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
+          e.orbitAngle += delta * speedVar; 
+          const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
+          const orbitRadius = 12.5 + breathe; 
+          
+          targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
+          targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
+
+          // Transition to Charge
+          if (e.stateTimer <= 0) {
+            e.state = 'charge';
+            e.stateTimer = 1.0; // Telegraph time
+            e.vx = 0;
+            e.vy = 0;
+          }
+        } 
+        else if (e.state === 'charge') {
+          // Stand still and vibrate (Visuals handled in Renderer via state check)
+          targetX = e.x; 
+          targetY = e.y;
+
+          // Transition to Fire
+          if (e.stateTimer <= 0) {
+            e.state = 'fire';
+          }
+        }
+        else if (e.state === 'fire') {
+          this.spawnEnemyBullet(e.x, e.y);
+          e.state = 'orbit';
+          e.stateTimer = 3.0 + Math.random() * 2.0; // Cooldown
+        }
       }
+      
+      // --- 3. MUNCHER ---
       else {
-        // MUNCHER LOGIC
         let nearestDist = Infinity;
         let bestPanel: any = null;
 
@@ -225,7 +270,8 @@ class GameEngineCore {
         }
       }
 
-      if (!e.isEating) {
+      // PHYSICS INTEGRATION
+      if (!e.isEating && e.state !== 'charge') {
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
@@ -256,9 +302,6 @@ class GameEngineCore {
     let radiusHit = 0.5;
 
     // SPAWN RATES
-    // 50% Muncher
-    // 30% Kamikaze
-    // 20% Hunter (Boss/Sniper)
     if (rand < 0.50) {
       type = 'muncher';
       hp = 2;
@@ -284,6 +327,25 @@ class GameEngineCore {
 
     this.enemies.push(enemy);
     GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
+  }
+
+  private spawnEnemyBullet(x: number, y: number) {
+    const dx = this.cursor.x - x;
+    const dy = this.cursor.y - y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const SPEED = 25; // Slower than player bullets
+
+    this.enemyBullets.push({
+      id: this.idCounter++,
+      x: x,
+      y: y,
+      vx: (dx / dist) * SPEED,
+      vy: (dy / dist) * SPEED,
+      radius: 0.3, // Slightly larger
+      active: true,
+      life: 3.0,
+      isEnemy: true
+    });
   }
 
   private attemptFire() {
@@ -317,24 +379,35 @@ class GameEngineCore {
         vy: (dy / dist) * SPEED,
         radius: 0.2,
         active: true,
-        life: 1.5
+        life: 1.5,
+        isEnemy: false
       });
       GameEventBus.emit('PLAYER_FIRED', { x: this.cursor.x, y: this.cursor.y });
     }
   }
 
-  private updateBullets(delta: number) {
-    for (const b of this.bullets) {
+  private updateBullets(list: Bullet[], delta: number) {
+    // Iterate backwards to allow removal? 
+    // Filter approach is cleaner in JS usually
+    for (const b of list) {
       if (!b.active) continue;
       b.x += b.vx * delta;
       b.y += b.vy * delta;
       b.life -= delta;
       if (b.life <= 0) b.active = false;
     }
-    this.bullets = this.bullets.filter(b => b.active);
+    
+    // Clean up inplace or reassignment
+    // Reassignment is safer for React render cycles usually
+    if (list === this.bullets) {
+        this.bullets = this.bullets.filter(b => b.active);
+    } else {
+        this.enemyBullets = this.enemyBullets.filter(b => b.active);
+    }
   }
 
   private checkCollisions() {
+    // 1. Player Bullets vs Enemies
     for (const b of this.bullets) {
       if (!b.active) continue;
       for (const e of this.enemies) {
@@ -347,7 +420,6 @@ class GameEngineCore {
         if (distSq < radiusSum * radiusSum) {
           e.hp--;
           b.active = false;
-          
           GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
 
           if (e.hp <= 0) {
@@ -360,6 +432,43 @@ class GameEngineCore {
           break;
         }
       }
+    }
+
+    // 2. Enemy Bullets vs Player (Hit)
+    for (const eb of this.enemyBullets) {
+        if (!eb.active) continue;
+        const dx = eb.x - this.cursor.x;
+        const dy = eb.y - this.cursor.y;
+        const distSq = dx*dx + dy*dy;
+        
+        // Player hitbox approx 0.5
+        if (distSq < (eb.radius + 0.5) ** 2) {
+            eb.active = false;
+            GameEventBus.emit('PLAYER_HIT', { damage: 10 });
+            this.explode(eb.x, eb.y, 5, '#FF003C');
+        }
+    }
+
+    // 3. Bullet vs Bullet (Clash/Destructible)
+    for (const pb of this.bullets) {
+        if (!pb.active) continue;
+        for (const eb of this.enemyBullets) {
+            if (!eb.active) continue;
+            
+            const dx = pb.x - eb.x;
+            const dy = pb.y - eb.y;
+            const distSq = dx*dx + dy*dy;
+            
+            if (distSq < (pb.radius + eb.radius) ** 2) {
+                pb.active = false;
+                eb.active = false;
+                
+                // Spawn Clash Effect
+                GameEventBus.emit('PROJECTILE_CLASH', { x: eb.x, y: eb.y });
+                this.explode(eb.x, eb.y, 6, '#F7D277'); // Yellow sparks
+                break;
+            }
+        }
     }
   }
 
