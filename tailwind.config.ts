@@ -9,10 +9,10 @@ const config: Config = {
       colors: {
         elfy: {
           green: {
-            light: '#C2FE9A',
-            DEFAULT: '#78F654',
-            dim: '#0BD426',
-            dark: '#15530A',
+            light: '#7FF65F',
+            DEFAULT: 'rgba(96, 196, 68, 1)',
+            dim: '#1bb930ff',
+            dark: '#217e10ff',
           },
           purple: {
             light: '#BC86BA',
@@ -21,7 +21,7 @@ const config: Config = {
             deep: '#350E3A',
           },
           yellow: {
-            DEFAULT: '#F7D277',
+            DEFAULT: '#eae747ff',
           },
           red: '#FF003C', 
           gray: '#27282A',
@@ -29,18 +29,26 @@ const config: Config = {
         },
       },
       fontFamily: {
-        // HIGH: The Gotham/Ultra Look
         header: ['var(--font-montserrat)', 'sans-serif'],
-        
-        // LOW: The Raw Typewriter/Hacker Look (Default Mono)
         mono: ['Courier New', 'Courier', 'monospace'],
-        
-        // TECH: Clean Modern Mono (Optional use)
         tech: ['var(--font-jetbrains)', 'monospace'],
       },
       animation: {
         'spin-slow': 'spin 3s linear infinite',
+        'matrix-green': 'matrix-green 4s ease-in-out infinite',
+        'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
       },
+      keyframes: {
+        'matrix-green': {
+          '0%, 100%': { color: '#14630bff' },
+          '50%': { color: '#0aa41cff' },
+        },
+        'matrix-purple': {
+          '0%, 100%': { color: '#9E4EA5' }, 
+          '33%': { color: '#BC86BA' },      
+          '66%': { color: '#350E3A' },      
+        }
+      }
     },
   },
   plugins: [],

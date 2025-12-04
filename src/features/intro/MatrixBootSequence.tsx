@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -17,6 +17,50 @@ const ASCII_TITLE = `
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
                                                                  
 `;
+
+// --- ASCII COMPONENT ---
+const AsciiRenderer = () => {
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+
+      let animClass = '';
+      
+      // Solids -> Dark Green Pulse
+      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+        // Starts dark (#15530A), pulses to dim (#0BD426)
+        animClass = 'animate-matrix-green text-elfy-green-dark';
+      } 
+      // Shades -> Purple Cycle
+      else if (['░', '▒', '▓'].includes(char)) {
+        animClass = 'animate-matrix-purple text-elfy-purple';
+      } 
+      // Fallback
+      else {
+        animClass = 'text-elfy-green-dark';
+      }
+
+      const delay = Math.random() * 2 + 's';
+
+      return (
+        <span 
+          key={i} 
+          className={animClass} 
+          style={{ animationDelay: delay }}
+        >
+          {char}
+        </span>
+      );
+    });
+  }, []);
+
+  return (
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px]">
+      {renderedChars}
+    </div>
+  );
+};
 
 const BootHeader = () => (
   <div className="flex items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
@@ -39,50 +83,92 @@ const CoreHeader = () => (
   </div>
 );
 
-const LoadingDots = () => {
+// UPDATED: LoadingDots now supports freezing
+const LoadingDots = ({ isFrozen }: { isFrozen: boolean }) => {
   const [dots, setDots] = useState("");
+  
   useEffect(() => {
+    if (isFrozen) {
+      setDots("..."); // Force static
+      return;
+    }
     const interval = setInterval(() => {
       setDots(d => d.length >= 3 ? "" : d + ".");
     }, 300);
     return () => clearInterval(interval);
-  }, []);
+  }, [isFrozen]);
+
   return <span>{dots}</span>;
 }
 
-const TypedLog = ({ text, color, speed = 20, showDots = false }: { text: string, color: string, speed?: number, showDots?: boolean }) => {
+// UPDATED: TypedLog handles cursor and frozen dots
+const TypedLog = ({ 
+  text, 
+  color, 
+  speed = 20, 
+  showDots = false, 
+  isActive = false, 
+  isPast = false 
+}: { 
+  text: string, 
+  color: string, 
+  speed?: number, 
+  showDots?: boolean,
+  isActive: boolean,
+  isPast: boolean
+}) => {
   const [displayed, setDisplayed] = useState("");
-  const [isDone, setIsDone] = useState(false);
+  const [isDoneTyping, setIsDoneTyping] = useState(false);
   
   useEffect(() => {
     let i = 0;
+    // Reset if re-mounting or step changing (optional safety)
+    setDisplayed("");
+    setIsDoneTyping(false);
+
     const interval = setInterval(() => {
       setDisplayed(text.substring(0, i + 1));
       i++;
       if (i >= text.length) {
-        setIsDone(true);
+        setIsDoneTyping(true);
         clearInterval(interval);
       }
     }, speed);
     return () => clearInterval(interval);
   }, [text, speed]);
 
+  // If line is 'past', show full text immediately (optimization)
+  if (isPast && displayed !== text) {
+    setDisplayed(text);
+    setIsDoneTyping(true);
+  }
+
   return (
-    <div className={`whitespace-nowrap font-mono ${color}`}>
-      {displayed}
-      {isDone && showDots && <LoadingDots />}
+    <div className={`whitespace-nowrap font-mono ${color} flex items-center`}>
+      <span>{displayed}</span>
+      
+      {/* Dots: Animate if active+done, Freeze if past */}
+      {isDoneTyping && showDots && (
+        <LoadingDots isFrozen={isPast} />
+      )}
+
+      {/* Cursor: Only show if this is the ACTIVE line */}
+      {isActive && (
+        <span className="ml-1 animate-pulse text-elfy-green font-bold">_</span>
+      )}
     </div>
   );
 };
 
+// DATA: explicit 'hasDots' field
 const LOG_DATA = [
-  { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40 },
-  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20 },
-  { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40 },
-  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20 },
-  { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40 },
-  { text: "> DECRYPTED.", color: "text-elfy-green", speed: 20 },
-  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20 },
+  { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
+  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20, hasDots: false },
+  { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
+  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20, hasDots: false },
+  { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40, hasDots: true },
+  { text: "> DECRYPTED.", color: "text-elfy-green", speed: 20, hasDots: false },
+  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20, hasDots: false },
 ];
 
 export const MatrixBootSequence = ({ onComplete }: Props) => {
@@ -90,34 +176,38 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
   const [step, setStep] = useState(0); 
   const [isBreaching, setIsBreaching] = useState(false);
 
-  const logsToShow = LOG_DATA.slice(0, step);
+  const logsToShow = LOG_DATA.slice(0, step + 1); // +1 because we use step as index
   
-  const getShowDots = (index: number) => {
-    if (index === 0 && step === 1) return true;
-    if (index === 2 && step === 3) return true;
-    if (index === 4 && step === 5) return true;
-    return false;
-  };
-
-  const showMatrix = step >= 2;       
-  const showPayloadWindow = step >= 3; 
-  const showWarningBox = step >= 4;    
-  const showButton = step >= 7;        
+  const showMatrix = step >= 1;       
+  const showPayloadWindow = step >= 2; 
+  const showWarningBox = step >= 3;    
+  const showButton = step >= 6;        
 
   useEffect(() => {
+    // TIMELINE: Adjusted for "breathers"
     const sequence = [
-      { t: 1000, step: 1 }, 
-      { t: 2300, step: 2 }, 
-      { t: 3300, step: 3 }, 
-      { t: 5300, step: 4 }, 
-      { t: 6300, step: 5 }, 
-      { t: 8300, step: 6 }, 
-      { t: 9300, step: 7 }, 
+      // Step 0: Initialize... (Types for ~1s, then waits)
+      { t: 3000, step: 1 }, // 2s Breather for dots
+      
+      // Step 1: Connected. (Types fast)
+      { t: 4000, step: 2 }, // 1s later
+      
+      // Step 2: Mount... (Types for ~1s)
+      { t: 7000, step: 3 }, // 2s Breather for dots
+      
+      // Step 3: Unsafe Warning
+      { t: 8500, step: 4 }, // 1.5s later
+
+      // Step 4: Bypassing... (Types for ~1s)
+      { t: 11500, step: 5 }, // 2s Breather for dots
+
+      // Step 5: Decrypted
+      { t: 12500, step: 6 }, // 1s later
     ];
 
-    const timeouts = sequence.map(({ t, step }) => {
+    const timeouts = sequence.map(({ t, step: s }) => {
       return setTimeout(() => {
-        if (!isBreaching) setStep(step);
+        if (!isBreaching) setStep(s);
       }, t);
     });
 
@@ -166,7 +256,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
 
   const handleInitialize = () => {
     setIsBreaching(true);
-    setStep(7);
+    setStep(6); // Jump to end
     setTimeout(onComplete, 800); 
   };
 
@@ -205,10 +295,11 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                 text={line.text} 
                 color={line.color} 
                 speed={line.speed}
-                showDots={getShowDots(i)}
+                showDots={line.hasDots}
+                isActive={i === step && !isBreaching} // Only the last line is active
+                isPast={i < step} // Older lines are past
               />
             ))}
-            {!isBreaching && <div className="animate-pulse text-elfy-green font-bold text-lg mt-1">_</div>}
           </div>
         </motion.div>
 
@@ -225,9 +316,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
               
               <div className="p-6 flex flex-col items-center gap-8">
                 
-                <pre className="text-[6px] md:text-[8px] leading-[6px] md:leading-[8px] font-mono text-elfy-green font-bold text-center whitespace-pre overflow-x-hidden select-none">
-                  {ASCII_TITLE}
-                </pre>
+                <AsciiRenderer />
 
                 {showWarningBox && (
                   <motion.div 
@@ -283,7 +372,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                       className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
                     >
                       <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                      {/* REDUCED SIZE + WHITESPACE NOWRAP */}
                       <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
                         [ INITIALIZE_SYSTEM.EXE ]
                       </span>
