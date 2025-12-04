@@ -7,12 +7,12 @@
 }
 
 html {
-  background-color: #000000; /* Ensure root is black */
+  background-color: #000000;
 }
 
 body {
   color: #78F654;
-  background-color: #000000; /* Ensure body is black */
+  background-color: #000000;
   overflow: hidden; 
   font-family: 'Courier New', monospace;
 }
@@ -51,4 +51,18 @@ body {
     90% 100%, 
     0 100%
   );
+}
+
+/* --- NUCLEAR OPTION: HIDE NEXT.JS INDICATORS --- */
+/* Force hides the "N" button, build spinners, and static route indicators */
+body > div[data-nextjs-toast],
+body > div[data-nextjs-dialog-overlay],
+#next-route-announcer,
+[class*="nextjs-toast"],
+[class*="build-activity"],
+[class*="static-route-indicator"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }

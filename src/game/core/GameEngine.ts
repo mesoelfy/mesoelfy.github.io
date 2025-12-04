@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
-import { domRectToWorldRect } from '../utils/coords';
+import { GameEventBus } from '../events/GameEventBus';
+import { FXManager } from '../systems/FXManager';
 
 export interface Entity {
   id: number;
@@ -26,6 +27,7 @@ export interface Bullet extends Entity {
   life: number;
 }
 
+// Particles will be moved to FXManager in Phase 2, keeping here for rendering compat for now
 export interface Particle extends Entity {
   vx: number;
   vy: number;
@@ -54,6 +56,11 @@ class GameEngineCore {
   private bounds = { width: 1920, height: 1080 };
   private viewport = { width: 1, height: 1 };
   private screenSize = { width: 1, height: 1 };
+
+  constructor() {
+    // Initialize Systems
+    FXManager.init();
+  }
 
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     this.viewport = { width: vpW, height: vpH };
@@ -131,6 +138,10 @@ class GameEngineCore {
         isHoveringPanel = true;
         healFn(p.id, 10); 
         this.lastRepairTime = time;
+        
+        // EMIT EVENT
+        GameEventBus.emit('PANEL_HEALED', { id: p.id, amount: 10 });
+        
         if (Math.random() > 0.6) {
            this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
         }
@@ -163,6 +174,9 @@ class GameEngineCore {
         if (dist < 1.0) {
            e.active = false;
            this.explode(e.x, e.y, 20, '#FF003C');
+           
+           // EMIT EVENT
+           GameEventBus.emit('PLAYER_HIT', { damage: 10 });
            continue; 
         }
       } 
@@ -170,14 +184,8 @@ class GameEngineCore {
       // --- 2. HUNTER: Dynamic Orbit ---
       else if (e.type === 'hunter') {
         if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
-        
-        // UNIQUE FLAVOR: Variable Speed
-        // Uses ID as offset so they don't sync. speed oscillates between 0.2 and 1.2
         const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
         e.orbitAngle += delta * speedVar; 
-
-        // UNIQUE FLAVOR: Breathing Radius
-        // Radius oscillates between 7 and 18 based on time and ID
         const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
         const orbitRadius = 12.5 + breathe; 
         
@@ -214,7 +222,14 @@ class GameEngineCore {
             e.isEating = true;
             if (e.type === 'seeker' && doDamageTick) {
               damageFn(bestPanel.id, 5); 
-              this.explode(targetX, targetY, 1, '#9E4EA5'); 
+              this.explode(targetX, targetY, 1, '#9E4EA5');
+              
+              // EMIT EVENT
+              GameEventBus.emit('PANEL_DAMAGED', { 
+                id: bestPanel.id, 
+                amount: 5, 
+                currentHealth: panels[bestPanel.id].health 
+              });
             }
           } else {
             e.isEating = false;
@@ -270,7 +285,7 @@ class GameEngineCore {
       hp = 1; 
     }
 
-    this.enemies.push({
+    const enemy: Enemy = {
       id: this.idCounter++,
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
@@ -280,7 +295,12 @@ class GameEngineCore {
       type,
       active: true,
       orbitAngle: Math.random() * Math.PI * 2
-    });
+    };
+
+    this.enemies.push(enemy);
+    
+    // EMIT EVENT
+    GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
   }
 
   private attemptFire() {
@@ -316,6 +336,9 @@ class GameEngineCore {
         active: true,
         life: 1.5
       });
+      
+      // EMIT EVENT
+      GameEventBus.emit('PLAYER_FIRED', { x: this.cursor.x, y: this.cursor.y });
     }
   }
 
@@ -343,9 +366,16 @@ class GameEngineCore {
         if (distSq < radiusSum * radiusSum) {
           e.hp--;
           b.active = false;
+          
+          // EMIT EVENT
+          GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
+
           if (e.hp <= 0) {
             e.active = false;
             this.explode(e.x, e.y, 8, e.type === 'hunter' ? '#F7D277' : e.type === 'kamikaze' ? '#FF003C' : '#9E4EA5');
+            
+            // EMIT EVENT
+            GameEventBus.emit('ENEMY_DESTROYED', { id: e.id, type: e.type, x: e.x, y: e.y });
           } else {
             this.explode(b.x, b.y, 2, '#FFF');
           }
