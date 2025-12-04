@@ -1,12 +1,45 @@
 # MESOELFY_OS // DEVELOPMENT ROADMAP
 
 
-## LATER
-- [ ] **Save State:** Track how many times the player has died even if they refresh or come back at a later date.
-- [ ] **Content Injection:** Fill JSON files with final text/links/images.
 
-## KNOWN BUGS
+
+
+## 🟢 COMPLETED 
+
+
+## 🟡 CURRENT FOCUS: VISUAL POLISH (The "Neon" Vibe)
+*Since the post-processing library is incompatible with React 19, we must implement manual shaders.*
+- [ ] **Manual Bloom:** Implement a custom shader pass or "Fake Glow" meshes to achieve the neon look without heavy post-processing.
+- [ ] **Chromatic Aberration:** Add a glitch effect that triggers on damage/low health.
+- [ ] **CRT/Scanline Effect:** Optional overlay for the retro hacker vibe.
+
+## 🟠 GAMEPLAY DEPTH
+- [ ] **Player Health UI:** Visualize player HP in MESOELFY_OS header (currently hidden in logic).
+- [ ] **Score System:** Display score on HUD and trigger "Level Up" events.
+- [ ] **Powerups:**
+    -   *Rapid Fire:* Increase fire rate temporarily.
+    -   *Spread Shot:* Triple shot.
+    -   *Shield:* One-hit protection.
+- [ ] **Wave System:** Instead of infinite random spawns, structure waves with increasing difficulty.
+
+## 🔴 NEW ENEMIES (From Audit)
+- [ ] **The Glitcher:** Teleports randomly around the screen. Hard to hit.
+- [ ] **The Virus:** When destroyed, spawns 3 smaller, faster "bits" (Munchers).
+- [ ] **The Boss:** A large, multi-stage entity (Reserved for later).
+
+## 🔵 SYSTEM & TECH
+- [ ] **Save State:** Track high score and total deaths in `localStorage`.
+- [ ] **Content Injection:** Fill JSON files with final text/links/images.
+- [ ] **Mobile Controls:** Add touch controls or ensure playable on mobile.
+
+## 🐛 KNOWN BUGS
 - [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.
+
+
+
+
+
+
 
 
 ## THOUGHTS

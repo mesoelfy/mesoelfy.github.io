@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Thu Dec  4 15:48:13 CST 2025
+Generated on: Thu Dec  4 17:36:05 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -66,6 +66,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   ├── features
 │   │   ├── contact
 │   │   │   └── ContactModal.tsx
+│   │   ├── effects
+│   │   │   └── GlobalShakeManager.tsx
 │   │   ├── feed
 │   │   │   └── FeedModal.tsx
 │   │   ├── gallery
@@ -78,16 +80,25 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── GameOverlay.tsx
 │   │   ├── components
 │   │   │   ├── BulletRenderer.tsx
+│   │   │   ├── EffectsLayer.tsx
+│   │   │   ├── EnemyBulletRenderer.tsx
 │   │   │   ├── EnemyRenderer.tsx
 │   │   │   ├── GameDirector.tsx
+│   │   │   ├── HunterChargeRenderer.tsx
 │   │   │   ├── ParticleRenderer.tsx
-│   │   │   └── PlayerTurret.tsx
+│   │   │   ├── PlayerTurret.tsx
+│   │   │   └── ScreenShaker.tsx
 │   │   ├── core
 │   │   │   └── GameEngine.ts
+│   │   ├── events
+│   │   │   ├── GameEventBus.ts
+│   │   │   └── GameEvents.ts
 │   │   ├── hooks
 │   │   │   └── usePanelRegistry.ts
 │   │   ├── store
 │   │   │   └── useGameStore.ts
+│   │   ├── systems
+│   │   │   └── FXManager.ts
 │   │   ├── theme.ts
 │   │   ├── types
 │   │   │   └── game.types.ts
@@ -120,7 +131,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-45 directories, 67 files
+48 directories, 75 files
 
 =====================================
 FILE: ./next.config.js
@@ -170,12 +181,45 @@ FILE: ./docs/TODO.md
 # MESOELFY_OS // DEVELOPMENT ROADMAP
 
 
-## LATER
-- [ ] **Save State:** Track how many times the player has died even if they refresh or come back at a later date.
-- [ ] **Content Injection:** Fill JSON files with final text/links/images.
 
-## KNOWN BUGS
+
+
+## 🟢 COMPLETED 
+
+
+## 🟡 CURRENT FOCUS: VISUAL POLISH (The "Neon" Vibe)
+*Since the post-processing library is incompatible with React 19, we must implement manual shaders.*
+- [ ] **Manual Bloom:** Implement a custom shader pass or "Fake Glow" meshes to achieve the neon look without heavy post-processing.
+- [ ] **Chromatic Aberration:** Add a glitch effect that triggers on damage/low health.
+- [ ] **CRT/Scanline Effect:** Optional overlay for the retro hacker vibe.
+
+## 🟠 GAMEPLAY DEPTH
+- [ ] **Player Health UI:** Visualize player HP in MESOELFY_OS header (currently hidden in logic).
+- [ ] **Score System:** Display score on HUD and trigger "Level Up" events.
+- [ ] **Powerups:**
+    -   *Rapid Fire:* Increase fire rate temporarily.
+    -   *Spread Shot:* Triple shot.
+    -   *Shield:* One-hit protection.
+- [ ] **Wave System:** Instead of infinite random spawns, structure waves with increasing difficulty.
+
+## 🔴 NEW ENEMIES (From Audit)
+- [ ] **The Glitcher:** Teleports randomly around the screen. Hard to hit.
+- [ ] **The Virus:** When destroyed, spawns 3 smaller, faster "bits" (Munchers).
+- [ ] **The Boss:** A large, multi-stage entity (Reserved for later).
+
+## 🔵 SYSTEM & TECH
+- [ ] **Save State:** Track high score and total deaths in `localStorage`.
+- [ ] **Content Injection:** Fill JSON files with final text/links/images.
+- [ ] **Mobile Controls:** Add touch controls or ensure playable on mobile.
+
+## 🐛 KNOWN BUGS
 - [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.
+
+
+
+
+
+
 
 
 ## THOUGHTS
@@ -413,7 +457,7 @@ FILE: ./package.json
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
-    "@react-three/postprocessing": "^2.16.0",
+    "@react-three/postprocessing": "^2.19.1",
     "clsx": "^2.1.0",
     "framer-motion": "^11.0.0",
     "lucide-react": "^0.300.0",
@@ -1373,6 +1417,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 import identity from '@/data/identity.json';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 
 export default function Home() {
   const { openModal } = useStore();
@@ -1387,106 +1432,112 @@ export default function Home() {
   const playHover = () => AudioSystem.playHover();
 
   return (
-    <main className="relative w-full h-screen flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
+    // WRAPPER FOR GLOBAL SHAKE
+    <div id="global-app-root" className="relative w-full h-screen overflow-hidden">
       
-      <SceneCanvas className="opacity-100 blur-0" />
+      {/* SHAKE MANAGER LOGIC */}
+      <GlobalShakeManager />
 
-      {bootState === 'active' && <GameOverlay />}
-
-      <AboutModal />
-      <FeedModal />
-      <GalleryModal />
-      <ContactModal />
-
-      {bootState === 'standby' && (
-        <MatrixBootSequence onComplete={handleBootComplete} />
-      )}
-
-      <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        <Header />
+        <SceneCanvas className="opacity-100 blur-0" />
 
-        <motion.div 
-          className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 overflow-y-auto md:overflow-hidden max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black"
-          initial="hidden"
-          animate={bootState === 'active' ? "visible" : "hidden"}
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { 
-              opacity: 1, 
-              transition: { 
-                staggerChildren: 0.3,
-                delayChildren: 0.2 
-              } 
-            }
-          }}
-        >
-          <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-            <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-              <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
-                <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
-                   <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                      <MiniCrystalCanvas />
-                   </div>
+        {bootState === 'active' && <GameOverlay />}
+
+        <AboutModal />
+        <FeedModal />
+        <GalleryModal />
+        <ContactModal />
+
+        {bootState === 'standby' && (
+          <MatrixBootSequence onComplete={handleBootComplete} />
+        )}
+
+        <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+          
+          <Header />
+
+          <motion.div 
+            className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 overflow-y-auto md:overflow-hidden max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black"
+            initial="hidden"
+            animate={bootState === 'active' ? "visible" : "hidden"}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { 
+                opacity: 1, 
+                transition: { 
+                  staggerChildren: 0.3,
+                  delayChildren: 0.2 
+                } 
+              }
+            }}
+          >
+            <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
+                  <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
+                     <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <MiniCrystalCanvas />
+                     </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <h2 className="text-4xl md:text-5xl font-header font-black text-elfy-green tracking-wide drop-shadow-md">{identity.name}</h2>
+                    <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
+                  </div>
+                  <div className="flex w-full gap-3 mt-2">
+                    <button 
+                      onClick={() => openModal('about')} 
+                      onMouseEnter={playHover}
+                      className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
+                    >
+                      About Me
+                    </button>
+                    <button 
+                      onClick={() => openModal('contact')} 
+                      onMouseEnter={playHover}
+                      className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
+                    >
+                      Contact
+                    </button>
+                  </div>
                 </div>
-                <div className="text-center space-y-1">
-                  <h2 className="text-4xl md:text-5xl font-header font-black text-elfy-green tracking-wide drop-shadow-md">{identity.name}</h2>
-                  <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
-                </div>
-                <div className="flex w-full gap-3 mt-2">
-                  <button 
-                    onClick={() => openModal('about')} 
-                    onMouseEnter={playHover}
-                    className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                  >
-                    About Me
-                  </button>
-                  <button 
-                    onClick={() => openModal('contact')} 
-                    onMouseEnter={playHover}
-                    className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                  >
-                    Contact
-                  </button>
-                </div>
-              </div>
-            </GlassPanel>
-
-            <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
-               <SocialRow />
-            </GlassPanel>
-          </div>
-
-          <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-            <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-              <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
-                {/* FIXED: Escaped the greater-than sign */}
-                <p className="animate-pulse mb-4">&gt; ESTABLISHING UPLINK...</p>
-                <button 
-                  onClick={() => openModal('feed')} 
-                  onMouseEnter={playHover}
-                  className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg"
-                >
-                  [ ACCESS TERMINAL ]
-                </button>
-              </div>
-            </GlassPanel>
-
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-              <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                 <LiveArtGrid />
               </GlassPanel>
 
-              <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                 <HoloCommLog />
+              <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                 <SocialRow />
               </GlassPanel>
             </div>
-          </div>
-        </motion.div>
-        
-        <Footer />
-      </div>
-    </main>
+
+            <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+              <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
+                  <p className="animate-pulse mb-4">&gt; ESTABLISHING UPLINK...</p>
+                  <button 
+                    onClick={() => openModal('feed')} 
+                    onMouseEnter={playHover}
+                    className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg"
+                  >
+                    [ ACCESS TERMINAL ]
+                  </button>
+                </div>
+              </GlassPanel>
+
+              <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+                <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                   <LiveArtGrid />
+                </GlassPanel>
+
+                <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                   <HoloCommLog />
+                </GlassPanel>
+              </div>
+            </div>
+          </motion.div>
+          
+          <Footer />
+        </div>
+      </main>
+    </div>
   );
 }
 
@@ -2046,30 +2097,80 @@ export const FeedModal = () => {
 
 
 =====================================
+FILE: ./src/features/effects/GlobalShakeManager.tsx
+=====================================
+import { useEffect, useRef } from 'react';
+import { FXManager } from '@/game/systems/FXManager';
+
+export const GlobalShakeManager = () => {
+  const requestRef = useRef<number>();
+  
+  useEffect(() => {
+    let lastTime = performance.now();
+
+    const animate = (time: number) => {
+      const delta = (time - lastTime) / 1000;
+      lastTime = time;
+
+      // 1. Process Decay Logic
+      FXManager.decay(delta);
+      const trauma = FXManager.trauma;
+
+      // 2. Apply to Global Root
+      const root = document.getElementById('global-app-root');
+      
+      if (root) {
+        if (trauma > 0) {
+          const shake = trauma * trauma;
+          const maxAngle = 1.0; // Degrees
+          const maxOffset = 10; // Pixels (Increased for visible HTML shake)
+          
+          const x = maxOffset * shake * (Math.random() * 2 - 1);
+          const y = maxOffset * shake * (Math.random() * 2 - 1);
+          const rot = maxAngle * shake * (Math.random() * 2 - 1);
+          
+          root.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+        } else {
+          // Optimization: Clear transform when idle
+          if (root.style.transform !== '') {
+             root.style.transform = '';
+          }
+        }
+      }
+
+      requestRef.current = requestAnimationFrame(animate);
+    };
+
+    requestRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(requestRef.current!);
+  }, []);
+
+  return null;
+};
+
+
+=====================================
 FILE: ./src/game/types/game.types.ts
 =====================================
 export interface RegisteredPanel {
   id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  health: number; // 0-100
+  element: HTMLElement; // Holds the live DOM reference
+  health: number;
   isDestroyed: boolean;
 }
 
 export interface GameState {
   isPlaying: boolean;
   score: number;
-  threatLevel: number; // 1-10, controls spawn rate
-  panels: Record<string, RegisteredPanel>; // Map of ID -> Panel Data
+  threatLevel: number;
+  panels: Record<string, RegisteredPanel>;
   
-  // Actions
   startGame: () => void;
   stopGame: () => void;
-  registerPanel: (id: string, rect: DOMRect) => void;
-  updatePanelRect: (id: string, rect: DOMRect) => void;
+  registerPanel: (id: string, element: HTMLElement) => void;
+  unregisterPanel: (id: string) => void;
   damagePanel: (id: string, amount: number) => void;
+  healPanel: (id: string, amount: number) => void;
 }
 
 
@@ -2078,7 +2179,8 @@ FILE: ./src/game/core/GameEngine.ts
 =====================================
 import * as THREE from 'three';
 import { useGameStore } from '../store/useGameStore';
-import { domRectToWorldRect } from '../utils/coords';
+import { GameEventBus } from '../events/GameEventBus';
+import { FXManager } from '../systems/FXManager';
 
 export interface Entity {
   id: number;
@@ -2092,7 +2194,9 @@ export interface Enemy extends Entity {
   vx: number;
   vy: number;
   hp: number;
-  type: 'seeker' | 'kamikaze' | 'hunter';
+  type: 'muncher' | 'kamikaze' | 'hunter';
+  state?: 'orbit' | 'charge' | 'fire';
+  stateTimer?: number;
   targetId?: string; 
   isEating?: boolean;
   orbitAngle?: number; 
@@ -2102,6 +2206,7 @@ export interface Bullet extends Entity {
   vx: number;
   vy: number;
   life: number;
+  isEnemy?: boolean;
 }
 
 export interface Particle extends Entity {
@@ -2112,9 +2217,12 @@ export interface Particle extends Entity {
   color: string;
 }
 
+const HUNTER_OFFSET_DISTANCE = 1.6;
+
 class GameEngineCore {
   public enemies: Enemy[] = [];
   public bullets: Bullet[] = [];
+  public enemyBullets: Bullet[] = [];
   public particles: Particle[] = [];
   
   public isRepairing = false;
@@ -2133,6 +2241,13 @@ class GameEngineCore {
   private viewport = { width: 1, height: 1 };
   private screenSize = { width: 1, height: 1 };
 
+  // State Tracking for Edge Detection
+  private prevPanelHealth: Record<string, number> = {};
+
+  constructor() {
+    FXManager.init();
+  }
+
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     this.viewport = { width: vpW, height: vpH };
     this.screenSize = { width: screenW, height: screenH };
@@ -2143,14 +2258,21 @@ class GameEngineCore {
   }
 
   private getPanelWorldRect(panel: any) {
+    if (!panel.element) return null;
+
+    const rect = panel.element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return null;
+
     const { width: vw, height: vh } = this.viewport;
     const { width: sw, height: sh } = this.screenSize;
-    const cx = panel.x + panel.width / 2;
-    const cy = panel.y + panel.height / 2;
+    
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    
     const wx = (cx / sw) * vw - (vw / 2);
     const wy = -((cy / sh) * vh - (vh / 2));
-    const wWidth = (panel.width / sw) * vw;
-    const wHeight = (panel.height / sh) * vh;
+    const wWidth = (rect.width / sw) * vw;
+    const wHeight = (rect.height / sh) * vh;
 
     return {
       id: panel.id,
@@ -2163,6 +2285,9 @@ class GameEngineCore {
 
   public update(delta: number, time: number) {
     const { threatLevel } = useGameStore.getState();
+
+    // 1. Check Panel Deaths (Global Check)
+    this.checkPanelStates();
 
     if (time > this.lastSpawnTime + (this.spawnInterval / threatLevel)) {
       this.spawnEnemy();
@@ -2180,9 +2305,29 @@ class GameEngineCore {
     if (doDamageTick) this.lastDamageTime = time;
 
     this.updateEnemies(delta, time, doDamageTick);
-    this.updateBullets(delta);
+    this.updateBullets(this.bullets, delta);
+    this.updateBullets(this.enemyBullets, delta);
     this.updateParticles(delta);
+    
     this.checkCollisions();
+  }
+
+  // ROBUST DEATH DETECTION
+  private checkPanelStates() {
+    const panels = useGameStore.getState().panels;
+    
+    for (const id in panels) {
+      const currentHealth = panels[id].health;
+      const prevHealth = this.prevPanelHealth[id]; // Undefined on first run
+
+      // If we have a history, and it was alive, and now it's dead...
+      if (prevHealth !== undefined && prevHealth > 0 && currentHealth <= 0) {
+        GameEventBus.emit('PANEL_DESTROYED', { id });
+      }
+
+      // Update history
+      this.prevPanelHealth[id] = currentHealth;
+    }
   }
 
   private attemptRepair(time: number) {
@@ -2199,6 +2344,7 @@ class GameEngineCore {
       if (p.isDestroyed || p.health >= 1000) continue;
 
       const r = this.getPanelWorldRect(p);
+      if (!r) continue;
 
       if (
         this.cursor.x >= r.left && 
@@ -2209,9 +2355,8 @@ class GameEngineCore {
         isHoveringPanel = true;
         healFn(p.id, 10); 
         this.lastRepairTime = time;
-        if (Math.random() > 0.6) {
-           this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
-        }
+        GameEventBus.emit('PANEL_HEALED', { id: p.id, amount: 10 });
+        if (Math.random() > 0.6) this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
         break; 
       }
     }
@@ -2221,7 +2366,10 @@ class GameEngineCore {
   private updateEnemies(delta: number, time: number, doDamageTick: boolean) {
     const panels = useGameStore.getState().panels;
     const damageFn = useGameStore.getState().damagePanel;
-    const worldPanels = Object.values(panels).map(p => this.getPanelWorldRect(p));
+    
+    const worldPanels = Object.values(panels)
+      .map(p => this.getPanelWorldRect(p))
+      .filter(r => r !== null);
 
     for (const e of this.enemies) {
       if (!e.active) continue;
@@ -2229,11 +2377,9 @@ class GameEngineCore {
       let targetX = 0;
       let targetY = 0;
 
-      // 1. KAMIKAZE: Chases Player
       if (e.type === 'kamikaze') {
         targetX = this.cursor.x;
         targetY = this.cursor.y;
-        
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
@@ -2241,36 +2387,75 @@ class GameEngineCore {
         if (dist < 1.0) {
            e.active = false;
            this.explode(e.x, e.y, 20, '#FF003C');
+           GameEventBus.emit('PLAYER_HIT', { damage: 10 });
            continue; 
         }
       } 
-      
-      // --- 2. HUNTER: Dynamic Orbit ---
       else if (e.type === 'hunter') {
-        if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
-        
-        // UNIQUE FLAVOR: Variable Speed
-        // Uses ID as offset so they don't sync. speed oscillates between 0.2 and 1.2
-        const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
-        e.orbitAngle += delta * speedVar; 
+        if (!e.state) e.state = 'orbit';
+        if (!e.stateTimer) e.stateTimer = 2.0 + Math.random() * 2.0;
 
-        // UNIQUE FLAVOR: Breathing Radius
-        // Radius oscillates between 7 and 18 based on time and ID
-        const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
-        const orbitRadius = 12.5 + breathe; 
-        
-        targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
-        targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
+        e.stateTimer -= delta;
+
+        if (e.state === 'orbit') {
+          if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
+          const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
+          e.orbitAngle += delta * speedVar; 
+          const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
+          const orbitRadius = 12.5 + breathe; 
+          
+          const centerX = 0;
+          const centerY = 0;
+          targetX = centerX + Math.cos(e.orbitAngle) * orbitRadius;
+          targetY = centerY + Math.sin(e.orbitAngle) * orbitRadius;
+
+          const maxX = this.viewport.width * 0.4;
+          const maxY = this.viewport.height * 0.4;
+          targetX = Math.max(-maxX, Math.min(maxX, targetX));
+          targetY = Math.max(-maxY, Math.min(maxY, targetY));
+
+          const inBoundsX = Math.abs(e.x) < this.viewport.width * 0.45;
+          const inBoundsY = Math.abs(e.y) < this.viewport.height * 0.45;
+
+          if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
+            e.state = 'charge';
+            e.stateTimer = 1.0; 
+            e.vx = 0;
+            e.vy = 0;
+          }
+        } 
+        else if (e.state === 'charge') {
+          targetX = e.x; 
+          targetY = e.y;
+          if (e.stateTimer <= 0) {
+            e.state = 'fire';
+          }
+        }
+        else if (e.state === 'fire') {
+          const dx = this.cursor.x - e.x;
+          const dy = this.cursor.y - e.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const dirX = dist > 0 ? dx/dist : 0;
+          const dirY = dist > 0 ? dy/dist : 1;
+          
+          const spawnX = e.x + (dirX * HUNTER_OFFSET_DISTANCE);
+          const spawnY = e.y + (dirY * HUNTER_OFFSET_DISTANCE);
+
+          this.spawnEnemyBullet(spawnX, spawnY);
+          e.state = 'orbit';
+          e.stateTimer = 3.0 + Math.random() * 2.0;
+        }
       }
-      
-      // 3. SEEKER: Targets Panels
       else {
+        // MUNCHER LOGIC
         let nearestDist = Infinity;
         let bestPanel: any = null;
 
         for (const p of worldPanels) {
+          if (!p) continue; 
           if (panels[p.id].isDestroyed) continue;
           if (p.id === 'feed') continue; 
+          
           const dx = p.x - e.x;
           const dy = p.y - e.y;
           const dist = dx*dx + dy*dy;
@@ -2290,30 +2475,41 @@ class GameEngineCore {
 
           if (distToEdge < 0.5) { 
             e.isEating = true;
-            if (e.type === 'seeker' && doDamageTick) {
-              damageFn(bestPanel.id, 5); 
-              this.explode(targetX, targetY, 1, '#9E4EA5'); 
+            if (doDamageTick) {
+              const dmg = 5;
+              const currentHp = panels[bestPanel.id].health;
+              
+              damageFn(bestPanel.id, dmg); 
+              this.explode(targetX, targetY, 1, '#9E4EA5');
+              
+              // EVENT LOGIC UPDATED:
+              // Only fire "DAMAGED" here. "DESTROYED" is now handled globally in checkPanelStates()
+              // to guarantee it never misfires.
+              if (currentHp > 0) {
+                 GameEventBus.emit('PANEL_DAMAGED', { 
+                    id: bestPanel.id, 
+                    amount: dmg, 
+                    currentHealth: currentHp - dmg
+                 });
+              }
             }
           } else {
             e.isEating = false;
           }
         } else {
-          // Wander
           targetX = Math.sin(time) * 5;
           targetY = Math.cos(time) * 5;
         }
       }
 
-      // Physics Move (Smoothing)
-      if (!e.isEating) {
+      if (!e.isEating && e.state !== 'charge') {
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        let speed = 0;
-        if (e.type === 'hunter') speed = 12; // Moderate to allow drift
+        let speed = 8;
+        if (e.type === 'hunter') speed = 12; 
         else if (e.type === 'kamikaze') speed = 12; 
-        else speed = 8; 
 
         if (dist > 0.1) {
           e.vx = (dx / dist) * speed * delta;
@@ -2332,23 +2528,22 @@ class GameEngineCore {
     const radius = 60; 
     const rand = Math.random();
     
-    let type: Enemy['type'] = 'seeker';
+    let type: Enemy['type'] = 'muncher';
     let hp = 2;
     let radiusHit = 0.5;
 
-    // Equal Spawns for Dev
-    if (rand < 0.33) {
-      type = 'seeker';
+    if (rand < 0.50) {
+      type = 'muncher';
       hp = 2;
-    } else if (rand < 0.66) {
-      type = 'hunter';
-      hp = 3;
-    } else {
+    } else if (rand < 0.80) {
       type = 'kamikaze';
       hp = 1; 
+    } else {
+      type = 'hunter';
+      hp = 3;
     }
 
-    this.enemies.push({
+    const enemy: Enemy = {
       id: this.idCounter++,
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
@@ -2358,6 +2553,28 @@ class GameEngineCore {
       type,
       active: true,
       orbitAngle: Math.random() * Math.PI * 2
+    };
+
+    this.enemies.push(enemy);
+    GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
+  }
+
+  private spawnEnemyBullet(x: number, y: number) {
+    const dx = this.cursor.x - x;
+    const dy = this.cursor.y - y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const SPEED = 25; 
+
+    this.enemyBullets.push({
+      id: this.idCounter++,
+      x: x,
+      y: y,
+      vx: (dx / dist) * SPEED,
+      vy: (dy / dist) * SPEED,
+      radius: 0.9, 
+      active: true,
+      life: 3.0,
+      isEnemy: true
     });
   }
 
@@ -2392,20 +2609,27 @@ class GameEngineCore {
         vy: (dy / dist) * SPEED,
         radius: 0.2,
         active: true,
-        life: 1.5
+        life: 1.5,
+        isEnemy: false
       });
+      GameEventBus.emit('PLAYER_FIRED', { x: this.cursor.x, y: this.cursor.y });
     }
   }
 
-  private updateBullets(delta: number) {
-    for (const b of this.bullets) {
+  private updateBullets(list: Bullet[], delta: number) {
+    for (const b of list) {
       if (!b.active) continue;
       b.x += b.vx * delta;
       b.y += b.vy * delta;
       b.life -= delta;
       if (b.life <= 0) b.active = false;
     }
-    this.bullets = this.bullets.filter(b => b.active);
+    
+    if (list === this.bullets) {
+        this.bullets = this.bullets.filter(b => b.active);
+    } else {
+        this.enemyBullets = this.enemyBullets.filter(b => b.active);
+    }
   }
 
   private checkCollisions() {
@@ -2421,15 +2645,51 @@ class GameEngineCore {
         if (distSq < radiusSum * radiusSum) {
           e.hp--;
           b.active = false;
+          GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
+
           if (e.hp <= 0) {
             e.active = false;
             this.explode(e.x, e.y, 8, e.type === 'hunter' ? '#F7D277' : e.type === 'kamikaze' ? '#FF003C' : '#9E4EA5');
+            GameEventBus.emit('ENEMY_DESTROYED', { id: e.id, type: e.type, x: e.x, y: e.y });
           } else {
             this.explode(b.x, b.y, 2, '#FFF');
           }
           break;
         }
       }
+    }
+
+    for (const eb of this.enemyBullets) {
+        if (!eb.active) continue;
+        const dx = eb.x - this.cursor.x;
+        const dy = eb.y - this.cursor.y;
+        const distSq = dx*dx + dy*dy;
+        
+        if (distSq < (eb.radius + 0.5) ** 2) {
+            eb.active = false;
+            GameEventBus.emit('PLAYER_HIT', { damage: 10 });
+            this.explode(eb.x, eb.y, 5, '#FF003C');
+        }
+    }
+
+    for (const pb of this.bullets) {
+        if (!pb.active) continue;
+        for (const eb of this.enemyBullets) {
+            if (!eb.active) continue;
+            
+            const dx = pb.x - eb.x;
+            const dy = pb.y - eb.y;
+            const distSq = dx*dx + dy*dy;
+            
+            if (distSq < (pb.radius + eb.radius) ** 2) {
+                pb.active = false;
+                eb.active = false;
+                
+                GameEventBus.emit('PROJECTILE_CLASH', { x: eb.x, y: eb.y });
+                this.explode(eb.x, eb.y, 6, '#F7D277');
+                break;
+            }
+        }
     }
   }
 
@@ -2476,7 +2736,9 @@ import { PlayerTurret } from './components/PlayerTurret';
 import { GameDirector } from './components/GameDirector';
 import { EnemyRenderer } from './components/EnemyRenderer';
 import { BulletRenderer } from './components/BulletRenderer';
-import { ParticleRenderer } from './components/ParticleRenderer'; // <-- NEW
+import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
+import { HunterChargeRenderer } from './components/HunterChargeRenderer';
+import { ParticleRenderer } from './components/ParticleRenderer';
 
 export const GameOverlay = () => {
   return (
@@ -2484,14 +2746,22 @@ export const GameOverlay = () => {
       <Canvas
         orthographic
         camera={{ zoom: 40, position: [0, 0, 100] }}
-        gl={{ alpha: true, antialias: true }}
+        gl={{ 
+          alpha: true, 
+          antialias: true,
+          stencil: false,
+        }}
         eventSource={typeof document !== 'undefined' ? document.body : undefined}
         eventPrefix="client"
       >
         <GameDirector />
+        {/* ScreenShaker REMOVED: Replaced by GlobalShakeManager */}
 
         <PlayerTurret />
+        
         <BulletRenderer />
+        <HunterChargeRenderer /> 
+        <EnemyBulletRenderer />
         <EnemyRenderer />
         <ParticleRenderer /> 
       </Canvas>
@@ -2725,6 +2995,135 @@ export const PlayerTurret = () => {
 
 
 =====================================
+FILE: ./src/game/components/EnemyBulletRenderer.tsx
+=====================================
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { GameEngine } from '../core/GameEngine';
+import { GAME_THEME } from '../theme';
+
+const MAX_BULLETS = 200;
+const tempObj = new THREE.Object3D();
+
+export const EnemyBulletRenderer = () => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+
+  // 3x Size Increase (0.3 -> 0.9)
+  const geometry = useMemo(() => new THREE.CircleGeometry(0.9, 16), []); 
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+
+    // Safety check: ensure array exists before reading length
+    const bullets = GameEngine.enemyBullets || [];
+    let count = 0;
+
+    for (let i = 0; i < bullets.length; i++) {
+      const b = bullets[i];
+      if (!b.active) continue;
+
+      if (count >= MAX_BULLETS) break;
+
+      tempObj.position.set(b.x, b.y, 0);
+      tempObj.scale.set(1, 1, 1);
+      
+      const angle = Math.atan2(b.vy, b.vx) - Math.PI / 2;
+      tempObj.rotation.z = angle;
+
+      tempObj.updateMatrix();
+      meshRef.current.setMatrixAt(count, tempObj.matrix);
+      count++;
+    }
+
+    meshRef.current.count = count;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_BULLETS]}>
+      <meshBasicMaterial color={GAME_THEME.bullet.hunter} />
+    </instancedMesh>
+  );
+};
+
+
+=====================================
+FILE: ./src/game/components/HunterChargeRenderer.tsx
+=====================================
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { GameEngine } from '../core/GameEngine';
+import { GAME_THEME } from '../theme';
+
+const MAX_CHARGES = 50;
+const tempObj = new THREE.Object3D();
+const OFFSET_DISTANCE = 1.6; // Distance from center to tip + bullet radius
+
+export const HunterChargeRenderer = () => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const geometry = useMemo(() => new THREE.CircleGeometry(0.9, 16), []);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+
+    const enemies = GameEngine.enemies;
+    // Access cursor position (using bracket notation to bypass TS private check safely)
+    const cursor = GameEngine['cursor']; 
+    let count = 0;
+
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (!e.active || e.type !== 'hunter') continue;
+
+      if (e.state === 'charge') {
+        if (count >= MAX_CHARGES) break;
+
+        const progress = Math.max(0, Math.min(1, 1.0 - (e.stateTimer || 0)));
+        const scale = 1 - Math.pow(1 - progress, 3);
+
+        // Calculate direction to player
+        const dx = cursor.x - e.x;
+        const dy = cursor.y - e.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Calculate Tip Position
+        // We normalize the vector (dx/dist) and multiply by our OFFSET
+        // If distance is 0 (on top of player), default to Up
+        const dirX = dist > 0 ? dx / dist : 0;
+        const dirY = dist > 0 ? dy / dist : 1;
+
+        const spawnX = e.x + (dirX * OFFSET_DISTANCE);
+        const spawnY = e.y + (dirY * OFFSET_DISTANCE);
+
+        tempObj.position.set(spawnX, spawnY, -0.1);
+        tempObj.scale.set(scale, scale, 1);
+        tempObj.rotation.z += 0.1;
+
+        tempObj.updateMatrix();
+        meshRef.current.setMatrixAt(count, tempObj.matrix);
+        count++;
+      }
+    }
+
+    meshRef.current.count = count;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_CHARGES]}>
+      <meshBasicMaterial 
+        color={GAME_THEME.bullet.hunter} 
+        transparent 
+        opacity={0.9} 
+      />
+    </instancedMesh>
+  );
+};
+
+
+=====================================
 FILE: ./src/game/components/EnemyRenderer.tsx
 =====================================
 import { useRef, useMemo } from 'react';
@@ -2736,11 +3135,10 @@ import { GAME_THEME } from '../theme';
 const MAX_ENEMIES = 1000;
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
+const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
 
 export const EnemyRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-
-  // Geometry: A simple Triangle
   const geometry = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
   
   useFrame((state) => {
@@ -2754,31 +3152,47 @@ export const EnemyRenderer = () => {
       if (!enemy.active) continue;
       if (count >= MAX_ENEMIES) break;
 
-      // Position
       tempObj.position.set(enemy.x, enemy.y, 0);
       
-      // Visuals based on Type
+      let angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
+      let scale = 1;
+      
+      // KAMIKAZE
       if (enemy.type === 'kamikaze') {
-        // Spin wild
         tempObj.rotation.z += 0.5; 
-        tempObj.scale.set(1.2, 1.2, 1);
-        tempColor.set(GAME_THEME.enemy.eater); // Red
-      } else if (enemy.type === 'hunter') {
-        // Face Player
-        const angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
+        scale = 1.2;
+        tempColor.set(GAME_THEME.enemy.kamikaze); 
+      } 
+      // HUNTER
+      else if (enemy.type === 'hunter') {
+        if (enemy.state === 'charge') {
+            // Telegraph Visuals
+            const dx = GameEngine['cursor'].x - enemy.x;
+            const dy = GameEngine['cursor'].y - enemy.y;
+            angle = Math.atan2(dy, dx) - Math.PI / 2;
+            
+            tempObj.position.x += (Math.random() - 0.5) * 0.1;
+            tempObj.position.y += (Math.random() - 0.5) * 0.1;
+            
+            const t = state.clock.elapsedTime * 20;
+            const alpha = (Math.sin(t) + 1) / 2;
+            tempColor.set(GAME_THEME.enemy.hunter).lerp(chargeColor, alpha);
+            
+            scale = 1.8;
+        } else {
+            tempColor.set(GAME_THEME.enemy.hunter);
+            scale = 1.5;
+        }
         tempObj.rotation.z = angle;
-        tempObj.scale.set(1.5, 1.5, 1); // Bigger
-        tempColor.set(GAME_THEME.enemy.boss); // Orange/Yellow
-      } else {
-        // Seeker (Standard)
-        const angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
+      } 
+      // MUNCHER
+      else {
         tempObj.rotation.z = angle;
-        // Pulse if eating
-        const scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
-        tempObj.scale.set(scale, scale, 1);
-        tempColor.set(GAME_THEME.enemy.seeker); // Purple
+        scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
+        tempColor.set(GAME_THEME.enemy.muncher); 
       }
 
+      tempObj.scale.set(scale, scale, 1);
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       meshRef.current.setColorAt(count, tempColor);
@@ -2823,6 +3237,82 @@ export const GameDirector = () => {
 
 
 =====================================
+FILE: ./src/game/components/ScreenShaker.tsx
+=====================================
+import { useFrame, useThree } from '@react-three/fiber';
+import { FXManager } from '../systems/FXManager';
+import { MathUtils } from 'three';
+
+export const ScreenShaker = () => {
+  const { camera } = useThree();
+  
+  useFrame((state, delta) => {
+    const trauma = FXManager.trauma;
+    
+    // Standard Decay
+    FXManager.decay(delta);
+
+    if (trauma > 0) {
+      // "Shake" is trauma squared (Non-linear falloff)
+      const shake = trauma * trauma;
+      
+      // Max offsets
+      const maxAngle = 0.05; // Radians (~2.8 degrees)
+      const maxOffset = 0.5; // World units
+      
+      // Perlin-ish noise using simple Math.random() for jitter
+      // In a more complex setup we'd use SimplexNoise, but this is efficient
+      const yaw = maxAngle * shake * (Math.random() * 2 - 1);
+      const pitch = maxAngle * shake * (Math.random() * 2 - 1);
+      const roll = maxAngle * shake * (Math.random() * 2 - 1);
+      
+      const offsetX = maxOffset * shake * (Math.random() * 2 - 1);
+      const offsetY = maxOffset * shake * (Math.random() * 2 - 1);
+
+      // Apply to Camera (Orthographic mainly cares about X/Y)
+      camera.position.x = offsetX;
+      camera.position.y = offsetY;
+      camera.rotation.z = roll;
+    } else {
+      // Reset smoothly
+      camera.position.x = MathUtils.lerp(camera.position.x, 0, delta * 10);
+      camera.position.y = MathUtils.lerp(camera.position.y, 0, delta * 10);
+      camera.rotation.z = MathUtils.lerp(camera.rotation.z, 0, delta * 10);
+    }
+  });
+
+  return null;
+};
+
+
+=====================================
+FILE: ./src/game/components/EffectsLayer.tsx
+=====================================
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+
+export const EffectsLayer = () => {
+  return (
+    <EffectComposer disableNormalPass>
+      {/* 
+        BLOOM: Adds the "Neon" glow.
+        luminanceThreshold: Only bright colors glow.
+        intensity: How strong the glow is.
+      */}
+      <Bloom 
+        luminanceThreshold={0.2} 
+        mipmapBlur 
+        intensity={1.5} 
+        radius={0.4} 
+      />
+      
+      {/* VIGNETTE: Darkens corners for focus */}
+      <Vignette eskil={false} offset={0.1} darkness={0.5} />
+    </EffectComposer>
+  );
+};
+
+
+=====================================
 FILE: ./src/game/hooks/usePanelRegistry.ts
 =====================================
 import { useEffect, useRef } from 'react';
@@ -2831,30 +3321,19 @@ import { useGameStore } from '../store/useGameStore';
 export const usePanelRegistry = (id: string) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const registerPanel = useGameStore((state) => state.registerPanel);
-  const updatePanelRect = useGameStore((state) => state.updatePanelRect);
+  const unregisterPanel = useGameStore((state) => state.unregisterPanel);
 
   useEffect(() => {
     const el = elementRef.current;
     if (!el) return;
 
-    // 1. Initial Registration
-    const rect = el.getBoundingClientRect();
-    registerPanel(id, rect);
-
-    // 2. Resize Observer (Updates position if window changes)
-    const observer = new ResizeObserver(() => {
-      const updatedRect = el.getBoundingClientRect();
-      updatePanelRect(id, updatedRect);
-    });
-
-    observer.observe(el);
-    // Also observe document body for layout shifts
-    observer.observe(document.body);
+    // Register the live DOM element
+    registerPanel(id, el);
 
     return () => {
-      observer.disconnect();
+      unregisterPanel(id);
     };
-  }, [id, registerPanel, updatePanelRect]);
+  }, [id, registerPanel, unregisterPanel]);
 
   return elementRef;
 };
@@ -2867,16 +3346,18 @@ export const GAME_THEME = {
   turret: {
     base: '#78F654',
     glow: '#C2FE9A',
-    repair: '#00F0FF', // <-- NEW: Repair Mode
+    repair: '#00F0FF',
   },
   bullet: {
     plasma: '#FFFFFF',
     trail: '#78F654',
+    hunter: '#F7D277', // Specific color for Hunter shots
   },
   enemy: {
-    seeker: '#9E4EA5',
-    eater: '#FF003C',
-    boss: '#F7D277',
+    muncher: '#9E4EA5',
+    kamikaze: '#FF003C',
+    hunter: '#F7D277',
+    charge: '#FFFFFF',  // Telegraph flash
   },
   hud: {
     text: '#78F654',
@@ -2885,21 +3366,150 @@ export const GAME_THEME = {
   vfx: {
     spark: '#FFFFFF',
     damage: '#FF003C',
-    heal: '#00F0FF', // <-- NEW: Healing sparks
+    heal: '#00F0FF',
+    clash: '#F7D277',
   }
 };
+
+
+=====================================
+FILE: ./src/game/events/GameEvents.ts
+=====================================
+// src/game/events/GameEvents.ts
+
+export type GameEventType = 
+  // --- COMBAT EVENTS ---
+  | 'PLAYER_FIRED'           // Payload: { x: number, y: number }
+  | 'PLAYER_HIT'             // Payload: { damage: number }
+  | 'ENEMY_SPAWNED'          // Payload: { type: string, id: number }
+  | 'ENEMY_DAMAGED'          // Payload: { id: number, damage: number, type: string }
+  | 'ENEMY_DESTROYED'        // Payload: { id: number, type: string, x: number, y: number }
+  | 'PROJECTILE_CLASH'       // Payload: { x: number, y: number }
+  
+  // --- PANEL EVENTS ---
+  | 'PANEL_DAMAGED'          // Payload: { id: string, amount: number, currentHealth: number }
+  | 'PANEL_HEALED'           // Payload: { id: string, amount: number }
+  | 'PANEL_DESTROYED'        // Payload: { id: string }
+  
+  // --- SYSTEM EVENTS ---
+  | 'GAME_START'             // Payload: null
+  | 'GAME_OVER'              // Payload: { score: number }
+  | 'THREAT_LEVEL_UP';       // Payload: { level: number }
+
+export interface GameEventPayloads {
+  PLAYER_FIRED: { x: number; y: number };
+  PLAYER_HIT: { damage: number };
+  ENEMY_SPAWNED: { type: string; id: number };
+  ENEMY_DAMAGED: { id: number; damage: number; type: string };
+  ENEMY_DESTROYED: { id: number; type: string; x: number; y: number };
+  PROJECTILE_CLASH: { x: number; y: number };
+  PANEL_DAMAGED: { id: string; amount: number; currentHealth: number };
+  PANEL_HEALED: { id: string; amount: number };
+  PANEL_DESTROYED: { id: string };
+  GAME_START: null;
+  GAME_OVER: { score: number };
+  THREAT_LEVEL_UP: { level: number };
+}
+
+
+=====================================
+FILE: ./src/game/events/GameEventBus.ts
+=====================================
+// src/game/events/GameEventBus.ts
+import { GameEventType, GameEventPayloads } from './GameEvents';
+
+type EventHandler<T extends GameEventType> = (payload: GameEventPayloads[T]) => void;
+
+class GameEventBusController {
+  private listeners: Partial<Record<GameEventType, EventHandler<any>[]>> = {};
+
+  // Subscribe to an event
+  public subscribe<T extends GameEventType>(event: T, handler: EventHandler<T>): () => void {
+    if (!this.listeners[event]) {
+      this.listeners[event] = [];
+    }
+    this.listeners[event]!.push(handler);
+
+    // Return unsubscribe function (Cleanup)
+    return () => {
+      this.listeners[event] = this.listeners[event]!.filter(h => h !== handler);
+    };
+  }
+
+  // Publish an event
+  public emit<T extends GameEventType>(event: T, payload: GameEventPayloads[T]): void {
+    if (!this.listeners[event]) return;
+    
+    // Iterate over a copy to allow handlers to unsubscribe during execution
+    [...this.listeners[event]!].forEach(handler => handler(payload));
+  }
+
+  public clear(): void {
+    this.listeners = {};
+  }
+}
+
+// Singleton Instance
+export const GameEventBus = new GameEventBusController();
+
+
+=====================================
+FILE: ./src/game/systems/FXManager.ts
+=====================================
+// src/game/systems/FXManager.ts
+import { GameEventBus } from '../events/GameEventBus';
+
+class FXManagerController {
+  private initialized = false;
+  
+  // A value between 0 and 1 representing "Chaos"
+  public trauma = 0;
+
+  public init() {
+    if (this.initialized) return;
+    
+    // --- EVENT WIRING ---
+    
+    // 1. Panel Offline (Major Shake)
+    GameEventBus.subscribe('PANEL_DESTROYED', () => {
+        this.addTrauma(0.55);
+    });
+    
+    // 2. Player Hit (Gentle Shake)
+    GameEventBus.subscribe('PLAYER_HIT', () => {
+        this.addTrauma(0.35);
+    });
+
+    // 3. Boss Death (Placeholder)
+    // GameEventBus.subscribe('BOSS_DIED', () => this.addTrauma(0.7));
+    
+    this.initialized = true;
+  }
+
+  public addTrauma(amount: number) {
+    this.trauma = Math.min(1.0, this.trauma + amount);
+  }
+
+  public decay(delta: number) {
+    if (this.trauma > 0) {
+      // Decay speed: 0.8 per second (fully calm in ~1.2s)
+      this.trauma = Math.max(0, this.trauma - (delta * 0.8));
+    }
+  }
+}
+
+export const FXManager = new FXManagerController();
 
 
 =====================================
 FILE: ./src/game/store/useGameStore.ts
 =====================================
 import { create } from 'zustand';
-import { GameState, RegisteredPanel } from '../types/game.types';
+import { GameState } from '../types/game.types';
 
-// CONSTANTS
-const MAX_HEALTH = 1000; // Increased from 100
+const MAX_HEALTH = 1000;
 
-export const useGameStore = create<GameState>((set, get) => ({
+export const useGameStore = create<GameState>((set) => ({
   isPlaying: false,
   score: 0,
   threatLevel: 1,
@@ -2908,30 +3518,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   startGame: () => set({ isPlaying: true, score: 0, threatLevel: 1 }),
   stopGame: () => set({ isPlaying: false }),
 
-  registerPanel: (id, rect) => set((state) => ({
+  registerPanel: (id, element) => set((state) => ({
     panels: {
       ...state.panels,
       [id]: {
         id,
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-        health: MAX_HEALTH, // Updated
+        element,
+        health: MAX_HEALTH,
         isDestroyed: false,
       }
     }
   })),
 
-  updatePanelRect: (id, rect) => set((state) => {
-    const panel = state.panels[id];
-    if (!panel) return state;
-    return {
-      panels: {
-        ...state.panels,
-        [id]: { ...panel, x: rect.left, y: rect.top, width: rect.width, height: rect.height }
-      }
-    };
+  unregisterPanel: (id) => set((state) => {
+    const newPanels = { ...state.panels };
+    delete newPanels[id];
+    return { panels: newPanels };
   }),
 
   damagePanel: (id, amount) => set((state) => {
@@ -2951,10 +3553,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
   }),
 
-  // NEW: Repair Logic
   healPanel: (id, amount) => set((state) => {
     const panel = state.panels[id];
-    // Cannot heal if destroyed or already full
     if (!panel || panel.isDestroyed || panel.health >= MAX_HEALTH) return state;
 
     const newHealth = Math.min(MAX_HEALTH, panel.health + amount);
