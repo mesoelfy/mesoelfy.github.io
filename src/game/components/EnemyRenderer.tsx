@@ -11,8 +11,6 @@ const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
 
 export const EnemyRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-
-  // Geometry: A simple Triangle
   const geometry = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
   
   useFrame((state) => {
@@ -26,46 +24,41 @@ export const EnemyRenderer = () => {
       if (!enemy.active) continue;
       if (count >= MAX_ENEMIES) break;
 
-      // Position
       tempObj.position.set(enemy.x, enemy.y, 0);
       
-      // Default Rotation
       let angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
       let scale = 1;
       
-      // Visuals based on Type
+      // KAMIKAZE
       if (enemy.type === 'kamikaze') {
         tempObj.rotation.z += 0.5; 
         scale = 1.2;
-        tempColor.set(GAME_THEME.enemy.eater); 
+        tempColor.set(GAME_THEME.enemy.kamikaze); 
       } 
+      // HUNTER
       else if (enemy.type === 'hunter') {
-        // Hunter Logic
         if (enemy.state === 'charge') {
-            // Telegraph: Face player, vibrate, pulse color
-            const dx = GameEngine['cursor'].x - enemy.x; // Access cursor via bracket if private, or assuming public in JS runtime
+            // Telegraph Visuals
+            const dx = GameEngine['cursor'].x - enemy.x;
             const dy = GameEngine['cursor'].y - enemy.y;
             angle = Math.atan2(dy, dx) - Math.PI / 2;
             
-            // Vibrate
             tempObj.position.x += (Math.random() - 0.5) * 0.1;
             tempObj.position.y += (Math.random() - 0.5) * 0.1;
             
-            // Pulse Color
             const t = state.clock.elapsedTime * 20;
             const alpha = (Math.sin(t) + 1) / 2;
-            tempColor.set(GAME_THEME.enemy.boss).lerp(chargeColor, alpha);
+            tempColor.set(GAME_THEME.enemy.hunter).lerp(chargeColor, alpha);
             
             scale = 1.8;
         } else {
-            // Orbit/Fire
-            tempColor.set(GAME_THEME.enemy.boss);
+            tempColor.set(GAME_THEME.enemy.hunter);
             scale = 1.5;
         }
         tempObj.rotation.z = angle;
       } 
+      // MUNCHER
       else {
-        // Muncher
         tempObj.rotation.z = angle;
         scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
         tempColor.set(GAME_THEME.enemy.muncher); 

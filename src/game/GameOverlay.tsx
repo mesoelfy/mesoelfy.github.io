@@ -6,6 +6,7 @@ import { GameDirector } from './components/GameDirector';
 import { EnemyRenderer } from './components/EnemyRenderer';
 import { BulletRenderer } from './components/BulletRenderer';
 import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
+import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
 
 export const GameOverlay = () => {
@@ -21,9 +22,13 @@ export const GameOverlay = () => {
         <GameDirector />
 
         <PlayerTurret />
+        
+        {/* Render Order: Visual layering */}
         <BulletRenderer />
+        <HunterChargeRenderer /> 
         <EnemyBulletRenderer />
         <EnemyRenderer />
+        
         <ParticleRenderer /> 
       </Canvas>
     </div>

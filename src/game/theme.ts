@@ -7,13 +7,13 @@ export const GAME_THEME = {
   bullet: {
     plasma: '#FFFFFF',
     trail: '#78F654',
-    enemy: '#F7D277', // Yellow/Orange for Hunter shots
+    hunter: '#F7D277', // Specific color for Hunter shots
   },
   enemy: {
-    muncher: '#9E4EA5', // Formerly seeker
-    eater: '#FF003C',   // Kamikaze
-    boss: '#F7D277',    // Hunter
-    charge: '#FFFFFF',  // Flash color when telegraphing
+    muncher: '#9E4EA5',
+    kamikaze: '#FF003C',
+    hunter: '#F7D277',
+    charge: '#FFFFFF',  // Telegraph flash
   },
   hud: {
     text: '#78F654',

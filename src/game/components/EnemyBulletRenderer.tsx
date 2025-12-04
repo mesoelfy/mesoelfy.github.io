@@ -10,8 +10,8 @@ const tempObj = new THREE.Object3D();
 export const EnemyBulletRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  // Geometry: Sphere/Circle for enemy shots (Distinct from player bars)
-  const geometry = useMemo(() => new THREE.CircleGeometry(0.3, 8), []); 
+  // 3x Size Increase (0.3 -> 0.9). Increased segments for smoothness.
+  const geometry = useMemo(() => new THREE.CircleGeometry(0.9, 16), []); 
 
   useFrame(() => {
     if (!meshRef.current) return;
@@ -28,7 +28,6 @@ export const EnemyBulletRenderer = () => {
       tempObj.position.set(b.x, b.y, 0);
       tempObj.scale.set(1, 1, 1);
       
-      // Rotation (Face velocity)
       const angle = Math.atan2(b.vy, b.vx) - Math.PI / 2;
       tempObj.rotation.z = angle;
 
@@ -43,7 +42,7 @@ export const EnemyBulletRenderer = () => {
 
   return (
     <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_BULLETS]}>
-      <meshBasicMaterial color={GAME_THEME.bullet.enemy} />
+      <meshBasicMaterial color={GAME_THEME.bullet.hunter} />
     </instancedMesh>
   );
 };

@@ -1,10 +1,9 @@
 import { create } from 'zustand';
-import { GameState, RegisteredPanel } from '../types/game.types';
+import { GameState } from '../types/game.types';
 
-// CONSTANTS
-const MAX_HEALTH = 1000; // Increased from 100
+const MAX_HEALTH = 1000;
 
-export const useGameStore = create<GameState>((set, get) => ({
+export const useGameStore = create<GameState>((set) => ({
   isPlaying: false,
   score: 0,
   threatLevel: 1,
@@ -13,30 +12,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   startGame: () => set({ isPlaying: true, score: 0, threatLevel: 1 }),
   stopGame: () => set({ isPlaying: false }),
 
-  registerPanel: (id, rect) => set((state) => ({
+  registerPanel: (id, element) => set((state) => ({
     panels: {
       ...state.panels,
       [id]: {
         id,
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-        health: MAX_HEALTH, // Updated
+        element,
+        health: MAX_HEALTH,
         isDestroyed: false,
       }
     }
   })),
 
-  updatePanelRect: (id, rect) => set((state) => {
-    const panel = state.panels[id];
-    if (!panel) return state;
-    return {
-      panels: {
-        ...state.panels,
-        [id]: { ...panel, x: rect.left, y: rect.top, width: rect.width, height: rect.height }
-      }
-    };
+  unregisterPanel: (id) => set((state) => {
+    const newPanels = { ...state.panels };
+    delete newPanels[id];
+    return { panels: newPanels };
   }),
 
   damagePanel: (id, amount) => set((state) => {
@@ -56,10 +47,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     };
   }),
 
-  // NEW: Repair Logic
   healPanel: (id, amount) => set((state) => {
     const panel = state.panels[id];
-    // Cannot heal if destroyed or already full
     if (!panel || panel.isDestroyed || panel.health >= MAX_HEALTH) return state;
 
     const newHealth = Math.min(MAX_HEALTH, panel.health + amount);

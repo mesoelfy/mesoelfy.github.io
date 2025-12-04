@@ -16,11 +16,8 @@ export interface Enemy extends Entity {
   vy: number;
   hp: number;
   type: 'muncher' | 'kamikaze' | 'hunter';
-  
-  // AI State
   state?: 'orbit' | 'charge' | 'fire';
   stateTimer?: number;
-  
   targetId?: string; 
   isEating?: boolean;
   orbitAngle?: number; 
@@ -30,7 +27,7 @@ export interface Bullet extends Entity {
   vx: number;
   vy: number;
   life: number;
-  isEnemy?: boolean; // Distinguish player vs enemy shots
+  isEnemy?: boolean;
 }
 
 export interface Particle extends Entity {
@@ -41,10 +38,12 @@ export interface Particle extends Entity {
   color: string;
 }
 
+const HUNTER_OFFSET_DISTANCE = 1.6;
+
 class GameEngineCore {
   public enemies: Enemy[] = [];
   public bullets: Bullet[] = [];
-  public enemyBullets: Bullet[] = []; // Separate array for easier collision logic
+  public enemyBullets: Bullet[] = [];
   public particles: Particle[] = [];
   
   public isRepairing = false;
@@ -76,15 +75,25 @@ class GameEngineCore {
     this.cursor = { x, y };
   }
 
+  // UPDATED: Now queries the live DOM element for perfect sync
   private getPanelWorldRect(panel: any) {
+    if (!panel.element) return null;
+
+    const rect = panel.element.getBoundingClientRect();
+    
+    // Safety check if element is off screen or detached
+    if (rect.width === 0 && rect.height === 0) return null;
+
     const { width: vw, height: vh } = this.viewport;
     const { width: sw, height: sh } = this.screenSize;
-    const cx = panel.x + panel.width / 2;
-    const cy = panel.y + panel.height / 2;
+    
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    
     const wx = (cx / sw) * vw - (vw / 2);
     const wy = -((cy / sh) * vh - (vh / 2));
-    const wWidth = (panel.width / sw) * vw;
-    const wHeight = (panel.height / sh) * vh;
+    const wWidth = (rect.width / sw) * vw;
+    const wHeight = (rect.height / sh) * vh;
 
     return {
       id: panel.id,
@@ -135,6 +144,7 @@ class GameEngineCore {
       if (p.isDestroyed || p.health >= 1000) continue;
 
       const r = this.getPanelWorldRect(p);
+      if (!r) continue;
 
       if (
         this.cursor.x >= r.left && 
@@ -156,7 +166,11 @@ class GameEngineCore {
   private updateEnemies(delta: number, time: number, doDamageTick: boolean) {
     const panels = useGameStore.getState().panels;
     const damageFn = useGameStore.getState().damagePanel;
-    const worldPanels = Object.values(panels).map(p => this.getPanelWorldRect(p));
+    
+    // Re-calculate world rects every frame to handle scrolling/animation
+    const worldPanels = Object.values(panels)
+      .map(p => this.getPanelWorldRect(p))
+      .filter(r => r !== null);
 
     for (const e of this.enemies) {
       if (!e.active) continue;
@@ -164,7 +178,6 @@ class GameEngineCore {
       let targetX = 0;
       let targetY = 0;
 
-      // --- 1. KAMIKAZE ---
       if (e.type === 'kamikaze') {
         targetX = this.cursor.x;
         targetY = this.cursor.y;
@@ -180,17 +193,13 @@ class GameEngineCore {
            continue; 
         }
       } 
-      
-      // --- 2. HUNTER (State Machine) ---
       else if (e.type === 'hunter') {
         if (!e.state) e.state = 'orbit';
         if (!e.stateTimer) e.stateTimer = 2.0 + Math.random() * 2.0;
 
         e.stateTimer -= delta;
 
-        // STATE TRANSITIONS
         if (e.state === 'orbit') {
-          // Movement Logic
           if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
           const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
           e.orbitAngle += delta * speedVar; 
@@ -200,37 +209,45 @@ class GameEngineCore {
           targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
           targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
 
-          // Transition to Charge
           if (e.stateTimer <= 0) {
             e.state = 'charge';
-            e.stateTimer = 1.0; // Telegraph time
+            e.stateTimer = 1.0; 
             e.vx = 0;
             e.vy = 0;
           }
         } 
         else if (e.state === 'charge') {
-          // Stand still and vibrate (Visuals handled in Renderer via state check)
           targetX = e.x; 
           targetY = e.y;
 
-          // Transition to Fire
           if (e.stateTimer <= 0) {
             e.state = 'fire';
           }
         }
         else if (e.state === 'fire') {
-          this.spawnEnemyBullet(e.x, e.y);
+          const dx = this.cursor.x - e.x;
+          const dy = this.cursor.y - e.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const dirX = dist > 0 ? dx/dist : 0;
+          const dirY = dist > 0 ? dy/dist : 1;
+          
+          const spawnX = e.x + (dirX * HUNTER_OFFSET_DISTANCE);
+          const spawnY = e.y + (dirY * HUNTER_OFFSET_DISTANCE);
+
+          this.spawnEnemyBullet(spawnX, spawnY);
           e.state = 'orbit';
-          e.stateTimer = 3.0 + Math.random() * 2.0; // Cooldown
+          e.stateTimer = 3.0 + Math.random() * 2.0;
         }
       }
-      
-      // --- 3. MUNCHER ---
       else {
+        // MUNCHER LOGIC
         let nearestDist = Infinity;
         let bestPanel: any = null;
 
         for (const p of worldPanels) {
+          // Type guard for filter nulls
+          if (!p) continue; 
+          
           if (panels[p.id].isDestroyed) continue;
           if (p.id === 'feed') continue; 
           const dx = p.x - e.x;
@@ -270,7 +287,6 @@ class GameEngineCore {
         }
       }
 
-      // PHYSICS INTEGRATION
       if (!e.isEating && e.state !== 'charge') {
         const dx = targetX - e.x;
         const dy = targetY - e.y;
@@ -301,7 +317,6 @@ class GameEngineCore {
     let hp = 2;
     let radiusHit = 0.5;
 
-    // SPAWN RATES
     if (rand < 0.50) {
       type = 'muncher';
       hp = 2;
@@ -333,7 +348,7 @@ class GameEngineCore {
     const dx = this.cursor.x - x;
     const dy = this.cursor.y - y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    const SPEED = 25; // Slower than player bullets
+    const SPEED = 25; 
 
     this.enemyBullets.push({
       id: this.idCounter++,
@@ -341,7 +356,7 @@ class GameEngineCore {
       y: y,
       vx: (dx / dist) * SPEED,
       vy: (dy / dist) * SPEED,
-      radius: 0.3, // Slightly larger
+      radius: 0.9, 
       active: true,
       life: 3.0,
       isEnemy: true
@@ -387,8 +402,6 @@ class GameEngineCore {
   }
 
   private updateBullets(list: Bullet[], delta: number) {
-    // Iterate backwards to allow removal? 
-    // Filter approach is cleaner in JS usually
     for (const b of list) {
       if (!b.active) continue;
       b.x += b.vx * delta;
@@ -397,8 +410,6 @@ class GameEngineCore {
       if (b.life <= 0) b.active = false;
     }
     
-    // Clean up inplace or reassignment
-    // Reassignment is safer for React render cycles usually
     if (list === this.bullets) {
         this.bullets = this.bullets.filter(b => b.active);
     } else {
@@ -407,7 +418,6 @@ class GameEngineCore {
   }
 
   private checkCollisions() {
-    // 1. Player Bullets vs Enemies
     for (const b of this.bullets) {
       if (!b.active) continue;
       for (const e of this.enemies) {
@@ -434,14 +444,12 @@ class GameEngineCore {
       }
     }
 
-    // 2. Enemy Bullets vs Player (Hit)
     for (const eb of this.enemyBullets) {
         if (!eb.active) continue;
         const dx = eb.x - this.cursor.x;
         const dy = eb.y - this.cursor.y;
         const distSq = dx*dx + dy*dy;
         
-        // Player hitbox approx 0.5
         if (distSq < (eb.radius + 0.5) ** 2) {
             eb.active = false;
             GameEventBus.emit('PLAYER_HIT', { damage: 10 });
@@ -449,7 +457,6 @@ class GameEngineCore {
         }
     }
 
-    // 3. Bullet vs Bullet (Clash/Destructible)
     for (const pb of this.bullets) {
         if (!pb.active) continue;
         for (const eb of this.enemyBullets) {
@@ -463,9 +470,8 @@ class GameEngineCore {
                 pb.active = false;
                 eb.active = false;
                 
-                // Spawn Clash Effect
                 GameEventBus.emit('PROJECTILE_CLASH', { x: eb.x, y: eb.y });
-                this.explode(eb.x, eb.y, 6, '#F7D277'); // Yellow sparks
+                this.explode(eb.x, eb.y, 6, '#F7D277');
                 break;
             }
         }
