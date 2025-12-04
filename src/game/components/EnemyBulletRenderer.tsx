@@ -10,13 +10,14 @@ const tempObj = new THREE.Object3D();
 export const EnemyBulletRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  // 3x Size Increase (0.3 -> 0.9). Increased segments for smoothness.
+  // 3x Size Increase (0.3 -> 0.9)
   const geometry = useMemo(() => new THREE.CircleGeometry(0.9, 16), []); 
 
   useFrame(() => {
     if (!meshRef.current) return;
 
-    const bullets = GameEngine.enemyBullets;
+    // Safety check: ensure array exists before reading length
+    const bullets = GameEngine.enemyBullets || [];
     let count = 0;
 
     for (let i = 0; i < bullets.length; i++) {

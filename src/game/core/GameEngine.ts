@@ -62,6 +62,9 @@ class GameEngineCore {
   private viewport = { width: 1, height: 1 };
   private screenSize = { width: 1, height: 1 };
 
+  // State Tracking for Edge Detection
+  private prevPanelHealth: Record<string, number> = {};
+
   constructor() {
     FXManager.init();
   }
@@ -75,13 +78,10 @@ class GameEngineCore {
     this.cursor = { x, y };
   }
 
-  // UPDATED: Now queries the live DOM element for perfect sync
   private getPanelWorldRect(panel: any) {
     if (!panel.element) return null;
 
     const rect = panel.element.getBoundingClientRect();
-    
-    // Safety check if element is off screen or detached
     if (rect.width === 0 && rect.height === 0) return null;
 
     const { width: vw, height: vh } = this.viewport;
@@ -107,6 +107,9 @@ class GameEngineCore {
   public update(delta: number, time: number) {
     const { threatLevel } = useGameStore.getState();
 
+    // 1. Check Panel Deaths (Global Check)
+    this.checkPanelStates();
+
     if (time > this.lastSpawnTime + (this.spawnInterval / threatLevel)) {
       this.spawnEnemy();
       this.lastSpawnTime = time;
@@ -128,6 +131,24 @@ class GameEngineCore {
     this.updateParticles(delta);
     
     this.checkCollisions();
+  }
+
+  // ROBUST DEATH DETECTION
+  private checkPanelStates() {
+    const panels = useGameStore.getState().panels;
+    
+    for (const id in panels) {
+      const currentHealth = panels[id].health;
+      const prevHealth = this.prevPanelHealth[id]; // Undefined on first run
+
+      // If we have a history, and it was alive, and now it's dead...
+      if (prevHealth !== undefined && prevHealth > 0 && currentHealth <= 0) {
+        GameEventBus.emit('PANEL_DESTROYED', { id });
+      }
+
+      // Update history
+      this.prevPanelHealth[id] = currentHealth;
+    }
   }
 
   private attemptRepair(time: number) {
@@ -167,7 +188,6 @@ class GameEngineCore {
     const panels = useGameStore.getState().panels;
     const damageFn = useGameStore.getState().damagePanel;
     
-    // Re-calculate world rects every frame to handle scrolling/animation
     const worldPanels = Object.values(panels)
       .map(p => this.getPanelWorldRect(p))
       .filter(r => r !== null);
@@ -181,7 +201,6 @@ class GameEngineCore {
       if (e.type === 'kamikaze') {
         targetX = this.cursor.x;
         targetY = this.cursor.y;
-        
         const dx = targetX - e.x;
         const dy = targetY - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
@@ -206,10 +225,20 @@ class GameEngineCore {
           const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
           const orbitRadius = 12.5 + breathe; 
           
-          targetX = this.cursor.x + Math.cos(e.orbitAngle) * orbitRadius;
-          targetY = this.cursor.y + Math.sin(e.orbitAngle) * orbitRadius;
+          const centerX = 0;
+          const centerY = 0;
+          targetX = centerX + Math.cos(e.orbitAngle) * orbitRadius;
+          targetY = centerY + Math.sin(e.orbitAngle) * orbitRadius;
 
-          if (e.stateTimer <= 0) {
+          const maxX = this.viewport.width * 0.4;
+          const maxY = this.viewport.height * 0.4;
+          targetX = Math.max(-maxX, Math.min(maxX, targetX));
+          targetY = Math.max(-maxY, Math.min(maxY, targetY));
+
+          const inBoundsX = Math.abs(e.x) < this.viewport.width * 0.45;
+          const inBoundsY = Math.abs(e.y) < this.viewport.height * 0.45;
+
+          if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
             e.state = 'charge';
             e.stateTimer = 1.0; 
             e.vx = 0;
@@ -219,7 +248,6 @@ class GameEngineCore {
         else if (e.state === 'charge') {
           targetX = e.x; 
           targetY = e.y;
-
           if (e.stateTimer <= 0) {
             e.state = 'fire';
           }
@@ -245,11 +273,10 @@ class GameEngineCore {
         let bestPanel: any = null;
 
         for (const p of worldPanels) {
-          // Type guard for filter nulls
           if (!p) continue; 
-          
           if (panels[p.id].isDestroyed) continue;
           if (p.id === 'feed') continue; 
+          
           const dx = p.x - e.x;
           const dy = p.y - e.y;
           const dist = dx*dx + dy*dy;
@@ -270,13 +297,22 @@ class GameEngineCore {
           if (distToEdge < 0.5) { 
             e.isEating = true;
             if (doDamageTick) {
-              damageFn(bestPanel.id, 5); 
+              const dmg = 5;
+              const currentHp = panels[bestPanel.id].health;
+              
+              damageFn(bestPanel.id, dmg); 
               this.explode(targetX, targetY, 1, '#9E4EA5');
-              GameEventBus.emit('PANEL_DAMAGED', { 
-                id: bestPanel.id, 
-                amount: 5, 
-                currentHealth: panels[bestPanel.id].health 
-              });
+              
+              // EVENT LOGIC UPDATED:
+              // Only fire "DAMAGED" here. "DESTROYED" is now handled globally in checkPanelStates()
+              // to guarantee it never misfires.
+              if (currentHp > 0) {
+                 GameEventBus.emit('PANEL_DAMAGED', { 
+                    id: bestPanel.id, 
+                    amount: dmg, 
+                    currentHealth: currentHp - dmg
+                 });
+              }
             }
           } else {
             e.isEating = false;

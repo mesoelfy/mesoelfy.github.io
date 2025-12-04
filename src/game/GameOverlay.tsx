@@ -15,20 +15,23 @@ export const GameOverlay = () => {
       <Canvas
         orthographic
         camera={{ zoom: 40, position: [0, 0, 100] }}
-        gl={{ alpha: true, antialias: true }}
+        gl={{ 
+          alpha: true, 
+          antialias: true,
+          stencil: false,
+        }}
         eventSource={typeof document !== 'undefined' ? document.body : undefined}
         eventPrefix="client"
       >
         <GameDirector />
+        {/* ScreenShaker REMOVED: Replaced by GlobalShakeManager */}
 
         <PlayerTurret />
         
-        {/* Render Order: Visual layering */}
         <BulletRenderer />
         <HunterChargeRenderer /> 
         <EnemyBulletRenderer />
         <EnemyRenderer />
-        
         <ParticleRenderer /> 
       </Canvas>
     </div>
