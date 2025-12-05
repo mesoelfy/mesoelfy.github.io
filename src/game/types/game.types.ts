@@ -1,6 +1,6 @@
 export interface RegisteredPanel {
   id: string;
-  element: HTMLElement; // Holds the live DOM reference
+  element: HTMLElement;
   health: number;
   isDestroyed: boolean;
 }
@@ -17,4 +17,41 @@ export interface GameState {
   unregisterPanel: (id: string) => void;
   damagePanel: (id: string, amount: number) => void;
   healPanel: (id: string, amount: number) => void;
+}
+
+// --- ENTITY TYPES ---
+
+export interface Entity {
+  id: number;
+  x: number;
+  y: number;
+  radius: number;
+  active: boolean;
+}
+
+export interface Enemy extends Entity {
+  vx: number;
+  vy: number;
+  hp: number;
+  type: 'muncher' | 'kamikaze' | 'hunter';
+  state?: 'orbit' | 'charge' | 'fire';
+  stateTimer?: number;
+  targetId?: string; 
+  isEating?: boolean;
+  orbitAngle?: number; 
+}
+
+export interface Bullet extends Entity {
+  vx: number;
+  vy: number;
+  life: number;
+  isEnemy?: boolean;
+}
+
+export interface Particle extends Entity {
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
 }
