@@ -17,7 +17,18 @@ const panelVariants = {
     opacity: 1, 
     y: 0,
     transition: { duration: 0.5, ease: "easeOut" }
-  }
+  },
+  // NEW: Game Over State
+  shattered: (custom: number) => ({
+    y: 1000,
+    opacity: 0,
+    rotate: custom * 10, // Random rotation
+    transition: { 
+        duration: 2.0, 
+        ease: "easeIn",
+        delay: custom * 0.2 // Random delay
+    }
+  })
 };
 
 const MAX_HEALTH = 1000;
@@ -28,9 +39,12 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const panelState = useGameStore((state) => 
     gameId ? state.panels[gameId] : null
   );
+  
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isGameOver = systemIntegrity <= 0;
 
   const health = panelState ? panelState.health : MAX_HEALTH;
-  const healthPercent = (health / MAX_HEALTH) * 100; // Normalized for CSS width
+  const healthPercent = (health / MAX_HEALTH) * 100; 
   
   const isDamaged = health < MAX_HEALTH;
   const isCritical = health < (MAX_HEALTH * 0.3);
@@ -39,10 +53,16 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
 
+  // Random seed for shatter animation
+  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
+
   return (
     <motion.div 
       ref={registryRef}
-      variants={panelVariants} 
+      variants={panelVariants}
+      initial="hidden"
+      animate={isGameOver ? "shattered" : "visible"}
+      custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col",
         "bg-black border",
@@ -83,9 +103,11 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {health <= 0 && (
-          <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
-            <span className="text-elfy-red font-header font-black text-xl animate-pulse">OFFLINE</span>
+        {/* Offline Overlay (Only if not full game over) */}
+        {health <= 0 && !isGameOver && (
+          <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center border-4 border-elfy-red m-1">
+            <span className="text-elfy-red font-header font-black text-xl animate-pulse">SECURITY BREACH</span>
+            <span className="text-xs text-elfy-red font-mono mt-1">SPAWNING HOSTILES...</span>
           </div>
         )}
         {children}

@@ -9,6 +9,7 @@ import { WaveSystem } from '../systems/WaveSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { InputSystem } from '../systems/InputSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
+import { BreachSystem } from '../systems/BreachSystem';
 import { ViewportHelper } from '../utils/ViewportHelper';
 
 class GameEngineCore {
@@ -18,10 +19,11 @@ class GameEngineCore {
   private interactionSystem: InteractionSystem;
   private inputSystem: InputSystem;
   private playerSystem: PlayerSystem;
+  private breachSystem: BreachSystem;
   
   public isRepairing = false;
   
-  private lastDamageTime = 0;
+  private lastDamageTime = 0; 
   private prevPanelHealth: Record<string, number> = {};
 
   constructor() {
@@ -32,6 +34,7 @@ class GameEngineCore {
     this.interactionSystem = new InteractionSystem();
     this.inputSystem = new InputSystem();
     this.playerSystem = new PlayerSystem();
+    this.breachSystem = new BreachSystem();
 
     ServiceLocator.registerEntitySystem(this.entitySystem);
     ServiceLocator.registerCollisionSystem(this.collisionSystem);
@@ -39,6 +42,7 @@ class GameEngineCore {
     ServiceLocator.registerInteractionSystem(this.interactionSystem);
     ServiceLocator.registerInputSystem(this.inputSystem);
     ServiceLocator.registerPlayerSystem(this.playerSystem);
+    ServiceLocator.registerBreachSystem(this.breachSystem);
     ServiceLocator.registerFXManager(FXManager);
   }
 
@@ -52,15 +56,32 @@ class GameEngineCore {
   }
 
   public update(delta: number, time: number) {
-    const { threatLevel } = useGameStore.getState();
-    const cursor = this.inputSystem.getCursorPosition();
+    // 0. Game Over Check
+    const store = useGameStore.getState();
+    if (store.isPlaying && store.systemIntegrity <= 0) {
+        store.stopGame();
+        // Trigger Massive Trauma
+        FXManager.addTrauma(1.0);
+        return;
+    }
 
+    // 1. Systems Update
     this.checkPanelStates();
     
+    const { threatLevel } = store;
+    const cursor = this.inputSystem.getCursorPosition();
+    
+    // 2. Wave Logic
     this.waveSystem.update(time, threatLevel);
+    this.breachSystem.update(time); // Spawn from dead panels
+
+    // 3. Interaction Logic
     this.isRepairing = this.interactionSystem.update(time, cursor);
+
+    // 4. Player Logic
     this.playerSystem.update(time);
 
+    // 5. Physics & Entities
     const doDamageTick = time > this.lastDamageTime + 0.5; 
     if (doDamageTick) this.lastDamageTime = time;
 
@@ -75,6 +96,8 @@ class GameEngineCore {
       const prevHealth = this.prevPanelHealth[id]; 
       if (prevHealth !== undefined && prevHealth > 0 && currentHealth <= 0) {
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+        // Recalculate integrity immediately on death
+        useGameStore.getState().recalculateIntegrity();
       }
       this.prevPanelHealth[id] = currentHealth;
     }
