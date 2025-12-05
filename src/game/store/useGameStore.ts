@@ -19,15 +19,17 @@ interface ExtendedGameState extends GameState {
   xpToNextLevel: number;
   level: number;
   availableUpgrades: UpgradeOption[];
+  activeUpgrades: Record<UpgradeOption, number>; // Level of each upgrade
   
   // System State
-  systemIntegrity: number; // 0-100%
+  systemIntegrity: number;
   
   // Actions
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
   addScore: (amount: number) => void;
   addXp: (amount: number) => void;
+  selectUpgrade: (option: UpgradeOption) => void;
   resetGame: () => void;
   recalculateIntegrity: () => void;
 }
@@ -47,6 +49,12 @@ export const useGameStore = create<ExtendedGameState>()(
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       level: 1,
       availableUpgrades: [],
+      activeUpgrades: {
+        'RAPID_FIRE': 0,
+        'MULTI_SHOT': 0,
+        'SPEED_UP': 0,
+        'REPAIR_NANITES': 0
+      },
       
       systemIntegrity: 100,
 
@@ -58,7 +66,13 @@ export const useGameStore = create<ExtendedGameState>()(
         xp: 0,
         level: 1,
         xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
-        availableUpgrades: []
+        availableUpgrades: [],
+        activeUpgrades: {
+            'RAPID_FIRE': 0,
+            'MULTI_SHOT': 0,
+            'SPEED_UP': 0,
+            'REPAIR_NANITES': 0
+        }
       }),
       
       stopGame: () => {
@@ -79,15 +93,12 @@ export const useGameStore = create<ExtendedGameState>()(
         let nextReq = state.xpToNextLevel;
         let newUpgrades = [...state.availableUpgrades];
 
-        // Level Up Logic
         if (newXp >= nextReq) {
           newXp -= nextReq;
           newLevel++;
           nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
           
-          // Generate Choices (Placeholder for UpgradeSystem)
-          // In real implementation, we'd pick random distinct ones
-          if (newUpgrades.length === 0) { // Only add if not already pending
+          if (newUpgrades.length === 0) {
              newUpgrades = ['RAPID_FIRE', 'MULTI_SHOT']; 
           }
         }
@@ -97,6 +108,17 @@ export const useGameStore = create<ExtendedGameState>()(
           level: newLevel,
           xpToNextLevel: nextReq,
           availableUpgrades: newUpgrades
+        };
+      }),
+
+      selectUpgrade: (option) => set((state) => {
+        const currentLevel = state.activeUpgrades[option] || 0;
+        return {
+            activeUpgrades: {
+                ...state.activeUpgrades,
+                [option]: currentLevel + 1
+            },
+            availableUpgrades: [] // Clear selection
         };
       }),
 
@@ -153,11 +175,6 @@ export const useGameStore = create<ExtendedGameState>()(
         if (!panel || panel.isDestroyed) return state;
 
         const newHealth = Math.max(0, panel.health - amount);
-        // We trigger recalc in the component or via subscription usually, 
-        // but for atomic updates we can do it here or let the loop handle it.
-        // For performance, let's assume the loop triggers a recalc periodically 
-        // OR we just calculate it derived in UI. 
-        // Better yet: Update it here.
         return {
           panels: {
             ...state.panels,

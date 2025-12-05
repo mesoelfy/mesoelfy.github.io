@@ -1,5 +1,5 @@
 import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore, UpgradeOption } from '@/game/store/useGameStore';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -14,6 +14,7 @@ export const IdentityHUD = () => {
   const nextXp = useGameStore(s => s.xpToNextLevel);
   const level = useGameStore(s => s.level);
   const upgrades = useGameStore(s => s.availableUpgrades);
+  const selectUpgrade = useGameStore(s => s.selectUpgrade); // ACTION
 
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
   const xpPercent = Math.min(100, (xp / nextXp) * 100);
@@ -33,6 +34,11 @@ export const IdentityHUD = () => {
 
   const isLowHp = hpPercent < 30;
   const isDead = hp <= 0;
+
+  const handleUpgrade = (u: UpgradeOption) => {
+      AudioSystem.playClick();
+      selectUpgrade(u);
+  };
 
   return (
     <div className="flex flex-col items-center h-full w-full relative">
@@ -79,15 +85,15 @@ export const IdentityHUD = () => {
       {/* 2. INFO & UPGRADES (Middle - Flexible Space) */}
       <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-2 min-h-0">
         
-        {/* Name (Hidden if upgrading to save space?) No, let's keep it small */}
+        {/* Name */}
         <div className="text-center">
           <h2 className="text-2xl font-header font-black text-elfy-green tracking-wider">{identity.name}</h2>
           <div className="text-[9px] text-elfy-purple-light uppercase tracking-widest opacity-80">{identity.class}</div>
         </div>
 
-        {/* UPGRADE MODULE (Appears when needed) */}
+        {/* UPGRADE MODULE */}
         {upgrades.length > 0 && (
-          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 animate-pulse rounded-sm">
+          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 animate-pulse rounded-sm pointer-events-auto z-50">
             <div className="text-[8px] text-elfy-purple-light text-center mb-1 font-bold tracking-widest">
               [ SYSTEM UPGRADE AVAILABLE ]
             </div>
@@ -95,9 +101,9 @@ export const IdentityHUD = () => {
               {upgrades.map(u => (
                 <button 
                   key={u}
-                  className="text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1 hover:bg-elfy-purple hover:text-white transition-colors"
+                  className="text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1 hover:bg-elfy-purple hover:text-white transition-colors uppercase"
                   onMouseEnter={() => AudioSystem.playHover()}
-                  onClick={() => AudioSystem.playClick()}
+                  onClick={() => handleUpgrade(u)}
                 >
                   {u.replace('_', ' ')}
                 </button>
