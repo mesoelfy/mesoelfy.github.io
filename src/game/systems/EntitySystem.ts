@@ -3,6 +3,7 @@ import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
+import { ViewportHelper } from '../utils/ViewportHelper';
 
 export class EntitySystem {
   public enemies: Enemy[] = [];
@@ -63,21 +64,22 @@ export class EntitySystem {
     }
   }
 
-  // FIX: Accept doDamageTick parameter
-  public update(delta: number, time: number, cursor: {x: number, y: number}, viewport: {width: number, height: number}, doDamageTick: boolean) {
-    this.updateEnemies(delta, time, cursor, viewport, doDamageTick);
+  // --- UPDATE LOOP ---
+
+  public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
+    this.updateEnemies(delta, time, cursor, doDamageTick);
     this.updateBullets(this.bullets, delta);
     this.updateBullets(this.enemyBullets, delta);
     this.updateParticles(delta);
   }
 
-  // FIX: Accept doDamageTick parameter
-  private updateEnemies(delta: number, time: number, cursor: {x: number, y: number}, viewport: {width: number, height: number}, doDamageTick: boolean) {
+  private updateEnemies(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
     const panels = useGameStore.getState().panels;
     
+    // Prepare AI Context using ViewportHelper (DRY)
     const worldPanels = Object.values(panels)
       .filter(p => !p.isDestroyed)
-      .map(p => this.getPanelWorldRect(p, viewport))
+      .map(p => ViewportHelper.getPanelWorldRect(p))
       .filter(r => r !== null);
 
     const ctx: AIContext = {
@@ -85,15 +87,12 @@ export class EntitySystem {
       panels: worldPanels,
       delta: delta,
       time: time,
-      doDamageTick: doDamageTick, // FIX: Pass to context
+      doDamageTick: doDamageTick,
       spawnProjectile: (x, y, vx, vy) => this.spawnBullet(x, y, vx, vy, true, 3.0, 0.9),
       triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 20),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
       damagePanel: (id, amount) => {
-        // Ideally we emit an event here, but direct store access is the current pattern
         useGameStore.getState().damagePanel(id, amount);
-        
-        // Also emit event for VFX/Shake
         const currentHp = panels[id].health;
         if (currentHp > 0) {
              GameEventBus.emit('PANEL_DAMAGED', { 
@@ -141,30 +140,5 @@ export class EntitySystem {
       if (p.life <= 0) p.active = false;
     }
     this.particles = this.particles.filter(p => p.active);
-  }
-
-  private getPanelWorldRect(panel: any, viewport: {width: number, height: number}) {
-    if (!panel.element) return null;
-    const rect = panel.element.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return null;
-
-    const sw = window.innerWidth; 
-    const sh = window.innerHeight;
-    
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    
-    const wx = (cx / sw) * viewport.width - (viewport.width / 2);
-    const wy = -((cy / sh) * viewport.height - (viewport.height / 2));
-    const wWidth = (rect.width / sw) * viewport.width;
-    const wHeight = (rect.height / sh) * viewport.height;
-
-    return {
-      id: panel.id,
-      x: wx, y: wy,
-      width: wWidth, height: wHeight,
-      left: wx - wWidth / 2, right: wx + wWidth / 2,
-      top: wy + wHeight / 2, bottom: wy - wHeight / 2,
-    };
   }
 }
