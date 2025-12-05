@@ -1,11 +1,10 @@
-// src/game/logic/ai/EnemyBehaviors.ts
 import { Enemy } from '../../core/GameEngine';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
+import { EnemyTypes, GameEvents } from '../../config/Identifiers';
 
-// --- Context Interface ---
 export interface AIContext {
   playerPos: { x: number, y: number };
-  panels: any[]; // World Rects
+  panels: any[]; 
   delta: number;
   time: number;
   doDamageTick: boolean;
@@ -15,23 +14,17 @@ export interface AIContext {
   emitEvent: (name: string, payload: any) => void;
 }
 
-// --- The Strategy Interface ---
 export interface EnemyBehavior {
   update(enemy: Enemy, ctx: AIContext): void;
 }
-
-// --- Concrete Strategies ---
 
 export const MuncherBehavior: EnemyBehavior = {
   update: (e, ctx) => {
     let targetX = 0;
     let targetY = 0;
-    
-    // 1. Find Nearest Panel
     let nearestDist = Infinity;
     let bestPanel: any = null;
 
-    // UPDATE: Removed filter. All panels (including 'feed') are now valid targets.
     const validPanels = ctx.panels; 
 
     for (const p of validPanels) {
@@ -55,7 +48,7 @@ export const MuncherBehavior: EnemyBehavior = {
       if (distToEdge < 0.5) { 
         e.isEating = true;
         if (ctx.doDamageTick) {
-            ctx.damagePanel(bestPanel.id, ENEMY_CONFIG.muncher.damage);
+            ctx.damagePanel(bestPanel.id, ENEMY_CONFIG[EnemyTypes.MUNCHER].damage);
             ctx.triggerExplosion(targetX, targetY, '#9E4EA5');
         }
       } else {
@@ -67,15 +60,14 @@ export const MuncherBehavior: EnemyBehavior = {
       e.isEating = false;
     }
 
-    // 2. Move
     if (!e.isEating) {
       const dx = targetX - e.x;
       const dy = targetY - e.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
       if (dist > 0.1) {
-        e.vx = (dx / dist) * ENEMY_CONFIG.muncher.baseSpeed * ctx.delta;
-        e.vy = (dy / dist) * ENEMY_CONFIG.muncher.baseSpeed * ctx.delta;
+        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
+        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
         e.x += e.vx;
         e.y += e.vy;
       }
@@ -92,18 +84,16 @@ export const KamikazeBehavior: EnemyBehavior = {
     const dy = targetY - e.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    // Hit Player Logic
     if (dist < 1.0) {
        e.active = false;
        ctx.triggerExplosion(e.x, e.y, '#FF003C');
-       ctx.emitEvent('PLAYER_HIT', { damage: 10 });
+       ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
        return; 
     }
 
-    // Move
     if (dist > 0.1) {
-      e.vx = (dx / dist) * ENEMY_CONFIG.kamikaze.baseSpeed * ctx.delta;
-      e.vy = (dy / dist) * ENEMY_CONFIG.kamikaze.baseSpeed * ctx.delta;
+      e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
+      e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
       e.x += e.vx;
       e.y += e.vy;
     }
@@ -113,7 +103,7 @@ export const KamikazeBehavior: EnemyBehavior = {
 export const HunterBehavior: EnemyBehavior = {
   update: (e, ctx) => {
     if (!e.state) e.state = 'orbit';
-    if (!e.stateTimer) e.stateTimer = ENEMY_CONFIG.hunter.orbitDuration + Math.random();
+    if (!e.stateTimer) e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitDuration + Math.random();
 
     e.stateTimer -= ctx.delta;
 
@@ -127,7 +117,7 @@ export const HunterBehavior: EnemyBehavior = {
       e.orbitAngle += ctx.delta * speedVar; 
       
       const breathe = Math.sin(ctx.time * 1.5 + e.id) * 5.5; 
-      const orbitRadius = ENEMY_CONFIG.hunter.orbitRadius + breathe; 
+      const orbitRadius = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitRadius + breathe; 
       
       targetX = Math.cos(e.orbitAngle) * orbitRadius;
       targetY = Math.sin(e.orbitAngle) * orbitRadius;
@@ -142,7 +132,7 @@ export const HunterBehavior: EnemyBehavior = {
 
       if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
         e.state = 'charge';
-        e.stateTimer = ENEMY_CONFIG.hunter.chargeDuration; 
+        e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration; 
         e.vx = 0;
         e.vy = 0;
       }
@@ -152,8 +142,8 @@ export const HunterBehavior: EnemyBehavior = {
       const dist = Math.sqrt(dx*dx + dy*dy);
       
       if (dist > 0.1) {
-        e.vx = (dx / dist) * ENEMY_CONFIG.hunter.baseSpeed * ctx.delta;
-        e.vy = (dy / dist) * ENEMY_CONFIG.hunter.baseSpeed * ctx.delta;
+        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
+        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
         e.x += e.vx;
         e.y += e.vy;
       }
@@ -171,7 +161,7 @@ export const HunterBehavior: EnemyBehavior = {
       const dirX = dist > 0 ? dx/dist : 0;
       const dirY = dist > 0 ? dy/dist : 1;
       
-      const offset = ENEMY_CONFIG.hunter.offsetDistance;
+      const offset = ENEMY_CONFIG[EnemyTypes.HUNTER].offsetDistance;
       const spawnX = e.x + (dirX * offset);
       const spawnY = e.y + (dirY * offset);
 
@@ -188,7 +178,7 @@ export const HunterBehavior: EnemyBehavior = {
 };
 
 export const Behaviors: Record<string, EnemyBehavior> = {
-  'muncher': MuncherBehavior,
-  'kamikaze': KamikazeBehavior,
-  'hunter': HunterBehavior
+  [EnemyTypes.MUNCHER]: MuncherBehavior,
+  [EnemyTypes.KAMIKAZE]: KamikazeBehavior,
+  [EnemyTypes.HUNTER]: HunterBehavior
 };

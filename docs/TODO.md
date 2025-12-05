@@ -50,3 +50,5 @@
 - need help seeing not obvious stuff that is missing.
 - hunter enemy needs to shoot projectiles.
 - Kamekazi should be bigger and slow. If it blows up on player and is inside a panel, it does damage to that panel.
+
+- What things does Vampire Survivors do that I should implement? Game design and juice.

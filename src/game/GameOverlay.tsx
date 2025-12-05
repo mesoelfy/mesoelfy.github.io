@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { PlayerTurret } from './components/PlayerTurret';
+import { PlayerAvatar } from './components/PlayerAvatar';
 import { GameDirector } from './components/GameDirector';
 import { EnemyRenderer } from './components/EnemyRenderer';
 import { BulletRenderer } from './components/BulletRenderer';
@@ -24,9 +24,8 @@ export const GameOverlay = () => {
         eventPrefix="client"
       >
         <GameDirector />
-        {/* ScreenShaker REMOVED: Replaced by GlobalShakeManager */}
 
-        <PlayerTurret />
+        <PlayerAvatar />
         
         <BulletRenderer />
         <HunterChargeRenderer /> 

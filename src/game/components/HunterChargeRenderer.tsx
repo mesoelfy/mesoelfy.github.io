@@ -2,11 +2,13 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
 import { GAME_THEME } from '../theme';
+import { EnemyTypes } from '../config/Identifiers';
 
 const MAX_CHARGES = 50;
 const tempObj = new THREE.Object3D();
-const OFFSET_DISTANCE = 1.6; // Distance from center to tip + bullet radius
+const OFFSET_DISTANCE = 1.6; 
 
 export const HunterChargeRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -16,13 +18,13 @@ export const HunterChargeRenderer = () => {
     if (!meshRef.current) return;
 
     const enemies = GameEngine.enemies;
-    // Access cursor position (using bracket notation to bypass TS private check safely)
-    const cursor = GameEngine['cursor']; 
+    const cursor = ServiceLocator.inputSystem ? ServiceLocator.inputSystem.getCursorPosition() : {x:0, y:0};
+    
     let count = 0;
 
     for (let i = 0; i < enemies.length; i++) {
       const e = enemies[i];
-      if (!e.active || e.type !== 'hunter') continue;
+      if (!e.active || e.type !== EnemyTypes.HUNTER) continue;
 
       if (e.state === 'charge') {
         if (count >= MAX_CHARGES) break;
@@ -30,14 +32,10 @@ export const HunterChargeRenderer = () => {
         const progress = Math.max(0, Math.min(1, 1.0 - (e.stateTimer || 0)));
         const scale = 1 - Math.pow(1 - progress, 3);
 
-        // Calculate direction to player
         const dx = cursor.x - e.x;
         const dy = cursor.y - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // Calculate Tip Position
-        // We normalize the vector (dx/dist) and multiply by our OFFSET
-        // If distance is 0 (on top of player), default to Up
         const dirX = dist > 0 ? dx / dist : 0;
         const dirY = dist > 0 ? dy / dist : 1;
 

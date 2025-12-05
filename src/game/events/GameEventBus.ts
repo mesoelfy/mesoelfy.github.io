@@ -1,29 +1,25 @@
 // src/game/events/GameEventBus.ts
-import { GameEventType, GameEventPayloads } from './GameEvents';
+import { GameEvents } from '../config/Identifiers';
 
-type EventHandler<T extends GameEventType> = (payload: GameEventPayloads[T]) => void;
+// Re-export specific types if needed or just use strings
+export type GameEventType = keyof typeof GameEvents;
 
 class GameEventBusController {
-  private listeners: Partial<Record<GameEventType, EventHandler<any>[]>> = {};
+  private listeners: Partial<Record<string, Function[]>> = {};
 
-  // Subscribe to an event
-  public subscribe<T extends GameEventType>(event: T, handler: EventHandler<T>): () => void {
+  public subscribe(event: string, handler: Function): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
     this.listeners[event]!.push(handler);
 
-    // Return unsubscribe function (Cleanup)
     return () => {
       this.listeners[event] = this.listeners[event]!.filter(h => h !== handler);
     };
   }
 
-  // Publish an event
-  public emit<T extends GameEventType>(event: T, payload: GameEventPayloads[T]): void {
+  public emit(event: string, payload: any): void {
     if (!this.listeners[event]) return;
-    
-    // Iterate over a copy to allow handlers to unsubscribe during execution
     [...this.listeners[event]!].forEach(handler => handler(payload));
   }
 
@@ -32,5 +28,4 @@ class GameEventBusController {
   }
 }
 
-// Singleton Instance
 export const GameEventBus = new GameEventBusController();

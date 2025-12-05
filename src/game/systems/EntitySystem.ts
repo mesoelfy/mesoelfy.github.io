@@ -1,6 +1,7 @@
 import { Enemy, Bullet, Particle } from '../types/game.types';
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { GameEvents, EnemyType } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
 import { ViewportHelper } from '../utils/ViewportHelper';
@@ -13,7 +14,7 @@ export class EntitySystem {
 
   private idCounter = 0;
 
-  public spawnEnemy(type: Enemy['type']): void {
+  public spawnEnemy(type: EnemyType): void {
     const config = ENEMY_CONFIG[type];
     const angle = Math.random() * Math.PI * 2;
     const radius = 60; 
@@ -31,7 +32,7 @@ export class EntitySystem {
     };
 
     this.enemies.push(enemy);
-    GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
+    GameEventBus.emit(GameEvents.ENEMY_SPAWNED, { type: type, id: enemy.id });
   }
 
   public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life = 1.5, radius = 0.2): void {
@@ -64,8 +65,6 @@ export class EntitySystem {
     }
   }
 
-  // --- UPDATE LOOP ---
-
   public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
     this.updateEnemies(delta, time, cursor, doDamageTick);
     this.updateBullets(this.bullets, delta);
@@ -76,7 +75,6 @@ export class EntitySystem {
   private updateEnemies(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
     const panels = useGameStore.getState().panels;
     
-    // Prepare AI Context using ViewportHelper (DRY)
     const worldPanels = Object.values(panels)
       .filter(p => !p.isDestroyed)
       .map(p => ViewportHelper.getPanelWorldRect(p))
@@ -95,7 +93,7 @@ export class EntitySystem {
         useGameStore.getState().damagePanel(id, amount);
         const currentHp = panels[id].health;
         if (currentHp > 0) {
-             GameEventBus.emit('PANEL_DAMAGED', { 
+             GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
                 id: id, 
                 amount: amount, 
                 currentHealth: currentHp - amount

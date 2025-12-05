@@ -1,5 +1,6 @@
 import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents, EnemyTypes } from '../config/Identifiers';
 
 export class CollisionSystem {
   private entitySystem: EntitySystem;
@@ -31,14 +32,14 @@ export class CollisionSystem {
         if (distSq < radiusSum * radiusSum) {
           e.hp--;
           b.active = false;
-          GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
+          GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: e.id, damage: 1, type: e.type });
 
           if (e.hp <= 0) {
             e.active = false;
             // Visuals
-            const color = e.type === 'hunter' ? '#F7D277' : e.type === 'kamikaze' ? '#FF003C' : '#9E4EA5';
+            const color = e.type === EnemyTypes.HUNTER ? '#F7D277' : e.type === EnemyTypes.KAMIKAZE ? '#FF003C' : '#9E4EA5';
             this.entitySystem.spawnParticle(e.x, e.y, color, 8);
-            GameEventBus.emit('ENEMY_DESTROYED', { id: e.id, type: e.type, x: e.x, y: e.y });
+            GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { id: e.id, type: e.type, x: e.x, y: e.y });
           } else {
             this.entitySystem.spawnParticle(b.x, b.y, '#FFF', 2);
           }
@@ -59,7 +60,7 @@ export class CollisionSystem {
         
         if (distSq < (eb.radius + 0.5) ** 2) {
             eb.active = false;
-            GameEventBus.emit('PLAYER_HIT', { damage: 10 });
+            GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
             this.entitySystem.spawnParticle(eb.x, eb.y, '#FF003C', 5);
         }
     }
@@ -82,7 +83,7 @@ export class CollisionSystem {
                 pb.active = false;
                 eb.active = false;
                 
-                GameEventBus.emit('PROJECTILE_CLASH', { x: eb.x, y: eb.y });
+                GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
                 this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
                 break;
             }

@@ -2,9 +2,10 @@ import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
 import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
 import * as THREE from 'three';
 
-export const PlayerTurret = () => {
+export const PlayerAvatar = () => {
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
@@ -22,11 +23,13 @@ export const PlayerTurret = () => {
     groupRef.current.position.x = x;
     groupRef.current.position.y = y;
 
-    GameEngine.updateCursor(x, y);
+    // DIP: Push to InputSystem
+    if (ServiceLocator.inputSystem) {
+        ServiceLocator.inputSystem.updateCursor(x, y);
+    }
 
     const isRepairing = GameEngine.isRepairing;
     
-    // Rotate Reticle
     if (ringRef.current) {
       if (isRepairing) {
         ringRef.current.rotation.z += 0.2; 
@@ -50,13 +53,11 @@ export const PlayerTurret = () => {
 
   return (
     <group ref={groupRef}>
-      {/* Central Core */}
       <mesh ref={coreRef}>
         <circleGeometry args={[0.1, 16]} />
         <meshBasicMaterial color={GAME_THEME.turret.base} />
       </mesh>
 
-      {/* SQUARE RING (4 Segments) */}
       <mesh ref={ringRef} rotation={[0, 0, Math.PI / 4]}>
         <ringGeometry args={[0.4, 0.45, 4]} /> 
         <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />

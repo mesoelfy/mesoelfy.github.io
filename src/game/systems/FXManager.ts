@@ -1,10 +1,10 @@
 // src/game/systems/FXManager.ts
 import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../config/Identifiers';
 
 class FXManagerController {
   private initialized = false;
   
-  // A value between 0 and 1 representing "Chaos"
   public trauma = 0;
 
   public init() {
@@ -12,18 +12,13 @@ class FXManagerController {
     
     // --- EVENT WIRING ---
     
-    // 1. Panel Offline (Major Shake)
-    GameEventBus.subscribe('PANEL_DESTROYED', () => {
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.addTrauma(0.55);
     });
     
-    // 2. Player Hit (Gentle Shake)
-    GameEventBus.subscribe('PLAYER_HIT', () => {
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
         this.addTrauma(0.35);
     });
-
-    // 3. Boss Death (Placeholder)
-    // GameEventBus.subscribe('BOSS_DIED', () => this.addTrauma(0.7));
     
     this.initialized = true;
   }
@@ -34,7 +29,6 @@ class FXManagerController {
 
   public decay(delta: number) {
     if (this.trauma > 0) {
-      // Decay speed: 0.8 per second (fully calm in ~1.2s)
       this.trauma = Math.max(0, this.trauma - (delta * 0.8));
     }
   }

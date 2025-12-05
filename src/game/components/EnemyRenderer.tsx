@@ -2,7 +2,9 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
 import { GAME_THEME } from '../theme';
+import { EnemyTypes } from '../config/Identifiers';
 
 const MAX_ENEMIES = 1000;
 const tempObj = new THREE.Object3D();
@@ -17,6 +19,7 @@ export const EnemyRenderer = () => {
     if (!meshRef.current) return;
 
     const enemies = GameEngine.enemies;
+    const cursor = ServiceLocator.inputSystem ? ServiceLocator.inputSystem.getCursorPosition() : {x:0, y:0};
     let count = 0;
 
     for (let i = 0; i < enemies.length; i++) {
@@ -26,23 +29,23 @@ export const EnemyRenderer = () => {
 
       tempObj.position.set(enemy.x, enemy.y, 0);
       
-      let angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
+      let angle = 0;
       let scale = 1;
       
-      // KAMIKAZE
-      if (enemy.type === 'kamikaze') {
-        tempObj.rotation.z += 0.5; 
+      if (enemy.type === EnemyTypes.KAMIKAZE) {
+        angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
+        tempObj.rotation.z = angle + 0.5; // Spin visual
         scale = 1.2;
         tempColor.set(GAME_THEME.enemy.kamikaze); 
       } 
-      // HUNTER
-      else if (enemy.type === 'hunter') {
+      else if (enemy.type === EnemyTypes.HUNTER) {
         if (enemy.state === 'charge') {
-            // Telegraph Visuals
-            const dx = GameEngine['cursor'].x - enemy.x;
-            const dy = GameEngine['cursor'].y - enemy.y;
+            // ROTATION FIX: Look at player
+            const dx = cursor.x - enemy.x;
+            const dy = cursor.y - enemy.y;
             angle = Math.atan2(dy, dx) - Math.PI / 2;
             
+            // Jitter
             tempObj.position.x += (Math.random() - 0.5) * 0.1;
             tempObj.position.y += (Math.random() - 0.5) * 0.1;
             
@@ -52,13 +55,15 @@ export const EnemyRenderer = () => {
             
             scale = 1.8;
         } else {
+            // Standard velocity rotation
+            angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
             tempColor.set(GAME_THEME.enemy.hunter);
             scale = 1.5;
         }
         tempObj.rotation.z = angle;
       } 
-      // MUNCHER
-      else {
+      else { // Muncher
+        angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
         tempObj.rotation.z = angle;
         scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
         tempColor.set(GAME_THEME.enemy.muncher); 
