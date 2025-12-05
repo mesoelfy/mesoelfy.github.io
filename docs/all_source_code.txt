@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Thu Dec  4 17:36:05 CST 2025
+Generated on: Fri Dec  5 12:13:14 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -86,23 +86,39 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GameDirector.tsx
 │   │   │   ├── HunterChargeRenderer.tsx
 │   │   │   ├── ParticleRenderer.tsx
-│   │   │   ├── PlayerTurret.tsx
+│   │   │   ├── PlayerAvatar.tsx
 │   │   │   └── ScreenShaker.tsx
+│   │   ├── config
+│   │   │   ├── EnemyConfig.ts
+│   │   │   ├── Identifiers.ts
+│   │   │   └── PlayerConfig.ts
 │   │   ├── core
-│   │   │   └── GameEngine.ts
+│   │   │   ├── GameEngine.ts
+│   │   │   └── ServiceLocator.ts
 │   │   ├── events
 │   │   │   ├── GameEventBus.ts
 │   │   │   └── GameEvents.ts
 │   │   ├── hooks
 │   │   │   └── usePanelRegistry.ts
+│   │   ├── logic
+│   │   │   └── ai
+│   │   │       └── EnemyBehaviors.ts
 │   │   ├── store
 │   │   │   └── useGameStore.ts
 │   │   ├── systems
-│   │   │   └── FXManager.ts
+│   │   │   ├── BreachSystem.ts
+│   │   │   ├── CollisionSystem.ts
+│   │   │   ├── EntitySystem.ts
+│   │   │   ├── FXManager.ts
+│   │   │   ├── InputSystem.ts
+│   │   │   ├── InteractionSystem.ts
+│   │   │   ├── PlayerSystem.ts
+│   │   │   └── WaveSystem.ts
 │   │   ├── theme.ts
 │   │   ├── types
 │   │   │   └── game.types.ts
 │   │   └── utils
+│   │       ├── ViewportHelper.ts
 │   │       └── coords.ts
 │   ├── scene
 │   │   ├── canvas
@@ -121,6 +137,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   └── GlassPanel.tsx
 │       ├── molecules
 │       │   ├── HoloCommLog.tsx
+│       │   ├── IdentityHUD.tsx
 │       │   ├── LiveArtGrid.tsx
 │       │   └── SocialRow.tsx
 │       ├── organisms
@@ -131,7 +148,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-48 directories, 75 files
+51 directories, 89 files
 
 =====================================
 FILE: ./next.config.js
@@ -231,6 +248,7 @@ FILE: ./docs/TODO.md
 - hunter enemy needs to shoot projectiles.
 - Kamekazi should be bigger and slow. If it blows up on player and is inside a panel, it does damage to that panel.
 
+- What things does Vampire Survivors do that I should implement? Game design and juice.
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -836,6 +854,177 @@ export const LiveArtGrid = () => {
 
 
 =====================================
+FILE: ./src/ui/molecules/IdentityHUD.tsx
+=====================================
+import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
+import { useGameStore, UpgradeOption } from '@/game/store/useGameStore';
+import identity from '@/data/identity.json';
+import { useStore } from '@/core/store/useStore'; 
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Unplug, Zap } from 'lucide-react';
+
+export const IdentityHUD = () => {
+  const { openModal } = useStore();
+  
+  const hp = useGameStore(s => s.playerHealth);
+  const maxHp = useGameStore(s => s.maxPlayerHealth);
+  const xp = useGameStore(s => s.xp);
+  const nextXp = useGameStore(s => s.xpToNextLevel);
+  const level = useGameStore(s => s.level);
+  const upgrades = useGameStore(s => s.availableUpgrades);
+  const selectUpgrade = useGameStore(s => s.selectUpgrade);
+  const rebootProgress = useGameStore(s => s.playerRebootProgress);
+  
+  const panel = useGameStore(s => s.panels['identity']);
+  const isPanelDead = panel ? panel.isDestroyed : false;
+  const isPlayerDead = hp <= 0;
+
+  const hpPercent = Math.max(0, (hp / maxHp) * 100);
+  const xpPercent = Math.min(100, (xp / nextXp) * 100);
+
+  const size = 160; 
+  const center = size / 2;
+  const radiusHp = 60;
+  const radiusXp = 70;
+  const stroke = 4;
+  
+  const circHp = 2 * Math.PI * radiusHp;
+  const circXp = 2 * Math.PI * radiusXp;
+
+  const displayHpPercent = isPlayerDead ? rebootProgress : hpPercent;
+  const displayHpColor = isPlayerDead ? "#eae747" : (hpPercent < 30 ? "#FF003C" : "#78F654"); 
+
+  const offsetHp = circHp - (displayHpPercent / 100 * circHp);
+  const offsetXp = circXp - (xpPercent / 100 * circXp);
+
+  const isLowHp = hpPercent < 30;
+
+  const handleUpgrade = (u: UpgradeOption) => {
+      if (isPanelDead || isPlayerDead) return; 
+      AudioSystem.playClick();
+      selectUpgrade(u);
+  };
+
+  return (
+    <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
+      
+      {/* 1. THE AVATAR (Top) */}
+      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group">
+        
+        {/* AVATAR LAYER */}
+        <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
+           <MiniCrystalCanvas />
+        </div>
+
+        {/* REBOOT INDICATOR (Center Text) */}
+        {isPlayerDead && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {rebootProgress > 0 ? (
+                    <span className="text-2xl font-header font-black text-elfy-yellow drop-shadow-md animate-pulse">
+                        {Math.floor(rebootProgress)}%
+                    </span>
+                ) : (
+                    <div className="animate-pulse">
+                        <Unplug className="text-white/50 w-8 h-8" />
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* HUD RINGS */}
+        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
+          <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
+          <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="4 4" />
+          
+          <circle 
+            cx={center} cy={center} r={radiusHp} 
+            stroke={displayHpColor} 
+            strokeWidth={stroke} fill="transparent"
+            strokeDasharray={circHp}
+            strokeDashoffset={offsetHp}
+            strokeLinecap="round"
+            className="transition-all duration-100 ease-linear"
+          />
+          <circle 
+            cx={center} cy={center} r={radiusXp} 
+            stroke="#9E4EA5" 
+            strokeWidth={stroke} fill="transparent"
+            strokeDasharray={circXp}
+            strokeDashoffset={offsetXp}
+            strokeLinecap="round"
+            className="transition-all duration-500 ease-out"
+          />
+        </svg>
+
+        {/* Level Badge */}
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-3 py-0.5 text-[10px] font-bold font-mono rounded-full shadow-[0_0_10px_rgba(158,78,165,0.4)]">
+          LVL_{level}
+        </div>
+      </div>
+
+      {/* 2. INFO & UPGRADES (Middle) */}
+      <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-2 min-h-0">
+        
+        {isPlayerDead && !isPanelDead ? (
+            <div className="bg-black/80 border border-elfy-yellow/50 px-4 py-2 rounded animate-pulse text-center">
+                <div className="flex items-center justify-center gap-2 text-elfy-yellow font-bold text-xs mb-1">
+                    <Zap size={14} />
+                    <span>SYSTEM CRITICAL</span>
+                </div>
+                <p className="text-[9px] text-white font-mono">HOLD TO REBOOT</p>
+            </div>
+        ) : (
+            <div className="text-center">
+              <h2 className="text-2xl font-header font-black text-elfy-green tracking-wider">{identity.name}</h2>
+              <div className="text-[9px] text-elfy-purple-light uppercase tracking-widest opacity-80">{identity.class}</div>
+            </div>
+        )}
+
+        {/* UPGRADE MODULE */}
+        {upgrades.length > 0 && !isPlayerDead && (
+          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 animate-pulse rounded-sm pointer-events-auto z-50">
+            <div className="text-[8px] text-elfy-purple-light text-center mb-1 font-bold tracking-widest">
+              [ SYSTEM UPGRADE AVAILABLE ]
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {upgrades.map(u => (
+                <button 
+                  key={u}
+                  className={`text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
+                  onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                  onClick={() => handleUpgrade(u)}
+                >
+                  {u.replace('_', ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. NAVIGATION */}
+      <div className="w-full grid grid-cols-2 gap-3 mt-auto pt-2 border-t border-elfy-green-dim/10">
+        <button 
+          onClick={() => !isPanelDead && openModal('about')} 
+          onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+          className="py-2 bg-elfy-purple-deep/20 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+        >
+          About
+        </button>
+        <button 
+          onClick={() => !isPanelDead && openModal('contact')} 
+          onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+          className="py-2 bg-elfy-yellow/5 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+        >
+          Contact
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/atoms/GlassPanel.tsx
 =====================================
 import { clsx } from 'clsx';
@@ -843,12 +1032,14 @@ import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
+import { AlertTriangle, ChevronUp, Skull } from 'lucide-react';
 
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
   title?: string;
   gameId?: string; 
+  suppressOfflineOverlay?: boolean;
 }
 
 const panelVariants = {
@@ -857,7 +1048,17 @@ const panelVariants = {
     opacity: 1, 
     y: 0,
     transition: { duration: 0.5, ease: "easeOut" }
-  }
+  },
+  shattered: (custom: number) => ({
+    y: 350 + (custom * 50),
+    opacity: 0.8,
+    rotate: custom * 15,
+    transition: { 
+        duration: 1.5, 
+        ease: "anticipate",
+        delay: Math.abs(custom) * 0.1 
+    }
+  })
 };
 
 const MAX_HEALTH = 1000;
@@ -865,24 +1066,43 @@ const MAX_HEALTH = 1000;
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isGameOver = Math.floor(systemIntegrity) <= 0;
+
   const panelState = useGameStore((state) => 
     gameId ? state.panels[gameId] : null
   );
 
   const health = panelState ? panelState.health : MAX_HEALTH;
-  const healthPercent = (health / MAX_HEALTH) * 100; // Normalized for CSS width
-  
+  const isDestroyed = panelState ? panelState.isDestroyed : false;
+  const healthPercent = (health / MAX_HEALTH) * 100; 
   const isDamaged = health < MAX_HEALTH;
-  const isCritical = health < (MAX_HEALTH * 0.3);
+  const isCritical = !isDestroyed && health < (MAX_HEALTH * 0.3);
 
   let borderColor = "border-elfy-green-dim/30";
-  if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
+  if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
+  else if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
+
+  let barColor = "bg-elfy-green";
+  if (isDestroyed) barColor = "bg-elfy-purple"; 
+  else if (healthPercent < 30) barColor = "bg-elfy-red";
+  else if (healthPercent < 60) barColor = "bg-elfy-yellow";
+
+  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
+  const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
+  const purpleCircleClass = isDestroyed ? "bg-elfy-purple" : "border border-elfy-purple-dim";
+
+  const tapeText = "SECURITY BREACH // ".repeat(20);
+  const tapeRows = Array.from({ length: 20 });
 
   return (
     <motion.div 
       ref={registryRef}
-      variants={panelVariants} 
+      variants={panelVariants}
+      initial="hidden"
+      animate={isGameOver ? "shattered" : "visible"}
+      custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col",
         "bg-black border",
@@ -901,21 +1121,18 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
               {title}
             </span>
             <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-elfy-green" />
-              <div className="w-2 h-2 rounded-full border border-elfy-purple-dim" />
+              <div className={`w-2 h-2 rounded-full ${greenCircleClass}`} />
+              <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
             </div>
           </div>
 
           {gameId && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
-                className={clsx("h-full transition-colors duration-300", 
-                  healthPercent > 60 ? "bg-elfy-green" : 
-                  healthPercent > 30 ? "bg-elfy-yellow" : "bg-elfy-red"
-                )}
+                className={clsx("h-full transition-colors duration-200", barColor)}
                 initial={{ width: "100%" }}
                 animate={{ width: `${healthPercent}%` }}
-                transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
+                transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
               />
             </div>
           )}
@@ -923,11 +1140,56 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {health <= 0 && (
-          <div className="absolute inset-0 z-50 bg-black/90 flex items-center justify-center">
-            <span className="text-elfy-red font-header font-black text-xl animate-pulse">OFFLINE</span>
+        {/* REBOOT OVERLAY - INFINITE TAPE WALL */}
+        {isDestroyed && !isGameOver && (
+          <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center overflow-hidden">
+            
+            {/* TAPE CONTAINER - MASSIVE SCALE TO PREVENT CLIPPING */}
+            <div className="absolute inset-[-150%] flex flex-col justify-center items-center gap-12 opacity-40 pointer-events-none -rotate-12 scale-150">
+                {tapeRows.map((_, i) => (
+                    <motion.div 
+                        key={i}
+                        className={clsx(
+                            "w-[600%] font-header font-black tracking-widest text-lg py-1 border-y-2",
+                            i % 2 === 0 ? "bg-elfy-red text-black border-black" : "bg-elfy-red/10 text-elfy-red border-elfy-red/50"
+                        )}
+                        // Slower Animation (30s base)
+                        animate={{ x: i % 2 === 0 ? ["0%", "-25%"] : ["-25%", "0%"] }}
+                        transition={{ repeat: Infinity, duration: 30 + (i % 5), ease: "linear" }}
+                    >
+                        <div className="whitespace-nowrap">{tapeText}</div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* INTERACTION UI (Centered) */}
+            <div className="relative z-20 flex flex-col items-center justify-center gap-4 bg-black/90 p-6 rounded-full backdrop-blur-md border-2 border-elfy-red/50 shadow-[0_0_50px_rgba(255,0,60,0.5)]">
+                <div className="animate-bounce">
+                    <AlertTriangle size={48} className="text-elfy-red fill-black drop-shadow-[0_0_10px_rgba(255,0,60,0.8)]" />
+                </div>
+
+                <div className="flex flex-col items-center justify-center text-center">
+                    <div className="bg-elfy-red text-black px-2 py-0.5 mb-2 font-bold text-[10px]">
+                        SYSTEM CRITICAL
+                    </div>
+                    <div className="flex flex-col items-center animate-pulse text-elfy-purple-light gap-1">
+                        <ChevronUp size={24} />
+                        <span className="text-xs font-mono font-bold tracking-widest">HOVER TO REBOOT</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1">
+                        SEQ: {Math.floor(healthPercent)}%
+                    </div>
+                </div>
+            </div>
           </div>
         )}
+        
+        {isGameOver && (
+            <div className="absolute inset-0 z-[100] bg-black/90 flex items-center justify-center">
+                <Skull className="text-elfy-red animate-pulse w-16 h-16" />
+            </div>
+        )}
+        
         {children}
       </div>
     </motion.div>
@@ -1055,52 +1317,76 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/organisms/Header.tsx
 =====================================
-import { Volume2, VolumeX, ShieldAlert } from 'lucide-react';
+import { Volume2, VolumeX, Radio } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useEffect, useState } from 'react';
 
 export const Header = () => {
   const { musicEnabled, toggleMusic } = useStore();
+  
+  // Global System Integrity (The Footer Bar replacement)
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const score = useGameStore(state => state.score);
+
+  // Client-side init
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const handleToggle = () => {
       AudioSystem.playClick();
       toggleMusic();
-      // Apply mute state immediately
       AudioSystem.setMute(!musicEnabled ? false : true); 
   };
 
+  // Integrity Bar Logic
+  let integrityColor = "bg-elfy-green";
+  if (systemIntegrity < 40) integrityColor = "bg-elfy-red";
+  else if (systemIntegrity < 70) integrityColor = "bg-elfy-yellow";
+
   return (
-    <header className="w-full h-12 border-b border-elfy-green-dim/30 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
+    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
+      
+      {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
-        {/* Logo */}
         <span className="font-header font-black text-elfy-green text-xl md:text-2xl tracking-wide drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
           MESOELFY_OS
         </span>
         
-        {/* Unsecure Status Badge */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1 border border-elfy-red/40 bg-elfy-red/5 rounded-full shadow-[0_0_10px_rgba(255,0,60,0.1)]">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-elfy-red opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-elfy-red"></span>
+        {mounted && (
+          <div className="hidden md:flex items-center gap-2 text-xs font-mono text-elfy-green-dim border-l border-elfy-green-dim/20 pl-4">
+            <span>SCORE:</span>
+            <span className="text-elfy-green">{score.toString().padStart(6, '0')}</span>
           </div>
-          <span className="text-[10px] text-elfy-red font-bold tracking-widest uppercase leading-none">
-            SYSTEM_UNSECURE
-          </span>
-        </div>
-        
-        {/* Mobile simplified version */}
-        <div className="md:hidden w-3 h-3 bg-elfy-red rounded-full animate-pulse shadow-[0_0_8px_#ff003c]" />
+        )}
       </div>
 
-      <button 
-        onClick={handleToggle}
-        onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
-        className="flex items-center gap-2 text-xs font-mono text-elfy-green-dim hover:text-elfy-green transition-colors"
-      >
-        <span className="hidden md:inline">AUDIO: [{musicEnabled ? 'ON' : 'OFF'}]</span>
-        <span className="md:hidden">[{musicEnabled ? 'ON' : 'OFF'}]</span>
-        {musicEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-      </button>
+      {/* RIGHT: Status */}
+      <div className="flex items-center gap-6">
+        <button 
+          onClick={handleToggle}
+          onMouseEnter={() => AudioSystem.playHover()}
+          className="flex items-center gap-2 text-xs font-mono text-elfy-green-dim hover:text-elfy-green transition-colors pl-4 border-l border-elfy-green-dim/20"
+        >
+          {musicEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+        </button>
+      </div>
+
+      {/* BOTTOM BORDER: OS INTEGRITY BAR */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900">
+        <div 
+          className={`h-full transition-all duration-500 ease-out ${integrityColor} shadow-[0_0_10px_currentColor]`} 
+          style={{ width: `${systemIntegrity}%` }}
+        />
+      </div>
+      
+      {/* Integrity Label (Floating) */}
+      <div className="absolute bottom-[-14px] right-2 text-[8px] font-mono text-elfy-green-dim flex items-center gap-1">
+        <Radio size={8} className={systemIntegrity < 100 ? "animate-pulse text-elfy-red" : ""} />
+        <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>
+      </div>
+
     </header>
   );
 };
@@ -1399,12 +1685,13 @@ FILE: ./src/app/page.tsx
 'use client';
 
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
 import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
-import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { SocialRow } from '@/ui/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
 import { HoloCommLog } from '@/ui/molecules/HoloCommLog';
+import { IdentityHUD } from '@/ui/molecules/IdentityHUD';
 import { Header } from '@/ui/organisms/Header';
 import { Footer } from '@/ui/organisms/Footer';
 import { AboutModal } from '@/features/identity/AboutModal';
@@ -1414,28 +1701,35 @@ import { ContactModal } from '@/features/contact/ContactModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import identity from '@/data/identity.json';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 
 export default function Home() {
   const { openModal } = useStore();
+  const startGame = useGameStore(s => s.startGame);
+  const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
+  
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
+      startGame();
     }, 200);
   };
+
+  useEffect(() => {
+    if (bootState !== 'active') return;
+    const interval = setInterval(recalcIntegrity, 500);
+    return () => clearInterval(interval);
+  }, [bootState, recalcIntegrity]);
 
   const playHover = () => AudioSystem.playHover();
 
   return (
-    // WRAPPER FOR GLOBAL SHAKE
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden">
       
-      {/* SHAKE MANAGER LOGIC */}
       <GlobalShakeManager />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
@@ -1473,34 +1767,9 @@ export default function Home() {
             }}
           >
             <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+              
               <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
-                  <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
-                     <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <MiniCrystalCanvas />
-                     </div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <h2 className="text-4xl md:text-5xl font-header font-black text-elfy-green tracking-wide drop-shadow-md">{identity.name}</h2>
-                    <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
-                  </div>
-                  <div className="flex w-full gap-3 mt-2">
-                    <button 
-                      onClick={() => openModal('about')} 
-                      onMouseEnter={playHover}
-                      className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                    >
-                      About Me
-                    </button>
-                    <button 
-                      onClick={() => openModal('contact')} 
-                      onMouseEnter={playHover}
-                      className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                    >
-                      Contact
-                    </button>
-                  </div>
-                </div>
+                <IdentityHUD />
               </GlassPanel>
 
               <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
@@ -2154,7 +2423,7 @@ FILE: ./src/game/types/game.types.ts
 =====================================
 export interface RegisteredPanel {
   id: string;
-  element: HTMLElement; // Holds the live DOM reference
+  element: HTMLElement;
   health: number;
   isDestroyed: boolean;
 }
@@ -2173,14 +2442,7 @@ export interface GameState {
   healPanel: (id: string, amount: number) => void;
 }
 
-
-=====================================
-FILE: ./src/game/core/GameEngine.ts
-=====================================
-import * as THREE from 'three';
-import { useGameStore } from '../store/useGameStore';
-import { GameEventBus } from '../events/GameEventBus';
-import { FXManager } from '../systems/FXManager';
+// --- ENTITY TYPES ---
 
 export interface Entity {
   id: number;
@@ -2188,6 +2450,7 @@ export interface Entity {
   y: number;
   radius: number;
   active: boolean;
+  spawnTime: number; // NEW: For spawn animation
 }
 
 export interface Enemy extends Entity {
@@ -2217,508 +2480,147 @@ export interface Particle extends Entity {
   color: string;
 }
 
-const HUNTER_OFFSET_DISTANCE = 1.6;
+
+=====================================
+FILE: ./src/game/core/ServiceLocator.ts
+=====================================
+import { EntitySystem } from '../systems/EntitySystem';
+import { CollisionSystem } from '../systems/CollisionSystem';
+import { WaveSystem } from '../systems/WaveSystem';
+import { InteractionSystem } from '../systems/InteractionSystem';
+import { InputSystem } from '../systems/InputSystem';
+import { PlayerSystem } from '../systems/PlayerSystem';
+import { BreachSystem } from '../systems/BreachSystem';
+import { FXManager } from '../systems/FXManager';
+
+class ServiceLocatorCore {
+  public entitySystem: EntitySystem;
+  public collisionSystem: CollisionSystem;
+  public waveSystem: WaveSystem;
+  public interactionSystem: InteractionSystem;
+  public inputSystem: InputSystem;
+  public playerSystem: PlayerSystem;
+  public breachSystem: BreachSystem;
+  public fxManager: typeof FXManager;
+
+  public registerEntitySystem(sys: EntitySystem) { this.entitySystem = sys; }
+  public registerCollisionSystem(sys: CollisionSystem) { this.collisionSystem = sys; }
+  public registerWaveSystem(sys: WaveSystem) { this.waveSystem = sys; }
+  public registerInteractionSystem(sys: InteractionSystem) { this.interactionSystem = sys; }
+  public registerInputSystem(sys: InputSystem) { this.inputSystem = sys; }
+  public registerPlayerSystem(sys: PlayerSystem) { this.playerSystem = sys; }
+  public registerBreachSystem(sys: BreachSystem) { this.breachSystem = sys; }
+  public registerFXManager(mgr: typeof FXManager) { this.fxManager = mgr; }
+}
+
+export const ServiceLocator = new ServiceLocatorCore();
+
+
+=====================================
+FILE: ./src/game/core/GameEngine.ts
+=====================================
+import { useGameStore } from '../store/useGameStore';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../config/Identifiers';
+import { FXManager } from '../systems/FXManager';
+import { ServiceLocator } from './ServiceLocator';
+import { EntitySystem } from '../systems/EntitySystem';
+import { CollisionSystem } from '../systems/CollisionSystem';
+import { WaveSystem } from '../systems/WaveSystem';
+import { InteractionSystem } from '../systems/InteractionSystem';
+import { InputSystem } from '../systems/InputSystem';
+import { PlayerSystem } from '../systems/PlayerSystem';
+import { BreachSystem } from '../systems/BreachSystem';
+import { ViewportHelper } from '../utils/ViewportHelper';
 
 class GameEngineCore {
-  public enemies: Enemy[] = [];
-  public bullets: Bullet[] = [];
-  public enemyBullets: Bullet[] = [];
-  public particles: Particle[] = [];
+  private entitySystem: EntitySystem;
+  private collisionSystem: CollisionSystem;
+  private waveSystem: WaveSystem;
+  private interactionSystem: InteractionSystem;
+  private inputSystem: InputSystem;
+  private playerSystem: PlayerSystem;
+  private breachSystem: BreachSystem;
   
   public isRepairing = false;
   
-  private lastSpawnTime = 0;
-  private lastFireTime = 0;
-  private lastDamageTime = 0;
-  private lastRepairTime = 0;
-  
-  private spawnInterval = 0.8; 
-  private fireRate = 0.15; 
-  private cursor = { x: 0, y: 0 };
-  
-  private idCounter = 0;
-  private bounds = { width: 1920, height: 1080 };
-  private viewport = { width: 1, height: 1 };
-  private screenSize = { width: 1, height: 1 };
-
-  // State Tracking for Edge Detection
+  private lastDamageTime = 0; 
   private prevPanelHealth: Record<string, number> = {};
 
   constructor() {
     FXManager.init();
+    this.entitySystem = new EntitySystem();
+    this.collisionSystem = new CollisionSystem(this.entitySystem);
+    this.waveSystem = new WaveSystem();
+    this.interactionSystem = new InteractionSystem();
+    this.inputSystem = new InputSystem();
+    this.playerSystem = new PlayerSystem();
+    this.breachSystem = new BreachSystem();
+
+    ServiceLocator.registerEntitySystem(this.entitySystem);
+    ServiceLocator.registerCollisionSystem(this.collisionSystem);
+    ServiceLocator.registerWaveSystem(this.waveSystem);
+    ServiceLocator.registerInteractionSystem(this.interactionSystem);
+    ServiceLocator.registerInputSystem(this.inputSystem);
+    ServiceLocator.registerPlayerSystem(this.playerSystem);
+    ServiceLocator.registerBreachSystem(this.breachSystem);
+    ServiceLocator.registerFXManager(FXManager);
   }
+
+  public get enemies() { return this.entitySystem.enemies; }
+  public get bullets() { return this.entitySystem.bullets; }
+  public get enemyBullets() { return this.entitySystem.enemyBullets; }
+  public get particles() { return this.entitySystem.particles; }
 
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
-    this.viewport = { width: vpW, height: vpH };
-    this.screenSize = { width: screenW, height: screenH };
-  }
-
-  public updateCursor(x: number, y: number) {
-    this.cursor = { x, y };
-  }
-
-  private getPanelWorldRect(panel: any) {
-    if (!panel.element) return null;
-
-    const rect = panel.element.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return null;
-
-    const { width: vw, height: vh } = this.viewport;
-    const { width: sw, height: sh } = this.screenSize;
-    
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    
-    const wx = (cx / sw) * vw - (vw / 2);
-    const wy = -((cy / sh) * vh - (vh / 2));
-    const wWidth = (rect.width / sw) * vw;
-    const wHeight = (rect.height / sh) * vh;
-
-    return {
-      id: panel.id,
-      x: wx, y: wy,
-      width: wWidth, height: wHeight,
-      left: wx - wWidth / 2, right: wx + wWidth / 2,
-      top: wy + wHeight / 2, bottom: wy - wHeight / 2,
-    };
+    ViewportHelper.update(vpW, vpH, screenW, screenH);
   }
 
   public update(delta: number, time: number) {
-    const { threatLevel } = useGameStore.getState();
+    // 0. Game Over Check
+    const store = useGameStore.getState();
+    if (store.isPlaying && store.systemIntegrity <= 0) {
+        store.stopGame();
+        // Trigger Massive Trauma
+        FXManager.addTrauma(1.0);
+        return;
+    }
 
-    // 1. Check Panel Deaths (Global Check)
+    // 1. Systems Update
     this.checkPanelStates();
+    
+    const { threatLevel } = store;
+    const cursor = this.inputSystem.getCursorPosition();
+    
+    // 2. Wave Logic
+    this.waveSystem.update(time, threatLevel);
+    this.breachSystem.update(time); // Spawn from dead panels
 
-    if (time > this.lastSpawnTime + (this.spawnInterval / threatLevel)) {
-      this.spawnEnemy();
-      this.lastSpawnTime = time;
-    }
+    // 3. Interaction Logic
+    this.isRepairing = this.interactionSystem.update(time, cursor);
 
-    this.attemptRepair(time);
+    // 4. Player Logic
+    this.playerSystem.update(time);
 
-    if (time > this.lastFireTime + this.fireRate) {
-      this.attemptFire();
-      this.lastFireTime = time;
-    }
-
+    // 5. Physics & Entities
     const doDamageTick = time > this.lastDamageTime + 0.5; 
     if (doDamageTick) this.lastDamageTime = time;
 
-    this.updateEnemies(delta, time, doDamageTick);
-    this.updateBullets(this.bullets, delta);
-    this.updateBullets(this.enemyBullets, delta);
-    this.updateParticles(delta);
-    
-    this.checkCollisions();
+    this.entitySystem.update(delta, time, cursor, doDamageTick);
+    this.collisionSystem.update(cursor);
   }
 
-  // ROBUST DEATH DETECTION
   private checkPanelStates() {
     const panels = useGameStore.getState().panels;
-    
     for (const id in panels) {
       const currentHealth = panels[id].health;
-      const prevHealth = this.prevPanelHealth[id]; // Undefined on first run
-
-      // If we have a history, and it was alive, and now it's dead...
+      const prevHealth = this.prevPanelHealth[id]; 
       if (prevHealth !== undefined && prevHealth > 0 && currentHealth <= 0) {
-        GameEventBus.emit('PANEL_DESTROYED', { id });
+        GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+        // Recalculate integrity immediately on death
+        useGameStore.getState().recalculateIntegrity();
       }
-
-      // Update history
       this.prevPanelHealth[id] = currentHealth;
-    }
-  }
-
-  private attemptRepair(time: number) {
-    const panels = useGameStore.getState().panels;
-    const healFn = useGameStore.getState().healPanel;
-    const REPAIR_RATE = 0.05; 
-
-    if (time < this.lastRepairTime + REPAIR_RATE) return;
-
-    let isHoveringPanel = false;
-
-    for (const pKey in panels) {
-      const p = panels[pKey];
-      if (p.isDestroyed || p.health >= 1000) continue;
-
-      const r = this.getPanelWorldRect(p);
-      if (!r) continue;
-
-      if (
-        this.cursor.x >= r.left && 
-        this.cursor.x <= r.right && 
-        this.cursor.y >= r.bottom && 
-        this.cursor.y <= r.top
-      ) {
-        isHoveringPanel = true;
-        healFn(p.id, 10); 
-        this.lastRepairTime = time;
-        GameEventBus.emit('PANEL_HEALED', { id: p.id, amount: 10 });
-        if (Math.random() > 0.6) this.explode(this.cursor.x, this.cursor.y, 1, '#00F0FF');
-        break; 
-      }
-    }
-    this.isRepairing = isHoveringPanel;
-  }
-
-  private updateEnemies(delta: number, time: number, doDamageTick: boolean) {
-    const panels = useGameStore.getState().panels;
-    const damageFn = useGameStore.getState().damagePanel;
-    
-    const worldPanels = Object.values(panels)
-      .map(p => this.getPanelWorldRect(p))
-      .filter(r => r !== null);
-
-    for (const e of this.enemies) {
-      if (!e.active) continue;
-
-      let targetX = 0;
-      let targetY = 0;
-
-      if (e.type === 'kamikaze') {
-        targetX = this.cursor.x;
-        targetY = this.cursor.y;
-        const dx = targetX - e.x;
-        const dy = targetY - e.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        if (dist < 1.0) {
-           e.active = false;
-           this.explode(e.x, e.y, 20, '#FF003C');
-           GameEventBus.emit('PLAYER_HIT', { damage: 10 });
-           continue; 
-        }
-      } 
-      else if (e.type === 'hunter') {
-        if (!e.state) e.state = 'orbit';
-        if (!e.stateTimer) e.stateTimer = 2.0 + Math.random() * 2.0;
-
-        e.stateTimer -= delta;
-
-        if (e.state === 'orbit') {
-          if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
-          const speedVar = 0.7 + Math.sin(time * 0.8 + e.id) * 0.5;
-          e.orbitAngle += delta * speedVar; 
-          const breathe = Math.sin(time * 1.5 + e.id) * 5.5; 
-          const orbitRadius = 12.5 + breathe; 
-          
-          const centerX = 0;
-          const centerY = 0;
-          targetX = centerX + Math.cos(e.orbitAngle) * orbitRadius;
-          targetY = centerY + Math.sin(e.orbitAngle) * orbitRadius;
-
-          const maxX = this.viewport.width * 0.4;
-          const maxY = this.viewport.height * 0.4;
-          targetX = Math.max(-maxX, Math.min(maxX, targetX));
-          targetY = Math.max(-maxY, Math.min(maxY, targetY));
-
-          const inBoundsX = Math.abs(e.x) < this.viewport.width * 0.45;
-          const inBoundsY = Math.abs(e.y) < this.viewport.height * 0.45;
-
-          if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
-            e.state = 'charge';
-            e.stateTimer = 1.0; 
-            e.vx = 0;
-            e.vy = 0;
-          }
-        } 
-        else if (e.state === 'charge') {
-          targetX = e.x; 
-          targetY = e.y;
-          if (e.stateTimer <= 0) {
-            e.state = 'fire';
-          }
-        }
-        else if (e.state === 'fire') {
-          const dx = this.cursor.x - e.x;
-          const dy = this.cursor.y - e.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          const dirX = dist > 0 ? dx/dist : 0;
-          const dirY = dist > 0 ? dy/dist : 1;
-          
-          const spawnX = e.x + (dirX * HUNTER_OFFSET_DISTANCE);
-          const spawnY = e.y + (dirY * HUNTER_OFFSET_DISTANCE);
-
-          this.spawnEnemyBullet(spawnX, spawnY);
-          e.state = 'orbit';
-          e.stateTimer = 3.0 + Math.random() * 2.0;
-        }
-      }
-      else {
-        // MUNCHER LOGIC
-        let nearestDist = Infinity;
-        let bestPanel: any = null;
-
-        for (const p of worldPanels) {
-          if (!p) continue; 
-          if (panels[p.id].isDestroyed) continue;
-          if (p.id === 'feed') continue; 
-          
-          const dx = p.x - e.x;
-          const dy = p.y - e.y;
-          const dist = dx*dx + dy*dy;
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            bestPanel = p;
-          }
-        }
-
-        if (bestPanel) {
-          targetX = Math.max(bestPanel.left, Math.min(e.x, bestPanel.right));
-          targetY = Math.max(bestPanel.bottom, Math.min(e.y, bestPanel.top));
-          
-          const dx = targetX - e.x;
-          const dy = targetY - e.y;
-          const distToEdge = Math.sqrt(dx*dx + dy*dy);
-
-          if (distToEdge < 0.5) { 
-            e.isEating = true;
-            if (doDamageTick) {
-              const dmg = 5;
-              const currentHp = panels[bestPanel.id].health;
-              
-              damageFn(bestPanel.id, dmg); 
-              this.explode(targetX, targetY, 1, '#9E4EA5');
-              
-              // EVENT LOGIC UPDATED:
-              // Only fire "DAMAGED" here. "DESTROYED" is now handled globally in checkPanelStates()
-              // to guarantee it never misfires.
-              if (currentHp > 0) {
-                 GameEventBus.emit('PANEL_DAMAGED', { 
-                    id: bestPanel.id, 
-                    amount: dmg, 
-                    currentHealth: currentHp - dmg
-                 });
-              }
-            }
-          } else {
-            e.isEating = false;
-          }
-        } else {
-          targetX = Math.sin(time) * 5;
-          targetY = Math.cos(time) * 5;
-        }
-      }
-
-      if (!e.isEating && e.state !== 'charge') {
-        const dx = targetX - e.x;
-        const dy = targetY - e.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        let speed = 8;
-        if (e.type === 'hunter') speed = 12; 
-        else if (e.type === 'kamikaze') speed = 12; 
-
-        if (dist > 0.1) {
-          e.vx = (dx / dist) * speed * delta;
-          e.vy = (dy / dist) * speed * delta;
-        }
-        e.x += e.vx;
-        e.y += e.vy;
-      }
-    }
-    
-    this.enemies = this.enemies.filter(e => e.active);
-  }
-
-  private spawnEnemy() {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 60; 
-    const rand = Math.random();
-    
-    let type: Enemy['type'] = 'muncher';
-    let hp = 2;
-    let radiusHit = 0.5;
-
-    if (rand < 0.50) {
-      type = 'muncher';
-      hp = 2;
-    } else if (rand < 0.80) {
-      type = 'kamikaze';
-      hp = 1; 
-    } else {
-      type = 'hunter';
-      hp = 3;
-    }
-
-    const enemy: Enemy = {
-      id: this.idCounter++,
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius,
-      vx: 0, vy: 0,
-      radius: radiusHit,
-      hp,
-      type,
-      active: true,
-      orbitAngle: Math.random() * Math.PI * 2
-    };
-
-    this.enemies.push(enemy);
-    GameEventBus.emit('ENEMY_SPAWNED', { type: type, id: enemy.id });
-  }
-
-  private spawnEnemyBullet(x: number, y: number) {
-    const dx = this.cursor.x - x;
-    const dy = this.cursor.y - y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const SPEED = 25; 
-
-    this.enemyBullets.push({
-      id: this.idCounter++,
-      x: x,
-      y: y,
-      vx: (dx / dist) * SPEED,
-      vy: (dy / dist) * SPEED,
-      radius: 0.9, 
-      active: true,
-      life: 3.0,
-      isEnemy: true
-    });
-  }
-
-  private attemptFire() {
-    let nearestDist = Infinity;
-    let targetEnemy: Enemy | null = null;
-    const RANGE = 12; 
-
-    for (const e of this.enemies) {
-      if (!e.active) continue;
-      const dx = e.x - this.cursor.x;
-      const dy = e.y - this.cursor.y;
-      const dist = dx*dx + dy*dy;
-
-      if (dist < (RANGE * RANGE) && dist < nearestDist) {
-        nearestDist = dist;
-        targetEnemy = e;
-      }
-    }
-
-    if (targetEnemy) {
-      const dx = targetEnemy.x - this.cursor.x;
-      const dy = targetEnemy.y - this.cursor.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const SPEED = 45;
-
-      this.bullets.push({
-        id: this.idCounter++,
-        x: this.cursor.x,
-        y: this.cursor.y,
-        vx: (dx / dist) * SPEED,
-        vy: (dy / dist) * SPEED,
-        radius: 0.2,
-        active: true,
-        life: 1.5,
-        isEnemy: false
-      });
-      GameEventBus.emit('PLAYER_FIRED', { x: this.cursor.x, y: this.cursor.y });
-    }
-  }
-
-  private updateBullets(list: Bullet[], delta: number) {
-    for (const b of list) {
-      if (!b.active) continue;
-      b.x += b.vx * delta;
-      b.y += b.vy * delta;
-      b.life -= delta;
-      if (b.life <= 0) b.active = false;
-    }
-    
-    if (list === this.bullets) {
-        this.bullets = this.bullets.filter(b => b.active);
-    } else {
-        this.enemyBullets = this.enemyBullets.filter(b => b.active);
-    }
-  }
-
-  private checkCollisions() {
-    for (const b of this.bullets) {
-      if (!b.active) continue;
-      for (const e of this.enemies) {
-        if (!e.active) continue;
-        const dx = b.x - e.x;
-        const dy = b.y - e.y;
-        const distSq = dx*dx + dy*dy;
-        const radiusSum = b.radius + e.radius;
-
-        if (distSq < radiusSum * radiusSum) {
-          e.hp--;
-          b.active = false;
-          GameEventBus.emit('ENEMY_DAMAGED', { id: e.id, damage: 1, type: e.type });
-
-          if (e.hp <= 0) {
-            e.active = false;
-            this.explode(e.x, e.y, 8, e.type === 'hunter' ? '#F7D277' : e.type === 'kamikaze' ? '#FF003C' : '#9E4EA5');
-            GameEventBus.emit('ENEMY_DESTROYED', { id: e.id, type: e.type, x: e.x, y: e.y });
-          } else {
-            this.explode(b.x, b.y, 2, '#FFF');
-          }
-          break;
-        }
-      }
-    }
-
-    for (const eb of this.enemyBullets) {
-        if (!eb.active) continue;
-        const dx = eb.x - this.cursor.x;
-        const dy = eb.y - this.cursor.y;
-        const distSq = dx*dx + dy*dy;
-        
-        if (distSq < (eb.radius + 0.5) ** 2) {
-            eb.active = false;
-            GameEventBus.emit('PLAYER_HIT', { damage: 10 });
-            this.explode(eb.x, eb.y, 5, '#FF003C');
-        }
-    }
-
-    for (const pb of this.bullets) {
-        if (!pb.active) continue;
-        for (const eb of this.enemyBullets) {
-            if (!eb.active) continue;
-            
-            const dx = pb.x - eb.x;
-            const dy = pb.y - eb.y;
-            const distSq = dx*dx + dy*dy;
-            
-            if (distSq < (pb.radius + eb.radius) ** 2) {
-                pb.active = false;
-                eb.active = false;
-                
-                GameEventBus.emit('PROJECTILE_CLASH', { x: eb.x, y: eb.y });
-                this.explode(eb.x, eb.y, 6, '#F7D277');
-                break;
-            }
-        }
-    }
-  }
-
-  private updateParticles(delta: number) {
-    for (const p of this.particles) {
-      if (!p.active) continue;
-      p.x += p.vx * delta;
-      p.y += p.vy * delta;
-      p.life -= delta;
-      if (p.life <= 0) p.active = false;
-    }
-    this.particles = this.particles.filter(p => p.active);
-  }
-
-  private explode(x: number, y: number, count: number, color: string) {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 10 + 5;
-      this.particles.push({
-        id: this.idCounter++,
-        x, y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 0.5 + Math.random() * 0.5,
-        maxLife: 1.0,
-        active: true,
-        radius: 0.1,
-        color
-      });
     }
   }
 }
@@ -2732,7 +2634,7 @@ FILE: ./src/game/GameOverlay.tsx
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { PlayerTurret } from './components/PlayerTurret';
+import { PlayerAvatar } from './components/PlayerAvatar';
 import { GameDirector } from './components/GameDirector';
 import { EnemyRenderer } from './components/EnemyRenderer';
 import { BulletRenderer } from './components/BulletRenderer';
@@ -2755,9 +2657,8 @@ export const GameOverlay = () => {
         eventPrefix="client"
       >
         <GameDirector />
-        {/* ScreenShaker REMOVED: Replaced by GlobalShakeManager */}
 
-        <PlayerTurret />
+        <PlayerAvatar />
         
         <BulletRenderer />
         <HunterChargeRenderer /> 
@@ -2768,6 +2669,323 @@ export const GameOverlay = () => {
     </div>
   );
 };
+
+
+=====================================
+FILE: ./src/game/config/PlayerConfig.ts
+=====================================
+export const PLAYER_CONFIG = {
+  maxHealth: 100,
+  fireRate: 0.15, 
+  bulletSpeed: 45,
+  bulletRadius: 0.2,
+  bulletLife: 1.5,
+  
+  // Scoring & Progression
+  scoreMultiplier: 1,
+  baseXpRequirement: 100,
+  xpScalingFactor: 1.5, // Next level = base * (scaling ^ level)
+};
+
+
+=====================================
+FILE: ./src/game/config/EnemyConfig.ts
+=====================================
+import { EnemyTypes } from './Identifiers';
+
+export const ENEMY_CONFIG = {
+  [EnemyTypes.MUNCHER]: {
+    hp: 2,
+    baseSpeed: 8,
+    radius: 0.5,
+    damage: 5,
+    score: 10
+  },
+  [EnemyTypes.KAMIKAZE]: {
+    hp: 1,
+    baseSpeed: 12,
+    radius: 0.5,
+    damage: 10,
+    score: 20
+  },
+  [EnemyTypes.HUNTER]: {
+    hp: 3,
+    baseSpeed: 12,
+    radius: 0.5,
+    score: 50,
+    orbitRadius: 12.5,
+    orbitDuration: 2.0,
+    chargeDuration: 1.0,
+    fireRange: 12.0,
+    offsetDistance: 1.6 
+  }
+};
+
+export const WAVE_CONFIG = {
+  baseSpawnInterval: 0.8,
+  difficultyScaler: 1.0 
+};
+
+
+=====================================
+FILE: ./src/game/config/Identifiers.ts
+=====================================
+export const EnemyTypes = {
+  MUNCHER: 'muncher',
+  KAMIKAZE: 'kamikaze',
+  HUNTER: 'hunter',
+} as const;
+
+export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
+
+export const GameEvents = {
+  ENEMY_SPAWNED: 'ENEMY_SPAWNED',
+  ENEMY_DAMAGED: 'ENEMY_DAMAGED',
+  ENEMY_DESTROYED: 'ENEMY_DESTROYED',
+  PLAYER_HIT: 'PLAYER_HIT',
+  PLAYER_FIRED: 'PLAYER_FIRED',
+  PROJECTILE_CLASH: 'PROJECTILE_CLASH',
+  PANEL_DAMAGED: 'PANEL_DAMAGED',
+  PANEL_HEALED: 'PANEL_HEALED',
+  PANEL_DESTROYED: 'PANEL_DESTROYED',
+} as const;
+
+
+=====================================
+FILE: ./src/game/logic/ai/EnemyBehaviors.ts
+=====================================
+import { Enemy } from '../../core/GameEngine';
+import { ENEMY_CONFIG } from '../../config/EnemyConfig';
+import { EnemyTypes, GameEvents } from '../../config/Identifiers';
+
+export interface AIContext {
+  playerPos: { x: number, y: number };
+  panels: any[]; 
+  delta: number;
+  time: number;
+  doDamageTick: boolean;
+  spawnProjectile: (x: number, y: number, vx: number, vy: number) => void;
+  damagePanel: (id: string, amount: number) => void;
+  triggerExplosion: (x: number, y: number, color: string) => void;
+  emitEvent: (name: string, payload: any) => void;
+}
+
+export interface EnemyBehavior {
+  update(enemy: Enemy, ctx: AIContext): void;
+}
+
+export const MuncherBehavior: EnemyBehavior = {
+  update: (e, ctx) => {
+    let targetX = 0;
+    let targetY = 0;
+    let nearestDist = Infinity;
+    let bestPanel: any = null;
+
+    const validPanels = ctx.panels; 
+
+    for (const p of validPanels) {
+      const dx = p.x - e.x;
+      const dy = p.y - e.y;
+      const dist = dx*dx + dy*dy;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        bestPanel = p;
+      }
+    }
+
+    if (bestPanel) {
+      targetX = Math.max(bestPanel.left, Math.min(e.x, bestPanel.right));
+      targetY = Math.max(bestPanel.bottom, Math.min(e.y, bestPanel.top));
+      
+      const dx = targetX - e.x;
+      const dy = targetY - e.y;
+      const distToEdge = Math.sqrt(dx*dx + dy*dy);
+
+      if (distToEdge < 0.5) { 
+        e.isEating = true;
+        if (ctx.doDamageTick) {
+            ctx.damagePanel(bestPanel.id, ENEMY_CONFIG[EnemyTypes.MUNCHER].damage);
+            ctx.triggerExplosion(targetX, targetY, '#9E4EA5');
+        }
+      } else {
+        e.isEating = false;
+      }
+    } else {
+      targetX = Math.sin(ctx.time) * 5;
+      targetY = Math.cos(ctx.time) * 5;
+      e.isEating = false;
+    }
+
+    if (!e.isEating) {
+      const dx = targetX - e.x;
+      const dy = targetY - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist > 0.1) {
+        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
+        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
+        e.x += e.vx;
+        e.y += e.vy;
+      }
+    }
+  }
+};
+
+export const KamikazeBehavior: EnemyBehavior = {
+  update: (e, ctx) => {
+    const targetX = ctx.playerPos.x;
+    const targetY = ctx.playerPos.y;
+    
+    const dx = targetX - e.x;
+    const dy = targetY - e.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist < 1.0) {
+       e.active = false;
+       ctx.triggerExplosion(e.x, e.y, '#FF003C');
+       ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
+       return; 
+    }
+
+    if (dist > 0.1) {
+      e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
+      e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
+      e.x += e.vx;
+      e.y += e.vy;
+    }
+  }
+};
+
+export const HunterBehavior: EnemyBehavior = {
+  update: (e, ctx) => {
+    if (!e.state) e.state = 'orbit';
+    if (!e.stateTimer) e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitDuration + Math.random();
+
+    e.stateTimer -= ctx.delta;
+
+    let targetX = 0;
+    let targetY = 0;
+
+    if (e.state === 'orbit') {
+      if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
+      
+      const speedVar = 0.7 + Math.sin(ctx.time * 0.8 + e.id) * 0.5;
+      e.orbitAngle += ctx.delta * speedVar; 
+      
+      const breathe = Math.sin(ctx.time * 1.5 + e.id) * 5.5; 
+      const orbitRadius = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitRadius + breathe; 
+      
+      targetX = Math.cos(e.orbitAngle) * orbitRadius;
+      targetY = Math.sin(e.orbitAngle) * orbitRadius;
+
+      const maxX = 18;
+      const maxY = 10;
+      targetX = Math.max(-maxX, Math.min(maxX, targetX));
+      targetY = Math.max(-maxY, Math.min(maxY, targetY));
+
+      const inBoundsX = Math.abs(e.x) < 20;
+      const inBoundsY = Math.abs(e.y) < 12;
+
+      if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
+        e.state = 'charge';
+        e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration; 
+        e.vx = 0;
+        e.vy = 0;
+      }
+      
+      const dx = targetX - e.x;
+      const dy = targetY - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist > 0.1) {
+        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
+        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
+        e.x += e.vx;
+        e.y += e.vy;
+      }
+
+    } 
+    else if (e.state === 'charge') {
+      if (e.stateTimer <= 0) {
+        e.state = 'fire';
+      }
+    }
+    else if (e.state === 'fire') {
+      const dx = ctx.playerPos.x - e.x;
+      const dy = ctx.playerPos.y - e.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const dirX = dist > 0 ? dx/dist : 0;
+      const dirY = dist > 0 ? dy/dist : 1;
+      
+      const offset = ENEMY_CONFIG[EnemyTypes.HUNTER].offsetDistance;
+      const spawnX = e.x + (dirX * offset);
+      const spawnY = e.y + (dirY * offset);
+
+      const SPEED = 25; 
+      const pVx = (dirX) * SPEED;
+      const pVy = (dirY) * SPEED;
+
+      ctx.spawnProjectile(spawnX, spawnY, pVx, pVy);
+
+      e.state = 'orbit';
+      e.stateTimer = 3.0 + Math.random() * 2.0;
+    }
+  }
+};
+
+export const Behaviors: Record<string, EnemyBehavior> = {
+  [EnemyTypes.MUNCHER]: MuncherBehavior,
+  [EnemyTypes.KAMIKAZE]: KamikazeBehavior,
+  [EnemyTypes.HUNTER]: HunterBehavior
+};
+
+
+=====================================
+FILE: ./src/game/utils/ViewportHelper.ts
+=====================================
+export class ViewportHelperCore {
+  public viewport = { width: 1, height: 1 };
+  public screenSize = { width: 1, height: 1 };
+
+  public update(vpW: number, vpH: number, screenW: number, screenH: number) {
+    this.viewport = { width: vpW, height: vpH };
+    this.screenSize = { width: screenW, height: screenH };
+  }
+
+  public getPanelWorldRect(panel: { id: string, element: HTMLElement }) {
+    if (!panel.element) return null;
+    
+    const rect = panel.element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return null;
+
+    // Use stored screenSize (or fallback to window if needed, but stored is safer for R3F context)
+    const sw = this.screenSize.width || window.innerWidth;
+    const sh = this.screenSize.height || window.innerHeight;
+    
+    const vw = this.viewport.width;
+    const vh = this.viewport.height;
+    
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    
+    // Screen (DOM) -> World (Three.js Orthographic)
+    const wx = (cx / sw) * vw - (vw / 2);
+    const wy = -((cy / sh) * vh - (vh / 2));
+    
+    const wWidth = (rect.width / sw) * vw;
+    const wHeight = (rect.height / sh) * vh;
+
+    return {
+      id: panel.id,
+      x: wx, y: wy,
+      width: wWidth, height: wHeight,
+      left: wx - wWidth / 2, right: wx + wWidth / 2,
+      top: wy + wHeight / 2, bottom: wy - wHeight / 2,
+    };
+  }
+}
+
+export const ViewportHelper = new ViewportHelperCore();
 
 
 =====================================
@@ -2803,6 +3021,117 @@ export const domRectToWorldRect = (rect: { x: number, y: number, width: number, 
     top: centerWorld.y + (rect.height / ZOOM / 2),
     bottom: centerWorld.y - (rect.height / ZOOM / 2),
   };
+};
+
+
+=====================================
+FILE: ./src/game/components/PlayerAvatar.tsx
+=====================================
+import { useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { GAME_THEME } from '../theme';
+import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { useGameStore } from '../store/useGameStore';
+import * as THREE from 'three';
+
+export const PlayerAvatar = () => {
+  const groupRef = useRef<THREE.Group>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+  const coreRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.Sprite>(null);
+  const { viewport } = useThree();
+
+  const colorTurret = new THREE.Color(GAME_THEME.turret.base);
+  const colorRepair = new THREE.Color(GAME_THEME.turret.repair);
+  const colorDead = new THREE.Color('#78F654'); // Green
+
+  const isDead = useGameStore(state => state.playerHealth <= 0);
+
+  // Alive: Small Circle
+  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+  // Dead: Hollow Triangle (Ring with 3 segments)
+  const deadGeo = new THREE.RingGeometry(0.15, 0.2, 3);
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+
+    const x = (state.pointer.x * viewport.width) / 2;
+    const y = (state.pointer.y * viewport.height) / 2;
+    groupRef.current.position.x = x;
+    groupRef.current.position.y = y;
+
+    if (ServiceLocator.inputSystem) {
+        ServiceLocator.inputSystem.updateCursor(x, y);
+    }
+
+    const isRepairing = GameEngine.isRepairing;
+    
+    if (ringRef.current && coreRef.current && glowRef.current) {
+        if (isDead) {
+            // DEAD STATE: Hollow Green Triangle
+            ringRef.current.visible = false;
+            glowRef.current.visible = false;
+            
+            coreRef.current.geometry = deadGeo;
+            coreRef.current.material.color.set(colorDead);
+            
+            if (isRepairing) {
+               // Revival Animation: Fast Spin
+               coreRef.current.rotation.z -= 0.5; 
+               coreRef.current.scale.setScalar(1.5);
+            } else {
+               // Idle Dead: Static or Slow Wobble
+               coreRef.current.rotation.z = Math.PI; // Point Up/Down
+               coreRef.current.scale.setScalar(1.0);
+            }
+        } else {
+            // ALIVE STATE
+            ringRef.current.visible = true;
+            glowRef.current.visible = true;
+            coreRef.current.geometry = aliveGeo;
+            
+            if (isRepairing) {
+                ringRef.current.rotation.z += 0.2; 
+                ringRef.current.material.color.lerp(colorRepair, 0.2);
+                const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.1;
+                ringRef.current.scale.setScalar(pulse);
+                coreRef.current.material.color.lerp(colorRepair, 0.2);
+                glowRef.current.material.color.lerp(colorRepair, 0.2);
+            } else {
+                ringRef.current.rotation.z -= 0.02; 
+                ringRef.current.material.color.lerp(colorTurret, 0.1);
+                ringRef.current.scale.setScalar(1);
+                coreRef.current.material.color.lerp(colorTurret, 0.1);
+                glowRef.current.material.color.lerp(colorTurret, 0.1);
+            }
+        }
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Central Core (Changes geo based on state) */}
+      <mesh ref={coreRef}>
+        <bufferGeometry />
+        <meshBasicMaterial color={GAME_THEME.turret.base} />
+      </mesh>
+
+      <mesh ref={ringRef} rotation={[0, 0, Math.PI / 4]}>
+        <ringGeometry args={[0.4, 0.45, 4]} /> 
+        <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
+      </mesh>
+
+      <sprite ref={glowRef} scale={[2, 2, 1]}>
+        <spriteMaterial 
+          color={GAME_THEME.turret.glow} 
+          transparent 
+          opacity={0.3}
+          blending={THREE.AdditiveBlending}
+        />
+      </sprite>
+    </group>
+  );
 };
 
 
@@ -2915,86 +3244,6 @@ export const ParticleRenderer = () => {
 
 
 =====================================
-FILE: ./src/game/components/PlayerTurret.tsx
-=====================================
-import { useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
-import { GAME_THEME } from '../theme';
-import { GameEngine } from '../core/GameEngine';
-import * as THREE from 'three';
-
-export const PlayerTurret = () => {
-  const groupRef = useRef<THREE.Group>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
-  const glowRef = useRef<THREE.Sprite>(null);
-  const { viewport } = useThree();
-
-  const colorTurret = new THREE.Color(GAME_THEME.turret.base);
-  const colorRepair = new THREE.Color(GAME_THEME.turret.repair);
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-
-    const x = (state.pointer.x * viewport.width) / 2;
-    const y = (state.pointer.y * viewport.height) / 2;
-    groupRef.current.position.x = x;
-    groupRef.current.position.y = y;
-
-    GameEngine.updateCursor(x, y);
-
-    const isRepairing = GameEngine.isRepairing;
-    
-    // Rotate Reticle
-    if (ringRef.current) {
-      if (isRepairing) {
-        ringRef.current.rotation.z += 0.2; 
-        ringRef.current.material.color.lerp(colorRepair, 0.2);
-        const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.1;
-        ringRef.current.scale.setScalar(pulse);
-      } else {
-        ringRef.current.rotation.z -= 0.02; 
-        ringRef.current.material.color.lerp(colorTurret, 0.1);
-        ringRef.current.scale.setScalar(1);
-      }
-    }
-
-    if (coreRef.current) {
-      coreRef.current.material.color.lerp(isRepairing ? colorRepair : colorTurret, 0.2);
-    }
-    if (glowRef.current) {
-      glowRef.current.material.color.lerp(isRepairing ? colorRepair : colorTurret, 0.2);
-    }
-  });
-
-  return (
-    <group ref={groupRef}>
-      {/* Central Core */}
-      <mesh ref={coreRef}>
-        <circleGeometry args={[0.1, 16]} />
-        <meshBasicMaterial color={GAME_THEME.turret.base} />
-      </mesh>
-
-      {/* SQUARE RING (4 Segments) */}
-      <mesh ref={ringRef} rotation={[0, 0, Math.PI / 4]}>
-        <ringGeometry args={[0.4, 0.45, 4]} /> 
-        <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
-      </mesh>
-
-      <sprite ref={glowRef} scale={[2, 2, 1]}>
-        <spriteMaterial 
-          color={GAME_THEME.turret.glow} 
-          transparent 
-          opacity={0.3}
-          blending={THREE.AdditiveBlending}
-        />
-      </sprite>
-    </group>
-  );
-};
-
-
-=====================================
 FILE: ./src/game/components/EnemyBulletRenderer.tsx
 =====================================
 import { useRef, useMemo } from 'react';
@@ -3055,11 +3304,13 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
 import { GAME_THEME } from '../theme';
+import { EnemyTypes } from '../config/Identifiers';
 
 const MAX_CHARGES = 50;
 const tempObj = new THREE.Object3D();
-const OFFSET_DISTANCE = 1.6; // Distance from center to tip + bullet radius
+const OFFSET_DISTANCE = 1.6; 
 
 export const HunterChargeRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -3069,13 +3320,13 @@ export const HunterChargeRenderer = () => {
     if (!meshRef.current) return;
 
     const enemies = GameEngine.enemies;
-    // Access cursor position (using bracket notation to bypass TS private check safely)
-    const cursor = GameEngine['cursor']; 
+    const cursor = ServiceLocator.inputSystem ? ServiceLocator.inputSystem.getCursorPosition() : {x:0, y:0};
+    
     let count = 0;
 
     for (let i = 0; i < enemies.length; i++) {
       const e = enemies[i];
-      if (!e.active || e.type !== 'hunter') continue;
+      if (!e.active || e.type !== EnemyTypes.HUNTER) continue;
 
       if (e.state === 'charge') {
         if (count >= MAX_CHARGES) break;
@@ -3083,14 +3334,10 @@ export const HunterChargeRenderer = () => {
         const progress = Math.max(0, Math.min(1, 1.0 - (e.stateTimer || 0)));
         const scale = 1 - Math.pow(1 - progress, 3);
 
-        // Calculate direction to player
         const dx = cursor.x - e.x;
         const dy = cursor.y - e.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // Calculate Tip Position
-        // We normalize the vector (dx/dist) and multiply by our OFFSET
-        // If distance is 0 (on top of player), default to Up
         const dirX = dist > 0 ? dx / dist : 0;
         const dirY = dist > 0 ? dy / dist : 1;
 
@@ -3130,7 +3377,9 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
 import { GAME_THEME } from '../theme';
+import { EnemyTypes } from '../config/Identifiers';
 
 const MAX_ENEMIES = 1000;
 const tempObj = new THREE.Object3D();
@@ -3138,37 +3387,82 @@ const tempColor = new THREE.Color();
 const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
 
 export const EnemyRenderer = () => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const geometry = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
+  const muncherRef = useRef<THREE.InstancedMesh>(null);
+  const kamikazeRef = useRef<THREE.InstancedMesh>(null);
+  const hunterRef = useRef<THREE.InstancedMesh>(null);
+  
+  const muncherGeo = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
+  const kamikazeGeo = useMemo(() => new THREE.IcosahedronGeometry(0.4, 0), []);
+  const hunterGeo = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
   
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!muncherRef.current || !kamikazeRef.current || !hunterRef.current) return;
 
     const enemies = GameEngine.enemies;
-    let count = 0;
+    const currentTime = state.clock.elapsedTime;
+    const cursor = ServiceLocator.inputSystem ? ServiceLocator.inputSystem.getCursorPosition() : {x:0, y:0};
+    
+    let mCount = 0;
+    let kCount = 0;
+    let hCount = 0;
 
     for (let i = 0; i < enemies.length; i++) {
-      const enemy = enemies[i];
-      if (!enemy.active) continue;
-      if (count >= MAX_ENEMIES) break;
+      const e = enemies[i];
+      if (!e.active) continue;
 
-      tempObj.position.set(enemy.x, enemy.y, 0);
+      tempObj.position.set(e.x, e.y, 0);
       
-      let angle = Math.atan2(enemy.vy, enemy.vx) - Math.PI / 2;
-      let scale = 1;
+      const age = currentTime - (e.spawnTime || 0);
+      const spawnScale = Math.min(1.0, age * 3.0); 
+      const elastic = spawnScale === 1 ? 1 : 1 - Math.pow(2, -10 * spawnScale) * Math.sin((spawnScale - 0.075) * (2 * Math.PI) / 0.3);
+
+      // --- MUNCHER ---
+      if (e.type === EnemyTypes.MUNCHER) {
+        if (mCount >= MAX_ENEMIES) continue;
+        
+        const angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
+        tempObj.rotation.set(0, 0, angle);
+        
+        const baseScale = e.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
+        const finalScale = baseScale * elastic;
+        tempObj.scale.set(finalScale, finalScale, 1);
+        
+        tempColor.set(GAME_THEME.enemy.muncher);
+        
+        tempObj.updateMatrix();
+        muncherRef.current.setMatrixAt(mCount, tempObj.matrix);
+        muncherRef.current.setColorAt(mCount, tempColor);
+        mCount++;
+      }
       
-      // KAMIKAZE
-      if (enemy.type === 'kamikaze') {
-        tempObj.rotation.z += 0.5; 
-        scale = 1.2;
-        tempColor.set(GAME_THEME.enemy.kamikaze); 
-      } 
-      // HUNTER
-      else if (enemy.type === 'hunter') {
-        if (enemy.state === 'charge') {
-            // Telegraph Visuals
-            const dx = GameEngine['cursor'].x - enemy.x;
-            const dy = GameEngine['cursor'].y - enemy.y;
+      // --- KAMIKAZE ---
+      else if (e.type === EnemyTypes.KAMIKAZE) {
+        if (kCount >= MAX_ENEMIES) continue;
+        
+        const angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
+        tempObj.rotation.set(0, 0, angle + (currentTime * 5)); // Spin
+        
+        const finalScale = 1.3 * elastic;
+        tempObj.scale.set(finalScale, finalScale, finalScale);
+        
+        tempColor.set(GAME_THEME.enemy.kamikaze);
+        
+        tempObj.updateMatrix();
+        kamikazeRef.current.setMatrixAt(kCount, tempObj.matrix);
+        kamikazeRef.current.setColorAt(kCount, tempColor);
+        kCount++;
+      }
+      
+      // --- HUNTER ---
+      else if (e.type === EnemyTypes.HUNTER) {
+        if (hCount >= MAX_ENEMIES) continue;
+        
+        let angle = 0;
+        let baseScale = 1.5;
+        
+        if (e.state === 'charge') {
+            const dx = cursor.x - e.x;
+            const dy = cursor.y - e.y;
             angle = Math.atan2(dy, dx) - Math.PI / 2;
             
             tempObj.position.x += (Math.random() - 0.5) * 0.1;
@@ -3177,38 +3471,50 @@ export const EnemyRenderer = () => {
             const t = state.clock.elapsedTime * 20;
             const alpha = (Math.sin(t) + 1) / 2;
             tempColor.set(GAME_THEME.enemy.hunter).lerp(chargeColor, alpha);
-            
-            scale = 1.8;
+            baseScale = 1.8;
         } else {
+            angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
             tempColor.set(GAME_THEME.enemy.hunter);
-            scale = 1.5;
         }
-        tempObj.rotation.z = angle;
-      } 
-      // MUNCHER
-      else {
-        tempObj.rotation.z = angle;
-        scale = enemy.isEating ? 1 + Math.sin(state.clock.elapsedTime * 20) * 0.2 : 1;
-        tempColor.set(GAME_THEME.enemy.muncher); 
+        
+        tempObj.rotation.set(0, 0, angle);
+        const finalScale = baseScale * elastic;
+        tempObj.scale.set(finalScale, finalScale, 1);
+        
+        tempObj.updateMatrix();
+        hunterRef.current.setMatrixAt(hCount, tempObj.matrix);
+        hunterRef.current.setColorAt(hCount, tempColor);
+        hCount++;
       }
-
-      tempObj.scale.set(scale, scale, 1);
-      tempObj.updateMatrix();
-      meshRef.current.setMatrixAt(count, tempObj.matrix);
-      meshRef.current.setColorAt(count, tempColor);
-      
-      count++;
     }
 
-    meshRef.current.count = count;
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+    muncherRef.current.count = mCount;
+    kamikazeRef.current.count = kCount;
+    hunterRef.current.count = hCount;
+    
+    muncherRef.current.instanceMatrix.needsUpdate = true;
+    // FIX: Add safety checks
+    if (muncherRef.current.instanceColor) muncherRef.current.instanceColor.needsUpdate = true;
+    
+    kamikazeRef.current.instanceMatrix.needsUpdate = true;
+    if (kamikazeRef.current.instanceColor) kamikazeRef.current.instanceColor.needsUpdate = true;
+    
+    hunterRef.current.instanceMatrix.needsUpdate = true;
+    if (hunterRef.current.instanceColor) hunterRef.current.instanceColor.needsUpdate = true;
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_ENEMIES]}>
-      <meshBasicMaterial color="white" />
-    </instancedMesh>
+    <group>
+        <instancedMesh ref={muncherRef} args={[muncherGeo, undefined, MAX_ENEMIES]}>
+            <meshBasicMaterial color="white" />
+        </instancedMesh>
+        <instancedMesh ref={kamikazeRef} args={[kamikazeGeo, undefined, MAX_ENEMIES]}>
+            <meshBasicMaterial color="white" />
+        </instancedMesh>
+        <instancedMesh ref={hunterRef} args={[hunterGeo, undefined, MAX_ENEMIES]}>
+            <meshBasicMaterial color="white" />
+        </instancedMesh>
+    </group>
   );
 };
 
@@ -3416,31 +3722,27 @@ export interface GameEventPayloads {
 FILE: ./src/game/events/GameEventBus.ts
 =====================================
 // src/game/events/GameEventBus.ts
-import { GameEventType, GameEventPayloads } from './GameEvents';
+import { GameEvents } from '../config/Identifiers';
 
-type EventHandler<T extends GameEventType> = (payload: GameEventPayloads[T]) => void;
+// Re-export specific types if needed or just use strings
+export type GameEventType = keyof typeof GameEvents;
 
 class GameEventBusController {
-  private listeners: Partial<Record<GameEventType, EventHandler<any>[]>> = {};
+  private listeners: Partial<Record<string, Function[]>> = {};
 
-  // Subscribe to an event
-  public subscribe<T extends GameEventType>(event: T, handler: EventHandler<T>): () => void {
+  public subscribe(event: string, handler: Function): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
     this.listeners[event]!.push(handler);
 
-    // Return unsubscribe function (Cleanup)
     return () => {
       this.listeners[event] = this.listeners[event]!.filter(h => h !== handler);
     };
   }
 
-  // Publish an event
-  public emit<T extends GameEventType>(event: T, payload: GameEventPayloads[T]): void {
+  public emit(event: string, payload: any): void {
     if (!this.listeners[event]) return;
-    
-    // Iterate over a copy to allow handlers to unsubscribe during execution
     [...this.listeners[event]!].forEach(handler => handler(payload));
   }
 
@@ -3449,8 +3751,492 @@ class GameEventBusController {
   }
 }
 
-// Singleton Instance
 export const GameEventBus = new GameEventBusController();
+
+
+=====================================
+FILE: ./src/game/systems/CollisionSystem.ts
+=====================================
+import { EntitySystem } from './EntitySystem';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents, EnemyTypes } from '../config/Identifiers';
+
+export class CollisionSystem {
+  private entitySystem: EntitySystem;
+
+  constructor(entitySystem: EntitySystem) {
+    this.entitySystem = entitySystem;
+  }
+
+  public update(cursor: {x: number, y: number}) {
+    this.checkPlayerBulletCollisions();
+    this.checkEnemyBulletCollisions(cursor);
+    this.checkProjectileClash();
+  }
+
+  private checkPlayerBulletCollisions() {
+    const bullets = this.entitySystem.bullets;
+    const enemies = this.entitySystem.enemies;
+
+    for (const b of bullets) {
+      if (!b.active) continue;
+      for (const e of enemies) {
+        if (!e.active) continue;
+        
+        const dx = b.x - e.x;
+        const dy = b.y - e.y;
+        const distSq = dx*dx + dy*dy;
+        const radiusSum = b.radius + e.radius;
+
+        if (distSq < radiusSum * radiusSum) {
+          e.hp--;
+          b.active = false;
+          GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: e.id, damage: 1, type: e.type });
+
+          if (e.hp <= 0) {
+            e.active = false;
+            // Visuals
+            const color = e.type === EnemyTypes.HUNTER ? '#F7D277' : e.type === EnemyTypes.KAMIKAZE ? '#FF003C' : '#9E4EA5';
+            this.entitySystem.spawnParticle(e.x, e.y, color, 8);
+            GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { id: e.id, type: e.type, x: e.x, y: e.y });
+          } else {
+            this.entitySystem.spawnParticle(b.x, b.y, '#FFF', 2);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  private checkEnemyBulletCollisions(cursor: {x: number, y: number}) {
+    const bullets = this.entitySystem.enemyBullets;
+    
+    for (const eb of bullets) {
+        if (!eb.active) continue;
+        const dx = eb.x - cursor.x;
+        const dy = eb.y - cursor.y;
+        const distSq = dx*dx + dy*dy;
+        
+        if (distSq < (eb.radius + 0.5) ** 2) {
+            eb.active = false;
+            GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
+            this.entitySystem.spawnParticle(eb.x, eb.y, '#FF003C', 5);
+        }
+    }
+  }
+
+  private checkProjectileClash() {
+    const pBullets = this.entitySystem.bullets;
+    const eBullets = this.entitySystem.enemyBullets;
+
+    for (const pb of pBullets) {
+        if (!pb.active) continue;
+        for (const eb of eBullets) {
+            if (!eb.active) continue;
+            
+            const dx = pb.x - eb.x;
+            const dy = pb.y - eb.y;
+            const distSq = dx*dx + dy*dy;
+            
+            if (distSq < (pb.radius + eb.radius) ** 2) {
+                pb.active = false;
+                eb.active = false;
+                
+                GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
+                this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
+                break;
+            }
+        }
+    }
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/InteractionSystem.ts
+=====================================
+import { useGameStore } from '../store/useGameStore';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../config/Identifiers';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { ViewportHelper } from '../utils/ViewportHelper';
+
+export class InteractionSystem {
+  private lastRepairTime = 0;
+  private REPAIR_RATE = 0.05;
+  
+  public update(time: number, cursor: {x: number, y: number}): boolean {
+    const store = useGameStore.getState();
+    if (!store.isPlaying) return false;
+
+    if (time < this.lastRepairTime + this.REPAIR_RATE) return false;
+
+    const panels = store.panels;
+    const healFn = store.healPanel;
+    const decayFn = store.decayReboot;
+    const tickReboot = store.tickPlayerReboot; // Correct function
+    
+    let isRepairing = false;
+    let repairedPanelId = null;
+    let isRebootingPlayer = false;
+
+    // --- 1. PLAYER REVIVAL LOGIC ---
+    if (store.playerHealth <= 0) {
+        const identityPanel = panels['identity'];
+        
+        // Allow revival even if panel is destroyed
+        if (identityPanel) {
+            const rect = ViewportHelper.getPanelWorldRect(identityPanel);
+            if (rect) {
+                if (
+                    cursor.x >= rect.left && 
+                    cursor.x <= rect.right && 
+                    cursor.y >= rect.bottom && 
+                    cursor.y <= rect.top
+                ) {
+                    // FIX: Use tickReboot, NOT healPlayer
+                    // 2.0 per tick -> 50 ticks -> ~2.5 seconds to revive
+                    tickReboot(2.0); 
+                    
+                    isRepairing = true;
+                    isRebootingPlayer = true;
+                    this.lastRepairTime = time;
+                    
+                    ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, '#eae747', 1);
+                }
+            }
+        }
+        
+        // Decay Player Reboot if not actively rebooting
+        if (!isRebootingPlayer && store.playerRebootProgress > 0) {
+            tickReboot(-5.0);
+        }
+        
+        if (isRebootingPlayer) return true; 
+    }
+
+    // --- 2. PANEL REPAIR LOGIC ---
+    for (const pKey in panels) {
+      const p = panels[pKey];
+      
+      if (!p.isDestroyed && p.health >= 1000) continue;
+
+      const r = ViewportHelper.getPanelWorldRect(p);
+      if (!r) continue;
+
+      if (
+        cursor.x >= r.left && 
+        cursor.x <= r.right && 
+        cursor.y >= r.bottom && 
+        cursor.y <= r.top
+      ) {
+        isRepairing = true;
+        repairedPanelId = p.id;
+        
+        healFn(p.id, 10); 
+        this.lastRepairTime = time;
+        
+        if (!p.isDestroyed) {
+            GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+        }
+        
+        if (Math.random() > 0.6) {
+            const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
+            ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, color, 1);
+        }
+        break; 
+      }
+    }
+
+    // --- 3. DECAY LOGIC ---
+    for (const pKey in panels) {
+        const p = panels[pKey];
+        if (p.isDestroyed && p.id !== repairedPanelId && p.health > 0) {
+            decayFn(p.id, 5); 
+        }
+    }
+    
+    return isRepairing;
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/PlayerSystem.ts
+=====================================
+import { ServiceLocator } from '../core/ServiceLocator';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../config/Identifiers';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
+import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { useGameStore } from '../store/useGameStore';
+
+export class PlayerSystem {
+  private lastFireTime = 0;
+
+  constructor() {
+    this.setupListeners();
+  }
+
+  private setupListeners() {
+    // 1. Damage
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload: any) => {
+      const { damage } = payload;
+      const store = useGameStore.getState();
+      store.damagePlayer(damage);
+      if (store.playerHealth <= 0) {
+        this.handlePlayerDeath();
+      }
+    });
+
+    // 2. Score & XP
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload: any) => {
+      const { type } = payload;
+      const config = ENEMY_CONFIG[type];
+      if (config) {
+        useGameStore.getState().addScore(config.score);
+        useGameStore.getState().addXp(config.score);
+      }
+    });
+  }
+
+  private handlePlayerDeath() {
+    useGameStore.getState().stopGame();
+  }
+
+  public update(time: number) {
+    if (!useGameStore.getState().isPlaying) return;
+    if (useGameStore.getState().playerHealth <= 0) return;
+
+    // --- UPGRADE LOGIC: FIRE RATE ---
+    const upgrades = useGameStore.getState().activeUpgrades;
+    const rapidLevel = upgrades['RAPID_FIRE'] || 0;
+    
+    // Decrease delay by 15% per level
+    const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
+
+    if (time > this.lastFireTime + currentFireRate) {
+      this.attemptAutoFire(time);
+    }
+  }
+
+  private attemptAutoFire(time: number) {
+    const cursor = ServiceLocator.inputSystem.getCursorPosition();
+    const enemies = ServiceLocator.entitySystem.enemies;
+
+    let nearestDist = Infinity;
+    const RANGE = 12; 
+    let targetEnemy: any = null;
+
+    for (const e of enemies) {
+      if (!e.active) continue;
+      const dx = e.x - cursor.x;
+      const dy = e.y - cursor.y;
+      const dist = dx*dx + dy*dy; 
+
+      if (dist < (RANGE * RANGE)) {
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          targetEnemy = e;
+        }
+      }
+    }
+
+    if (targetEnemy) {
+      const dx = targetEnemy.x - cursor.x;
+      const dy = targetEnemy.y - cursor.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      const upgrades = useGameStore.getState().activeUpgrades;
+      const multiLevel = upgrades['MULTI_SHOT'] || 0;
+      
+      // --- UPGRADE LOGIC: PROJECTILES ---
+      // Base: 1 shot. Level 1: 3 shots. Level 2: 5 shots.
+      const projectileCount = 1 + (multiLevel * 2);
+      const spreadAngle = 0.2; // roughly 11 degrees
+
+      // Calculate base angle
+      const baseAngle = Math.atan2(dy, dx);
+      
+      // Calculate start angle to center the spread
+      const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
+
+      for (let i = 0; i < projectileCount; i++) {
+          const angle = startAngle + (i * spreadAngle);
+          const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
+          const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
+
+          ServiceLocator.entitySystem.spawnBullet(
+              cursor.x, 
+              cursor.y, 
+              vx, 
+              vy, 
+              false, 
+              PLAYER_CONFIG.bulletLife, 
+              PLAYER_CONFIG.bulletRadius
+          );
+      }
+      
+      GameEventBus.emit(GameEvents.PLAYER_FIRED, { x: cursor.x, y: cursor.y });
+      this.lastFireTime = time;
+    }
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/EntitySystem.ts
+=====================================
+import { Enemy, Bullet, Particle } from '../types/game.types';
+import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
+import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { GameEvents, EnemyType } from '../config/Identifiers';
+import { GameEventBus } from '../events/GameEventBus';
+import { useGameStore } from '../store/useGameStore';
+import { ViewportHelper } from '../utils/ViewportHelper';
+
+export class EntitySystem {
+  public enemies: Enemy[] = [];
+  public bullets: Bullet[] = [];
+  public enemyBullets: Bullet[] = [];
+  public particles: Particle[] = [];
+
+  private idCounter = 0;
+  // Track global time internally or pass it in spawn?
+  // We'll pass it in update and store it, or just use performance.now() / 1000
+  // ideally we use the engine time.
+  private currentTime = 0;
+
+  public spawnEnemy(type: EnemyType): void {
+    const config = ENEMY_CONFIG[type];
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 60; 
+
+    const enemy: Enemy = {
+      id: this.idCounter++,
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+      vx: 0, vy: 0,
+      radius: config.radius,
+      hp: config.hp,
+      type,
+      active: true,
+      orbitAngle: Math.random() * Math.PI * 2,
+      spawnTime: this.currentTime // Capture current frame time
+    };
+
+    this.enemies.push(enemy);
+    GameEventBus.emit(GameEvents.ENEMY_SPAWNED, { type: type, id: enemy.id });
+  }
+
+  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life = 1.5, radius = 0.2): void {
+    const list = isEnemy ? this.enemyBullets : this.bullets;
+    list.push({
+      id: this.idCounter++,
+      x, y, vx, vy,
+      life,
+      active: true,
+      isEnemy,
+      radius,
+      spawnTime: this.currentTime
+    });
+  }
+
+  public spawnParticle(x: number, y: number, color: string, count: number): void {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 10 + 5;
+      this.particles.push({
+        id: this.idCounter++,
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 0.5 + Math.random() * 0.5,
+        maxLife: 1.0,
+        active: true,
+        radius: 0.1,
+        color,
+        spawnTime: this.currentTime
+      });
+    }
+  }
+
+  public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
+    this.currentTime = time; // Sync time for spawns
+    this.updateEnemies(delta, time, cursor, doDamageTick);
+    this.updateBullets(this.bullets, delta);
+    this.updateBullets(this.enemyBullets, delta);
+    this.updateParticles(delta);
+  }
+
+  private updateEnemies(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
+    const panels = useGameStore.getState().panels;
+    
+    const worldPanels = Object.values(panels)
+      .filter(p => !p.isDestroyed)
+      .map(p => ViewportHelper.getPanelWorldRect(p))
+      .filter(r => r !== null);
+
+    const ctx: AIContext = {
+      playerPos: cursor,
+      panels: worldPanels,
+      delta: delta,
+      time: time,
+      doDamageTick: doDamageTick,
+      spawnProjectile: (x, y, vx, vy) => this.spawnBullet(x, y, vx, vy, true, 3.0, 0.9),
+      triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 20),
+      emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
+      damagePanel: (id, amount) => {
+        useGameStore.getState().damagePanel(id, amount);
+        const currentHp = panels[id].health;
+        if (currentHp > 0) {
+             GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
+                id: id, 
+                amount: amount, 
+                currentHealth: currentHp - amount
+             });
+        }
+      }
+    };
+
+    for (const e of this.enemies) {
+      if (!e.active) continue;
+      const behavior = Behaviors[e.type];
+      if (behavior) {
+        behavior.update(e, ctx);
+      }
+    }
+    
+    this.enemies = this.enemies.filter(e => e.active);
+  }
+
+  private updateBullets(list: Bullet[], delta: number) {
+    for (const b of list) {
+      if (!b.active) continue;
+      b.x += b.vx * delta;
+      b.y += b.vy * delta;
+      b.life -= delta;
+      if (b.life <= 0) b.active = false;
+    }
+    
+    if (list === this.bullets) {
+       this.bullets = this.bullets.filter(b => b.active);
+    } else {
+       this.enemyBullets = this.enemyBullets.filter(b => b.active);
+    }
+  }
+
+  private updateParticles(delta: number) {
+    for (const p of this.particles) {
+      if (!p.active) continue;
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.life -= delta;
+      if (p.life <= 0) p.active = false;
+    }
+    this.particles = this.particles.filter(p => p.active);
+  }
+}
 
 
 =====================================
@@ -3458,11 +4244,11 @@ FILE: ./src/game/systems/FXManager.ts
 =====================================
 // src/game/systems/FXManager.ts
 import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../config/Identifiers';
 
 class FXManagerController {
   private initialized = false;
   
-  // A value between 0 and 1 representing "Chaos"
   public trauma = 0;
 
   public init() {
@@ -3470,18 +4256,13 @@ class FXManagerController {
     
     // --- EVENT WIRING ---
     
-    // 1. Panel Offline (Major Shake)
-    GameEventBus.subscribe('PANEL_DESTROYED', () => {
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.addTrauma(0.55);
     });
     
-    // 2. Player Hit (Gentle Shake)
-    GameEventBus.subscribe('PLAYER_HIT', () => {
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
         this.addTrauma(0.35);
     });
-
-    // 3. Boss Death (Placeholder)
-    // GameEventBus.subscribe('BOSS_DIED', () => this.addTrauma(0.7));
     
     this.initialized = true;
   }
@@ -3492,7 +4273,6 @@ class FXManagerController {
 
   public decay(delta: number) {
     if (this.trauma > 0) {
-      // Decay speed: 0.8 per second (fully calm in ~1.2s)
       this.trauma = Math.max(0, this.trauma - (delta * 0.8));
     }
   }
@@ -3502,70 +4282,352 @@ export const FXManager = new FXManagerController();
 
 
 =====================================
+FILE: ./src/game/systems/InputSystem.ts
+=====================================
+export class InputSystem {
+  private _cursor = { x: 0, y: 0 };
+
+  public updateCursor(x: number, y: number) {
+    this._cursor.x = x;
+    this._cursor.y = y;
+  }
+
+  public getCursorPosition() {
+    return this._cursor;
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/BreachSystem.ts
+=====================================
+import { ServiceLocator } from '../core/ServiceLocator';
+import { useGameStore } from '../store/useGameStore';
+import { ViewportHelper } from '../utils/ViewportHelper';
+import { EnemyTypes } from '../config/Identifiers';
+
+export class BreachSystem {
+  private lastSpawnTime = 0;
+  private SPAWN_INTERVAL = 3.0; // Seconds between breach waves
+
+  public update(time: number) {
+    if (!useGameStore.getState().isPlaying) return;
+
+    if (time > this.lastSpawnTime + this.SPAWN_INTERVAL) {
+      this.spawnBreachEnemies();
+      this.lastSpawnTime = time;
+    }
+  }
+
+  private spawnBreachEnemies() {
+    const panels = useGameStore.getState().panels;
+    
+    // Find dead panels
+    const destroyedPanels = Object.values(panels).filter(p => p.isDestroyed);
+    
+    if (destroyedPanels.length === 0) return;
+
+    for (const p of destroyedPanels) {
+      const rect = ViewportHelper.getPanelWorldRect(p);
+      if (!rect) continue;
+
+      // Spawn a fast Muncher or Kamikaze from the center of the dead panel
+      // We manually inject the spawn via EntitySystem
+      const type = Math.random() > 0.5 ? EnemyTypes.MUNCHER : EnemyTypes.KAMIKAZE;
+      const sys = ServiceLocator.entitySystem;
+      
+      // Manually push to array to override the random position logic in spawnEnemy()
+      // OR better: Add a spawnAt() method to EntitySystem. 
+      // For now, we will use the internal spawn logic but modify the position immediately after.
+      
+      // Cleaner approach: Just instantiate data here and push to system.
+      // But EntitySystem encapsulates ID logic.
+      
+      // Let's create a specific spawn method in EntitySystem for this or hack it.
+      // Since we want to stick to patterns, let's look at EntitySystem.
+      // It lacks a "SpawnAt" method. We will access the array directly for now 
+      // to avoid modifying EntitySystem again in this step, but ideal refactor adds spawnAt().
+      
+      // Actually, let's just modify EntitySystem in the next block if needed.
+      // For now, we spawn normally and move it.
+      
+      sys.spawnEnemy(type);
+      const enemy = sys.enemies[sys.enemies.length - 1];
+      if (enemy) {
+        enemy.x = rect.x;
+        enemy.y = rect.y;
+        // Give them a little outward velocity immediately
+        enemy.vx = (Math.random() - 0.5) * 10;
+        enemy.vy = (Math.random() - 0.5) * 10;
+      }
+    }
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/WaveSystem.ts
+=====================================
+import { ServiceLocator } from '../core/ServiceLocator';
+import { WAVE_CONFIG } from '../config/EnemyConfig';
+import { EnemyTypes, EnemyType } from '../config/Identifiers';
+
+export class WaveSystem {
+  private lastSpawnTime = 0;
+
+  public update(time: number, threatLevel: number) {
+    if (time > this.lastSpawnTime + (WAVE_CONFIG.baseSpawnInterval / threatLevel)) {
+      this.spawnRandomEnemy();
+      this.lastSpawnTime = time;
+    }
+  }
+
+  private spawnRandomEnemy() {
+    const rand = Math.random();
+    let type: EnemyType = EnemyTypes.MUNCHER;
+    
+    // Adjusted Probabilities:
+    // 0.0 - 0.4: Muncher (40%)
+    // 0.4 - 0.8: Kamikaze (40%) - Increased
+    // 0.8 - 1.0: Hunter (20%)
+    
+    if (rand < 0.40) type = EnemyTypes.MUNCHER;
+    else if (rand < 0.80) type = EnemyTypes.KAMIKAZE;
+    else type = EnemyTypes.HUNTER;
+
+    ServiceLocator.entitySystem.spawnEnemy(type);
+  }
+}
+
+
+=====================================
 FILE: ./src/game/store/useGameStore.ts
 =====================================
 import { create } from 'zustand';
-import { GameState } from '../types/game.types';
+import { persist } from 'zustand/middleware';
+import { GameState, RegisteredPanel } from '../types/game.types';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
 
-const MAX_HEALTH = 1000;
+const MAX_PANEL_HEALTH = 1000;
 
-export const useGameStore = create<GameState>((set) => ({
-  isPlaying: false,
-  score: 0,
-  threatLevel: 1,
-  panels: {},
+export type UpgradeOption = 'RAPID_FIRE' | 'MULTI_SHOT' | 'SPEED_UP' | 'REPAIR_NANITES';
 
-  startGame: () => set({ isPlaying: true, score: 0, threatLevel: 1 }),
-  stopGame: () => set({ isPlaying: false }),
+interface ExtendedGameState extends GameState {
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  score: number;
+  highScore: number;
+  
+  xp: number;
+  xpToNextLevel: number;
+  level: number;
+  availableUpgrades: UpgradeOption[];
+  activeUpgrades: Record<UpgradeOption, number>;
+  
+  systemIntegrity: number;
+  
+  damagePlayer: (amount: number) => void;
+  healPlayer: (amount: number) => void;
+  tickPlayerReboot: (amount: number) => void;
+  healPanel: (id: string, amount: number) => void;
+  decayReboot: (id: string, amount: number) => void;
+  addScore: (amount: number) => void;
+  addXp: (amount: number) => void;
+  selectUpgrade: (option: UpgradeOption) => void;
+  resetGame: () => void;
+  recalculateIntegrity: () => void;
+}
 
-  registerPanel: (id, element) => set((state) => ({
-    panels: {
-      ...state.panels,
-      [id]: {
-        id,
-        element,
-        health: MAX_HEALTH,
-        isDestroyed: false,
-      }
-    }
-  })),
+export const useGameStore = create<ExtendedGameState>()(
+  persist(
+    (set, get) => ({
+      isPlaying: false,
+      score: 0,
+      highScore: 0,
+      threatLevel: 1,
+      panels: {},
+      playerHealth: PLAYER_CONFIG.maxHealth,
+      maxPlayerHealth: PLAYER_CONFIG.maxHealth,
+      playerRebootProgress: 0,
+      
+      xp: 0,
+      xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+      level: 1,
+      availableUpgrades: [],
+      activeUpgrades: {
+        'RAPID_FIRE': 0,
+        'MULTI_SHOT': 0,
+        'SPEED_UP': 0,
+        'REPAIR_NANITES': 0
+      },
+      
+      systemIntegrity: 100,
 
-  unregisterPanel: (id) => set((state) => {
-    const newPanels = { ...state.panels };
-    delete newPanels[id];
-    return { panels: newPanels };
-  }),
+      startGame: () => {
+        // FIX: Prevent accidental reset if already running
+        if (get().isPlaying) return;
+        
+        set({ 
+            isPlaying: true, 
+            score: 0, 
+            threatLevel: 1,
+            playerHealth: PLAYER_CONFIG.maxHealth,
+            playerRebootProgress: 0,
+            xp: 0,
+            level: 1,
+            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+            availableUpgrades: [],
+            activeUpgrades: {
+                'RAPID_FIRE': 0,
+                'MULTI_SHOT': 0,
+                'SPEED_UP': 0,
+                'REPAIR_NANITES': 0
+            },
+            panels: Object.fromEntries(
+                Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+            )
+        });
+      },
+      
+      stopGame: () => {
+        const { score, highScore } = get();
+        set({ 
+          isPlaying: false,
+          highScore: Math.max(score, highScore)
+        });
+      },
 
-  damagePanel: (id, amount) => set((state) => {
-    const panel = state.panels[id];
-    if (!panel || panel.isDestroyed) return state;
+      addScore: (amount) => set((state) => ({ 
+        score: state.score + amount 
+      })),
 
-    const newHealth = Math.max(0, panel.health - amount);
-    return {
-      panels: {
-        ...state.panels,
-        [id]: {
-          ...panel,
-          health: newHealth,
-          isDestroyed: newHealth <= 0
+      addXp: (amount) => set((state) => {
+        let newXp = state.xp + amount;
+        let newLevel = state.level;
+        let nextReq = state.xpToNextLevel;
+        let newUpgrades = [...state.availableUpgrades];
+
+        if (newXp >= nextReq) {
+          newXp -= nextReq;
+          newLevel++;
+          nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
+          
+          if (newUpgrades.length === 0) {
+             newUpgrades = ['RAPID_FIRE', 'MULTI_SHOT']; 
+          }
         }
-      }
-    };
-  }),
 
-  healPanel: (id, amount) => set((state) => {
-    const panel = state.panels[id];
-    if (!panel || panel.isDestroyed || panel.health >= MAX_HEALTH) return state;
+        return {
+          xp: newXp,
+          level: newLevel,
+          xpToNextLevel: nextReq,
+          availableUpgrades: newUpgrades
+        };
+      }),
 
-    const newHealth = Math.min(MAX_HEALTH, panel.health + amount);
-    return {
-      panels: {
-        ...state.panels,
-        [id]: { ...panel, health: newHealth }
-      }
-    };
-  }),
-}));
+      selectUpgrade: (option) => set((state) => {
+        const currentLevel = state.activeUpgrades[option] || 0;
+        return {
+            activeUpgrades: {
+                ...state.activeUpgrades,
+                [option]: currentLevel + 1
+            },
+            availableUpgrades: []
+        };
+      }),
+
+      damagePlayer: (amount) => set((state) => {
+        const newHealth = Math.max(0, state.playerHealth - amount);
+        return { playerHealth: newHealth };
+      }),
+
+      healPlayer: (amount) => set((state) => ({
+        playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount)
+      })),
+      
+      tickPlayerReboot: (amount) => set((state) => {
+        if (state.playerHealth > 0) return { playerRebootProgress: 0 };
+        
+        const newProgress = Math.max(0, Math.min(100, state.playerRebootProgress + amount));
+        
+        if (newProgress >= 100) {
+            return {
+                playerRebootProgress: 0,
+                playerHealth: state.maxPlayerHealth / 2 
+            };
+        }
+        return { playerRebootProgress: newProgress };
+      }),
+
+      resetGame: () => set({
+        score: 0,
+        playerHealth: PLAYER_CONFIG.maxHealth,
+        isPlaying: true
+      }),
+
+      recalculateIntegrity: () => {
+        const { panels } = get();
+        const pKeys = Object.keys(panels);
+        if (pKeys.length === 0) return;
+
+        let currentSum = 0;
+        let maxSum = pKeys.length * MAX_PANEL_HEALTH;
+
+        for (const key of pKeys) {
+          const p = panels[key];
+          if (!p.isDestroyed) {
+            currentSum += p.health;
+          }
+        }
+
+        set({ systemIntegrity: (currentSum / maxSum) * 100 });
+      },
+
+      registerPanel: (id, element) => set((state) => ({
+        panels: { ...state.panels, [id]: { id, element, health: MAX_PANEL_HEALTH, isDestroyed: false } }
+      })),
+
+      unregisterPanel: (id) => set((state) => {
+        const newPanels = { ...state.panels };
+        delete newPanels[id];
+        return { panels: newPanels };
+      }),
+
+      damagePanel: (id, amount) => set((state) => {
+        const panel = state.panels[id];
+        if (!panel || panel.isDestroyed) return state;
+        const newHealth = Math.max(0, panel.health - amount);
+        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: newHealth <= 0 } } };
+      }),
+
+      healPanel: (id, amount) => set((state) => {
+        const panel = state.panels[id];
+        if (!panel) return state;
+        if (!panel.isDestroyed && panel.health >= MAX_PANEL_HEALTH) return state;
+        let newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
+        let wasDestroyed = panel.isDestroyed;
+        if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
+            wasDestroyed = false;
+            newHealth = 500;
+        }
+        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: wasDestroyed } } };
+      }),
+
+      decayReboot: (id, amount) => set((state) => {
+        const panel = state.panels[id];
+        if (!panel || !panel.isDestroyed) return state;
+        if (panel.health <= 0) return state;
+        const newProgress = Math.max(0, panel.health - amount);
+        return { panels: { ...state.panels, [id]: { ...panel, health: newProgress } } };
+      }),
+    }),
+    {
+      name: 'mesoelfy-os-storage',
+      partialize: (state) => ({ highScore: state.highScore }),
+    }
+  )
+);
 
 
 =====================================

@@ -1,6 +1,7 @@
 import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents, EnemyTypes } from '../config/Identifiers';
+import { useGameStore } from '../store/useGameStore';
 
 export class CollisionSystem {
   private entitySystem: EntitySystem;
@@ -36,7 +37,6 @@ export class CollisionSystem {
 
           if (e.hp <= 0) {
             e.active = false;
-            // Visuals
             const color = e.type === EnemyTypes.HUNTER ? '#F7D277' : e.type === EnemyTypes.KAMIKAZE ? '#FF003C' : '#9E4EA5';
             this.entitySystem.spawnParticle(e.x, e.y, color, 8);
             GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { id: e.id, type: e.type, x: e.x, y: e.y });
@@ -60,7 +60,19 @@ export class CollisionSystem {
         
         if (distSq < (eb.radius + 0.5) ** 2) {
             eb.active = false;
-            GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
+            
+            // LOGIC: If player is ALIVE, take damage.
+            // If player is DEAD (Downed), take huge progress penalty.
+            
+            const store = useGameStore.getState();
+            if (store.playerHealth > 0) {
+                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
+            } else {
+                 // Player is trying to reboot
+                 store.damageRebootProgress(30); // Lose 30% progress on hit
+                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 0 }); // Visual shake only
+            }
+            
             this.entitySystem.spawnParticle(eb.x, eb.y, '#FF003C', 5);
         }
     }
@@ -80,11 +92,21 @@ export class CollisionSystem {
             const distSq = dx*dx + dy*dy;
             
             if (distSq < (pb.radius + eb.radius) ** 2) {
-                pb.active = false;
-                eb.active = false;
+                // CLASH LOGIC
+                pb.active = false; // Player bullet always dies
                 
-                GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
-                this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
+                // Enemy bullet takes damage
+                eb.hp = (eb.hp || 1) - 1;
+                
+                if (eb.hp <= 0) {
+                    eb.active = false;
+                    GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
+                    this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
+                } else {
+                    // Flash or spark indicating it survived
+                    this.entitySystem.spawnParticle(eb.x, eb.y, '#FFFFFF', 2);
+                }
+                
                 break;
             }
         }

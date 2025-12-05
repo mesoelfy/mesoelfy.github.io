@@ -1,7 +1,7 @@
 import { Enemy, Bullet, Particle } from '../types/game.types';
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
-import { GameEvents, EnemyType } from '../config/Identifiers';
+import { GameEvents, EnemyType, EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
 import { ViewportHelper } from '../utils/ViewportHelper';
@@ -13,6 +13,7 @@ export class EntitySystem {
   public particles: Particle[] = [];
 
   private idCounter = 0;
+  private currentTime = 0;
 
   public spawnEnemy(type: EnemyType): void {
     const config = ENEMY_CONFIG[type];
@@ -28,7 +29,8 @@ export class EntitySystem {
       hp: config.hp,
       type,
       active: true,
-      orbitAngle: Math.random() * Math.PI * 2
+      orbitAngle: Math.random() * Math.PI * 2,
+      spawnTime: this.currentTime 
     };
 
     this.enemies.push(enemy);
@@ -37,13 +39,19 @@ export class EntitySystem {
 
   public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life = 1.5, radius = 0.2): void {
     const list = isEnemy ? this.enemyBullets : this.bullets;
+    
+    // Hunter bullets (isEnemy=true) get 2 HP, normal bullets get 1
+    const hp = isEnemy ? 2 : 1; 
+
     list.push({
       id: this.idCounter++,
       x, y, vx, vy,
       life,
       active: true,
       isEnemy,
-      radius
+      radius,
+      hp, 
+      spawnTime: this.currentTime
     });
   }
 
@@ -60,12 +68,14 @@ export class EntitySystem {
         maxLife: 1.0,
         active: true,
         radius: 0.1,
-        color
+        color,
+        spawnTime: this.currentTime
       });
     }
   }
 
   public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
+    this.currentTime = time;
     this.updateEnemies(delta, time, cursor, doDamageTick);
     this.updateBullets(this.bullets, delta);
     this.updateBullets(this.enemyBullets, delta);

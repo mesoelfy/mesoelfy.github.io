@@ -16,8 +16,13 @@ export class WaveSystem {
     const rand = Math.random();
     let type: EnemyType = EnemyTypes.MUNCHER;
     
-    if (rand < 0.50) type = EnemyTypes.MUNCHER;
-    else if (rand < 0.80) type = EnemyTypes.KAMIKAZE;
+    // Adjusted Probabilities for "More Munchers"
+    // 0.0 - 0.60: Muncher (60%)
+    // 0.60 - 0.90: Kamikaze (30%)
+    // 0.90 - 1.00: Hunter (10%)
+    
+    if (rand < 0.60) type = EnemyTypes.MUNCHER;
+    else if (rand < 0.90) type = EnemyTypes.KAMIKAZE;
     else type = EnemyTypes.HUNTER;
 
     ServiceLocator.entitySystem.spawnEnemy(type);

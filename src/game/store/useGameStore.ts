@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { GameState, RegisteredPanel } from '../types/game.types';
+import { GameState } from '../types/game.types';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 
 const MAX_PANEL_HEALTH = 1000;
@@ -10,19 +10,24 @@ export type UpgradeOption = 'RAPID_FIRE' | 'MULTI_SHOT' | 'SPEED_UP' | 'REPAIR_N
 interface ExtendedGameState extends GameState {
   playerHealth: number;
   maxPlayerHealth: number;
+  playerRebootProgress: number;
   score: number;
   highScore: number;
   
   xp: number;
   xpToNextLevel: number;
   level: number;
-  availableUpgrades: UpgradeOption[];
+  upgradePoints: number; // NEW: Stackable points
   activeUpgrades: Record<UpgradeOption, number>;
   
   systemIntegrity: number;
   
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
+  tickPlayerReboot: (amount: number) => void;
+  damageRebootProgress: (amount: number) => void; // NEW: Penalty on hit
+  healPanel: (id: string, amount: number) => void;
+  decayReboot: (id: string, amount: number) => void;
   addScore: (amount: number) => void;
   addXp: (amount: number) => void;
   selectUpgrade: (option: UpgradeOption) => void;
@@ -40,11 +45,12 @@ export const useGameStore = create<ExtendedGameState>()(
       panels: {},
       playerHealth: PLAYER_CONFIG.maxHealth,
       maxPlayerHealth: PLAYER_CONFIG.maxHealth,
+      playerRebootProgress: 0,
       
       xp: 0,
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       level: 1,
-      availableUpgrades: [],
+      upgradePoints: 0,
       activeUpgrades: {
         'RAPID_FIRE': 0,
         'MULTI_SHOT': 0,
@@ -54,26 +60,29 @@ export const useGameStore = create<ExtendedGameState>()(
       
       systemIntegrity: 100,
 
-      startGame: () => set({ 
-        isPlaying: true, 
-        score: 0, 
-        threatLevel: 1,
-        playerHealth: PLAYER_CONFIG.maxHealth,
-        xp: 0,
-        level: 1,
-        xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
-        availableUpgrades: [],
-        activeUpgrades: {
-            'RAPID_FIRE': 0,
-            'MULTI_SHOT': 0,
-            'SPEED_UP': 0,
-            'REPAIR_NANITES': 0
-        },
-        // Reset panels on start
-        panels: Object.fromEntries(
-            Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
-        )
-      }),
+      startGame: () => {
+        if (get().isPlaying) return;
+        set({ 
+            isPlaying: true, 
+            score: 0, 
+            threatLevel: 1,
+            playerHealth: PLAYER_CONFIG.maxHealth,
+            playerRebootProgress: 0,
+            xp: 0,
+            level: 1,
+            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+            upgradePoints: 0,
+            activeUpgrades: {
+                'RAPID_FIRE': 0,
+                'MULTI_SHOT': 0,
+                'SPEED_UP': 0,
+                'REPAIR_NANITES': 0
+            },
+            panels: Object.fromEntries(
+                Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+            )
+        });
+      },
       
       stopGame: () => {
         const { score, highScore } = get();
@@ -91,34 +100,33 @@ export const useGameStore = create<ExtendedGameState>()(
         let newXp = state.xp + amount;
         let newLevel = state.level;
         let nextReq = state.xpToNextLevel;
-        let newUpgrades = [...state.availableUpgrades];
+        let newPoints = state.upgradePoints;
 
-        if (newXp >= nextReq) {
+        // Loop to handle massive XP gains (multiple levels at once)
+        while (newXp >= nextReq) {
           newXp -= nextReq;
           newLevel++;
+          newPoints++; // Stack points
           nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
-          
-          if (newUpgrades.length === 0) {
-             newUpgrades = ['RAPID_FIRE', 'MULTI_SHOT']; 
-          }
         }
 
         return {
           xp: newXp,
           level: newLevel,
           xpToNextLevel: nextReq,
-          availableUpgrades: newUpgrades
+          upgradePoints: newPoints
         };
       }),
 
       selectUpgrade: (option) => set((state) => {
+        if (state.upgradePoints <= 0) return state;
         const currentLevel = state.activeUpgrades[option] || 0;
         return {
             activeUpgrades: {
                 ...state.activeUpgrades,
                 [option]: currentLevel + 1
             },
-            availableUpgrades: []
+            upgradePoints: state.upgradePoints - 1
         };
       }),
 
@@ -130,6 +138,24 @@ export const useGameStore = create<ExtendedGameState>()(
       healPlayer: (amount) => set((state) => ({
         playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount)
       })),
+      
+      tickPlayerReboot: (amount) => set((state) => {
+        if (state.playerHealth > 0) return { playerRebootProgress: 0 };
+        const newProgress = Math.max(0, Math.min(100, state.playerRebootProgress + amount));
+        if (newProgress >= 100) {
+            return {
+                playerRebootProgress: 0,
+                playerHealth: state.maxPlayerHealth / 2 // Revive with 50% HP
+            };
+        }
+        return { playerRebootProgress: newProgress };
+      }),
+      
+      damageRebootProgress: (amount) => set((state) => {
+        if (state.playerHealth > 0) return state;
+        // Big penalty for getting hit while downed
+        return { playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) };
+      }),
 
       resetGame: () => set({
         score: 0,
@@ -141,27 +167,17 @@ export const useGameStore = create<ExtendedGameState>()(
         const { panels } = get();
         const pKeys = Object.keys(panels);
         if (pKeys.length === 0) return;
-
         let currentSum = 0;
         let maxSum = pKeys.length * MAX_PANEL_HEALTH;
-
         for (const key of pKeys) {
-          currentSum += panels[key].health;
+          const p = panels[key];
+          if (!p.isDestroyed) currentSum += p.health;
         }
-
         set({ systemIntegrity: (currentSum / maxSum) * 100 });
       },
 
       registerPanel: (id, element) => set((state) => ({
-        panels: {
-          ...state.panels,
-          [id]: {
-            id,
-            element,
-            health: MAX_PANEL_HEALTH,
-            isDestroyed: false,
-          }
-        }
+        panels: { ...state.panels, [id]: { id, element, health: MAX_PANEL_HEALTH, isDestroyed: false } }
       })),
 
       unregisterPanel: (id) => set((state) => {
@@ -173,37 +189,29 @@ export const useGameStore = create<ExtendedGameState>()(
       damagePanel: (id, amount) => set((state) => {
         const panel = state.panels[id];
         if (!panel || panel.isDestroyed) return state;
-
         const newHealth = Math.max(0, panel.health - amount);
-        return {
-          panels: {
-            ...state.panels,
-            [id]: {
-              ...panel,
-              health: newHealth,
-              isDestroyed: newHealth <= 0
-            }
-          }
-        };
+        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: newHealth <= 0 } } };
       }),
 
       healPanel: (id, amount) => set((state) => {
         const panel = state.panels[id];
         if (!panel) return state;
-        // Allow healing even if destroyed (Revival Mechanic)
-        if (panel.health >= MAX_PANEL_HEALTH) return state;
+        if (!panel.isDestroyed && panel.health >= MAX_PANEL_HEALTH) return state;
+        let newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
+        let wasDestroyed = panel.isDestroyed;
+        if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
+            wasDestroyed = false;
+            newHealth = 500;
+        }
+        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: wasDestroyed } } };
+      }),
 
-        const newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
-        return {
-          panels: {
-            ...state.panels,
-            [id]: { 
-                ...panel, 
-                health: newHealth,
-                isDestroyed: newHealth <= 0 // Auto-revive if health > 0
-            }
-          }
-        };
+      decayReboot: (id, amount) => set((state) => {
+        const panel = state.panels[id];
+        if (!panel || !panel.isDestroyed) return state;
+        if (panel.health <= 0) return state;
+        const newProgress = Math.max(0, panel.health - amount);
+        return { panels: { ...state.panels, [id]: { ...panel, health: newProgress } } };
       }),
     }),
     {

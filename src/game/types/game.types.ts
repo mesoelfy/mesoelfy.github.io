@@ -27,6 +27,7 @@ export interface Entity {
   y: number;
   radius: number;
   active: boolean;
+  spawnTime: number; 
 }
 
 export interface Enemy extends Entity {
@@ -46,6 +47,7 @@ export interface Bullet extends Entity {
   vy: number;
   life: number;
   isEnemy?: boolean;
+  hp: number; // NEW: Bullet durability
 }
 
 export interface Particle extends Entity {

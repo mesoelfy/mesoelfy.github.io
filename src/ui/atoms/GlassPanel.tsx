@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
+import { ChevronUp, Skull } from 'lucide-react';
 
 interface GlassPanelProps {
   children: ReactNode;
@@ -20,11 +21,9 @@ const panelVariants = {
     transition: { duration: 0.5, ease: "easeOut" }
   },
   shattered: (custom: number) => ({
-    // FIX: Reduced Y fall distance (was 1000)
-    // Randomize slightly so they don't form a perfect line
-    y: 350 + (custom * 50), 
-    opacity: 0.8, // Keep them visible
-    rotate: custom * 15, 
+    y: 350 + (custom * 50),
+    opacity: 0.8,
+    rotate: custom * 15,
     transition: { 
         duration: 1.5, 
         ease: "anticipate",
@@ -35,28 +34,137 @@ const panelVariants = {
 
 const MAX_HEALTH = 1000;
 
-export const GlassPanel = ({ children, className, title, gameId, suppressOfflineOverlay }: GlassPanelProps) => {
+// --- INFINITE SCROLL COMPONENTS ---
+
+const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
+  return (
+    // FIX: Increased opacity to 0.6 for better legibility
+    <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
+      <motion.div 
+        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
+        animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
+             {text}
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+const BreachOverlay = ({ progress }: { progress: number }) => {
+  return (
+    <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center overflow-hidden">
+        
+        {/* BACKGROUND TAPE */}
+        <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
+            <motion.div
+               className="flex flex-col gap-8"
+               animate={{ y: ["0%", "-50%"] }}
+               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            >
+                {[0, 1].map((set) => (
+                    <div key={set} className="flex flex-col gap-8">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <ScrollingRow 
+                                key={`${set}-${i}`} 
+                                direction={i % 2 === 0 ? 1 : -1} 
+                                text="SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED //" 
+                            />
+                        ))}
+                    </div>
+                ))}
+            </motion.div>
+        </div>
+
+        {/* INTERACTION UI: Bouncing Arrow */}
+        {/* Uses group-hover from parent GlassPanel to trigger state changes immediately via CSS */}
+        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
+            
+            {/* ARROW: Idle (Red Bounce) -> Hover (Purple Shake/Scale) */}
+            <div className="relative">
+                {/* IDLE STATE */}
+                <div className="group-hover:opacity-0 transition-opacity duration-0 absolute inset-0 flex items-center justify-center">
+                    <motion.div 
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-red"
+                    >
+                        <ChevronUp size={64} strokeWidth={3} />
+                    </motion.div>
+                </div>
+
+                {/* HOVER STATE (Active Repair) */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-0 flex items-center justify-center">
+                    <motion.div 
+                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                    >
+                        <ChevronUp size={64} strokeWidth={4} />
+                    </motion.div>
+                </div>
+                
+                {/* Spacer to keep layout stable since one arrow is absolute */}
+                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-0">
+                    HOLD TO REBOOT
+                </span>
+                
+                {/* Progress Bar - Purple Fill */}
+                <div className="w-32 bg-gray-900 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700">
+                    <motion.div 
+                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ type: "tween", duration: 0.1 }}
+                    />
+                </div>
+                
+                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    INTEGRITY: {Math.floor(progress)}%
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isGameOver = Math.floor(systemIntegrity) <= 0;
+
   const panelState = useGameStore((state) => 
     gameId ? state.panels[gameId] : null
   );
-  
-  const systemIntegrity = useGameStore(state => state.systemIntegrity);
-  const isGameOver = systemIntegrity <= 0;
 
   const health = panelState ? panelState.health : MAX_HEALTH;
+  const isDestroyed = panelState ? panelState.isDestroyed : false;
   const healthPercent = (health / MAX_HEALTH) * 100; 
-  
   const isDamaged = health < MAX_HEALTH;
-  const isCritical = health < (MAX_HEALTH * 0.3);
+  const isCritical = !isDestroyed && health < (MAX_HEALTH * 0.3);
 
   let borderColor = "border-elfy-green-dim/30";
-  if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
+  if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
+  else if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
 
-  // Random seed for shatter animation
+  let barColor = "bg-elfy-green";
+  if (isDestroyed) barColor = "bg-elfy-purple"; 
+  else if (healthPercent < 30) barColor = "bg-elfy-red";
+  else if (healthPercent < 60) barColor = "bg-elfy-yellow";
+
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
+  const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
+  const purpleCircleClass = isDestroyed ? "bg-elfy-purple" : "border border-elfy-purple-dim";
 
   return (
     <motion.div 
@@ -66,7 +174,7 @@ export const GlassPanel = ({ children, className, title, gameId, suppressOffline
       animate={isGameOver ? "shattered" : "visible"}
       custom={randSeed}
       className={clsx(
-        "relative overflow-hidden flex flex-col",
+        "relative overflow-hidden flex flex-col group", // Added group here
         "bg-black border",
         borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
@@ -77,27 +185,24 @@ export const GlassPanel = ({ children, className, title, gameId, suppressOffline
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {title && (
-        <div className="relative flex flex-col border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0">
+        <div className="relative flex flex-col border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0 z-10">
           <div className="flex items-center justify-between px-3 py-1">
             <span className="text-sm md:text-base font-header font-bold text-elfy-green uppercase tracking-wider drop-shadow-md">
               {title}
             </span>
             <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-elfy-green" />
-              <div className="w-2 h-2 rounded-full border border-elfy-purple-dim" />
+              <div className={`w-2 h-2 rounded-full ${greenCircleClass}`} />
+              <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
             </div>
           </div>
 
           {gameId && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
-                className={clsx("h-full transition-colors duration-300", 
-                  healthPercent > 60 ? "bg-elfy-green" : 
-                  healthPercent > 30 ? "bg-elfy-yellow" : "bg-elfy-red"
-                )}
+                className={clsx("h-full transition-colors duration-200", barColor)}
                 initial={{ width: "100%" }}
                 animate={{ width: `${healthPercent}%` }}
-                transition={{ type: "tween", ease: "easeOut", duration: 0.2 }}
+                transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
               />
             </div>
           )}
@@ -105,13 +210,17 @@ export const GlassPanel = ({ children, className, title, gameId, suppressOffline
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* Offline Overlay */}
-        {health <= 0 && !isGameOver && !suppressOfflineOverlay && (
-          <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center border-4 border-elfy-red m-1">
-            <span className="text-elfy-red font-header font-black text-xl animate-pulse">SECURITY BREACH</span>
-            <span className="text-xs text-elfy-red font-mono mt-1">SPAWNING HOSTILES...</span>
-          </div>
+        {isDestroyed && !isGameOver && (
+            <BreachOverlay progress={healthPercent} />
         )}
+        
+        {isGameOver && (
+            <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center gap-4">
+                <Skull className="text-elfy-red animate-pulse w-20 h-20" />
+                <span className="text-elfy-red font-header font-black text-2xl tracking-widest">SYSTEM FAILURE</span>
+            </div>
+        )}
+        
         {children}
       </div>
     </motion.div>

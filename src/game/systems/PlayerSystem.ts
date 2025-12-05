@@ -18,6 +18,7 @@ export class PlayerSystem {
       const { damage } = payload;
       const store = useGameStore.getState();
       store.damagePlayer(damage);
+      
       if (store.playerHealth <= 0) {
         this.handlePlayerDeath();
       }
@@ -35,7 +36,18 @@ export class PlayerSystem {
   }
 
   private handlePlayerDeath() {
-    useGameStore.getState().stopGame();
+    const store = useGameStore.getState();
+    const identityPanel = store.panels['identity'];
+
+    // LOGIC CHANGE:
+    // Only Game Over if the Identity Core is ALSO destroyed.
+    // Otherwise, the player is just "Downed" and must reboot manually.
+    if (identityPanel && identityPanel.isDestroyed) {
+        store.stopGame();
+    } else {
+        // Optional: Trigger a "System Down" sound or visual event here
+        // The store state (playerHealth <= 0) automatically triggers the UI changes.
+    }
   }
 
   public update(time: number) {
@@ -46,7 +58,6 @@ export class PlayerSystem {
     const upgrades = useGameStore.getState().activeUpgrades;
     const rapidLevel = upgrades['RAPID_FIRE'] || 0;
     
-    // Decrease delay by 15% per level
     const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
 
     if (time > this.lastFireTime + currentFireRate) {
@@ -79,20 +90,14 @@ export class PlayerSystem {
     if (targetEnemy) {
       const dx = targetEnemy.x - cursor.x;
       const dy = targetEnemy.y - cursor.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
       
       const upgrades = useGameStore.getState().activeUpgrades;
       const multiLevel = upgrades['MULTI_SHOT'] || 0;
       
-      // --- UPGRADE LOGIC: PROJECTILES ---
-      // Base: 1 shot. Level 1: 3 shots. Level 2: 5 shots.
       const projectileCount = 1 + (multiLevel * 2);
-      const spreadAngle = 0.2; // roughly 11 degrees
+      const spreadAngle = 0.2; 
 
-      // Calculate base angle
       const baseAngle = Math.atan2(dy, dx);
-      
-      // Calculate start angle to center the spread
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
       for (let i = 0; i < projectileCount; i++) {

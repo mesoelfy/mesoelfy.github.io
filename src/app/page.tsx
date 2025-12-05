@@ -84,8 +84,7 @@ export default function Home() {
           >
             <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
               
-              {/* Added suppressOfflineOverlay to allow custom Reboot UI */}
-              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity" suppressOfflineOverlay={true}>
+              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
                 <IdentityHUD />
               </GlassPanel>
 
