@@ -1,13 +1,13 @@
 'use client';
 
 import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore'; // FIX: Import
+import { useGameStore } from '@/game/store/useGameStore';
 import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { SocialRow } from '@/ui/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
 import { HoloCommLog } from '@/ui/molecules/HoloCommLog';
-import { IdentityHUD } from '@/ui/molecules/IdentityHUD'; // FIX: New HUD
+import { IdentityHUD } from '@/ui/molecules/IdentityHUD';
 import { Header } from '@/ui/organisms/Header';
 import { Footer } from '@/ui/organisms/Footer';
 import { AboutModal } from '@/features/identity/AboutModal';
@@ -17,7 +17,7 @@ import { ContactModal } from '@/features/contact/ContactModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { useState, useEffect } from 'react'; // FIX: Imports
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 
@@ -31,11 +31,10 @@ export default function Home() {
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
-      startGame(); // FIX: Actually start the game logic
+      startGame();
     }, 200);
   };
 
-  // Integrity Loop (1s Tick)
   useEffect(() => {
     if (bootState !== 'active') return;
     const interval = setInterval(recalcIntegrity, 500);
@@ -85,8 +84,8 @@ export default function Home() {
           >
             <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
               
-              {/* UPDATED: Uses IdentityHUD now */}
-              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+              {/* Added suppressOfflineOverlay to allow custom Reboot UI */}
+              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity" suppressOfflineOverlay={true}>
                 <IdentityHUD />
               </GlassPanel>
 

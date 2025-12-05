@@ -18,7 +18,8 @@ export class InteractionSystem {
     for (const pKey in panels) {
       const p = panels[pKey];
       
-      if (p.isDestroyed || p.health >= 1000) continue;
+      // FIX: Removed 'p.isDestroyed' check. We allow repairing dead panels.
+      if (p.health >= 1000) continue;
 
       const r = ViewportHelper.getPanelWorldRect(p);
       if (!r) continue;
@@ -34,8 +35,10 @@ export class InteractionSystem {
         this.lastRepairTime = time;
         GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
         
+        // Visuals
         if (Math.random() > 0.6) {
-            ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, '#00F0FF', 1);
+            const color = p.isDestroyed ? '#FF003C' : '#00F0FF'; // Red sparks if reviving
+            ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, color, 1);
         }
         break; 
       }

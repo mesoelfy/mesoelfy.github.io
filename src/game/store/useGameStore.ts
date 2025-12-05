@@ -8,23 +8,19 @@ const MAX_PANEL_HEALTH = 1000;
 export type UpgradeOption = 'RAPID_FIRE' | 'MULTI_SHOT' | 'SPEED_UP' | 'REPAIR_NANITES';
 
 interface ExtendedGameState extends GameState {
-  // Player State
   playerHealth: number;
   maxPlayerHealth: number;
   score: number;
   highScore: number;
   
-  // Progression
   xp: number;
   xpToNextLevel: number;
   level: number;
   availableUpgrades: UpgradeOption[];
-  activeUpgrades: Record<UpgradeOption, number>; // Level of each upgrade
+  activeUpgrades: Record<UpgradeOption, number>;
   
-  // System State
   systemIntegrity: number;
   
-  // Actions
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
   addScore: (amount: number) => void;
@@ -72,7 +68,11 @@ export const useGameStore = create<ExtendedGameState>()(
             'MULTI_SHOT': 0,
             'SPEED_UP': 0,
             'REPAIR_NANITES': 0
-        }
+        },
+        // Reset panels on start
+        panels: Object.fromEntries(
+            Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+        )
       }),
       
       stopGame: () => {
@@ -118,7 +118,7 @@ export const useGameStore = create<ExtendedGameState>()(
                 ...state.activeUpgrades,
                 [option]: currentLevel + 1
             },
-            availableUpgrades: [] // Clear selection
+            availableUpgrades: []
         };
       }),
 
@@ -189,13 +189,19 @@ export const useGameStore = create<ExtendedGameState>()(
 
       healPanel: (id, amount) => set((state) => {
         const panel = state.panels[id];
-        if (!panel || panel.isDestroyed || panel.health >= MAX_PANEL_HEALTH) return state;
+        if (!panel) return state;
+        // Allow healing even if destroyed (Revival Mechanic)
+        if (panel.health >= MAX_PANEL_HEALTH) return state;
 
         const newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
         return {
           panels: {
             ...state.panels,
-            [id]: { ...panel, health: newHealth }
+            [id]: { 
+                ...panel, 
+                health: newHealth,
+                isDestroyed: newHealth <= 0 // Auto-revive if health > 0
+            }
           }
         };
       }),

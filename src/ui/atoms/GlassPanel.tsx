@@ -9,6 +9,7 @@ interface GlassPanelProps {
   className?: string;
   title?: string;
   gameId?: string; 
+  suppressOfflineOverlay?: boolean;
 }
 
 const panelVariants = {
@@ -18,22 +19,23 @@ const panelVariants = {
     y: 0,
     transition: { duration: 0.5, ease: "easeOut" }
   },
-  // NEW: Game Over State
   shattered: (custom: number) => ({
-    y: 1000,
-    opacity: 0,
-    rotate: custom * 10, // Random rotation
+    // FIX: Reduced Y fall distance (was 1000)
+    // Randomize slightly so they don't form a perfect line
+    y: 350 + (custom * 50), 
+    opacity: 0.8, // Keep them visible
+    rotate: custom * 15, 
     transition: { 
-        duration: 2.0, 
-        ease: "easeIn",
-        delay: custom * 0.2 // Random delay
+        duration: 1.5, 
+        ease: "anticipate",
+        delay: Math.abs(custom) * 0.1 
     }
   })
 };
 
 const MAX_HEALTH = 1000;
 
-export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
+export const GlassPanel = ({ children, className, title, gameId, suppressOfflineOverlay }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   
   const panelState = useGameStore((state) => 
@@ -103,8 +105,8 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* Offline Overlay (Only if not full game over) */}
-        {health <= 0 && !isGameOver && (
+        {/* Offline Overlay */}
+        {health <= 0 && !isGameOver && !suppressOfflineOverlay && (
           <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center border-4 border-elfy-red m-1">
             <span className="text-elfy-red font-header font-black text-xl animate-pulse">SECURITY BREACH</span>
             <span className="text-xs text-elfy-red font-mono mt-1">SPAWNING HOSTILES...</span>

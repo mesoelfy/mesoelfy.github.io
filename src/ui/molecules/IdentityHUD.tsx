@@ -3,6 +3,7 @@ import { useGameStore, UpgradeOption } from '@/game/store/useGameStore';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AlertTriangle, Power, RefreshCw } from 'lucide-react';
 
 export const IdentityHUD = () => {
   const { openModal } = useStore();
@@ -14,7 +15,15 @@ export const IdentityHUD = () => {
   const nextXp = useGameStore(s => s.xpToNextLevel);
   const level = useGameStore(s => s.level);
   const upgrades = useGameStore(s => s.availableUpgrades);
-  const selectUpgrade = useGameStore(s => s.selectUpgrade); // ACTION
+  const selectUpgrade = useGameStore(s => s.selectUpgrade);
+  
+  // Panel Health State (Logic for "Reboot")
+  const panel = useGameStore(s => s.panels['identity']);
+  const panelHealth = panel ? panel.health : 1000;
+  const isPanelDead = panelHealth <= 0;
+  
+  // Revival Progress (0-100%)
+  const rebootPercent = (panelHealth / 1000) * 100;
 
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
   const xpPercent = Math.min(100, (xp / nextXp) * 100);
@@ -40,6 +49,54 @@ export const IdentityHUD = () => {
       selectUpgrade(u);
   };
 
+  // --- RENDER: DEAD STATE (BIOS REBOOT) ---
+  if (isPanelDead) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full w-full relative space-y-4 bg-black/80 p-2 border-2 border-elfy-red/50 animate-pulse">
+        
+        {/* Warning Icon */}
+        <div className="text-elfy-red animate-bounce">
+          <AlertTriangle size={48} />
+        </div>
+
+        {/* Text */}
+        <div className="text-center space-y-1">
+          <h2 className="text-xl font-header font-black text-elfy-red tracking-widest">CRITICAL FAILURE</h2>
+          <p className="text-[10px] font-mono text-elfy-red/80">CORE_LOGIC_OFFLINE</p>
+        </div>
+
+        {/* Reboot Instruction / Progress */}
+        <div className="w-full max-w-[200px] text-center">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-white mb-2">
+            <RefreshCw size={12} className={rebootPercent > 0 ? "animate-spin" : ""} />
+            <span>HOVER TO REBOOT</span>
+          </div>
+          
+          <div className="w-full h-4 bg-gray-900 border border-white/20 relative overflow-hidden">
+             {/* Progress Bar */}
+             <div 
+               className="h-full bg-white transition-all duration-100 ease-linear"
+               style={{ width: `${rebootPercent}%` }}
+             />
+             {/* Scanline overlay */}
+             <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,black_2px,black_4px)] opacity-20" />
+          </div>
+          <div className="text-[9px] font-mono text-white/50 mt-1 text-right">
+            BIOS_LOAD: {Math.floor(rebootPercent)}%
+          </div>
+        </div>
+
+        {/* Disabled Upgrade Preview */}
+        {upgrades.length > 0 && (
+          <div className="opacity-50 grayscale pointer-events-none mt-2">
+             <span className="text-[8px] border border-white/20 px-2 py-1 text-white/40">UPGRADES PENDING REBOOT</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- RENDER: NORMAL STATE ---
   return (
     <div className="flex flex-col items-center h-full w-full relative">
       
