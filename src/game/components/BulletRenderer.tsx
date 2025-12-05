@@ -1,8 +1,9 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { EntitySystem } from '../systems/EntitySystem';
+import { Registry } from '../core/ecs/EntityRegistry';
+import { Tag } from '../core/ecs/types';
+import { TransformComponent } from '../components/data/TransformComponent';
 import { GAME_THEME } from '../theme';
 
 const MAX_BULLETS = 500;
@@ -15,24 +16,22 @@ export const BulletRenderer = () => {
   useFrame(() => {
     if (!meshRef.current) return;
     
-    // SAFETY: If game hasn't booted, skip
-    let system: EntitySystem;
-    try {
-       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
-    } catch { return; }
-
-    const bullets = system.bullets;
+    // Query BULLET + PLAYER tags to exclude Enemy bullets
+    // Since Registry.getByTag returns array, we filter manually or intersect
+    const allBullets = Registry.getByTag(Tag.BULLET);
     let count = 0;
 
-    for (let i = 0; i < bullets.length; i++) {
-      const b = bullets[i];
-      if (!b.active) continue;
+    for (const b of allBullets) {
+      if (b.hasTag(Tag.ENEMY)) continue; // Skip enemy bullets
+      
+      const transform = b.getComponent<TransformComponent>('Transform');
+      if (!transform) continue;
+
       if (count >= MAX_BULLETS) break;
 
-      tempObj.position.set(b.x, b.y, 0);
-      const angle = Math.atan2(b.vy, b.vx) - Math.PI / 2;
-      tempObj.rotation.z = angle;
-
+      tempObj.position.set(transform.x, transform.y, 0);
+      tempObj.rotation.z = transform.rotation;
+      
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       count++;

@@ -1,8 +1,11 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { EntitySystem } from '../systems/EntitySystem';
+import { Registry } from '../core/ecs/EntityRegistry';
+import { Tag } from '../core/ecs/types';
+import { TransformComponent } from '../components/data/TransformComponent';
+import { IdentityComponent } from '../components/data/IdentityComponent';
+import { LifetimeComponent } from '../components/data/LifetimeComponent';
 
 const MAX_PARTICLES = 1000;
 const tempObj = new THREE.Object3D();
@@ -15,24 +18,24 @@ export const ParticleRenderer = () => {
   useFrame(() => {
     if (!meshRef.current) return;
 
-    let system: EntitySystem;
-    try {
-       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
-    } catch { return; }
-
-    const particles = system.particles;
+    const particles = Registry.getByTag(Tag.PARTICLE);
     let count = 0;
 
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      if (!p.active) continue;
+    for (const p of particles) {
+      const transform = p.getComponent<TransformComponent>('Transform');
+      const identity = p.getComponent<IdentityComponent>('Identity');
+      const life = p.getComponent<LifetimeComponent>('Lifetime');
+      
+      if (!transform || !life) continue;
+
       if (count >= MAX_PARTICLES) break;
 
-      tempObj.position.set(p.x, p.y, 0);
-      const scale = p.life / p.maxLife; 
+      tempObj.position.set(transform.x, transform.y, 0);
+      const scale = life.remaining / life.total; 
       tempObj.scale.set(scale, scale, 1);
       
-      tempColor.set(p.color);
+      // Use Identity variant as Hex Color
+      tempColor.set(identity ? identity.variant : '#FFF');
       
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);

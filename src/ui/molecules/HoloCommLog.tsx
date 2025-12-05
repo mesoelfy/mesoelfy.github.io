@@ -8,16 +8,18 @@ const VIDEO_POOL = [
   "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
 ];
 
-// Reusable Offline Static Component
 const OfflineStatic = () => (
   <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center border border-elfy-red/20">
     <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-10 bg-cover mix-blend-screen pointer-events-none" />
-    <WifiOff className="text-elfy-red animate-pulse w-8 h-8 mb-2" />
-    <span className="text-[10px] font-mono text-elfy-red animate-pulse tracking-widest">SIGNAL_LOST</span>
+    
+    {/* 
+      // PREVIOUS DESIGN: Icon + Text
+      <WifiOff className="text-elfy-red animate-pulse w-8 h-8 mb-2" />
+      <span className="text-[10px] font-mono text-elfy-red animate-pulse tracking-widest">SIGNAL_LOST</span>
+    */}
   </div>
 );
 
-// Loading Placeholder (To prevent Hydration Mismatch)
 const LoadingPlaceholder = () => (
   <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/20 bg-black flex flex-col items-center justify-center">
     <Radio className="text-elfy-green-dim/50 animate-pulse w-6 h-6 mb-2" />
@@ -39,19 +41,16 @@ const VideoSlot = ({
   const [videoId, setVideoId] = useState(initialVideo);
   const [isMasked, setIsMasked] = useState(true);
 
-  // HOOK 1: Initial Mask
   useEffect(() => {
-    setIsMasked(true);
-    const unmaskTimer = setTimeout(() => {
-      setIsMasked(false);
-    }, 5000);
-    return () => clearTimeout(unmaskTimer);
-  }, []); 
+    if (!isOffline) {
+        setIsMasked(true);
+        const unmaskTimer = setTimeout(() => setIsMasked(false), 5000);
+        return () => clearTimeout(unmaskTimer);
+    }
+  }, [isOffline]); 
 
-  // HOOK 2: Video Rotation
   useEffect(() => {
-    if (isOffline) return; // Logic check inside hook (Safe)
-
+    if (isOffline) return;
     const duration = 30000 + (Math.random() * 15000);
     const timer = setTimeout(() => {
       setIsMasked(true);
@@ -64,7 +63,6 @@ const VideoSlot = ({
     return () => clearTimeout(timer);
   }, [videoId, getNextVideo, isOffline]);
 
-  // Conditional Rendering Logic (Must be after all hooks)
   const content = isOffline ? (
     <>
       <OfflineStatic />
@@ -76,19 +74,20 @@ const VideoSlot = ({
     <>
       <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
       
-      <a 
-        href={`https://www.youtube.com/watch?v=${videoId}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute inset-0 z-40 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
-      >
-        <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm">
-          <span>OPEN_SOURCE</span>
-          <ExternalLink size={12} />
-        </div>
-      </a>
+      {!isMasked && (
+          <a 
+            href={`https://www.youtube.com/watch?v=${videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute inset-0 z-40 cursor-pointer flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
+          >
+            <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm hover:scale-105 transition-transform">
+              <span>OPEN_SOURCE</span>
+              <ExternalLink size={12} />
+            </div>
+          </a>
+      )}
 
-      {/* The Loading/Mask Overlay */}
       <div 
         className={`absolute inset-0 z-20 bg-black flex flex-col items-center justify-center transition-opacity duration-500 ${isMasked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
@@ -115,7 +114,7 @@ const VideoSlot = ({
   );
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group/video hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
       {content}
     </div>
   );
@@ -123,41 +122,30 @@ const VideoSlot = ({
 
 export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
-  
-  // Game Store Subscription
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
-
-  // Hydration Safe State
   const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
 
-  // Initialize Random Videos on Client Only
   useEffect(() => {
-    // Reset deck
     deckRef.current = [...VIDEO_POOL];
     const init: string[] = [];
-    
-    // Pick 3 random videos
     for(let i=0; i<3; i++) {
       const randomIndex = Math.floor(Math.random() * deckRef.current.length);
       const vid = deckRef.current[randomIndex];
-      deckRef.current.splice(randomIndex, 1); // Remove selected to avoid dupes
+      deckRef.current.splice(randomIndex, 1);
       init.push(vid);
     }
     setInitialVideos(init);
   }, []);
 
   const getNextVideo = useCallback(() => {
-    if (deckRef.current.length === 0) {
-      deckRef.current = [...VIDEO_POOL];
-    }
+    if (deckRef.current.length === 0) deckRef.current = [...VIDEO_POOL];
     const randomIndex = Math.floor(Math.random() * deckRef.current.length);
     const selected = deckRef.current[randomIndex];
     deckRef.current.splice(randomIndex, 1);
     return selected || VIDEO_POOL[0];
   }, []);
 
-  // If waiting for client hydration, show placeholders
   if (!initialVideos) {
     return (
       <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">

@@ -2,17 +2,19 @@ import { IGameSystem, IServiceLocator } from './interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
+import { Registry } from './ecs/EntityRegistry'; // Import Registry
+import { Tag } from './ecs/types';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   private locator!: IServiceLocator;
 
-  public get enemies() { return (this.locator.getSystem('EntitySystem') as any).enemies; }
-  public get bullets() { return (this.locator.getSystem('EntitySystem') as any).bullets; }
-  public get enemyBullets() { return (this.locator.getSystem('EntitySystem') as any).enemyBullets; }
-  public get particles() { return (this.locator.getSystem('EntitySystem') as any).particles; }
+  // FIX: Bridge these getters to the Registry to prevent crashes
+  public get enemies() { return Registry.getByTag(Tag.ENEMY); }
+  public get bullets() { return Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY)); }
+  public get enemyBullets() { return Registry.getByTag(Tag.BULLET).filter(b => b.hasTag(Tag.ENEMY)); }
+  public get particles() { return Registry.getByTag(Tag.PARTICLE); }
   
-  // Bridge for UI/Debug
   public get isRepairing() { 
     try {
       return (this.locator.getSystem('InteractionSystem') as any).repairState !== 'IDLE';

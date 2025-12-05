@@ -1,8 +1,10 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { EntitySystem } from '../systems/EntitySystem';
+import { Registry } from '../core/ecs/EntityRegistry';
+import { Tag } from '../core/ecs/types';
+import { TransformComponent } from '../components/data/TransformComponent';
+import { IdentityComponent } from '../components/data/IdentityComponent';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
@@ -23,83 +25,50 @@ export const EnemyRenderer = () => {
   useFrame((state) => {
     if (!muncherRef.current || !kamikazeRef.current || !hunterRef.current) return;
 
-    let system: EntitySystem;
-    try {
-       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
-    } catch { return; }
-
-    const enemies = system.enemies;
+    // QUERY REGISTRY
+    const enemies = Registry.getByTag(Tag.ENEMY);
     const currentTime = state.clock.elapsedTime;
-    
-    let cursor = { x: 0, y: 0 };
-    try {
-        cursor = ServiceLocator.getInputService().getCursor();
-    } catch {}
     
     let mCount = 0;
     let kCount = 0;
     let hCount = 0;
 
-    for (let i = 0; i < enemies.length; i++) {
-      const e = enemies[i];
-      if (!e.active) continue;
-
-      tempObj.position.set(e.x, e.y, 0);
+    for (const e of enemies) {
+      const transform = e.getComponent<TransformComponent>('Transform');
+      const identity = e.getComponent<IdentityComponent>('Identity');
       
-      // FIX: Clamp age to 0 to prevent negative infinity scale
-      const age = Math.max(0, currentTime - (e.spawnTime || 0));
-      const spawnScale = Math.min(1.0, age * 3.0); 
-      const elastic = spawnScale === 1 ? 1 : 1 - Math.pow(2, -10 * spawnScale) * Math.sin((spawnScale - 0.075) * (2 * Math.PI) / 0.3);
+      if (!transform || !identity) continue;
 
-      if (e.type === EnemyTypes.MUNCHER) {
+      tempObj.position.set(transform.x, transform.y, 0);
+      tempObj.rotation.z = transform.rotation;
+      tempObj.scale.set(transform.scale, transform.scale, 1);
+      
+      const type = identity.variant;
+      
+      if (type === EnemyTypes.MUNCHER) {
         if (mCount >= MAX_ENEMIES) continue;
-        const angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
-        tempObj.rotation.set(0, 0, angle);
-        const baseScale = e.isEating ? 1 + Math.sin(currentTime * 20) * 0.2 : 1;
-        const finalScale = baseScale * elastic;
-        tempObj.scale.set(finalScale, finalScale, 1);
         tempColor.set(GAME_THEME.enemy.muncher);
-        
         tempObj.updateMatrix();
         muncherRef.current.setMatrixAt(mCount, tempObj.matrix);
         muncherRef.current.setColorAt(mCount, tempColor);
         mCount++;
       }
-      else if (e.type === EnemyTypes.KAMIKAZE) {
+      else if (type === EnemyTypes.KAMIKAZE) {
         if (kCount >= MAX_ENEMIES) continue;
-        const angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
-        tempObj.rotation.set(0, 0, angle + (currentTime * 5)); 
-        const finalScale = 1.3 * elastic;
-        tempObj.scale.set(finalScale, finalScale, finalScale);
         tempColor.set(GAME_THEME.enemy.kamikaze);
-        
         tempObj.updateMatrix();
         kamikazeRef.current.setMatrixAt(kCount, tempObj.matrix);
         kamikazeRef.current.setColorAt(kCount, tempColor);
         kCount++;
       }
-      else if (e.type === EnemyTypes.HUNTER) {
+      else if (type === EnemyTypes.HUNTER) {
         if (hCount >= MAX_ENEMIES) continue;
-        let angle = 0;
-        let baseScale = 1.5;
-        if (e.state === 'charge') {
-            const dx = cursor.x - e.x;
-            const dy = cursor.y - e.y;
-            angle = Math.atan2(dy, dx) - Math.PI / 2;
-            tempObj.position.x += (Math.random() - 0.5) * 0.1;
-            tempObj.position.y += (Math.random() - 0.5) * 0.1;
-            const t = currentTime * 20;
-            const alpha = (Math.sin(t) + 1) / 2;
-            tempColor.set(GAME_THEME.enemy.hunter).lerp(chargeColor, alpha);
-            baseScale = 1.8;
-        } else {
-            angle = Math.atan2(e.vy, e.vx) - Math.PI / 2;
-            tempColor.set(GAME_THEME.enemy.hunter);
+        const isCharging = (e as any)._hunterState === 'charge';
+        tempColor.set(GAME_THEME.enemy.hunter);
+        if (isCharging) {
+             const alpha = (Math.sin(currentTime * 20) + 1) / 2;
+             tempColor.lerp(chargeColor, alpha);
         }
-        tempObj.rotation.set(0, 0, angle);
-        const finalScale = baseScale * elastic;
-        tempObj.scale.set(finalScale, finalScale, 1);
-        
         tempObj.updateMatrix();
         hunterRef.current.setMatrixAt(hCount, tempObj.matrix);
         hunterRef.current.setColorAt(hCount, tempColor);
@@ -108,13 +77,14 @@ export const EnemyRenderer = () => {
     }
 
     muncherRef.current.count = mCount;
-    kamikazeRef.current.count = kCount;
-    hunterRef.current.count = hCount;
-    
     muncherRef.current.instanceMatrix.needsUpdate = true;
     if (muncherRef.current.instanceColor) muncherRef.current.instanceColor.needsUpdate = true;
+
+    kamikazeRef.current.count = kCount;
     kamikazeRef.current.instanceMatrix.needsUpdate = true;
     if (kamikazeRef.current.instanceColor) kamikazeRef.current.instanceColor.needsUpdate = true;
+
+    hunterRef.current.count = hCount;
     hunterRef.current.instanceMatrix.needsUpdate = true;
     if (hunterRef.current.instanceColor) hunterRef.current.instanceColor.needsUpdate = true;
   });

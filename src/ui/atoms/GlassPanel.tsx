@@ -1,9 +1,154 @@
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ReactNode } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
-import { ChevronUp, Skull } from 'lucide-react';
+import { ChevronUp, Skull, Power } from 'lucide-react';
+import { useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
+
+// --- CONSTANTS ---
+const MAX_HEALTH = 1000;
+
+// --- SUB-COMPONENTS ---
+
+const RebootOverlay = () => (
+  <motion.div 
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+    transition={{ duration: 0.4, ease: "backOut" }}
+    className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-[2px]"
+  >
+    <div className="flex flex-col items-center gap-2 border-y-2 border-elfy-green bg-elfy-green/10 w-full py-4 relative overflow-hidden">
+      <motion.div 
+        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-elfy-green/20 to-transparent"
+        animate={{ top: ["-100%", "100%"] }}
+        transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
+      />
+      <div className="relative z-10 flex items-center gap-3">
+        <motion.div
+          initial={{ rotate: -180, scale: 0 }}
+          animate={{ rotate: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+        >
+            <Power className="text-elfy-green w-8 h-8 md:w-10 md:h-10" />
+        </motion.div>
+        <div className="flex flex-col">
+            <motion.span 
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-2xl md:text-3xl font-header font-black text-elfy-green tracking-widest italic"
+            >
+                SYSTEM
+            </motion.span>
+            <motion.span 
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-xs md:text-sm font-mono font-bold text-elfy-green-dim tracking-[0.3em]"
+            >
+                RESTORED
+            </motion.span>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
+  return (
+    <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
+      <motion.div 
+        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
+        animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
+             {text}
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boolean }) => {
+  return (
+    <div className={clsx(
+        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm",
+        isVideo ? "bg-black/20" : "bg-black/90"
+    )}>
+        <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
+            <motion.div
+               className="flex flex-col gap-8"
+               animate={{ y: ["0%", "-50%"] }}
+               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            >
+                {[0, 1].map((set) => (
+                    <div key={set} className="flex flex-col gap-8">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <ScrollingRow 
+                                key={`${set}-${i}`} 
+                                direction={i % 2 === 0 ? 1 : -1} 
+                                text="SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED //" 
+                            />
+                        ))}
+                    </div>
+                ))}
+            </motion.div>
+        </div>
+
+        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
+            <div className="relative">
+                <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
+                    <motion.div 
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-red drop-shadow-md"
+                    >
+                        <ChevronUp size={64} strokeWidth={3} />
+                    </motion.div>
+                </div>
+
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
+                    <motion.div 
+                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                    >
+                        <ChevronUp size={64} strokeWidth={4} />
+                    </motion.div>
+                </div>
+                
+                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
+                    HOLD TO REBOOT
+                </span>
+                
+                <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
+                    <motion.div 
+                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ type: "tween", duration: 0.1 }}
+                    />
+                </div>
+                
+                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
+                    INTEGRITY: {Math.floor(progress)}%
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+// --- MAIN COMPONENT ---
 
 interface GlassPanelProps {
   children: ReactNode;
@@ -32,125 +177,29 @@ const panelVariants = {
   })
 };
 
-const MAX_HEALTH = 1000;
-
-// --- INFINITE SCROLL COMPONENTS ---
-
-const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
-  return (
-    // FIX: Increased opacity to 0.6 for better legibility
-    <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
-      <motion.div 
-        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
-        animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
-        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-      >
-        {Array.from({ length: 12 }).map((_, i) => (
-          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
-             {text}
-          </span>
-        ))}
-      </motion.div>
-    </div>
-  );
-};
-
-const BreachOverlay = ({ progress }: { progress: number }) => {
-  return (
-    <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center overflow-hidden">
-        
-        {/* BACKGROUND TAPE */}
-        <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
-            <motion.div
-               className="flex flex-col gap-8"
-               animate={{ y: ["0%", "-50%"] }}
-               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            >
-                {[0, 1].map((set) => (
-                    <div key={set} className="flex flex-col gap-8">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <ScrollingRow 
-                                key={`${set}-${i}`} 
-                                direction={i % 2 === 0 ? 1 : -1} 
-                                text="SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED //" 
-                            />
-                        ))}
-                    </div>
-                ))}
-            </motion.div>
-        </div>
-
-        {/* INTERACTION UI: Bouncing Arrow */}
-        {/* Uses group-hover from parent GlassPanel to trigger state changes immediately via CSS */}
-        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
-            
-            {/* ARROW: Idle (Red Bounce) -> Hover (Purple Shake/Scale) */}
-            <div className="relative">
-                {/* IDLE STATE */}
-                <div className="group-hover:opacity-0 transition-opacity duration-0 absolute inset-0 flex items-center justify-center">
-                    <motion.div 
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-red"
-                    >
-                        <ChevronUp size={64} strokeWidth={3} />
-                    </motion.div>
-                </div>
-
-                {/* HOVER STATE (Active Repair) */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-0 flex items-center justify-center">
-                    <motion.div 
-                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
-                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
-                    >
-                        <ChevronUp size={64} strokeWidth={4} />
-                    </motion.div>
-                </div>
-                
-                {/* Spacer to keep layout stable since one arrow is absolute */}
-                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
-            </div>
-
-            <div className="flex flex-col items-center text-center">
-                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-0">
-                    HOLD TO REBOOT
-                </span>
-                
-                {/* Progress Bar - Purple Fill */}
-                <div className="w-32 bg-gray-900 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700">
-                    <motion.div 
-                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ type: "tween", duration: 0.1 }}
-                    />
-                </div>
-                
-                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    INTEGRITY: {Math.floor(progress)}%
-                </div>
-            </div>
-        </div>
-    </div>
-  );
-};
-
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
-  
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isGameOver = Math.floor(systemIntegrity) <= 0;
-
-  const panelState = useGameStore((state) => 
-    gameId ? state.panels[gameId] : null
-  );
+  const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
 
   const health = panelState ? panelState.health : MAX_HEALTH;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   const healthPercent = (health / MAX_HEALTH) * 100; 
   const isDamaged = health < MAX_HEALTH;
   const isCritical = !isDestroyed && health < (MAX_HEALTH * 0.3);
+
+  const [showReboot, setShowReboot] = useReactState(false);
+  const prevDestroyed = useReactRef(isDestroyed);
+
+  useReactEffect(() => {
+    if (prevDestroyed.current && !isDestroyed) {
+        setShowReboot(true);
+        const timer = setTimeout(() => setShowReboot(false), 2000); 
+        return () => clearTimeout(timer);
+    }
+    prevDestroyed.current = isDestroyed;
+  }, [isDestroyed]);
 
   let borderColor = "border-elfy-green-dim/30";
   if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
@@ -174,7 +223,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       animate={isGameOver ? "shattered" : "visible"}
       custom={randSeed}
       className={clsx(
-        "relative overflow-hidden flex flex-col group", // Added group here
+        "relative overflow-hidden flex flex-col group",
         "bg-black border",
         borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
@@ -195,7 +244,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
               <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
             </div>
           </div>
-
           {gameId && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
@@ -211,8 +259,12 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
       <div className="relative z-10 p-4 h-full">
         {isDestroyed && !isGameOver && (
-            <BreachOverlay progress={healthPercent} />
+            <BreachOverlay progress={healthPercent} isVideo={gameId === 'video'} />
         )}
+
+        <AnimatePresence>
+            {showReboot && <RebootOverlay key="reboot" />}
+        </AnimatePresence>
         
         {isGameOver && (
             <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center gap-4">

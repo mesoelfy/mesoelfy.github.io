@@ -20,9 +20,10 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
+import { CustomCursor } from '@/ui/atoms/CustomCursor';
 
 export default function Home() {
-  const { openModal } = useStore();
+  const { openModal, setIntroDone } = useStore(); // Added setIntroDone
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   
@@ -31,6 +32,7 @@ export default function Home() {
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
+      setIntroDone(true); // FIX: Signal that intro is over so Cursor fades out
       startGame();
     }, 200);
   };
@@ -44,8 +46,9 @@ export default function Home() {
   const playHover = () => AudioSystem.playHover();
 
   return (
-    <div id="global-app-root" className="relative w-full h-screen overflow-hidden">
+    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none">
       
+      <CustomCursor />
       <GlobalShakeManager />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">

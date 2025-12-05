@@ -6,6 +6,11 @@ import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { useGameStore } from '../store/useGameStore';
 
+// NEW: ECS Imports
+import { Registry } from '../core/ecs/EntityRegistry';
+import { Tag } from '../core/ecs/types';
+import { TransformComponent } from '../components/data/TransformComponent';
+
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
   private entitySystem!: EntitySystem;
@@ -32,12 +37,9 @@ export class PlayerSystem implements IGameSystem {
   }
 
   teardown(): void {
-    // Unsubscribe logic should ideally be here if we stored the unsub functions
   }
 
   private setupListeners() {
-    // These global listeners persist, which is a flaw we will fix in Phase 2
-    // For now, we keep them as is.
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
       const { damage } = payload;
       const store = useGameStore.getState();
@@ -65,17 +67,25 @@ export class PlayerSystem implements IGameSystem {
 
   private attemptAutoFire(time: number) {
     const cursor = this.locator.getInputService().getCursor();
-    const enemies = this.entitySystem.enemies;
+    
+    // FIX: Get enemies from ECS Registry instead of missing array
+    const enemies = Registry.getByTag(Tag.ENEMY);
 
     let nearestDist = Infinity;
     const RANGE = 12; 
-    let targetEnemy: any = null;
+    let targetEnemy: any = null; // Entity
 
     for (const e of enemies) {
       if (!e.active) continue;
-      const dx = e.x - cursor.x;
-      const dy = e.y - cursor.y;
+      
+      // FIX: Get position from Component
+      const transform = e.getComponent<TransformComponent>('Transform');
+      if (!transform) continue;
+
+      const dx = transform.x - cursor.x;
+      const dy = transform.y - cursor.y;
       const dist = dx*dx + dy*dy; 
+
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
           targetEnemy = e;
@@ -83,8 +93,11 @@ export class PlayerSystem implements IGameSystem {
     }
 
     if (targetEnemy) {
-      const dx = targetEnemy.x - cursor.x;
-      const dy = targetEnemy.y - cursor.y;
+      const tPos = targetEnemy.getComponent<TransformComponent>('Transform');
+      if (!tPos) return;
+
+      const dx = tPos.x - cursor.x;
+      const dy = tPos.y - cursor.y;
       
       const upgrades = useGameStore.getState().activeUpgrades;
       const multiLevel = upgrades['MULTI_SHOT'] || 0;

@@ -1,8 +1,11 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { Registry } from '../core/ecs/EntityRegistry';
+import { Tag } from '../core/ecs/types';
+import { TransformComponent } from '../components/data/TransformComponent';
+import { IdentityComponent } from '../components/data/IdentityComponent';
 import { ServiceLocator } from '../core/ServiceLocator';
-import { EntitySystem } from '../systems/EntitySystem';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
@@ -17,38 +20,36 @@ export const HunterChargeRenderer = () => {
   useFrame(() => {
     if (!meshRef.current) return;
 
-    let system: EntitySystem;
-    try {
-       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
-    } catch { return; }
-
-    const enemies = system.enemies;
+    const enemies = Registry.getByTag(Tag.ENEMY);
     let cursor = { x: 0, y: 0 };
-    try {
-        cursor = ServiceLocator.getInputService().getCursor();
-    } catch {}
+    try { cursor = ServiceLocator.getInputService().getCursor(); } catch {}
     
     let count = 0;
 
-    for (let i = 0; i < enemies.length; i++) {
-      const e = enemies[i];
-      if (!e.active || e.type !== EnemyTypes.HUNTER) continue;
+    for (const e of enemies) {
+      const identity = e.getComponent<IdentityComponent>('Identity');
+      if (!identity || identity.variant !== EnemyTypes.HUNTER) continue;
 
-      if (e.state === 'charge') {
+      // HACK: Access dynamic state property
+      if ((e as any)._hunterState === 'charge') {
+        const transform = e.getComponent<TransformComponent>('Transform');
+        if (!transform) continue;
+
         if (count >= MAX_CHARGES) break;
 
-        const progress = Math.max(0, Math.min(1, 1.0 - (e.stateTimer || 0)));
+        const timer = (e as any)._hunterTimer || 0;
+        const progress = Math.max(0, Math.min(1, 1.0 - timer));
         const scale = 1 - Math.pow(1 - progress, 3);
 
-        const dx = cursor.x - e.x;
-        const dy = cursor.y - e.y;
+        const dx = cursor.x - transform.x;
+        const dy = cursor.y - transform.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
         const dirX = dist > 0 ? dx / dist : 0;
         const dirY = dist > 0 ? dy / dist : 1;
 
-        const spawnX = e.x + (dirX * OFFSET_DISTANCE);
-        const spawnY = e.y + (dirY * OFFSET_DISTANCE);
+        const spawnX = transform.x + (dirX * OFFSET_DISTANCE);
+        const spawnY = transform.y + (dirY * OFFSET_DISTANCE);
 
         tempObj.position.set(spawnX, spawnY, -0.1);
         tempObj.scale.set(scale, scale, 1);

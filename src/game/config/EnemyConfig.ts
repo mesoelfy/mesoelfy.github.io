@@ -5,11 +5,11 @@ export const ENEMY_CONFIG = {
     hp: 2,
     baseSpeed: 8,
     radius: 0.5,
-    damage: 5,
+    damage: 15, // TRIPLED (Was 5)
     score: 10
   },
   [EnemyTypes.KAMIKAZE]: {
-    hp: 3, // TRIPLED HEALTH (Was 1)
+    hp: 3,
     baseSpeed: 12,
     radius: 0.5,
     damage: 10,

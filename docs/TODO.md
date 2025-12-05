@@ -83,3 +83,11 @@
 - Should I have a high score patron screen where people can enter their name with links to whatever they want?
 
 - Full functionality in the site isn't active immediately. the video slots and social media links could be broken until the first wave of munchers that are already there are dealt with. Maybe a power up that clears and heals the board is dropped?
+
+bullet width upgrade lmited
+
+- OPNE_SOURCE video overlay shouldn't be red, since that is for dangerous bad stuff - update design language -
+
+we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
+
+- We need a dramatic visual animation / indication signifying that a panel has reached 0% health 

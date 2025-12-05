@@ -1,6 +1,14 @@
-import { Enemy } from '../../types/game.types';
+import { Entity } from '../../core/ecs/Entity';
+import { TransformComponent } from '../../components/data/TransformComponent';
+import { MotionComponent } from '../../components/data/MotionComponent';
+import { IdentityComponent } from '../../components/data/IdentityComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
-import { EnemyTypes, GameEvents } from '../../config/Identifiers';
+import { GameEvents } from '../../events/GameEvents';
+import { EnemyTypes } from '../../config/Identifiers';
+
+// Helpers to reduce verbosity
+const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
+const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
 
 export interface AIContext {
   playerPos: { x: number, y: number };
@@ -15,21 +23,22 @@ export interface AIContext {
 }
 
 export interface EnemyBehavior {
-  update(enemy: Enemy, ctx: AIContext): void;
+  update(entity: Entity, ctx: AIContext): void;
 }
 
 export const MuncherBehavior: EnemyBehavior = {
   update: (e, ctx) => {
+    const pos = getPos(e);
+    const motion = getMotion(e);
+    
     let targetX = 0;
     let targetY = 0;
     let nearestDist = Infinity;
     let bestPanel: any = null;
 
-    const validPanels = ctx.panels; 
-
-    for (const p of validPanels) {
-      const dx = p.x - e.x;
-      const dy = p.y - e.y;
+    for (const p of ctx.panels) {
+      const dx = p.x - pos.x;
+      const dy = p.y - pos.y;
       const dist = dx*dx + dy*dy;
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -37,142 +46,150 @@ export const MuncherBehavior: EnemyBehavior = {
       }
     }
 
+    let isEating = false;
+
     if (bestPanel) {
-      targetX = Math.max(bestPanel.left, Math.min(e.x, bestPanel.right));
-      targetY = Math.max(bestPanel.bottom, Math.min(e.y, bestPanel.top));
+      targetX = Math.max(bestPanel.left, Math.min(pos.x, bestPanel.right));
+      targetY = Math.max(bestPanel.bottom, Math.min(pos.y, bestPanel.top));
       
-      const dx = targetX - e.x;
-      const dy = targetY - e.y;
+      const dx = targetX - pos.x;
+      const dy = targetY - pos.y;
       const distToEdge = Math.sqrt(dx*dx + dy*dy);
 
       if (distToEdge < 0.5) { 
-        e.isEating = true;
+        isEating = true;
         if (ctx.doDamageTick) {
             ctx.damagePanel(bestPanel.id, ENEMY_CONFIG[EnemyTypes.MUNCHER].damage);
             ctx.triggerExplosion(targetX, targetY, '#9E4EA5');
         }
-      } else {
-        e.isEating = false;
       }
     } else {
       targetX = Math.sin(ctx.time) * 5;
       targetY = Math.cos(ctx.time) * 5;
-      e.isEating = false;
     }
 
-    if (!e.isEating) {
-      const dx = targetX - e.x;
-      const dy = targetY - e.y;
+    if (!isEating) {
+      const dx = targetX - pos.x;
+      const dy = targetY - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
+      const speed = ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed;
+
       if (dist > 0.1) {
-        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
-        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed * ctx.delta;
-        e.x += e.vx;
-        e.y += e.vy;
+        motion.vx = (dx / dist) * speed;
+        motion.vy = (dy / dist) * speed;
+      } else {
+        motion.vx = 0;
+        motion.vy = 0;
       }
+    } else {
+      motion.vx = 0;
+      motion.vy = 0;
+    }
+    
+    if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
+        pos.rotation = Math.atan2(motion.vy, motion.vx) - Math.PI/2;
     }
   }
 };
 
 export const KamikazeBehavior: EnemyBehavior = {
   update: (e, ctx) => {
+    const pos = getPos(e);
+    const motion = getMotion(e);
+    
     const targetX = ctx.playerPos.x;
     const targetY = ctx.playerPos.y;
     
-    const dx = targetX - e.x;
-    const dy = targetY - e.y;
+    const dx = targetX - pos.x;
+    const dy = targetY - pos.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
     if (dist < 1.0) {
-       e.active = false;
-       ctx.triggerExplosion(e.x, e.y, '#FF003C');
+       const hp = e.requireComponent<any>('Health'); 
+       if(hp) hp.current = 0; 
+       
+       ctx.triggerExplosion(pos.x, pos.y, '#FF003C');
        ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
        return; 
     }
 
     if (dist > 0.1) {
-      e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
-      e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed * ctx.delta;
-      e.x += e.vx;
-      e.y += e.vy;
+      const speed = ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed;
+      motion.vx = (dx / dist) * speed;
+      motion.vy = (dy / dist) * speed;
+      pos.rotation += 0.1; 
     }
   }
 };
 
 export const HunterBehavior: EnemyBehavior = {
   update: (e, ctx) => {
-    if (!e.state) e.state = 'orbit';
-    if (!e.stateTimer) e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitDuration + Math.random();
+    const anyE = e as any;
+    if (!anyE._hunterState) anyE._hunterState = 'orbit';
+    if (!anyE._hunterTimer) anyE._hunterTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitDuration + Math.random();
+    if (!anyE._orbitAngle) anyE._orbitAngle = Math.random() * Math.PI * 2;
 
-    e.stateTimer -= ctx.delta;
+    anyE._hunterTimer -= ctx.delta;
+    
+    const pos = getPos(e);
+    const motion = getMotion(e);
 
-    let targetX = 0;
-    let targetY = 0;
-
-    if (e.state === 'orbit') {
-      if (!e.orbitAngle) e.orbitAngle = Math.random() * Math.PI * 2;
+    if (anyE._hunterState === 'orbit') {
+      const speedVar = 0.7 + Math.sin(ctx.time * 0.8 + e.id.valueOf()) * 0.5;
+      anyE._orbitAngle += ctx.delta * speedVar; 
       
-      const speedVar = 0.7 + Math.sin(ctx.time * 0.8 + e.id) * 0.5;
-      e.orbitAngle += ctx.delta * speedVar; 
-      
-      const breathe = Math.sin(ctx.time * 1.5 + e.id) * 5.5; 
+      const breathe = Math.sin(ctx.time * 1.5 + e.id.valueOf()) * 5.5; 
       const orbitRadius = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitRadius + breathe; 
       
-      targetX = Math.cos(e.orbitAngle) * orbitRadius;
-      targetY = Math.sin(e.orbitAngle) * orbitRadius;
+      let targetX = Math.cos(anyE._orbitAngle) * orbitRadius;
+      let targetY = Math.sin(anyE._orbitAngle) * orbitRadius;
 
-      const maxX = 18;
-      const maxY = 10;
-      targetX = Math.max(-maxX, Math.min(maxX, targetX));
-      targetY = Math.max(-maxY, Math.min(maxY, targetY));
+      targetX = Math.max(-18, Math.min(18, targetX));
+      targetY = Math.max(-10, Math.min(10, targetY));
 
-      const inBoundsX = Math.abs(e.x) < 20;
-      const inBoundsY = Math.abs(e.y) < 12;
-
-      if (e.stateTimer <= 0 && inBoundsX && inBoundsY) {
-        e.state = 'charge';
-        e.stateTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration; 
-        e.vx = 0;
-        e.vy = 0;
-      }
-      
-      const dx = targetX - e.x;
-      const dy = targetY - e.y;
+      const dx = targetX - pos.x;
+      const dy = targetY - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
+      const speed = ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed;
       if (dist > 0.1) {
-        e.vx = (dx / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
-        e.vy = (dy / dist) * ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed * ctx.delta;
-        e.x += e.vx;
-        e.y += e.vy;
+        motion.vx = (dx / dist) * speed;
+        motion.vy = (dy / dist) * speed;
       }
+      pos.rotation = Math.atan2(motion.vy, motion.vx) - Math.PI/2;
 
-    } 
-    else if (e.state === 'charge') {
-      if (e.stateTimer <= 0) {
-        e.state = 'fire';
+      const inBounds = Math.abs(pos.x) < 20 && Math.abs(pos.y) < 12;
+      if (anyE._hunterTimer <= 0 && inBounds) {
+        anyE._hunterState = 'charge';
+        anyE._hunterTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
+        motion.vx = 0; motion.vy = 0;
       }
+    } 
+    else if (anyE._hunterState === 'charge') {
+      if (anyE._hunterTimer <= 0) {
+        anyE._hunterState = 'fire';
+      }
+      const dx = ctx.playerPos.x - pos.x;
+      const dy = ctx.playerPos.y - pos.y;
+      pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
     }
-    else if (e.state === 'fire') {
-      const dx = ctx.playerPos.x - e.x;
-      const dy = ctx.playerPos.y - e.y;
+    else if (anyE._hunterState === 'fire') {
+      const dx = ctx.playerPos.x - pos.x;
+      const dy = ctx.playerPos.y - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       const dirX = dist > 0 ? dx/dist : 0;
       const dirY = dist > 0 ? dy/dist : 1;
       
-      const offset = ENEMY_CONFIG[EnemyTypes.HUNTER].offsetDistance;
-      const spawnX = e.x + (dirX * offset);
-      const spawnY = e.y + (dirY * offset);
-
+      const offset = 1.6;
+      const spawnX = pos.x + (dirX * offset);
+      const spawnY = pos.y + (dirY * offset);
       const SPEED = 25; 
-      const pVx = (dirX) * SPEED;
-      const pVy = (dirY) * SPEED;
 
-      ctx.spawnProjectile(spawnX, spawnY, pVx, pVy);
+      ctx.spawnProjectile(spawnX, spawnY, dirX * SPEED, dirY * SPEED);
 
-      e.state = 'orbit';
-      e.stateTimer = 3.0 + Math.random() * 2.0;
+      anyE._hunterState = 'orbit';
+      anyE._hunterTimer = 3.0 + Math.random() * 2.0;
     }
   }
 };
