@@ -90,4 +90,10 @@ bullet width upgrade lmited
 
 we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
 
-- We need a dramatic visual animation / indication signifying that a panel has reached 0% health 
+- We need a dramatic visual animation / indication signifying that a panel has reached 0% health like the system restored animation
+
+- When opening modal, our game mouse cursor needs to be visible
+
+- purple regen bar needs to slowly decay when user is not charging it
+
+sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.

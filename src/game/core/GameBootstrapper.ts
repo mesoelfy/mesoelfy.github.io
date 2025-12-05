@@ -1,5 +1,6 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
+import { EntityFactory } from './EntityFactory'; // NEW IMPORT
 
 // Systems
 import { TimeSystem } from '../systems/TimeSystem';
@@ -36,7 +37,7 @@ export const GameBootstrapper = () => {
   // 4. Register to Engine Loop
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
-  engine.registerSystem(interactionSys); // Run Interaction before physics? Or after? Before is fine.
+  engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
   engine.registerSystem(playerSys); 
   engine.registerSystem(entitySys); 
@@ -52,6 +53,9 @@ export const GameBootstrapper = () => {
   interactionSys.setup(ServiceLocator);
   
   engine.setup(ServiceLocator);
+
+  // 6. SPAWN PLAYER (CRITICAL FIX)
+  EntityFactory.createPlayer();
 
   return engine;
 };

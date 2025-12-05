@@ -5,6 +5,7 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
+import { StateComponent } from '../components/data/StateComponent'; // NEW
 import { ServiceLocator } from '../core/ServiceLocator';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
@@ -30,14 +31,16 @@ export const HunterChargeRenderer = () => {
       const identity = e.getComponent<IdentityComponent>('Identity');
       if (!identity || identity.variant !== EnemyTypes.HUNTER) continue;
 
-      // HACK: Access dynamic state property
-      if ((e as any)._hunterState === 'charge') {
+      const state = e.getComponent<StateComponent>('State');
+      
+      // Check formal state
+      if (state && state.current === 'CHARGE') {
         const transform = e.getComponent<TransformComponent>('Transform');
         if (!transform) continue;
 
         if (count >= MAX_CHARGES) break;
 
-        const timer = (e as any)._hunterTimer || 0;
+        const timer = state.timers.state || 0;
         const progress = Math.max(0, Math.min(1, 1.0 - timer));
         const scale = 1 - Math.pow(1 - progress, 3);
 

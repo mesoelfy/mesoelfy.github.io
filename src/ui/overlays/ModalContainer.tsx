@@ -16,7 +16,8 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
+        // FIX: Bumped z-index to 100 to stay above GameOverlay (z-60)
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
           
           <motion.div
             initial={{ opacity: 0 }}
@@ -42,7 +43,7 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
               </div>
               <button 
                 onClick={closeModal}
-                onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
+                onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-1 hover:bg-elfy-red hover:text-black text-elfy-green transition-colors"
               >
                 <X />

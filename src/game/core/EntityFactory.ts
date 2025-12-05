@@ -9,6 +9,7 @@ import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { CombatComponent } from '../components/data/CombatComponent';
+import { StateComponent } from '../components/data/StateComponent'; // NEW
 
 // Configs
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
@@ -22,9 +23,9 @@ export class EntityFactory {
     e.addTag(Tag.PLAYER);
     
     e.addComponent(new TransformComponent(0, 0, 0, 1));
-    // Player motion is handled via input/velocity, but we add component for consistency
     e.addComponent(new MotionComponent(0, 0, 0.9)); 
     e.addComponent(new HealthComponent(PLAYER_CONFIG.maxHealth));
+    e.addComponent(new StateComponent('IDLE')); // Track status
     
     Registry.updateCache(e);
     return e;
@@ -35,17 +36,16 @@ export class EntityFactory {
     const e = Registry.createEntity();
     
     e.addTag(Tag.ENEMY);
-    e.addTag(Tag.OBSTACLE); // Can interact with other things?
+    e.addTag(Tag.OBSTACLE);
 
     e.addComponent(new TransformComponent(x, y, 0, 1));
     e.addComponent(new IdentityComponent(type));
-    
-    // Motion: Default values, will be driven by AI
     e.addComponent(new MotionComponent(0, 0, 0, 0)); 
-    
     e.addComponent(new HealthComponent(config.hp));
     
-    // Combat: Damage on touch
+    // Default state for everyone is IDLE or ORBIT depending on logic
+    e.addComponent(new StateComponent('SPAWN')); 
+    
     if (config.damage) {
         e.addComponent(new CombatComponent(config.damage));
     }
@@ -62,16 +62,12 @@ export class EntityFactory {
   ): Entity {
     const e = Registry.createEntity();
     e.addTag(Tag.BULLET);
-    
-    // Tag distinction for collision logic
-    if (isEnemy) e.addTag(Tag.ENEMY); // It harms player
-    else e.addTag(Tag.PLAYER); // It harms enemies
+    if (isEnemy) e.addTag(Tag.ENEMY); 
+    else e.addTag(Tag.PLAYER); 
 
     e.addComponent(new TransformComponent(x, y, Math.atan2(vy, vx), 1));
-    e.addComponent(new MotionComponent(vx, vy, 0)); // No friction
+    e.addComponent(new MotionComponent(vx, vy, 0));
     e.addComponent(new LifetimeComponent(life, life));
-    
-    // Bullet Damage (could be dynamic based on player stats)
     e.addComponent(new CombatComponent(1)); 
 
     Registry.updateCache(e);
@@ -88,12 +84,8 @@ export class EntityFactory {
     e.addTag(Tag.PARTICLE);
 
     e.addComponent(new TransformComponent(x, y, 0, 1));
-    e.addComponent(new MotionComponent(vx, vy, 0.05)); // Slight friction?
+    e.addComponent(new MotionComponent(vx, vy, 0.05));
     e.addComponent(new LifetimeComponent(life, life));
-    
-    // Particles often need a generic "Data" component for color, 
-    // or we can reuse Identity for visual variants.
-    // For now, let's treat Identity variant as the Color hex code for simplicity
     e.addComponent(new IdentityComponent(color));
 
     Registry.updateCache(e);

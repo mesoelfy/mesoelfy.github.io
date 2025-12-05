@@ -1,14 +1,15 @@
 import { Entity } from '../../core/ecs/Entity';
 import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
-import { IdentityComponent } from '../../components/data/IdentityComponent';
+import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
-import { GameEvents } from '../../events/GameEvents';
-import { EnemyTypes } from '../../config/Identifiers';
+import { EnemyTypes, GameEvents } from '../../events/GameEvents';
+import { EnemyTypes as Types } from '../../config/Identifiers';
+import { Registry } from '../../core/ecs/EntityRegistry'; // NEW IMPORT
 
-// Helpers to reduce verbosity
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
+const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
 
 export interface AIContext {
   playerPos: { x: number, y: number };
@@ -33,8 +34,8 @@ export const MuncherBehavior: EnemyBehavior = {
     
     let targetX = 0;
     let targetY = 0;
-    let nearestDist = Infinity;
     let bestPanel: any = null;
+    let nearestDist = Infinity;
 
     for (const p of ctx.panels) {
       const dx = p.x - pos.x;
@@ -59,7 +60,7 @@ export const MuncherBehavior: EnemyBehavior = {
       if (distToEdge < 0.5) { 
         isEating = true;
         if (ctx.doDamageTick) {
-            ctx.damagePanel(bestPanel.id, ENEMY_CONFIG[EnemyTypes.MUNCHER].damage);
+            ctx.damagePanel(bestPanel.id, ENEMY_CONFIG[Types.MUNCHER].damage);
             ctx.triggerExplosion(targetX, targetY, '#9E4EA5');
         }
       }
@@ -73,7 +74,7 @@ export const MuncherBehavior: EnemyBehavior = {
       const dy = targetY - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
-      const speed = ENEMY_CONFIG[EnemyTypes.MUNCHER].baseSpeed;
+      const speed = ENEMY_CONFIG[Types.MUNCHER].baseSpeed;
 
       if (dist > 0.1) {
         motion.vx = (dx / dist) * speed;
@@ -106,8 +107,8 @@ export const KamikazeBehavior: EnemyBehavior = {
     const dist = Math.sqrt(dx*dx + dy*dy);
     
     if (dist < 1.0) {
-       const hp = e.requireComponent<any>('Health'); 
-       if(hp) hp.current = 0; 
+       // FIX: Destroy directly to bypass kill count
+       Registry.destroyEntity(e.id);
        
        ctx.triggerExplosion(pos.x, pos.y, '#FF003C');
        ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
@@ -115,7 +116,7 @@ export const KamikazeBehavior: EnemyBehavior = {
     }
 
     if (dist > 0.1) {
-      const speed = ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed;
+      const speed = ENEMY_CONFIG[Types.KAMIKAZE].baseSpeed;
       motion.vx = (dx / dist) * speed;
       motion.vy = (dy / dist) * speed;
       pos.rotation += 0.1; 
@@ -125,25 +126,30 @@ export const KamikazeBehavior: EnemyBehavior = {
 
 export const HunterBehavior: EnemyBehavior = {
   update: (e, ctx) => {
-    const anyE = e as any;
-    if (!anyE._hunterState) anyE._hunterState = 'orbit';
-    if (!anyE._hunterTimer) anyE._hunterTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitDuration + Math.random();
-    if (!anyE._orbitAngle) anyE._orbitAngle = Math.random() * Math.PI * 2;
-
-    anyE._hunterTimer -= ctx.delta;
-    
+    const state = getState(e);
     const pos = getPos(e);
     const motion = getMotion(e);
 
-    if (anyE._hunterState === 'orbit') {
-      const speedVar = 0.7 + Math.sin(ctx.time * 0.8 + e.id.valueOf()) * 0.5;
-      anyE._orbitAngle += ctx.delta * speedVar; 
+    if (state.current === 'SPAWN') {
+        state.current = 'ORBIT';
+        state.timers.state = ENEMY_CONFIG[Types.HUNTER].orbitDuration + Math.random();
+        state.data.orbitAngle = Math.random() * Math.PI * 2;
+        state.data.idOffset = e.id.valueOf();
+    }
+
+    state.timers.state -= ctx.delta;
+
+    if (state.current === 'ORBIT') {
+      const angle = state.data.orbitAngle || 0;
+      const speedVar = 0.7 + Math.sin(ctx.time * 0.8 + state.data.idOffset) * 0.5;
       
-      const breathe = Math.sin(ctx.time * 1.5 + e.id.valueOf()) * 5.5; 
-      const orbitRadius = ENEMY_CONFIG[EnemyTypes.HUNTER].orbitRadius + breathe; 
+      state.data.orbitAngle = angle + (ctx.delta * speedVar); 
       
-      let targetX = Math.cos(anyE._orbitAngle) * orbitRadius;
-      let targetY = Math.sin(anyE._orbitAngle) * orbitRadius;
+      const breathe = Math.sin(ctx.time * 1.5 + state.data.idOffset) * 5.5; 
+      const orbitRadius = ENEMY_CONFIG[Types.HUNTER].orbitRadius + breathe; 
+      
+      let targetX = Math.cos(state.data.orbitAngle) * orbitRadius;
+      let targetY = Math.sin(state.data.orbitAngle) * orbitRadius;
 
       targetX = Math.max(-18, Math.min(18, targetX));
       targetY = Math.max(-10, Math.min(10, targetY));
@@ -152,7 +158,7 @@ export const HunterBehavior: EnemyBehavior = {
       const dy = targetY - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
       
-      const speed = ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed;
+      const speed = ENEMY_CONFIG[Types.HUNTER].baseSpeed;
       if (dist > 0.1) {
         motion.vx = (dx / dist) * speed;
         motion.vy = (dy / dist) * speed;
@@ -160,21 +166,21 @@ export const HunterBehavior: EnemyBehavior = {
       pos.rotation = Math.atan2(motion.vy, motion.vx) - Math.PI/2;
 
       const inBounds = Math.abs(pos.x) < 20 && Math.abs(pos.y) < 12;
-      if (anyE._hunterTimer <= 0 && inBounds) {
-        anyE._hunterState = 'charge';
-        anyE._hunterTimer = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
+      if (state.timers.state <= 0 && inBounds) {
+        state.current = 'CHARGE';
+        state.timers.state = ENEMY_CONFIG[Types.HUNTER].chargeDuration;
         motion.vx = 0; motion.vy = 0;
       }
     } 
-    else if (anyE._hunterState === 'charge') {
-      if (anyE._hunterTimer <= 0) {
-        anyE._hunterState = 'fire';
+    else if (state.current === 'CHARGE') {
+      if (state.timers.state <= 0) {
+        state.current = 'FIRE';
       }
       const dx = ctx.playerPos.x - pos.x;
       const dy = ctx.playerPos.y - pos.y;
       pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
     }
-    else if (anyE._hunterState === 'fire') {
+    else if (state.current === 'FIRE') {
       const dx = ctx.playerPos.x - pos.x;
       const dy = ctx.playerPos.y - pos.y;
       const dist = Math.sqrt(dx*dx + dy*dy);
@@ -188,14 +194,14 @@ export const HunterBehavior: EnemyBehavior = {
 
       ctx.spawnProjectile(spawnX, spawnY, dirX * SPEED, dirY * SPEED);
 
-      anyE._hunterState = 'orbit';
-      anyE._hunterTimer = 3.0 + Math.random() * 2.0;
+      state.current = 'ORBIT';
+      state.timers.state = 3.0 + Math.random() * 2.0;
     }
   }
 };
 
 export const Behaviors: Record<string, EnemyBehavior> = {
-  [EnemyTypes.MUNCHER]: MuncherBehavior,
-  [EnemyTypes.KAMIKAZE]: KamikazeBehavior,
-  [EnemyTypes.HUNTER]: HunterBehavior
+  [Types.MUNCHER]: MuncherBehavior,
+  [Types.KAMIKAZE]: KamikazeBehavior,
+  [Types.HUNTER]: HunterBehavior
 };

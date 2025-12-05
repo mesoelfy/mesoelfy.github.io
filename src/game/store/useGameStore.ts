@@ -11,24 +11,31 @@ interface ExtendedGameState extends GameState {
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
-  score: number;
-  highScore: number;
   
+  // SCORING
+  score: number; // Current Session Kills
+  highScore: number; // Best Session Kills
+  
+  // PROGRESSION
   xp: number;
   xpToNextLevel: number;
   level: number;
-  upgradePoints: number; // NEW: Stackable points
+  upgradePoints: number;
   activeUpgrades: Record<UpgradeOption, number>;
   
   systemIntegrity: number;
   
+  // ACTIONS
+  startGame: () => void;
+  stopGame: () => void;
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
   tickPlayerReboot: (amount: number) => void;
-  damageRebootProgress: (amount: number) => void; // NEW: Penalty on hit
+  damageRebootProgress: (amount: number) => void;
   healPanel: (id: string, amount: number) => void;
   decayReboot: (id: string, amount: number) => void;
-  addScore: (amount: number) => void;
+  
+  incrementKills: (amount: number) => void;
   addXp: (amount: number) => void;
   selectUpgrade: (option: UpgradeOption) => void;
   resetGame: () => void;
@@ -70,8 +77,6 @@ export const useGameStore = create<ExtendedGameState>()(
             playerRebootProgress: 0,
             xp: 0,
             level: 1,
-            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
-            upgradePoints: 0,
             activeUpgrades: {
                 'RAPID_FIRE': 0,
                 'MULTI_SHOT': 0,
@@ -92,9 +97,13 @@ export const useGameStore = create<ExtendedGameState>()(
         });
       },
 
-      addScore: (amount) => set((state) => ({ 
-        score: state.score + amount 
-      })),
+      incrementKills: (amount) => set((state) => {
+        const newScore = state.score + amount;
+        return { 
+            score: newScore,
+            highScore: Math.max(newScore, state.highScore)
+        };
+      }),
 
       addXp: (amount) => set((state) => {
         let newXp = state.xp + amount;
@@ -102,11 +111,10 @@ export const useGameStore = create<ExtendedGameState>()(
         let nextReq = state.xpToNextLevel;
         let newPoints = state.upgradePoints;
 
-        // Loop to handle massive XP gains (multiple levels at once)
         while (newXp >= nextReq) {
           newXp -= nextReq;
           newLevel++;
-          newPoints++; // Stack points
+          newPoints++; 
           nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
         }
 
@@ -145,7 +153,7 @@ export const useGameStore = create<ExtendedGameState>()(
         if (newProgress >= 100) {
             return {
                 playerRebootProgress: 0,
-                playerHealth: state.maxPlayerHealth / 2 // Revive with 50% HP
+                playerHealth: state.maxPlayerHealth / 2
             };
         }
         return { playerRebootProgress: newProgress };
@@ -153,7 +161,6 @@ export const useGameStore = create<ExtendedGameState>()(
       
       damageRebootProgress: (amount) => set((state) => {
         if (state.playerHealth > 0) return state;
-        // Big penalty for getting hit while downed
         return { playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) };
       }),
 
@@ -215,7 +222,8 @@ export const useGameStore = create<ExtendedGameState>()(
       }),
     }),
     {
-      name: 'mesoelfy-os-storage',
+      // FIX: Changed version to v2 to invalidate old Score data
+      name: 'mesoelfy-os-storage-v2',
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )

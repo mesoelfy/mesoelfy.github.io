@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Radio } from 'lucide-react';
+import { Volume2, VolumeX, Radio, Trophy, Skull } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -7,11 +7,10 @@ import { useEffect, useState } from 'react';
 export const Header = () => {
   const { musicEnabled, toggleMusic } = useStore();
   
-  // Global System Integrity (The Footer Bar replacement)
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const score = useGameStore(state => state.score);
+  const highScore = useGameStore(state => state.highScore);
 
-  // Client-side init
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -21,7 +20,6 @@ export const Header = () => {
       AudioSystem.setMute(!musicEnabled ? false : true); 
   };
 
-  // Integrity Bar Logic
   let integrityColor = "bg-elfy-green";
   if (systemIntegrity < 40) integrityColor = "bg-elfy-red";
   else if (systemIntegrity < 70) integrityColor = "bg-elfy-yellow";
@@ -36,9 +34,22 @@ export const Header = () => {
         </span>
         
         {mounted && (
-          <div className="hidden md:flex items-center gap-2 text-xs font-mono text-elfy-green-dim border-l border-elfy-green-dim/20 pl-4">
-            <span>SCORE:</span>
-            <span className="text-elfy-green">{score.toString().padStart(6, '0')}</span>
+          <div className="hidden md:flex items-center gap-6 text-xs font-mono border-l border-elfy-green-dim/20 pl-4">
+            
+            {/* CURRENT KILLS */}
+            <div className="flex items-center gap-2 text-elfy-green" title="Current Session Kills">
+              <Skull size={14} />
+              <span className="opacity-70">KILLS:</span>
+              <span className="font-bold">{score.toString().padStart(4, '0')}</span>
+            </div>
+
+            {/* MAX KILLS */}
+            <div className="flex items-center gap-2 text-elfy-yellow" title="All-Time Max Kills">
+              <Trophy size={14} />
+              <span className="opacity-70">MAX:</span>
+              <span className="font-bold">{highScore.toString().padStart(4, '0')}</span>
+            </div>
+
           </div>
         )}
       </div>
@@ -62,7 +73,6 @@ export const Header = () => {
         />
       </div>
       
-      {/* Integrity Label (Floating) */}
       <div className="absolute bottom-[-14px] right-2 text-[8px] font-mono text-elfy-green-dim flex items-center gap-1">
         <Radio size={8} className={systemIntegrity < 100 ? "animate-pulse text-elfy-red" : ""} />
         <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>

@@ -3,13 +3,14 @@ import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { useGameStore } from '../store/useGameStore';
 
-// NEW: ECS Imports
+// ECS Imports
 import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
+import { StateComponent } from '../components/data/StateComponent';
+import { InteractionSystem } from './InteractionSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -25,14 +26,42 @@ export class PlayerSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const store = useGameStore.getState();
     if (!store.isPlaying) return;
-    if (store.playerHealth <= 0) return;
 
-    const upgrades = store.activeUpgrades;
-    const rapidLevel = upgrades['RAPID_FIRE'] || 0;
-    const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
+    // 1. UPDATE PLAYER STATE
+    const players = Registry.getByTag(Tag.PLAYER);
+    const playerEntity = players[0]; 
+    if (!playerEntity) return;
 
-    if (time > this.lastFireTime + currentFireRate) {
-      this.attemptAutoFire(time);
+    const stateComp = playerEntity.getComponent<StateComponent>('State');
+    if (stateComp) {
+        if (store.playerHealth <= 0) {
+            stateComp.current = 'DEAD';
+        } else {
+            try {
+                const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
+                // If repairing, we mark state as REBOOTING for visuals (Spin/Color)
+                if (interact && interact.repairState !== 'IDLE') {
+                    stateComp.current = 'REBOOTING';
+                } else {
+                    stateComp.current = 'ACTIVE';
+                }
+            } catch {
+                stateComp.current = 'ACTIVE';
+            }
+        }
+    }
+
+    // 2. COMBAT LOGIC
+    // FIX: Allow shooting in REBOOTING state (repairing panels), but NOT when DEAD.
+    // If playerHealth <= 0, state is DEAD, so this check fails gracefully.
+    if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
+        const upgrades = store.activeUpgrades;
+        const rapidLevel = upgrades['RAPID_FIRE'] || 0;
+        const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
+
+        if (time > this.lastFireTime + currentFireRate) {
+            this.attemptAutoFire(time, playerEntity);
+        }
     }
   }
 
@@ -47,13 +76,9 @@ export class PlayerSystem implements IGameSystem {
       if (store.playerHealth <= 0) this.handlePlayerDeath();
     });
 
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload) => {
-      const { type } = payload;
-      const config = ENEMY_CONFIG[type];
-      if (config) {
-        useGameStore.getState().addScore(config.score);
-        useGameStore.getState().addXp(config.score);
-      }
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+      useGameStore.getState().incrementKills(1);
+      useGameStore.getState().addXp(10); 
     });
   }
 
@@ -65,20 +90,17 @@ export class PlayerSystem implements IGameSystem {
     }
   }
 
-  private attemptAutoFire(time: number) {
+  private attemptAutoFire(time: number, player: any) {
     const cursor = this.locator.getInputService().getCursor();
-    
-    // FIX: Get enemies from ECS Registry instead of missing array
     const enemies = Registry.getByTag(Tag.ENEMY);
 
     let nearestDist = Infinity;
     const RANGE = 12; 
-    let targetEnemy: any = null; // Entity
+    let targetEnemy: any = null;
 
     for (const e of enemies) {
       if (!e.active) continue;
       
-      // FIX: Get position from Component
       const transform = e.getComponent<TransformComponent>('Transform');
       if (!transform) continue;
 

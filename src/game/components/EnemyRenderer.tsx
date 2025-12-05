@@ -5,6 +5,7 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
+import { StateComponent } from '../components/data/StateComponent'; // NEW
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
@@ -25,7 +26,6 @@ export const EnemyRenderer = () => {
   useFrame((state) => {
     if (!muncherRef.current || !kamikazeRef.current || !hunterRef.current) return;
 
-    // QUERY REGISTRY
     const enemies = Registry.getByTag(Tag.ENEMY);
     const currentTime = state.clock.elapsedTime;
     
@@ -63,7 +63,11 @@ export const EnemyRenderer = () => {
       }
       else if (type === EnemyTypes.HUNTER) {
         if (hCount >= MAX_ENEMIES) continue;
-        const isCharging = (e as any)._hunterState === 'charge';
+        
+        // FIX: Read from State Component
+        const stateComp = e.getComponent<StateComponent>('State');
+        const isCharging = stateComp && stateComp.current === 'CHARGE';
+        
         tempColor.set(GAME_THEME.enemy.hunter);
         if (isCharging) {
              const alpha = (Math.sin(currentTime * 20) + 1) / 2;
