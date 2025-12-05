@@ -222,8 +222,7 @@ export const useGameStore = create<ExtendedGameState>()(
       }),
     }),
     {
-      // FIX: Changed version to v2 to invalidate old Score data
-      name: 'mesoelfy-os-storage-v2',
+      name: 'mesoelfy-os-storage', // REVERTED
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )
