@@ -1,12 +1,13 @@
 'use client';
 
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore'; // FIX: Import
 import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
-import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { SocialRow } from '@/ui/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
 import { HoloCommLog } from '@/ui/molecules/HoloCommLog';
+import { IdentityHUD } from '@/ui/molecules/IdentityHUD'; // FIX: New HUD
 import { Header } from '@/ui/organisms/Header';
 import { Footer } from '@/ui/organisms/Footer';
 import { AboutModal } from '@/features/identity/AboutModal';
@@ -16,28 +17,36 @@ import { ContactModal } from '@/features/contact/ContactModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import identity from '@/data/identity.json';
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // FIX: Imports
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 
 export default function Home() {
   const { openModal } = useStore();
+  const startGame = useGameStore(s => s.startGame);
+  const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
+  
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
+      startGame(); // FIX: Actually start the game logic
     }, 200);
   };
+
+  // Integrity Loop (1s Tick)
+  useEffect(() => {
+    if (bootState !== 'active') return;
+    const interval = setInterval(recalcIntegrity, 500);
+    return () => clearInterval(interval);
+  }, [bootState, recalcIntegrity]);
 
   const playHover = () => AudioSystem.playHover();
 
   return (
-    // WRAPPER FOR GLOBAL SHAKE
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden">
       
-      {/* SHAKE MANAGER LOGIC */}
       <GlobalShakeManager />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
@@ -75,34 +84,10 @@ export default function Home() {
             }}
           >
             <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+              
+              {/* UPDATED: Uses IdentityHUD now */}
               <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                <div className="flex flex-col items-center h-full justify-between py-2 gap-4">
-                  <div className="w-40 h-40 md:w-48 md:h-48 rounded-full border-4 border-elfy-purple shadow-[0_0_30px_rgba(158,78,165,0.4)] bg-black/50 overflow-hidden relative group">
-                     <div className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <MiniCrystalCanvas />
-                     </div>
-                  </div>
-                  <div className="text-center space-y-1">
-                    <h2 className="text-4xl md:text-5xl font-header font-black text-elfy-green tracking-wide drop-shadow-md">{identity.name}</h2>
-                    <div className="inline-block px-3 py-1 border border-elfy-purple-dim rounded-full text-[10px] font-bold text-elfy-purple-light uppercase tracking-widest bg-elfy-purple-deep/40">{identity.class}</div>
-                  </div>
-                  <div className="flex w-full gap-3 mt-2">
-                    <button 
-                      onClick={() => openModal('about')} 
-                      onMouseEnter={playHover}
-                      className="flex-1 py-3 bg-elfy-purple-deep/40 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black hover:border-elfy-purple transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                    >
-                      About Me
-                    </button>
-                    <button 
-                      onClick={() => openModal('contact')} 
-                      onMouseEnter={playHover}
-                      className="flex-1 py-3 bg-elfy-yellow/10 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-sm md:text-base font-header font-black uppercase clip-corner-btn"
-                    >
-                      Contact
-                    </button>
-                  </div>
-                </div>
+                <IdentityHUD />
               </GlassPanel>
 
               <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
