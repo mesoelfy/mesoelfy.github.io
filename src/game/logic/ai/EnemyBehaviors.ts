@@ -8,7 +8,7 @@ export interface AIContext {
   panels: any[]; // World Rects
   delta: number;
   time: number;
-  doDamageTick: boolean; // NEW: Global tick for DoT effects
+  doDamageTick: boolean;
   spawnProjectile: (x: number, y: number, vx: number, vy: number) => void;
   damagePanel: (id: string, amount: number) => void;
   triggerExplosion: (x: number, y: number, color: string) => void;
@@ -31,7 +31,8 @@ export const MuncherBehavior: EnemyBehavior = {
     let nearestDist = Infinity;
     let bestPanel: any = null;
 
-    const validPanels = ctx.panels.filter(p => p.id !== 'feed');
+    // UPDATE: Removed filter. All panels (including 'feed') are now valid targets.
+    const validPanels = ctx.panels; 
 
     for (const p of validPanels) {
       const dx = p.x - e.x;
@@ -53,7 +54,6 @@ export const MuncherBehavior: EnemyBehavior = {
 
       if (distToEdge < 0.5) { 
         e.isEating = true;
-        // FIX: Actually apply damage on tick
         if (ctx.doDamageTick) {
             ctx.damagePanel(bestPanel.id, ENEMY_CONFIG.muncher.damage);
             ctx.triggerExplosion(targetX, targetY, '#9E4EA5');
