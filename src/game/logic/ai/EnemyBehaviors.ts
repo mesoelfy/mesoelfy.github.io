@@ -1,4 +1,4 @@
-import { Enemy } from '../../core/GameEngine';
+import { Enemy } from '../../types/game.types';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes, GameEvents } from '../../config/Identifiers';
 

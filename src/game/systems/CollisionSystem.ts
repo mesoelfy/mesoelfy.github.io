@@ -1,19 +1,31 @@
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents, EnemyTypes } from '../config/Identifiers';
+import { GameEvents, EnemyType } from '../events/GameEvents';
+import { EnemyTypes } from '../config/Identifiers'; // Backward compatibility for Enum
 import { useGameStore } from '../store/useGameStore';
 
-export class CollisionSystem {
-  private entitySystem: EntitySystem;
+export class CollisionSystem implements IGameSystem {
+  private entitySystem!: EntitySystem;
+  private locator!: IServiceLocator;
 
-  constructor(entitySystem: EntitySystem) {
-    this.entitySystem = entitySystem;
+  // We no longer take deps in constructor
+  setup(locator: IServiceLocator): void {
+    this.locator = locator;
+    // We fetch the specific system we need
+    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
   }
 
-  public update(cursor: {x: number, y: number}) {
+  update(delta: number, time: number): void {
+    const cursor = this.locator.getInputService().getCursor();
+    
     this.checkPlayerBulletCollisions();
     this.checkEnemyBulletCollisions(cursor);
     this.checkProjectileClash();
+  }
+
+  teardown(): void {
+    // No explicit cleanup needed
   }
 
   private checkPlayerBulletCollisions() {
@@ -61,16 +73,12 @@ export class CollisionSystem {
         if (distSq < (eb.radius + 0.5) ** 2) {
             eb.active = false;
             
-            // LOGIC: If player is ALIVE, take damage.
-            // If player is DEAD (Downed), take huge progress penalty.
-            
             const store = useGameStore.getState();
             if (store.playerHealth > 0) {
                  GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
             } else {
-                 // Player is trying to reboot
-                 store.damageRebootProgress(30); // Lose 30% progress on hit
-                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 0 }); // Visual shake only
+                 store.damageRebootProgress(30); 
+                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 0 }); 
             }
             
             this.entitySystem.spawnParticle(eb.x, eb.y, '#FF003C', 5);
@@ -92,10 +100,7 @@ export class CollisionSystem {
             const distSq = dx*dx + dy*dy;
             
             if (distSq < (pb.radius + eb.radius) ** 2) {
-                // CLASH LOGIC
-                pb.active = false; // Player bullet always dies
-                
-                // Enemy bullet takes damage
+                pb.active = false; 
                 eb.hp = (eb.hp || 1) - 1;
                 
                 if (eb.hp <= 0) {
@@ -103,10 +108,8 @@ export class CollisionSystem {
                     GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
                     this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
                 } else {
-                    // Flash or spark indicating it survived
                     this.entitySystem.spawnParticle(eb.x, eb.y, '#FFFFFF', 2);
                 }
-                
                 break;
             }
         }

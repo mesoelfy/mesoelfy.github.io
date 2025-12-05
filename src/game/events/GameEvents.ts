@@ -1,35 +1,43 @@
-// src/game/events/GameEvents.ts
-
-export type GameEventType = 
+export enum GameEvents {
   // --- COMBAT EVENTS ---
-  | 'PLAYER_FIRED'           // Payload: { x: number, y: number }
-  | 'PLAYER_HIT'             // Payload: { damage: number }
-  | 'ENEMY_SPAWNED'          // Payload: { type: string, id: number }
-  | 'ENEMY_DAMAGED'          // Payload: { id: number, damage: number, type: string }
-  | 'ENEMY_DESTROYED'        // Payload: { id: number, type: string, x: number, y: number }
-  | 'PROJECTILE_CLASH'       // Payload: { x: number, y: number }
+  PLAYER_FIRED = 'PLAYER_FIRED',
+  PLAYER_HIT = 'PLAYER_HIT',
+  ENEMY_SPAWNED = 'ENEMY_SPAWNED',
+  ENEMY_DAMAGED = 'ENEMY_DAMAGED',
+  ENEMY_DESTROYED = 'ENEMY_DESTROYED',
+  PROJECTILE_CLASH = 'PROJECTILE_CLASH',
   
   // --- PANEL EVENTS ---
-  | 'PANEL_DAMAGED'          // Payload: { id: string, amount: number, currentHealth: number }
-  | 'PANEL_HEALED'           // Payload: { id: string, amount: number }
-  | 'PANEL_DESTROYED'        // Payload: { id: string }
+  PANEL_DAMAGED = 'PANEL_DAMAGED',
+  PANEL_HEALED = 'PANEL_HEALED',
+  PANEL_DESTROYED = 'PANEL_DESTROYED',
   
   // --- SYSTEM EVENTS ---
-  | 'GAME_START'             // Payload: null
-  | 'GAME_OVER'              // Payload: { score: number }
-  | 'THREAT_LEVEL_UP';       // Payload: { level: number }
+  GAME_START = 'GAME_START',
+  GAME_OVER = 'GAME_OVER',
+  THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
+  
+  // --- VISUAL EVENTS ---
+  TRAUMA_ADDED = 'TRAUMA_ADDED',
+  SCENE_READY = 'SCENE_READY'
+}
 
 export interface GameEventPayloads {
-  PLAYER_FIRED: { x: number; y: number };
-  PLAYER_HIT: { damage: number };
-  ENEMY_SPAWNED: { type: string; id: number };
-  ENEMY_DAMAGED: { id: number; damage: number; type: string };
-  ENEMY_DESTROYED: { id: number; type: string; x: number; y: number };
-  PROJECTILE_CLASH: { x: number; y: number };
-  PANEL_DAMAGED: { id: string; amount: number; currentHealth: number };
-  PANEL_HEALED: { id: string; amount: number };
-  PANEL_DESTROYED: { id: string };
-  GAME_START: null;
-  GAME_OVER: { score: number };
-  THREAT_LEVEL_UP: { level: number };
+  [GameEvents.PLAYER_FIRED]: { x: number; y: number };
+  [GameEvents.PLAYER_HIT]: { damage: number };
+  [GameEvents.ENEMY_SPAWNED]: { type: string; id: number };
+  [GameEvents.ENEMY_DAMAGED]: { id: number; damage: number; type: string };
+  [GameEvents.ENEMY_DESTROYED]: { id: number; type: string; x: number; y: number };
+  [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
+  
+  [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number };
+  [GameEvents.PANEL_HEALED]: { id: string; amount: number };
+  [GameEvents.PANEL_DESTROYED]: { id: string };
+  
+  [GameEvents.GAME_START]: null;
+  [GameEvents.GAME_OVER]: { score: number };
+  [GameEvents.THREAT_LEVEL_UP]: { level: number };
+  
+  [GameEvents.TRAUMA_ADDED]: { amount: number };
+  [GameEvents.SCENE_READY]: null;
 }

@@ -1,8 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GameEngine } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
+import { EntitySystem } from '../systems/EntitySystem';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
@@ -17,8 +17,16 @@ export const HunterChargeRenderer = () => {
   useFrame(() => {
     if (!meshRef.current) return;
 
-    const enemies = GameEngine.enemies;
-    const cursor = ServiceLocator.inputSystem ? ServiceLocator.inputSystem.getCursorPosition() : {x:0, y:0};
+    let system: EntitySystem;
+    try {
+       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
+    } catch { return; }
+
+    const enemies = system.enemies;
+    let cursor = { x: 0, y: 0 };
+    try {
+        cursor = ServiceLocator.getInputService().getCursor();
+    } catch {}
     
     let count = 0;
 

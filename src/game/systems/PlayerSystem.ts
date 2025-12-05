@@ -1,31 +1,51 @@
-import { ServiceLocator } from '../core/ServiceLocator';
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../config/Identifiers';
+import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { useGameStore } from '../store/useGameStore';
 
-export class PlayerSystem {
+export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
+  private entitySystem!: EntitySystem;
+  private locator!: IServiceLocator;
 
-  constructor() {
+  setup(locator: IServiceLocator): void {
+    this.locator = locator;
+    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
     this.setupListeners();
   }
 
+  update(delta: number, time: number): void {
+    const store = useGameStore.getState();
+    if (!store.isPlaying) return;
+    if (store.playerHealth <= 0) return;
+
+    const upgrades = store.activeUpgrades;
+    const rapidLevel = upgrades['RAPID_FIRE'] || 0;
+    const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
+
+    if (time > this.lastFireTime + currentFireRate) {
+      this.attemptAutoFire(time);
+    }
+  }
+
+  teardown(): void {
+    // Unsubscribe logic should ideally be here if we stored the unsub functions
+  }
+
   private setupListeners() {
-    // 1. Damage
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload: any) => {
+    // These global listeners persist, which is a flaw we will fix in Phase 2
+    // For now, we keep them as is.
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
       const { damage } = payload;
       const store = useGameStore.getState();
       store.damagePlayer(damage);
-      
-      if (store.playerHealth <= 0) {
-        this.handlePlayerDeath();
-      }
+      if (store.playerHealth <= 0) this.handlePlayerDeath();
     });
 
-    // 2. Score & XP
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload: any) => {
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload) => {
       const { type } = payload;
       const config = ENEMY_CONFIG[type];
       if (config) {
@@ -38,36 +58,14 @@ export class PlayerSystem {
   private handlePlayerDeath() {
     const store = useGameStore.getState();
     const identityPanel = store.panels['identity'];
-
-    // LOGIC CHANGE:
-    // Only Game Over if the Identity Core is ALSO destroyed.
-    // Otherwise, the player is just "Downed" and must reboot manually.
     if (identityPanel && identityPanel.isDestroyed) {
         store.stopGame();
-    } else {
-        // Optional: Trigger a "System Down" sound or visual event here
-        // The store state (playerHealth <= 0) automatically triggers the UI changes.
-    }
-  }
-
-  public update(time: number) {
-    if (!useGameStore.getState().isPlaying) return;
-    if (useGameStore.getState().playerHealth <= 0) return;
-
-    // --- UPGRADE LOGIC: FIRE RATE ---
-    const upgrades = useGameStore.getState().activeUpgrades;
-    const rapidLevel = upgrades['RAPID_FIRE'] || 0;
-    
-    const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
-
-    if (time > this.lastFireTime + currentFireRate) {
-      this.attemptAutoFire(time);
     }
   }
 
   private attemptAutoFire(time: number) {
-    const cursor = ServiceLocator.inputSystem.getCursorPosition();
-    const enemies = ServiceLocator.entitySystem.enemies;
+    const cursor = this.locator.getInputService().getCursor();
+    const enemies = this.entitySystem.enemies;
 
     let nearestDist = Infinity;
     const RANGE = 12; 
@@ -78,12 +76,9 @@ export class PlayerSystem {
       const dx = e.x - cursor.x;
       const dy = e.y - cursor.y;
       const dist = dx*dx + dy*dy; 
-
-      if (dist < (RANGE * RANGE)) {
-        if (dist < nearestDist) {
+      if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
           targetEnemy = e;
-        }
       }
     }
 
@@ -96,7 +91,6 @@ export class PlayerSystem {
       
       const projectileCount = 1 + (multiLevel * 2);
       const spreadAngle = 0.2; 
-
       const baseAngle = Math.atan2(dy, dx);
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
@@ -105,7 +99,7 @@ export class PlayerSystem {
           const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
           const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
 
-          ServiceLocator.entitySystem.spawnBullet(
+          this.entitySystem.spawnBullet(
               cursor.x, 
               cursor.y, 
               vx, 

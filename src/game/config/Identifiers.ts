@@ -1,3 +1,5 @@
+import { GameEvents as NewGameEvents } from '../events/GameEvents';
+
 export const EnemyTypes = {
   MUNCHER: 'muncher',
   KAMIKAZE: 'kamikaze',
@@ -6,14 +8,5 @@ export const EnemyTypes = {
 
 export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
 
-export const GameEvents = {
-  ENEMY_SPAWNED: 'ENEMY_SPAWNED',
-  ENEMY_DAMAGED: 'ENEMY_DAMAGED',
-  ENEMY_DESTROYED: 'ENEMY_DESTROYED',
-  PLAYER_HIT: 'PLAYER_HIT',
-  PLAYER_FIRED: 'PLAYER_FIRED',
-  PROJECTILE_CLASH: 'PROJECTILE_CLASH',
-  PANEL_DAMAGED: 'PANEL_DAMAGED',
-  PANEL_HEALED: 'PANEL_HEALED',
-  PANEL_DESTROYED: 'PANEL_DESTROYED',
-} as const;
+// Re-export the new Enum as the old Const Object to maintain backward compatibility
+export const GameEvents = NewGameEvents;

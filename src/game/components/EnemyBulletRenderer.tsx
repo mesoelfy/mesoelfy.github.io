@@ -1,7 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { EntitySystem } from '../systems/EntitySystem';
 import { GAME_THEME } from '../theme';
 
 const MAX_BULLETS = 200;
@@ -9,15 +10,17 @@ const tempObj = new THREE.Object3D();
 
 export const EnemyBulletRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-
-  // 3x Size Increase (0.3 -> 0.9)
   const geometry = useMemo(() => new THREE.CircleGeometry(0.9, 16), []); 
 
   useFrame(() => {
     if (!meshRef.current) return;
 
-    // Safety check: ensure array exists before reading length
-    const bullets = GameEngine.enemyBullets || [];
+    let system: EntitySystem;
+    try {
+       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
+    } catch { return; }
+
+    const bullets = system.enemyBullets;
     let count = 0;
 
     for (let i = 0; i < bullets.length; i++) {

@@ -1,30 +1,40 @@
-import { EntitySystem } from '../systems/EntitySystem';
-import { CollisionSystem } from '../systems/CollisionSystem';
-import { WaveSystem } from '../systems/WaveSystem';
-import { InteractionSystem } from '../systems/InteractionSystem';
-import { InputSystem } from '../systems/InputSystem';
-import { PlayerSystem } from '../systems/PlayerSystem';
-import { BreachSystem } from '../systems/BreachSystem';
-import { FXManager } from '../systems/FXManager';
+import { IServiceLocator, IGameSystem, IAudioService, IInputService } from './interfaces';
 
-class ServiceLocatorCore {
-  public entitySystem: EntitySystem;
-  public collisionSystem: CollisionSystem;
-  public waveSystem: WaveSystem;
-  public interactionSystem: InteractionSystem;
-  public inputSystem: InputSystem;
-  public playerSystem: PlayerSystem;
-  public breachSystem: BreachSystem;
-  public fxManager: typeof FXManager;
+class ServiceLocatorImpl implements IServiceLocator {
+  private systems = new Map<string, IGameSystem>();
+  private audioService?: IAudioService;
+  private inputService?: IInputService;
 
-  public registerEntitySystem(sys: EntitySystem) { this.entitySystem = sys; }
-  public registerCollisionSystem(sys: CollisionSystem) { this.collisionSystem = sys; }
-  public registerWaveSystem(sys: WaveSystem) { this.waveSystem = sys; }
-  public registerInteractionSystem(sys: InteractionSystem) { this.interactionSystem = sys; }
-  public registerInputSystem(sys: InputSystem) { this.inputSystem = sys; }
-  public registerPlayerSystem(sys: PlayerSystem) { this.playerSystem = sys; }
-  public registerBreachSystem(sys: BreachSystem) { this.breachSystem = sys; }
-  public registerFXManager(mgr: typeof FXManager) { this.fxManager = mgr; }
+  public registerSystem(id: string, system: IGameSystem): void {
+    this.systems.set(id, system);
+    
+    // Auto-register specific services if they match the interface
+    // (In a stricter app, we might do this explicitly)
+    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
+    // Audio service registration would happen here too
+  }
+
+  public getSystem<T extends IGameSystem>(id: string): T {
+    const sys = this.systems.get(id);
+    if (!sys) throw new Error(`System not registered: ${id}`);
+    return sys as T;
+  }
+
+  public getAudioService(): IAudioService {
+    if (!this.audioService) throw new Error("AudioService not registered");
+    return this.audioService;
+  }
+
+  public getInputService(): IInputService {
+    if (!this.inputService) throw new Error("InputService not registered");
+    return this.inputService;
+  }
+  
+  public reset(): void {
+    this.systems.clear();
+    this.audioService = undefined;
+    this.inputService = undefined;
+  }
 }
 
-export const ServiceLocator = new ServiceLocatorCore();
+export const ServiceLocator = new ServiceLocatorImpl();

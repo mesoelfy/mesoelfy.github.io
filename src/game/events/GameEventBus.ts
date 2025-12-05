@@ -1,13 +1,13 @@
-// src/game/events/GameEventBus.ts
-import { GameEvents } from '../config/Identifiers';
+import { GameEvents, GameEventPayloads } from './GameEvents';
 
-// Re-export specific types if needed or just use strings
-export type GameEventType = keyof typeof GameEvents;
+type Handler<T extends GameEvents> = (payload: GameEventPayloads[T]) => void;
 
 class GameEventBusController {
-  private listeners: Partial<Record<string, Function[]>> = {};
+  private listeners: Partial<Record<GameEvents, Function[]>> = {};
+  private history: { event: string; payload: any; timestamp: number }[] = [];
+  private readonly MAX_HISTORY = 50;
 
-  public subscribe(event: string, handler: Function): () => void {
+  public subscribe<T extends GameEvents>(event: T, handler: Handler<T>): () => void {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
@@ -18,13 +18,25 @@ class GameEventBusController {
     };
   }
 
-  public emit(event: string, payload: any): void {
+  public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void {
+    // 1. Log History
+    this.history.push({ event, payload, timestamp: Date.now() });
+    if (this.history.length > this.MAX_HISTORY) {
+      this.history.shift();
+    }
+
+    // 2. Dispatch
     if (!this.listeners[event]) return;
     [...this.listeners[event]!].forEach(handler => handler(payload));
   }
 
   public clear(): void {
     this.listeners = {};
+    this.history = [];
+  }
+
+  public dumpHistory(): void {
+    console.table(this.history);
   }
 }
 

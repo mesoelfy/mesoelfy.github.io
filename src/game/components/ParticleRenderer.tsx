@@ -1,7 +1,8 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { GameEngine } from '../core/GameEngine';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { EntitySystem } from '../systems/EntitySystem';
 
 const MAX_PARTICLES = 1000;
 const tempObj = new THREE.Object3D();
@@ -14,7 +15,12 @@ export const ParticleRenderer = () => {
   useFrame(() => {
     if (!meshRef.current) return;
 
-    const particles = GameEngine.particles;
+    let system: EntitySystem;
+    try {
+       system = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
+    } catch { return; }
+
+    const particles = system.particles;
     let count = 0;
 
     for (let i = 0; i < particles.length; i++) {
@@ -26,13 +32,11 @@ export const ParticleRenderer = () => {
       const scale = p.life / p.maxLife; 
       tempObj.scale.set(scale, scale, 1);
       
-      // FIXED: Apply instance color
       tempColor.set(p.color);
       
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       meshRef.current.setColorAt(count, tempColor);
-      
       count++;
     }
 

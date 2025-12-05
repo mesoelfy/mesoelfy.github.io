@@ -1,19 +1,49 @@
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { Enemy, Bullet, Particle } from '../types/game.types';
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
-import { GameEvents, EnemyType, EnemyTypes } from '../config/Identifiers';
+import { GameEvents, EnemyType } from '../events/GameEvents';
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
 import { ViewportHelper } from '../utils/ViewportHelper';
 
-export class EntitySystem {
+export class EntitySystem implements IGameSystem {
   public enemies: Enemy[] = [];
   public bullets: Bullet[] = [];
   public enemyBullets: Bullet[] = [];
   public particles: Particle[] = [];
 
   private idCounter = 0;
-  private currentTime = 0;
+  private locator!: IServiceLocator;
+  private currentTime: number = 0; // Track game time
+
+  setup(locator: IServiceLocator): void {
+    this.locator = locator;
+    this.enemies = [];
+    this.bullets = [];
+    this.enemyBullets = [];
+    this.particles = [];
+    this.currentTime = 0;
+  }
+
+  update(delta: number, time: number): void {
+    // 1. SYNC TIME
+    this.currentTime = time;
+
+    const cursor = this.locator.getInputService().getCursor();
+    const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
+
+    this.updateEnemies(delta, time, cursor, doDamageTick);
+    this.updateBullets(this.bullets, delta);
+    this.updateBullets(this.enemyBullets, delta);
+    this.updateParticles(delta);
+  }
+
+  teardown(): void {
+    this.enemies = [];
+    this.bullets = [];
+    this.particles = [];
+  }
 
   public spawnEnemy(type: EnemyType): void {
     const config = ENEMY_CONFIG[type];
@@ -30,7 +60,8 @@ export class EntitySystem {
       type,
       active: true,
       orbitAngle: Math.random() * Math.PI * 2,
-      spawnTime: this.currentTime 
+      // FIX: Use synchronized game time
+      spawnTime: this.currentTime
     };
 
     this.enemies.push(enemy);
@@ -39,8 +70,6 @@ export class EntitySystem {
 
   public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life = 1.5, radius = 0.2): void {
     const list = isEnemy ? this.enemyBullets : this.bullets;
-    
-    // Hunter bullets (isEnemy=true) get 2 HP, normal bullets get 1
     const hp = isEnemy ? 2 : 1; 
 
     list.push({
@@ -51,6 +80,7 @@ export class EntitySystem {
       isEnemy,
       radius,
       hp, 
+      // FIX: Use synchronized game time
       spawnTime: this.currentTime
     });
   }
@@ -69,22 +99,14 @@ export class EntitySystem {
         active: true,
         radius: 0.1,
         color,
+        // FIX: Use synchronized game time
         spawnTime: this.currentTime
       });
     }
   }
 
-  public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
-    this.currentTime = time;
-    this.updateEnemies(delta, time, cursor, doDamageTick);
-    this.updateBullets(this.bullets, delta);
-    this.updateBullets(this.enemyBullets, delta);
-    this.updateParticles(delta);
-  }
-
   private updateEnemies(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
     const panels = useGameStore.getState().panels;
-    
     const worldPanels = Object.values(panels)
       .filter(p => !p.isDestroyed)
       .map(p => ViewportHelper.getPanelWorldRect(p))
@@ -119,7 +141,6 @@ export class EntitySystem {
         behavior.update(e, ctx);
       }
     }
-    
     this.enemies = this.enemies.filter(e => e.active);
   }
 
@@ -131,12 +152,8 @@ export class EntitySystem {
       b.life -= delta;
       if (b.life <= 0) b.active = false;
     }
-    
-    if (list === this.bullets) {
-       this.bullets = this.bullets.filter(b => b.active);
-    } else {
-       this.enemyBullets = this.enemyBullets.filter(b => b.active);
-    }
+    if (list === this.bullets) this.bullets = this.bullets.filter(b => b.active);
+    else this.enemyBullets = this.enemyBullets.filter(b => b.active);
   }
 
   private updateParticles(delta: number) {

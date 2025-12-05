@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec  5 12:13:14 CST 2025
+Generated on: Fri Dec  5 13:02:15 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -249,6 +249,8 @@ FILE: ./docs/TODO.md
 - Kamekazi should be bigger and slow. If it blows up on player and is inside a panel, it does damage to that panel.
 
 - What things does Vampire Survivors do that I should implement? Game design and juice.
+
+- Should I have a high score patron screen where people can enter their name with links to whatever they want?
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -861,7 +863,7 @@ import { useGameStore, UpgradeOption } from '@/game/store/useGameStore';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap } from 'lucide-react';
+import { Unplug, Zap, AlertCircle } from 'lucide-react';
 
 export const IdentityHUD = () => {
   const { openModal } = useStore();
@@ -871,7 +873,8 @@ export const IdentityHUD = () => {
   const xp = useGameStore(s => s.xp);
   const nextXp = useGameStore(s => s.xpToNextLevel);
   const level = useGameStore(s => s.level);
-  const upgrades = useGameStore(s => s.availableUpgrades);
+  
+  const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
   const rebootProgress = useGameStore(s => s.playerRebootProgress);
   
@@ -897,7 +900,7 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  const isLowHp = hpPercent < 30;
+  const availableOptions: UpgradeOption[] = ['RAPID_FIRE', 'MULTI_SHOT', 'SPEED_UP', 'REPAIR_NANITES'];
 
   const handleUpgrade = (u: UpgradeOption) => {
       if (isPanelDead || isPlayerDead) return; 
@@ -909,7 +912,7 @@ export const IdentityHUD = () => {
     <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
       {/* 1. THE AVATAR (Top) */}
-      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group">
+      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> {/* Added margin bottom to clear badge */}
         
         {/* AVATAR LAYER */}
         <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
@@ -956,22 +959,23 @@ export const IdentityHUD = () => {
           />
         </svg>
 
-        {/* Level Badge */}
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-3 py-0.5 text-[10px] font-bold font-mono rounded-full shadow-[0_0_10px_rgba(158,78,165,0.4)]">
+        {/* Level Badge - MOVED LOWER (bottom: -16px) */}
+        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-3 py-0.5 text-[10px] font-bold font-mono rounded-full shadow-[0_0_10px_rgba(158,78,165,0.4)] z-20">
           LVL_{level}
         </div>
       </div>
 
       {/* 2. INFO & UPGRADES (Middle) */}
-      <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-2 min-h-0">
+      <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-1 min-h-0">
         
         {isPlayerDead && !isPanelDead ? (
-            <div className="bg-black/80 border border-elfy-yellow/50 px-4 py-2 rounded animate-pulse text-center">
+            <div className="bg-black/80 border border-elfy-yellow/50 px-4 py-2 rounded animate-pulse text-center relative z-50">
                 <div className="flex items-center justify-center gap-2 text-elfy-yellow font-bold text-xs mb-1">
                     <Zap size={14} />
                     <span>SYSTEM CRITICAL</span>
                 </div>
                 <p className="text-[9px] text-white font-mono">HOLD TO REBOOT</p>
+                <p className="text-[8px] text-elfy-red mt-1 font-bold">TAKING DAMAGE DRAINS POWER</p>
             </div>
         ) : (
             <div className="text-center">
@@ -980,14 +984,18 @@ export const IdentityHUD = () => {
             </div>
         )}
 
-        {/* UPGRADE MODULE */}
-        {upgrades.length > 0 && !isPlayerDead && (
-          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 animate-pulse rounded-sm pointer-events-auto z-50">
-            <div className="text-[8px] text-elfy-purple-light text-center mb-1 font-bold tracking-widest">
-              [ SYSTEM UPGRADE AVAILABLE ]
+        {/* UPGRADE MODULE (Stacking) */}
+        {upgradePoints > 0 && !isPlayerDead && (
+          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 rounded-sm pointer-events-auto z-50 animate-pulse">
+            <div className="flex items-center justify-center gap-2 mb-1">
+                <AlertCircle size={10} className="text-elfy-green" />
+                <div className="text-[9px] text-white text-center font-bold tracking-widest">
+                  UPGRADE AVAILABLE ({upgradePoints})
+                </div>
             </div>
+            
             <div className="grid grid-cols-2 gap-1">
-              {upgrades.map(u => (
+              {availableOptions.map(u => (
                 <button 
                   key={u}
                   className={`text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
@@ -1032,7 +1040,7 @@ import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
-import { AlertTriangle, ChevronUp, Skull } from 'lucide-react';
+import { ChevronUp, Skull } from 'lucide-react';
 
 interface GlassPanelProps {
   children: ReactNode;
@@ -1062,6 +1070,108 @@ const panelVariants = {
 };
 
 const MAX_HEALTH = 1000;
+
+// --- INFINITE SCROLL COMPONENTS ---
+
+const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
+  return (
+    // FIX: Increased opacity to 0.6 for better legibility
+    <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
+      <motion.div 
+        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
+        animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
+             {text}
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+const BreachOverlay = ({ progress }: { progress: number }) => {
+  return (
+    <div className="absolute inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center overflow-hidden">
+        
+        {/* BACKGROUND TAPE */}
+        <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
+            <motion.div
+               className="flex flex-col gap-8"
+               animate={{ y: ["0%", "-50%"] }}
+               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+            >
+                {[0, 1].map((set) => (
+                    <div key={set} className="flex flex-col gap-8">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <ScrollingRow 
+                                key={`${set}-${i}`} 
+                                direction={i % 2 === 0 ? 1 : -1} 
+                                text="SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED //" 
+                            />
+                        ))}
+                    </div>
+                ))}
+            </motion.div>
+        </div>
+
+        {/* INTERACTION UI: Bouncing Arrow */}
+        {/* Uses group-hover from parent GlassPanel to trigger state changes immediately via CSS */}
+        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
+            
+            {/* ARROW: Idle (Red Bounce) -> Hover (Purple Shake/Scale) */}
+            <div className="relative">
+                {/* IDLE STATE */}
+                <div className="group-hover:opacity-0 transition-opacity duration-0 absolute inset-0 flex items-center justify-center">
+                    <motion.div 
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-red"
+                    >
+                        <ChevronUp size={64} strokeWidth={3} />
+                    </motion.div>
+                </div>
+
+                {/* HOVER STATE (Active Repair) */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-0 flex items-center justify-center">
+                    <motion.div 
+                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                    >
+                        <ChevronUp size={64} strokeWidth={4} />
+                    </motion.div>
+                </div>
+                
+                {/* Spacer to keep layout stable since one arrow is absolute */}
+                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
+            </div>
+
+            <div className="flex flex-col items-center text-center">
+                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-0">
+                    HOLD TO REBOOT
+                </span>
+                
+                {/* Progress Bar - Purple Fill */}
+                <div className="w-32 bg-gray-900 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700">
+                    <motion.div 
+                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ type: "tween", duration: 0.1 }}
+                    />
+                </div>
+                
+                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    INTEGRITY: {Math.floor(progress)}%
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+};
 
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
@@ -1093,9 +1203,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
   const purpleCircleClass = isDestroyed ? "bg-elfy-purple" : "border border-elfy-purple-dim";
 
-  const tapeText = "SECURITY BREACH // ".repeat(20);
-  const tapeRows = Array.from({ length: 20 });
-
   return (
     <motion.div 
       ref={registryRef}
@@ -1104,7 +1211,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       animate={isGameOver ? "shattered" : "visible"}
       custom={randSeed}
       className={clsx(
-        "relative overflow-hidden flex flex-col",
+        "relative overflow-hidden flex flex-col group", // Added group here
         "bg-black border",
         borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
@@ -1115,7 +1222,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {title && (
-        <div className="relative flex flex-col border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0">
+        <div className="relative flex flex-col border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0 z-10">
           <div className="flex items-center justify-between px-3 py-1">
             <span className="text-sm md:text-base font-header font-bold text-elfy-green uppercase tracking-wider drop-shadow-md">
               {title}
@@ -1140,53 +1247,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* REBOOT OVERLAY - INFINITE TAPE WALL */}
         {isDestroyed && !isGameOver && (
-          <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center overflow-hidden">
-            
-            {/* TAPE CONTAINER - MASSIVE SCALE TO PREVENT CLIPPING */}
-            <div className="absolute inset-[-150%] flex flex-col justify-center items-center gap-12 opacity-40 pointer-events-none -rotate-12 scale-150">
-                {tapeRows.map((_, i) => (
-                    <motion.div 
-                        key={i}
-                        className={clsx(
-                            "w-[600%] font-header font-black tracking-widest text-lg py-1 border-y-2",
-                            i % 2 === 0 ? "bg-elfy-red text-black border-black" : "bg-elfy-red/10 text-elfy-red border-elfy-red/50"
-                        )}
-                        // Slower Animation (30s base)
-                        animate={{ x: i % 2 === 0 ? ["0%", "-25%"] : ["-25%", "0%"] }}
-                        transition={{ repeat: Infinity, duration: 30 + (i % 5), ease: "linear" }}
-                    >
-                        <div className="whitespace-nowrap">{tapeText}</div>
-                    </motion.div>
-                ))}
-            </div>
-
-            {/* INTERACTION UI (Centered) */}
-            <div className="relative z-20 flex flex-col items-center justify-center gap-4 bg-black/90 p-6 rounded-full backdrop-blur-md border-2 border-elfy-red/50 shadow-[0_0_50px_rgba(255,0,60,0.5)]">
-                <div className="animate-bounce">
-                    <AlertTriangle size={48} className="text-elfy-red fill-black drop-shadow-[0_0_10px_rgba(255,0,60,0.8)]" />
-                </div>
-
-                <div className="flex flex-col items-center justify-center text-center">
-                    <div className="bg-elfy-red text-black px-2 py-0.5 mb-2 font-bold text-[10px]">
-                        SYSTEM CRITICAL
-                    </div>
-                    <div className="flex flex-col items-center animate-pulse text-elfy-purple-light gap-1">
-                        <ChevronUp size={24} />
-                        <span className="text-xs font-mono font-bold tracking-widest">HOVER TO REBOOT</span>
-                    </div>
-                    <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1">
-                        SEQ: {Math.floor(healthPercent)}%
-                    </div>
-                </div>
-            </div>
-          </div>
+            <BreachOverlay progress={healthPercent} />
         )}
         
         {isGameOver && (
-            <div className="absolute inset-0 z-[100] bg-black/90 flex items-center justify-center">
-                <Skull className="text-elfy-red animate-pulse w-16 h-16" />
+            <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center gap-4">
+                <Skull className="text-elfy-red animate-pulse w-20 h-20" />
+                <span className="text-elfy-red font-header font-black text-2xl tracking-widest">SYSTEM FAILURE</span>
             </div>
         )}
         
@@ -2450,7 +2518,7 @@ export interface Entity {
   y: number;
   radius: number;
   active: boolean;
-  spawnTime: number; // NEW: For spawn animation
+  spawnTime: number; 
 }
 
 export interface Enemy extends Entity {
@@ -2470,6 +2538,7 @@ export interface Bullet extends Entity {
   vy: number;
   life: number;
   isEnemy?: boolean;
+  hp: number; // NEW: Bullet durability
 }
 
 export interface Particle extends Entity {
@@ -2702,7 +2771,7 @@ export const ENEMY_CONFIG = {
     score: 10
   },
   [EnemyTypes.KAMIKAZE]: {
-    hp: 1,
+    hp: 3, // TRIPLED HEALTH (Was 1)
     baseSpeed: 12,
     radius: 0.5,
     damage: 10,
@@ -3045,6 +3114,7 @@ export const PlayerAvatar = () => {
   const colorTurret = new THREE.Color(GAME_THEME.turret.base);
   const colorRepair = new THREE.Color(GAME_THEME.turret.repair);
   const colorDead = new THREE.Color('#78F654'); // Green
+  const colorReboot = new THREE.Color('#eae747'); // Yellow
 
   const isDead = useGameStore(state => state.playerHealth <= 0);
 
@@ -3069,20 +3139,23 @@ export const PlayerAvatar = () => {
     
     if (ringRef.current && coreRef.current && glowRef.current) {
         if (isDead) {
-            // DEAD STATE: Hollow Green Triangle
+            // DEAD STATE
             ringRef.current.visible = false;
-            glowRef.current.visible = false;
+            
+            // Only show glow if we are actively rebooting
+            glowRef.current.visible = isRepairing;
+            glowRef.current.material.color.set(colorReboot);
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.set(colorDead);
+            coreRef.current.material.color.set(isRepairing ? colorReboot : colorDead);
             
             if (isRepairing) {
-               // Revival Animation: Fast Spin
+               // Revival Animation: Fast Spin & Pulse
                coreRef.current.rotation.z -= 0.5; 
-               coreRef.current.scale.setScalar(1.5);
+               coreRef.current.scale.setScalar(1.5 + Math.sin(state.clock.elapsedTime * 30) * 0.2);
             } else {
-               // Idle Dead: Static or Slow Wobble
-               coreRef.current.rotation.z = Math.PI; // Point Up/Down
+               // Idle Dead
+               coreRef.current.rotation.z = Math.PI; 
                coreRef.current.scale.setScalar(1.0);
             }
         } else {
@@ -3092,13 +3165,15 @@ export const PlayerAvatar = () => {
             coreRef.current.geometry = aliveGeo;
             
             if (isRepairing) {
-                ringRef.current.rotation.z += 0.2; 
-                ringRef.current.material.color.lerp(colorRepair, 0.2);
-                const pulse = 1 + Math.sin(state.clock.elapsedTime * 20) * 0.1;
+                // Repairing Panel Animation
+                ringRef.current.rotation.z += 0.4; 
+                ringRef.current.material.color.lerp(colorRepair, 0.4);
+                const pulse = 1.2 + Math.sin(state.clock.elapsedTime * 20) * 0.2;
                 ringRef.current.scale.setScalar(pulse);
-                coreRef.current.material.color.lerp(colorRepair, 0.2);
-                glowRef.current.material.color.lerp(colorRepair, 0.2);
+                coreRef.current.material.color.lerp(colorRepair, 0.4);
+                glowRef.current.material.color.lerp(colorRepair, 0.4);
             } else {
+                // Normal Combat
                 ringRef.current.rotation.z -= 0.02; 
                 ringRef.current.material.color.lerp(colorTurret, 0.1);
                 ringRef.current.scale.setScalar(1);
@@ -3111,7 +3186,6 @@ export const PlayerAvatar = () => {
 
   return (
     <group ref={groupRef}>
-      {/* Central Core (Changes geo based on state) */}
       <mesh ref={coreRef}>
         <bufferGeometry />
         <meshBasicMaterial color={GAME_THEME.turret.base} />
@@ -3760,6 +3834,7 @@ FILE: ./src/game/systems/CollisionSystem.ts
 import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents, EnemyTypes } from '../config/Identifiers';
+import { useGameStore } from '../store/useGameStore';
 
 export class CollisionSystem {
   private entitySystem: EntitySystem;
@@ -3795,7 +3870,6 @@ export class CollisionSystem {
 
           if (e.hp <= 0) {
             e.active = false;
-            // Visuals
             const color = e.type === EnemyTypes.HUNTER ? '#F7D277' : e.type === EnemyTypes.KAMIKAZE ? '#FF003C' : '#9E4EA5';
             this.entitySystem.spawnParticle(e.x, e.y, color, 8);
             GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { id: e.id, type: e.type, x: e.x, y: e.y });
@@ -3819,7 +3893,19 @@ export class CollisionSystem {
         
         if (distSq < (eb.radius + 0.5) ** 2) {
             eb.active = false;
-            GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
+            
+            // LOGIC: If player is ALIVE, take damage.
+            // If player is DEAD (Downed), take huge progress penalty.
+            
+            const store = useGameStore.getState();
+            if (store.playerHealth > 0) {
+                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 10 });
+            } else {
+                 // Player is trying to reboot
+                 store.damageRebootProgress(30); // Lose 30% progress on hit
+                 GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 0 }); // Visual shake only
+            }
+            
             this.entitySystem.spawnParticle(eb.x, eb.y, '#FF003C', 5);
         }
     }
@@ -3839,11 +3925,21 @@ export class CollisionSystem {
             const distSq = dx*dx + dy*dy;
             
             if (distSq < (pb.radius + eb.radius) ** 2) {
-                pb.active = false;
-                eb.active = false;
+                // CLASH LOGIC
+                pb.active = false; // Player bullet always dies
                 
-                GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
-                this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
+                // Enemy bullet takes damage
+                eb.hp = (eb.hp || 1) - 1;
+                
+                if (eb.hp <= 0) {
+                    eb.active = false;
+                    GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: eb.x, y: eb.y });
+                    this.entitySystem.spawnParticle(eb.x, eb.y, '#F7D277', 6);
+                } else {
+                    // Flash or spark indicating it survived
+                    this.entitySystem.spawnParticle(eb.x, eb.y, '#FFFFFF', 2);
+                }
+                
                 break;
             }
         }
@@ -3874,7 +3970,7 @@ export class InteractionSystem {
     const panels = store.panels;
     const healFn = store.healPanel;
     const decayFn = store.decayReboot;
-    const tickReboot = store.tickPlayerReboot; // Correct function
+    const tickReboot = store.tickPlayerReboot; 
     
     let isRepairing = false;
     let repairedPanelId = null;
@@ -3888,28 +3984,32 @@ export class InteractionSystem {
         if (identityPanel) {
             const rect = ViewportHelper.getPanelWorldRect(identityPanel);
             if (rect) {
+                // Expanded Hitbox for easier revival
+                const padding = 2.0; 
+                
                 if (
-                    cursor.x >= rect.left && 
-                    cursor.x <= rect.right && 
-                    cursor.y >= rect.bottom && 
-                    cursor.y <= rect.top
+                    cursor.x >= rect.left - padding && 
+                    cursor.x <= rect.right + padding && 
+                    cursor.y >= rect.bottom - padding && 
+                    cursor.y <= rect.top + padding
                 ) {
-                    // FIX: Use tickReboot, NOT healPlayer
-                    // 2.0 per tick -> 50 ticks -> ~2.5 seconds to revive
-                    tickReboot(2.0); 
+                    // INCREASED SPEED: 2.5 per tick (approx 2s to revive)
+                    tickReboot(2.5); 
                     
                     isRepairing = true;
                     isRebootingPlayer = true;
                     this.lastRepairTime = time;
                     
-                    ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, '#eae747', 1);
+                    if (Math.random() > 0.5) {
+                        ServiceLocator.entitySystem.spawnParticle(cursor.x, cursor.y, '#eae747', 1);
+                    }
                 }
             }
         }
         
-        // Decay Player Reboot if not actively rebooting
+        // REDUCED DECAY: -2.0 per tick (slower drain if you slip off)
         if (!isRebootingPlayer && store.playerRebootProgress > 0) {
-            tickReboot(-5.0);
+            tickReboot(-2.0);
         }
         
         if (isRebootingPlayer) return true; 
@@ -3948,7 +4048,7 @@ export class InteractionSystem {
       }
     }
 
-    // --- 3. DECAY LOGIC ---
+    // --- 3. DECAY LOGIC (Panels) ---
     for (const pKey in panels) {
         const p = panels[pKey];
         if (p.isDestroyed && p.id !== repairedPanelId && p.health > 0) {
@@ -3984,6 +4084,7 @@ export class PlayerSystem {
       const { damage } = payload;
       const store = useGameStore.getState();
       store.damagePlayer(damage);
+      
       if (store.playerHealth <= 0) {
         this.handlePlayerDeath();
       }
@@ -4001,7 +4102,18 @@ export class PlayerSystem {
   }
 
   private handlePlayerDeath() {
-    useGameStore.getState().stopGame();
+    const store = useGameStore.getState();
+    const identityPanel = store.panels['identity'];
+
+    // LOGIC CHANGE:
+    // Only Game Over if the Identity Core is ALSO destroyed.
+    // Otherwise, the player is just "Downed" and must reboot manually.
+    if (identityPanel && identityPanel.isDestroyed) {
+        store.stopGame();
+    } else {
+        // Optional: Trigger a "System Down" sound or visual event here
+        // The store state (playerHealth <= 0) automatically triggers the UI changes.
+    }
   }
 
   public update(time: number) {
@@ -4012,7 +4124,6 @@ export class PlayerSystem {
     const upgrades = useGameStore.getState().activeUpgrades;
     const rapidLevel = upgrades['RAPID_FIRE'] || 0;
     
-    // Decrease delay by 15% per level
     const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
 
     if (time > this.lastFireTime + currentFireRate) {
@@ -4045,20 +4156,14 @@ export class PlayerSystem {
     if (targetEnemy) {
       const dx = targetEnemy.x - cursor.x;
       const dy = targetEnemy.y - cursor.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
       
       const upgrades = useGameStore.getState().activeUpgrades;
       const multiLevel = upgrades['MULTI_SHOT'] || 0;
       
-      // --- UPGRADE LOGIC: PROJECTILES ---
-      // Base: 1 shot. Level 1: 3 shots. Level 2: 5 shots.
       const projectileCount = 1 + (multiLevel * 2);
-      const spreadAngle = 0.2; // roughly 11 degrees
+      const spreadAngle = 0.2; 
 
-      // Calculate base angle
       const baseAngle = Math.atan2(dy, dx);
-      
-      // Calculate start angle to center the spread
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
       for (let i = 0; i < projectileCount; i++) {
@@ -4090,7 +4195,7 @@ FILE: ./src/game/systems/EntitySystem.ts
 import { Enemy, Bullet, Particle } from '../types/game.types';
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
-import { GameEvents, EnemyType } from '../config/Identifiers';
+import { GameEvents, EnemyType, EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
 import { ViewportHelper } from '../utils/ViewportHelper';
@@ -4102,9 +4207,6 @@ export class EntitySystem {
   public particles: Particle[] = [];
 
   private idCounter = 0;
-  // Track global time internally or pass it in spawn?
-  // We'll pass it in update and store it, or just use performance.now() / 1000
-  // ideally we use the engine time.
   private currentTime = 0;
 
   public spawnEnemy(type: EnemyType): void {
@@ -4122,7 +4224,7 @@ export class EntitySystem {
       type,
       active: true,
       orbitAngle: Math.random() * Math.PI * 2,
-      spawnTime: this.currentTime // Capture current frame time
+      spawnTime: this.currentTime 
     };
 
     this.enemies.push(enemy);
@@ -4131,6 +4233,10 @@ export class EntitySystem {
 
   public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life = 1.5, radius = 0.2): void {
     const list = isEnemy ? this.enemyBullets : this.bullets;
+    
+    // Hunter bullets (isEnemy=true) get 2 HP, normal bullets get 1
+    const hp = isEnemy ? 2 : 1; 
+
     list.push({
       id: this.idCounter++,
       x, y, vx, vy,
@@ -4138,6 +4244,7 @@ export class EntitySystem {
       active: true,
       isEnemy,
       radius,
+      hp, 
       spawnTime: this.currentTime
     });
   }
@@ -4162,7 +4269,7 @@ export class EntitySystem {
   }
 
   public update(delta: number, time: number, cursor: {x: number, y: number}, doDamageTick: boolean) {
-    this.currentTime = time; // Sync time for spawns
+    this.currentTime = time;
     this.updateEnemies(delta, time, cursor, doDamageTick);
     this.updateBullets(this.bullets, delta);
     this.updateBullets(this.enemyBullets, delta);
@@ -4386,13 +4493,13 @@ export class WaveSystem {
     const rand = Math.random();
     let type: EnemyType = EnemyTypes.MUNCHER;
     
-    // Adjusted Probabilities:
-    // 0.0 - 0.4: Muncher (40%)
-    // 0.4 - 0.8: Kamikaze (40%) - Increased
-    // 0.8 - 1.0: Hunter (20%)
+    // Adjusted Probabilities for "More Munchers"
+    // 0.0 - 0.60: Muncher (60%)
+    // 0.60 - 0.90: Kamikaze (30%)
+    // 0.90 - 1.00: Hunter (10%)
     
-    if (rand < 0.40) type = EnemyTypes.MUNCHER;
-    else if (rand < 0.80) type = EnemyTypes.KAMIKAZE;
+    if (rand < 0.60) type = EnemyTypes.MUNCHER;
+    else if (rand < 0.90) type = EnemyTypes.KAMIKAZE;
     else type = EnemyTypes.HUNTER;
 
     ServiceLocator.entitySystem.spawnEnemy(type);
@@ -4405,7 +4512,7 @@ FILE: ./src/game/store/useGameStore.ts
 =====================================
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { GameState, RegisteredPanel } from '../types/game.types';
+import { GameState } from '../types/game.types';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 
 const MAX_PANEL_HEALTH = 1000;
@@ -4422,7 +4529,7 @@ interface ExtendedGameState extends GameState {
   xp: number;
   xpToNextLevel: number;
   level: number;
-  availableUpgrades: UpgradeOption[];
+  upgradePoints: number; // NEW: Stackable points
   activeUpgrades: Record<UpgradeOption, number>;
   
   systemIntegrity: number;
@@ -4430,6 +4537,7 @@ interface ExtendedGameState extends GameState {
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
   tickPlayerReboot: (amount: number) => void;
+  damageRebootProgress: (amount: number) => void; // NEW: Penalty on hit
   healPanel: (id: string, amount: number) => void;
   decayReboot: (id: string, amount: number) => void;
   addScore: (amount: number) => void;
@@ -4454,7 +4562,7 @@ export const useGameStore = create<ExtendedGameState>()(
       xp: 0,
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       level: 1,
-      availableUpgrades: [],
+      upgradePoints: 0,
       activeUpgrades: {
         'RAPID_FIRE': 0,
         'MULTI_SHOT': 0,
@@ -4465,9 +4573,7 @@ export const useGameStore = create<ExtendedGameState>()(
       systemIntegrity: 100,
 
       startGame: () => {
-        // FIX: Prevent accidental reset if already running
         if (get().isPlaying) return;
-        
         set({ 
             isPlaying: true, 
             score: 0, 
@@ -4477,7 +4583,7 @@ export const useGameStore = create<ExtendedGameState>()(
             xp: 0,
             level: 1,
             xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
-            availableUpgrades: [],
+            upgradePoints: 0,
             activeUpgrades: {
                 'RAPID_FIRE': 0,
                 'MULTI_SHOT': 0,
@@ -4506,34 +4612,33 @@ export const useGameStore = create<ExtendedGameState>()(
         let newXp = state.xp + amount;
         let newLevel = state.level;
         let nextReq = state.xpToNextLevel;
-        let newUpgrades = [...state.availableUpgrades];
+        let newPoints = state.upgradePoints;
 
-        if (newXp >= nextReq) {
+        // Loop to handle massive XP gains (multiple levels at once)
+        while (newXp >= nextReq) {
           newXp -= nextReq;
           newLevel++;
+          newPoints++; // Stack points
           nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
-          
-          if (newUpgrades.length === 0) {
-             newUpgrades = ['RAPID_FIRE', 'MULTI_SHOT']; 
-          }
         }
 
         return {
           xp: newXp,
           level: newLevel,
           xpToNextLevel: nextReq,
-          availableUpgrades: newUpgrades
+          upgradePoints: newPoints
         };
       }),
 
       selectUpgrade: (option) => set((state) => {
+        if (state.upgradePoints <= 0) return state;
         const currentLevel = state.activeUpgrades[option] || 0;
         return {
             activeUpgrades: {
                 ...state.activeUpgrades,
                 [option]: currentLevel + 1
             },
-            availableUpgrades: []
+            upgradePoints: state.upgradePoints - 1
         };
       }),
 
@@ -4548,16 +4653,20 @@ export const useGameStore = create<ExtendedGameState>()(
       
       tickPlayerReboot: (amount) => set((state) => {
         if (state.playerHealth > 0) return { playerRebootProgress: 0 };
-        
         const newProgress = Math.max(0, Math.min(100, state.playerRebootProgress + amount));
-        
         if (newProgress >= 100) {
             return {
                 playerRebootProgress: 0,
-                playerHealth: state.maxPlayerHealth / 2 
+                playerHealth: state.maxPlayerHealth / 2 // Revive with 50% HP
             };
         }
         return { playerRebootProgress: newProgress };
+      }),
+      
+      damageRebootProgress: (amount) => set((state) => {
+        if (state.playerHealth > 0) return state;
+        // Big penalty for getting hit while downed
+        return { playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) };
       }),
 
       resetGame: () => set({
@@ -4570,17 +4679,12 @@ export const useGameStore = create<ExtendedGameState>()(
         const { panels } = get();
         const pKeys = Object.keys(panels);
         if (pKeys.length === 0) return;
-
         let currentSum = 0;
         let maxSum = pKeys.length * MAX_PANEL_HEALTH;
-
         for (const key of pKeys) {
           const p = panels[key];
-          if (!p.isDestroyed) {
-            currentSum += p.health;
-          }
+          if (!p.isDestroyed) currentSum += p.health;
         }
-
         set({ systemIntegrity: (currentSum / maxSum) * 100 });
       },
 
