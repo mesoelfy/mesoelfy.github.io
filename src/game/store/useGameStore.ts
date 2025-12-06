@@ -1,228 +1,127 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { GameState } from '../types/game.types';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
+import { UpgradeOption } from '../types/game.types'; // Assuming types exist or inferred
 
-const MAX_PANEL_HEALTH = 1000;
-
-export type UpgradeOption = 'RAPID_FIRE' | 'MULTI_SHOT' | 'SPEED_UP' | 'REPAIR_NANITES';
-
-interface ExtendedGameState extends GameState {
+// UI-Centric State
+interface GameStateUI {
+  isPlaying: boolean;
+  
+  // Synced Data
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
-  
-  // SCORING
-  score: number; // Current Session Kills
-  highScore: number; // Best Session Kills
-  
-  // PROGRESSION
+  score: number;
+  highScore: number;
   xp: number;
-  xpToNextLevel: number;
   level: number;
+  xpToNextLevel: number;
   upgradePoints: number;
-  activeUpgrades: Record<UpgradeOption, number>;
-  
   systemIntegrity: number;
   
-  // ACTIONS
+  activeUpgrades: Record<UpgradeOption, number>;
+  panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
+  
+  // Actions
   startGame: () => void;
   stopGame: () => void;
-  damagePlayer: (amount: number) => void;
-  healPlayer: (amount: number) => void;
-  tickPlayerReboot: (amount: number) => void;
-  damageRebootProgress: (amount: number) => void;
-  healPanel: (id: string, amount: number) => void;
-  decayReboot: (id: string, amount: number) => void;
   
-  incrementKills: (amount: number) => void;
-  addXp: (amount: number) => void;
+  // UI Registration
+  registerPanel: (id: string, element: HTMLElement) => void;
+  unregisterPanel: (id: string) => void;
+  
+  // SYNC ACTIONS (Called by UISyncSystem)
+  syncGameState: (data: Partial<GameStateUI>) => void;
+  syncPanels: (panelsData: Record<string, any>) => void;
+  
+  // Upgrades (Still UI driven for now)
   selectUpgrade: (option: UpgradeOption) => void;
-  resetGame: () => void;
-  recalculateIntegrity: () => void;
 }
 
-export const useGameStore = create<ExtendedGameState>()(
+export const useGameStore = create<GameStateUI>()(
   persist(
     (set, get) => ({
       isPlaying: false,
+      
+      playerHealth: 100,
+      maxPlayerHealth: 100,
+      playerRebootProgress: 0,
       score: 0,
       highScore: 0,
-      threatLevel: 1,
-      panels: {},
-      playerHealth: PLAYER_CONFIG.maxHealth,
-      maxPlayerHealth: PLAYER_CONFIG.maxHealth,
-      playerRebootProgress: 0,
-      
       xp: 0,
-      xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       level: 1,
+      xpToNextLevel: 100,
       upgradePoints: 0,
-      activeUpgrades: {
-        'RAPID_FIRE': 0,
-        'MULTI_SHOT': 0,
-        'SPEED_UP': 0,
-        'REPAIR_NANITES': 0
-      },
-      
       systemIntegrity: 100,
+      
+      activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
+      panels: {},
 
-      startGame: () => {
-        if (get().isPlaying) return;
-        set({ 
-            isPlaying: true, 
-            score: 0, 
-            threatLevel: 1,
-            playerHealth: PLAYER_CONFIG.maxHealth,
-            playerRebootProgress: 0,
-            xp: 0,
-            level: 1,
-            activeUpgrades: {
-                'RAPID_FIRE': 0,
-                'MULTI_SHOT': 0,
-                'SPEED_UP': 0,
-                'REPAIR_NANITES': 0
-            },
-            panels: Object.fromEntries(
-                Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
-            )
-        });
-      },
+      startGame: () => set({ isPlaying: true }),
       
       stopGame: () => {
-        const { score, highScore } = get();
-        set({ 
-          isPlaying: false,
-          highScore: Math.max(score, highScore)
-        });
+          const { score, highScore } = get();
+          set({ 
+              isPlaying: false,
+              highScore: Math.max(score, highScore)
+          });
       },
 
-      incrementKills: (amount) => set((state) => {
-        const newScore = state.score + amount;
-        return { 
-            score: newScore,
-            highScore: Math.max(newScore, state.highScore)
-        };
+      // --- SYNC INTERFACE ---
+      syncGameState: (data) => set((state) => ({ ...state, ...data })),
+      
+      syncPanels: (incomingPanels) => set((state) => {
+          // Merge incoming health/status with existing refs
+          const merged = { ...state.panels };
+          for (const key in incomingPanels) {
+              if (merged[key]) {
+                  merged[key].health = incomingPanels[key].health;
+                  merged[key].isDestroyed = incomingPanels[key].isDestroyed;
+              } else {
+                  // If sync system sends a panel we don't have (rare), add it
+                  merged[key] = incomingPanels[key];
+              }
+          }
+          return { panels: merged };
       }),
 
-      addXp: (amount) => set((state) => {
-        let newXp = state.xp + amount;
-        let newLevel = state.level;
-        let nextReq = state.xpToNextLevel;
-        let newPoints = state.upgradePoints;
-
-        while (newXp >= nextReq) {
-          newXp -= nextReq;
-          newLevel++;
-          newPoints++; 
-          nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
-        }
-
-        return {
-          xp: newXp,
-          level: newLevel,
-          xpToNextLevel: nextReq,
-          upgradePoints: newPoints
-        };
+      // --- UI REGISTRATION ---
+      registerPanel: (id, element) => set((state) => ({
+          panels: { 
+              ...state.panels, 
+              [id]: { 
+                  id, 
+                  element, 
+                  health: 1000, 
+                  isDestroyed: false 
+              } 
+          }
+      })),
+      
+      unregisterPanel: (id) => set((state) => {
+          const next = { ...state.panels };
+          delete next[id];
+          return { panels: next };
       }),
 
       selectUpgrade: (option) => set((state) => {
-        if (state.upgradePoints <= 0) return state;
-        const currentLevel = state.activeUpgrades[option] || 0;
-        return {
-            activeUpgrades: {
-                ...state.activeUpgrades,
-                [option]: currentLevel + 1
-            },
-            upgradePoints: state.upgradePoints - 1
-        };
-      }),
-
-      damagePlayer: (amount) => set((state) => {
-        const newHealth = Math.max(0, state.playerHealth - amount);
-        return { playerHealth: newHealth };
-      }),
-
-      healPlayer: (amount) => set((state) => ({
-        playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount)
-      })),
-      
-      tickPlayerReboot: (amount) => set((state) => {
-        if (state.playerHealth > 0) return { playerRebootProgress: 0 };
-        const newProgress = Math.max(0, Math.min(100, state.playerRebootProgress + amount));
-        if (newProgress >= 100) {
-            return {
-                playerRebootProgress: 0,
-                playerHealth: state.maxPlayerHealth / 2
-            };
-        }
-        return { playerRebootProgress: newProgress };
-      }),
-      
-      damageRebootProgress: (amount) => set((state) => {
-        if (state.playerHealth > 0) return state;
-        return { playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) };
-      }),
-
-      resetGame: () => set({
-        score: 0,
-        playerHealth: PLAYER_CONFIG.maxHealth,
-        isPlaying: true
-      }),
-
-      recalculateIntegrity: () => {
-        const { panels } = get();
-        const pKeys = Object.keys(panels);
-        if (pKeys.length === 0) return;
-        let currentSum = 0;
-        let maxSum = pKeys.length * MAX_PANEL_HEALTH;
-        for (const key of pKeys) {
-          const p = panels[key];
-          if (!p.isDestroyed) currentSum += p.health;
-        }
-        set({ systemIntegrity: (currentSum / maxSum) * 100 });
-      },
-
-      registerPanel: (id, element) => set((state) => ({
-        panels: { ...state.panels, [id]: { id, element, health: MAX_PANEL_HEALTH, isDestroyed: false } }
-      })),
-
-      unregisterPanel: (id) => set((state) => {
-        const newPanels = { ...state.panels };
-        delete newPanels[id];
-        return { panels: newPanels };
-      }),
-
-      damagePanel: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel || panel.isDestroyed) return state;
-        const newHealth = Math.max(0, panel.health - amount);
-        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: newHealth <= 0 } } };
-      }),
-
-      healPanel: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel) return state;
-        if (!panel.isDestroyed && panel.health >= MAX_PANEL_HEALTH) return state;
-        let newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
-        let wasDestroyed = panel.isDestroyed;
-        if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
-            wasDestroyed = false;
-            newHealth = 500;
-        }
-        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: wasDestroyed } } };
-      }),
-
-      decayReboot: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel || !panel.isDestroyed) return state;
-        if (panel.health <= 0) return state;
-        const newProgress = Math.max(0, panel.health - amount);
-        return { panels: { ...state.panels, [id]: { ...panel, health: newProgress } } };
+          // Note: In Phase 3 we should move this logic to GameStateSystem too
+          // But since upgrades happen in UI (Modal usually), strictly speaking it's okay here
+          // as long as we tell the GameStateSystem about it.
+          // For now, let's keep it here, but we need to push it to GameStateSystem somehow?
+          // Actually, GameStateSystem holds the truth. 
+          // UI should send "Upgrade Event" to EventBus, GameSystem handles it.
+          // For this refactor step, we'll leave upgrades loosely coupled.
+          return {
+              activeUpgrades: {
+                  ...state.activeUpgrades,
+                  [option]: (state.activeUpgrades[option] || 0) + 1
+              },
+              upgradePoints: state.upgradePoints - 1
+          };
       }),
     }),
     {
-      name: 'mesoelfy-os-storage', // REVERTED
+      name: 'mesoelfy-os-storage',
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )

@@ -1,9 +1,9 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
-import { useGameStore } from '../store/useGameStore';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { PanelRegistrySystem } from './PanelRegistrySystem'; // NEW
+import { PanelRegistry } from './PanelRegistrySystem'; 
+import { GameStateSystem } from './GameStateSystem'; // NEW
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -14,35 +14,35 @@ export class InteractionSystem implements IGameSystem {
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
   private entitySystem!: EntitySystem;
-  private panelSys!: PanelRegistrySystem; // NEW
+  private gameSystem!: GameStateSystem; // NEW
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
-    this.panelSys = locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
+    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
   }
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
-    const store = useGameStore.getState();
-    if (!store.isPlaying) return;
+    
+    // FIX: Read Game Over from System, not Store
+    if (this.gameSystem.isGameOver) return;
     
     const cursor = this.locator.getInputService().getCursor();
     
-    if (store.playerHealth <= 0) {
-        this.handleRevival(cursor, time, store);
+    if (this.gameSystem.playerHealth <= 0) {
+        this.handleRevival(cursor, time);
         return; 
     }
 
-    this.handlePanelRepair(cursor, time, store);
-
+    this.handlePanelRepair(cursor, time);
+    
+    // Handle Decay (Tick based)
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
-        const decayFn = store.decayReboot;
-        const panels = store.panels;
-        for (const pKey in panels) {
-            const p = panels[pKey];
+        const panels = PanelRegistry.getAllPanels();
+        for (const p of panels) {
             if (p.isDestroyed && p.health > 0) {
-                 decayFn(p.id, 5);
+                 PanelRegistry.decayPanel(p.id, 5);
             }
         }
     }
@@ -50,12 +50,9 @@ export class InteractionSystem implements IGameSystem {
 
   teardown(): void {}
 
-  private handleRevival(cursor: {x: number, y: number}, time: number, store: any) {
-    const identityPanel = store.panels['identity'];
-    if (!identityPanel) return;
-
-    // FIX: Read from Cache
-    const rect = this.panelSys.getPanelRect(identityPanel.id);
+  private handleRevival(cursor: {x: number, y: number}, time: number) {
+    // Hardcoded ID check is fine for now
+    const rect = PanelRegistry.getPanelRect('identity');
     if (!rect) return;
 
     const padding = 2.0; 
@@ -68,36 +65,32 @@ export class InteractionSystem implements IGameSystem {
     if (isHovering) {
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.tickPlayerReboot(2.5);
+            this.gameSystem.tickReboot(2.5);
             this.lastRepairTime = time;
             if (Math.random() > 0.3) {
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
             }
         }
     } else {
-        if (store.playerRebootProgress > 0 && time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.tickPlayerReboot(-2.0);
+        if (this.gameSystem.playerRebootProgress > 0 && time > this.lastRepairTime + this.REPAIR_RATE) {
+            this.gameSystem.tickReboot(-2.0);
         }
     }
   }
 
-  private handlePanelRepair(cursor: {x: number, y: number}, time: number, store: any) {
-    const panels = store.panels;
+  private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
+    // Spatial Query
+    const panels = PanelRegistry.getAllPanels();
     let hoveringPanelId: string | null = null;
 
-    for (const pKey in panels) {
-      const p = panels[pKey];
+    for (const p of panels) {
       if (!p.isDestroyed && p.health >= 1000) continue;
       
-      // FIX: Read from Cache
-      const r = this.panelSys.getPanelRect(p.id);
-      if (!r) continue;
-
       if (
-        cursor.x >= r.left && 
-        cursor.x <= r.right && 
-        cursor.y >= r.bottom && 
-        cursor.y <= r.top
+        cursor.x >= p.left && 
+        cursor.x <= p.right && 
+        cursor.y >= p.bottom && 
+        cursor.y <= p.top
       ) {
         hoveringPanelId = p.id;
         break; 
@@ -105,18 +98,21 @@ export class InteractionSystem implements IGameSystem {
     }
 
     if (hoveringPanelId) {
-        const p = panels[hoveringPanelId];
-        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
+        // Read State to determine cursor type
+        const state = PanelRegistry.getPanelState(hoveringPanelId);
+        if (!state) return;
+
+        this.repairState = state.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.healPanel(p.id, 10);
+            PanelRegistry.healPanel(hoveringPanelId, 10);
             this.lastRepairTime = time;
 
-            if (!p.isDestroyed) {
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+            if (!state.isDestroyed) {
+                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: hoveringPanelId, amount: 10 });
             }
             if (Math.random() > 0.3) {
-                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
+                const color = state.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
             }
         }

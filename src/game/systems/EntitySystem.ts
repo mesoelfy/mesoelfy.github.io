@@ -3,24 +3,20 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { EntityFactory } from '../core/EntityFactory';
 import { SpatialGrid } from '../core/SpatialGrid';
 import { Tag } from '../core/ecs/types';
-
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyType } from '../config/Identifiers'; 
 import { GameEventBus } from '../events/GameEventBus';
-import { useGameStore } from '../store/useGameStore';
-import { PanelRegistrySystem } from './PanelRegistrySystem'; // NEW
+import { PanelRegistry } from './PanelRegistrySystem'; // NEW
 
 export class EntitySystem implements IGameSystem {
   public spatialGrid: SpatialGrid;
   private locator!: IServiceLocator;
-  private panelSys!: PanelRegistrySystem; // NEW
 
   constructor() {
     this.spatialGrid = new SpatialGrid(4);
@@ -28,9 +24,6 @@ export class EntitySystem implements IGameSystem {
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    // Get Shadow Board
-    this.panelSys = locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
-    
     Registry.clear();
     this.spatialGrid.clear();
   }
@@ -40,19 +33,8 @@ export class EntitySystem implements IGameSystem {
     const cursor = this.locator.getInputService().getCursor();
     const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
 
-    // PERFORMANCE FIX: Read from Cache, not DOM
-    const storePanels = useGameStore.getState().panels;
-    const worldPanels = [];
-    
-    // We only want panels that are not destroyed logic-wise
-    for (const pKey in storePanels) {
-        const p = storePanels[pKey];
-        if (!p.isDestroyed) {
-            // Read coordinate from System, not Helper
-            const rect = this.panelSys.getPanelRect(p.id);
-            if (rect) worldPanels.push(rect);
-        }
-    }
+    // FIX: Get Panel Data from Registry
+    const worldPanels = PanelRegistry.getAllPanels().filter(p => !p.isDestroyed);
 
     const aiContext: AIContext = {
       playerPos: cursor,
@@ -62,13 +44,11 @@ export class EntitySystem implements IGameSystem {
       doDamageTick,
       spawnProjectile: (x, y, vx, vy) => EntityFactory.createBullet(x, y, vx, vy, true, 3.0),
       triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 8, 15, 0.8),
-      spawnDrillSparks: (x, y, color) => {
-          this.spawnParticle(x, y, color, 1, 3.0, 0.25);
-      },
+      spawnDrillSparks: (x, y, color) => this.spawnParticle(x, y, color, 1, 3.0, 0.25),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
-      damagePanel: (id, amount) => {
-        useGameStore.getState().damagePanel(id, amount);
-      }
+      
+      // FIX: Damage via Registry
+      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 
     for (const entity of Registry.getAll()) {
