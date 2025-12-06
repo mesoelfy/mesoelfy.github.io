@@ -1,11 +1,11 @@
 import { EnemyTypes } from './Identifiers';
 
 export const ENEMY_CONFIG = {
-  [EnemyTypes.MUNCHER]: {
+  [EnemyTypes.DRILLER]: { // RENAMED
     hp: 2,
     baseSpeed: 8,
     radius: 0.5,
-    damage: 15, // TRIPLED (Was 5)
+    damage: 15,
     score: 10
   },
   [EnemyTypes.KAMIKAZE]: {

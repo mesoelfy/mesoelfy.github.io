@@ -101,3 +101,5 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - each upgrade needs its own bespoke icon that looks like what it does
 
 - there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
+
+- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty.

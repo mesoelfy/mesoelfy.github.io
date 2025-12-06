@@ -1,7 +1,7 @@
 import { GameEvents as NewGameEvents } from '../events/GameEvents';
 
 export const EnemyTypes = {
-  MUNCHER: 'muncher',
+  DRILLER: 'driller', // RENAMED
   KAMIKAZE: 'kamikaze',
   HUNTER: 'hunter',
 } as const;

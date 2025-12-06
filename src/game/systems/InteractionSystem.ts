@@ -22,22 +22,18 @@ export class InteractionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
-    
     const store = useGameStore.getState();
     if (!store.isPlaying) return;
     
     const cursor = this.locator.getInputService().getCursor();
     
-    // 1. PLAYER DOWN (Revival is always a REBOOT)
     if (store.playerHealth <= 0) {
         this.handleRevival(cursor, time, store);
         return; 
     }
 
-    // 2. PANEL REPAIR
     this.handlePanelRepair(cursor, time, store);
 
-    // 3. DECAY LOGIC
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
         const decayFn = store.decayReboot;
         const panels = store.panels;
@@ -67,14 +63,15 @@ export class InteractionSystem implements IGameSystem {
         cursor.y <= rect.top + padding;
 
     if (isHovering) {
-        this.repairState = 'REBOOTING'; // Reviving player is Purple
+        this.repairState = 'REBOOTING';
         
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             store.tickPlayerReboot(2.5);
             this.lastRepairTime = time;
             
-            if (Math.random() > 0.5) {
-                this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 1);
+            // FIX: Spawn 4 particles for more impact
+            if (Math.random() > 0.3) {
+                this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
             }
         }
     } else {
@@ -107,8 +104,6 @@ export class InteractionSystem implements IGameSystem {
 
     if (hoveringPanelId) {
         const p = panels[hoveringPanelId];
-        
-        // SET STATE BASED ON PANEL STATUS
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
@@ -119,10 +114,10 @@ export class InteractionSystem implements IGameSystem {
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
             }
 
-            if (Math.random() > 0.6) {
-                // Match particle color to state
+            // FIX: Spawn 4 particles for more visual feedback
+            if (Math.random() > 0.3) {
                 const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
-                this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 1);
+                this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
             }
         }
     }

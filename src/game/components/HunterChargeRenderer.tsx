@@ -13,7 +13,7 @@ const MAX_CHARGES = 50;
 const tempObj = new THREE.Object3D();
 const OFFSET_DISTANCE = 1.6; 
 
-// --- ORB SHADER (Same as Bullet) ---
+// --- ORB SHADER ---
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -28,9 +28,7 @@ const fragmentShader = `
   
   void main() {
     float dist = distance(vUv, vec2(0.5));
-    // Hard Core
     float core = 1.0 - smoothstep(0.2, 0.25, dist);
-    // Glow Halo
     float glow = 1.0 - smoothstep(0.25, 0.5, dist);
     glow = pow(glow, 3.0); 
     
@@ -76,19 +74,28 @@ export const HunterChargeRenderer = () => {
         if (count >= MAX_CHARGES) break;
 
         const timer = state.timers.state || 0;
+        // Timer goes 1.0 -> 0.0
         const progress = Math.max(0, Math.min(1, 1.0 - timer));
-        const scale = 1 - Math.pow(1 - progress, 3);
+        
+        // FIX: Linear growth (0 to 1) feels more "charging up" than the previous fast-pop
+        // We cap it at 1.0 just in case
+        const scale = Math.min(1.0, progress * 1.1); 
 
-        // Position: Relative to Hunter, slightly in front
-        // We calculate direction based on current Hunter rotation? 
-        // No, hunter rotates to face player.
+        // Position: In front of Hunter
+        // Since Hunter rotates to face player, we can trust its rotation or re-calc direction?
+        // Driller uses State for rotation updates. Hunter uses State.
+        // Let's assume Transform.rotation is correct (facing player).
+        
+        // Transform rotation is Z-axis rotation.
+        // -PI/2 adjustment because 0 rotation is usually Right, but UP is forward?
+        // Let's use standard trig based on rotation.
         const dirX = Math.cos(transform.rotation + Math.PI/2);
         const dirY = Math.sin(transform.rotation + Math.PI/2);
 
         const spawnX = transform.x + (dirX * OFFSET_DISTANCE);
         const spawnY = transform.y + (dirY * OFFSET_DISTANCE);
 
-        tempObj.position.set(spawnX, spawnY, -0.1);
+        tempObj.position.set(spawnX, spawnY, 0.1); // Slightly above hunter
         tempObj.scale.set(scale, scale, 1);
         tempObj.rotation.set(0, 0, 0); 
 

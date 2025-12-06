@@ -10,7 +10,7 @@ import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
 import { ProjectileTrails } from './components/ProjectileTrails'; 
-import { GlowRenderer } from './components/GlowRenderer'; // RESTORED
+// Removed GlowRenderer
 
 export const GameOverlay = () => {
   return (
@@ -30,7 +30,6 @@ export const GameOverlay = () => {
         <GameDirector />
         <ScreenShaker />
 
-        <GlowRenderer /> {/* Back Layer */}
         <ProjectileTrails />
 
         <PlayerAvatar />

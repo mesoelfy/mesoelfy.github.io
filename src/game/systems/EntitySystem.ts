@@ -4,7 +4,6 @@ import { EntityFactory } from '../core/EntityFactory';
 import { SpatialGrid } from '../core/SpatialGrid';
 import { Tag } from '../core/ecs/types';
 
-// Components
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
@@ -13,7 +12,7 @@ import { IdentityComponent } from '../components/data/IdentityComponent';
 
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { GameEvents } from '../events/GameEvents';
-import { EnemyType } from '../config/Identifiers'; // CORRECTED IMPORT
+import { EnemyType } from '../config/Identifiers'; 
 import { GameEventBus } from '../events/GameEventBus';
 import { useGameStore } from '../store/useGameStore';
 import { ViewportHelper } from '../utils/ViewportHelper';
@@ -23,7 +22,7 @@ export class EntitySystem implements IGameSystem {
   private locator!: IServiceLocator;
 
   constructor() {
-    this.spatialGrid = new SpatialGrid(4); // 4x4 buckets
+    this.spatialGrid = new SpatialGrid(4);
   }
 
   setup(locator: IServiceLocator): void {
@@ -37,7 +36,6 @@ export class EntitySystem implements IGameSystem {
     const cursor = this.locator.getInputService().getCursor();
     const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
 
-    // AI Context
     const panels = useGameStore.getState().panels;
     const worldPanels = Object.values(panels)
       .filter(p => !p.isDestroyed)
@@ -51,18 +49,25 @@ export class EntitySystem implements IGameSystem {
       time,
       doDamageTick,
       spawnProjectile: (x, y, vx, vy) => EntityFactory.createBullet(x, y, vx, vy, true, 3.0),
-      triggerExplosion: (x, y, color) => EntityFactory.createParticle(x, y, color, 0, 0, 1.0), 
+      
+      triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 8, 15, 0.8),
+      
+      // FIX: Constant, concentrated sparks for drilling
+      spawnDrillSparks: (x, y, color) => {
+          // Spawn 1 particle per frame for constant stream
+          // Low speed (2.0), Short life (0.2)
+          this.spawnParticle(x, y, color, 1, 3.0, 0.25);
+      },
+      
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
       damagePanel: (id, amount) => {
         useGameStore.getState().damagePanel(id, amount);
       }
     };
 
-    // --- MAIN ECS LOOP ---
     for (const entity of Registry.getAll()) {
       if (!entity.active) continue;
 
-      // 1. LIFETIME
       const lifetime = entity.getComponent<LifetimeComponent>('Lifetime');
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -72,12 +77,10 @@ export class EntitySystem implements IGameSystem {
         }
       }
 
-      // 2. HEALTH CHECK
       const health = entity.getComponent<HealthComponent>('Health');
       if (health && health.isDead) {
           Registry.destroyEntity(entity.id);
           
-          // Emit Death Event
           const identity = entity.getComponent<IdentityComponent>('Identity');
           const transform = entity.getComponent<TransformComponent>('Transform');
           
@@ -94,19 +97,15 @@ export class EntitySystem implements IGameSystem {
           continue;
       }
 
-      // 3. MOTION -> TRANSFORM
       const transform = entity.getComponent<TransformComponent>('Transform');
       const motion = entity.getComponent<MotionComponent>('Motion');
       
       if (transform && motion) {
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
-        
-        // Update Spatial Grid
         this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
 
-      // 4. AI UPDATE
       if (entity.hasTag(Tag.ENEMY)) {
         const identity = entity.getComponent<IdentityComponent>('Identity');
         if (identity && transform && motion) {
@@ -122,8 +121,6 @@ export class EntitySystem implements IGameSystem {
     this.spatialGrid.clear();
   }
 
-  // --- PUBLIC API ---
-  
   public spawnEnemy(type: EnemyType) {
       const angle = Math.random() * Math.PI * 2;
       const radius = 25; 
@@ -138,21 +135,24 @@ export class EntitySystem implements IGameSystem {
       EntityFactory.createBullet(x, y, vx, vy, isEnemy, life);
   }
 
-  public spawnParticle(x: number, y: number, color: string, count: number) {
+  // FIX: Added speedScale and lifeScale parameters
+  public spawnParticle(x: number, y: number, color: string, count: number, speedScale = 15, lifeScale = 1.0) {
       for(let i=0; i<count; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 10 + 5;
+          const speed = Math.random() * speedScale; 
+          const life = (0.2 + Math.random() * 0.3) * lifeScale;
+          
           EntityFactory.createParticle(
             x, y, 
             color, 
             Math.cos(angle)*speed, Math.sin(angle)*speed, 
-            0.5 + Math.random()*0.5
+            life
           );
       }
   }
 
   private spawnExplosion(x: number, y: number, type: string) {
       const color = type === 'hunter' ? '#F7D277' : type === 'kamikaze' ? '#FF003C' : '#9E4EA5';
-      this.spawnParticle(x, y, color, 12);
+      this.spawnParticle(x, y, color, 12, 15, 1.0);
   }
 }
