@@ -67,3 +67,5 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating.
 
 - Game Over left most broken frame looks weird as broken - should retain full shape
+
+- Power UP - Heal panel faster

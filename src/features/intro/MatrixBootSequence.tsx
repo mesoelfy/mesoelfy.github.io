@@ -19,46 +19,6 @@ const ASCII_TITLE = `
                                                                  
 `;
 
-// --- ASCII COMPONENT ---
-const AsciiRenderer = () => {
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-
-      let animClass = '';
-      
-      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        animClass = 'animate-matrix-green text-elfy-green-dark';
-      } 
-      else if (['░', '▒', '▓'].includes(char)) {
-        animClass = 'animate-matrix-purple text-elfy-purple';
-      } 
-      else {
-        animClass = 'text-elfy-green-dark';
-      }
-
-      const delay = Math.random() * 2 + 's';
-
-      return (
-        <span 
-          key={i} 
-          className={animClass} 
-          style={{ animationDelay: delay }}
-        >
-          {char}
-        </span>
-      );
-    });
-  }, []);
-
-  return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
-      {renderedChars}
-    </div>
-  );
-};
-
 const BootHeader = () => (
   <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
     <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
@@ -80,26 +40,19 @@ const CoreHeader = () => (
   </div>
 );
 
-const LoadingDots = ({ isFrozen }: { isFrozen: boolean }) => {
-  const [dots, setDots] = useState("");
-  useEffect(() => {
-    if (isFrozen) {
-      setDots("..."); 
-      return;
-    }
-    const interval = setInterval(() => {
-      setDots(d => d.length >= 3 ? "" : d + ".");
-    }, 300);
-    return () => clearInterval(interval);
-  }, [isFrozen]);
-  return <span>{dots}</span>;
-}
+const AsciiRenderer = () => {
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+      const animClass = ['█','▀','▄'].includes(char) ? 'animate-matrix-green text-elfy-green-dark' : 'text-elfy-green-dark';
+      return <span key={i} className={animClass} style={{ animationDelay: Math.random() + 's' }}>{char}</span>;
+    });
+  }, []);
+  return <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">{renderedChars}</div>;
+};
 
-const TypedLog = ({ 
-  text, color, speed = 20, showDots = false, isActive = false, isPast = false 
-}: { 
-  text: string, color: string, speed?: number, showDots?: boolean, isActive: boolean, isPast: boolean
-}) => {
+const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
   const [isDoneTyping, setIsDoneTyping] = useState(false);
   
@@ -126,7 +79,7 @@ const TypedLog = ({
   return (
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
-      {isDoneTyping && showDots && <LoadingDots isFrozen={isPast} />}
+      {isDoneTyping && showDots && <span>{isPast ? '...' : (Math.floor(Date.now() / 300) % 4 === 0 ? '' : '...')}</span>}
       {isActive && <span className="ml-1 animate-cursor-blink text-elfy-green font-bold">_</span>}
     </div>
   );
@@ -143,6 +96,7 @@ const LOG_DATA = [
 ];
 
 export const MatrixBootSequence = ({ onComplete }: Props) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
   const [isBreaching, setIsBreaching] = useState(false);
@@ -154,6 +108,11 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
   const showButton = step >= 6;        
 
   useEffect(() => {
+    // FIX: Force focus to the container to capture keys immediately
+    if (containerRef.current) {
+        containerRef.current.focus();
+    }
+    
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
@@ -199,31 +158,35 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isBreaching) handleInitialize();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isBreaching]);
+  // Handle ESC via KeyDown
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleInitialize();
+    }
+  };
 
-  // AUDIO TRIGGER HERE
   const handleInitialize = async () => {
-    // 1. Init Audio
-    await AudioSystem.init();
-    // 2. Play Boot Sound
-    AudioSystem.playBootSequence();
-    
+    if (isBreaching) return;
     setIsBreaching(true);
+    
+    await AudioSystem.init();
+    AudioSystem.playBootSequence();
+    AudioSystem.startMusic();
+    
     setStep(6);
     setTimeout(onComplete, 800); 
   };
 
   return (
     <motion.div 
+      ref={containerRef}
+      tabIndex={0} // Make focusable
+      onKeyDown={handleKeyDown}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden outline-none cursor-pointer"
+      // Added onClick as backup to ensure AudioContext can start
+      onClick={() => { if(!isBreaching && containerRef.current) containerRef.current.focus(); }}
     >
       <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -271,7 +234,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
                     <button 
                       onClick={handleInitialize}
-                      onMouseEnter={() => AudioSystem.playHover()} // ADDED HOVER SOUND
+                      onMouseEnter={() => AudioSystem.playHover()}
                       className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
                     >
                       <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />

@@ -1,5 +1,5 @@
 export enum GameEvents {
-  // --- COMBAT EVENTS ---
+  // --- COMBAT ---
   PLAYER_FIRED = 'PLAYER_FIRED',
   PLAYER_HIT = 'PLAYER_HIT',
   ENEMY_SPAWNED = 'ENEMY_SPAWNED',
@@ -7,17 +7,18 @@ export enum GameEvents {
   ENEMY_DESTROYED = 'ENEMY_DESTROYED',
   PROJECTILE_CLASH = 'PROJECTILE_CLASH',
   
-  // --- PANEL EVENTS ---
+  // --- PANEL ---
   PANEL_DAMAGED = 'PANEL_DAMAGED',
   PANEL_HEALED = 'PANEL_HEALED',
   PANEL_DESTROYED = 'PANEL_DESTROYED',
   
-  // --- SYSTEM EVENTS ---
+  // --- SYSTEM ---
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
+  UPGRADE_SELECTED = 'UPGRADE_SELECTED', // NEW
   
-  // --- VISUAL EVENTS ---
+  // --- VISUAL ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
   SCENE_READY = 'SCENE_READY'
 }
@@ -37,6 +38,7 @@ export interface GameEventPayloads {
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
+  [GameEvents.UPGRADE_SELECTED]: { option: string }; // NEW
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;

@@ -9,21 +9,12 @@ const VIDEO_POOL = [
 ];
 
 const OfflineStatic = () => (
-  <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center border border-elfy-red/20">
-    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-10 bg-cover mix-blend-screen pointer-events-none" />
-    
-    {/* 
-      // PREVIOUS DESIGN: Icon + Text
-      <WifiOff className="text-elfy-red animate-pulse w-8 h-8 mb-2" />
-      <span className="text-[10px] font-mono text-elfy-red animate-pulse tracking-widest">SIGNAL_LOST</span>
-    */}
-  </div>
-);
-
-const LoadingPlaceholder = () => (
-  <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/20 bg-black flex flex-col items-center justify-center">
-    <Radio className="text-elfy-green-dim/50 animate-pulse w-6 h-6 mb-2" />
-    <span className="text-[10px] font-mono text-elfy-green-dim/50 animate-pulse">INITIALIZING_FEED...</span>
+  <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
+    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-20 bg-cover mix-blend-screen pointer-events-none" />
+    <div className="relative z-10 animate-pulse text-elfy-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
+        <WifiOff size={12} />
+        <span>SIGNAL_LOST</span>
+    </div>
   </div>
 );
 
@@ -41,14 +32,16 @@ const VideoSlot = ({
   const [videoId, setVideoId] = useState(initialVideo);
   const [isMasked, setIsMasked] = useState(true);
 
+  // When offline toggles off (repair), restore mask briefly
   useEffect(() => {
     if (!isOffline) {
         setIsMasked(true);
-        const unmaskTimer = setTimeout(() => setIsMasked(false), 5000);
+        const unmaskTimer = setTimeout(() => setIsMasked(false), 2000);
         return () => clearTimeout(unmaskTimer);
     }
   }, [isOffline]); 
 
+  // Auto-rotate videos logic
   useEffect(() => {
     if (isOffline) return;
     const duration = 30000 + (Math.random() * 15000);
@@ -57,73 +50,84 @@ const VideoSlot = ({
       setTimeout(() => {
         const next = getNextVideo();
         if (next) setVideoId(next);
-        setTimeout(() => setIsMasked(false), 5000);
+        setTimeout(() => setIsMasked(false), 2000);
       }, 1000); 
     }, duration);
     return () => clearTimeout(timer);
   }, [videoId, getNextVideo, isOffline]);
 
-  const content = isOffline ? (
-    <>
-      <OfflineStatic />
-      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
-         CAM_0{slotIndex + 1} [ERR]
-      </div>
-    </>
-  ) : (
-    <>
-      <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
-      
-      {!isMasked && (
-          <a 
-            href={`https://www.youtube.com/watch?v=${videoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 z-40 cursor-pointer flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
-          >
-            <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm hover:scale-105 transition-transform">
-              <span>OPEN_SOURCE</span>
-              <ExternalLink size={12} />
-            </div>
-          </a>
-      )}
-
-      <div 
-        className={`absolute inset-0 z-20 bg-black flex flex-col items-center justify-center transition-opacity duration-500 ${isMasked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      >
-        <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
-        <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
-      </div>
-
-      <div className="absolute inset-0 z-10">
-        <iframe 
-          width="100%" 
-          height="100%" 
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
-          title="HOLO_COMM" 
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          className="w-full h-full object-cover grayscale"
-        />
-      </div>
-
-      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
-         CAM_0{slotIndex + 1}
-      </div>
-    </>
-  );
-
   return (
     <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group/video hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
-      {content}
+      
+      {/* 
+         STRICT RENDER:
+         If offline, ONLY render Static.
+         If online, render Video + Overlays.
+      */}
+      {isOffline ? (
+        <>
+          <OfflineStatic />
+          <div className="absolute bottom-1 right-1 z-[70] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+             CAM_0{slotIndex + 1} [ERR]
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="absolute inset-0 z-10">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
+              title="HOLO_COMM" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              className="w-full h-full object-cover grayscale"
+            />
+          </div>
+
+          <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
+          
+          <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
+             {isMasked ? (
+                <div className="flex flex-col items-center">
+                    <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
+                </div>
+             ) : (
+                 <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm pointer-events-auto">
+                    <span>OPEN_SOURCE</span>
+                    <ExternalLink size={12} />
+                 </div>
+             )}
+          </div>
+          
+          {/* External Link Overlay */}
+          {!isMasked && (
+              <a 
+                href={`https://www.youtube.com/watch?v=${videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute inset-0 z-50 cursor-pointer"
+                aria-label="Watch on YouTube"
+              />
+          )}
+
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+             CAM_0{slotIndex + 1}
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
 export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
+  
+  // Access panel state
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
+  
   const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -146,13 +150,7 @@ export const HoloCommLog = () => {
     return selected || VIDEO_POOL[0];
   }, []);
 
-  if (!initialVideos) {
-    return (
-      <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
-        {[0, 1, 2].map((i) => <LoadingPlaceholder key={i} />)}
-      </div>
-    );
-  }
+  if (!initialVideos) return <div className="h-full bg-black" />;
 
   return (
     <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">

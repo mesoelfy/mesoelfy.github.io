@@ -1,36 +1,57 @@
-// src/game/systems/FXManager.ts
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../config/Identifiers';
+import { GameEvents } from '../events/GameEvents';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { TimeSystem } from './TimeSystem';
+import { CameraSystem } from './CameraSystem';
 
 class FXManagerController {
   private initialized = false;
   
-  public trauma = 0;
-
   public init() {
     if (this.initialized) return;
     
-    // --- EVENT WIRING ---
+    // --- HIT STOP & TRAUMA EVENTS ---
     
+    // 1. PANEL DESTROYED (Major Impact)
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.addTrauma(0.55);
+        this.addTrauma(0.7);
+        this.triggerHitStop(0.15); // 150ms Freeze
     });
     
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.addTrauma(0.35);
+    // 2. PLAYER HIT (Medium Impact)
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        const isBig = p.damage > 10;
+        this.addTrauma(isBig ? 0.6 : 0.3);
+        if (isBig) this.triggerHitStop(0.1); // 100ms Freeze on big hits
     });
+    
+    // 3. GAME OVER (Catastrophic)
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        this.addTrauma(1.0);
+        this.triggerHitStop(0.5); // 500ms Freeze
+    });
+
+    // 4. BOSS DEATH (Placeholder Comment)
+    // GameEventBus.subscribe(GameEvents.BOSS_DEATH, () => {
+    //    this.addTrauma(1.0);
+    //    this.triggerHitStop(1.0); // 1 Second dramatic pause
+    // });
     
     this.initialized = true;
   }
 
   public addTrauma(amount: number) {
-    this.trauma = Math.min(1.0, this.trauma + amount);
+    try {
+        const cam = ServiceLocator.getSystem<CameraSystem>('CameraSystem');
+        cam.addTrauma(amount);
+    } catch {}
   }
 
-  public decay(delta: number) {
-    if (this.trauma > 0) {
-      this.trauma = Math.max(0, this.trauma - (delta * 0.8));
-    }
+  private triggerHitStop(duration: number) {
+    try {
+        const time = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
+        time.freeze(duration);
+    } catch {}
   }
 }
 

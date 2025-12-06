@@ -4,12 +4,10 @@ import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 
 export class GameStateSystem implements IGameSystem {
-  // Player Stats
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
   
-  // Progression
   public score: number = 0;
   public xp: number = 0;
   public level: number = 1;
@@ -19,20 +17,27 @@ export class GameStateSystem implements IGameSystem {
     'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0
   };
 
-  // Meta
   public isGameOver: boolean = false;
 
   setup(locator: IServiceLocator): void {
     this.reset();
+    
+    // FIX: Listen for Upgrades
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        this.applyUpgrade(p.option);
+    });
+    
+    // FIX: Listen for Panel Death (Identity = Game Over)
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        if (p.id === 'identity') {
+            this.isGameOver = true;
+            GameEventBus.emit(GameEvents.GAME_OVER, { score: this.score });
+        }
+    });
   }
 
-  update(delta: number, time: number): void {
-    // Logic like passive regen or buff timers could go here
-  }
-
-  teardown(): void {
-    // Data persists in instance until explicit reset
-  }
+  update(delta: number, time: number): void {}
+  teardown(): void {}
 
   public reset() {
     this.playerHealth = this.maxPlayerHealth;
@@ -46,18 +51,23 @@ export class GameStateSystem implements IGameSystem {
     this.activeUpgrades = { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 };
   }
 
-  // --- ACTIONS ---
+  public applyUpgrade(option: string) {
+      if (this.upgradePoints > 0) {
+          this.upgradePoints--;
+          this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
+          
+          if (option === 'REPAIR_NANITES') {
+             // Instant effect: Heal 20%
+             this.healPlayer(this.maxPlayerHealth * 0.2);
+          }
+      }
+  }
 
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
-    
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        if (this.playerHealth <= 0) {
-           // Player just died, but game isn't over (Reboot phase)
-        }
     } else {
-        // Damage reboot progress if already down
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -77,16 +87,15 @@ export class GameStateSystem implements IGameSystem {
         this.level++;
         this.upgradePoints++;
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
+        
+        GameEventBus.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
     }
   }
 
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
-    
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
-    
     if (this.playerRebootProgress >= 100) {
-        // REVIVED!
         this.playerHealth = this.maxPlayerHealth / 2;
         this.playerRebootProgress = 0;
     }

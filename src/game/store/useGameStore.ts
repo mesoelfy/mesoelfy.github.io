@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UpgradeOption } from '../types/game.types'; // Assuming types exist or inferred
+import { UpgradeOption } from '../types/game.types';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
 
-// UI-Centric State
+const MAX_PANEL_HEALTH = 1000;
+
 interface GameStateUI {
   isPlaying: boolean;
-  
-  // Synced Data
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
@@ -18,83 +20,88 @@ interface GameStateUI {
   upgradePoints: number;
   systemIntegrity: number;
   
-  activeUpgrades: Record<UpgradeOption, number>;
+  availableUpgrades: UpgradeOption[];
+  activeUpgrades: Record<string, number>;
   panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
   
-  // Actions
   startGame: () => void;
   stopGame: () => void;
-  
-  // UI Registration
   registerPanel: (id: string, element: HTMLElement) => void;
   unregisterPanel: (id: string) => void;
-  
-  // SYNC ACTIONS (Called by UISyncSystem)
   syncGameState: (data: Partial<GameStateUI>) => void;
   syncPanels: (panelsData: Record<string, any>) => void;
-  
-  // Upgrades (Still UI driven for now)
   selectUpgrade: (option: UpgradeOption) => void;
+  addScore: (amount: number) => void;
+  addXp: (amount: number) => void;
+  damagePlayer: (amount: number) => void;
+  healPlayer: (amount: number) => void;
+  tickPlayerReboot: (amount: number) => void;
+  healPanel: (id: string, amount: number) => void;
+  decayReboot: (id: string, amount: number) => void;
+  damagePanel: (id: string, amount: number) => void;
+  resetGame: () => void;
+  recalculateIntegrity: () => void;
 }
 
 export const useGameStore = create<GameStateUI>()(
   persist(
     (set, get) => ({
       isPlaying: false,
-      
-      playerHealth: 100,
-      maxPlayerHealth: 100,
+      playerHealth: PLAYER_CONFIG.maxHealth,
+      maxPlayerHealth: PLAYER_CONFIG.maxHealth,
       playerRebootProgress: 0,
       score: 0,
       highScore: 0,
       xp: 0,
       level: 1,
-      xpToNextLevel: 100,
+      xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
       systemIntegrity: 100,
-      
+      availableUpgrades: [],
       activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
       panels: {},
 
-      startGame: () => set({ isPlaying: true }),
+      startGame: () => {
+        if (get().isPlaying) return;
+        set({ 
+            isPlaying: true, 
+            score: 0, 
+            threatLevel: 1,
+            playerHealth: PLAYER_CONFIG.maxHealth,
+            playerRebootProgress: 0,
+            xp: 0,
+            level: 1,
+            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+            availableUpgrades: [],
+            activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
+            panels: Object.fromEntries(
+                Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+            )
+        });
+      },
       
       stopGame: () => {
           const { score, highScore } = get();
-          set({ 
-              isPlaying: false,
-              highScore: Math.max(score, highScore)
-          });
+          set({ isPlaying: false, highScore: Math.max(score, highScore) });
       },
 
-      // --- SYNC INTERFACE ---
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
       syncPanels: (incomingPanels) => set((state) => {
-          // Merge incoming health/status with existing refs
           const merged = { ...state.panels };
           for (const key in incomingPanels) {
               if (merged[key]) {
                   merged[key].health = incomingPanels[key].health;
                   merged[key].isDestroyed = incomingPanels[key].isDestroyed;
               } else {
-                  // If sync system sends a panel we don't have (rare), add it
                   merged[key] = incomingPanels[key];
               }
           }
           return { panels: merged };
       }),
 
-      // --- UI REGISTRATION ---
       registerPanel: (id, element) => set((state) => ({
-          panels: { 
-              ...state.panels, 
-              [id]: { 
-                  id, 
-                  element, 
-                  health: 1000, 
-                  isDestroyed: false 
-              } 
-          }
+          panels: { ...state.panels, [id]: { id, element, health: 1000, isDestroyed: false } }
       })),
       
       unregisterPanel: (id) => set((state) => {
@@ -103,25 +110,24 @@ export const useGameStore = create<GameStateUI>()(
           return { panels: next };
       }),
 
-      selectUpgrade: (option) => set((state) => {
-          // Note: In Phase 3 we should move this logic to GameStateSystem too
-          // But since upgrades happen in UI (Modal usually), strictly speaking it's okay here
-          // as long as we tell the GameStateSystem about it.
-          // For now, let's keep it here, but we need to push it to GameStateSystem somehow?
-          // Actually, GameStateSystem holds the truth. 
-          // UI should send "Upgrade Event" to EventBus, GameSystem handles it.
-          // For this refactor step, we'll leave upgrades loosely coupled.
-          return {
-              activeUpgrades: {
-                  ...state.activeUpgrades,
-                  [option]: (state.activeUpgrades[option] || 0) + 1
-              },
-              upgradePoints: state.upgradePoints - 1
-          };
-      }),
+      selectUpgrade: (option) => {
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
+      },
+
+      // Fallback getters/setters for legacy consumers (will be overwritten by sync)
+      addScore: (amount) => set(state => ({ score: state.score + amount })),
+      addXp: (amount) => set(state => ({ xp: state.xp + amount })),
+      damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
+      healPlayer: (amount) => set(state => ({ playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) })),
+      tickPlayerReboot: (amount) => set(state => ({ playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) })),
+      healPanel: (id, amount) => {}, // Handled by ECS event
+      decayReboot: (id, amount) => {}, // Handled by ECS
+      damagePanel: (id, amount) => {}, // Handled by ECS
+      resetGame: () => {},
+      recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage',
+      name: 'mesoelfy-os-storage-v2', // VERSION BUMP
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )
