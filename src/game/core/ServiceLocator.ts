@@ -5,19 +5,16 @@ class ServiceLocatorImpl implements IServiceLocator {
   private audioService?: IAudioService;
   private inputService?: IInputService;
 
-  public registerSystem(id: string, system: IGameSystem): void {
-    this.systems.set(id, system);
-    
-    // Auto-register specific services if they match the interface
-    // (In a stricter app, we might do this explicitly)
-    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
-    // Audio service registration would happen here too
-  }
-
+  // Generic getter allows accessing any registered system type-safely
   public getSystem<T extends IGameSystem>(id: string): T {
     const sys = this.systems.get(id);
     if (!sys) throw new Error(`System not registered: ${id}`);
     return sys as T;
+  }
+
+  public registerSystem(id: string, system: IGameSystem): void {
+    this.systems.set(id, system);
+    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
   }
 
   public getAudioService(): IAudioService {
@@ -34,6 +31,11 @@ class ServiceLocatorImpl implements IServiceLocator {
     this.systems.clear();
     this.audioService = undefined;
     this.inputService = undefined;
+  }
+
+  // Helper for debug/tools
+  public get registeredSystemIds(): string[] {
+    return Array.from(this.systems.keys());
   }
 }
 

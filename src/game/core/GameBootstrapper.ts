@@ -10,12 +10,14 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { CameraSystem } from '../systems/CameraSystem'; // NEW
+import { CameraSystem } from '../systems/CameraSystem';
+import { PanelRegistry } from '../systems/PanelRegistrySystem'; // Singleton Import
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
   const engine = new GameEngineCore();
+  
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
   const entitySys = new EntitySystem();
@@ -23,7 +25,10 @@ export const GameBootstrapper = () => {
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
-  const cameraSys = new CameraSystem(); // NEW
+  const cameraSys = new CameraSystem();
+  
+  // Reuse the persistent PanelRegistry singleton
+  const panelSys = PanelRegistry; 
 
   // Register
   ServiceLocator.registerSystem('TimeSystem', timeSys);
@@ -33,17 +38,19 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerSystem('WaveSystem', waveSys);
   ServiceLocator.registerSystem('PlayerSystem', playerSys);
   ServiceLocator.registerSystem('InteractionSystem', interactionSys);
-  ServiceLocator.registerSystem('CameraSystem', cameraSys); // NEW
+  ServiceLocator.registerSystem('CameraSystem', cameraSys);
+  ServiceLocator.registerSystem('PanelRegistrySystem', panelSys);
   
   // Engine Loop
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
+  engine.registerSystem(panelSys);
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
   engine.registerSystem(playerSys); 
   engine.registerSystem(entitySys); 
   engine.registerSystem(collisionSys); 
-  engine.registerSystem(cameraSys); // NEW (Order doesn't matter much for camera logic)
+  engine.registerSystem(cameraSys); 
   
   // Setup
   timeSys.setup(ServiceLocator);
@@ -53,7 +60,8 @@ export const GameBootstrapper = () => {
   waveSys.setup(ServiceLocator);
   playerSys.setup(ServiceLocator);
   interactionSys.setup(ServiceLocator);
-  cameraSys.setup(ServiceLocator); // NEW
+  cameraSys.setup(ServiceLocator);
+  panelSys.setup(ServiceLocator);
   
   engine.setup(ServiceLocator);
 

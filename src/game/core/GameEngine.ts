@@ -2,14 +2,15 @@ import { IGameSystem, IServiceLocator } from './interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
-import { Registry } from './ecs/EntityRegistry'; // Import Registry
+import { Registry } from './ecs/EntityRegistry';
 import { Tag } from './ecs/types';
+import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; // NEW IMPORT
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   private locator!: IServiceLocator;
 
-  // FIX: Bridge these getters to the Registry to prevent crashes
+  // Bridge getters to Registry
   public get enemies() { return Registry.getByTag(Tag.ENEMY); }
   public get bullets() { return Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY)); }
   public get enemyBullets() { return Registry.getByTag(Tag.BULLET).filter(b => b.hasTag(Tag.ENEMY)); }
@@ -52,6 +53,16 @@ export class GameEngineCore implements IGameSystem {
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
+    // 1. Update the Math Helper
     ViewportHelper.update(vpW, vpH, screenW, screenH);
+    
+    // 2. CRITICAL FIX: Tell the Registry to recalculate all DOM positions 
+    // now that we know the real screen size.
+    try {
+        const panelSys = this.locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
+        panelSys.refreshAll();
+    } catch (e) {
+        // System might not be ready on first frame, ignore.
+    }
   }
 }

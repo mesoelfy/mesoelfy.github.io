@@ -3,7 +3,7 @@ import { EntitySystem } from './EntitySystem';
 import { useGameStore } from '../store/useGameStore';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { PanelRegistrySystem } from './PanelRegistrySystem'; // NEW
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -14,10 +14,12 @@ export class InteractionSystem implements IGameSystem {
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
   private entitySystem!: EntitySystem;
+  private panelSys!: PanelRegistrySystem; // NEW
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.panelSys = locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
   }
 
   update(delta: number, time: number): void {
@@ -52,7 +54,8 @@ export class InteractionSystem implements IGameSystem {
     const identityPanel = store.panels['identity'];
     if (!identityPanel) return;
 
-    const rect = ViewportHelper.getPanelWorldRect(identityPanel);
+    // FIX: Read from Cache
+    const rect = this.panelSys.getPanelRect(identityPanel.id);
     if (!rect) return;
 
     const padding = 2.0; 
@@ -64,12 +67,9 @@ export class InteractionSystem implements IGameSystem {
 
     if (isHovering) {
         this.repairState = 'REBOOTING';
-        
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             store.tickPlayerReboot(2.5);
             this.lastRepairTime = time;
-            
-            // FIX: Spawn 4 particles for more impact
             if (Math.random() > 0.3) {
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
             }
@@ -88,7 +88,9 @@ export class InteractionSystem implements IGameSystem {
     for (const pKey in panels) {
       const p = panels[pKey];
       if (!p.isDestroyed && p.health >= 1000) continue;
-      const r = ViewportHelper.getPanelWorldRect(p);
+      
+      // FIX: Read from Cache
+      const r = this.panelSys.getPanelRect(p.id);
       if (!r) continue;
 
       if (
@@ -113,8 +115,6 @@ export class InteractionSystem implements IGameSystem {
             if (!p.isDestroyed) {
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
             }
-
-            // FIX: Spawn 4 particles for more visual feedback
             if (Math.random() > 0.3) {
                 const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);

@@ -1,37 +1,45 @@
+export interface WorldRect {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export class ViewportHelperCore {
-  public viewport = { width: 1, height: 1 };
-  public screenSize = { width: 1, height: 1 };
+  public viewport = { width: 1, height: 1 }; // R3F Viewport units
+  public screenSize = { width: 1, height: 1 }; // Window Pixels
 
   public update(vpW: number, vpH: number, screenW: number, screenH: number) {
     this.viewport = { width: vpW, height: vpH };
     this.screenSize = { width: screenW, height: screenH };
   }
 
-  public getPanelWorldRect(panel: { id: string, element: HTMLElement }) {
-    if (!panel.element) return null;
-    
-    const rect = panel.element.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return null;
-
-    // Use stored screenSize (or fallback to window if needed, but stored is safer for R3F context)
-    const sw = this.screenSize.width || window.innerWidth;
-    const sh = this.screenSize.height || window.innerHeight;
+  // Pure Math: Converts Pixel Rect -> World Rect
+  public domToWorld(id: string, domRect: DOMRect): WorldRect {
+    const sw = this.screenSize.width || 1;
+    const sh = this.screenSize.height || 1;
     
     const vw = this.viewport.width;
     const vh = this.viewport.height;
     
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const cx = domRect.left + domRect.width / 2;
+    const cy = domRect.top + domRect.height / 2;
     
-    // Screen (DOM) -> World (Three.js Orthographic)
+    // Screen (Pixels) -> World (Orthographic Units)
+    // 0,0 is center of screen in World
     const wx = (cx / sw) * vw - (vw / 2);
     const wy = -((cy / sh) * vh - (vh / 2));
     
-    const wWidth = (rect.width / sw) * vw;
-    const wHeight = (rect.height / sh) * vh;
+    const wWidth = (domRect.width / sw) * vw;
+    const wHeight = (domRect.height / sh) * vh;
 
     return {
-      id: panel.id,
+      id: id,
       x: wx, y: wy,
       width: wWidth, height: wHeight,
       left: wx - wWidth / 2, right: wx + wWidth / 2,
