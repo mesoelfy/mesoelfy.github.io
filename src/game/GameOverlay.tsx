@@ -8,11 +8,12 @@ import { BulletRenderer } from './components/BulletRenderer';
 import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
 import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
-// Removed EffectsLayer due to React 19 incompatibility
+import { ScreenShaker } from './components/ScreenShaker';
+import { GlowRenderer } from './components/GlowRenderer'; // NEW
+import { ProjectileTrails } from './components/ProjectileTrails'; // NEW
 
 export const GameOverlay = () => {
   return (
-    // Z-Index 60: Above Panels (10), Below BreachOverlay (70) & Modals (100)
     <div className="fixed inset-0 z-[60] w-full h-full pointer-events-none overflow-hidden">
       <Canvas
         orthographic
@@ -27,9 +28,14 @@ export const GameOverlay = () => {
         eventPrefix="client"
       >
         <GameDirector />
+        <ScreenShaker />
 
+        {/* BACKGROUND LAYER */}
+        <GlowRenderer />
+        <ProjectileTrails />
+
+        {/* ENTITY LAYER */}
         <PlayerAvatar />
-        
         <BulletRenderer />
         <HunterChargeRenderer /> 
         <EnemyBulletRenderer />

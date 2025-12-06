@@ -2,11 +2,13 @@ import { EntityID, Tag } from './types';
 import { Component } from './Component';
 
 export class Entity {
-  public readonly id: EntityID;
+  // ID is now mutable because pooled entities get new IDs when reused
+  public id: EntityID; 
   public readonly tags = new Set<Tag>();
   public active = true;
 
-  private components = new Map<string, Component>();
+  // We expose components map for the Registry to clear it efficiently
+  public components = new Map<string, Component>();
 
   constructor(id: EntityID) {
     this.id = id;
@@ -38,5 +40,13 @@ export class Entity {
 
   public hasTag(tag: Tag): boolean {
     return this.tags.has(tag);
+  }
+
+  // NEW: Reset state for pooling
+  public reset(newId: EntityID) {
+      this.id = newId;
+      this.active = true;
+      this.tags.clear();
+      this.components.clear();
   }
 }

@@ -97,3 +97,7 @@ we can skin the munchers/enemies differently as they get stronger with cool indi
 - purple regen bar needs to slowly decay when user is not charging it
 
 sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
+
+- each upgrade needs its own bespoke icon that looks like what it does
+
+- there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back

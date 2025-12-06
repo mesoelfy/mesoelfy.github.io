@@ -1,39 +1,35 @@
 import { useEffect, useRef } from 'react';
-import { FXManager } from '@/game/systems/FXManager';
+import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { CameraSystem } from '@/game/systems/CameraSystem';
 
 export const GlobalShakeManager = () => {
   const requestRef = useRef<number>();
   
   useEffect(() => {
-    let lastTime = performance.now();
+    const animate = () => {
+      // 1. Get Shake from the authoritative Game System
+      let x = 0, y = 0, r = 0;
+      try {
+          const sys = ServiceLocator.getSystem<CameraSystem>('CameraSystem');
+          const shake = sys.getShake();
+          x = shake.x;
+          y = shake.y;
+          r = shake.r;
+      } catch {
+          // System not ready
+      }
 
-    const animate = (time: number) => {
-      const delta = (time - lastTime) / 1000;
-      lastTime = time;
-
-      // 1. Process Decay Logic
-      FXManager.decay(delta);
-      const trauma = FXManager.trauma;
-
-      // 2. Apply to Global Root
+      // 2. Apply to HTML Root
       const root = document.getElementById('global-app-root');
-      
       if (root) {
-        if (trauma > 0) {
-          const shake = trauma * trauma;
-          const maxAngle = 1.0; // Degrees
-          const maxOffset = 10; // Pixels (Increased for visible HTML shake)
-          
-          const x = maxOffset * shake * (Math.random() * 2 - 1);
-          const y = maxOffset * shake * (Math.random() * 2 - 1);
-          const rot = maxAngle * shake * (Math.random() * 2 - 1);
-          
-          root.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+        if (Math.abs(x) > 0.01 || Math.abs(y) > 0.01) {
+          // Convert rotation radians to degrees for CSS
+          const deg = r * (180 / Math.PI);
+          // Scale pixels up slightly so HTML moves perceptibly (since World Units are small)
+          const pixelScale = 20; 
+          root.style.transform = `translate(${x * pixelScale}px, ${y * pixelScale}px) rotate(${deg}deg)`;
         } else {
-          // Optimization: Clear transform when idle
-          if (root.style.transform !== '') {
-             root.style.transform = '';
-          }
+          root.style.transform = '';
         }
       }
 

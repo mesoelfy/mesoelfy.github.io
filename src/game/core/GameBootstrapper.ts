@@ -1,6 +1,6 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
-import { EntityFactory } from './EntityFactory'; // NEW IMPORT
+import { EntityFactory } from './EntityFactory';
 
 // Systems
 import { TimeSystem } from '../systems/TimeSystem';
@@ -10,12 +10,11 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
+import { CameraSystem } from '../systems/CameraSystem'; // NEW
 
 export const GameBootstrapper = () => {
-  // 1. Reset Locator
   ServiceLocator.reset();
 
-  // 2. Instantiate Systems
   const engine = new GameEngineCore();
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
@@ -24,8 +23,9 @@ export const GameBootstrapper = () => {
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
+  const cameraSys = new CameraSystem(); // NEW
 
-  // 3. Register to Locator
+  // Register
   ServiceLocator.registerSystem('TimeSystem', timeSys);
   ServiceLocator.registerSystem('InputSystem', inputSys);
   ServiceLocator.registerSystem('EntitySystem', entitySys);
@@ -33,8 +33,9 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerSystem('WaveSystem', waveSys);
   ServiceLocator.registerSystem('PlayerSystem', playerSys);
   ServiceLocator.registerSystem('InteractionSystem', interactionSys);
+  ServiceLocator.registerSystem('CameraSystem', cameraSys); // NEW
   
-  // 4. Register to Engine Loop
+  // Engine Loop
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(interactionSys); 
@@ -42,8 +43,9 @@ export const GameBootstrapper = () => {
   engine.registerSystem(playerSys); 
   engine.registerSystem(entitySys); 
   engine.registerSystem(collisionSys); 
+  engine.registerSystem(cameraSys); // NEW (Order doesn't matter much for camera logic)
   
-  // 5. Setup All
+  // Setup
   timeSys.setup(ServiceLocator);
   inputSys.setup(ServiceLocator);
   entitySys.setup(ServiceLocator);
@@ -51,10 +53,10 @@ export const GameBootstrapper = () => {
   waveSys.setup(ServiceLocator);
   playerSys.setup(ServiceLocator);
   interactionSys.setup(ServiceLocator);
+  cameraSys.setup(ServiceLocator); // NEW
   
   engine.setup(ServiceLocator);
 
-  // 6. SPAWN PLAYER (CRITICAL FIX)
   EntityFactory.createPlayer();
 
   return engine;

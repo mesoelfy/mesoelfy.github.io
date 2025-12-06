@@ -1,17 +1,35 @@
 import { EntityID, createEntityID, Tag } from './types';
 import { Entity } from './Entity';
+import { ObjectPool } from '../ObjectPool';
 
 class EntityRegistryCore {
+  // Active entities (The "Live" List)
   private entities = new Map<EntityID, Entity>();
   private nextId = 0;
   
-  // Optimization: Cached lists for common queries
   private tagCache = new Map<Tag, Set<EntityID>>();
 
+  // The Pool (The "Recycle Bin")
+  private entityPool: ObjectPool<Entity>;
+
+  constructor() {
+      this.entityPool = new ObjectPool<Entity>(
+          () => new Entity(createEntityID(0)), // Factory (ID set later)
+          (e) => {}, // Reset (Handled manually in createEntity)
+          1000 // Initial Capacity
+      );
+  }
+
   public createEntity(): Entity {
-    const id = createEntityID(++this.nextId);
-    const entity = new Entity(id);
-    this.entities.set(id, entity);
+    const newId = createEntityID(++this.nextId);
+    
+    // Acquire from pool
+    const entity = this.entityPool.acquire();
+    
+    // Explicitly reset with new ID
+    entity.reset(newId);
+    
+    this.entities.set(newId, entity);
     return entity;
   }
 
@@ -19,11 +37,11 @@ class EntityRegistryCore {
     const entity = this.entities.get(id);
     if (entity) {
         entity.active = false;
-        // We defer actual removal to end of frame or cleanup method
-        // But for this simple engine, we can remove from map immediately
-        // provided we don't mutate while iterating (handled by Systems later)
         this.removeFromCache(entity);
         this.entities.delete(id);
+        
+        // Return to pool
+        this.entityPool.release(entity);
     }
   }
 
@@ -36,13 +54,13 @@ class EntityRegistryCore {
   }
 
   public getByTag(tag: Tag): Entity[] {
-    // If not cached, build cache
     if (!this.tagCache.has(tag)) {
         this.rebuildTagCache(tag);
     }
-    
     const ids = this.tagCache.get(tag)!;
     const results: Entity[] = [];
+    // We iterate the ID set, but we must check if entity still exists in main map
+    // (In case cache is stale within a frame, though we try to keep it sync)
     for (const id of ids) {
         const e = this.entities.get(id);
         if (e && e.active) results.push(e);
@@ -74,9 +92,22 @@ class EntityRegistryCore {
   }
 
   public clear() {
+      // When clearing level, move everything to pool
+      for (const entity of this.entities.values()) {
+          this.entityPool.release(entity);
+      }
       this.entities.clear();
       this.tagCache.clear();
       this.nextId = 0;
+  }
+  
+  // Debug method
+  public getStats() {
+      return {
+          active: this.entities.size,
+          pooled: this.entityPool.availableSize,
+          totalAllocated: this.entityPool.totalSize
+      };
   }
 }
 

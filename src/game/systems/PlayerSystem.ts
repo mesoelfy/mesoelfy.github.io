@@ -5,7 +5,6 @@ import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { useGameStore } from '../store/useGameStore';
 
-// ECS Imports
 import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
@@ -27,11 +26,21 @@ export class PlayerSystem implements IGameSystem {
     const store = useGameStore.getState();
     if (!store.isPlaying) return;
 
-    // 1. UPDATE PLAYER STATE
+    // 1. GET PLAYER ENTITY
     const players = Registry.getByTag(Tag.PLAYER);
     const playerEntity = players[0]; 
     if (!playerEntity) return;
 
+    // 2. SYNC POSITION (CRITICAL FIX)
+    // Move the physics entity to match the mouse cursor
+    const cursor = this.locator.getInputService().getCursor();
+    const transform = playerEntity.getComponent<TransformComponent>('Transform');
+    if (transform) {
+        transform.x = cursor.x;
+        transform.y = cursor.y;
+    }
+
+    // 3. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
         if (store.playerHealth <= 0) {
@@ -39,7 +48,6 @@ export class PlayerSystem implements IGameSystem {
         } else {
             try {
                 const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
-                // If repairing, we mark state as REBOOTING for visuals (Spin/Color)
                 if (interact && interact.repairState !== 'IDLE') {
                     stateComp.current = 'REBOOTING';
                 } else {
@@ -51,9 +59,7 @@ export class PlayerSystem implements IGameSystem {
         }
     }
 
-    // 2. COMBAT LOGIC
-    // FIX: Allow shooting in REBOOTING state (repairing panels), but NOT when DEAD.
-    // If playerHealth <= 0, state is DEAD, so this check fails gracefully.
+    // 4. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = store.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
@@ -101,11 +107,11 @@ export class PlayerSystem implements IGameSystem {
     for (const e of enemies) {
       if (!e.active) continue;
       
-      const transform = e.getComponent<TransformComponent>('Transform');
-      if (!transform) continue;
+      const t = e.getComponent<TransformComponent>('Transform');
+      if (!t) continue;
 
-      const dx = transform.x - cursor.x;
-      const dy = transform.y - cursor.y;
+      const dx = t.x - cursor.x;
+      const dy = t.y - cursor.y;
       const dist = dx*dx + dy*dy; 
 
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
