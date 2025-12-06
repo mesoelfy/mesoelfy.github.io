@@ -5,49 +5,89 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-import { createGlowTexture } from '../utils/TextureGen';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
-const MAX_GLOWS = 1000; // Reduced count since bullets are gone
-const tempObj = new THREE.Object3D();
-const tempColor = new THREE.Color();
+const MAX_GLOWS = 1000;
 
 export const GlowRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const texture = useMemo(() => createGlowTexture(), []);
   const geometry = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
+
+  const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: `
+      // Auto-injected instanceColor
+      varying vec2 vUv;
+      varying vec3 vColor;
+      
+      void main() {
+        vUv = uv;
+        #ifdef USE_INSTANCING_COLOR
+          vColor = instanceColor;
+        #else
+          vColor = vec3(1.0);
+        #endif
+        
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec2 vUv;
+      varying vec3 vColor;
+      
+      void main() {
+        float dist = distance(vUv, vec2(0.5));
+        
+        // Soft Glow Logic: 1.0 center -> 0.0 edge
+        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+        alpha = pow(alpha, 2.0); // Exponential falloff for "Gas" look
+        
+        vec3 finalColor = vColor;
+        
+        if (alpha < 0.01) discard;
+        // Strong Opacity (0.5) for clear visibility
+        gl_FragColor = vec4(finalColor, alpha * 0.5); 
+      }
+    `,
+    uniforms: {},
+    vertexColors: true, 
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  }), []);
 
   useFrame(() => {
     if (!meshRef.current) return;
+    const tempObj = new THREE.Object3D();
+    const tempColor = new THREE.Color();
 
     let count = 0;
-
-    // ONLY ENEMIES (Bullets handle their own glow now)
     const enemies = Registry.getByTag(Tag.ENEMY);
+
     for (const e of enemies) {
       if (count >= MAX_GLOWS) break;
-      // Skip bullets (they share ENEMY tag sometimes in factory, but have BULLET tag too)
-      if (e.hasTag(Tag.BULLET)) continue;
+      if (e.hasTag(Tag.BULLET)) continue; // Bullets glow themselves
 
       const t = e.getComponent<TransformComponent>('Transform');
       const id = e.getComponent<IdentityComponent>('Identity');
       if (!t || !id) continue;
 
+      // Position: Behind enemy
       tempObj.position.set(t.x, t.y, -0.5);
+      tempObj.rotation.set(0, 0, 0); // Billboards don't rotate
       
       let scale = 2.5;
       let color = '#FFF';
 
       if (id.variant === EnemyTypes.MUNCHER) {
           color = GAME_THEME.enemy.muncher;
-          scale = 3.0;
+          scale = 3.5;
       } else if (id.variant === EnemyTypes.KAMIKAZE) {
           color = GAME_THEME.enemy.kamikaze;
-          scale = 3.5;
+          scale = 4.0;
       } else if (id.variant === EnemyTypes.HUNTER) {
           color = GAME_THEME.enemy.hunter;
-          scale = 4.0;
+          scale = 5.0;
       }
 
       tempObj.scale.set(scale, scale, 1);
@@ -65,15 +105,7 @@ export const GlowRenderer = () => {
   });
 
   return (
-    <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_GLOWS]}>
-      <meshBasicMaterial 
-        map={texture}
-        transparent={true}
-        opacity={0.10} 
-        blending={THREE.AdditiveBlending}
-        depthWrite={false} 
-        color="#FFF"
-      />
+    <instancedMesh ref={meshRef} args={[geometry, shaderMaterial, MAX_GLOWS]}>
     </instancedMesh>
   );
 };

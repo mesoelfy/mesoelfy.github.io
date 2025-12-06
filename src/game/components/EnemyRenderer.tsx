@@ -5,7 +5,7 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-import { StateComponent } from '../components/data/StateComponent'; // NEW
+import { StateComponent } from '../components/data/StateComponent';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 
@@ -22,7 +22,7 @@ export const EnemyRenderer = () => {
   const muncherGeo = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
   const kamikazeGeo = useMemo(() => new THREE.IcosahedronGeometry(0.4, 0), []);
   const hunterGeo = useMemo(() => new THREE.ConeGeometry(0.3, 0.8, 3), []);
-  
+
   useFrame((state) => {
     if (!muncherRef.current || !kamikazeRef.current || !hunterRef.current) return;
 
@@ -64,7 +64,6 @@ export const EnemyRenderer = () => {
       else if (type === EnemyTypes.HUNTER) {
         if (hCount >= MAX_ENEMIES) continue;
         
-        // FIX: Read from State Component
         const stateComp = e.getComponent<StateComponent>('State');
         const isCharging = stateComp && stateComp.current === 'CHARGE';
         
@@ -95,6 +94,7 @@ export const EnemyRenderer = () => {
 
   return (
     <group>
+        {/* Simple Basic Material for crisp, glitch-free geometry */}
         <instancedMesh ref={muncherRef} args={[muncherGeo, undefined, MAX_ENEMIES]}>
             <meshBasicMaterial color="white" />
         </instancedMesh>

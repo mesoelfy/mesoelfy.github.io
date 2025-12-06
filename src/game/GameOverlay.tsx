@@ -9,8 +9,8 @@ import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
 import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
-import { GlowRenderer } from './components/GlowRenderer'; // NEW
-import { ProjectileTrails } from './components/ProjectileTrails'; // NEW
+import { ProjectileTrails } from './components/ProjectileTrails'; 
+import { GlowRenderer } from './components/GlowRenderer'; // RESTORED
 
 export const GameOverlay = () => {
   return (
@@ -30,11 +30,9 @@ export const GameOverlay = () => {
         <GameDirector />
         <ScreenShaker />
 
-        {/* BACKGROUND LAYER */}
-        <GlowRenderer />
+        <GlowRenderer /> {/* Back Layer */}
         <ProjectileTrails />
 
-        {/* ENTITY LAYER */}
         <PlayerAvatar />
         <BulletRenderer />
         <HunterChargeRenderer /> 
