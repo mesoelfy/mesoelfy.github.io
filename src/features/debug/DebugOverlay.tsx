@@ -4,7 +4,8 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { Registry } from '@/game/core/ecs/EntityRegistry'; 
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, LogOut, Eraser, Bug, Clock, AlertTriangle } from 'lucide-react';
+import { PanelRegistry } from '@/game/systems/PanelRegistrySystem'; 
+import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, Bug, Eraser, Clock, Trash2, Sparkles, Ghost } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -28,27 +29,19 @@ export const DebugOverlay = () => {
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  // Derived State
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
-  // KEY LISTENER
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESCAPE: Standard Toggle (Context Aware)
       if (e.key === 'Escape') {
         if (isDebugMinimized) {
             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
             toggleDebugMenu();
         }
-      }
-      
-      // TILDE (~): GOD MODE ACTIVATION
-      else if (e.key === '`' || e.key === '~') {
+      } else if (e.key === '`' || e.key === '~') {
         if (!isDebugOpen && !isDebugMinimized) {
-            // If closed -> Open AND Enable God Suite
             toggleDebugMenu();
-            // Only enable if not already fully enabled
             if (!useStore.getState().debugFlags.godMode) {
                 setDebugFlag('godMode', true);
                 setDebugFlag('panelGodMode', true);
@@ -114,15 +107,46 @@ export const DebugOverlay = () => {
   };
 
   const handleForceCrash = () => {
+    if (bootState === 'standby') {
+        setIntroDone(true);
+        setBootState('active');
+    }
+    
+    // 1. Update Game Store (Score/State)
     useGameStore.setState({ systemIntegrity: 0 });
+    
+    // 2. Update Registry Logic (Destroy all Panels instantly)
+    PanelRegistry.destroyAll();
+
+    // 3. Emit Event
+    GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
     stopGame();
-    toggleDebugMenu();
+    
+    if (isDebugOpen) toggleDebugMenu();
   };
 
   const handleReboot = () => {
-    useGameStore.setState({ systemIntegrity: 100, playerHealth: 100 });
-    healPlayer(1000);
-    toggleDebugMenu();
+    useGameStore.setState({ playerHealth: 100, playerRebootProgress: 0 });
+    const panels = PanelRegistry.getAllPanels();
+    panels.forEach(p => {
+        PanelRegistry.healPanel(p.id, 1000); 
+    });
+    if (isDebugOpen) toggleDebugMenu();
+  };
+
+  const handleZenModeWrapper = () => {
+      if (bootState === 'standby') {
+          setIntroDone(true);
+          setBootState('active');
+      }
+      activateZenMode();
+      if (isDebugOpen) toggleDebugMenu();
+  };
+
+  const handleSystemFormat = () => {
+      resetApplication();
+      // FIX: Do NOT toggleDebugMenu here. resetApplication() resets the store state,
+      // setting isDebugOpen: false. Toggling it again would re-open it.
   };
 
   const toggleGodSuite = () => {
@@ -154,34 +178,20 @@ export const DebugOverlay = () => {
 
   if (!isDebugOpen && !isDebugMinimized) return null;
 
-  // --- SPECIAL MODE: PAUSE MENU (If in Sandbox) ---
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono">
             <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
                 <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
-                
                 <div className="flex flex-col gap-4">
-                    <button 
-                        onClick={toggleDebugMenu}
-                        className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors"
-                    >
-                        RESUME
-                    </button>
-                    
-                    <button 
-                        onClick={exitSimulation}
-                        className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors"
-                    >
-                        EXIT_TO_BOOT
-                    </button>
+                    <button onClick={toggleDebugMenu} className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
+                    <button onClick={exitSimulation} className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
                 </div>
             </div>
         </div>
       );
   }
 
-  // --- MINI MODE ---
   if (isDebugMinimized) {
       return (
         <div className="fixed top-24 left-4 z-[9999] flex flex-col gap-2 font-mono text-[10px]">
@@ -200,7 +210,6 @@ export const DebugOverlay = () => {
       );
   }
 
-  // --- FULL MENU ---
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
       
@@ -221,7 +230,6 @@ export const DebugOverlay = () => {
         {/* BODY */}
         <div className="flex flex-1 min-h-0">
           
-          {/* SIDEBAR */}
           <div className="w-48 border-r border-elfy-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
               <button
@@ -238,36 +246,51 @@ export const DebugOverlay = () => {
             ))}
           </div>
 
-          {/* CONTENT */}
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
             
             {activeTab === 'OVERRIDES' && (
               <div className="space-y-6">
                 
-                {/* SCENE JUMP */}
+                {/* SCENE CONTROL */}
                 <div className="space-y-3">
-                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_JUMP</h3>
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-elfy-green/50 hover:bg-elfy-green hover:text-black transition-all text-xs font-bold">
                       <Play size={14} /> SKIP_BOOT
                     </button>
+                    
+                    <button 
+                      onClick={handleZenModeWrapper} 
+                      className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"
+                    >
+                      <div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" />
+                      <div className="relative z-10 flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 font-bold tracking-widest text-xs group-hover:text-white transition-colors">
+                          <Sparkles size={14} className="text-yellow-300" /> ZEN_MODE
+                      </div>
+                    </button>
+                    <button onClick={handleSystemFormat} className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold">
+                      <Trash2 size={14} /> SYSTEM_FORMAT
+                    </button>
+                  </div>
+                </div>
+
+                {/* STATE OVERRIDES */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
+                  <div className="grid grid-cols-2 gap-3">
                     <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black transition-all text-xs font-bold">
                       <Skull size={14} /> FORCE_CRASH
                     </button>
                     <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-elfy-purple/50 text-elfy-purple hover:bg-elfy-purple hover:text-black transition-all text-xs font-bold">
                       <RefreshCw size={14} /> REBOOT_CORE
                     </button>
-                    <button onClick={() => { activateZenMode(); toggleDebugMenu(); }} className="flex items-center justify-center gap-2 p-3 border border-elfy-yellow/50 text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all text-xs font-bold">
-                      <Zap size={14} /> ZEN_MODE
-                    </button>
                   </div>
                 </div>
 
-                {/* GOD TOGGLES */}
+                {/* CHEATS */}
                 <div className="space-y-3">
-                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_TOGGLES</h3>
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
                   
-                  {/* FIX: Smart Toggle Button */}
                   <button 
                     onClick={toggleGodSuite}
                     className={clsx(
@@ -278,14 +301,14 @@ export const DebugOverlay = () => {
                     )}
                   >
                     <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
-                    {areAllGodModesOn ? "DISABLE_GOD_SUITE" : "ENABLE_GOD_SUITE"}
+                    {areAllGodModesOn ? "DISABLE_ALL" : "ENABLE_MAX_POWER"}
                   </button>
 
                   <label 
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
                   >
-                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> GHOST_MODE (Player Invincible)</span>
+                    <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
                     <input 
                       type="checkbox" 
                       checked={debugFlags.godMode} 
@@ -298,7 +321,7 @@ export const DebugOverlay = () => {
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
                   >
-                    <span className="text-xs font-bold flex items-center gap-2"><Square size={14} /> FORTRESS_MODE (Panels Invincible)</span>
+                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
                     <input 
                       type="checkbox" 
                       checked={debugFlags.panelGodMode} 
@@ -324,6 +347,7 @@ export const DebugOverlay = () => {
               </div>
             )}
 
+            {/* (SANDBOX, STATS, CONSOLE tabs remain unchanged) */}
             {activeTab === 'SANDBOX' && (
               <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
                   <Box size={64} className="text-elfy-green animate-pulse" />
@@ -370,7 +394,6 @@ export const DebugOverlay = () => {
                   </div>
                 </div>
                 
-                {/* RESTORED: MINI MODE BUTTON */}
                 <div className="mt-8 flex justify-center">
                     <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-elfy-green hover:text-white transition-colors border border-elfy-green/50 px-4 py-2 hover:bg-elfy-green/10">
                         <LayoutTemplate size={14} /> SWITCH TO MINI_MODE

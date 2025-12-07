@@ -2,7 +2,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useStore } from '@/core/store/useStore'; // Global Store for Debug Flags
+import { useStore } from '@/core/store/useStore';
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -12,14 +12,10 @@ interface PanelState {
 }
 
 class PanelRegistrySystemClass implements IGameSystem {
-  // Spatial Data
   private panelRects = new Map<string, WorldRect>();
   private observedElements = new Map<string, HTMLElement>();
-  
-  // Game Logic Data
   private panelStates = new Map<string, PanelState>();
 
-  // Derived Metric
   public systemIntegrity: number = 100;
 
   setup(locator: IServiceLocator): void {
@@ -31,8 +27,7 @@ class PanelRegistrySystemClass implements IGameSystem {
     // Passive
   }
 
-  teardown(): void {
-  }
+  teardown(): void {}
 
   public resetLogic() {
     for (const id of this.observedElements.keys()) {
@@ -44,7 +39,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   // --- ACTIONS ---
 
   public damagePanel(id: string, amount: number) {
-    // CHECK: Panel God Mode
     if (useStore.getState().debugFlags.panelGodMode) return;
 
     const state = this.panelStates.get(id);
@@ -83,6 +77,16 @@ class PanelRegistrySystemClass implements IGameSystem {
      state.health = Math.max(0, state.health - amount);
   }
 
+  // NEW: Forcefully destroy everything for FORCE_CRASH
+  public destroyAll() {
+      for (const [id, state] of this.panelStates) {
+          state.health = 0;
+          state.isDestroyed = true;
+          GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+      }
+      this.calculateIntegrity();
+  }
+
   private calculateIntegrity() {
     let current = 0;
     let max = 0;
@@ -92,8 +96,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     }
     this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
   }
-
-  // --- REGISTRY API ---
 
   public register(id: string, element: HTMLElement) {
     this.observedElements.set(id, element);
@@ -121,8 +123,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     const ids = Array.from(this.observedElements.keys());
     for (const id of ids) this.refreshSingle(id);
   }
-
-  // --- GETTERS ---
 
   public getPanelRect(id: string): WorldRect | undefined {
     return this.panelRects.get(id);
