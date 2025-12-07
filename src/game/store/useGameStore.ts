@@ -9,6 +9,7 @@ const MAX_PANEL_HEALTH = 1000;
 
 interface GameStateUI {
   isPlaying: boolean;
+  isZenMode: boolean; // NEW
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
@@ -20,7 +21,7 @@ interface GameStateUI {
   upgradePoints: number;
   systemIntegrity: number;
   
-  interactionTarget: string | null; // NEW: Tracks which panel player is hovering
+  interactionTarget: string | null;
 
   availableUpgrades: UpgradeOption[];
   activeUpgrades: Record<string, number>;
@@ -28,6 +29,8 @@ interface GameStateUI {
   
   startGame: () => void;
   stopGame: () => void;
+  activateZenMode: () => void; // NEW
+  
   registerPanel: (id: string, element: HTMLElement) => void;
   unregisterPanel: (id: string) => void;
   syncGameState: (data: Partial<GameStateUI>) => void;
@@ -49,6 +52,7 @@ export const useGameStore = create<GameStateUI>()(
   persist(
     (set, get) => ({
       isPlaying: false,
+      isZenMode: false,
       playerHealth: PLAYER_CONFIG.maxHealth,
       maxPlayerHealth: PLAYER_CONFIG.maxHealth,
       playerRebootProgress: 0,
@@ -59,7 +63,7 @@ export const useGameStore = create<GameStateUI>()(
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
       systemIntegrity: 100,
-      interactionTarget: null, // Default
+      interactionTarget: null,
       
       availableUpgrades: [],
       activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
@@ -69,6 +73,7 @@ export const useGameStore = create<GameStateUI>()(
         if (get().isPlaying) return;
         set({ 
             isPlaying: true, 
+            isZenMode: false,
             score: 0, 
             threatLevel: 1,
             playerHealth: PLAYER_CONFIG.maxHealth,
@@ -87,6 +92,11 @@ export const useGameStore = create<GameStateUI>()(
       stopGame: () => {
           const { score, highScore } = get();
           set({ isPlaying: false, highScore: Math.max(score, highScore) });
+      },
+
+      activateZenMode: () => {
+          set({ isZenMode: true });
+          GameEventBus.emit(GameEvents.ZEN_MODE_ENABLED, null);
       },
 
       syncGameState: (data) => set((state) => ({ ...state, ...data })),

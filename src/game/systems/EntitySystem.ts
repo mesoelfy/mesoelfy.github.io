@@ -12,7 +12,7 @@ import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyType } from '../config/Identifiers'; 
 import { GameEventBus } from '../events/GameEventBus';
-import { PanelRegistry } from './PanelRegistrySystem'; // NEW
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class EntitySystem implements IGameSystem {
   public spatialGrid: SpatialGrid;
@@ -26,6 +26,12 @@ export class EntitySystem implements IGameSystem {
     this.locator = locator;
     Registry.clear();
     this.spatialGrid.clear();
+    
+    // NEW: Listen for Zen Mode to wipe the board
+    GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        Registry.clear();
+        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); // Big visual wipe effect
+    });
   }
 
   update(delta: number, time: number): void {
@@ -33,7 +39,6 @@ export class EntitySystem implements IGameSystem {
     const cursor = this.locator.getInputService().getCursor();
     const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
 
-    // FIX: Get Panel Data from Registry
     const worldPanels = PanelRegistry.getAllPanels().filter(p => !p.isDestroyed);
 
     const aiContext: AIContext = {
@@ -46,8 +51,6 @@ export class EntitySystem implements IGameSystem {
       triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 8, 15, 0.8),
       spawnDrillSparks: (x, y, color) => this.spawnParticle(x, y, color, 1, 3.0, 0.25),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
-      
-      // FIX: Damage via Registry
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 

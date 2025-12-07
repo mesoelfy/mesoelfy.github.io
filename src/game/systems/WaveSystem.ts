@@ -1,10 +1,9 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
-import { EnemyTypes } from '../config/Identifiers';
+import { useGameStore } from '../store/useGameStore';
 
 // --- AGGRESSIVE WAVE CONFIG ---
 const WAVE_TIMELINE = [
-  // TIME (s) |  TYPE     | COUNT | INTERVAL
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
   { at: 5,     type: 'kamikaze', count: 2, interval: 1.0 },
@@ -35,6 +34,9 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // FIX: Stop spawning if Zen Mode is active
+    if (useGameStore.getState().isZenMode) return;
+
     this.waveTime += delta;
     this.checkTimeline();
     this.processQueue(time);

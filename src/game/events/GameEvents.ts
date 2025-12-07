@@ -16,7 +16,8 @@ export enum GameEvents {
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
-  UPGRADE_SELECTED = 'UPGRADE_SELECTED', // NEW
+  UPGRADE_SELECTED = 'UPGRADE_SELECTED',
+  ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED', // NEW
   
   // --- VISUAL ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
@@ -38,7 +39,8 @@ export interface GameEventPayloads {
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
-  [GameEvents.UPGRADE_SELECTED]: { option: string }; // NEW
+  [GameEvents.UPGRADE_SELECTED]: { option: string };
+  [GameEvents.ZEN_MODE_ENABLED]: null; // NEW
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;

@@ -18,9 +18,10 @@ import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
+import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -28,13 +29,12 @@ export default function Home() {
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
-  const isGameOver = systemIntegrity <= 0;
+  const isZenMode = useGameStore(s => s.isZenMode);
   
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
-  const [showScene, setShowScene] = useState(false); // Controls Grid Visibility
+  const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
-    // Reveal the 3D Scene immediately when breach animation starts
     setShowScene(true);
   };
 
@@ -62,7 +62,6 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        {/* FIX: Scene starts invisible (opacity-0) to prevent Grid FOUC over black screen */}
         <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
         {bootState === 'active' && <GameOverlay />}
@@ -71,6 +70,8 @@ export default function Home() {
         <FeedModal />
         <GalleryModal />
         <ContactModal />
+        
+        <ZenBomb />
 
         {bootState === 'standby' && (
           <MatrixBootSequence 
@@ -83,63 +84,69 @@ export default function Home() {
           
           <Header />
 
-          <motion.div 
-            className={clsx(
-                "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
-            )}
-            initial="hidden"
-            animate={bootState === 'active' ? "visible" : "hidden"}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { 
-                opacity: 1, 
-                transition: { 
-                  staggerChildren: 0.3,
-                  delayChildren: 0.2 
-                } 
-              }
-            }}
-          >
-            <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-              
-              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                <IdentityHUD />
-              </GlassPanel>
+          {/* FIX: Layout Container (flex-1) is permanent. Content vanishes inside. */}
+          <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
+            <AnimatePresence>
+              {!isZenMode && (
+                <motion.div 
+                  className={clsx(
+                      "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                      "overflow-y-auto md:overflow-hidden"
+                  )}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 0.5 } }}
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: { 
+                      opacity: 1, 
+                      transition: { 
+                        staggerChildren: 0.3,
+                        delayChildren: 0.2 
+                      } 
+                    }
+                  }}
+                >
+                  <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                    <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                      <IdentityHUD />
+                    </GlassPanel>
 
-              <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
-                 <SocialRow />
-              </GlassPanel>
-            </div>
-
-            <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-              <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                {/* FIX: Centered Dashed Box that hugs content */}
-                <div className="w-full h-full flex items-center justify-center p-4">
-                  <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                    <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
-                    <button 
-                      onClick={() => openModal('feed')} 
-                      onMouseEnter={playHover}
-                      className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
-                    >
-                      [ ACCESS TERMINAL ]
-                    </button>
+                    <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                       <SocialRow />
+                    </GlassPanel>
                   </div>
-                </div>
-              </GlassPanel>
 
-              <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                   <LiveArtGrid />
-                </GlassPanel>
+                  <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                    <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                      <div className="w-full h-full flex items-center justify-center p-4">
+                        <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                          <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                          <button 
+                            onClick={() => openModal('feed')} 
+                            onMouseEnter={playHover}
+                            className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                          >
+                            [ ACCESS TERMINAL ]
+                          </button>
+                        </div>
+                      </div>
+                    </GlassPanel>
 
-                <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                   <HoloCommLog />
-                </GlassPanel>
-              </div>
-            </div>
-          </motion.div>
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+                      <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                         <LiveArtGrid />
+                      </GlassPanel>
+
+                      <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                         <HoloCommLog />
+                      </GlassPanel>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           <Footer />
         </div>
