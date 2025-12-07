@@ -4,6 +4,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface Props {
   onComplete: () => void;
+  onBreachStart: () => void; // New Prop
 }
 
 const ASCII_TITLE = `
@@ -95,7 +96,7 @@ const LOG_DATA = [
   { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20, hasDots: false },
 ];
 
-export const MatrixBootSequence = ({ onComplete }: Props) => {
+export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
@@ -137,13 +138,28 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     const matrixEffect = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0F0';
+      
       ctx.font = '14px "Courier New"';
+      
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
+
+        const isPurple = Math.random() > 0.85;
+        
+        ctx.fillStyle = isPurple ? '#9E4EA5' : '#0F0';
+        
+        if (isPurple) {
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#9E4EA5';
+        } else {
+            ctx.shadowBlur = 0;
+        }
+
         ctx.fillText(text, x, y);
+        ctx.shadowBlur = 0;
+
         const speed = isBreaching ? 100 : 20; 
         if (y > canvas.height + Math.random() * 10000) ypos[ind] = 0;
         else ypos[ind] = y + speed;
@@ -153,7 +169,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  // Handle ESC via Window Listener (No focus required)
+  // Handle ESC via Window Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -168,7 +184,9 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     if (isBreaching) return;
     setIsBreaching(true);
     
-    // SYNCHRONOUSLY call Audio Init to capture User Gesture
+    // Call the Scene Trigger immediately
+    onBreachStart();
+
     AudioSystem.init();
     AudioSystem.playBootSequence();
     AudioSystem.startMusic();

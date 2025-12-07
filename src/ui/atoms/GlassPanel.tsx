@@ -197,7 +197,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const prevDestroyed = useReactRef(isDestroyed);
 
   useReactEffect(() => {
-    // Only show reboot overlay if we revived AND the game isn't over
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
         const timer = setTimeout(() => setShowReboot(false), 2000); 
@@ -219,7 +218,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
   
-  // FIX: Purple circle turns RED filled on Game Over
   let purpleCircleClass = "border border-elfy-purple-dim";
   if (isGameOver) purpleCircleClass = "bg-elfy-red animate-pulse shadow-[0_0_8px_#ff003c]";
   else if (isDestroyed) purpleCircleClass = "bg-elfy-purple";
@@ -254,7 +252,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
             </div>
           </div>
           
-          {/* HIDE HEALTH BAR ON GAME OVER */}
           {gameId && !isGameOver && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
@@ -269,10 +266,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* FIX: Content remains mounted to preserve layout size, but is completely invisible via CSS */}
-        <div className={isGameOver ? "invisible" : "visible"}>
+        {/* FIX: ADDED h-full flex flex-col to enable IdentityHUD vertical alignment */}
+        <div className={clsx("h-full flex flex-col", isGameOver ? "invisible" : "visible")}>
             {children}
-            {/* Render Breach Overlay here so it inherits visibility hidden */}
             {isDestroyed && (
                 <BreachOverlay 
                     progress={healthPercent} 
@@ -286,7 +282,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
             {showReboot && <RebootOverlay key="reboot" />}
         </AnimatePresence>
         
-        {/* FIX: Exclusive Game Over overlay */}
         {isGameOver && (
             <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
                 <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />

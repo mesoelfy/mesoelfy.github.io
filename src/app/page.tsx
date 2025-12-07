@@ -31,6 +31,12 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
+  const [showScene, setShowScene] = useState(false); // Controls Grid Visibility
+
+  const handleBreachStart = () => {
+    // Reveal the 3D Scene immediately when breach animation starts
+    setShowScene(true);
+  };
 
   const handleBootComplete = () => {
     setTimeout(() => {
@@ -49,14 +55,15 @@ export default function Home() {
   const playHover = () => AudioSystem.playHover();
 
   return (
-    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none">
+    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
       <GlobalShakeManager />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        <SceneCanvas className="opacity-100 blur-0" />
+        {/* FIX: Scene starts invisible (opacity-0) to prevent Grid FOUC over black screen */}
+        <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
         {bootState === 'active' && <GameOverlay />}
 
@@ -66,7 +73,10 @@ export default function Home() {
         <ContactModal />
 
         {bootState === 'standby' && (
-          <MatrixBootSequence onComplete={handleBootComplete} />
+          <MatrixBootSequence 
+             onComplete={handleBootComplete} 
+             onBreachStart={handleBreachStart} 
+          />
         )}
 
         <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -76,7 +86,6 @@ export default function Home() {
           <motion.div 
             className={clsx(
                 "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                // FIX: When Game Over, allow overflow so falling panels aren't clipped by the grid container
                 isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
             )}
             initial="hidden"
@@ -105,15 +114,18 @@ export default function Home() {
 
             <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
               <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
-                  <p className="animate-pulse mb-4">&gt; ESTABLISHING UPLINK...</p>
-                  <button 
-                    onClick={() => openModal('feed')} 
-                    onMouseEnter={playHover}
-                    className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg"
-                  >
-                    [ ACCESS TERMINAL ]
-                  </button>
+                {/* FIX: Centered Dashed Box that hugs content */}
+                <div className="w-full h-full flex items-center justify-center p-4">
+                  <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                    <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                    <button 
+                      onClick={() => openModal('feed')} 
+                      onMouseEnter={playHover}
+                      className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                    >
+                      [ ACCESS TERMINAL ]
+                    </button>
+                  </div>
                 </div>
               </GlassPanel>
 

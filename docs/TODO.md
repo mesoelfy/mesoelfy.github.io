@@ -77,3 +77,12 @@ MESOELFY ASCII not animating properly
 What are screenshake best practices?
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
+
+- 
+- a sound should happen when clicking on an upgrade
+
+When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
+
+Music should get distorted, glitchy, and reverbed when Game Over state
+
+make some of the streaming matrix rain characters red at the moment  UNSAFE CONNECTION DETECTED is triggered.

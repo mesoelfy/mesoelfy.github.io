@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec  6 18:33:38 CST 2025
+Generated on: Sat Dec  6 21:23:40 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -39,11 +39,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   ├── assets
 │   │   ├── audio
 │   │   │   └── bg_music_placeholder.mp3
-│   │   ├── images
-│   │   │   └── social-card.jpg
-│   │   ├── models
-│   │   ├── textures
-│   │   └── videos
+│   │   └── images
+│   │       └── social-card.jpg
 │   └── favicon.ico
 ├── scripts
 │   └── create_source_context.command
@@ -54,11 +51,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   ├── core
 │   │   ├── audio
 │   │   │   └── AudioSystem.ts
-│   │   ├── hooks
-│   │   ├── math
-│   │   ├── store
-│   │   │   └── useStore.ts
-│   │   └── utils
+│   │   └── store
+│   │       └── useStore.ts
 │   ├── data
 │   │   ├── feed.json
 │   │   ├── gallery.json
@@ -156,10 +150,9 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── effects
 │   │   │   ├── FireTransition.tsx
 │   │   │   └── MatrixGrid.tsx
-│   │   ├── props
-│   │   │   ├── MiniCrystalCanvas.tsx
-│   │   │   └── SoulCrystal.tsx
-│   │   └── shaders
+│   │   └── props
+│   │       ├── MiniCrystalCanvas.tsx
+│   │       └── SoulCrystal.tsx
 │   ├── styles
 │   │   └── globals.css
 │   └── ui
@@ -179,7 +172,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-53 directories, 118 files
+46 directories, 118 files
 
 =====================================
 FILE: ./next.config.js
@@ -297,6 +290,14 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - Game Over left most broken frame looks weird as broken - should retain full shape
 
 - Power UP - Heal panel faster
+
+- should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
+
+MESOELFY ASCII not animating properly
+
+What are screenshake best practices?
+
+- the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -610,9 +611,11 @@ module.exports = {
 =====================================
 FILE: ./src/ui/molecules/SocialRow.tsx
 =====================================
-import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon } from 'lucide-react';
+import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import socials from '@/data/socials.json';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useGameStore } from '@/game/store/useGameStore';
+import { clsx } from 'clsx';
 
 const IconMap: Record<string, any> = {
   twitter: Twitter,
@@ -624,26 +627,50 @@ const IconMap: Record<string, any> = {
 };
 
 export const SocialRow = () => {
+  const panelState = useGameStore((state) => state.panels['social']);
+  const isDestroyed = panelState ? panelState.isDestroyed : false;
+
   return (
-    <div className="grid grid-cols-3 gap-2 h-full content-center py-2">
-      {socials.map((social) => {
-        const Icon = IconMap[social.icon] || Crosshair;
+    <div className={clsx(
+        "grid grid-cols-3 gap-2 h-full content-center py-2 relative",
+        // If destroyed, we don't fully hide it, we let it sit under the overlay
+        // but we disable interactions so it feels "broken"
+        isDestroyed ? "pointer-events-none" : "" 
+    )}>
+      {socials.map((social, idx) => {
+        const Icon = isDestroyed ? AlertTriangle : (IconMap[social.icon] || Crosshair);
+        
+        // Random "Corruption" logic for visuals
+        const isGlitch = isDestroyed && (idx % 2 === 0);
+        
         return (
           <a
             key={social.name}
-            href={social.url}
+            href={isDestroyed ? undefined : social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
-            onClick={() => AudioSystem.playClick()}      // ADDED SFX
-            className="group flex flex-col items-center justify-center p-2 border border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-green/10 hover:border-elfy-green transition-all duration-300"
+            onMouseEnter={() => !isDestroyed && AudioSystem.playHover()} 
+            onClick={() => !isDestroyed && AudioSystem.playClick()}
+            className={clsx(
+                "group flex flex-col items-center justify-center p-2 border transition-all duration-300",
+                isDestroyed 
+                    ? "border-elfy-red/20 bg-elfy-red/5 grayscale" 
+                    : "border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-green/10 hover:border-elfy-green"
+            )}
           >
             <Icon 
-              className="w-5 h-5 mb-1 text-elfy-green-dim group-hover:text-elfy-green group-hover:scale-110 transition-transform" 
-              style={{ filter: 'drop-shadow(0 0 2px rgba(120,246,84,0.3))' }}
+              className={clsx(
+                  "w-5 h-5 mb-1 transition-transform",
+                  isDestroyed ? "text-elfy-red animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-green group-hover:scale-110",
+                  isGlitch ? "translate-x-1" : ""
+              )}
+              style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(120,246,84,0.3))' } : {}}
             />
-            <span className="text-[10px] uppercase text-elfy-green-dim/60 group-hover:text-elfy-green tracking-wider font-mono">
-              {social.name.split(' ')[0]}
+            <span className={clsx(
+                "text-[10px] uppercase tracking-wider font-mono",
+                isDestroyed ? "text-elfy-red/60" : "text-elfy-green-dim/60 group-hover:text-elfy-green"
+            )}>
+              {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name.split(' ')[0]}
             </span>
           </a>
         );
@@ -667,7 +694,7 @@ const VIDEO_POOL = [
 ];
 
 const OfflineStatic = () => (
-  <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
+  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
     <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-40 bg-cover mix-blend-screen pointer-events-none" />
     <div className="relative z-10 animate-pulse text-elfy-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
         <WifiOff size={12} />
@@ -686,47 +713,81 @@ const VideoSlot = ({
   getNextVideo: () => string
 }) => {
   const [videoId, setVideoId] = useState(initialVideo);
-  const [isMasked, setIsMasked] = useState(true);
+  const [isMasked, setIsMasked] = useState(true); // Start masked (Uplink animation)
 
-  // DIRECT STORE ACCESS
+  // Game Store Access
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
+  
+  // Track previous offline state to detect "Revival" edge
+  const prevOffline = useRef(isOffline);
 
+  // --- REVIVAL & MASK LOGIC ---
   useEffect(() => {
-    if (isOffline) {
-        // RESET MASK INSTANTLY so it's ready for the reveal when power comes back
-        setIsMasked(true);
-    } else {
-        // If coming online (and masked is true), start the reveal sequence
-        const unmaskTimer = setTimeout(() => setIsMasked(false), 2000);
-        return () => clearTimeout(unmaskTimer);
+    // 1. If we just died (became offline)
+    if (isOffline && !prevOffline.current) {
+        setIsMasked(true); // Prepare mask for next time
     }
-  }, [isOffline]); 
+    
+    // 2. If we just revived (became online)
+    if (!isOffline && prevOffline.current) {
+        setVideoId(getNextVideo()); // Swap cartridge IMMEDIATELY
+        setIsMasked(true); // Ensure mask is up
+        
+        // Start reveal timer
+        const t = setTimeout(() => setIsMasked(false), 2000);
+        
+        prevOffline.current = isOffline;
+        return () => clearTimeout(t);
+    }
 
-  // Auto-rotate videos logic
+    // 3. Initial Mount (if online)
+    if (!isOffline && isMasked) {
+         const t = setTimeout(() => setIsMasked(false), 2000);
+         return () => clearTimeout(t);
+    }
+    
+    prevOffline.current = isOffline;
+  }, [isOffline, getNextVideo]);
+
+  // --- AUTO-ROTATION LOGIC ---
   useEffect(() => {
-    if (isOffline) return;
+    if (isOffline) return; // Stop timer if offline
+
+    // Random duration for this video clip
     const duration = 30000 + (Math.random() * 15000);
-    const timer = setTimeout(() => {
+    
+    const rotateTimer = setTimeout(() => {
+      // Sequence: Mask -> Swap -> Unmask
       setIsMasked(true);
-      setTimeout(() => {
-        const next = getNextVideo();
-        if (next) setVideoId(next);
-        setTimeout(() => setIsMasked(false), 2000);
-      }, 1000); 
+      
+      const swapTimer = setTimeout(() => {
+        setVideoId(getNextVideo());
+        
+        const unmaskTimer = setTimeout(() => {
+            setIsMasked(false);
+        }, 2000);
+        
+        return () => clearTimeout(unmaskTimer);
+      }, 1000); // Wait 1s while masked before swapping (simulating load)
+      
+      return () => clearTimeout(swapTimer);
     }, duration);
-    return () => clearTimeout(timer);
-  }, [videoId, getNextVideo, isOffline]);
+
+    return () => clearTimeout(rotateTimer);
+  }, [videoId, isOffline, getNextVideo]);
 
   return (
     <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group/video hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
       
-      {isOffline && <OfflineStatic />}
-
-      {!isOffline && (
+      {/* Use Ternary to strictly unmount iframe when offline */}
+      {isOffline ? (
+          <OfflineStatic />
+      ) : (
         <>
           <div className="absolute inset-0 z-10">
             <iframe 
+              key={videoId} // Force DOM recreation on video swap
               width="100%" 
               height="100%" 
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
@@ -739,6 +800,7 @@ const VideoSlot = ({
 
           <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
           
+          {/* MASK / UPLINK OVERLAY */}
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
@@ -753,6 +815,7 @@ const VideoSlot = ({
              )}
           </div>
           
+          {/* CLICKABLE COVER */}
           {!isMasked && (
               <a 
                 href={`https://www.youtube.com/watch?v=${videoId}`}
@@ -768,9 +831,11 @@ const VideoSlot = ({
           </div>
         </>
       )}
-
+      
       {isOffline && (
-          <div className="absolute bottom-1 right-1 z-[110] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+          // FIX: Reduced Z-Index from 110 to 60. 
+          // This puts it BENEATH the BreachOverlay (Z-70), ensuring it gets blurred.
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
              CAM_0{slotIndex + 1} [ERR]
           </div>
       )}
@@ -782,6 +847,7 @@ export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
   const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
 
+  // Initialize videos once on mount
   useEffect(() => {
     deckRef.current = [...VIDEO_POOL];
     const init: string[] = [];
@@ -824,14 +890,19 @@ FILE: ./src/ui/molecules/LiveArtGrid.tsx
 =====================================
 import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 
 const randomId = () => Math.floor(Math.random() * 899) + 100;
 
 export const LiveArtGrid = () => {
   const { openModal } = useStore();
   const [slots, setSlots] = useState<number[]>([]);
+  
+  const panelState = useGameStore((state) => state.panels['art']);
+  const isDestroyed = panelState ? panelState.isDestroyed : false;
 
   useEffect(() => {
     setSlots(Array.from({ length: 12 }, randomId));
@@ -849,31 +920,51 @@ export const LiveArtGrid = () => {
   }, []);
 
   return (
-    <div className="grid grid-cols-3 gap-1 w-full p-2 content-start">
+    <div className={clsx(
+        "grid grid-cols-3 gap-1 w-full p-2 content-start transition-opacity duration-500",
+        isDestroyed ? "pointer-events-none opacity-80" : ""
+    )}>
       <AnimatePresence mode='popLayout'>
-        {slots.map((id, index) => (
-          <motion.button
-            key={`${index}-${id}`}
-            layout
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+        {slots.map((id, index) => {
+            const isCorrupt = isDestroyed;
             
-            onClick={() => openModal('gallery')}
-            onMouseEnter={() => AudioSystem.playHover()} // ADDED SFX
-            
-            className="w-full aspect-square relative bg-black/50 border border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)] group overflow-hidden flex items-center justify-center rounded-[1px]"
-          >
-            <div className="absolute inset-0 bg-elfy-green/5 group-hover:bg-elfy-green/10 transition-colors" />
-            
-            <span className="relative z-10 text-[9px] font-mono text-elfy-green-dim group-hover:text-elfy-yellow transition-colors">
-              IMG_{id}
-            </span>
+            return (
+              <motion.button
+                key={`${index}-${id}`}
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                
+                onClick={() => !isDestroyed && openModal('gallery')}
+                onMouseEnter={() => !isDestroyed && AudioSystem.playHover()}
+                
+                className={clsx(
+                    "w-full aspect-square relative border group overflow-hidden flex items-center justify-center rounded-[1px] transition-colors",
+                    isCorrupt 
+                        ? "bg-black border-elfy-red/20" 
+                        : "bg-black/50 border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)]"
+                )}
+              >
+                <div className={clsx(
+                    "absolute inset-0 transition-colors",
+                    isCorrupt ? "bg-elfy-red/5" : "bg-elfy-green/5 group-hover:bg-elfy-green/10"
+                )} />
+                
+                <span className={clsx(
+                    "relative z-10 text-[9px] font-mono transition-colors",
+                    isCorrupt ? "text-elfy-red/50 animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-yellow"
+                )}>
+                  {isCorrupt ? (Math.random() > 0.5 ? "0x00" : "ERR") : `IMG_${id}`}
+                </span>
 
-            <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-elfy-green-dim/50 group-hover:border-elfy-yellow" />
-          </motion.button>
-        ))}
+                {!isCorrupt && (
+                    <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-elfy-green-dim/50 group-hover:border-elfy-yellow" />
+                )}
+              </motion.button>
+            );
+        })}
       </AnimatePresence>
     </div>
   );
@@ -1221,13 +1312,13 @@ const ScrollingRow = ({ direction, text }: { direction: number, text: string }) 
   );
 };
 
-const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boolean }) => {
+const BreachOverlay = ({ progress, isVideo, showInteractive }: { progress: number, isVideo: boolean, showInteractive: boolean }) => {
   return (
     <div className={clsx(
-        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm",
-        // FIX: If it's the video panel, make background fully transparent so static is visible.
-        isVideo ? "bg-transparent" : "bg-black/90"
+        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
+        isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
     )}>
+        {/* Background Scrolling Text */}
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
                className="flex flex-col gap-8"
@@ -1248,50 +1339,53 @@ const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boole
             </motion.div>
         </div>
 
-        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
-            <div className="relative">
-                <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
-                    <motion.div 
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-red drop-shadow-md"
-                    >
-                        <ChevronUp size={64} strokeWidth={3} />
-                    </motion.div>
-                </div>
+        {/* Interactive "Reboot" UI */}
+        {showInteractive && (
+          <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
+              <div className="relative">
+                  <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
+                      <motion.div 
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          className="text-elfy-red drop-shadow-md"
+                      >
+                          <ChevronUp size={64} strokeWidth={3} />
+                      </motion.div>
+                  </div>
 
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
-                    <motion.div 
-                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
-                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
-                    >
-                        <ChevronUp size={64} strokeWidth={4} />
-                    </motion.div>
-                </div>
-                
-                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
-            </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
+                      <motion.div 
+                          animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                          className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                      >
+                          <ChevronUp size={64} strokeWidth={4} />
+                      </motion.div>
+                  </div>
+                  
+                  <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
+              </div>
 
-            <div className="flex flex-col items-center text-center">
-                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
-                    HOLD TO REBOOT
-                </span>
-                
-                <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
-                    <motion.div 
-                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ type: "tween", duration: 0.1 }}
-                    />
-                </div>
-                
-                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
-                    INTEGRITY: {Math.floor(progress)}%
-                </div>
-            </div>
-        </div>
+              <div className="flex flex-col items-center text-center">
+                  <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
+                      HOLD TO REBOOT
+                  </span>
+                  
+                  <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
+                      <motion.div 
+                          className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ type: "tween", duration: 0.1 }}
+                      />
+                  </div>
+                  
+                  <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
+                      INTEGRITY: {Math.floor(progress)}%
+                  </div>
+              </div>
+          </div>
+        )}
     </div>
   );
 };
@@ -1341,13 +1435,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const prevDestroyed = useReactRef(isDestroyed);
 
   useReactEffect(() => {
-    if (prevDestroyed.current && !isDestroyed) {
+    // Only show reboot overlay if we revived AND the game isn't over
+    if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
         const timer = setTimeout(() => setShowReboot(false), 2000); 
         return () => clearTimeout(timer);
     }
     prevDestroyed.current = isDestroyed;
-  }, [isDestroyed]);
+  }, [isDestroyed, isGameOver]);
 
   let borderColor = "border-elfy-green-dim/30";
   if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
@@ -1361,7 +1456,11 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
-  const purpleCircleClass = isDestroyed ? "bg-elfy-purple" : "border border-elfy-purple-dim";
+  
+  // FIX: Purple circle turns RED filled on Game Over
+  let purpleCircleClass = "border border-elfy-purple-dim";
+  if (isGameOver) purpleCircleClass = "bg-elfy-red animate-pulse shadow-[0_0_8px_#ff003c]";
+  else if (isDestroyed) purpleCircleClass = "bg-elfy-purple";
 
   return (
     <motion.div 
@@ -1392,7 +1491,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
               <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
             </div>
           </div>
-          {gameId && (
+          
+          {/* HIDE HEALTH BAR ON GAME OVER */}
+          {gameId && !isGameOver && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
                 className={clsx("h-full transition-colors duration-200", barColor)}
@@ -1406,22 +1507,30 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {isDestroyed && !isGameOver && (
-            <BreachOverlay progress={healthPercent} isVideo={gameId === 'video'} />
-        )}
+        {/* FIX: Content remains mounted to preserve layout size, but is completely invisible via CSS */}
+        <div className={isGameOver ? "invisible" : "visible"}>
+            {children}
+            {/* Render Breach Overlay here so it inherits visibility hidden */}
+            {isDestroyed && (
+                <BreachOverlay 
+                    progress={healthPercent} 
+                    isVideo={gameId === 'video'} 
+                    showInteractive={true} 
+                />
+            )}
+        </div>
 
         <AnimatePresence>
             {showReboot && <RebootOverlay key="reboot" />}
         </AnimatePresence>
         
+        {/* FIX: Exclusive Game Over overlay */}
         {isGameOver && (
-            <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center gap-4">
-                <Skull className="text-elfy-red animate-pulse w-20 h-20" />
-                <span className="text-elfy-red font-header font-black text-2xl tracking-widest">SYSTEM FAILURE</span>
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
+                <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
+                <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
         )}
-        
-        {children}
       </div>
     </motion.div>
   );
@@ -2045,18 +2154,21 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
+import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone } = useStore(); // Added setIntroDone
+  const { openModal, setIntroDone } = useStore(); 
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
+  const systemIntegrity = useGameStore(s => s.systemIntegrity);
+  const isGameOver = systemIntegrity <= 0;
   
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
-      setIntroDone(true); // FIX: Signal that intro is over so Cursor fades out
+      setIntroDone(true);
       startGame();
     }, 200);
   };
@@ -2095,7 +2207,11 @@ export default function Home() {
           <Header />
 
           <motion.div 
-            className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 overflow-y-auto md:overflow-hidden max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black"
+            className={clsx(
+                "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                // FIX: When Game Over, allow overflow so falling panels aren't clipped by the grid container
+                isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+            )}
             initial="hidden"
             animate={bootState === 'active' ? "visible" : "hidden"}
             variants={{
@@ -6890,15 +7006,21 @@ export const useGameStore = create<GameStateUI>()(
 
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
+      // FIX: Immutable Update Logic for Panels
+      // Previously, we were mutating nested objects which prevented React from seeing the change.
       syncPanels: (incomingPanels) => set((state) => {
           const merged = { ...state.panels };
+          
           for (const key in incomingPanels) {
-              if (merged[key]) {
-                  merged[key].health = incomingPanels[key].health;
-                  merged[key].isDestroyed = incomingPanels[key].isDestroyed;
-              } else {
-                  merged[key] = incomingPanels[key];
-              }
+              const prev = merged[key];
+              
+              // We strictly create a NEW object reference here using spread syntax.
+              // This ensures that selectors like `state.panels['video']` see a new reference
+              // and trigger a re-render in the UI components.
+              merged[key] = {
+                  ...(prev || {}),
+                  ...incomingPanels[key]
+              };
           }
           return { panels: merged };
       }),
@@ -6917,20 +7039,20 @@ export const useGameStore = create<GameStateUI>()(
         GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
       },
 
-      // Fallback getters/setters for legacy consumers (will be overwritten by sync)
+      // Fallback getters/setters (mostly driven by ECS SyncSystem now)
       addScore: (amount) => set(state => ({ score: state.score + amount })),
       addXp: (amount) => set(state => ({ xp: state.xp + amount })),
       damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
       healPlayer: (amount) => set(state => ({ playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) })),
       tickPlayerReboot: (amount) => set(state => ({ playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) })),
-      healPanel: (id, amount) => {}, // Handled by ECS event
-      decayReboot: (id, amount) => {}, // Handled by ECS
-      damagePanel: (id, amount) => {}, // Handled by ECS
+      healPanel: (id, amount) => {}, 
+      decayReboot: (id, amount) => {}, 
+      damagePanel: (id, amount) => {}, 
       resetGame: () => {},
       recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage-v2', // VERSION BUMP
+      name: 'mesoelfy-os-storage-v2',
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )

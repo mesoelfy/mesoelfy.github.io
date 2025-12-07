@@ -7,14 +7,14 @@ class AudioSystemController {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   private compressor: DynamicsCompressorNode | null = null;
+  
   private musicSource: MediaElementAudioSourceNode | null = null;
   private musicElement: HTMLAudioElement | null = null;
+  
   private isInitialized = false;
-  private isMuted = false;
 
   public init() {
     if (this.isInitialized) {
-        // Always try to resume if context exists but is suspended
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume().catch(() => {});
         }
@@ -25,33 +25,72 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
+    // 1. Create Nodes
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.5;
-
-    this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.value = -24;
-    
+    this.musicGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
+    this.compressor = this.ctx.createDynamicsCompressor();
+
+    // 2. Initial Volumes (Matches default Store State: Master 0.5, Music 0, SFX 0.8)
+    this.masterGain.gain.value = 0.5;
+    this.musicGain.gain.value = 0; // Default off
     this.sfxGain.gain.value = 0.8; 
 
-    this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.6; 
-
+    // 3. Wiring: Bus -> Compressor -> Master -> Out
     this.sfxGain.connect(this.compressor);
     this.musicGain.connect(this.compressor);
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
+
+    // 4. Compressor Settings (Prevent clipping)
+    this.compressor.threshold.value = -24;
+    this.compressor.knee.value = 30;
+    this.compressor.ratio.value = 12;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.25;
 
     this.setupEventListeners();
     this.setupMusic();
 
     this.isInitialized = true;
     
-    // Resume immediately (this works if called from a click/key handler)
     if (this.ctx.state === 'suspended') {
         this.ctx.resume().catch(() => {});
     }
   }
+
+  // --- BUS CONTROLS ---
+
+  public setMasterMute(muted: boolean, instant = false) {
+    if (!this.masterGain || !this.ctx) return;
+    const val = muted ? 0 : 0.5;
+    const t = this.ctx.currentTime;
+    instant 
+      ? (this.masterGain.gain.value = val) 
+      : this.masterGain.gain.setTargetAtTime(val, t, 0.1);
+  }
+
+  public setMusicMute(muted: boolean, instant = false) {
+    if (!this.musicGain || !this.ctx) return;
+    const val = muted ? 0 : 0.4; // Music slightly quieter than SFX
+    const t = this.ctx.currentTime;
+    // Slower fade for music
+    instant 
+      ? (this.musicGain.gain.value = val) 
+      : this.musicGain.gain.setTargetAtTime(val, t, 0.5);
+  }
+
+  public setSfxMute(muted: boolean, instant = false) {
+    if (!this.sfxGain || !this.ctx) return;
+    const val = muted ? 0 : 0.8;
+    const t = this.ctx.currentTime;
+    // Fast fade for SFX
+    instant 
+      ? (this.sfxGain.gain.value = val) 
+      : this.sfxGain.gain.setTargetAtTime(val, t, 0.05);
+  }
+
+  // --- MUSIC SETUP ---
 
   private setupMusic() {
     if (!this.ctx || !this.musicGain) return;
@@ -63,12 +102,13 @@ class AudioSystemController {
   }
 
   public startMusic() {
-    // Resume context again to be safe
     if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume().catch(() => {});
     }
     if (this.musicElement) this.musicElement.play().catch(e => console.warn(e));
   }
+
+  // --- SFX LOGIC ---
 
   private setupEventListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playLaser());
@@ -82,10 +122,8 @@ class AudioSystemController {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playHeal());
   }
 
-  // --- AUDIO LOGIC ---
-
   private playLaser() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -97,13 +135,13 @@ class AudioSystemController {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     
     osc.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain); // Route to SFX Bus
     osc.start(t);
     osc.stop(t + 0.15);
   }
 
   private playHeal() {
-      if (this.isMuted || !this.ctx) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.type = 'triangle';
@@ -115,13 +153,13 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(0, t + 0.2);
       
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t + 0.2);
   }
 
   private playExplosion(type: string) {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const isBig = type !== 'driller';
     const bufferSize = this.ctx.sampleRate * (isBig ? 0.8 : 0.4);
@@ -139,12 +177,12 @@ class AudioSystemController {
     gain.gain.exponentialRampToValueAtTime(0.001, t + (isBig ? 0.6 : 0.3));
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain);
     noise.start(t);
   }
 
   private playImpact(isPlayer: boolean) {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'square';
@@ -154,13 +192,13 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
     osc.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.1);
   }
 
   private playDamageAlert() {
-      if (!this.ctx || this.isMuted) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.frequency.setValueAtTime(300, t);
@@ -169,14 +207,14 @@ class AudioSystemController {
       gain.gain.setValueAtTime(0.03, t); 
       gain.gain.linearRampToValueAtTime(0, t+0.05);
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t+0.05);
   }
 
   private playMassiveExplosion() {
      this.playExplosion('kamikaze');
-     if (this.ctx) {
+     if (this.ctx && this.masterGain) { // Connect bass rumble to master or sfx? SFX is better.
          const t = this.ctx.currentTime;
          const osc = this.ctx.createOscillator();
          osc.type = 'sine';
@@ -186,14 +224,14 @@ class AudioSystemController {
          gain.gain.setValueAtTime(0.5, t);
          gain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
          osc.connect(gain);
-         gain.connect(this.masterGain!);
+         gain.connect(this.sfxGain!);
          osc.start(t);
          osc.stop(t + 2.0);
      }
   }
   
   private playAlarm() {
-      if (this.isMuted || !this.ctx) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.type = 'sine';
@@ -203,7 +241,7 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(0.2, t + 0.1);
       gain.gain.linearRampToValueAtTime(0, t + 0.2);
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t + 0.3);
   }
@@ -216,7 +254,7 @@ class AudioSystemController {
   }
   
   public playHover() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sine';
@@ -225,13 +263,13 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.02, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     osc.connect(gain);
-    gain.connect(this.masterGain!);
+    gain.connect(this.sfxGain); // Use SFX Bus
     osc.start(t);
     osc.stop(t + 0.05);
   }
 
   public playClick() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'square';
@@ -241,16 +279,12 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.1, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
     osc.connect(gain);
-    gain.connect(this.masterGain!);
+    gain.connect(this.sfxGain); // Use SFX Bus
     osc.start(t);
     osc.stop(t + 0.1);
   }
 
   public playBootSequence() { this.playAlarm(); }
-  public setMute(muted: boolean) {
-    this.isMuted = muted;
-    if (this.masterGain) this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx!.currentTime, 0.1);
-  }
 }
 
 export const AudioSystem = new AudioSystemController();
