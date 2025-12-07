@@ -29,16 +29,11 @@ const AsciiRenderer = () => {
 
       let animClass = '';
       
-      // 1. Solid Blocks = Green Matrix Animation
       if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
         animClass = 'animate-matrix-green text-elfy-green-dark';
-      } 
-      // 2. Shaded Blocks = Purple Matrix Animation (The "Shimmer")
-      else if (['░', '▒', '▓'].includes(char)) {
+      } else if (['░', '▒', '▓'].includes(char)) {
         animClass = 'animate-matrix-purple text-elfy-purple';
-      } 
-      // 3. Fallback
-      else {
+      } else {
         animClass = 'text-elfy-green-dark';
       }
 
@@ -134,7 +129,6 @@ const CoreHeader = ({ step }: { step: number }) => {
   const isDecrypted = step === 5;
   const isCaution = step >= 6;
 
-  // Local state to handle the Lock -> CPU transition during step 5
   const [showCpu, setShowCpu] = useState(false);
 
   useEffect(() => {
@@ -151,7 +145,6 @@ const CoreHeader = ({ step }: { step: number }) => {
   let bgColor = "bg-elfy-green/10";
   let textColor = "text-elfy-green";
 
-  // Base colors
   if (isUnsafe) {
     borderColor = "border-elfy-red/50";
     bgColor = "bg-elfy-red/10";
@@ -198,7 +191,6 @@ const CoreHeader = ({ step }: { step: number }) => {
                     key="bypass"
                     initial={{ opacity: 0, scale: 0.8 }} 
                     animate={{ opacity: 1, scale: 1.1 }} 
-                    // FIX: Explicit override for exit transition to prevent infinite loop blockage
                     exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
                     transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
                 >
@@ -214,7 +206,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                        animate={{
                            filter: ['drop-shadow(0 0 8px rgba(120,246,84,0.8))', 'drop-shadow(0 0 15px rgba(234,231,71,1))', 'drop-shadow(0 0 8px rgba(120,246,84,0.8))'],
                            color: ['#78F654', '#eae747', '#78F654'],
-                           rotate: [0, 8, -8, 0] // Pirate Swagger
+                           rotate: [0, 8, -8, 0] 
                        }}
                        transition={{ duration: 2.0, repeat: Infinity, ease: "easeInOut" }}
                     >
@@ -222,7 +214,6 @@ const CoreHeader = ({ step }: { step: number }) => {
                     </motion.div>
                 </motion.div>
             ) : isDecrypted ? (
-                // DECRYPTED PHASE: LOCK -> CPU
                 !showCpu ? (
                     <motion.div 
                         key="locked"
@@ -245,7 +236,6 @@ const CoreHeader = ({ step }: { step: number }) => {
                     </motion.div>
                 )
             ) : (
-                // LOADING PHASE (Step 0-2)
                 <motion.div 
                     key="loading"
                     initial={{ opacity: 0 }} 
@@ -309,7 +299,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
-  const stepRef = useRef(0); // Track step in ref for loop access
+  const stepRef = useRef(0);
   const [isBreaching, setIsBreaching] = useState(false);
   const logsToShow = LOG_DATA.slice(0, step + 1);
   
@@ -326,10 +316,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
-      { t: 8000, step: 3 }, // Unsafe
-      { t: 9500, step: 4 }, // Bypass (Purple)
-      { t: 11500, step: 5 }, // Decrypted (Green Lock -> CPU)
-      { t: 13500, step: 6 }, // Caution (Skull)
+      { t: 8000, step: 3 }, 
+      { t: 9500, step: 4 }, 
+      { t: 11500, step: 5 }, 
+      { t: 13500, step: 6 }, 
     ];
     const timeouts = sequence.map(({ t, step: s }) => setTimeout(() => {
       if (!isBreaching) setStep(s);
@@ -356,8 +346,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ctx.font = '14px "Courier New"';
 
       const currentStep = stepRef.current;
-      
-      // UNSAFE: Starts at step 3 and NEVER stops (continues indefinitely)
       const isUnsafePhase = currentStep >= 3;
       
       ypos.forEach((y, ind) => {
@@ -365,10 +353,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
 
-        // Increased Purple Density: > 0.6 means 40% chance of purple (was 15%)
         const isPurple = Math.random() > 0.6;
-        
-        // Red Logic: Keep rate same (> 0.6), but persists forever now
         const isRed = isUnsafePhase && Math.random() > 0.6; 
         
         let color = '#0F0';
@@ -387,8 +372,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         ctx.shadowColor = color;
 
         ctx.fillText(text, x, y);
-        
-        // Reset shadow for next op (performance)
         ctx.shadowBlur = 0;
 
         const speed = isBreaching ? 100 : 20; 
@@ -400,15 +383,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]); 
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleInitialize();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isBreaching]); 
+  // NOTE: REMOVED KEYDOWN LISTENER HERE (It is now in DebugOverlay)
 
   const handleInitialize = () => {
     if (isBreaching) return;

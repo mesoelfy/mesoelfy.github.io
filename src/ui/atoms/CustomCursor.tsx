@@ -8,15 +8,15 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone } = useStore();
+  const { introDone, isDebugOpen } = useStore();
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      // Hover triggers on buttons, inputs, links
-      const isInteractive = target.closest('button, a, input, [data-interactive="true"]');
+      // Includes 'label' and 'data-interactive' check for Debug Menu items
+      const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
 
@@ -37,26 +37,26 @@ export const CustomCursor = () => {
   return (
     <>
       <style jsx global>{`
-        body, a, button, input { cursor: none !important; }
+        /* Force hide system cursor on all interactive elements */
+        body, a, button, input, label, select, textarea { cursor: none !important; }
       `}</style>
 
       <motion.div
         className={clsx(
-            "fixed top-0 left-0 pointer-events-none z-[9999]",
-            // FIX: Only apply difference blend mode when hovering interactive elements
+            "fixed top-0 left-0 pointer-events-none z-[10000]",
             isHovering ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {!introDone && (
+          {(!introDone || isDebugOpen) && (
             <motion.div
-              key="intro-cursor"
+              key="custom-cursor"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.2 }}
               className="relative"
             >
               <svg 

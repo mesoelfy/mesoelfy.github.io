@@ -87,12 +87,40 @@ Music should get distorted, glitchy, and reverbed when Game Over state
 
 
 
-
-
-
 “	•	The Skull Glitch:
 	◦	We will overlay a 2D, glitchy "Skull" graphic over the 3D canvas.
 	◦	This skull stays at opacity: 0 normally.
 	◦	As health drops, it randomly flickers to opacity: 1 for a single frame (subliminal glitch).
 	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
 “
+
+
+
+I’ve noticed that when I use the ESC button to skip the intro scene, I still have to click to make the audio active. Also, sometimes using the ESC button makes the driller enemies not render properly. I can see their points doing damage attached to the panels, but can’t see their bodies. I can still see the other two enemy types.
+
+
+screen shake - an individual panel should shake when brought to 0% health
+
+Player icon should be red unfilled tiny triangle after losing health.
+
+For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
+
+Maybe we can have the motion grid affected by the music like a music player visualizer, affected by the song that is playing?
+
+Your cursor could leave a psychedelic trail of colors behind it
+
+
+1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
+
+2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
+
+3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
+
+4     I’d like a quick simple chime blip to indicate panel healed 100%.
+
+
+
+
+DEBUG mode will have asterisk slots for entering konami code to access it
+
+Purple health bar needs to appear in panel header when rebooting

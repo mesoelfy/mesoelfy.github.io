@@ -22,19 +22,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
+import { DebugOverlay } from '@/features/debug/DebugOverlay'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone } = useStore(); 
+  const { openModal, setIntroDone, bootState, setBootState } = useStore(); // Use global bootState
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
-  // Track Game Over locally for layout switching
   const isGameOver = systemIntegrity <= 0;
-  
-  const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
@@ -62,6 +60,7 @@ export default function Home() {
       
       <CustomCursor />
       <GlobalShakeManager />
+      <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
@@ -93,7 +92,6 @@ export default function Home() {
                 <motion.div 
                   className={clsx(
                       "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                      // FIX: Force overflow visible on Game Over so falling panels aren't clipped by the container
                       isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
                   )}
                   initial="hidden"
