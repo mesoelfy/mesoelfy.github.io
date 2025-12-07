@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useGameStore } from '@/game/store/useGameStore';
 
 // --- TYPES ---
 interface AudioSettings {
@@ -10,10 +11,11 @@ interface AudioSettings {
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
 type BootState = 'standby' | 'active' | 'sandbox';
+type SandboxView = 'arena' | 'gallery'; // NEW
 
 interface DebugFlags {
-  godMode: boolean; // Player Invincibility
-  panelGodMode: boolean; // Panel Invincibility
+  godMode: boolean;
+  panelGodMode: boolean;
   peaceMode: boolean;
   showHitboxes: boolean;
   timeScale: number;
@@ -26,20 +28,25 @@ interface AppState {
   activeModal: ModalType;
   hoveredItem: string | null;
   
+  // Sandbox State
+  sandboxView: SandboxView;
+  
   // Audio
   audioSettings: AudioSettings;
   
   // Debug
   isDebugOpen: boolean;
-  isDebugMinimized: boolean; // NEW
+  isDebugMinimized: boolean;
   debugFlags: DebugFlags;
   
   // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
+  setSandboxView: (view: SandboxView) => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
+  resetApplication: () => void; // NEW
   
   toggleMaster: () => void;
   toggleMusic: () => void;
@@ -47,8 +54,9 @@ interface AppState {
   
   // Debug Actions
   toggleDebugMenu: () => void;
-  toggleDebugMinimize: () => void; // NEW
+  toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
+  resetDebugFlags: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -56,6 +64,7 @@ export const useStore = create<AppState>((set, get) => ({
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
+  sandboxView: 'arena',
   
   audioSettings: {
     master: true,
@@ -75,6 +84,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
+  setSandboxView: (view) => set({ sandboxView: view }),
   
   openModal: (modal) => {
       if (get().audioSettings.master && get().audioSettings.sfx) {
@@ -92,7 +102,25 @@ export const useStore = create<AppState>((set, get) => ({
   
   setHovered: (item) => set({ hoveredItem: item }),
   
-  // Audio
+  // Full Reset Logic
+  resetApplication: () => {
+      // 1. Reset Game Store Logic
+      useGameStore.getState().stopGame();
+      useGameStore.getState().resetGame(); 
+      
+      // 2. Reset App State
+      set({
+          bootState: 'standby',
+          introDone: false,
+          activeModal: 'none',
+          isDebugOpen: false,
+          isDebugMinimized: false,
+          sandboxView: 'arena'
+      });
+      
+      // 3. Reset Audio if needed (optional)
+  },
+  
   toggleMaster: () => {
       const prev = get().audioSettings.master;
       const next = !prev;
@@ -117,10 +145,12 @@ export const useStore = create<AppState>((set, get) => ({
       if (next && get().audioSettings.master) AudioSystem.playClick();
   },
   
-  // Debug
   toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
   toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
   setDebugFlag: (key, value) => set(state => ({ 
       debugFlags: { ...state.debugFlags, [key]: value } 
   })),
+  resetDebugFlags: () => set({
+      debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
+  })
 }));

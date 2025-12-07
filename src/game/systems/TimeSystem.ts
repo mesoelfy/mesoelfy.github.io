@@ -1,5 +1,6 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { WorldConfig } from '../config/WorldConfig';
+import { useStore } from '@/core/store/useStore';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;
@@ -19,7 +20,7 @@ export class TimeSystem implements IGameSystem {
   }
 
   update(rawDelta: number, rawTime: number): void {
-    // 1. Calculate FPS (Updates once per second)
+    // 1. Calculate FPS (Real-time)
     this.frames++;
     if (rawTime >= this.lastFpsTime + 1.0) {
         this.fps = this.frames;
@@ -30,7 +31,7 @@ export class TimeSystem implements IGameSystem {
     // 2. Handle Hit Stop (Freeze)
     if (this.freezeTimer > 0) {
         this.freezeTimer -= rawDelta;
-        this.delta = 0; // Game logic pauses
+        this.delta = 0; 
         return;
     }
 
@@ -39,9 +40,13 @@ export class TimeSystem implements IGameSystem {
       return;
     }
 
-    // 3. Normal Time Processing
+    // 3. Debug Time Dilation
+    // We multiply the raw delta by the debug timeScale
+    const debugScale = useStore.getState().debugFlags.timeScale;
+
+    // 4. Normal Time Processing
     const safeDelta = Math.min(rawDelta, WorldConfig.time.maxDelta);
-    this.delta = safeDelta * this.timeScale;
+    this.delta = safeDelta * this.timeScale * debugScale;
     this.elapsedTime += this.delta;
   }
 

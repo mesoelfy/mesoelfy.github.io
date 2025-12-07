@@ -121,7 +121,7 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
-DEBUG mode will have asterisk slots for entering konami code to access it
+DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
 
 Purple health bar needs to appear in panel header when rebooting
 

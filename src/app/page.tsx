@@ -22,17 +22,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
-import { DebugOverlay } from '@/features/debug/DebugOverlay'; // NEW
+import { DebugOverlay } from '@/features/debug/DebugOverlay';
+import { SimulationHUD } from '@/features/sandbox/SimulationHUD'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone, bootState, setBootState } = useStore(); // Use global bootState
+  const { openModal, setIntroDone, bootState, setBootState } = useStore(); 
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isGameOver = systemIntegrity <= 0;
+  const isSandbox = bootState === 'sandbox';
+
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
@@ -66,14 +69,20 @@ export default function Home() {
         
         <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
-        {bootState === 'active' && <GameOverlay />}
+        {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
 
-        <AboutModal />
-        <FeedModal />
-        <GalleryModal />
-        <ContactModal />
-        
-        <ZenBomb />
+        {/* SANDBOX UI LAYER */}
+        {isSandbox && <SimulationHUD />}
+
+        {!isSandbox && (
+            <>
+                <AboutModal />
+                <FeedModal />
+                <GalleryModal />
+                <ContactModal />
+                <ZenBomb />
+            </>
+        )}
 
         {bootState === 'standby' && (
           <MatrixBootSequence 
@@ -82,75 +91,76 @@ export default function Home() {
           />
         )}
 
-        <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          
-          <Header />
+        {!isSandbox && (
+            <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <Header />
 
-          <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
-            <AnimatePresence>
-              {!isZenMode && (
-                <motion.div 
-                  className={clsx(
-                      "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                      isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
-                  )}
-                  initial="hidden"
-                  animate="visible"
-                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: { 
-                      opacity: 1, 
-                      transition: { 
-                        staggerChildren: 0.3,
-                        delayChildren: 0.2 
-                      } 
-                    }
-                  }}
-                >
-                  <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                    <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                      <IdentityHUD />
-                    </GlassPanel>
+              <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
+                <AnimatePresence>
+                  {!isZenMode && (
+                    <motion.div 
+                      className={clsx(
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                          isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+                      )}
+                      initial="hidden"
+                      animate="visible"
+                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: { 
+                          opacity: 1, 
+                          transition: { 
+                            staggerChildren: 0.3,
+                            delayChildren: 0.2 
+                          } 
+                        }
+                      }}
+                    >
+                      <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                        <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                          <IdentityHUD />
+                        </GlassPanel>
 
-                    <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
-                       <SocialRow />
-                    </GlassPanel>
-                  </div>
+                        <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                           <SocialRow />
+                        </GlassPanel>
+                      </div>
 
-                  <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                    <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                      <div className="w-full h-full flex items-center justify-center p-4">
-                        <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                          <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
-                          <button 
-                            onClick={() => openModal('feed')} 
-                            onMouseEnter={playHover}
-                            className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
-                          >
-                            [ ACCESS TERMINAL ]
-                          </button>
+                      <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                        <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                          <div className="w-full h-full flex items-center justify-center p-4">
+                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                              <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                              <button 
+                                onClick={() => openModal('feed')} 
+                                onMouseEnter={playHover}
+                                className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                              >
+                                [ ACCESS TERMINAL ]
+                              </button>
+                            </div>
+                          </div>
+                        </GlassPanel>
+
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+                          <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                             <LiveArtGrid />
+                          </GlassPanel>
+
+                          <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                             <HoloCommLog />
+                          </GlassPanel>
                         </div>
                       </div>
-                    </GlassPanel>
-
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                      <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                         <LiveArtGrid />
-                      </GlassPanel>
-
-                      <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                         <HoloCommLog />
-                      </GlassPanel>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          <Footer />
-        </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              <Footer />
+            </div>
+        )}
       </main>
     </div>
   );

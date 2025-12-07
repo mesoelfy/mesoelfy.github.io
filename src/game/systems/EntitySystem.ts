@@ -27,10 +27,18 @@ export class EntitySystem implements IGameSystem {
     Registry.clear();
     this.spatialGrid.clear();
     
-    // NEW: Listen for Zen Mode to wipe the board
+    // Zen Mode Wipe
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         Registry.clear();
-        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); // Big visual wipe effect
+        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); 
+    });
+
+    // NEW: Debug Spawning
+    GameEventBus.subscribe(GameEvents.DEBUG_SPAWN, (payload) => {
+        const type = payload.type as EnemyType;
+        for(let i=0; i<payload.count; i++) {
+            this.spawnEnemy(type);
+        }
     });
   }
 

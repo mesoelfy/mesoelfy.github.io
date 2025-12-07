@@ -1,53 +1,85 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { Registry } from '@/game/core/ecs/EntityRegistry'; 
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square } from 'lucide-react';
+import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, LogOut, Eraser, Bug, Clock, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { EnemyTypes } from '@/game/config/Identifiers';
 
-// --- TABS ---
-type Tab = 'OVERRIDES' | 'SANDBOX' | 'STATS';
+type Tab = 'OVERRIDES' | 'SANDBOX' | 'STATS' | 'CONSOLE';
 
 const TABS: { id: Tab, label: string, icon: any }[] = [
   { id: 'OVERRIDES', label: 'ROOT_ACCESS', icon: Shield },
   { id: 'SANDBOX', label: 'HOLO_DECK', icon: Box },
   { id: 'STATS', label: 'TELEMETRY', icon: Activity },
+  { id: 'CONSOLE', label: 'KERNEL_LOG', icon: Terminal },
 ];
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, toggleDebugMinimize, debugFlags, setDebugFlag, setBootState, setIntroDone } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, toggleDebugMinimize, debugFlags, setDebugFlag, setBootState, setIntroDone, bootState, resetApplication } = useStore();
   const { startGame, stopGame, activateZenMode, healPlayer } = useGameStore();
   
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
-  
-  // STATS STATE
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
+  const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Derived State
+  const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
   // KEY LISTENER
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '`' || e.key === '~' || e.key === 'Escape') {
-        if (!isDebugOpen && !isDebugMinimized) toggleDebugMenu(); // Open if closed
-        else if (isDebugOpen) toggleDebugMenu(); // Close if open
-        else if (isDebugMinimized) toggleDebugMenu(); // Close mini mode? Or Restore? Let's say Close.
+      // ESCAPE: Standard Toggle (Context Aware)
+      if (e.key === 'Escape') {
+        if (isDebugMinimized) {
+            useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+        } else {
+            toggleDebugMenu();
+        }
+      }
+      
+      // TILDE (~): GOD MODE ACTIVATION
+      else if (e.key === '`' || e.key === '~') {
+        if (!isDebugOpen && !isDebugMinimized) {
+            // If closed -> Open AND Enable God Suite
+            toggleDebugMenu();
+            // Only enable if not already fully enabled
+            if (!useStore.getState().debugFlags.godMode) {
+                setDebugFlag('godMode', true);
+                setDebugFlag('panelGodMode', true);
+                setDebugFlag('peaceMode', true);
+            }
+        } else {
+            toggleDebugMenu();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleDebugMenu, isDebugOpen, isDebugMinimized]);
+  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag]);
 
-  // POLLING LOOP (Runs when Open OR Minimized)
+  // LOGS & STATS POLLING
   useEffect(() => {
     if (!isDebugOpen && !isDebugMinimized) return;
+    
+    const handlers = Object.values(GameEvents).map(evt => {
+        return GameEventBus.subscribe(evt as any, (payload) => {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            let msg = `${evt}`;
+            if (payload && (payload as any).type) msg += ` [${(payload as any).type}]`;
+            setLogs(prev => [...prev.slice(-49), { time, msg, type: evt }]);
+        });
+    });
 
     const pollInterval = setInterval(() => {
         const regStats = Registry.getStats();
-        
         let fps = 0;
         try {
-            // FIX: Get REAL FPS from TimeSystem
             const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
             fps = timeSys.fps;
         } catch {}
@@ -58,13 +90,22 @@ export const DebugOverlay = () => {
             total: regStats.totalAllocated,
             fps: fps
         });
+    }, 250); 
 
-    }, 250); // Faster updates (250ms)
-
-    return () => clearInterval(pollInterval);
+    return () => {
+        handlers.forEach(unsub => unsub());
+        clearInterval(pollInterval);
+    };
   }, [isDebugOpen, isDebugMinimized]);
 
-  // ACTIONS
+  useEffect(() => {
+      if (activeTab === 'CONSOLE' && logEndRef.current) {
+          logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+  }, [logs, activeTab]);
+
+  // --- ACTIONS ---
+
   const handleSkipBoot = () => {
     setIntroDone(true);
     setBootState('active');
@@ -84,11 +125,63 @@ export const DebugOverlay = () => {
     toggleDebugMenu();
   };
 
-  // --- RENDER ---
+  const toggleGodSuite = () => {
+      const newState = !areAllGodModesOn;
+      setDebugFlag('godMode', newState);
+      setDebugFlag('panelGodMode', newState);
+      setDebugFlag('peaceMode', newState);
+  };
+
+  const enterSandbox = () => {
+      setIntroDone(true);
+      setBootState('sandbox');
+      Registry.clear();
+      startGame();
+      toggleDebugMenu();
+  };
+
+  const exitSimulation = () => {
+      resetApplication(); 
+  };
+  
+  const spawnEnemy = (type: string) => {
+      GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
+  };
+
+  const clearBoard = () => {
+      Registry.clear();
+  };
 
   if (!isDebugOpen && !isDebugMinimized) return null;
 
-  // MINI MODE RENDER
+  // --- SPECIAL MODE: PAUSE MENU (If in Sandbox) ---
+  if (bootState === 'sandbox') {
+      return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono">
+            <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
+                <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
+                
+                <div className="flex flex-col gap-4">
+                    <button 
+                        onClick={toggleDebugMenu}
+                        className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors"
+                    >
+                        RESUME
+                    </button>
+                    
+                    <button 
+                        onClick={exitSimulation}
+                        className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors"
+                    >
+                        EXIT_TO_BOOT
+                    </button>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- MINI MODE ---
   if (isDebugMinimized) {
       return (
         <div className="fixed top-24 left-4 z-[9999] flex flex-col gap-2 font-mono text-[10px]">
@@ -107,7 +200,7 @@ export const DebugOverlay = () => {
       );
   }
 
-  // FULL MODE RENDER
+  // --- FULL MENU ---
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
       
@@ -174,6 +267,20 @@ export const DebugOverlay = () => {
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_TOGGLES</h3>
                   
+                  {/* FIX: Smart Toggle Button */}
+                  <button 
+                    onClick={toggleGodSuite}
+                    className={clsx(
+                        "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
+                        areAllGodModesOn
+                            ? "bg-elfy-green text-black border-elfy-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
+                            : "bg-elfy-green/10 text-elfy-green border-elfy-green/50 hover:bg-elfy-green hover:text-black"
+                    )}
+                  >
+                    <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
+                    {areAllGodModesOn ? "DISABLE_GOD_SUITE" : "ENABLE_GOD_SUITE"}
+                  </button>
+
                   <label 
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
@@ -218,41 +325,38 @@ export const DebugOverlay = () => {
             )}
 
             {activeTab === 'SANDBOX' && (
-              <div className="flex flex-col items-center justify-center h-full text-center gap-4 text-elfy-green-dim">
-                <Box size={48} className="opacity-50" />
-                <p>SANDBOX_MODULE // COMING_SOON</p>
-                <div className="text-xs max-w-md">
-                  This module will allow isolation testing of enemy AI, hitboxes, and animation curves in a controlled 'Holo-Deck' environment.
-                </div>
+              <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
+                  <Box size={64} className="text-elfy-green animate-pulse" />
+                  <div>
+                      <h2 className="text-xl font-bold mb-2">INITIALIZE_SIMULATION?</h2>
+                      <p className="text-xs text-elfy-green-dim max-w-xs mx-auto">
+                          Loads the 'Holo-Deck' simulation environment. The main OS will be suspended.
+                      </p>
+                  </div>
+                  <button 
+                      onClick={enterSandbox}
+                      className="px-8 py-3 bg-elfy-green text-black font-bold tracking-widest hover:bg-white transition-colors"
+                  >
+                      [ ENTER_HOLO_DECK ]
+                  </button>
               </div>
             )}
 
             {activeTab === 'STATS' && (
               <div className="space-y-6">
-                
-                {/* ENTITY MONITOR */}
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">ENTITY_REGISTRY</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    
                     <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
-                            <Cpu size={14} /> ACTIVE ENTITIES
-                        </div>
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Cpu size={14} /> ACTIVE ENTITIES</div>
                         <div className="text-3xl font-bold text-elfy-green">{stats.active}</div>
                     </div>
-
                     <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
-                            <Database size={14} /> MEMORY POOL
-                        </div>
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Database size={14} /> MEMORY POOL</div>
                         <div className="text-3xl font-bold text-elfy-green-dim">{stats.pooled} <span className="text-xs font-normal opacity-50">/ {stats.total}</span></div>
                     </div>
-
                   </div>
                 </div>
-
-                {/* RENDER STATS */}
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">RENDER_PIPELINE</h3>
                   <div className="p-4 border border-elfy-green/20 bg-black">
@@ -265,20 +369,33 @@ export const DebugOverlay = () => {
                       </div>
                   </div>
                 </div>
-
+                
+                {/* RESTORED: MINI MODE BUTTON */}
                 <div className="mt-8 flex justify-center">
                     <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-elfy-green hover:text-white transition-colors border border-elfy-green/50 px-4 py-2 hover:bg-elfy-green/10">
                         <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
                     </button>
                 </div>
-
               </div>
+            )}
+
+            {activeTab === 'CONSOLE' && (
+                <div className="h-full flex flex-col">
+                    <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2">
+                        {logs.map((l, i) => (
+                            <div key={i} className="flex gap-2 opacity-80 hover:opacity-100 border-b border-white/5 py-0.5">
+                                <span className="text-elfy-green-dim">[{l.time}]</span>
+                                <span className={l.type.includes('ERROR') ? 'text-elfy-red' : 'text-elfy-green'}>{l.msg}</span>
+                            </div>
+                        ))}
+                        <div ref={logEndRef} />
+                    </div>
+                </div>
             )}
 
           </div>
         </div>
         
-        {/* FOOTER */}
         <div className="h-6 bg-elfy-green/5 border-t border-elfy-green/30 flex items-center px-4 text-[9px] text-elfy-green-dim">
           <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
         </div>

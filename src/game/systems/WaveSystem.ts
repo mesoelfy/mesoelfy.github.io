@@ -1,9 +1,8 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
 import { useGameStore } from '../store/useGameStore';
-import { useStore } from '@/core/store/useStore'; // Import Global Store
+import { useStore } from '@/core/store/useStore';
 
-// --- AGGRESSIVE WAVE CONFIG ---
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
@@ -35,11 +34,15 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // CHECK 1: Zen Mode (System Purge)
+    // STOP CONDITIONS:
+    // 1. Zen Mode (System Purge)
     if (useGameStore.getState().isZenMode) return;
-
-    // CHECK 2: Peace Protocol (Debug Flag)
+    
+    // 2. Peace Protocol (Debug Flag)
     if (useStore.getState().debugFlags.peaceMode) return;
+
+    // 3. Sandbox Mode (Manual Spawning Only)
+    if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
     this.checkTimeline();
