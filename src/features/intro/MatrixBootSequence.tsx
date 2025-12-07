@@ -142,7 +142,7 @@ const CoreHeader = ({ step }: { step: number }) => {
       setShowCpu(false);
       const timer = setTimeout(() => {
         setShowCpu(true);
-      }, 700); // Wait 0.7s showing the Locked icon, then flip to CPU
+      }, 700); 
       return () => clearTimeout(timer);
     }
   }, [step]);
@@ -198,36 +198,13 @@ const CoreHeader = ({ step }: { step: number }) => {
                     key="bypass"
                     initial={{ opacity: 0, scale: 0.8 }} 
                     animate={{ opacity: 1, scale: 1.1 }} 
-                    exit={{ opacity: 0 }}
+                    // FIX: Explicit override for exit transition to prevent infinite loop blockage
+                    exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
                     transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
                 >
                      <Unlock size={18} className="text-elfy-purple-light" />
                 </motion.div>
-            ) : isDecrypted ? (
-                // DECRYPTED PHASE: LOCK -> CPU
-                !showCpu ? (
-                    <motion.div 
-                        key="locked"
-                        initial={{ scale: 1.5, opacity: 0 }} 
-                        animate={{ scale: 1, opacity: 1 }} 
-                        exit={{ scale: 0.5, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                ) : (
-                    <motion.div 
-                        key="cpu"
-                        initial={{ scale: 0, rotate: -45 }} 
-                        animate={{ scale: 1, rotate: 0 }} 
-                        exit={{ scale: 0 }}
-                        transition={{ duration: 0.4, ease: "backOut" }}
-                    >
-                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                )
             ) : isCaution ? (
-                // CAUTION PHASE: SKULL
                 <motion.div 
                     key="caution"
                     initial={{ scale: 0, opacity: 0 }} 
@@ -244,6 +221,29 @@ const CoreHeader = ({ step }: { step: number }) => {
                          <Skull size={18} />
                     </motion.div>
                 </motion.div>
+            ) : isDecrypted ? (
+                // DECRYPTED PHASE: LOCK -> CPU
+                !showCpu ? (
+                    <motion.div 
+                        key="locked"
+                        initial={{ scale: 1.5, opacity: 0 }} 
+                        animate={{ scale: 1, opacity: 1 }} 
+                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
+                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    >
+                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        key="cpu"
+                        initial={{ scale: 0, rotate: -45 }} 
+                        animate={{ scale: 1, rotate: 0 }} 
+                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
+                        transition={{ duration: 0.4, ease: "backOut" }}
+                    >
+                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                )
             ) : (
                 // LOADING PHASE (Step 0-2)
                 <motion.div 
@@ -323,13 +323,12 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   }, [step]);
 
   useEffect(() => {
-    // FIX: Tightened timeline for Step 4 -> 5 to prevent Purple Padlock from lingering
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
       { t: 8000, step: 3 }, // Unsafe
       { t: 9500, step: 4 }, // Bypass (Purple)
-      { t: 11500, step: 5 }, // Decrypted (Green Lock -> CPU) (Moved up from 12500)
+      { t: 11500, step: 5 }, // Decrypted (Green Lock -> CPU)
       { t: 13500, step: 6 }, // Caution (Skull)
     ];
     const timeouts = sequence.map(({ t, step: s }) => setTimeout(() => {
