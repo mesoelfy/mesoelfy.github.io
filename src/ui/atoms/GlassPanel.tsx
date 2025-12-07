@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
-import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap, Plus } from 'lucide-react';
+import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 
 // --- CONSTANTS ---
 const MAX_HEALTH = 1000;
@@ -79,18 +79,16 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
   const isInteracting = gameId && interactionTarget === gameId;
   
   const healthPercent = (health / MAX_HEALTH) * 100;
-  const isDamaged = !isDestroyed && healthPercent < 100;
+  // Adjusted threshold: any damage shows the warning until healed full
+  const isDamaged = !isDestroyed && health < MAX_HEALTH;
 
   // --- OPTIMAL ICON STATE LOGIC ---
   const [showOptimal, setShowOptimal] = useReactState(false);
 
   useReactEffect(() => {
-    // 1. If damaged, arm the "Optimal" state so it shows when healed
     if (health < MAX_HEALTH) {
       setShowOptimal(true);
     }
-    
-    // 2. If healed (100%) AND showing optimal, start timer to hide it
     if (health >= MAX_HEALTH && showOptimal) {
       const timer = setTimeout(() => setShowOptimal(false), 3000);
       return () => clearTimeout(timer);
@@ -114,7 +112,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
       mainColor = "text-elfy-yellow"; 
       statusText = "ATTENTION_REQ";
   } else if (!showOptimal) {
-      // Hidden state (initial or settled)
       mainColor = "text-elfy-green-dim";
       statusText = "ONLINE";
   }
@@ -196,18 +193,29 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                         </motion.div>
 
                     ) : isDamaged ? (
+                        // VIBRATION ANIMATION FIX: Explicit opacity: 1, No fade-in
                         <motion.div 
                             key="damaged"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1, opacity: [0.6, 1, 0.6] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                            className="text-elfy-yellow drop-shadow-[0_0_5px_currentColor]"
+                            initial={{ opacity: 1, scale: 1 }}
+                            animate={{ 
+                                x: [-2, 2, -2, 2, -2, 2, 0, 0, 0, 0, 0, 0, 0], // Shake then pause
+                                filter: [
+                                    'drop-shadow(0 0 0px rgba(234,231,71,0))',
+                                    'drop-shadow(0 0 8px rgba(234,231,71,1))', // Pulse glow
+                                    'drop-shadow(0 0 0px rgba(234,231,71,0))'
+                                ]
+                            }}
+                            transition={{ 
+                                duration: 1.5,
+                                repeat: Infinity,
+                                ease: "linear"
+                            }}
+                            className="text-elfy-yellow"
                         >
                             <AlertTriangle size={16} />
                         </motion.div>
 
                     ) : showOptimal ? (
-                        // ONLY SHOW IF RECENTLY HEALED
                         <motion.div 
                             key="optimal"
                             initial={{ scale: 0 }}
@@ -223,7 +231,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
             </div>
         </div>
 
-        {/* Health Bar */}
         {!isGameOver && (
             <div className="w-full h-1 bg-black/50 relative overflow-hidden">
                 <motion.div 
@@ -366,7 +373,11 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   }, [isDestroyed, isGameOver]);
 
   let borderColor = "border-elfy-green-dim/30";
-  if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
+  if (isDestroyed) {
+      borderColor = isInteracting 
+        ? "border-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+        : "border-elfy-red animate-pulse"; 
+  }
   else if (isInteracting && isDamaged) borderColor = "border-elfy-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
 
