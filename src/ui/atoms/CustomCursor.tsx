@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -9,12 +10,17 @@ export const CustomCursor = () => {
   const [isClicking, setIsClicking] = useState(false);
   
   const { introDone, isDebugOpen, bootState } = useStore();
+  
+  const playerHealth = useGameStore(state => state.playerHealth);
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isDead = playerHealth <= 0 || systemIntegrity <= 0;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
+      // Hover triggers on buttons, inputs, links, labels, and specific interactive zones
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
@@ -33,7 +39,6 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  // Show cursor if: Intro Active OR Debug Open OR Sandbox Mode
   const isVisible = !introDone || isDebugOpen || bootState === 'sandbox';
 
   return (
@@ -45,13 +50,16 @@ export const CustomCursor = () => {
       <motion.div
         className={clsx(
             "fixed top-0 left-0 pointer-events-none z-[10000]",
-            isHovering ? "mix-blend-difference" : "" 
+            (isHovering && !isDead) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {isVisible && (
+          {/* Show cursor during Intro/Debug/Sandbox. 
+              If DEAD: Custom red cursor logic in future, but for now we hide the SVG if dead 
+              because user requested 3D triangle takes over. */}
+          {isVisible && !isDead && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}

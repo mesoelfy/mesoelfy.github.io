@@ -24,14 +24,16 @@ export class PlayerSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (this.gameSystem.isGameOver) return;
+    // 1. DEAD / GAME OVER CHECK
+    // If dead or game over, no input processing or shooting.
+    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // 1. GET PLAYER ENTITY
+    // 2. GET PLAYER ENTITY
     const players = Registry.getByTag(Tag.PLAYER);
     const playerEntity = players[0]; 
     if (!playerEntity) return;
 
-    // 2. SYNC POSITION
+    // 3. SYNC POSITION
     const cursor = this.locator.getInputService().getCursor();
     const transform = playerEntity.getComponent<TransformComponent>('Transform');
     if (transform) {
@@ -39,26 +41,22 @@ export class PlayerSystem implements IGameSystem {
         transform.y = cursor.y;
     }
 
-    // 3. UPDATE STATE
+    // 4. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
-        if (this.gameSystem.playerHealth <= 0) {
-            stateComp.current = 'DEAD';
-        } else {
-            try {
-                const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
-                if (interact && interact.repairState !== 'IDLE') {
-                    stateComp.current = 'REBOOTING';
-                } else {
-                    stateComp.current = 'ACTIVE';
-                }
-            } catch {
+        try {
+            const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
+            if (interact && interact.repairState !== 'IDLE') {
+                stateComp.current = 'REBOOTING';
+            } else {
                 stateComp.current = 'ACTIVE';
             }
+        } catch {
+            stateComp.current = 'ACTIVE';
         }
     }
 
-    // 4. COMBAT LOGIC
+    // 5. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
@@ -70,14 +68,9 @@ export class PlayerSystem implements IGameSystem {
     }
   }
 
-  teardown(): void {
-  }
+  teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
-       // Death logic is handled by state/HUD. Game Over is mostly unused until we define a true lose condition (like failing reboot)
-    });
-
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);

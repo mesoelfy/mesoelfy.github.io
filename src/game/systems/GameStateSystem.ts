@@ -2,7 +2,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useStore } from '@/core/store/useStore'; // Import Global Store
+import { useStore } from '@/core/store/useStore'; 
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -23,7 +23,6 @@ export class GameStateSystem implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.reset();
     
-    // Listen for Upgrades
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
@@ -58,13 +57,13 @@ export class GameStateSystem implements IGameSystem {
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
 
-    // DEBUG: GHOST MODE CHECK
     const { godMode } = useStore.getState().debugFlags;
     if (godMode) return;
 
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {
+        // If already dead, damage reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -96,5 +95,11 @@ export class GameStateSystem implements IGameSystem {
         this.playerHealth = this.maxPlayerHealth / 2;
         this.playerRebootProgress = 0;
     }
+  }
+
+  // NEW: Decay logic for when player stops charging
+  public decayReboot(amount: number) {
+      if (this.playerHealth > 0) return; 
+      this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
   }
 }

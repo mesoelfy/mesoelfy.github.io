@@ -52,7 +52,7 @@ export const IdentityHUD = () => {
     <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
       {/* 1. THE AVATAR (Top) */}
-      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> {/* Added margin bottom to clear badge */}
+      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> 
         
         {/* AVATAR LAYER */}
         <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
@@ -99,8 +99,8 @@ export const IdentityHUD = () => {
           />
         </svg>
 
-        {/* Level Badge - MOVED LOWER (bottom: -16px) */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-3 py-0.5 text-[10px] font-bold font-mono rounded-full shadow-[0_0_10px_rgba(158,78,165,0.4)] z-20">
+        {/* Level Badge - Pill Style */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
           LVL_{level}
         </div>
       </div>

@@ -34,7 +34,7 @@
 ## MISC THOUGHTS
 
 
-- instead of just panel munchers (rename from seeker), what if there is also a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button, or the CONTACT and ABOUT ME buttons? What about an enemy type that enters a modal and does damage inside? Can that be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet? How do we deal with the enemies on the MESOELFY_OS screen if we are inside a modal fighting some enemies? Wouldn't that have weird game logic? I need to brainstorm this with AI.
+- what if there is a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button, or the CONTACT and ABOUT ME buttons? What about an enemy type that enters a modal and does damage inside? Can that be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet? How do we deal with the enemies on the MESOELFY_OS screen if we are inside a modal fighting some enemies? Wouldn't that have weird game logic? I need to brainstorm this with AI.
 - need health for player and lives and powerups. (increase bullet size / rate of fire)
 - need help seeing not obvious stuff that is missing.
 
@@ -42,7 +42,7 @@
 
 - What things does Vampire Survivors do that I should implement? Game design and juice.
 
-- Should I have a high score patron screen where people can enter their name with links to whatever they want?
+- Should I have a high score patron screen where people can enter their name with links to whatever they want? - YES
 
 - Full functionality in the site isn't active immediately. the video slots and social media links could be broken until the first wave of munchers that are already there are dealt with. Maybe a power up that clears and heals the board is dropped?
 
@@ -54,9 +54,9 @@ we can skin the munchers/enemies differently as they get stronger with cool indi
 
 - We need a dramatic visual animation / indication signifying that a panel has reached 0% health like the system restored animation
 
-- When opening modal, our game mouse cursor needs to be visible
 
-- purple regen bar needs to slowly decay when user is not charging it
+
+
 
 sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
 
@@ -79,7 +79,7 @@ What are screenshake best practices?
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
 - 
-- a sound should happen when clicking on an upgrade
+
 
 When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
 
@@ -96,12 +96,11 @@ Music should get distorted, glitchy, and reverbed when Game Over state
 
 
 
-I’ve noticed that when I use the ESC button to skip the intro scene, I still have to click to make the audio active. Also, sometimes using the ESC button makes the driller enemies not render properly. I can see their points doing damage attached to the panels, but can’t see their bodies. I can still see the other two enemy types.
 
 
 screen shake - an individual panel should shake when brought to 0% health
 
-Player icon should be red unfilled tiny triangle after losing health.
+
 
 For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
 
@@ -125,10 +124,10 @@ DEBUG mode will have asterisk slots for entering konami code to access it. If th
 
 
 
-Skipping boot mode / not clicking initialize button, seems to make the driller enemy not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
+Somtimes driller enemy does not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
 
 Indicate to player to press ESC or ~ in zen mode
 
 
-fix the debug scene buttons
 
+Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little taller of a panel

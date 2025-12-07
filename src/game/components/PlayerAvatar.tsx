@@ -1,10 +1,11 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { InteractionSystem, RepairState } from '../systems/InteractionSystem'; 
+import { EntitySystem } from '../systems/EntitySystem';
 import * as THREE from 'three';
 
 export const PlayerAvatar = () => {
@@ -14,18 +15,21 @@ export const PlayerAvatar = () => {
   const glowRef = useRef<THREE.Sprite>(null);
   const { viewport } = useThree();
   
-  const { introDone } = useStore(); // Access Intro State
+  const { introDone } = useStore(); 
 
   const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
   const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
   const colorReboot = new THREE.Color('#9E4EA5'); 
-  const colorDead = new THREE.Color('#78F654'); 
+  const colorDead = new THREE.Color('#FF003C'); 
 
   const isDead = useGameStore(state => state.playerHealth <= 0);
-  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
-  const deadGeo = new THREE.RingGeometry(0.15, 0.2, 3);
+  const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
   
-  // Animation State for Fade-In
+  // GEOMETRIES
+  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+  // Reverted: Use Circle with 3 segments for Triangle, size 0.12
+  const deadGeo = new THREE.CircleGeometry(0.12, 3); 
+  
   const animScale = useRef(0);
 
   useFrame((state, delta) => {
@@ -35,8 +39,6 @@ export const PlayerAvatar = () => {
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
-    // Apply Global Scale (Entrance Animation)
-    // If intro is not done, we hide it.
     if (animScale.current < 0.01) {
         groupRef.current.visible = false;
         return;
@@ -53,41 +55,57 @@ export const PlayerAvatar = () => {
 
     // 2. State
     let repairState: RepairState = 'IDLE';
+    let entitySys: EntitySystem | null = null;
     try {
-        const sys = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem');
-        repairState = sys.repairState;
+        repairState = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem').repairState;
+        entitySys = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
     } catch {}
     
-    const isRepairing = repairState !== 'IDLE';
     let targetColor = colorTurret;
     if (repairState === 'HEALING') targetColor = colorRepair; 
     if (repairState === 'REBOOTING') targetColor = colorReboot; 
 
     // 3. Visuals
     if (ringRef.current && coreRef.current && glowRef.current) {
-        // Base Scale (multiplied by animScale)
         let currentBaseScale = 1.0;
 
-        if (isDead) {
+        if (isDead || isGameOver) {
+            // DEAD STATE: Red Triangle
             ringRef.current.visible = false;
-            glowRef.current.visible = isRepairing;
-            glowRef.current.material.color.set(colorReboot);
+            glowRef.current.visible = false;
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.set(isRepairing ? colorReboot : colorDead);
+            coreRef.current.material.color.set(colorDead);
+            coreRef.current.material.wireframe = true; 
             
-            if (isRepairing) {
-               coreRef.current.rotation.z -= 0.5; 
-               currentBaseScale = 1.5 + Math.sin(state.clock.elapsedTime * 30) * 0.2;
+            // ANIMATION LOGIC
+            const isRebooting = repairState === 'REBOOTING';
+            
+            if (isRebooting) {
+                // Fast Counter-Clockwise Spin
+                coreRef.current.rotation.z -= delta * 10.0;
+                
+                // Particle Spray
+                if (entitySys && Math.random() > 0.5) { // 30fps emission rate
+                    const pColor = Math.random() > 0.5 ? '#FF003C' : '#F7D277';
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 3;
+                    
+                    entitySys.spawnParticle(x, y, pColor, 1, speed, 0.4);
+                }
             } else {
-               coreRef.current.rotation.z = Math.PI; 
+                // Slow Clockwise Idle Spin
+                coreRef.current.rotation.z += delta * 1.5; 
             }
+            
         } else {
+            // ALIVE STATE
             ringRef.current.visible = true;
             glowRef.current.visible = true;
             coreRef.current.geometry = aliveGeo;
+            coreRef.current.material.wireframe = false;
             
-            if (isRepairing) {
+            if (repairState !== 'IDLE') {
                 ringRef.current.rotation.z += 0.4; 
                 ringRef.current.material.color.lerp(targetColor, 0.4);
                 coreRef.current.material.color.lerp(targetColor, 0.4);
@@ -103,16 +121,7 @@ export const PlayerAvatar = () => {
             }
         }
         
-        // Apply Final Scale (Entrance * State)
-        const finalScale = animScale.current * currentBaseScale;
-        
-        // Apply to sub-meshes individually or group? Group is easier for entrance.
-        // But we have logic that sets scale on sub-meshes. Let's apply to group.
         groupRef.current.scale.setScalar(animScale.current);
-        
-        // The sub-logic above set scalar on coreRef, we should respect that relative to group.
-        // Actually, previous logic set scale on coreRef/ringRef directly.
-        // Let's modify the previous logic to set local scale, while group handles global entrance.
         coreRef.current.scale.setScalar(currentBaseScale);
         ringRef.current.scale.setScalar(currentBaseScale); 
     }
