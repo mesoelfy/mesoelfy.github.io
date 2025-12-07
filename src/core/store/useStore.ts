@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useGameStore } from '@/game/store/useGameStore';
+import { EnemyTypes } from '@/game/config/Identifiers';
 
 // --- TYPES ---
 interface AudioSettings {
@@ -11,7 +12,7 @@ interface AudioSettings {
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
 type BootState = 'standby' | 'active' | 'sandbox';
-type SandboxView = 'arena' | 'gallery'; // NEW
+type SandboxView = 'arena' | 'gallery';
 
 interface DebugFlags {
   godMode: boolean;
@@ -30,6 +31,8 @@ interface AppState {
   
   // Sandbox State
   sandboxView: SandboxView;
+  galleryTarget: string; // NEW: Which enemy to show
+  galleryAction: 'IDLE' | 'ATTACK'; // NEW: Animation state
   
   // Audio
   audioSettings: AudioSettings;
@@ -43,16 +46,18 @@ interface AppState {
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   setSandboxView: (view: SandboxView) => void;
+  setGalleryTarget: (target: string) => void; // NEW
+  toggleGalleryAction: () => void; // NEW
+  
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
-  resetApplication: () => void; // NEW
+  resetApplication: () => void;
   
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
   
-  // Debug Actions
   toggleDebugMenu: () => void;
   toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
@@ -64,7 +69,10 @@ export const useStore = create<AppState>((set, get) => ({
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
+  
   sandboxView: 'arena',
+  galleryTarget: EnemyTypes.DRILLER,
+  galleryAction: 'IDLE',
   
   audioSettings: {
     master: true,
@@ -85,6 +93,8 @@ export const useStore = create<AppState>((set, get) => ({
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
   setSandboxView: (view) => set({ sandboxView: view }),
+  setGalleryTarget: (target) => set({ galleryTarget: target }),
+  toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
   
   openModal: (modal) => {
       if (get().audioSettings.master && get().audioSettings.sfx) {
@@ -102,23 +112,20 @@ export const useStore = create<AppState>((set, get) => ({
   
   setHovered: (item) => set({ hoveredItem: item }),
   
-  // Full Reset Logic
   resetApplication: () => {
-      // 1. Reset Game Store Logic
       useGameStore.getState().stopGame();
       useGameStore.getState().resetGame(); 
       
-      // 2. Reset App State
       set({
           bootState: 'standby',
           introDone: false,
           activeModal: 'none',
           isDebugOpen: false,
           isDebugMinimized: false,
-          sandboxView: 'arena'
+          sandboxView: 'arena',
+          galleryTarget: EnemyTypes.DRILLER,
+          galleryAction: 'IDLE'
       });
-      
-      // 3. Reset Audio if needed (optional)
   },
   
   toggleMaster: () => {

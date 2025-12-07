@@ -8,14 +8,13 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen } = useStore();
+  const { introDone, isDebugOpen, bootState } = useStore();
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      // Includes 'label' and 'data-interactive' check for Debug Menu items
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
@@ -34,10 +33,12 @@ export const CustomCursor = () => {
     };
   }, []);
 
+  // Show cursor if: Intro Active OR Debug Open OR Sandbox Mode
+  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox';
+
   return (
     <>
       <style jsx global>{`
-        /* Force hide system cursor on all interactive elements */
         body, a, button, input, label, select, textarea { cursor: none !important; }
       `}</style>
 
@@ -50,7 +51,7 @@ export const CustomCursor = () => {
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {(!introDone || isDebugOpen) && (
+          {isVisible && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}

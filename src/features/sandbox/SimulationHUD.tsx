@@ -4,13 +4,12 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { Registry } from '@/game/core/ecs/EntityRegistry';
 import { EnemyTypes } from '@/game/config/Identifiers';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw } from 'lucide-react';
+import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const SimulationHUD = () => {
-  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
-  const { resetGame } = useGameStore();
-
+  const { debugFlags, setDebugFlag, sandboxView, setSandboxView, galleryTarget, setGalleryTarget, galleryAction, toggleGalleryAction } = useStore();
+  
   const spawnEnemy = (type: string) => {
       GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
   };
@@ -29,18 +28,20 @@ export const SimulationHUD = () => {
             <span className="font-header font-black tracking-widest text-lg">HOLO_DECK // SIMULATION</span>
         </div>
         
-        {/* TIME CONTROL */}
-        <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
-            <Clock size={16} className="text-elfy-cyan" />
-            <input 
-                type="range" 
-                min="0.0" max="2.0" step="0.1"
-                value={debugFlags.timeScale}
-                onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
-                className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
-            />
-            <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
-        </div>
+        {/* TIME CONTROL (Arena Only) */}
+        {sandboxView === 'arena' && (
+            <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
+                <Clock size={16} className="text-elfy-cyan" />
+                <input 
+                    type="range" 
+                    min="0.0" max="2.0" step="0.1"
+                    value={debugFlags.timeScale}
+                    onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
+                    className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
+                />
+                <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
+            </div>
+        )}
       </div>
 
       {/* LEFT: VIEW TOGGLES */}
@@ -98,16 +99,47 @@ export const SimulationHUD = () => {
           </div>
       )}
 
-      {/* CENTER: GALLERY CONTROLS (Placeholder for now) */}
+      {/* CENTER: GALLERY CONTROLS */}
       {sandboxView === 'gallery' && (
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto">
-              <div className="bg-black/80 border border-elfy-cyan/50 px-6 py-4 flex items-center gap-6 backdrop-blur-md">
-                  <div className="text-elfy-cyan text-xs font-mono opacity-70 text-center">
-                      GALLERY_MODE // DRAG TO ROTATE
-                  </div>
-                  <button className="p-2 border border-elfy-cyan text-elfy-cyan hover:bg-elfy-cyan hover:text-black rounded-full">
-                      <RotateCw size={20} />
+              
+              {/* TARGET SELECTOR */}
+              <div className="flex bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
+                  {Object.values(EnemyTypes).map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => setGalleryTarget(type)}
+                        className={clsx(
+                            "px-4 py-2 text-xs font-bold uppercase transition-colors",
+                            galleryTarget === type 
+                                ? "bg-elfy-cyan text-black" 
+                                : "text-elfy-cyan hover:bg-elfy-cyan/10"
+                        )}
+                      >
+                          {type}
+                      </button>
+                  ))}
+              </div>
+
+              {/* ACTION TOGGLE */}
+              <div className="bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
+                  <button 
+                    onClick={toggleGalleryAction}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 text-xs font-bold transition-colors",
+                        galleryAction === 'ATTACK' 
+                            ? "bg-elfy-red text-black" 
+                            : "text-elfy-cyan hover:bg-elfy-cyan/10"
+                    )}
+                  >
+                      {galleryAction === 'ATTACK' ? <Play size={14} /> : <Pause size={14} />}
+                      {galleryAction === 'ATTACK' ? "ATTACK_MODE" : "IDLE_MODE"}
                   </button>
+              </div>
+
+              <div className="bg-black/80 border border-elfy-cyan/50 px-4 py-2 flex items-center gap-3 backdrop-blur-md text-elfy-cyan">
+                  <RotateCw size={16} />
+                  <span className="text-[10px] font-mono opacity-70">DRAG TO ROTATE // SCROLL TO ZOOM</span>
               </div>
           </div>
       )}

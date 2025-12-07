@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec  7 13:25:47 CST 2025
+Generated on: Sun Dec  7 14:24:56 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -71,8 +71,10 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── GalleryModal.tsx
 │   │   ├── identity
 │   │   │   └── AboutModal.tsx
-│   │   └── intro
-│   │       └── MatrixBootSequence.tsx
+│   │   ├── intro
+│   │   │   └── MatrixBootSequence.tsx
+│   │   └── sandbox
+│   │       └── SimulationHUD.tsx
 │   ├── game
 │   │   ├── GameOverlay.tsx
 │   │   ├── components
@@ -175,7 +177,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-47 directories, 120 files
+48 directories, 121 files
 
 =====================================
 FILE: ./next.config.js
@@ -345,7 +347,7 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
-DEBUG mode will have asterisk slots for entering konami code to access it
+DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
 
 Purple health bar needs to appear in panel header when rebooting
 
@@ -2486,6 +2488,7 @@ FILE: ./src/core/store/useStore.ts
 =====================================
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useGameStore } from '@/game/store/useGameStore';
 
 // --- TYPES ---
 interface AudioSettings {
@@ -2495,10 +2498,12 @@ interface AudioSettings {
 }
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
-type BootState = 'standby' | 'active' | 'sandbox'; // Added 'sandbox'
+type BootState = 'standby' | 'active' | 'sandbox';
+type SandboxView = 'arena' | 'gallery'; // NEW
 
 interface DebugFlags {
   godMode: boolean;
+  panelGodMode: boolean;
   peaceMode: boolean;
   showHitboxes: boolean;
   timeScale: number;
@@ -2511,19 +2516,25 @@ interface AppState {
   activeModal: ModalType;
   hoveredItem: string | null;
   
+  // Sandbox State
+  sandboxView: SandboxView;
+  
   // Audio
   audioSettings: AudioSettings;
   
   // Debug
   isDebugOpen: boolean;
+  isDebugMinimized: boolean;
   debugFlags: DebugFlags;
   
   // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
+  setSandboxView: (view: SandboxView) => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
+  resetApplication: () => void; // NEW
   
   toggleMaster: () => void;
   toggleMusic: () => void;
@@ -2531,7 +2542,9 @@ interface AppState {
   
   // Debug Actions
   toggleDebugMenu: () => void;
+  toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
+  resetDebugFlags: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -2539,6 +2552,7 @@ export const useStore = create<AppState>((set, get) => ({
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
+  sandboxView: 'arena',
   
   audioSettings: {
     master: true,
@@ -2547,8 +2561,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   isDebugOpen: false,
+  isDebugMinimized: false,
   debugFlags: {
     godMode: false,
+    panelGodMode: false,
     peaceMode: false,
     showHitboxes: false,
     timeScale: 1.0,
@@ -2556,6 +2572,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
+  setSandboxView: (view) => set({ sandboxView: view }),
   
   openModal: (modal) => {
       if (get().audioSettings.master && get().audioSettings.sfx) {
@@ -2573,7 +2590,25 @@ export const useStore = create<AppState>((set, get) => ({
   
   setHovered: (item) => set({ hoveredItem: item }),
   
-  // Audio
+  // Full Reset Logic
+  resetApplication: () => {
+      // 1. Reset Game Store Logic
+      useGameStore.getState().stopGame();
+      useGameStore.getState().resetGame(); 
+      
+      // 2. Reset App State
+      set({
+          bootState: 'standby',
+          introDone: false,
+          activeModal: 'none',
+          isDebugOpen: false,
+          isDebugMinimized: false,
+          sandboxView: 'arena'
+      });
+      
+      // 3. Reset Audio if needed (optional)
+  },
+  
   toggleMaster: () => {
       const prev = get().audioSettings.master;
       const next = !prev;
@@ -2598,11 +2633,14 @@ export const useStore = create<AppState>((set, get) => ({
       if (next && get().audioSettings.master) AudioSystem.playClick();
   },
   
-  // Debug
   toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
+  toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
   setDebugFlag: (key, value) => set(state => ({ 
       debugFlags: { ...state.debugFlags, [key]: value } 
   })),
+  resetDebugFlags: () => set({
+      debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
+  })
 }));
 
 
@@ -2708,17 +2746,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
-import { DebugOverlay } from '@/features/debug/DebugOverlay'; // NEW
+import { DebugOverlay } from '@/features/debug/DebugOverlay';
+import { SimulationHUD } from '@/features/sandbox/SimulationHUD'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone, bootState, setBootState } = useStore(); // Use global bootState
+  const { openModal, setIntroDone, bootState, setBootState } = useStore(); 
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isGameOver = systemIntegrity <= 0;
+  const isSandbox = bootState === 'sandbox';
+
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
@@ -2752,14 +2793,20 @@ export default function Home() {
         
         <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
-        {bootState === 'active' && <GameOverlay />}
+        {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
 
-        <AboutModal />
-        <FeedModal />
-        <GalleryModal />
-        <ContactModal />
-        
-        <ZenBomb />
+        {/* SANDBOX UI LAYER */}
+        {isSandbox && <SimulationHUD />}
+
+        {!isSandbox && (
+            <>
+                <AboutModal />
+                <FeedModal />
+                <GalleryModal />
+                <ContactModal />
+                <ZenBomb />
+            </>
+        )}
 
         {bootState === 'standby' && (
           <MatrixBootSequence 
@@ -2768,75 +2815,76 @@ export default function Home() {
           />
         )}
 
-        <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          
-          <Header />
+        {!isSandbox && (
+            <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+              <Header />
 
-          <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
-            <AnimatePresence>
-              {!isZenMode && (
-                <motion.div 
-                  className={clsx(
-                      "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                      isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
-                  )}
-                  initial="hidden"
-                  animate="visible"
-                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
-                  variants={{
-                    hidden: { opacity: 0 },
-                    visible: { 
-                      opacity: 1, 
-                      transition: { 
-                        staggerChildren: 0.3,
-                        delayChildren: 0.2 
-                      } 
-                    }
-                  }}
-                >
-                  <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                    <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                      <IdentityHUD />
-                    </GlassPanel>
+              <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
+                <AnimatePresence>
+                  {!isZenMode && (
+                    <motion.div 
+                      className={clsx(
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                          isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+                      )}
+                      initial="hidden"
+                      animate="visible"
+                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                      variants={{
+                        hidden: { opacity: 0 },
+                        visible: { 
+                          opacity: 1, 
+                          transition: { 
+                            staggerChildren: 0.3,
+                            delayChildren: 0.2 
+                          } 
+                        }
+                      }}
+                    >
+                      <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                        <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                          <IdentityHUD />
+                        </GlassPanel>
 
-                    <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
-                       <SocialRow />
-                    </GlassPanel>
-                  </div>
+                        <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                           <SocialRow />
+                        </GlassPanel>
+                      </div>
 
-                  <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                    <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                      <div className="w-full h-full flex items-center justify-center p-4">
-                        <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                          <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
-                          <button 
-                            onClick={() => openModal('feed')} 
-                            onMouseEnter={playHover}
-                            className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
-                          >
-                            [ ACCESS TERMINAL ]
-                          </button>
+                      <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                        <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                          <div className="w-full h-full flex items-center justify-center p-4">
+                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                              <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                              <button 
+                                onClick={() => openModal('feed')} 
+                                onMouseEnter={playHover}
+                                className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                              >
+                                [ ACCESS TERMINAL ]
+                              </button>
+                            </div>
+                          </div>
+                        </GlassPanel>
+
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+                          <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                             <LiveArtGrid />
+                          </GlassPanel>
+
+                          <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                             <HoloCommLog />
+                          </GlassPanel>
                         </div>
                       </div>
-                    </GlassPanel>
-
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                      <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                         <LiveArtGrid />
-                      </GlassPanel>
-
-                      <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                         <HoloCommLog />
-                      </GlassPanel>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          
-          <Footer />
-        </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              <Footer />
+            </div>
+        )}
       </main>
     </div>
   );
@@ -3532,6 +3580,128 @@ export const GalleryModal = () => {
 
 
 =====================================
+FILE: ./src/features/sandbox/SimulationHUD.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { Registry } from '@/game/core/ecs/EntityRegistry';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw } from 'lucide-react';
+import { clsx } from 'clsx';
+
+export const SimulationHUD = () => {
+  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
+  const { resetGame } = useGameStore();
+
+  const spawnEnemy = (type: string) => {
+      GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
+  };
+
+  const clearBoard = () => {
+      Registry.clear();
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-50">
+      
+      {/* TOP HEADER */}
+      <div className="absolute top-0 left-0 right-0 h-12 bg-black/80 backdrop-blur-md border-b border-elfy-cyan/30 flex items-center justify-between px-6 pointer-events-auto">
+        <div className="flex items-center gap-3 text-elfy-cyan">
+            <Box size={20} />
+            <span className="font-header font-black tracking-widest text-lg">HOLO_DECK // SIMULATION</span>
+        </div>
+        
+        {/* TIME CONTROL */}
+        <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
+            <Clock size={16} className="text-elfy-cyan" />
+            <input 
+                type="range" 
+                min="0.0" max="2.0" step="0.1"
+                value={debugFlags.timeScale}
+                onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
+                className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
+            />
+            <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
+        </div>
+      </div>
+
+      {/* LEFT: VIEW TOGGLES */}
+      <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto">
+         <button 
+            onClick={() => setSandboxView('arena')}
+            className={clsx(
+                "flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40",
+                sandboxView === 'arena' 
+                    ? "bg-elfy-cyan text-black border-elfy-cyan" 
+                    : "bg-black/50 text-elfy-cyan border-elfy-cyan/30 hover:bg-elfy-cyan/10"
+            )}
+         >
+            <Crosshair size={16} /> ARENA_MODE
+         </button>
+         
+         <button 
+            onClick={() => setSandboxView('gallery')}
+            className={clsx(
+                "flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40",
+                sandboxView === 'gallery' 
+                    ? "bg-elfy-cyan text-black border-elfy-cyan" 
+                    : "bg-black/50 text-elfy-cyan border-elfy-cyan/30 hover:bg-elfy-cyan/10"
+            )}
+         >
+            <ScanEye size={16} /> GALLERY_VIEW
+         </button>
+      </div>
+
+      {/* RIGHT: SPAWN CONTROLS (Only in Arena) */}
+      {sandboxView === 'arena' && (
+          <div className="absolute right-6 top-24 w-64 bg-black/80 backdrop-blur-md border border-elfy-cyan/30 p-4 pointer-events-auto flex flex-col gap-4">
+             <div>
+                <h3 className="text-xs font-mono text-elfy-cyan mb-2 border-b border-elfy-cyan/30 pb-1">ENTITY_INJECTION</h3>
+                <div className="grid grid-cols-1 gap-2">
+                    {Object.values(EnemyTypes).map(type => (
+                        <button 
+                            key={type}
+                            onClick={() => spawnEnemy(type)} 
+                            className="flex items-center justify-between px-3 py-2 border border-elfy-cyan/30 text-xs hover:bg-elfy-cyan hover:text-black transition-colors text-elfy-cyan group"
+                        >
+                            <span className="uppercase font-bold tracking-wider">{type}</span>
+                            <Bug size={14} className="group-hover:rotate-12 transition-transform" />
+                        </button>
+                    ))}
+                </div>
+             </div>
+
+             <button 
+                onClick={clearBoard}
+                className="w-full flex items-center justify-center gap-2 p-2 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black text-xs font-bold transition-colors"
+             >
+                <Eraser size={14} /> WIPE_ENTITIES
+             </button>
+          </div>
+      )}
+
+      {/* CENTER: GALLERY CONTROLS (Placeholder for now) */}
+      {sandboxView === 'gallery' && (
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto">
+              <div className="bg-black/80 border border-elfy-cyan/50 px-6 py-4 flex items-center gap-6 backdrop-blur-md">
+                  <div className="text-elfy-cyan text-xs font-mono opacity-70 text-center">
+                      GALLERY_MODE // DRAG TO ROTATE
+                  </div>
+                  <button className="p-2 border border-elfy-cyan text-elfy-cyan hover:bg-elfy-cyan hover:text-black rounded-full">
+                      <RotateCw size={20} />
+                  </button>
+              </div>
+          </div>
+      )}
+
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/features/feed/FeedModal.tsx
 =====================================
 import { ModalContainer } from '@/ui/overlays/ModalContainer';
@@ -3634,75 +3804,111 @@ FILE: ./src/features/debug/DebugOverlay.tsx
 import { useEffect, useState, useRef } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
-import { Registry } from '@/game/core/ecs/EntityRegistry'; // Direct Access for Telemetry
-import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database } from 'lucide-react';
+import { Registry } from '@/game/core/ecs/EntityRegistry'; 
+import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { TimeSystem } from '@/game/systems/TimeSystem';
+import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, LogOut, Eraser, Bug, Clock, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { EnemyTypes } from '@/game/config/Identifiers';
 
-// --- TABS ---
-type Tab = 'OVERRIDES' | 'SANDBOX' | 'STATS';
+type Tab = 'OVERRIDES' | 'SANDBOX' | 'STATS' | 'CONSOLE';
 
 const TABS: { id: Tab, label: string, icon: any }[] = [
   { id: 'OVERRIDES', label: 'ROOT_ACCESS', icon: Shield },
   { id: 'SANDBOX', label: 'HOLO_DECK', icon: Box },
   { id: 'STATS', label: 'TELEMETRY', icon: Activity },
+  { id: 'CONSOLE', label: 'KERNEL_LOG', icon: Terminal },
 ];
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, toggleDebugMenu, debugFlags, setDebugFlag, setBootState, setIntroDone } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, toggleDebugMinimize, debugFlags, setDebugFlag, setBootState, setIntroDone, bootState, resetApplication } = useStore();
   const { startGame, stopGame, activateZenMode, healPlayer } = useGameStore();
   
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
-  
-  // STATS STATE
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
-  const lastFrameTime = useRef(performance.now());
-  const frameCount = useRef(0);
+  const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Derived State
+  const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
   // KEY LISTENER
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '`' || e.key === '~' || e.key === 'Escape') {
-        toggleDebugMenu();
+      // ESCAPE: Standard Toggle (Context Aware)
+      if (e.key === 'Escape') {
+        if (isDebugMinimized) {
+            useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+        } else {
+            toggleDebugMenu();
+        }
+      }
+      
+      // TILDE (~): GOD MODE ACTIVATION
+      else if (e.key === '`' || e.key === '~') {
+        if (!isDebugOpen && !isDebugMinimized) {
+            // If closed -> Open AND Enable God Suite
+            toggleDebugMenu();
+            // Only enable if not already fully enabled
+            if (!useStore.getState().debugFlags.godMode) {
+                setDebugFlag('godMode', true);
+                setDebugFlag('panelGodMode', true);
+                setDebugFlag('peaceMode', true);
+            }
+        } else {
+            toggleDebugMenu();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleDebugMenu]);
+  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag]);
 
-  // TELEMETRY POLLING
+  // LOGS & STATS POLLING
   useEffect(() => {
-    if (!isDebugOpen || activeTab !== 'STATS') return;
+    if (!isDebugOpen && !isDebugMinimized) return;
+    
+    const handlers = Object.values(GameEvents).map(evt => {
+        return GameEventBus.subscribe(evt as any, (payload) => {
+            const time = new Date().toLocaleTimeString().split(' ')[0];
+            let msg = `${evt}`;
+            if (payload && (payload as any).type) msg += ` [${(payload as any).type}]`;
+            setLogs(prev => [...prev.slice(-49), { time, msg, type: evt }]);
+        });
+    });
 
     const pollInterval = setInterval(() => {
         const regStats = Registry.getStats();
-        
-        // Simple FPS Calc
-        const now = performance.now();
-        const delta = now - lastFrameTime.current;
-        frameCount.current++;
-        
-        if (delta >= 1000) {
-            setStats(prev => ({ 
-                ...prev, 
-                fps: Math.round((frameCount.current * 1000) / delta) 
-            }));
-            frameCount.current = 0;
-            lastFrameTime.current = now;
-        }
+        let fps = 0;
+        try {
+            const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
+            fps = timeSys.fps;
+        } catch {}
 
-        setStats(prev => ({
-            ...prev,
+        setStats({
             active: regStats.active,
             pooled: regStats.pooled,
-            total: regStats.totalAllocated
-        }));
+            total: regStats.totalAllocated,
+            fps: fps
+        });
+    }, 250); 
 
-    }, 500); // Update UI every 500ms
+    return () => {
+        handlers.forEach(unsub => unsub());
+        clearInterval(pollInterval);
+    };
+  }, [isDebugOpen, isDebugMinimized]);
 
-    return () => clearInterval(pollInterval);
-  }, [isDebugOpen, activeTab]);
+  useEffect(() => {
+      if (activeTab === 'CONSOLE' && logEndRef.current) {
+          logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+  }, [logs, activeTab]);
 
-  // ACTIONS
+  // --- ACTIONS ---
+
   const handleSkipBoot = () => {
     setIntroDone(true);
     setBootState('active');
@@ -3722,12 +3928,86 @@ export const DebugOverlay = () => {
     toggleDebugMenu();
   };
 
-  if (!isDebugOpen) return null;
+  const toggleGodSuite = () => {
+      const newState = !areAllGodModesOn;
+      setDebugFlag('godMode', newState);
+      setDebugFlag('panelGodMode', newState);
+      setDebugFlag('peaceMode', newState);
+  };
 
+  const enterSandbox = () => {
+      setIntroDone(true);
+      setBootState('sandbox');
+      Registry.clear();
+      startGame();
+      toggleDebugMenu();
+  };
+
+  const exitSimulation = () => {
+      resetApplication(); 
+  };
+  
+  const spawnEnemy = (type: string) => {
+      GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
+  };
+
+  const clearBoard = () => {
+      Registry.clear();
+  };
+
+  if (!isDebugOpen && !isDebugMinimized) return null;
+
+  // --- SPECIAL MODE: PAUSE MENU (If in Sandbox) ---
+  if (bootState === 'sandbox') {
+      return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono">
+            <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
+                <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
+                
+                <div className="flex flex-col gap-4">
+                    <button 
+                        onClick={toggleDebugMenu}
+                        className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors"
+                    >
+                        RESUME
+                    </button>
+                    
+                    <button 
+                        onClick={exitSimulation}
+                        className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors"
+                    >
+                        EXIT_TO_BOOT
+                    </button>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- MINI MODE ---
+  if (isDebugMinimized) {
+      return (
+        <div className="fixed top-24 left-4 z-[9999] flex flex-col gap-2 font-mono text-[10px]">
+            <div className="bg-black/80 border border-elfy-green p-2 shadow-[0_0_20px_rgba(0,255,65,0.2)] w-32 backdrop-blur-md">
+                <div className="flex justify-between items-center border-b border-elfy-green/30 pb-1 mb-1">
+                    <span className="text-elfy-green font-bold flex items-center gap-1"><Activity size={10} /> STATS</span>
+                    <button onClick={toggleDebugMinimize} className="hover:text-white text-elfy-green"><LayoutTemplate size={10} /></button>
+                </div>
+                <div className="flex flex-col gap-1 text-elfy-green-dim">
+                    <div className="flex justify-between"><span>FPS:</span> <span className="text-white font-bold">{stats.fps}</span></div>
+                    <div className="flex justify-between"><span>ENT:</span> <span className="text-white">{stats.active}</span></div>
+                    <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{stats.pooled}</span></div>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- FULL MENU ---
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
       
-      <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden">
+      <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
         
         {/* HEADER */}
         <div className="h-10 border-b border-elfy-green/50 bg-elfy-green/10 flex items-center justify-between px-4 shrink-0">
@@ -3735,7 +4015,10 @@ export const DebugOverlay = () => {
             <Terminal size={16} />
             <span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span>
           </div>
-          <button onClick={toggleDebugMenu} className="hover:text-white transition-colors"><X /></button>
+          <div className="flex items-center gap-2">
+             <button onClick={toggleDebugMinimize} className="hover:text-white transition-colors" title="Mini Mode"><MinusSquare size={16} /></button>
+             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors" title="Close"><X size={16} /></button>
+          </div>
         </div>
 
         {/* BODY */}
@@ -3787,15 +4070,42 @@ export const DebugOverlay = () => {
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_TOGGLES</h3>
                   
+                  {/* FIX: Smart Toggle Button */}
+                  <button 
+                    onClick={toggleGodSuite}
+                    className={clsx(
+                        "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
+                        areAllGodModesOn
+                            ? "bg-elfy-green text-black border-elfy-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
+                            : "bg-elfy-green/10 text-elfy-green border-elfy-green/50 hover:bg-elfy-green hover:text-black"
+                    )}
+                  >
+                    <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
+                    {areAllGodModesOn ? "DISABLE_GOD_SUITE" : "ENABLE_GOD_SUITE"}
+                  </button>
+
                   <label 
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
                   >
-                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> GHOST_MODE (Invincible)</span>
+                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> GHOST_MODE (Player Invincible)</span>
                     <input 
                       type="checkbox" 
                       checked={debugFlags.godMode} 
                       onChange={(e) => setDebugFlag('godMode', e.target.checked)}
+                      className="accent-elfy-green cursor-pointer"
+                    />
+                  </label>
+
+                  <label 
+                    data-interactive="true"
+                    className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+                  >
+                    <span className="text-xs font-bold flex items-center gap-2"><Square size={14} /> FORTRESS_MODE (Panels Invincible)</span>
+                    <input 
+                      type="checkbox" 
+                      checked={debugFlags.panelGodMode} 
+                      onChange={(e) => setDebugFlag('panelGodMode', e.target.checked)}
                       className="accent-elfy-green cursor-pointer"
                     />
                   </label>
@@ -3818,41 +4128,38 @@ export const DebugOverlay = () => {
             )}
 
             {activeTab === 'SANDBOX' && (
-              <div className="flex flex-col items-center justify-center h-full text-center gap-4 text-elfy-green-dim">
-                <Box size={48} className="opacity-50" />
-                <p>SANDBOX_MODULE // COMING_SOON</p>
-                <div className="text-xs max-w-md">
-                  This module will allow isolation testing of enemy AI, hitboxes, and animation curves in a controlled 'Holo-Deck' environment.
-                </div>
+              <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
+                  <Box size={64} className="text-elfy-green animate-pulse" />
+                  <div>
+                      <h2 className="text-xl font-bold mb-2">INITIALIZE_SIMULATION?</h2>
+                      <p className="text-xs text-elfy-green-dim max-w-xs mx-auto">
+                          Loads the 'Holo-Deck' simulation environment. The main OS will be suspended.
+                      </p>
+                  </div>
+                  <button 
+                      onClick={enterSandbox}
+                      className="px-8 py-3 bg-elfy-green text-black font-bold tracking-widest hover:bg-white transition-colors"
+                  >
+                      [ ENTER_HOLO_DECK ]
+                  </button>
               </div>
             )}
 
             {activeTab === 'STATS' && (
               <div className="space-y-6">
-                
-                {/* ENTITY MONITOR */}
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">ENTITY_REGISTRY</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    
                     <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
-                            <Cpu size={14} /> ACTIVE ENTITIES
-                        </div>
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Cpu size={14} /> ACTIVE ENTITIES</div>
                         <div className="text-3xl font-bold text-elfy-green">{stats.active}</div>
                     </div>
-
                     <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
-                            <Database size={14} /> MEMORY POOL
-                        </div>
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Database size={14} /> MEMORY POOL</div>
                         <div className="text-3xl font-bold text-elfy-green-dim">{stats.pooled} <span className="text-xs font-normal opacity-50">/ {stats.total}</span></div>
                     </div>
-
                   </div>
                 </div>
-
-                {/* RENDER STATS */}
                 <div className="space-y-3">
                   <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">RENDER_PIPELINE</h3>
                   <div className="p-4 border border-elfy-green/20 bg-black">
@@ -3865,14 +4172,33 @@ export const DebugOverlay = () => {
                       </div>
                   </div>
                 </div>
-
+                
+                {/* RESTORED: MINI MODE BUTTON */}
+                <div className="mt-8 flex justify-center">
+                    <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-elfy-green hover:text-white transition-colors border border-elfy-green/50 px-4 py-2 hover:bg-elfy-green/10">
+                        <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
+                    </button>
+                </div>
               </div>
+            )}
+
+            {activeTab === 'CONSOLE' && (
+                <div className="h-full flex flex-col">
+                    <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2">
+                        {logs.map((l, i) => (
+                            <div key={i} className="flex gap-2 opacity-80 hover:opacity-100 border-b border-white/5 py-0.5">
+                                <span className="text-elfy-green-dim">[{l.time}]</span>
+                                <span className={l.type.includes('ERROR') ? 'text-elfy-red' : 'text-elfy-green'}>{l.msg}</span>
+                            </div>
+                        ))}
+                        <div ref={logEndRef} />
+                    </div>
+                </div>
             )}
 
           </div>
         </div>
         
-        {/* FOOTER */}
         <div className="h-6 bg-elfy-green/5 border-t border-elfy-green/30 flex items-center px-4 text-[9px] text-elfy-green-dim">
           <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
         </div>
@@ -6626,7 +6952,10 @@ export enum GameEvents {
   GAME_OVER = 'GAME_OVER',
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
   UPGRADE_SELECTED = 'UPGRADE_SELECTED',
-  ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED', // NEW
+  ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED',
+  
+  // --- DEBUG ---
+  DEBUG_SPAWN = 'DEBUG_SPAWN', // NEW
   
   // --- VISUAL ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
@@ -6649,7 +6978,9 @@ export interface GameEventPayloads {
   [GameEvents.GAME_OVER]: { score: number };
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
   [GameEvents.UPGRADE_SELECTED]: { option: string };
-  [GameEvents.ZEN_MODE_ENABLED]: null; // NEW
+  [GameEvents.ZEN_MODE_ENABLED]: null;
+  
+  [GameEvents.DEBUG_SPAWN]: { type: string; count: number }; // NEW
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
@@ -7247,12 +7578,18 @@ FILE: ./src/game/systems/TimeSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { WorldConfig } from '../config/WorldConfig';
+import { useStore } from '@/core/store/useStore';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;
   public elapsedTime: number = 0;
   public delta: number = 0;
   public isPaused: boolean = false;
+  
+  // FPS Counting
+  public fps: number = 60;
+  private frames: number = 0;
+  private lastFpsTime: number = 0;
   
   private freezeTimer: number = 0;
 
@@ -7261,10 +7598,18 @@ export class TimeSystem implements IGameSystem {
   }
 
   update(rawDelta: number, rawTime: number): void {
-    // 1. Handle Hit Stop (Freeze)
+    // 1. Calculate FPS (Real-time)
+    this.frames++;
+    if (rawTime >= this.lastFpsTime + 1.0) {
+        this.fps = this.frames;
+        this.frames = 0;
+        this.lastFpsTime = rawTime;
+    }
+
+    // 2. Handle Hit Stop (Freeze)
     if (this.freezeTimer > 0) {
         this.freezeTimer -= rawDelta;
-        this.delta = 0; // Game logic pauses
+        this.delta = 0; 
         return;
     }
 
@@ -7273,9 +7618,13 @@ export class TimeSystem implements IGameSystem {
       return;
     }
 
-    // 2. Normal Time Processing
+    // 3. Debug Time Dilation
+    // We multiply the raw delta by the debug timeScale
+    const debugScale = useStore.getState().debugFlags.timeScale;
+
+    // 4. Normal Time Processing
     const safeDelta = Math.min(rawDelta, WorldConfig.time.maxDelta);
-    this.delta = safeDelta * this.timeScale;
+    this.delta = safeDelta * this.timeScale * debugScale;
     this.elapsedTime += this.delta;
   }
 
@@ -7289,6 +7638,9 @@ export class TimeSystem implements IGameSystem {
     this.delta = 0;
     this.isPaused = false;
     this.freezeTimer = 0;
+    this.frames = 0;
+    this.lastFpsTime = 0;
+    this.fps = 60;
   }
   
   public setScale(scale: number, duration?: number) {
@@ -7300,10 +7652,6 @@ export class TimeSystem implements IGameSystem {
     }
   }
 
-  /**
-   * Freezes game logic for a specific duration (seconds)
-   * Used for "Hit Stop" effects.
-   */
   public freeze(duration: number) {
       this.freezeTimer = duration;
   }
@@ -7342,10 +7690,18 @@ export class EntitySystem implements IGameSystem {
     Registry.clear();
     this.spatialGrid.clear();
     
-    // NEW: Listen for Zen Mode to wipe the board
+    // Zen Mode Wipe
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         Registry.clear();
-        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); // Big visual wipe effect
+        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); 
+    });
+
+    // NEW: Debug Spawning
+    GameEventBus.subscribe(GameEvents.DEBUG_SPAWN, (payload) => {
+        const type = payload.type as EnemyType;
+        for(let i=0; i<payload.count; i++) {
+            this.spawnEnemy(type);
+        }
     });
   }
 
@@ -7565,6 +7921,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
+import { useStore } from '@/core/store/useStore'; // Global Store for Debug Flags
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -7585,7 +7942,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   public systemIntegrity: number = 100;
 
   setup(locator: IServiceLocator): void {
-    // When game starts, we ensure states exist for all registered panels
     this.resetLogic();
     this.refreshAll();
   }
@@ -7595,8 +7951,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   }
 
   teardown(): void {
-    // We don't clear observedElements (DOM persists), but we can reset game logic?
-    // Actually, let's keep logic state until explicit reset.
   }
 
   public resetLogic() {
@@ -7609,12 +7963,14 @@ class PanelRegistrySystemClass implements IGameSystem {
   // --- ACTIONS ---
 
   public damagePanel(id: string, amount: number) {
+    // CHECK: Panel God Mode
+    if (useStore.getState().debugFlags.panelGodMode) return;
+
     const state = this.panelStates.get(id);
     if (!state || state.isDestroyed) return;
 
     state.health = Math.max(0, state.health - amount);
     
-    // Check Destruction
     if (state.health <= 0 && !state.isDestroyed) {
         state.isDestroyed = true;
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
@@ -7629,24 +7985,12 @@ class PanelRegistrySystemClass implements IGameSystem {
     const state = this.panelStates.get(id);
     if (!state) return;
 
-    // Logic: If destroyed, healing brings it back to life but starts at low HP?
-    // Or does "Rebooting" bring it back?
-    // Let's stick to existing logic: Healing increments HP.
-    // If destroyed, you must heal it back to full? Or just some?
-    // Let's say: Healing works. If destroyed, getting > 0 doesn't undestroy immediately?
-    // Existing logic: "If wasDestroyed and newHealth >= MAX, then undestroy".
-    // Wait, InteractionSystem handles the "Reboot vs Heal" logic.
-    // Let's allow simple healing here.
-    
     const wasDestroyed = state.isDestroyed;
     state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
     
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = 500; // Reset to half health upon revival? Or logic from store...
-        // Previous store logic: "if wasDestroyed and newHealth >= MAX ... newHealth = 500"
-        // That logic was weird. Let's simplify:
-        // You have to fill the bar to revive.
+        state.health = 500; 
     }
     
     this.calculateIntegrity();
@@ -7681,7 +8025,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   public unregister(id: string) {
     this.observedElements.delete(id);
     this.panelRects.delete(id);
-    // We keep state in case it remounts? No, delete state too.
     this.panelStates.delete(id);
   }
 
@@ -7709,7 +8052,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   }
   
   public getAllPanels() {
-      // Return combined data
       const result = [];
       for(const [id, rect] of this.panelRects) {
           const state = this.panelStates.get(id) || { health: 0, isDestroyed: true };
@@ -7900,9 +8242,8 @@ FILE: ./src/game/systems/WaveSystem.ts
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
 import { useGameStore } from '../store/useGameStore';
-import { useStore } from '@/core/store/useStore'; // Import Global Store
+import { useStore } from '@/core/store/useStore';
 
-// --- AGGRESSIVE WAVE CONFIG ---
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
@@ -7934,11 +8275,15 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // CHECK 1: Zen Mode (System Purge)
+    // STOP CONDITIONS:
+    // 1. Zen Mode (System Purge)
     if (useGameStore.getState().isZenMode) return;
-
-    // CHECK 2: Peace Protocol (Debug Flag)
+    
+    // 2. Peace Protocol (Debug Flag)
     if (useStore.getState().debugFlags.peaceMode) return;
+
+    // 3. Sandbox Mode (Manual Spawning Only)
+    if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
     this.checkTimeline();
@@ -8485,38 +8830,42 @@ import { useFrame } from '@react-three/fiber';
 import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/core/store/useStore';
 
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);
-  const gridRef = useRef<any>(null); // Ref to the Grid mesh to access material
+  const gridRef = useRef<any>(null);
 
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const bootState = useStore(state => state.bootState); // NEW
 
   const SECTION_SIZE = 5;   
   const SPEED = 0.5;
 
-  // --- COLOR PALETTES (Updated for Visibility) ---
   const colors = useMemo(() => ({
     safe: {
-      section: new THREE.Color("#003300"), // Dark Green
-      cell: new THREE.Color("#044d0f")     // Dim Green
+      section: new THREE.Color("#003300"),
+      cell: new THREE.Color("#044d0f")
     },
     warning: {
-      section: new THREE.Color("#4d3300"), // Deep Brown/Amber
-      cell: new THREE.Color("#d48806")     // Bright Amber/Orange
+      section: new THREE.Color("#4d3300"),
+      cell: new THREE.Color("#d48806")
     },
     critical: {
-      section: new THREE.Color("#4d0000"), // Deep Maroon
-      cell: new THREE.Color("#ff003c")     // Bright Neon Red
+      section: new THREE.Color("#4d0000"),
+      cell: new THREE.Color("#ff003c")
+    },
+    // NEW: Sandbox Palette (Blueprint / TRON)
+    sandbox: {
+      section: new THREE.Color("#001a33"), // Deep Blue
+      cell: new THREE.Color("#00F0FF")     // Cyan
     }
   }), []);
 
-  // Internal state for smooth transitions
   const currentSectionColor = useRef(new THREE.Color(colors.safe.section));
   const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
 
   useFrame((state, delta) => {
-    // 1. MOVEMENT (Infinite Scroll)
     if (groupRef.current) {
       groupRef.current.position.z += SPEED * delta;
       if (groupRef.current.position.z >= SECTION_SIZE) {
@@ -8524,12 +8873,14 @@ export const MatrixGrid = () => {
       }
     }
 
-    // 2. COLOR TRANSITION LOGIC
-    // Determine Target Colors based on Integrity (Matches Header/Panel Logic)
     let targetSection = colors.safe.section;
     let targetCell = colors.safe.cell;
 
-    if (systemIntegrity < 30) {
+    // Logic Priority: Sandbox > Critical > Warning > Safe
+    if (bootState === 'sandbox') {
+        targetSection = colors.sandbox.section;
+        targetCell = colors.sandbox.cell;
+    } else if (systemIntegrity < 30) {
       targetSection = colors.critical.section;
       targetCell = colors.critical.cell;
     } else if (systemIntegrity < 60) {
@@ -8537,11 +8888,9 @@ export const MatrixGrid = () => {
       targetCell = colors.warning.cell;
     }
 
-    // Smoothly Lerp current colors towards target (Speed: 3.0 * delta for faster reaction)
     currentSectionColor.current.lerp(targetSection, delta * 3.0);
     currentCellColor.current.lerp(targetCell, delta * 3.0);
 
-    // Apply to Grid Material
     if (gridRef.current && gridRef.current.material) {
         if (gridRef.current.material.uniforms.sectionColor) {
             gridRef.current.material.uniforms.sectionColor.value.copy(currentSectionColor.current);
@@ -8560,13 +8909,9 @@ export const MatrixGrid = () => {
         infiniteGrid
         cellSize={1}
         sectionSize={SECTION_SIZE}
-        
-        fadeDistance={25}      
-        
-        // Initial colors
+        fadeDistance={bootState === 'sandbox' ? 40 : 25} // Further visibility in sandbox
         sectionColor="#003300"
         cellColor="#044d0f"
-        
         sectionThickness={1.2} 
         cellThickness={1.1}
       />
