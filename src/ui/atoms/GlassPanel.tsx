@@ -4,7 +4,7 @@ import { ReactNode, useEffect as useReactEffect, useState as useReactState, useR
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
-import { PanelSparks } from './PanelSparks'; // NEW
+import { PanelSparks } from './PanelSparks';
 
 // --- CONSTANTS ---
 const MAX_HEALTH = 1000;
@@ -214,6 +214,8 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                 <motion.div 
                     className={clsx(
                         "h-full transition-colors duration-200",
+                        // FIX: Added Purple bar for active rebooting
+                        (isDestroyed && isInteracting) ? "bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" :
                         isDestroyed ? "bg-transparent" : 
                         (isInteracting && isDamaged) ? "bg-elfy-cyan" :
                         isDamaged ? "bg-elfy-yellow" : 
@@ -390,7 +392,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* NEW: Panel Sparks VFX Overlay */}
         {(isDestroyed || isGameOver) && (
             <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
         )}

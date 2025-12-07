@@ -123,8 +123,12 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
 
-Purple health bar needs to appear in panel header when rebooting
+
 
 Skipping boot mode / not clicking initialize button, seems to make the driller enemy not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
 
 Indicate to player to press ESC or ~ in zen mode
+
+
+fix the debug scene buttons
+
