@@ -20,6 +20,8 @@ interface GameStateUI {
   upgradePoints: number;
   systemIntegrity: number;
   
+  interactionTarget: string | null; // NEW: Tracks which panel player is hovering
+
   availableUpgrades: UpgradeOption[];
   activeUpgrades: Record<string, number>;
   panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
@@ -57,6 +59,8 @@ export const useGameStore = create<GameStateUI>()(
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
       systemIntegrity: 100,
+      interactionTarget: null, // Default
+      
       availableUpgrades: [],
       activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
       panels: {},
@@ -87,21 +91,11 @@ export const useGameStore = create<GameStateUI>()(
 
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
-      // FIX: Immutable Update Logic for Panels
-      // Previously, we were mutating nested objects which prevented React from seeing the change.
       syncPanels: (incomingPanels) => set((state) => {
           const merged = { ...state.panels };
-          
           for (const key in incomingPanels) {
               const prev = merged[key];
-              
-              // We strictly create a NEW object reference here using spread syntax.
-              // This ensures that selectors like `state.panels['video']` see a new reference
-              // and trigger a re-render in the UI components.
-              merged[key] = {
-                  ...(prev || {}),
-                  ...incomingPanels[key]
-              };
+              merged[key] = { ...(prev || {}), ...incomingPanels[key] };
           }
           return { panels: merged };
       }),
@@ -120,7 +114,6 @@ export const useGameStore = create<GameStateUI>()(
         GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
       },
 
-      // Fallback getters/setters (mostly driven by ECS SyncSystem now)
       addScore: (amount) => set(state => ({ score: state.score + amount })),
       addXp: (amount) => set(state => ({ xp: state.xp + amount })),
       damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),

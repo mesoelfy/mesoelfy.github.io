@@ -9,6 +9,7 @@ export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
 export class InteractionSystem implements IGameSystem {
   public repairState: RepairState = 'IDLE';
+  public hoveringPanelId: string | null = null; // Exposed for UI Sync
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
@@ -24,8 +25,9 @@ export class InteractionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
+    this.hoveringPanelId = null;
     
-    // STRICT CHECK: If game is over (Integrity 0), disable ALL interaction
+    // STRICT CHECK: If game is over, disable interaction
     if (this.gameSystem.isGameOver) {
         return; 
     }
@@ -65,6 +67,7 @@ export class InteractionSystem implements IGameSystem {
         cursor.y <= rect.top + padding;
 
     if (isHovering) {
+        this.hoveringPanelId = 'identity'; // Consider self-repair as hovering identity
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.gameSystem.tickReboot(2.5);
@@ -80,31 +83,28 @@ export class InteractionSystem implements IGameSystem {
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
     const panels = PanelRegistry.getAllPanels();
-    let hoveringPanelId: string | null = null;
-
+    
     for (const p of panels) {
-      if (!p.isDestroyed && p.health >= 1000) continue;
+      // Logic: Is mouse inside?
       if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
-        hoveringPanelId = p.id;
-        break; 
-      }
-    }
-
-    if (hoveringPanelId) {
-        const state = PanelRegistry.getPanelState(hoveringPanelId);
-        if (!state) return;
+        this.hoveringPanelId = p.id;
         
-        this.repairState = state.isDestroyed ? 'REBOOTING' : 'HEALING';
+        // Only trigger repair/logic if needed
+        if (!p.isDestroyed && p.health >= 1000) continue;
+
+        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(hoveringPanelId, 10);
+            PanelRegistry.healPanel(p.id, 10);
             this.lastRepairTime = time;
-            if (!state.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: hoveringPanelId, amount: 10 });
+            if (!p.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
             if (Math.random() > 0.3) {
-                const color = state.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
+                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
             }
         }
+        break; 
+      }
     }
   }
 }

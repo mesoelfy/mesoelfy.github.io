@@ -21,6 +21,10 @@ const config: Config = {
             dim: '#822B8A',
             deep: '#350E3A',
           },
+          cyan: {
+            DEFAULT: '#00F0FF', // NEW: Repair Color
+            dim: '#008ba3',
+          },
           yellow: {
             DEFAULT: '#eae747ff',
           },
@@ -30,10 +34,9 @@ const config: Config = {
         },
         
         // --- LATENT DEFENSE (Game Layer) ---
-        // Bespoke values for fine-tuning without affecting UI
         game: {
           turret: {
-            base: '#78F654', // Player color
+            base: '#78F654',
             glow: '#C2FE9A',
           },
           bullet: {
@@ -41,9 +44,9 @@ const config: Config = {
             trail: '#78F654',
           },
           enemy: {
-            seeker: '#9E4EA5', // Fast unit (Purple)
-            eater: '#FF003C',  // Tank unit (Red)
-            boss: '#F7D277',   // Boss unit (Yellow)
+            seeker: '#9E4EA5',
+            eater: '#FF003C',
+            boss: '#F7D277',
           },
           hud: {
             text: '#78F654',

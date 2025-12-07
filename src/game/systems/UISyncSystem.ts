@@ -2,15 +2,18 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { GameStateSystem } from './GameStateSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
+import { InteractionSystem } from './InteractionSystem';
 
 export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
+  private interactionSystem!: InteractionSystem;
   
   private readonly SYNC_INTERVAL = 0.1;
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.interactionSystem = locator.getSystem<InteractionSystem>('InteractionSystem');
   }
 
   update(delta: number, time: number): void {
@@ -35,7 +38,10 @@ export class UISyncSystem implements IGameSystem {
         xpToNextLevel: this.gameSystem.xpToNextLevel,
         upgradePoints: this.gameSystem.upgradePoints,
         systemIntegrity: PanelRegistry.systemIntegrity,
-        activeUpgrades: { ...this.gameSystem.activeUpgrades } // FIX: Ensure new object reference
+        activeUpgrades: { ...this.gameSystem.activeUpgrades },
+        
+        // NEW: Sync Interaction Target so React knows what player is doing
+        interactionTarget: this.interactionSystem.hoveringPanelId 
     });
 
     // Sync Panels
