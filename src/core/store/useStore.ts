@@ -9,10 +9,11 @@ interface AudioSettings {
 }
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
-type BootState = 'standby' | 'active' | 'sandbox'; // Added 'sandbox'
+type BootState = 'standby' | 'active' | 'sandbox';
 
 interface DebugFlags {
-  godMode: boolean;
+  godMode: boolean; // Player Invincibility
+  panelGodMode: boolean; // Panel Invincibility
   peaceMode: boolean;
   showHitboxes: boolean;
   timeScale: number;
@@ -30,6 +31,7 @@ interface AppState {
   
   // Debug
   isDebugOpen: boolean;
+  isDebugMinimized: boolean; // NEW
   debugFlags: DebugFlags;
   
   // Actions
@@ -45,6 +47,7 @@ interface AppState {
   
   // Debug Actions
   toggleDebugMenu: () => void;
+  toggleDebugMinimize: () => void; // NEW
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
 }
 
@@ -61,8 +64,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   isDebugOpen: false,
+  isDebugMinimized: false,
   debugFlags: {
     godMode: false,
+    panelGodMode: false,
     peaceMode: false,
     showHitboxes: false,
     timeScale: 1.0,
@@ -114,6 +119,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   // Debug
   toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
+  toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
   setDebugFlag: (key, value) => set(state => ({ 
       debugFlags: { ...state.debugFlags, [key]: value } 
   })),

@@ -1,6 +1,7 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
 import { useGameStore } from '../store/useGameStore';
+import { useStore } from '@/core/store/useStore'; // Import Global Store
 
 // --- AGGRESSIVE WAVE CONFIG ---
 const WAVE_TIMELINE = [
@@ -34,8 +35,11 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // FIX: Stop spawning if Zen Mode is active
+    // CHECK 1: Zen Mode (System Purge)
     if (useGameStore.getState().isZenMode) return;
+
+    // CHECK 2: Peace Protocol (Debug Flag)
+    if (useStore.getState().debugFlags.peaceMode) return;
 
     this.waveTime += delta;
     this.checkTimeline();

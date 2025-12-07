@@ -7,6 +7,11 @@ export class TimeSystem implements IGameSystem {
   public delta: number = 0;
   public isPaused: boolean = false;
   
+  // FPS Counting
+  public fps: number = 60;
+  private frames: number = 0;
+  private lastFpsTime: number = 0;
+  
   private freezeTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
@@ -14,7 +19,15 @@ export class TimeSystem implements IGameSystem {
   }
 
   update(rawDelta: number, rawTime: number): void {
-    // 1. Handle Hit Stop (Freeze)
+    // 1. Calculate FPS (Updates once per second)
+    this.frames++;
+    if (rawTime >= this.lastFpsTime + 1.0) {
+        this.fps = this.frames;
+        this.frames = 0;
+        this.lastFpsTime = rawTime;
+    }
+
+    // 2. Handle Hit Stop (Freeze)
     if (this.freezeTimer > 0) {
         this.freezeTimer -= rawDelta;
         this.delta = 0; // Game logic pauses
@@ -26,7 +39,7 @@ export class TimeSystem implements IGameSystem {
       return;
     }
 
-    // 2. Normal Time Processing
+    // 3. Normal Time Processing
     const safeDelta = Math.min(rawDelta, WorldConfig.time.maxDelta);
     this.delta = safeDelta * this.timeScale;
     this.elapsedTime += this.delta;
@@ -42,6 +55,9 @@ export class TimeSystem implements IGameSystem {
     this.delta = 0;
     this.isPaused = false;
     this.freezeTimer = 0;
+    this.frames = 0;
+    this.lastFpsTime = 0;
+    this.fps = 60;
   }
   
   public setScale(scale: number, duration?: number) {
@@ -53,10 +69,6 @@ export class TimeSystem implements IGameSystem {
     }
   }
 
-  /**
-   * Freezes game logic for a specific duration (seconds)
-   * Used for "Hit Stop" effects.
-   */
   public freeze(duration: number) {
       this.freezeTimer = duration;
   }

@@ -2,6 +2,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
+import { useStore } from '@/core/store/useStore'; // Import Global Store
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -26,9 +27,6 @@ export class GameStateSystem implements IGameSystem {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
-    
-    // REMOVED: Listener that caused Game Over on Identity Panel destruction.
-    // The panel is now just another piece of hardware that can break and be fixed.
   }
 
   update(delta: number, time: number): void {}
@@ -59,6 +57,11 @@ export class GameStateSystem implements IGameSystem {
 
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
+
+    // DEBUG: GHOST MODE CHECK
+    const { godMode } = useStore.getState().debugFlags;
+    if (godMode) return;
+
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {

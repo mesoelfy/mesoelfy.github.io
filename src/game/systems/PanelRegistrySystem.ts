@@ -2,6 +2,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
+import { useStore } from '@/core/store/useStore'; // Global Store for Debug Flags
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -22,7 +23,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   public systemIntegrity: number = 100;
 
   setup(locator: IServiceLocator): void {
-    // When game starts, we ensure states exist for all registered panels
     this.resetLogic();
     this.refreshAll();
   }
@@ -32,8 +32,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   }
 
   teardown(): void {
-    // We don't clear observedElements (DOM persists), but we can reset game logic?
-    // Actually, let's keep logic state until explicit reset.
   }
 
   public resetLogic() {
@@ -46,12 +44,14 @@ class PanelRegistrySystemClass implements IGameSystem {
   // --- ACTIONS ---
 
   public damagePanel(id: string, amount: number) {
+    // CHECK: Panel God Mode
+    if (useStore.getState().debugFlags.panelGodMode) return;
+
     const state = this.panelStates.get(id);
     if (!state || state.isDestroyed) return;
 
     state.health = Math.max(0, state.health - amount);
     
-    // Check Destruction
     if (state.health <= 0 && !state.isDestroyed) {
         state.isDestroyed = true;
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
@@ -66,24 +66,12 @@ class PanelRegistrySystemClass implements IGameSystem {
     const state = this.panelStates.get(id);
     if (!state) return;
 
-    // Logic: If destroyed, healing brings it back to life but starts at low HP?
-    // Or does "Rebooting" bring it back?
-    // Let's stick to existing logic: Healing increments HP.
-    // If destroyed, you must heal it back to full? Or just some?
-    // Let's say: Healing works. If destroyed, getting > 0 doesn't undestroy immediately?
-    // Existing logic: "If wasDestroyed and newHealth >= MAX, then undestroy".
-    // Wait, InteractionSystem handles the "Reboot vs Heal" logic.
-    // Let's allow simple healing here.
-    
     const wasDestroyed = state.isDestroyed;
     state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
     
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = 500; // Reset to half health upon revival? Or logic from store...
-        // Previous store logic: "if wasDestroyed and newHealth >= MAX ... newHealth = 500"
-        // That logic was weird. Let's simplify:
-        // You have to fill the bar to revive.
+        state.health = 500; 
     }
     
     this.calculateIntegrity();
@@ -118,7 +106,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   public unregister(id: string) {
     this.observedElements.delete(id);
     this.panelRects.delete(id);
-    // We keep state in case it remounts? No, delete state too.
     this.panelStates.delete(id);
   }
 
@@ -146,7 +133,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   }
   
   public getAllPanels() {
-      // Return combined data
       const result = [];
       for(const [id, rect] of this.panelRects) {
           const state = this.panelStates.get(id) || { health: 0, isDestroyed: true };

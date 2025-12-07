@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec  6 21:46:37 CST 2025
+Generated on: Sun Dec  7 13:25:47 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -61,6 +61,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   ├── features
 │   │   ├── contact
 │   │   │   └── ContactModal.tsx
+│   │   ├── debug
+│   │   │   └── DebugOverlay.tsx
 │   │   ├── effects
 │   │   │   └── GlobalShakeManager.tsx
 │   │   ├── feed
@@ -158,7 +160,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   └── ui
 │       ├── atoms
 │       │   ├── CustomCursor.tsx
-│       │   └── GlassPanel.tsx
+│       │   ├── GlassPanel.tsx
+│       │   └── ZenBomb.tsx
 │       ├── molecules
 │       │   ├── HoloCommLog.tsx
 │       │   ├── IdentityHUD.tsx
@@ -172,7 +175,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-46 directories, 118 files
+47 directories, 120 files
 
 =====================================
 FILE: ./next.config.js
@@ -269,7 +272,7 @@ FILE: ./docs/TODO.md
 
 bullet width upgrade lmited
 
-- OPNE_SOURCE video overlay shouldn't be red, since that is for dangerous bad stuff - update design language -
+
 
 we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
 
@@ -293,7 +296,7 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 
 - should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
 
-MESOELFY ASCII not animating properly
+
 
 What are screenshake best practices?
 
@@ -306,7 +309,49 @@ When player regenerates itself, the health bar shows 50% but I think it might ac
 
 Music should get distorted, glitchy, and reverbed when Game Over state
 
-make some of the streaming matrix rain characters red at the moment  UNSAFE CONNECTION DETECTED is triggered.
+
+
+“	•	The Skull Glitch:
+	◦	We will overlay a 2D, glitchy "Skull" graphic over the 3D canvas.
+	◦	This skull stays at opacity: 0 normally.
+	◦	As health drops, it randomly flickers to opacity: 1 for a single frame (subliminal glitch).
+	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
+“
+
+
+
+I’ve noticed that when I use the ESC button to skip the intro scene, I still have to click to make the audio active. Also, sometimes using the ESC button makes the driller enemies not render properly. I can see their points doing damage attached to the panels, but can’t see their bodies. I can still see the other two enemy types.
+
+
+screen shake - an individual panel should shake when brought to 0% health
+
+Player icon should be red unfilled tiny triangle after losing health.
+
+For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
+
+Maybe we can have the motion grid affected by the music like a music player visualizer, affected by the song that is playing?
+
+Your cursor could leave a psychedelic trail of colors behind it
+
+
+1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
+
+2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
+
+3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
+
+4     I’d like a quick simple chime blip to indicate panel healed 100%.
+
+
+
+
+DEBUG mode will have asterisk slots for entering konami code to access it
+
+Purple health bar needs to appear in panel header when rebooting
+
+Skipping boot mode / not clicking initialize button, seems to make the driller enemy not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
+
+Indicate to player to press ESC or ~ in zen mode
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -444,6 +489,10 @@ const config: Config = {
             dim: '#822B8A',
             deep: '#350E3A',
           },
+          cyan: {
+            DEFAULT: '#00F0FF', // NEW: Repair Color
+            dim: '#008ba3',
+          },
           yellow: {
             DEFAULT: '#eae747ff',
           },
@@ -453,10 +502,9 @@ const config: Config = {
         },
         
         // --- LATENT DEFENSE (Game Layer) ---
-        // Bespoke values for fine-tuning without affecting UI
         game: {
           turret: {
-            base: '#78F654', // Player color
+            base: '#78F654',
             glow: '#C2FE9A',
           },
           bullet: {
@@ -464,9 +512,9 @@ const config: Config = {
             trail: '#78F654',
           },
           enemy: {
-            seeker: '#9E4EA5', // Fast unit (Purple)
-            eater: '#FF003C',  // Tank unit (Red)
-            boss: '#F7D277',   // Boss unit (Yellow)
+            seeker: '#9E4EA5',
+            eater: '#FF003C',
+            boss: '#F7D277',
           },
           hud: {
             text: '#78F654',
@@ -722,35 +770,28 @@ const VideoSlot = ({
   getNextVideo: () => string
 }) => {
   const [videoId, setVideoId] = useState(initialVideo);
-  const [isMasked, setIsMasked] = useState(true); // Start masked (Uplink animation)
+  const [isMasked, setIsMasked] = useState(true); 
 
-  // Game Store Access
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
-  // Track previous offline state to detect "Revival" edge
   const prevOffline = useRef(isOffline);
 
-  // --- REVIVAL & MASK LOGIC ---
   useEffect(() => {
-    // 1. If we just died (became offline)
     if (isOffline && !prevOffline.current) {
-        setIsMasked(true); // Prepare mask for next time
+        setIsMasked(true); 
     }
     
-    // 2. If we just revived (became online)
     if (!isOffline && prevOffline.current) {
-        setVideoId(getNextVideo()); // Swap cartridge IMMEDIATELY
-        setIsMasked(true); // Ensure mask is up
+        setVideoId(getNextVideo()); 
+        setIsMasked(true); 
         
-        // Start reveal timer
         const t = setTimeout(() => setIsMasked(false), 2000);
         
         prevOffline.current = isOffline;
         return () => clearTimeout(t);
     }
 
-    // 3. Initial Mount (if online)
     if (!isOffline && isMasked) {
          const t = setTimeout(() => setIsMasked(false), 2000);
          return () => clearTimeout(t);
@@ -759,15 +800,12 @@ const VideoSlot = ({
     prevOffline.current = isOffline;
   }, [isOffline, getNextVideo]);
 
-  // --- AUTO-ROTATION LOGIC ---
   useEffect(() => {
-    if (isOffline) return; // Stop timer if offline
+    if (isOffline) return; 
 
-    // Random duration for this video clip
     const duration = 30000 + (Math.random() * 15000);
     
     const rotateTimer = setTimeout(() => {
-      // Sequence: Mask -> Swap -> Unmask
       setIsMasked(true);
       
       const swapTimer = setTimeout(() => {
@@ -778,7 +816,7 @@ const VideoSlot = ({
         }, 2000);
         
         return () => clearTimeout(unmaskTimer);
-      }, 1000); // Wait 1s while masked before swapping (simulating load)
+      }, 1000); 
       
       return () => clearTimeout(swapTimer);
     }, duration);
@@ -787,16 +825,15 @@ const VideoSlot = ({
   }, [videoId, isOffline, getNextVideo]);
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group/video hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/30 bg-black overflow-hidden group/video hover:border-elfy-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
       
-      {/* Use Ternary to strictly unmount iframe when offline */}
       {isOffline ? (
           <OfflineStatic />
       ) : (
         <>
           <div className="absolute inset-0 z-10">
             <iframe 
-              key={videoId} // Force DOM recreation on video swap
+              key={videoId} 
               width="100%" 
               height="100%" 
               src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
@@ -813,37 +850,34 @@ const VideoSlot = ({
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
-                    <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
-                    <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
+                    <Radio className="text-elfy-green animate-pulse w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-mono text-elfy-green animate-pulse">ESTABLISHING_UPLINK...</span>
                 </div>
              ) : (
-                 <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm pointer-events-auto">
+                 // HOVER STATE: Yellow Text & Border
+                 <div className="flex items-center gap-2 text-elfy-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-yellow rounded-sm pointer-events-auto">
                     <span>OPEN_SOURCE</span>
                     <ExternalLink size={12} />
                  </div>
              )}
           </div>
           
-          {/* CLICKABLE COVER */}
-          {!isMasked && (
-              <a 
-                href={`https://www.youtube.com/watch?v=${videoId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute inset-0 z-50 cursor-pointer"
-                aria-label="Watch on YouTube"
-              />
-          )}
+          <a 
+            href={`https://www.youtube.com/watch?v=${videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute inset-0 z-50 cursor-pointer"
+            aria-label="Watch on YouTube"
+          />
 
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+          {/* CAM TEXT: Green by default, stays visible */}
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-elfy-yellow transition-colors">
              CAM_0{slotIndex + 1}
           </div>
         </>
       )}
       
       {isOffline && (
-          // FIX: Reduced Z-Index from 110 to 60. 
-          // This puts it BENEATH the BreachOverlay (Z-70), ensuring it gets blurred.
           <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
              CAM_0{slotIndex + 1} [ERR]
           </div>
@@ -856,7 +890,6 @@ export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
   const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
 
-  // Initialize videos once on mount
   useEffect(() => {
     deckRef.current = [...VIDEO_POOL];
     const init: string[] = [];
@@ -1158,6 +1191,89 @@ export const IdentityHUD = () => {
 
 
 =====================================
+FILE: ./src/ui/atoms/ZenBomb.tsx
+=====================================
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bomb, Skull } from 'lucide-react';
+import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useState } from 'react';
+
+export const ZenBomb = () => {
+  const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
+  const isZenMode = useGameStore(state => state.isZenMode);
+  const activateZenMode = useGameStore(state => state.activateZenMode);
+  const [clicked, setClicked] = useState(false);
+
+  if (!isGameOver || isZenMode) return null;
+
+  const handleClick = () => {
+    setClicked(true);
+    AudioSystem.playClick();
+    
+    setTimeout(() => {
+        activateZenMode();
+    }, 800);
+  };
+
+  return (
+    <AnimatePresence>
+      {!clicked && (
+        <motion.button
+          initial={{ y: -200, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ scale: 3, opacity: 0, filter: "blur(20px)" }} 
+          transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
+          
+          onClick={handleClick}
+          // Z-30 is correct (behind Header z-40)
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center group cursor-pointer"
+        >
+          {/* CONNECTOR LINE: Increased width and opacity for visibility */}
+          <motion.div 
+            initial={{ height: 0 }}
+            animate={{ height: 160 }} 
+            transition={{ delay: 1.0, duration: 0.8, ease: "easeOut" }}
+            className="w-[2px] bg-elfy-red/80 absolute -top-64 left-1/2 -translate-x-1/2 shadow-[0_0_8px_#FF003C]"
+          />
+
+          {/* THE BOMB BUTTON */}
+          <div className="relative p-1 border border-elfy-red bg-black/90 backdrop-blur-md shadow-[0_0_20px_#FF003C] overflow-hidden group-hover:shadow-[0_0_40px_#FF003C] transition-shadow duration-300 z-10">
+             
+             <div className="absolute inset-0 opacity-20 pointer-events-none" 
+                  style={{ backgroundImage: 'repeating-linear-gradient(45deg, #FF003C 0, #FF003C 5px, transparent 5px, transparent 10px)' }} 
+             />
+
+             <div className="relative w-16 h-16 border border-elfy-red/50 flex items-center justify-center bg-black hover:bg-elfy-red transition-colors duration-300 group-hover:text-black text-elfy-red">
+                 <motion.div
+                   animate={{ rotate: [0, -10, 10, 0] }}
+                   transition={{ repeat: Infinity, duration: 0.3, repeatDelay: 2 }} 
+                 >
+                    <Bomb size={32} strokeWidth={2} />
+                 </motion.div>
+             </div>
+          </div>
+
+          {/* LABEL */}
+          <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-elfy-red/10 border border-elfy-red/50 backdrop-blur-md z-10">
+             <Skull size={10} className="text-elfy-red animate-pulse" />
+             <span className="text-[10px] font-mono font-black text-elfy-red tracking-widest uppercase group-hover:text-white transition-colors">
+                PURGE_SYSTEM
+             </span>
+             <Skull size={10} className="text-elfy-red animate-pulse" />
+          </div>
+          
+          <span className="text-[8px] text-elfy-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            [ ENABLE_ZEN_MODE ]
+          </span>
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/atoms/CustomCursor.tsx
 =====================================
 import { useEffect, useState } from 'react';
@@ -1170,15 +1286,15 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone } = useStore();
+  const { introDone, isDebugOpen } = useStore();
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      // Hover triggers on buttons, inputs, links
-      const isInteractive = target.closest('button, a, input, [data-interactive="true"]');
+      // Includes 'label' and 'data-interactive' check for Debug Menu items
+      const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
 
@@ -1199,26 +1315,26 @@ export const CustomCursor = () => {
   return (
     <>
       <style jsx global>{`
-        body, a, button, input { cursor: none !important; }
+        /* Force hide system cursor on all interactive elements */
+        body, a, button, input, label, select, textarea { cursor: none !important; }
       `}</style>
 
       <motion.div
         className={clsx(
-            "fixed top-0 left-0 pointer-events-none z-[9999]",
-            // FIX: Only apply difference blend mode when hovering interactive elements
+            "fixed top-0 left-0 pointer-events-none z-[10000]",
             isHovering ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {!introDone && (
+          {(!introDone || isDebugOpen) && (
             <motion.div
-              key="intro-cursor"
+              key="custom-cursor"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.2 }}
               className="relative"
             >
               <svg 
@@ -1247,14 +1363,32 @@ FILE: ./src/ui/atoms/GlassPanel.tsx
 =====================================
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
-import { ChevronUp, Skull, Power } from 'lucide-react';
-import { useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
+import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 
 // --- CONSTANTS ---
 const MAX_HEALTH = 1000;
+
+const panelVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  },
+  shattered: (custom: number) => ({
+    y: 350 + (custom * 50),
+    opacity: 0.8,
+    rotate: custom * 15,
+    transition: { 
+        duration: 1.5, 
+        ease: "anticipate",
+        delay: Math.abs(custom) * 0.1 
+    }
+  })
+};
 
 // --- SUB-COMPONENTS ---
 
@@ -1303,6 +1437,182 @@ const RebootOverlay = () => (
   </motion.div>
 );
 
+const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: { title: string, health: number, isDestroyed: boolean, isGameOver: boolean, gameId?: string }) => {
+  const interactionTarget = useGameStore(state => state.interactionTarget);
+  const isInteracting = gameId && interactionTarget === gameId;
+  
+  const healthPercent = (health / MAX_HEALTH) * 100;
+  const isDamaged = !isDestroyed && healthPercent < 100;
+
+  // --- OPTIMAL ICON STATE LOGIC ---
+  const [showOptimal, setShowOptimal] = useReactState(false);
+
+  useReactEffect(() => {
+    if (health < MAX_HEALTH) {
+      setShowOptimal(true);
+    }
+    // FIX: Reduced success icon duration from 3000 -> 1500
+    if (health >= MAX_HEALTH && showOptimal) {
+      const timer = setTimeout(() => setShowOptimal(false), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [health, showOptimal]);
+
+  // Determine Colors & Status
+  let mainColor = "text-elfy-green";
+  let statusText = "SECURE";
+  
+  if (isGameOver) {
+      mainColor = "text-elfy-red";
+      statusText = "SYSTEM_FAILURE";
+  } else if (isDestroyed) {
+      mainColor = isInteracting ? "text-elfy-purple" : "text-elfy-red";
+      statusText = isInteracting ? "REBOOTING..." : "OFFLINE";
+  } else if (isInteracting && isDamaged) {
+      mainColor = "text-elfy-cyan";
+      statusText = "HEALING...";
+  } else if (isDamaged) {
+      mainColor = "text-elfy-yellow"; 
+      statusText = "ATTENTION_REQ";
+  } else if (!showOptimal) {
+      mainColor = "text-elfy-green-dim";
+      statusText = "ONLINE";
+  }
+
+  return (
+    <div className={clsx(
+        "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
+        isGameOver ? "bg-elfy-red/10 border-elfy-red/50" :
+        isDestroyed ? (isInteracting ? "bg-elfy-purple/10 border-elfy-purple/50" : "bg-elfy-red/10 border-elfy-red/50") :
+        (isInteracting && isDamaged) ? "bg-elfy-cyan/10 border-elfy-cyan/50" :
+        isDamaged ? "bg-elfy-yellow/10 border-elfy-yellow/30" : 
+        "bg-elfy-green/5 border-elfy-green-dim/30"
+    )}>
+        <div className="flex items-center justify-between px-3 py-1.5 h-8">
+            
+            {/* LEFT: Title & Status Text */}
+            <div className="flex items-baseline gap-2">
+                <span className={clsx(
+                    "text-sm md:text-base font-header font-bold uppercase tracking-wider drop-shadow-md transition-colors duration-300",
+                    mainColor
+                )}>
+                    {title}
+                </span>
+                <span className={clsx(
+                    "text-[8px] font-mono tracking-widest opacity-80",
+                    mainColor
+                )}>
+                    [{statusText}]
+                </span>
+            </div>
+
+            {/* RIGHT: The "Action Node" */}
+            <div className="w-5 h-5 flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                    
+                    {isGameOver ? (
+                        <motion.div 
+                            key="gameover"
+                            initial={{ scale: 0, rotate: -90 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            className="text-elfy-red drop-shadow-[0_0_8px_currentColor]"
+                        >
+                            <Skull size={16} />
+                        </motion.div>
+
+                    ) : isDestroyed ? (
+                        isInteracting ? (
+                            <motion.div 
+                                key="rebooting"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-4 h-4 bg-elfy-purple rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                            >
+                                <motion.div animate={{ rotate: 360, opacity: [0.6, 1, 0.6] }} transition={{ duration: 0.5, repeat: Infinity }}>
+                                    <Zap size={10} className="text-black fill-current" />
+                                </motion.div>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="destroyed"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="w-4 h-4 border border-elfy-purple rounded-full flex items-center justify-center opacity-80"
+                            >
+                                <Power size={10} className="text-elfy-purple" />
+                            </motion.div>
+                        )
+
+                    ) : isInteracting && isDamaged ? (
+                        <motion.div 
+                            key="healing"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-4 h-4 bg-elfy-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                        >
+                            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                                <RefreshCw size={10} className="text-black" />
+                            </motion.div>
+                        </motion.div>
+
+                    ) : isDamaged ? (
+                        <motion.div 
+                            key="damaged"
+                            initial={{ opacity: 1, scale: 1 }}
+                            animate={{ 
+                                x: [-2, 2, -2, 2, -2, 2, 0, 0, 0, 0, 0, 0, 0], 
+                                filter: [
+                                    'drop-shadow(0 0 0px rgba(234,231,71,0))',
+                                    'drop-shadow(0 0 8px rgba(234,231,71,1))', 
+                                    'drop-shadow(0 0 0px rgba(234,231,71,0))'
+                                ]
+                            }}
+                            transition={{ 
+                                duration: 1.5,
+                                repeat: Infinity,
+                                ease: "linear"
+                            }}
+                            className="text-elfy-yellow"
+                        >
+                            <AlertTriangle size={16} />
+                        </motion.div>
+
+                    ) : showOptimal ? (
+                        <motion.div 
+                            key="optimal"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0, opacity: 0 }}
+                            className="w-4 h-4 bg-elfy-green rounded-full flex items-center justify-center shadow-[0_0_5px_currentColor]"
+                        >
+                            <Check size={10} className="text-black stroke-[3px]" />
+                        </motion.div>
+                    ) : null}
+
+                </AnimatePresence>
+            </div>
+        </div>
+
+        {!isGameOver && (
+            <div className="w-full h-1 bg-black/50 relative overflow-hidden">
+                <motion.div 
+                    className={clsx(
+                        "h-full transition-colors duration-200",
+                        isDestroyed ? "bg-transparent" : 
+                        (isInteracting && isDamaged) ? "bg-elfy-cyan" :
+                        isDamaged ? "bg-elfy-yellow" : 
+                        "bg-elfy-green"
+                    )}
+                    initial={{ width: "100%" }}
+                    animate={{ width: `${healthPercent}%` }}
+                    transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
+                />
+            </div>
+        )}
+    </div>
+  );
+};
+
 const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
   return (
     <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
@@ -1327,7 +1637,6 @@ const BreachOverlay = ({ progress, isVideo, showInteractive }: { progress: numbe
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
         isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
     )}>
-        {/* Background Scrolling Text */}
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
                className="flex flex-col gap-8"
@@ -1348,7 +1657,6 @@ const BreachOverlay = ({ progress, isVideo, showInteractive }: { progress: numbe
             </motion.div>
         </div>
 
-        {/* Interactive "Reboot" UI */}
         {showInteractive && (
           <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
               <div className="relative">
@@ -1399,38 +1707,13 @@ const BreachOverlay = ({ progress, isVideo, showInteractive }: { progress: numbe
   );
 };
 
-// --- MAIN COMPONENT ---
-
-interface GlassPanelProps {
-  children: ReactNode;
-  className?: string;
-  title?: string;
-  gameId?: string; 
-  suppressOfflineOverlay?: boolean;
-}
-
-const panelVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" }
-  },
-  shattered: (custom: number) => ({
-    y: 350 + (custom * 50),
-    opacity: 0.8,
-    rotate: custom * 15,
-    transition: { 
-        duration: 1.5, 
-        ease: "anticipate",
-        delay: Math.abs(custom) * 0.1 
-    }
-  })
-};
-
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  
+  const interactionTarget = useGameStore(state => state.interactionTarget);
+  const isInteracting = gameId && interactionTarget === gameId;
+
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
 
@@ -1438,7 +1721,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   const healthPercent = (health / MAX_HEALTH) * 100; 
   const isDamaged = health < MAX_HEALTH;
-  const isCritical = !isDestroyed && health < (MAX_HEALTH * 0.3);
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
@@ -1453,21 +1735,15 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   }, [isDestroyed, isGameOver]);
 
   let borderColor = "border-elfy-green-dim/30";
-  if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
-  else if (isCritical) borderColor = "border-elfy-red/80 animate-pulse";
+  if (isDestroyed) {
+      borderColor = isInteracting 
+        ? "border-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+        : "border-elfy-red animate-pulse"; 
+  }
+  else if (isInteracting && isDamaged) borderColor = "border-elfy-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
 
-  let barColor = "bg-elfy-green";
-  if (isDestroyed) barColor = "bg-elfy-purple"; 
-  else if (healthPercent < 30) barColor = "bg-elfy-red";
-  else if (healthPercent < 60) barColor = "bg-elfy-yellow";
-
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
-  const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
-  
-  let purpleCircleClass = "border border-elfy-purple-dim";
-  if (isGameOver) purpleCircleClass = "bg-elfy-red animate-pulse shadow-[0_0_8px_#ff003c]";
-  else if (isDestroyed) purpleCircleClass = "bg-elfy-purple";
 
   return (
     <motion.div 
@@ -1488,32 +1764,16 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {title && (
-        <div className="relative flex flex-col border-b border-elfy-green-dim/30 bg-elfy-green-dark/20 shrink-0 z-10">
-          <div className="flex items-center justify-between px-3 py-1">
-            <span className="text-sm md:text-base font-header font-bold text-elfy-green uppercase tracking-wider drop-shadow-md">
-              {title}
-            </span>
-            <div className="flex gap-1">
-              <div className={`w-2 h-2 rounded-full ${greenCircleClass}`} />
-              <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
-            </div>
-          </div>
-          
-          {gameId && !isGameOver && (
-            <div className="w-full h-1 bg-black/50">
-              <motion.div 
-                className={clsx("h-full transition-colors duration-200", barColor)}
-                initial={{ width: "100%" }}
-                animate={{ width: `${healthPercent}%` }}
-                transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
-              />
-            </div>
-          )}
-        </div>
+          <IntelligentHeader 
+            title={title} 
+            health={health} 
+            isDestroyed={isDestroyed} 
+            isGameOver={isGameOver}
+            gameId={gameId}
+          />
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* FIX: ADDED h-full flex flex-col to enable IdentityHUD vertical alignment */}
         <div className={clsx("h-full flex flex-col", isGameOver ? "invisible" : "visible")}>
             {children}
             {isDestroyed && (
@@ -1617,42 +1877,151 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
 =====================================
 FILE: ./src/ui/organisms/Footer.tsx
 =====================================
+import { useEffect, useState, useRef } from 'react';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useGameStore } from '@/game/store/useGameStore';
+import { clsx } from 'clsx';
+
+const IDLE_MESSAGES = [
+  "SYSTEM_MONITORING...",
+  "SCANNING_LATENT_SECTORS...",
+  "ENCRYPTION_ACTIVE...",
+  "PACKET_STREAM_STABLE...",
+  "PINGING_NEURAL_NET...",
+  "RENDERING_CONTEXT...",
+];
+
 export const Footer = () => {
   const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'UNKNOWN';
   const actionsUrl = "https://github.com/mesoelfy/mesoelfy.github.io/actions";
+  
+  // GLOBAL STATE FOR COLORS
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isGameOver = systemIntegrity <= 0;
+  const isCritical = systemIntegrity < 30;
+  const isWarning = systemIntegrity < 60;
+
+  let globalColor = "text-elfy-green-dim border-elfy-green-dim/30";
+  if (isGameOver) globalColor = "text-elfy-red border-elfy-red/50";
+  else if (isCritical) globalColor = "text-elfy-red border-elfy-red/30";
+  else if (isWarning) globalColor = "text-elfy-yellow border-elfy-yellow/30";
+
+  const [log, setLog] = useState<{ text: string, type: 'info' | 'warn' | 'crit' }>({ 
+      text: "SYSTEM_ONLINE", type: 'info' 
+  });
+  
+  const lockUntilRef = useRef(0);
+
+  useEffect(() => {
+    // Helper to check if we should update log
+    const canUpdate = () => {
+        const state = useGameStore.getState();
+        if (state.systemIntegrity <= 0) return false; // DEAD SILENCE
+        return Date.now() > lockUntilRef.current;
+    };
+
+    // 1. Event Listeners
+    const unsubHit = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
+        if (!canUpdate()) return;
+        setLog({ text: ">> WARNING: HULL BREACH DETECTED", type: 'warn' });
+        lockUntilRef.current = Date.now() + 1000;
+    });
+
+    const unsubDamage = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+        if (!canUpdate()) return;
+        setLog({ text: `>> ALERT: SECTOR [${p.id.toUpperCase()}] SUSTAINING DAMAGE`, type: 'warn' });
+        lockUntilRef.current = Date.now() + 1500;
+    });
+
+    const unsubDestroy = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        // Critical messages can override lock unless game over
+        if (useGameStore.getState().systemIntegrity <= 0) return;
+        setLog({ text: `⚠ CRITICAL: SECTOR [${p.id.toUpperCase()}] OFFLINE ⚠`, type: 'crit' });
+        lockUntilRef.current = Date.now() + 3000;
+    });
+
+    const unsubGameOver = GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        // FORCE OVERRIDE
+        setLog({ text: "⚠ SYSTEM FAILURE // CONNECTION LOST ⚠", type: 'crit' });
+        lockUntilRef.current = Date.now() + 999999999; 
+    });
+
+    const unsubSpawn = GameEventBus.subscribe(GameEvents.ENEMY_SPAWNED, (p) => {
+        if (!canUpdate()) return;
+        if (Math.random() > 0.9) {
+            setLog({ text: `>> SENSOR: NEW SIGNAL [${p.type.toUpperCase()}] DETECTED`, type: 'info' });
+        }
+    });
+    
+    const unsubHeal = GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
+        if (!canUpdate()) return;
+        setLog({ text: `>> MAINTENANCE: RESTORING [${p.id.toUpperCase()}]`, type: 'info' });
+    });
+
+    // 2. Idle Loop
+    const interval = setInterval(() => {
+        if (canUpdate()) {
+            const msg = IDLE_MESSAGES[Math.floor(Math.random() * IDLE_MESSAGES.length)];
+            setLog({ text: msg, type: 'info' });
+        }
+    }, 4000);
+
+    return () => {
+        unsubHit(); unsubDamage(); unsubDestroy(); unsubSpawn(); unsubHeal(); unsubGameOver();
+        clearInterval(interval);
+    };
+  }, []);
+
+  // Force update immediately on React state change for Game Over to ensure UI sync
+  useEffect(() => {
+      if (isGameOver) {
+          setLog({ text: "⚠ SYSTEM FAILURE // CONNECTION LOST ⚠", type: 'crit' });
+      }
+  }, [isGameOver]);
 
   return (
-    <footer className="w-full h-10 border-t border-elfy-green-dim/30 bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] text-elfy-green-dim font-mono">
-      <div className="flex items-center gap-2">
-        {/* Static Label */}
-        <span>BUILD_VER:</span>
-        
-        {/* Interactive Link */}
+    <footer className={clsx(
+        "w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-500",
+        globalColor
+    )}>
+      
+      {/* LEFT: System Log */}
+      <div className="flex-1 flex items-center gap-2 overflow-hidden mr-4">
+        <span className="shrink-0 font-bold">LOG:</span>
+        <AnimatePresence mode="wait">
+            <motion.span 
+                key={log.text}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.2 }}
+                className={clsx(
+                    "whitespace-nowrap font-bold tracking-wider truncate",
+                    // If Game Over, FORCE Red. Otherwise respect message type colors
+                    isGameOver ? "text-elfy-red animate-pulse" : 
+                    log.type === 'crit' ? "text-elfy-red animate-pulse" : 
+                    log.type === 'warn' ? "text-elfy-yellow" : 
+                    "text-elfy-green"
+                )}
+            >
+                {log.text}
+            </motion.span>
+        </AnimatePresence>
+      </div>
+
+      {/* RIGHT: Version */}
+      <div className="flex items-center gap-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity">
+        <span>VER:</span>
         <a 
           href={actionsUrl}
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-elfy-green-dim hover:text-elfy-green transition-colors cursor-pointer group"
+          className="hover:text-white transition-colors decoration-dashed underline underline-offset-2"
         >
-          [
-          {/* Underline only applies to the internal span on hover */}
-          <span className="group-hover:underline decoration-dashed decoration-elfy-green underline-offset-2">
-            {commitHash}
-          </span>
-          ]
+          {commitHash}
         </a>
-        
-        <span>//</span>
-        
-        <span className="text-elfy-red font-bold animate-pulse">STATUS: UNSAFE // MONITORING</span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <span>LATENT_CORE:</span>
-        <div className="w-4 h-4 flex items-center justify-center">
-          {/* Yellow border/bg, Green Shadow, Custom Diamond Spin */}
-          <div className="w-2.5 h-2.5 border border-elfy-yellow bg-elfy-yellow/20 animate-spin-diamond shadow-[0_0_8px_#78F654]" />
-        </div>
       </div>
     </footer>
   );
@@ -1662,36 +2031,60 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/organisms/Header.tsx
 =====================================
-import { Volume2, VolumeX, Radio, Trophy, Skull, Music } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
+import { motion } from 'framer-motion';
 
-// SUB-COMPONENTS for Audio Controls
-const SfxBtn = ({ active, onClick }: { active: boolean, onClick: () => void }) => (
+// --- SUB-COMPONENTS ---
+
+const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
+  <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
+    <div className="absolute inset-0 border-current opacity-20" 
+         style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
+    <div className="absolute w-full h-[1px] bg-current opacity-40" />
+    <div className="absolute h-full w-[1px] bg-current opacity-40" />
+    
+    <motion.div 
+      className="absolute inset-0 origin-bottom-right opacity-40"
+      style={{ 
+        background: 'conic-gradient(from 0deg, transparent 270deg, currentColor 360deg)',
+      }}
+      animate={{ rotate: 360 }}
+      transition={{ 
+        repeat: Infinity, 
+        ease: "linear", 
+        duration: panic ? 1.0 : 4.0 
+      }}
+    />
+    <div className={`w-1 h-1 rounded-full bg-current ${active ? 'animate-pulse' : ''}`} />
+  </div>
+);
+
+const SfxBtn = ({ active, onClick, color }: { active: boolean, onClick: () => void, color: string }) => (
   <button 
     onClick={onClick}
     className={clsx(
       "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
       active 
-        ? "text-elfy-green hover:text-elfy-yellow bg-elfy-green/10 border-elfy-green/20" 
-        : "text-elfy-green-dim/30 hover:text-elfy-red decoration-line-through"
+        ? `hover:text-elfy-yellow bg-white/5 border-white/10 ${color}`
+        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100 decoration-line-through`
     )}
   >
     SFX
   </button>
 );
 
-const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon }: any) => (
+const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any) => (
   <button 
     onClick={onClick}
     className={clsx(
       "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
       active 
-        ? "text-elfy-green hover:text-elfy-yellow bg-elfy-green/5" 
-        : "text-elfy-green-dim/30 hover:text-elfy-red"
+        ? `hover:text-elfy-yellow bg-white/5 ${color}`
+        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100`
     )}
   >
     {active ? <Icon size={14} /> : <OffIcon size={14} />}
@@ -1703,80 +2096,88 @@ export const Header = () => {
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const score = useGameStore(state => state.score);
-  const highScore = useGameStore(state => state.highScore);
+  const isPlaying = useGameStore(state => state.isPlaying);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  let integrityColor = "bg-elfy-green";
-  if (systemIntegrity < 40) integrityColor = "bg-elfy-red";
-  else if (systemIntegrity < 70) integrityColor = "bg-elfy-yellow";
+  const isCritical = systemIntegrity < 30;
+  const isWarning = systemIntegrity < 60;
+  const isGameOver = systemIntegrity <= 0;
+  
+  let statusColor = "text-elfy-green";
+  if (isCritical) statusColor = "text-elfy-red";
+  else if (isWarning) statusColor = "text-elfy-yellow";
 
   return (
-    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0">
+    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
-        <span className="font-header font-black text-elfy-green text-xl md:text-2xl tracking-wide drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]">
+        <span className={clsx(
+            "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
+            statusColor
+        )}>
           MESOELFY_OS
         </span>
         
         {mounted && (
-          <div className="hidden md:flex items-center gap-6 text-xs font-mono border-l border-elfy-green-dim/20 pl-4">
+          <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
+            <Radar active={isPlaying} panic={isCritical || (isPlaying && score > 0)} color={statusColor} />
             
-            {/* CURRENT KILLS */}
-            <div className="flex items-center gap-2 text-elfy-green" title="Current Session Kills">
-              <Skull size={14} />
-              <span className="opacity-70">KILLS:</span>
-              <span className="font-bold">{score.toString().padStart(4, '0')}</span>
+            <div className="flex flex-col leading-none">
+                <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
+                <span className="font-bold text-lg tabular-nums tracking-widest">
+                    {score.toString().padStart(4, '0')}
+                </span>
             </div>
-
-            {/* MAX KILLS */}
-            <div className="flex items-center gap-2 text-elfy-yellow" title="All-Time Max Kills">
-              <Trophy size={14} />
-              <span className="opacity-70">MAX:</span>
-              <span className="font-bold">{highScore.toString().padStart(4, '0')}</span>
-            </div>
-
           </div>
         )}
       </div>
 
       {/* RIGHT: Status & Audio Controls */}
       <div className="flex items-center gap-4">
-        
-        {/* Audio Group */}
-        <div className="flex items-center gap-1 border-l border-elfy-green-dim/20 pl-4">
-            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} />
+        <div className="flex items-center gap-1 border-l border-white/10 pl-4">
+            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
             
             <AudioBtn 
                 active={audioSettings.music} 
                 onClick={toggleMusic} 
                 icon={Music} 
                 offIcon={Music}
+                color={statusColor}
             />
 
-            <div className="w-[1px] h-4 bg-elfy-green-dim/20 mx-1" />
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
             <AudioBtn 
                 active={audioSettings.master} 
                 onClick={toggleMaster} 
                 icon={Volume2} 
                 offIcon={VolumeX} 
+                color={statusColor}
             />
         </div>
       </div>
 
-      {/* BOTTOM BORDER: OS INTEGRITY BAR */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900">
-        <div 
-          className={`h-full transition-all duration-500 ease-out ${integrityColor} shadow-[0_0_10px_currentColor]`} 
-          style={{ width: `${systemIntegrity}%` }}
-        />
-      </div>
+      {/* BOTTOM BORDER */}
+      {!isGameOver && (
+        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
+          <div 
+            className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
+                isCritical ? "bg-elfy-red" : isWarning ? "bg-elfy-yellow" : "bg-elfy-green"
+            )} 
+            style={{ width: `${systemIntegrity}%` }}
+          />
+        </div>
+      )}
       
-      <div className="absolute bottom-[-14px] right-2 text-[8px] font-mono text-elfy-green-dim flex items-center gap-1">
-        <Radio size={8} className={systemIntegrity < 100 ? "animate-pulse text-elfy-red" : ""} />
+      {/* INTEGRITY TEXT */}
+      <div className={clsx(
+          "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
+          isCritical ? "text-elfy-red" : isWarning ? "text-elfy-yellow" : "text-elfy-green-dim"
+      )}>
+        <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
         <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>
       </div>
 
@@ -2086,6 +2487,7 @@ FILE: ./src/core/store/useStore.ts
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 
+// --- TYPES ---
 interface AudioSettings {
   master: boolean;
   music: boolean;
@@ -2093,42 +2495,69 @@ interface AudioSettings {
 }
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
+type BootState = 'standby' | 'active' | 'sandbox'; // Added 'sandbox'
+
+interface DebugFlags {
+  godMode: boolean;
+  peaceMode: boolean;
+  showHitboxes: boolean;
+  timeScale: number;
+}
 
 interface AppState {
+  // App Flow
+  bootState: BootState;
   introDone: boolean;
   activeModal: ModalType;
   hoveredItem: string | null;
   
-  // New Audio State
+  // Audio
   audioSettings: AudioSettings;
   
+  // Debug
+  isDebugOpen: boolean;
+  debugFlags: DebugFlags;
+  
+  // Actions
+  setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
   
-  // New Audio Actions
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
+  
+  // Debug Actions
+  toggleDebugMenu: () => void;
+  setDebugFlag: (key: keyof DebugFlags, value: any) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
+  bootState: 'standby',
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
   
-  // Default Settings: Master ON, Music OFF (User must enable), SFX ON
   audioSettings: {
     master: true,
     music: false,
     sfx: true,
   },
+  
+  isDebugOpen: false,
+  debugFlags: {
+    godMode: false,
+    peaceMode: false,
+    showHitboxes: false,
+    timeScale: 1.0,
+  },
 
+  setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
   
   openModal: (modal) => {
-      // Check Master & SFX state before playing sound
       if (get().audioSettings.master && get().audioSettings.sfx) {
           AudioSystem.playClick(); 
       }
@@ -2144,16 +2573,12 @@ export const useStore = create<AppState>((set, get) => ({
   
   setHovered: (item) => set({ hoveredItem: item }),
   
-  // --- GRANULAR AUDIO ACTIONS ---
-
+  // Audio
   toggleMaster: () => {
       const prev = get().audioSettings.master;
       const next = !prev;
       set(state => ({ audioSettings: { ...state.audioSettings, master: next } }));
-      
       AudioSystem.setMasterMute(!next);
-      
-      // Feedback sound if turning ON
       if (next && get().audioSettings.sfx) AudioSystem.playClick(); 
   },
 
@@ -2161,9 +2586,7 @@ export const useStore = create<AppState>((set, get) => ({
       const prev = get().audioSettings.music;
       const next = !prev;
       set(state => ({ audioSettings: { ...state.audioSettings, music: next } }));
-      
       AudioSystem.setMusicMute(!next);
-      
       if (next && get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
   },
 
@@ -2171,11 +2594,15 @@ export const useStore = create<AppState>((set, get) => ({
       const prev = get().audioSettings.sfx;
       const next = !prev;
       set(state => ({ audioSettings: { ...state.audioSettings, sfx: next } }));
-      
       AudioSystem.setSfxMute(!next);
-      
       if (next && get().audioSettings.master) AudioSystem.playClick();
   },
+  
+  // Debug
+  toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
+  setDebugFlag: (key, value) => set(state => ({ 
+      debugFlags: { ...state.debugFlags, [key]: value } 
+  })),
 }));
 
 
@@ -2277,23 +2704,24 @@ import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
+import { ZenBomb } from '@/ui/atoms/ZenBomb';
+import { DebugOverlay } from '@/features/debug/DebugOverlay'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone } = useStore(); 
+  const { openModal, setIntroDone, bootState, setBootState } = useStore(); // Use global bootState
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
-  const isGameOver = systemIntegrity <= 0;
+  const isZenMode = useGameStore(s => s.isZenMode);
   
-  const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
-  const [showScene, setShowScene] = useState(false); // Controls Grid Visibility
+  const isGameOver = systemIntegrity <= 0;
+  const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
-    // Reveal the 3D Scene immediately when breach animation starts
     setShowScene(true);
   };
 
@@ -2318,10 +2746,10 @@ export default function Home() {
       
       <CustomCursor />
       <GlobalShakeManager />
+      <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        {/* FIX: Scene starts invisible (opacity-0) to prevent Grid FOUC over black screen */}
         <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
         {bootState === 'active' && <GameOverlay />}
@@ -2330,6 +2758,8 @@ export default function Home() {
         <FeedModal />
         <GalleryModal />
         <ContactModal />
+        
+        <ZenBomb />
 
         {bootState === 'standby' && (
           <MatrixBootSequence 
@@ -2342,63 +2772,68 @@ export default function Home() {
           
           <Header />
 
-          <motion.div 
-            className={clsx(
-                "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
-            )}
-            initial="hidden"
-            animate={bootState === 'active' ? "visible" : "hidden"}
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { 
-                opacity: 1, 
-                transition: { 
-                  staggerChildren: 0.3,
-                  delayChildren: 0.2 
-                } 
-              }
-            }}
-          >
-            <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-              
-              <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                <IdentityHUD />
-              </GlassPanel>
+          <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
+            <AnimatePresence>
+              {!isZenMode && (
+                <motion.div 
+                  className={clsx(
+                      "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                      isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+                  )}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: { 
+                      opacity: 1, 
+                      transition: { 
+                        staggerChildren: 0.3,
+                        delayChildren: 0.2 
+                      } 
+                    }
+                  }}
+                >
+                  <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                    <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                      <IdentityHUD />
+                    </GlassPanel>
 
-              <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
-                 <SocialRow />
-              </GlassPanel>
-            </div>
-
-            <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-              <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                {/* FIX: Centered Dashed Box that hugs content */}
-                <div className="w-full h-full flex items-center justify-center p-4">
-                  <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                    <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
-                    <button 
-                      onClick={() => openModal('feed')} 
-                      onMouseEnter={playHover}
-                      className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
-                    >
-                      [ ACCESS TERMINAL ]
-                    </button>
+                    <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                       <SocialRow />
+                    </GlassPanel>
                   </div>
-                </div>
-              </GlassPanel>
 
-              <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                   <LiveArtGrid />
-                </GlassPanel>
+                  <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                    <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                      <div className="w-full h-full flex items-center justify-center p-4">
+                        <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                          <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                          <button 
+                            onClick={() => openModal('feed')} 
+                            onMouseEnter={playHover}
+                            className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                          >
+                            [ ACCESS TERMINAL ]
+                          </button>
+                        </div>
+                      </div>
+                    </GlassPanel>
 
-                <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                   <HoloCommLog />
-                </GlassPanel>
-              </div>
-            </div>
-          </motion.div>
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
+                      <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                         <LiveArtGrid />
+                      </GlassPanel>
+
+                      <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                         <HoloCommLog />
+                      </GlassPanel>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           <Footer />
         </div>
@@ -2549,6 +2984,7 @@ FILE: ./src/features/intro/MatrixBootSequence.tsx
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
@@ -2565,7 +3001,6 @@ const ASCII_TITLE = `
 ░  ░      ░ ░ ░  ░ ░ ▒  ░   ░ ▒ ▒░  ░ ░  ░░ ░ ▒  ░ ░       ▓██ ░▒░ 
 ░      ░      ░    ░ ░    ░ ░ ░ ▒     ░     ░ ░    ░ ░     ▒ ▒ ░░  
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
-                                                                 
 `;
 
 // --- RESTORED ASCII RENDERER ---
@@ -2577,16 +3012,11 @@ const AsciiRenderer = () => {
 
       let animClass = '';
       
-      // 1. Solid Blocks = Green Matrix Animation
       if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
         animClass = 'animate-matrix-green text-elfy-green-dark';
-      } 
-      // 2. Shaded Blocks = Purple Matrix Animation (The "Shimmer")
-      else if (['░', '▒', '▓'].includes(char)) {
+      } else if (['░', '▒', '▓'].includes(char)) {
         animClass = 'animate-matrix-purple text-elfy-purple';
-      } 
-      // 3. Fallback
-      else {
+      } else {
         animClass = 'text-elfy-green-dark';
       }
 
@@ -2611,26 +3041,199 @@ const AsciiRenderer = () => {
   );
 };
 
-const BootHeader = () => (
-  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
-    <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
-    <div className="flex gap-1 items-center">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="w-1 bg-elfy-green/50 animate-pulse" style={{ height: `${i * 4 + 4}px`, animationDelay: `${i * 0.1}s` }} />
-      ))}
-    </div>
-  </div>
-);
+const BootHeader = ({ step }: { step: number }) => {
+  const isUnsafe = step === 3;
+  const isBypass = step === 4;
+  const isSecure = step >= 5;
 
-const CoreHeader = () => (
-  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
-    <span className="text-sm text-elfy-green font-mono font-bold tracking-widest uppercase">MESOELFY_CORE</span>
-    <div className="relative w-3 h-3 flex items-center justify-center">
-      <div className="absolute inset-0 border border-elfy-green rounded-full animate-spin-slow border-t-transparent" />
-      <div className="w-1 h-1 bg-elfy-green rounded-full animate-pulse" />
+  let color = "text-elfy-green-dim";
+  let statusText = "ESTABLISHING...";
+  let bgClass = "bg-elfy-green/5";
+  
+  if (isUnsafe) {
+      color = "text-elfy-red";
+      statusText = "SIGNAL_CORRUPTED";
+      bgClass = "bg-elfy-red/10 border-elfy-red/30";
+  } else if (isBypass) {
+      color = "text-elfy-purple-light";
+      statusText = "INJECTING_PAYLOAD";
+      bgClass = "bg-elfy-purple/10 border-elfy-purple/30";
+  } else if (isSecure) {
+      color = "text-elfy-green";
+      statusText = "UPLINK_STABLE";
+      bgClass = "bg-elfy-green/10 border-elfy-green/30";
+  } else if (step >= 1) {
+      statusText = "HANDSHAKING...";
+  }
+
+  return (
+    <div className={`flex shrink-0 items-center justify-between border-b border-white/10 ${bgClass} px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300`}>
+      <div className="flex flex-col leading-none gap-1.5 mt-0.5">
+          <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
+            BOOT_LOADER.SYS
+          </span>
+          <span className="text-[8px] text-gray-500 font-mono tracking-wider opacity-80">{statusText}</span>
+      </div>
+      
+      <div className="flex gap-1 items-end h-3">
+        {[1, 2, 3, 4].map(i => {
+           let heightClass = "h-1";
+           let animClass = "";
+           let barColor = isUnsafe ? "bg-elfy-red" : isBypass ? "bg-elfy-purple-light" : "bg-elfy-green";
+           
+           if (isUnsafe) {
+               heightClass = i % 2 === 0 ? "h-3" : "h-1";
+               animClass = "animate-pulse";
+           } else if (isBypass) {
+               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
+           } else if (isSecure) {
+               heightClass = "h-3"; 
+           } else {
+               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
+               animClass = step >= (i-1) ? "animate-pulse" : "";
+           }
+
+           return (
+               <div 
+                 key={i} 
+                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
+                 style={{ opacity: isSecure ? 1 : 0.7 }} 
+               />
+           );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+const CoreHeader = ({ step }: { step: number }) => {
+  const isUnsafe = step === 3;
+  const isBypass = step === 4;
+  const isDecrypted = step === 5;
+  const isCaution = step >= 6;
+
+  const [showCpu, setShowCpu] = useState(false);
+
+  useEffect(() => {
+    if (step === 5) {
+      setShowCpu(false);
+      const timer = setTimeout(() => {
+        setShowCpu(true);
+      }, 700); 
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  let borderColor = "border-elfy-green/30";
+  let bgColor = "bg-elfy-green/10";
+  let textColor = "text-elfy-green";
+
+  if (isUnsafe) {
+    borderColor = "border-elfy-red/50";
+    bgColor = "bg-elfy-red/10";
+    textColor = "text-elfy-red";
+  } else if (isBypass) {
+    borderColor = "border-elfy-purple/50";
+    bgColor = "bg-elfy-purple/10";
+    textColor = "text-elfy-purple-light";
+  }
+
+  return (
+    <motion.div 
+      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
+      animate={isCaution ? {
+        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
+        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+      } : {}}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <motion.span 
+        className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
+        animate={isCaution ? {
+            color: ['#78F654', '#eae747', '#78F654']
+        } : {}}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        MESOELFY_CORE
+      </motion.span>
+      
+      <div className="relative w-6 h-6 flex items-center justify-center">
+         <AnimatePresence mode="wait">
+            {isUnsafe ? (
+                <motion.div 
+                    key="unsafe"
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1, x: [-2, 2, -2, 2, 0] }}
+                    exit={{ scale: 0 }}
+                    transition={{ x: { repeat: Infinity, duration: 0.1 } }}
+                >
+                    <ShieldAlert size={18} className="text-elfy-red" />
+                </motion.div>
+            ) : isBypass ? (
+                <motion.div 
+                    key="bypass"
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1.1 }} 
+                    exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
+                    transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
+                >
+                     <Unlock size={18} className="text-elfy-purple-light" />
+                </motion.div>
+            ) : isCaution ? (
+                <motion.div 
+                    key="caution"
+                    initial={{ scale: 0, opacity: 0 }} 
+                    animate={{ scale: 1, opacity: 1 }}
+                >
+                    <motion.div
+                       animate={{
+                           filter: ['drop-shadow(0 0 8px rgba(120,246,84,0.8))', 'drop-shadow(0 0 15px rgba(234,231,71,1))', 'drop-shadow(0 0 8px rgba(120,246,84,0.8))'],
+                           color: ['#78F654', '#eae747', '#78F654'],
+                           rotate: [0, 8, -8, 0] 
+                       }}
+                       transition={{ duration: 2.0, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                         <Skull size={18} />
+                    </motion.div>
+                </motion.div>
+            ) : isDecrypted ? (
+                !showCpu ? (
+                    <motion.div 
+                        key="locked"
+                        initial={{ scale: 1.5, opacity: 0 }} 
+                        animate={{ scale: 1, opacity: 1 }} 
+                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
+                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    >
+                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        key="cpu"
+                        initial={{ scale: 0, rotate: -45 }} 
+                        animate={{ scale: 1, rotate: 0 }} 
+                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
+                        transition={{ duration: 0.4, ease: "backOut" }}
+                    >
+                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                )
+            ) : (
+                <motion.div 
+                    key="loading"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1, rotate: 360 }} 
+                    exit={{ opacity: 0 }}
+                    transition={{ rotate: { repeat: Infinity, duration: 2, ease: "linear" } }}
+                >
+                     <div className="w-4 h-4 border-2 border-elfy-green border-t-transparent rounded-full" />
+                </motion.div>
+            )}
+         </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
 
 const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
@@ -2679,6 +3282,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
+  const stepRef = useRef(0);
   const [isBreaching, setIsBreaching] = useState(false);
   const logsToShow = LOG_DATA.slice(0, step + 1);
   
@@ -2688,12 +3292,16 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const showButton = step >= 6;        
 
   useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
       { t: 8000, step: 3 }, 
       { t: 9500, step: 4 }, 
-      { t: 12500, step: 5 }, 
+      { t: 11500, step: 5 }, 
       { t: 13500, step: 6 }, 
     ];
     const timeouts = sequence.map(({ t, step: s }) => setTimeout(() => {
@@ -2719,22 +3327,32 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       ctx.font = '14px "Courier New"';
+
+      const currentStep = stepRef.current;
+      const isUnsafePhase = currentStep >= 3;
       
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
 
-        const isPurple = Math.random() > 0.85;
+        const isPurple = Math.random() > 0.6;
+        const isRed = isUnsafePhase && Math.random() > 0.6; 
         
-        ctx.fillStyle = isPurple ? '#9E4EA5' : '#0F0';
-        
-        if (isPurple) {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#9E4EA5';
-        } else {
-            ctx.shadowBlur = 0;
+        let color = '#0F0';
+        let blur = 0;
+
+        if (isRed) {
+            color = '#FF003C';
+            blur = 8;
+        } else if (isPurple) {
+            color = '#9E4EA5';
+            blur = 8;
         }
+
+        ctx.fillStyle = color;
+        ctx.shadowBlur = blur;
+        ctx.shadowColor = color;
 
         ctx.fillText(text, x, y);
         ctx.shadowBlur = 0;
@@ -2746,17 +3364,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     };
     const interval = setInterval(matrixEffect, 50);
     return () => clearInterval(interval);
-  }, [showMatrix, isBreaching]);
+  }, [showMatrix, isBreaching]); 
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleInitialize();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isBreaching]); 
+  // NOTE: REMOVED KEYDOWN LISTENER HERE (It is now in DebugOverlay)
 
   const handleInitialize = () => {
     if (isBreaching) return;
@@ -2787,7 +3397,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
       >
         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
-          <BootHeader />
+          <BootHeader step={step} />
           <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
             {logsToShow.map((line, i) => (
               <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
@@ -2803,8 +3413,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
               className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
-              <CoreHeader />
-              <div className="p-6 flex flex-col items-center gap-8">
+              <CoreHeader step={step} />
+              
+              <div className="p-6 flex flex-col items-center gap-4">
                 <AsciiRenderer />
                 {showWarningBox && (
                   <motion.div 
@@ -3014,6 +3625,261 @@ export const GlobalShakeManager = () => {
   }, []);
 
   return null;
+};
+
+
+=====================================
+FILE: ./src/features/debug/DebugOverlay.tsx
+=====================================
+import { useEffect, useState, useRef } from 'react';
+import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
+import { Registry } from '@/game/core/ecs/EntityRegistry'; // Direct Access for Telemetry
+import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database } from 'lucide-react';
+import { clsx } from 'clsx';
+
+// --- TABS ---
+type Tab = 'OVERRIDES' | 'SANDBOX' | 'STATS';
+
+const TABS: { id: Tab, label: string, icon: any }[] = [
+  { id: 'OVERRIDES', label: 'ROOT_ACCESS', icon: Shield },
+  { id: 'SANDBOX', label: 'HOLO_DECK', icon: Box },
+  { id: 'STATS', label: 'TELEMETRY', icon: Activity },
+];
+
+export const DebugOverlay = () => {
+  const { isDebugOpen, toggleDebugMenu, debugFlags, setDebugFlag, setBootState, setIntroDone } = useStore();
+  const { startGame, stopGame, activateZenMode, healPlayer } = useGameStore();
+  
+  const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
+  
+  // STATS STATE
+  const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
+  const lastFrameTime = useRef(performance.now());
+  const frameCount = useRef(0);
+
+  // KEY LISTENER
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '`' || e.key === '~' || e.key === 'Escape') {
+        toggleDebugMenu();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleDebugMenu]);
+
+  // TELEMETRY POLLING
+  useEffect(() => {
+    if (!isDebugOpen || activeTab !== 'STATS') return;
+
+    const pollInterval = setInterval(() => {
+        const regStats = Registry.getStats();
+        
+        // Simple FPS Calc
+        const now = performance.now();
+        const delta = now - lastFrameTime.current;
+        frameCount.current++;
+        
+        if (delta >= 1000) {
+            setStats(prev => ({ 
+                ...prev, 
+                fps: Math.round((frameCount.current * 1000) / delta) 
+            }));
+            frameCount.current = 0;
+            lastFrameTime.current = now;
+        }
+
+        setStats(prev => ({
+            ...prev,
+            active: regStats.active,
+            pooled: regStats.pooled,
+            total: regStats.totalAllocated
+        }));
+
+    }, 500); // Update UI every 500ms
+
+    return () => clearInterval(pollInterval);
+  }, [isDebugOpen, activeTab]);
+
+  // ACTIONS
+  const handleSkipBoot = () => {
+    setIntroDone(true);
+    setBootState('active');
+    startGame();
+    if (isDebugOpen) toggleDebugMenu(); 
+  };
+
+  const handleForceCrash = () => {
+    useGameStore.setState({ systemIntegrity: 0 });
+    stopGame();
+    toggleDebugMenu();
+  };
+
+  const handleReboot = () => {
+    useGameStore.setState({ systemIntegrity: 100, playerHealth: 100 });
+    healPlayer(1000);
+    toggleDebugMenu();
+  };
+
+  if (!isDebugOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
+      
+      <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden">
+        
+        {/* HEADER */}
+        <div className="h-10 border-b border-elfy-green/50 bg-elfy-green/10 flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-2">
+            <Terminal size={16} />
+            <span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span>
+          </div>
+          <button onClick={toggleDebugMenu} className="hover:text-white transition-colors"><X /></button>
+        </div>
+
+        {/* BODY */}
+        <div className="flex flex-1 min-h-0">
+          
+          {/* SIDEBAR */}
+          <div className="w-48 border-r border-elfy-green/30 bg-black/50 flex flex-col">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={clsx(
+                  "p-3 text-left text-xs font-bold tracking-wider border-b border-elfy-green/10 flex items-center gap-2 transition-all hover:bg-elfy-green/20",
+                  activeTab === tab.id ? "bg-elfy-green text-black" : "text-elfy-green-dim"
+                )}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* CONTENT */}
+          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
+            
+            {activeTab === 'OVERRIDES' && (
+              <div className="space-y-6">
+                
+                {/* SCENE JUMP */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_JUMP</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-elfy-green/50 hover:bg-elfy-green hover:text-black transition-all text-xs font-bold">
+                      <Play size={14} /> SKIP_BOOT
+                    </button>
+                    <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black transition-all text-xs font-bold">
+                      <Skull size={14} /> FORCE_CRASH
+                    </button>
+                    <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-elfy-purple/50 text-elfy-purple hover:bg-elfy-purple hover:text-black transition-all text-xs font-bold">
+                      <RefreshCw size={14} /> REBOOT_CORE
+                    </button>
+                    <button onClick={() => { activateZenMode(); toggleDebugMenu(); }} className="flex items-center justify-center gap-2 p-3 border border-elfy-yellow/50 text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all text-xs font-bold">
+                      <Zap size={14} /> ZEN_MODE
+                    </button>
+                  </div>
+                </div>
+
+                {/* GOD TOGGLES */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_TOGGLES</h3>
+                  
+                  <label 
+                    data-interactive="true"
+                    className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+                  >
+                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> GHOST_MODE (Invincible)</span>
+                    <input 
+                      type="checkbox" 
+                      checked={debugFlags.godMode} 
+                      onChange={(e) => setDebugFlag('godMode', e.target.checked)}
+                      className="accent-elfy-green cursor-pointer"
+                    />
+                  </label>
+
+                  <label 
+                    data-interactive="true"
+                    className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+                  >
+                    <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>
+                    <input 
+                      type="checkbox" 
+                      checked={debugFlags.peaceMode} 
+                      onChange={(e) => setDebugFlag('peaceMode', e.target.checked)}
+                      className="accent-elfy-green cursor-pointer"
+                    />
+                  </label>
+                </div>
+
+              </div>
+            )}
+
+            {activeTab === 'SANDBOX' && (
+              <div className="flex flex-col items-center justify-center h-full text-center gap-4 text-elfy-green-dim">
+                <Box size={48} className="opacity-50" />
+                <p>SANDBOX_MODULE // COMING_SOON</p>
+                <div className="text-xs max-w-md">
+                  This module will allow isolation testing of enemy AI, hitboxes, and animation curves in a controlled 'Holo-Deck' environment.
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'STATS' && (
+              <div className="space-y-6">
+                
+                {/* ENTITY MONITOR */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">ENTITY_REGISTRY</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    
+                    <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
+                            <Cpu size={14} /> ACTIVE ENTITIES
+                        </div>
+                        <div className="text-3xl font-bold text-elfy-green">{stats.active}</div>
+                    </div>
+
+                    <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
+                        <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs">
+                            <Database size={14} /> MEMORY POOL
+                        </div>
+                        <div className="text-3xl font-bold text-elfy-green-dim">{stats.pooled} <span className="text-xs font-normal opacity-50">/ {stats.total}</span></div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* RENDER STATS */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">RENDER_PIPELINE</h3>
+                  <div className="p-4 border border-elfy-green/20 bg-black">
+                      <div className="flex justify-between items-end">
+                          <span className="text-xs text-elfy-green-dim">FRAME_RATE</span>
+                          <span className="text-xl font-bold text-elfy-green">{stats.fps} FPS</span>
+                      </div>
+                      <div className="w-full h-1 bg-gray-900 mt-2">
+                          <div className="h-full bg-elfy-green" style={{ width: `${Math.min(100, (stats.fps / 60) * 100)}%` }} />
+                      </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+        </div>
+        
+        {/* FOOTER */}
+        <div className="h-6 bg-elfy-green/5 border-t border-elfy-green/30 flex items-center px-4 text-[9px] text-elfy-green-dim">
+          <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 
@@ -5759,7 +6625,8 @@ export enum GameEvents {
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
-  UPGRADE_SELECTED = 'UPGRADE_SELECTED', // NEW
+  UPGRADE_SELECTED = 'UPGRADE_SELECTED',
+  ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED', // NEW
   
   // --- VISUAL ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
@@ -5781,7 +6648,8 @@ export interface GameEventPayloads {
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
-  [GameEvents.UPGRADE_SELECTED]: { option: string }; // NEW
+  [GameEvents.UPGRADE_SELECTED]: { option: string };
+  [GameEvents.ZEN_MODE_ENABLED]: null; // NEW
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
@@ -5996,15 +6864,18 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { GameStateSystem } from './GameStateSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
+import { InteractionSystem } from './InteractionSystem';
 
 export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
+  private interactionSystem!: InteractionSystem;
   
   private readonly SYNC_INTERVAL = 0.1;
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.interactionSystem = locator.getSystem<InteractionSystem>('InteractionSystem');
   }
 
   update(delta: number, time: number): void {
@@ -6029,7 +6900,10 @@ export class UISyncSystem implements IGameSystem {
         xpToNextLevel: this.gameSystem.xpToNextLevel,
         upgradePoints: this.gameSystem.upgradePoints,
         systemIntegrity: PanelRegistry.systemIntegrity,
-        activeUpgrades: { ...this.gameSystem.activeUpgrades } // FIX: Ensure new object reference
+        activeUpgrades: { ...this.gameSystem.activeUpgrades },
+        
+        // NEW: Sync Interaction Target so React knows what player is doing
+        interactionTarget: this.interactionSystem.hoveringPanelId 
     });
 
     // Sync Panels
@@ -6063,6 +6937,7 @@ export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
 export class InteractionSystem implements IGameSystem {
   public repairState: RepairState = 'IDLE';
+  public hoveringPanelId: string | null = null; // Exposed for UI Sync
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
@@ -6078,8 +6953,9 @@ export class InteractionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
+    this.hoveringPanelId = null;
     
-    // STRICT CHECK: If game is over (Integrity 0), disable ALL interaction
+    // STRICT CHECK: If game is over, disable interaction
     if (this.gameSystem.isGameOver) {
         return; 
     }
@@ -6119,6 +6995,7 @@ export class InteractionSystem implements IGameSystem {
         cursor.y <= rect.top + padding;
 
     if (isHovering) {
+        this.hoveringPanelId = 'identity'; // Consider self-repair as hovering identity
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.gameSystem.tickReboot(2.5);
@@ -6134,31 +7011,28 @@ export class InteractionSystem implements IGameSystem {
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
     const panels = PanelRegistry.getAllPanels();
-    let hoveringPanelId: string | null = null;
-
+    
     for (const p of panels) {
-      if (!p.isDestroyed && p.health >= 1000) continue;
+      // Logic: Is mouse inside?
       if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
-        hoveringPanelId = p.id;
-        break; 
-      }
-    }
-
-    if (hoveringPanelId) {
-        const state = PanelRegistry.getPanelState(hoveringPanelId);
-        if (!state) return;
+        this.hoveringPanelId = p.id;
         
-        this.repairState = state.isDestroyed ? 'REBOOTING' : 'HEALING';
+        // Only trigger repair/logic if needed
+        if (!p.isDestroyed && p.health >= 1000) continue;
+
+        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(hoveringPanelId, 10);
+            PanelRegistry.healPanel(p.id, 10);
             this.lastRepairTime = time;
-            if (!state.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: hoveringPanelId, amount: 10 });
+            if (!p.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
             if (Math.random() > 0.3) {
-                const color = state.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
+                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
             }
         }
+        break; 
+      }
     }
   }
 }
@@ -6453,7 +7327,7 @@ import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyType } from '../config/Identifiers'; 
 import { GameEventBus } from '../events/GameEventBus';
-import { PanelRegistry } from './PanelRegistrySystem'; // NEW
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class EntitySystem implements IGameSystem {
   public spatialGrid: SpatialGrid;
@@ -6467,6 +7341,12 @@ export class EntitySystem implements IGameSystem {
     this.locator = locator;
     Registry.clear();
     this.spatialGrid.clear();
+    
+    // NEW: Listen for Zen Mode to wipe the board
+    GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        Registry.clear();
+        this.spawnParticle(0, 0, '#FFF', 50, 30, 2.0); // Big visual wipe effect
+    });
   }
 
   update(delta: number, time: number): void {
@@ -6474,7 +7354,6 @@ export class EntitySystem implements IGameSystem {
     const cursor = this.locator.getInputService().getCursor();
     const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
 
-    // FIX: Get Panel Data from Registry
     const worldPanels = PanelRegistry.getAllPanels().filter(p => !p.isDestroyed);
 
     const aiContext: AIContext = {
@@ -6487,8 +7366,6 @@ export class EntitySystem implements IGameSystem {
       triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 8, 15, 0.8),
       spawnDrillSparks: (x, y, color) => this.spawnParticle(x, y, color, 1, 3.0, 0.25),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
-      
-      // FIX: Damage via Registry
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 
@@ -6852,6 +7729,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
+import { useStore } from '@/core/store/useStore'; // Import Global Store
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -6876,9 +7754,6 @@ export class GameStateSystem implements IGameSystem {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
-    
-    // REMOVED: Listener that caused Game Over on Identity Panel destruction.
-    // The panel is now just another piece of hardware that can break and be fixed.
   }
 
   update(delta: number, time: number): void {}
@@ -6909,6 +7784,11 @@ export class GameStateSystem implements IGameSystem {
 
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
+
+    // DEBUG: GHOST MODE CHECK
+    const { godMode } = useStore.getState().debugFlags;
+    if (godMode) return;
+
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {
@@ -7019,11 +7899,11 @@ FILE: ./src/game/systems/WaveSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
-import { EnemyTypes } from '../config/Identifiers';
+import { useGameStore } from '../store/useGameStore';
+import { useStore } from '@/core/store/useStore'; // Import Global Store
 
 // --- AGGRESSIVE WAVE CONFIG ---
 const WAVE_TIMELINE = [
-  // TIME (s) |  TYPE     | COUNT | INTERVAL
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
   { at: 5,     type: 'kamikaze', count: 2, interval: 1.0 },
@@ -7054,6 +7934,12 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // CHECK 1: Zen Mode (System Purge)
+    if (useGameStore.getState().isZenMode) return;
+
+    // CHECK 2: Peace Protocol (Debug Flag)
+    if (useStore.getState().debugFlags.peaceMode) return;
+
     this.waveTime += delta;
     this.checkTimeline();
     this.processQueue(time);
@@ -7113,6 +7999,7 @@ const MAX_PANEL_HEALTH = 1000;
 
 interface GameStateUI {
   isPlaying: boolean;
+  isZenMode: boolean; // NEW
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
@@ -7124,12 +8011,16 @@ interface GameStateUI {
   upgradePoints: number;
   systemIntegrity: number;
   
+  interactionTarget: string | null;
+
   availableUpgrades: UpgradeOption[];
   activeUpgrades: Record<string, number>;
   panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
   
   startGame: () => void;
   stopGame: () => void;
+  activateZenMode: () => void; // NEW
+  
   registerPanel: (id: string, element: HTMLElement) => void;
   unregisterPanel: (id: string) => void;
   syncGameState: (data: Partial<GameStateUI>) => void;
@@ -7151,6 +8042,7 @@ export const useGameStore = create<GameStateUI>()(
   persist(
     (set, get) => ({
       isPlaying: false,
+      isZenMode: false,
       playerHealth: PLAYER_CONFIG.maxHealth,
       maxPlayerHealth: PLAYER_CONFIG.maxHealth,
       playerRebootProgress: 0,
@@ -7161,6 +8053,8 @@ export const useGameStore = create<GameStateUI>()(
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
       systemIntegrity: 100,
+      interactionTarget: null,
+      
       availableUpgrades: [],
       activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
       panels: {},
@@ -7169,6 +8063,7 @@ export const useGameStore = create<GameStateUI>()(
         if (get().isPlaying) return;
         set({ 
             isPlaying: true, 
+            isZenMode: false,
             score: 0, 
             threatLevel: 1,
             playerHealth: PLAYER_CONFIG.maxHealth,
@@ -7189,23 +8084,18 @@ export const useGameStore = create<GameStateUI>()(
           set({ isPlaying: false, highScore: Math.max(score, highScore) });
       },
 
+      activateZenMode: () => {
+          set({ isZenMode: true });
+          GameEventBus.emit(GameEvents.ZEN_MODE_ENABLED, null);
+      },
+
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
-      // FIX: Immutable Update Logic for Panels
-      // Previously, we were mutating nested objects which prevented React from seeing the change.
       syncPanels: (incomingPanels) => set((state) => {
           const merged = { ...state.panels };
-          
           for (const key in incomingPanels) {
               const prev = merged[key];
-              
-              // We strictly create a NEW object reference here using spread syntax.
-              // This ensures that selectors like `state.panels['video']` see a new reference
-              // and trigger a re-render in the UI components.
-              merged[key] = {
-                  ...(prev || {}),
-                  ...incomingPanels[key]
-              };
+              merged[key] = { ...(prev || {}), ...incomingPanels[key] };
           }
           return { panels: merged };
       }),
@@ -7224,7 +8114,6 @@ export const useGameStore = create<GameStateUI>()(
         GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
       },
 
-      // Fallback getters/setters (mostly driven by ECS SyncSystem now)
       addScore: (amount) => set(state => ({ score: state.score + amount })),
       addXp: (amount) => set(state => ({ xp: state.xp + amount })),
       damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
@@ -7593,39 +8482,90 @@ FILE: ./src/scene/effects/MatrixGrid.tsx
 =====================================
 import { Grid } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
+import { useGameStore } from '@/game/store/useGameStore';
 
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);
+  const gridRef = useRef<any>(null); // Ref to the Grid mesh to access material
+
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
 
   const SECTION_SIZE = 5;   
   const SPEED = 0.5;
 
+  // --- COLOR PALETTES (Updated for Visibility) ---
+  const colors = useMemo(() => ({
+    safe: {
+      section: new THREE.Color("#003300"), // Dark Green
+      cell: new THREE.Color("#044d0f")     // Dim Green
+    },
+    warning: {
+      section: new THREE.Color("#4d3300"), // Deep Brown/Amber
+      cell: new THREE.Color("#d48806")     // Bright Amber/Orange
+    },
+    critical: {
+      section: new THREE.Color("#4d0000"), // Deep Maroon
+      cell: new THREE.Color("#ff003c")     // Bright Neon Red
+    }
+  }), []);
+
+  // Internal state for smooth transitions
+  const currentSectionColor = useRef(new THREE.Color(colors.safe.section));
+  const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
+
   useFrame((state, delta) => {
+    // 1. MOVEMENT (Infinite Scroll)
     if (groupRef.current) {
       groupRef.current.position.z += SPEED * delta;
-      
       if (groupRef.current.position.z >= SECTION_SIZE) {
         groupRef.current.position.z = 0;
       }
+    }
+
+    // 2. COLOR TRANSITION LOGIC
+    // Determine Target Colors based on Integrity (Matches Header/Panel Logic)
+    let targetSection = colors.safe.section;
+    let targetCell = colors.safe.cell;
+
+    if (systemIntegrity < 30) {
+      targetSection = colors.critical.section;
+      targetCell = colors.critical.cell;
+    } else if (systemIntegrity < 60) {
+      targetSection = colors.warning.section;
+      targetCell = colors.warning.cell;
+    }
+
+    // Smoothly Lerp current colors towards target (Speed: 3.0 * delta for faster reaction)
+    currentSectionColor.current.lerp(targetSection, delta * 3.0);
+    currentCellColor.current.lerp(targetCell, delta * 3.0);
+
+    // Apply to Grid Material
+    if (gridRef.current && gridRef.current.material) {
+        if (gridRef.current.material.uniforms.sectionColor) {
+            gridRef.current.material.uniforms.sectionColor.value.copy(currentSectionColor.current);
+        }
+        if (gridRef.current.material.uniforms.cellColor) {
+            gridRef.current.material.uniforms.cellColor.value.copy(currentCellColor.current);
+        }
     }
   });
 
   return (
     <group ref={groupRef} position={[0, -2, 0]}>
       <Grid
+        ref={gridRef}
         renderOrder={-1}
         infiniteGrid
         cellSize={1}
         sectionSize={SECTION_SIZE}
         
-        // FIX 1: Fade out sooner (25) to hide far-away aliasing
         fadeDistance={25}      
         
-        // FIX 2: Much darker colors to reduce "Shimmer" and visual weight
-        sectionColor="#003300" // Very subtle dark green
-        cellColor="#044d0f"    // Darker dim green (less contrast = less aliasing)
+        // Initial colors
+        sectionColor="#003300"
+        cellColor="#044d0f"
         
         sectionThickness={1.2} 
         cellThickness={1.1}
