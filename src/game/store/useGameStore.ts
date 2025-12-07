@@ -87,15 +87,21 @@ export const useGameStore = create<GameStateUI>()(
 
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
+      // FIX: Immutable Update Logic for Panels
+      // Previously, we were mutating nested objects which prevented React from seeing the change.
       syncPanels: (incomingPanels) => set((state) => {
           const merged = { ...state.panels };
+          
           for (const key in incomingPanels) {
-              if (merged[key]) {
-                  merged[key].health = incomingPanels[key].health;
-                  merged[key].isDestroyed = incomingPanels[key].isDestroyed;
-              } else {
-                  merged[key] = incomingPanels[key];
-              }
+              const prev = merged[key];
+              
+              // We strictly create a NEW object reference here using spread syntax.
+              // This ensures that selectors like `state.panels['video']` see a new reference
+              // and trigger a re-render in the UI components.
+              merged[key] = {
+                  ...(prev || {}),
+                  ...incomingPanels[key]
+              };
           }
           return { panels: merged };
       }),
@@ -114,20 +120,20 @@ export const useGameStore = create<GameStateUI>()(
         GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
       },
 
-      // Fallback getters/setters for legacy consumers (will be overwritten by sync)
+      // Fallback getters/setters (mostly driven by ECS SyncSystem now)
       addScore: (amount) => set(state => ({ score: state.score + amount })),
       addXp: (amount) => set(state => ({ xp: state.xp + amount })),
       damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
       healPlayer: (amount) => set(state => ({ playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) })),
       tickPlayerReboot: (amount) => set(state => ({ playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) })),
-      healPanel: (id, amount) => {}, // Handled by ECS event
-      decayReboot: (id, amount) => {}, // Handled by ECS
-      damagePanel: (id, amount) => {}, // Handled by ECS
+      healPanel: (id, amount) => {}, 
+      decayReboot: (id, amount) => {}, 
+      damagePanel: (id, amount) => {}, 
       resetGame: () => {},
       recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage-v2', // VERSION BUMP
+      name: 'mesoelfy-os-storage-v2',
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )

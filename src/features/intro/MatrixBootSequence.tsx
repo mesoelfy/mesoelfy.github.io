@@ -108,11 +108,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
   const showButton = step >= 6;        
 
   useEffect(() => {
-    // FIX: Force focus to the container to capture keys immediately
-    if (containerRef.current) {
-        containerRef.current.focus();
-    }
-    
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
@@ -158,18 +153,23 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  // Handle ESC via KeyDown
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleInitialize();
-    }
-  };
+  // Handle ESC via Window Listener (No focus required)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleInitialize();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isBreaching]); 
 
-  const handleInitialize = async () => {
+  const handleInitialize = () => {
     if (isBreaching) return;
     setIsBreaching(true);
     
-    await AudioSystem.init();
+    // SYNCHRONOUSLY call Audio Init to capture User Gesture
+    AudioSystem.init();
     AudioSystem.playBootSequence();
     AudioSystem.startMusic();
     
@@ -180,13 +180,9 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
   return (
     <motion.div 
       ref={containerRef}
-      tabIndex={0} // Make focusable
-      onKeyDown={handleKeyDown}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden outline-none cursor-pointer"
-      // Added onClick as backup to ensure AudioContext can start
-      onClick={() => { if(!isBreaching && containerRef.current) containerRef.current.focus(); }}
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden outline-none cursor-none"
     >
       <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -235,7 +231,7 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                     <button 
                       onClick={handleInitialize}
                       onMouseEnter={() => AudioSystem.playHover()}
-                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
+                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                     >
                       <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                       <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">

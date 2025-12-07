@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec  6 15:27:16 CST 2025
+Generated on: Sat Dec  6 18:33:38 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -38,6 +38,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── public
 │   ├── assets
 │   │   ├── audio
+│   │   │   └── bg_music_placeholder.mp3
 │   │   ├── images
 │   │   │   └── social-card.jpg
 │   │   ├── models
@@ -132,10 +133,13 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── CollisionSystem.ts
 │   │   │   ├── EntitySystem.ts
 │   │   │   ├── FXManager.ts
+│   │   │   ├── GameStateSystem.ts
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
+│   │   │   ├── PanelRegistrySystem.ts
 │   │   │   ├── PlayerSystem.ts
 │   │   │   ├── TimeSystem.ts
+│   │   │   ├── UISyncSystem.ts
 │   │   │   └── WaveSystem.ts
 │   │   ├── theme.ts
 │   │   ├── types
@@ -175,7 +179,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-53 directories, 114 files
+53 directories, 118 files
 
 =====================================
 FILE: ./next.config.js
@@ -288,9 +292,11 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 
 - there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
 
-- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty.
+- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating.
 
 - Game Over left most broken frame looks weird as broken - should retain full shape
+
+- Power UP - Heal panel faster
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -661,46 +667,43 @@ const VIDEO_POOL = [
 ];
 
 const OfflineStatic = () => (
-  <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center border border-elfy-red/20">
-    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-10 bg-cover mix-blend-screen pointer-events-none" />
-    
-    {/* 
-      // PREVIOUS DESIGN: Icon + Text
-      <WifiOff className="text-elfy-red animate-pulse w-8 h-8 mb-2" />
-      <span className="text-[10px] font-mono text-elfy-red animate-pulse tracking-widest">SIGNAL_LOST</span>
-    */}
-  </div>
-);
-
-const LoadingPlaceholder = () => (
-  <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/20 bg-black flex flex-col items-center justify-center">
-    <Radio className="text-elfy-green-dim/50 animate-pulse w-6 h-6 mb-2" />
-    <span className="text-[10px] font-mono text-elfy-green-dim/50 animate-pulse">INITIALIZING_FEED...</span>
+  <div className="absolute inset-0 z-[100] bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
+    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-40 bg-cover mix-blend-screen pointer-events-none" />
+    <div className="relative z-10 animate-pulse text-elfy-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
+        <WifiOff size={12} />
+        <span>SIGNAL_LOST</span>
+    </div>
   </div>
 );
 
 const VideoSlot = ({ 
   slotIndex, 
   initialVideo, 
-  getNextVideo,
-  isOffline 
+  getNextVideo
 }: { 
   slotIndex: number, 
   initialVideo: string, 
-  getNextVideo: () => string,
-  isOffline: boolean
+  getNextVideo: () => string
 }) => {
   const [videoId, setVideoId] = useState(initialVideo);
   const [isMasked, setIsMasked] = useState(true);
 
+  // DIRECT STORE ACCESS
+  const panelState = useGameStore((state) => state.panels['video']);
+  const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
+
   useEffect(() => {
-    if (!isOffline) {
+    if (isOffline) {
+        // RESET MASK INSTANTLY so it's ready for the reveal when power comes back
         setIsMasked(true);
-        const unmaskTimer = setTimeout(() => setIsMasked(false), 5000);
+    } else {
+        // If coming online (and masked is true), start the reveal sequence
+        const unmaskTimer = setTimeout(() => setIsMasked(false), 2000);
         return () => clearTimeout(unmaskTimer);
     }
   }, [isOffline]); 
 
+  // Auto-rotate videos logic
   useEffect(() => {
     if (isOffline) return;
     const duration = 30000 + (Math.random() * 15000);
@@ -709,73 +712,74 @@ const VideoSlot = ({
       setTimeout(() => {
         const next = getNextVideo();
         if (next) setVideoId(next);
-        setTimeout(() => setIsMasked(false), 5000);
+        setTimeout(() => setIsMasked(false), 2000);
       }, 1000); 
     }, duration);
     return () => clearTimeout(timer);
   }, [videoId, getNextVideo, isOffline]);
 
-  const content = isOffline ? (
-    <>
-      <OfflineStatic />
-      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
-         CAM_0{slotIndex + 1} [ERR]
-      </div>
-    </>
-  ) : (
-    <>
-      <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
-      
-      {!isMasked && (
-          <a 
-            href={`https://www.youtube.com/watch?v=${videoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 z-40 cursor-pointer flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
-          >
-            <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm hover:scale-105 transition-transform">
-              <span>OPEN_SOURCE</span>
-              <ExternalLink size={12} />
-            </div>
-          </a>
-      )}
-
-      <div 
-        className={`absolute inset-0 z-20 bg-black flex flex-col items-center justify-center transition-opacity duration-500 ${isMasked ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      >
-        <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
-        <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
-      </div>
-
-      <div className="absolute inset-0 z-10">
-        <iframe 
-          width="100%" 
-          height="100%" 
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
-          title="HOLO_COMM" 
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          className="w-full h-full object-cover grayscale"
-        />
-      </div>
-
-      <div className="absolute bottom-1 right-1 z-30 text-[8px] text-elfy-red font-mono bg-black/80 px-1">
-         CAM_0{slotIndex + 1}
-      </div>
-    </>
-  );
-
   return (
     <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-red/30 bg-black overflow-hidden group/video hover:border-elfy-red hover:shadow-[0_0_15px_rgba(255,0,60,0.3)] transition-all">
-      {content}
+      
+      {isOffline && <OfflineStatic />}
+
+      {!isOffline && (
+        <>
+          <div className="absolute inset-0 z-10">
+            <iframe 
+              width="100%" 
+              height="100%" 
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
+              title="HOLO_COMM" 
+              frameBorder="0" 
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+              className="w-full h-full object-cover grayscale"
+            />
+          </div>
+
+          <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
+          
+          <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
+             {isMasked ? (
+                <div className="flex flex-col items-center">
+                    <Radio className="text-elfy-red animate-pulse w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-mono text-elfy-red animate-pulse">ESTABLISHING_UPLINK...</span>
+                </div>
+             ) : (
+                 <div className="flex items-center gap-2 text-elfy-red font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-red rounded-sm pointer-events-auto">
+                    <span>OPEN_SOURCE</span>
+                    <ExternalLink size={12} />
+                 </div>
+             )}
+          </div>
+          
+          {!isMasked && (
+              <a 
+                href={`https://www.youtube.com/watch?v=${videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute inset-0 z-50 cursor-pointer"
+                aria-label="Watch on YouTube"
+              />
+          )}
+
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+             CAM_0{slotIndex + 1}
+          </div>
+        </>
+      )}
+
+      {isOffline && (
+          <div className="absolute bottom-1 right-1 z-[110] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+             CAM_0{slotIndex + 1} [ERR]
+          </div>
+      )}
     </div>
   );
 };
 
 export const HoloCommLog = () => {
   const deckRef = useRef<string[]>([...VIDEO_POOL]);
-  const panelState = useGameStore((state) => state.panels['video']);
-  const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -798,13 +802,7 @@ export const HoloCommLog = () => {
     return selected || VIDEO_POOL[0];
   }, []);
 
-  if (!initialVideos) {
-    return (
-      <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
-        {[0, 1, 2].map((i) => <LoadingPlaceholder key={i} />)}
-      </div>
-    );
-  }
+  if (!initialVideos) return <div className="h-full bg-black" />;
 
   return (
     <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
@@ -814,7 +812,6 @@ export const HoloCommLog = () => {
           slotIndex={i} 
           initialVideo={vid} 
           getNextVideo={getNextVideo}
-          isOffline={isOffline} 
         />
       ))}
     </div>
@@ -1228,7 +1225,8 @@ const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boole
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm",
-        isVideo ? "bg-black/20" : "bg-black/90"
+        // FIX: If it's the video panel, make background fully transparent so static is visible.
+        isVideo ? "bg-transparent" : "bg-black/90"
     )}>
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
@@ -1639,160 +1637,258 @@ export const Header = () => {
 =====================================
 FILE: ./src/core/audio/AudioSystem.ts
 =====================================
-import { useStore } from '@/core/store/useStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 class AudioSystemController {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
+  private musicSource: MediaElementAudioSourceNode | null = null;
+  private musicElement: HTMLAudioElement | null = null;
   private isInitialized = false;
+  private isMuted = false;
 
-  constructor() {
-    // Singleton pattern could go here, but we'll manage instance via export
-  }
-
-  // 1. WAKE UP THE ENGINE (Must be called on user click)
-  public async init() {
-    if (this.isInitialized) return;
+  public init() {
+    if (this.isInitialized) {
+        // Always try to resume if context exists but is suspended
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+        return;
+    }
 
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
     this.ctx = new AudioContextClass();
+    if (!this.ctx) return;
+
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.5;
+
+    this.compressor = this.ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -24;
     
-    // Master Volume
-    this.masterGain = this.ctx!.createGain();
-    this.masterGain.gain.value = 0.4; // Default volume
-    this.masterGain.connect(this.ctx!.destination);
+    this.sfxGain = this.ctx.createGain();
+    this.sfxGain.gain.value = 0.8; 
+
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.value = 0.6; 
+
+    this.sfxGain.connect(this.compressor);
+    this.musicGain.connect(this.compressor);
+    this.compressor.connect(this.masterGain);
+    this.masterGain.connect(this.ctx.destination);
+
+    this.setupEventListeners();
+    this.setupMusic();
 
     this.isInitialized = true;
     
-    // Resume context if suspended (browser policy)
-    if (this.ctx?.state === 'suspended') {
-      await this.ctx.resume();
+    // Resume immediately (this works if called from a click/key handler)
+    if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
     }
   }
 
-  // 2. THE BOOT SOUND (THX Style Deep Drone)
-  public playBootSequence() {
-    if (!this.ctx || !this.masterGain) return;
-
-    const t = this.ctx.currentTime;
-    
-    // OSC 1: Deep Bass (Sawtooth)
-    const osc1 = this.ctx.createOscillator();
-    const gain1 = this.ctx.createGain();
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(55, t); // A1
-    osc1.detune.setValueAtTime(-10, t); // Slight detune for thickness
-    
-    // Filter Sweep (Lowpass) - The "Opening" effect
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(0, t);
-    filter.frequency.exponentialRampToValueAtTime(5000, t + 2.5); // Sweep up
-
-    // Wiring 1
-    osc1.connect(filter);
-    filter.connect(gain1);
-    gain1.connect(this.masterGain);
-
-    // Envelope 1
-    gain1.gain.setValueAtTime(0, t);
-    gain1.gain.linearRampToValueAtTime(0.8, t + 0.1);
-    gain1.gain.exponentialRampToValueAtTime(0.001, t + 4);
-
-    // OSC 2: Mid Harmony (Square)
-    const osc2 = this.ctx.createOscillator();
-    const gain2 = this.ctx.createGain();
-    osc2.type = 'square';
-    osc2.frequency.setValueAtTime(110, t); // A2
-    osc2.detune.setValueAtTime(10, t);
-
-    // Wiring 2
-    osc2.connect(filter); // Share filter
-    filter.connect(gain2);
-    gain2.connect(this.masterGain);
-
-    // Envelope 2
-    gain2.gain.setValueAtTime(0, t);
-    gain2.gain.linearRampToValueAtTime(0.4, t + 0.5); // Enters slightly later
-    gain2.gain.exponentialRampToValueAtTime(0.001, t + 4);
-
-    // GLITCH NOISE (Digital burst)
-    const bufferSize = this.ctx.sampleRate * 0.5; // 0.5 seconds
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1; // White noise
-    }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.1, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-    
-    noise.connect(noiseGain);
-    noiseGain.connect(this.masterGain);
-
-    // Start
-    osc1.start(t);
-    osc2.start(t);
-    noise.start(t);
-    
-    // Stop
-    osc1.stop(t + 4.5);
-    osc2.stop(t + 4.5);
+  private setupMusic() {
+    if (!this.ctx || !this.musicGain) return;
+    this.musicElement = new Audio('/assets/audio/bg_music_placeholder.mp3');
+    this.musicElement.loop = true;
+    this.musicElement.crossOrigin = "anonymous";
+    this.musicSource = this.ctx.createMediaElementSource(this.musicElement);
+    this.musicSource.connect(this.musicGain);
   }
 
-  // 3. HOVER SOUND (High-Tech Blip)
-  public playHover() {
-    if (!this.ctx || !this.masterGain || useStore.getState().musicEnabled === false) return;
+  public startMusic() {
+    // Resume context again to be safe
+    if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+    }
+    if (this.musicElement) this.musicElement.play().catch(e => console.warn(e));
+  }
 
+  private setupEventListeners() {
+    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playLaser());
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => this.playImpact(true));
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => this.playExplosion(p.type));
+    GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, () => this.playDamageAlert());
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => this.playMassiveExplosion());
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playHeal());
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => this.playGameOver());
+    GameEventBus.subscribe(GameEvents.THREAT_LEVEL_UP, () => this.playAlarm());
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playHeal());
+  }
+
+  // --- AUDIO LOGIC ---
+
+  private playLaser() {
+    if (this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    // Randomize pitch slightly for organic feel
-    osc.frequency.setValueAtTime(800 + Math.random() * 200, t); 
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(110, t + 0.15);
     
-    gain.gain.setValueAtTime(0.05, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain!);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
 
+  private playHeal() {
+      if (this.isMuted || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.linearRampToValueAtTime(880, t + 0.2);
+      const gain = this.ctx.createGain();
+      
+      gain.gain.setValueAtTime(0.05, t);
+      gain.gain.linearRampToValueAtTime(0, t + 0.2);
+      
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 0.2);
+  }
+
+  private playExplosion(type: string) {
+    if (this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const isBig = type !== 'driller';
+    const bufferSize = this.ctx.sampleRate * (isBig ? 0.8 : 0.4);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, t);
+    filter.frequency.exponentialRampToValueAtTime(100, t + (isBig ? 0.6 : 0.3));
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(isBig ? 0.4 : 0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + (isBig ? 0.6 : 0.3));
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain!);
+    noise.start(t);
+  }
+
+  private playImpact(isPlayer: boolean) {
+    if (this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain);
+    gain.connect(this.sfxGain!);
     osc.start(t);
     osc.stop(t + 0.1);
   }
 
-  // 4. CLICK SOUND (Mechanical Thud)
-  public playClick() {
-    if (!this.ctx || !this.masterGain || useStore.getState().musicEnabled === false) return;
+  private playDamageAlert() {
+      if (!this.ctx || this.isMuted) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      osc.frequency.setValueAtTime(300, t);
+      osc.frequency.linearRampToValueAtTime(200, t+0.05);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.03, t); 
+      gain.gain.linearRampToValueAtTime(0, t+0.05);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t+0.05);
+  }
 
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1); // Pitch drop
-
-    gain.gain.setValueAtTime(0.15, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.start(t);
-    osc.stop(t + 0.2);
+  private playMassiveExplosion() {
+     this.playExplosion('kamikaze');
+     if (this.ctx) {
+         const t = this.ctx.currentTime;
+         const osc = this.ctx.createOscillator();
+         osc.type = 'sine';
+         osc.frequency.setValueAtTime(60, t);
+         osc.frequency.exponentialRampToValueAtTime(10, t + 2.0);
+         const gain = this.ctx.createGain();
+         gain.gain.setValueAtTime(0.5, t);
+         gain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+         osc.connect(gain);
+         gain.connect(this.masterGain!);
+         osc.start(t);
+         osc.stop(t + 2.0);
+     }
   }
   
-  // 5. TOGGLE MUTE
-  public setMute(muted: boolean) {
-      if (this.masterGain) {
-          // If "muted" (musicEnabled = false), volume 0
-          // If "unmuted" (musicEnabled = true), volume 0.4
-          this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.4, this.ctx!.currentTime, 0.1);
+  private playAlarm() {
+      if (this.isMuted || !this.ctx) return;
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, t);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.2, t + 0.1);
+      gain.gain.linearRampToValueAtTime(0, t + 0.2);
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 0.3);
+  }
+
+  private playGameOver() {
+      this.playMassiveExplosion();
+      if (this.musicSource && this.musicSource.playbackRate) {
+          this.musicSource.playbackRate.value = 0.5;
       }
+  }
+  
+  public playHover() {
+    if (this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, t);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.02, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain);
+    gain.connect(this.masterGain!);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  public playClick() {
+    if (this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(gain);
+    gain.connect(this.masterGain!);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+
+  public playBootSequence() { this.playAlarm(); }
+  public setMute(muted: boolean) {
+    this.isMuted = muted;
+    if (this.masterGain) this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx!.currentTime, 0.1);
   }
 }
 
@@ -2217,46 +2313,6 @@ const ASCII_TITLE = `
                                                                  
 `;
 
-// --- ASCII COMPONENT ---
-const AsciiRenderer = () => {
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-
-      let animClass = '';
-      
-      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        animClass = 'animate-matrix-green text-elfy-green-dark';
-      } 
-      else if (['░', '▒', '▓'].includes(char)) {
-        animClass = 'animate-matrix-purple text-elfy-purple';
-      } 
-      else {
-        animClass = 'text-elfy-green-dark';
-      }
-
-      const delay = Math.random() * 2 + 's';
-
-      return (
-        <span 
-          key={i} 
-          className={animClass} 
-          style={{ animationDelay: delay }}
-        >
-          {char}
-        </span>
-      );
-    });
-  }, []);
-
-  return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
-      {renderedChars}
-    </div>
-  );
-};
-
 const BootHeader = () => (
   <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
     <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
@@ -2278,26 +2334,19 @@ const CoreHeader = () => (
   </div>
 );
 
-const LoadingDots = ({ isFrozen }: { isFrozen: boolean }) => {
-  const [dots, setDots] = useState("");
-  useEffect(() => {
-    if (isFrozen) {
-      setDots("..."); 
-      return;
-    }
-    const interval = setInterval(() => {
-      setDots(d => d.length >= 3 ? "" : d + ".");
-    }, 300);
-    return () => clearInterval(interval);
-  }, [isFrozen]);
-  return <span>{dots}</span>;
-}
+const AsciiRenderer = () => {
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+      const animClass = ['█','▀','▄'].includes(char) ? 'animate-matrix-green text-elfy-green-dark' : 'text-elfy-green-dark';
+      return <span key={i} className={animClass} style={{ animationDelay: Math.random() + 's' }}>{char}</span>;
+    });
+  }, []);
+  return <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">{renderedChars}</div>;
+};
 
-const TypedLog = ({ 
-  text, color, speed = 20, showDots = false, isActive = false, isPast = false 
-}: { 
-  text: string, color: string, speed?: number, showDots?: boolean, isActive: boolean, isPast: boolean
-}) => {
+const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
   const [isDoneTyping, setIsDoneTyping] = useState(false);
   
@@ -2324,7 +2373,7 @@ const TypedLog = ({
   return (
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
-      {isDoneTyping && showDots && <LoadingDots isFrozen={isPast} />}
+      {isDoneTyping && showDots && <span>{isPast ? '...' : (Math.floor(Date.now() / 300) % 4 === 0 ? '' : '...')}</span>}
       {isActive && <span className="ml-1 animate-cursor-blink text-elfy-green font-bold">_</span>}
     </div>
   );
@@ -2341,6 +2390,7 @@ const LOG_DATA = [
 ];
 
 export const MatrixBootSequence = ({ onComplete }: Props) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
   const [isBreaching, setIsBreaching] = useState(false);
@@ -2397,31 +2447,36 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
+  // Handle ESC via Window Listener (No focus required)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isBreaching) handleInitialize();
+      if (e.key === 'Escape') {
+        handleInitialize();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isBreaching]);
+  }, [isBreaching]); 
 
-  // AUDIO TRIGGER HERE
-  const handleInitialize = async () => {
-    // 1. Init Audio
-    await AudioSystem.init();
-    // 2. Play Boot Sound
-    AudioSystem.playBootSequence();
-    
+  const handleInitialize = () => {
+    if (isBreaching) return;
     setIsBreaching(true);
+    
+    // SYNCHRONOUSLY call Audio Init to capture User Gesture
+    AudioSystem.init();
+    AudioSystem.playBootSequence();
+    AudioSystem.startMusic();
+    
     setStep(6);
     setTimeout(onComplete, 800); 
   };
 
   return (
     <motion.div 
+      ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden outline-none cursor-none"
     >
       <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -2469,8 +2524,8 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
                     <button 
                       onClick={handleInitialize}
-                      onMouseEnter={() => AudioSystem.playHover()} // ADDED HOVER SOUND
-                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)]"
+                      onMouseEnter={() => AudioSystem.playHover()}
+                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                     >
                       <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                       <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
@@ -2793,12 +2848,16 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { CameraSystem } from '../systems/CameraSystem'; // NEW
+import { CameraSystem } from '../systems/CameraSystem';
+import { PanelRegistry } from '../systems/PanelRegistrySystem'; // Singleton
+import { GameStateSystem } from '../systems/GameStateSystem'; // NEW
+import { UISyncSystem } from '../systems/UISyncSystem'; // NEW
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
   const engine = new GameEngineCore();
+  
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
   const entitySys = new EntitySystem();
@@ -2806,7 +2865,11 @@ export const GameBootstrapper = () => {
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
-  const cameraSys = new CameraSystem(); // NEW
+  const cameraSys = new CameraSystem();
+  const gameSys = new GameStateSystem(); // NEW
+  const syncSys = new UISyncSystem(); // NEW
+  
+  const panelSys = PanelRegistry; 
 
   // Register
   ServiceLocator.registerSystem('TimeSystem', timeSys);
@@ -2816,27 +2879,36 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerSystem('WaveSystem', waveSys);
   ServiceLocator.registerSystem('PlayerSystem', playerSys);
   ServiceLocator.registerSystem('InteractionSystem', interactionSys);
-  ServiceLocator.registerSystem('CameraSystem', cameraSys); // NEW
+  ServiceLocator.registerSystem('CameraSystem', cameraSys);
+  ServiceLocator.registerSystem('PanelRegistrySystem', panelSys);
+  ServiceLocator.registerSystem('GameStateSystem', gameSys); // NEW
+  ServiceLocator.registerSystem('UISyncSystem', syncSys); // NEW
   
   // Engine Loop
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
+  engine.registerSystem(panelSys);
+  engine.registerSystem(gameSys); // NEW (Logic Update)
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
   engine.registerSystem(playerSys); 
   engine.registerSystem(entitySys); 
   engine.registerSystem(collisionSys); 
-  engine.registerSystem(cameraSys); // NEW (Order doesn't matter much for camera logic)
+  engine.registerSystem(cameraSys); 
+  engine.registerSystem(syncSys); // NEW (Last in loop to sync final state)
   
   // Setup
   timeSys.setup(ServiceLocator);
   inputSys.setup(ServiceLocator);
+  gameSys.setup(ServiceLocator); // NEW
   entitySys.setup(ServiceLocator);
   collisionSys.setup(ServiceLocator);
   waveSys.setup(ServiceLocator);
   playerSys.setup(ServiceLocator);
   interactionSys.setup(ServiceLocator);
-  cameraSys.setup(ServiceLocator); // NEW
+  cameraSys.setup(ServiceLocator);
+  panelSys.setup(ServiceLocator);
+  syncSys.setup(ServiceLocator); // NEW
   
   engine.setup(ServiceLocator);
 
@@ -3157,19 +3229,16 @@ class ServiceLocatorImpl implements IServiceLocator {
   private audioService?: IAudioService;
   private inputService?: IInputService;
 
-  public registerSystem(id: string, system: IGameSystem): void {
-    this.systems.set(id, system);
-    
-    // Auto-register specific services if they match the interface
-    // (In a stricter app, we might do this explicitly)
-    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
-    // Audio service registration would happen here too
-  }
-
+  // Generic getter allows accessing any registered system type-safely
   public getSystem<T extends IGameSystem>(id: string): T {
     const sys = this.systems.get(id);
     if (!sys) throw new Error(`System not registered: ${id}`);
     return sys as T;
+  }
+
+  public registerSystem(id: string, system: IGameSystem): void {
+    this.systems.set(id, system);
+    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
   }
 
   public getAudioService(): IAudioService {
@@ -3186,6 +3255,11 @@ class ServiceLocatorImpl implements IServiceLocator {
     this.systems.clear();
     this.audioService = undefined;
     this.inputService = undefined;
+  }
+
+  // Helper for debug/tools
+  public get registeredSystemIds(): string[] {
+    return Array.from(this.systems.keys());
   }
 }
 
@@ -3304,14 +3378,15 @@ import { IGameSystem, IServiceLocator } from './interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
-import { Registry } from './ecs/EntityRegistry'; // Import Registry
+import { Registry } from './ecs/EntityRegistry';
 import { Tag } from './ecs/types';
+import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; 
+import { GameStateSystem } from '../systems/GameStateSystem';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   private locator!: IServiceLocator;
 
-  // FIX: Bridge these getters to the Registry to prevent crashes
   public get enemies() { return Registry.getByTag(Tag.ENEMY); }
   public get bullets() { return Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY)); }
   public get enemyBullets() { return Registry.getByTag(Tag.BULLET).filter(b => b.hasTag(Tag.ENEMY)); }
@@ -3334,11 +3409,19 @@ export class GameEngineCore implements IGameSystem {
 
   update(delta: number, time: number): void {
     const store = useGameStore.getState();
+    const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
+    // SYNC GLOBAL GAME OVER STATE
     if (store.isPlaying && store.systemIntegrity <= 0) {
         store.stopGame();
         FXManager.addTrauma(1.0);
+        gameSys.isGameOver = true; // FORCE SYNC
         return;
+    }
+
+    // Force GameStateSystem to respect store if stopped manually
+    if (!store.isPlaying) {
+        gameSys.isGameOver = true;
     }
 
     for (const sys of this.systems) {
@@ -3355,6 +3438,11 @@ export class GameEngineCore implements IGameSystem {
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
+    try {
+        const panelSys = this.locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
+        panelSys.refreshAll();
+    } catch (e) {
+    }
   }
 }
 
@@ -3908,40 +3996,48 @@ function mix(a: number, b: number, t: number): number {
 =====================================
 FILE: ./src/game/utils/ViewportHelper.ts
 =====================================
+export interface WorldRect {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 export class ViewportHelperCore {
-  public viewport = { width: 1, height: 1 };
-  public screenSize = { width: 1, height: 1 };
+  public viewport = { width: 1, height: 1 }; // R3F Viewport units
+  public screenSize = { width: 1, height: 1 }; // Window Pixels
 
   public update(vpW: number, vpH: number, screenW: number, screenH: number) {
     this.viewport = { width: vpW, height: vpH };
     this.screenSize = { width: screenW, height: screenH };
   }
 
-  public getPanelWorldRect(panel: { id: string, element: HTMLElement }) {
-    if (!panel.element) return null;
-    
-    const rect = panel.element.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return null;
-
-    // Use stored screenSize (or fallback to window if needed, but stored is safer for R3F context)
-    const sw = this.screenSize.width || window.innerWidth;
-    const sh = this.screenSize.height || window.innerHeight;
+  // Pure Math: Converts Pixel Rect -> World Rect
+  public domToWorld(id: string, domRect: DOMRect): WorldRect {
+    const sw = this.screenSize.width || 1;
+    const sh = this.screenSize.height || 1;
     
     const vw = this.viewport.width;
     const vh = this.viewport.height;
     
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const cx = domRect.left + domRect.width / 2;
+    const cy = domRect.top + domRect.height / 2;
     
-    // Screen (DOM) -> World (Three.js Orthographic)
+    // Screen (Pixels) -> World (Orthographic Units)
+    // 0,0 is center of screen in World
     const wx = (cx / sw) * vw - (vw / 2);
     const wy = -((cy / sh) * vh - (vh / 2));
     
-    const wWidth = (rect.width / sw) * vw;
-    const wHeight = (rect.height / sh) * vh;
+    const wWidth = (domRect.width / sw) * vw;
+    const wHeight = (domRect.height / sh) * vh;
 
     return {
-      id: panel.id,
+      id: id,
       x: wx, y: wy,
       width: wWidth, height: wHeight,
       left: wx - wWidth / 2, right: wx + wWidth / 2,
@@ -4862,9 +4958,9 @@ import { GameBootstrapper } from '../core/GameBootstrapper';
 import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { InputSystem } from '../systems/InputSystem';
+import { PanelRegistry } from '../systems/PanelRegistrySystem';
 
 // We export the active engine instance for the Renderer components to access via import
-// This is a "Module Singleton" pattern common in hybrid React/Game apps.
 export let ActiveEngine: GameEngineCore | null = null;
 
 export const GameDirector = () => {
@@ -4879,8 +4975,26 @@ export const GameDirector = () => {
 
     // 2. Initial Viewport Sync
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
+    
+    // 3. Force Layout Refresh Loop (The Fix)
+    // Run every 500ms to catch animations settling (entrance) or scroll shifts
+    // This is cheap (5-10 elements) and fixes the "Stale Rect" issue.
+    const refreshInterval = setInterval(() => {
+        PanelRegistry.refreshAll();
+    }, 500);
+
+    // 4. Force an immediate refresh chain for the first 2 seconds (Entrance Animation)
+    // We poll faster during entrance to make it look responsive immediately
+    let initialPolls = 0;
+    const fastPoll = setInterval(() => {
+        PanelRegistry.refreshAll();
+        initialPolls++;
+        if (initialPolls > 20) clearInterval(fastPoll); // Stop fast polling after 2s
+    }, 100);
 
     return () => {
+      clearInterval(refreshInterval);
+      clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
       ActiveEngine = null;
@@ -4896,7 +5010,7 @@ export const GameDirector = () => {
 
   useFrame((state, delta) => {
     if (engineRef.current) {
-      // Sync Input from R3F (Temporary, until InputSystem adds its own listeners)
+      // Sync Input from R3F
       const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
       const x = (state.pointer.x * viewport.width) / 2;
       const y = (state.pointer.y * viewport.height) / 2;
@@ -5254,9 +5368,11 @@ FILE: ./src/game/hooks/usePanelRegistry.ts
 =====================================
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { PanelRegistry } from '../systems/PanelRegistrySystem';
 
 export const usePanelRegistry = (id: string) => {
   const elementRef = useRef<HTMLDivElement>(null);
+  
   const registerPanel = useGameStore((state) => state.registerPanel);
   const unregisterPanel = useGameStore((state) => state.unregisterPanel);
 
@@ -5264,11 +5380,23 @@ export const usePanelRegistry = (id: string) => {
     const el = elementRef.current;
     if (!el) return;
 
-    // Register the live DOM element
+    // 1. Register Logic (Health/Store)
     registerPanel(id, el);
 
+    // 2. Register Spatial (Singleton)
+    // This works immediately, even if game hasn't started
+    PanelRegistry.register(id, el);
+
+    // 3. Resize Observer
+    const observer = new ResizeObserver(() => {
+        PanelRegistry.refreshSingle(id);
+    });
+    observer.observe(el);
+
     return () => {
+      observer.disconnect();
       unregisterPanel(id);
+      PanelRegistry.unregister(id);
     };
   }, [id, registerPanel, unregisterPanel]);
 
@@ -5313,7 +5441,7 @@ export const GAME_THEME = {
 FILE: ./src/game/events/GameEvents.ts
 =====================================
 export enum GameEvents {
-  // --- COMBAT EVENTS ---
+  // --- COMBAT ---
   PLAYER_FIRED = 'PLAYER_FIRED',
   PLAYER_HIT = 'PLAYER_HIT',
   ENEMY_SPAWNED = 'ENEMY_SPAWNED',
@@ -5321,17 +5449,18 @@ export enum GameEvents {
   ENEMY_DESTROYED = 'ENEMY_DESTROYED',
   PROJECTILE_CLASH = 'PROJECTILE_CLASH',
   
-  // --- PANEL EVENTS ---
+  // --- PANEL ---
   PANEL_DAMAGED = 'PANEL_DAMAGED',
   PANEL_HEALED = 'PANEL_HEALED',
   PANEL_DESTROYED = 'PANEL_DESTROYED',
   
-  // --- SYSTEM EVENTS ---
+  // --- SYSTEM ---
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
+  UPGRADE_SELECTED = 'UPGRADE_SELECTED', // NEW
   
-  // --- VISUAL EVENTS ---
+  // --- VISUAL ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
   SCENE_READY = 'SCENE_READY'
 }
@@ -5351,6 +5480,7 @@ export interface GameEventPayloads {
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
+  [GameEvents.UPGRADE_SELECTED]: { option: string }; // NEW
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
@@ -5417,29 +5547,28 @@ import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useGameStore } from '../store/useGameStore';
 import { EnemyTypes } from '../config/Identifiers';
+import { GameStateSystem } from './GameStateSystem'; // NEW
 
 export class CollisionSystem implements IGameSystem {
   private entitySystem!: EntitySystem;
+  private gameSystem!: GameStateSystem; // NEW
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
   }
 
   update(delta: number, time: number): void {
     const spatial = this.entitySystem.spatialGrid;
     const cursor = this.locator.getInputService().getCursor();
 
-    // 1. PLAYER BULLETS vs ENEMIES
     this.handleBulletCollisions(spatial);
-
-    // 2. PLAYER BULLETS vs ENEMY BULLETS (Clash)
     this.handleProjectileClash(spatial);
 
-    // 3. ENEMY BULLETS vs PLAYER (Cursor)
+    // Enemy Bullets vs Player
     const bullets = Registry.getByTag(Tag.BULLET);
     for (const b of bullets) {
         if (!b.hasTag(Tag.ENEMY)) continue;
@@ -5454,7 +5583,7 @@ export class CollisionSystem implements IGameSystem {
         }
     }
 
-    // 4. BODY COLLISIONS
+    // Body Collisions
     const players = Registry.getByTag(Tag.PLAYER);
     const player = players[0];
     
@@ -5483,41 +5612,20 @@ export class CollisionSystem implements IGameSystem {
 
   private handleProjectileClash(spatial: any) {
       const playerBullets = Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY));
-      
       for (const pb of playerBullets) {
           const pPos = pb.getComponent<TransformComponent>('Transform');
           if (!pPos) continue;
-
-          // Look for nearby entities
           const nearby = spatial.query(pPos.x, pPos.y, 1.0);
-          
           for (const id of nearby) {
               const target = Registry.getEntity(id);
-              // Target must be a BULLET and an ENEMY
               if (!target || !target.active || !target.hasTag(Tag.BULLET) || !target.hasTag(Tag.ENEMY)) continue;
-
               const tPos = target.getComponent<TransformComponent>('Transform');
               if (!tPos) continue;
-
               const dx = pPos.x - tPos.x;
               const dy = pPos.y - tPos.y;
-              const distSq = dx*dx + dy*dy;
-
-              // Hunter Shot Radius ~1.0, Player Bullet ~0.2. SumSq ~1.44
-              if (distSq < 1.0) {
-                  // Clash!
-                  Registry.destroyEntity(pb.id); // Player bullet always dies
-                  
-                  // Enemy bullet might have HP (Hunter shot takes 2 hits)
-                  // For now, let's just destroy it or spawn particles
-                  // To implement HP for bullets, we'd need to check HealthComponent on bullet.
-                  // Default behavior: Destroy both? Or just particles?
-                  // Let's destroy enemy bullet for satisfaction.
-                  
-                  // Optional: Hunter Shot is strong, maybe it survives one hit?
-                  // Let's assume 1-hit kill for now to fix the bug first.
+              if (dx*dx + dy*dy < 1.0) {
+                  Registry.destroyEntity(pb.id);
                   Registry.destroyEntity(target.id);
-                  
                   GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: tPos.x, y: tPos.y });
                   this.entitySystem.spawnParticle(tPos.x, tPos.y, '#F7D277', 6);
                   break; 
@@ -5529,7 +5637,6 @@ export class CollisionSystem implements IGameSystem {
   private handleBodyCollision(enemy: any, x: number, y: number) {
       const identity = enemy.getComponent<IdentityComponent>('Identity');
       const type = identity ? identity.variant : 'unknown';
-      
       if (type === EnemyTypes.KAMIKAZE) {
           this.damagePlayer(25); 
           this.entitySystem.spawnParticle(x, y, '#FF003C', 15);
@@ -5541,13 +5648,9 @@ export class CollisionSystem implements IGameSystem {
   }
 
   private damagePlayer(amount: number) {
-      const store = useGameStore.getState();
-      if (store.playerHealth > 0) {
-           GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
-      } else {
-           store.damageRebootProgress(amount * 2); 
-           GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: 0 });
-      }
+      // FIX: Use GameStateSystem, not Store
+      this.gameSystem.damagePlayer(amount);
+      GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
   }
 
   private handleBulletCollisions(spatial: any) {
@@ -5561,15 +5664,12 @@ export class CollisionSystem implements IGameSystem {
         for (const targetId of candidates) {
             const target = Registry.getEntity(targetId);
             if (!target || !target.active || !target.hasTag(Tag.ENEMY) || target.hasTag(Tag.BULLET)) continue;
+            
+            const dx = bPos.x - target.getComponent<TransformComponent>('Transform')!.x;
+            const dy = bPos.y - target.getComponent<TransformComponent>('Transform')!.y;
 
-            const tPos = target.getComponent<TransformComponent>('Transform');
-            if (!tPos) continue;
-
-            const dx = bPos.x - tPos.x;
-            const dy = bPos.y - tPos.y;
             if (dx*dx + dy*dy < 0.49) { 
                 Registry.destroyEntity(b.id);
-                
                 const hp = target.getComponent<HealthComponent>('Health');
                 if (hp) {
                     hp.damage(1);
@@ -5589,14 +5689,74 @@ export class CollisionSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/game/systems/UISyncSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { useGameStore } from '../store/useGameStore';
+import { GameStateSystem } from './GameStateSystem';
+import { PanelRegistry } from './PanelRegistrySystem';
+
+export class UISyncSystem implements IGameSystem {
+  private gameSystem!: GameStateSystem;
+  
+  private readonly SYNC_INTERVAL = 0.1;
+  private timeSinceLastSync = 0;
+
+  setup(locator: IServiceLocator): void {
+    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+  }
+
+  update(delta: number, time: number): void {
+    this.timeSinceLastSync += delta;
+    if (this.timeSinceLastSync < this.SYNC_INTERVAL) return;
+    this.timeSinceLastSync = 0;
+    this.sync();
+  }
+
+  teardown(): void {}
+
+  private sync() {
+    const store = useGameStore.getState();
+    
+    // Sync Global State
+    store.syncGameState({
+        playerHealth: this.gameSystem.playerHealth,
+        playerRebootProgress: this.gameSystem.playerRebootProgress,
+        score: this.gameSystem.score,
+        xp: this.gameSystem.xp,
+        level: this.gameSystem.level,
+        xpToNextLevel: this.gameSystem.xpToNextLevel,
+        upgradePoints: this.gameSystem.upgradePoints,
+        systemIntegrity: PanelRegistry.systemIntegrity,
+        activeUpgrades: { ...this.gameSystem.activeUpgrades } // FIX: Ensure new object reference
+    });
+
+    // Sync Panels
+    const uiPanels: Record<string, any> = {};
+    const panels = PanelRegistry.getAllPanels();
+    
+    for(const p of panels) {
+        uiPanels[p.id] = {
+            id: p.id,
+            health: p.health,
+            isDestroyed: p.isDestroyed
+        };
+    }
+    
+    store.syncPanels(uiPanels);
+  }
+}
+
+
+=====================================
 FILE: ./src/game/systems/InteractionSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { EntitySystem } from './EntitySystem';
-import { useGameStore } from '../store/useGameStore';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { PanelRegistry } from './PanelRegistrySystem'; 
+import { GameStateSystem } from './GameStateSystem'; 
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -5607,33 +5767,39 @@ export class InteractionSystem implements IGameSystem {
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
   private entitySystem!: EntitySystem;
+  private gameSystem!: GameStateSystem; 
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
   }
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
-    const store = useGameStore.getState();
-    if (!store.isPlaying) return;
+    
+    // STRICT CHECK: If game is over (Integrity 0), disable ALL interaction
+    if (this.gameSystem.isGameOver) {
+        return; 
+    }
     
     const cursor = this.locator.getInputService().getCursor();
     
-    if (store.playerHealth <= 0) {
-        this.handleRevival(cursor, time, store);
+    // Player Dead logic (Revive Player)
+    if (this.gameSystem.playerHealth <= 0) {
+        this.handleRevival(cursor, time);
         return; 
     }
 
-    this.handlePanelRepair(cursor, time, store);
-
+    // Panel Repair Logic
+    this.handlePanelRepair(cursor, time);
+    
+    // Decay Logic for destroyed panels
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
-        const decayFn = store.decayReboot;
-        const panels = store.panels;
-        for (const pKey in panels) {
-            const p = panels[pKey];
+        const panels = PanelRegistry.getAllPanels();
+        for (const p of panels) {
             if (p.isDestroyed && p.health > 0) {
-                 decayFn(p.id, 5);
+                 PanelRegistry.decayPanel(p.id, 5);
             }
         }
     }
@@ -5641,13 +5807,9 @@ export class InteractionSystem implements IGameSystem {
 
   teardown(): void {}
 
-  private handleRevival(cursor: {x: number, y: number}, time: number, store: any) {
-    const identityPanel = store.panels['identity'];
-    if (!identityPanel) return;
-
-    const rect = ViewportHelper.getPanelWorldRect(identityPanel);
+  private handleRevival(cursor: {x: number, y: number}, time: number) {
+    const rect = PanelRegistry.getPanelRect('identity');
     if (!rect) return;
-
     const padding = 2.0; 
     const isHovering = 
         cursor.x >= rect.left - padding && 
@@ -5657,59 +5819,42 @@ export class InteractionSystem implements IGameSystem {
 
     if (isHovering) {
         this.repairState = 'REBOOTING';
-        
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.tickPlayerReboot(2.5);
+            this.gameSystem.tickReboot(2.5);
             this.lastRepairTime = time;
-            
-            // FIX: Spawn 4 particles for more impact
-            if (Math.random() > 0.3) {
-                this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
-            }
+            if (Math.random() > 0.3) this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
         }
     } else {
-        if (store.playerRebootProgress > 0 && time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.tickPlayerReboot(-2.0);
+        if (this.gameSystem.playerRebootProgress > 0 && time > this.lastRepairTime + this.REPAIR_RATE) {
+            this.gameSystem.tickReboot(-2.0);
         }
     }
   }
 
-  private handlePanelRepair(cursor: {x: number, y: number}, time: number, store: any) {
-    const panels = store.panels;
+  private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
+    const panels = PanelRegistry.getAllPanels();
     let hoveringPanelId: string | null = null;
 
-    for (const pKey in panels) {
-      const p = panels[pKey];
+    for (const p of panels) {
       if (!p.isDestroyed && p.health >= 1000) continue;
-      const r = ViewportHelper.getPanelWorldRect(p);
-      if (!r) continue;
-
-      if (
-        cursor.x >= r.left && 
-        cursor.x <= r.right && 
-        cursor.y >= r.bottom && 
-        cursor.y <= r.top
-      ) {
+      if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
         hoveringPanelId = p.id;
         break; 
       }
     }
 
     if (hoveringPanelId) {
-        const p = panels[hoveringPanelId];
-        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
+        const state = PanelRegistry.getPanelState(hoveringPanelId);
+        if (!state) return;
+        
+        this.repairState = state.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            store.healPanel(p.id, 10);
+            PanelRegistry.healPanel(hoveringPanelId, 10);
             this.lastRepairTime = time;
-
-            if (!p.isDestroyed) {
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
-            }
-
-            // FIX: Spawn 4 particles for more visual feedback
+            if (!state.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: hoveringPanelId, amount: 10 });
             if (Math.random() > 0.3) {
-                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
+                const color = state.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
             }
         }
@@ -5791,36 +5936,35 @@ import { EntitySystem } from './EntitySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { useGameStore } from '../store/useGameStore';
-
 import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { InteractionSystem } from './InteractionSystem';
+import { GameStateSystem } from './GameStateSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
   private entitySystem!: EntitySystem;
+  private gameSystem!: GameStateSystem;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
     this.setupListeners();
   }
 
   update(delta: number, time: number): void {
-    const store = useGameStore.getState();
-    if (!store.isPlaying) return;
+    if (this.gameSystem.isGameOver) return;
 
     // 1. GET PLAYER ENTITY
     const players = Registry.getByTag(Tag.PLAYER);
     const playerEntity = players[0]; 
     if (!playerEntity) return;
 
-    // 2. SYNC POSITION (CRITICAL FIX)
-    // Move the physics entity to match the mouse cursor
+    // 2. SYNC POSITION
     const cursor = this.locator.getInputService().getCursor();
     const transform = playerEntity.getComponent<TransformComponent>('Transform');
     if (transform) {
@@ -5831,7 +5975,7 @@ export class PlayerSystem implements IGameSystem {
     // 3. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
-        if (store.playerHealth <= 0) {
+        if (this.gameSystem.playerHealth <= 0) {
             stateComp.current = 'DEAD';
         } else {
             try {
@@ -5849,7 +5993,7 @@ export class PlayerSystem implements IGameSystem {
 
     // 4. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
-        const upgrades = store.activeUpgrades;
+        const upgrades = this.gameSystem.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
         const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
 
@@ -5864,44 +6008,29 @@ export class PlayerSystem implements IGameSystem {
 
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
-      const { damage } = payload;
-      const store = useGameStore.getState();
-      store.damagePlayer(damage);
-      if (store.playerHealth <= 0) this.handlePlayerDeath();
+       // Death logic is handled by state/HUD. Game Over is mostly unused until we define a true lose condition (like failing reboot)
     });
 
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-      useGameStore.getState().incrementKills(1);
-      useGameStore.getState().addXp(10); 
+      this.gameSystem.addScore(1);
+      this.gameSystem.addXp(10);
     });
-  }
-
-  private handlePlayerDeath() {
-    const store = useGameStore.getState();
-    const identityPanel = store.panels['identity'];
-    if (identityPanel && identityPanel.isDestroyed) {
-        store.stopGame();
-    }
   }
 
   private attemptAutoFire(time: number, player: any) {
     const cursor = this.locator.getInputService().getCursor();
     const enemies = Registry.getByTag(Tag.ENEMY);
-
     let nearestDist = Infinity;
     const RANGE = 12; 
     let targetEnemy: any = null;
 
     for (const e of enemies) {
       if (!e.active) continue;
-      
       const t = e.getComponent<TransformComponent>('Transform');
       if (!t) continue;
-
       const dx = t.x - cursor.x;
       const dy = t.y - cursor.y;
       const dist = dx*dx + dy*dy; 
-
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
           targetEnemy = e;
@@ -5909,17 +6038,14 @@ export class PlayerSystem implements IGameSystem {
     }
 
     if (targetEnemy) {
-      const tPos = targetEnemy.getComponent<TransformComponent>('Transform');
-      if (!tPos) return;
-
-      const dx = tPos.x - cursor.x;
-      const dy = tPos.y - cursor.y;
-      
-      const upgrades = useGameStore.getState().activeUpgrades;
+      const upgrades = this.gameSystem.activeUpgrades;
       const multiLevel = upgrades['MULTI_SHOT'] || 0;
-      
       const projectileCount = 1 + (multiLevel * 2);
       const spreadAngle = 0.2; 
+      
+      const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
+      const dx = tPos.x - cursor.x;
+      const dy = tPos.y - cursor.y;
       const baseAngle = Math.atan2(dy, dx);
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
@@ -5929,13 +6055,8 @@ export class PlayerSystem implements IGameSystem {
           const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
 
           this.entitySystem.spawnBullet(
-              cursor.x, 
-              cursor.y, 
-              vx, 
-              vy, 
-              false, 
-              PLAYER_CONFIG.bulletLife, 
-              PLAYER_CONFIG.bulletRadius
+              cursor.x, cursor.y, vx, vy, false, 
+              PLAYER_CONFIG.bulletLife, PLAYER_CONFIG.bulletRadius
           );
       }
       
@@ -5957,21 +6078,28 @@ export class TimeSystem implements IGameSystem {
   public elapsedTime: number = 0;
   public delta: number = 0;
   public isPaused: boolean = false;
+  
+  private freezeTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
     this.reset();
   }
 
   update(rawDelta: number, rawTime: number): void {
+    // 1. Handle Hit Stop (Freeze)
+    if (this.freezeTimer > 0) {
+        this.freezeTimer -= rawDelta;
+        this.delta = 0; // Game logic pauses
+        return;
+    }
+
     if (this.isPaused) {
       this.delta = 0;
       return;
     }
 
-    // Clamp delta to prevent huge jumps
+    // 2. Normal Time Processing
     const safeDelta = Math.min(rawDelta, WorldConfig.time.maxDelta);
-    
-    // Apply Time Scale (Slow-mo / Hit-stop)
     this.delta = safeDelta * this.timeScale;
     this.elapsedTime += this.delta;
   }
@@ -5985,6 +6113,7 @@ export class TimeSystem implements IGameSystem {
     this.elapsedTime = 0;
     this.delta = 0;
     this.isPaused = false;
+    this.freezeTimer = 0;
   }
   
   public setScale(scale: number, duration?: number) {
@@ -5994,6 +6123,14 @@ export class TimeSystem implements IGameSystem {
         this.timeScale = 1.0;
       }, duration * 1000);
     }
+  }
+
+  /**
+   * Freezes game logic for a specific duration (seconds)
+   * Used for "Hit Stop" effects.
+   */
+  public freeze(duration: number) {
+      this.freezeTimer = duration;
   }
 }
 
@@ -6006,19 +6143,16 @@ import { Registry } from '../core/ecs/EntityRegistry';
 import { EntityFactory } from '../core/EntityFactory';
 import { SpatialGrid } from '../core/SpatialGrid';
 import { Tag } from '../core/ecs/types';
-
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyType } from '../config/Identifiers'; 
 import { GameEventBus } from '../events/GameEventBus';
-import { useGameStore } from '../store/useGameStore';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { PanelRegistry } from './PanelRegistrySystem'; // NEW
 
 export class EntitySystem implements IGameSystem {
   public spatialGrid: SpatialGrid;
@@ -6039,11 +6173,8 @@ export class EntitySystem implements IGameSystem {
     const cursor = this.locator.getInputService().getCursor();
     const doDamageTick = Math.floor(time * 2) > Math.floor((time - delta) * 2);
 
-    const panels = useGameStore.getState().panels;
-    const worldPanels = Object.values(panels)
-      .filter(p => !p.isDestroyed)
-      .map(p => ViewportHelper.getPanelWorldRect(p))
-      .filter(r => r !== null);
+    // FIX: Get Panel Data from Registry
+    const worldPanels = PanelRegistry.getAllPanels().filter(p => !p.isDestroyed);
 
     const aiContext: AIContext = {
       playerPos: cursor,
@@ -6052,20 +6183,12 @@ export class EntitySystem implements IGameSystem {
       time,
       doDamageTick,
       spawnProjectile: (x, y, vx, vy) => EntityFactory.createBullet(x, y, vx, vy, true, 3.0),
-      
       triggerExplosion: (x, y, color) => this.spawnParticle(x, y, color, 8, 15, 0.8),
-      
-      // FIX: Constant, concentrated sparks for drilling
-      spawnDrillSparks: (x, y, color) => {
-          // Spawn 1 particle per frame for constant stream
-          // Low speed (2.0), Short life (0.2)
-          this.spawnParticle(x, y, color, 1, 3.0, 0.25);
-      },
-      
+      spawnDrillSparks: (x, y, color) => this.spawnParticle(x, y, color, 1, 3.0, 0.25),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
-      damagePanel: (id, amount) => {
-        useGameStore.getState().damagePanel(id, amount);
-      }
+      
+      // FIX: Damage via Registry
+      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 
     for (const entity of Registry.getAll()) {
@@ -6083,10 +6206,8 @@ export class EntitySystem implements IGameSystem {
       const health = entity.getComponent<HealthComponent>('Health');
       if (health && health.isDead) {
           Registry.destroyEntity(entity.id);
-          
           const identity = entity.getComponent<IdentityComponent>('Identity');
           const transform = entity.getComponent<TransformComponent>('Transform');
-          
           if (identity && transform) {
              GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 
                 id: entity.id as number, 
@@ -6094,7 +6215,6 @@ export class EntitySystem implements IGameSystem {
                 x: transform.x, 
                 y: transform.y 
              });
-             
              this.spawnExplosion(transform.x, transform.y, identity.variant);
           }
           continue;
@@ -6129,7 +6249,6 @@ export class EntitySystem implements IGameSystem {
       const radius = 25; 
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
-      
       const e = EntityFactory.createEnemy(type, x, y);
       GameEventBus.emit(GameEvents.ENEMY_SPAWNED, { type, id: e.id as number });
   }
@@ -6138,19 +6257,12 @@ export class EntitySystem implements IGameSystem {
       EntityFactory.createBullet(x, y, vx, vy, isEnemy, life);
   }
 
-  // FIX: Added speedScale and lifeScale parameters
   public spawnParticle(x: number, y: number, color: string, count: number, speedScale = 15, lifeScale = 1.0) {
       for(let i=0; i<count; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = Math.random() * speedScale; 
           const life = (0.2 + Math.random() * 0.3) * lifeScale;
-          
-          EntityFactory.createParticle(
-            x, y, 
-            color, 
-            Math.cos(angle)*speed, Math.sin(angle)*speed, 
-            life
-          );
+          EntityFactory.createParticle(x, y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, life);
       }
   }
 
@@ -6164,39 +6276,60 @@ export class EntitySystem implements IGameSystem {
 =====================================
 FILE: ./src/game/systems/FXManager.ts
 =====================================
-// src/game/systems/FXManager.ts
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../config/Identifiers';
+import { GameEvents } from '../events/GameEvents';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { TimeSystem } from './TimeSystem';
+import { CameraSystem } from './CameraSystem';
 
 class FXManagerController {
   private initialized = false;
   
-  public trauma = 0;
-
   public init() {
     if (this.initialized) return;
     
-    // --- EVENT WIRING ---
+    // --- HIT STOP & TRAUMA EVENTS ---
     
+    // 1. PANEL DESTROYED (Major Impact)
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.addTrauma(0.55);
+        this.addTrauma(0.7);
+        this.triggerHitStop(0.15); // 150ms Freeze
     });
     
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.addTrauma(0.35);
+    // 2. PLAYER HIT (Medium Impact)
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        const isBig = p.damage > 10;
+        this.addTrauma(isBig ? 0.6 : 0.3);
+        if (isBig) this.triggerHitStop(0.1); // 100ms Freeze on big hits
     });
+    
+    // 3. GAME OVER (Catastrophic)
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        this.addTrauma(1.0);
+        this.triggerHitStop(0.5); // 500ms Freeze
+    });
+
+    // 4. BOSS DEATH (Placeholder Comment)
+    // GameEventBus.subscribe(GameEvents.BOSS_DEATH, () => {
+    //    this.addTrauma(1.0);
+    //    this.triggerHitStop(1.0); // 1 Second dramatic pause
+    // });
     
     this.initialized = true;
   }
 
   public addTrauma(amount: number) {
-    this.trauma = Math.min(1.0, this.trauma + amount);
+    try {
+        const cam = ServiceLocator.getSystem<CameraSystem>('CameraSystem');
+        cam.addTrauma(amount);
+    } catch {}
   }
 
-  public decay(delta: number) {
-    if (this.trauma > 0) {
-      this.trauma = Math.max(0, this.trauma - (delta * 0.8));
-    }
+  private triggerHitStop(duration: number) {
+    try {
+        const time = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
+        time.freeze(duration);
+    } catch {}
   }
 }
 
@@ -6243,6 +6376,272 @@ export class InputSystem implements IGameSystem, IInputService {
 
   public isPressed(action: string): boolean {
     return this._keys.has(action);
+  }
+}
+
+
+=====================================
+FILE: ./src/game/systems/PanelRegistrySystem.ts
+=====================================
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
+
+const MAX_PANEL_HEALTH = 1000;
+
+interface PanelState {
+  health: number;
+  isDestroyed: boolean;
+}
+
+class PanelRegistrySystemClass implements IGameSystem {
+  // Spatial Data
+  private panelRects = new Map<string, WorldRect>();
+  private observedElements = new Map<string, HTMLElement>();
+  
+  // Game Logic Data
+  private panelStates = new Map<string, PanelState>();
+
+  // Derived Metric
+  public systemIntegrity: number = 100;
+
+  setup(locator: IServiceLocator): void {
+    // When game starts, we ensure states exist for all registered panels
+    this.resetLogic();
+    this.refreshAll();
+  }
+
+  update(delta: number, time: number): void {
+    // Passive
+  }
+
+  teardown(): void {
+    // We don't clear observedElements (DOM persists), but we can reset game logic?
+    // Actually, let's keep logic state until explicit reset.
+  }
+
+  public resetLogic() {
+    for (const id of this.observedElements.keys()) {
+        this.panelStates.set(id, { health: MAX_PANEL_HEALTH, isDestroyed: false });
+    }
+    this.calculateIntegrity();
+  }
+
+  // --- ACTIONS ---
+
+  public damagePanel(id: string, amount: number) {
+    const state = this.panelStates.get(id);
+    if (!state || state.isDestroyed) return;
+
+    state.health = Math.max(0, state.health - amount);
+    
+    // Check Destruction
+    if (state.health <= 0 && !state.isDestroyed) {
+        state.isDestroyed = true;
+        GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+    } else {
+        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
+    }
+    
+    this.calculateIntegrity();
+  }
+
+  public healPanel(id: string, amount: number) {
+    const state = this.panelStates.get(id);
+    if (!state) return;
+
+    // Logic: If destroyed, healing brings it back to life but starts at low HP?
+    // Or does "Rebooting" bring it back?
+    // Let's stick to existing logic: Healing increments HP.
+    // If destroyed, you must heal it back to full? Or just some?
+    // Let's say: Healing works. If destroyed, getting > 0 doesn't undestroy immediately?
+    // Existing logic: "If wasDestroyed and newHealth >= MAX, then undestroy".
+    // Wait, InteractionSystem handles the "Reboot vs Heal" logic.
+    // Let's allow simple healing here.
+    
+    const wasDestroyed = state.isDestroyed;
+    state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
+    
+    if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
+        state.isDestroyed = false;
+        state.health = 500; // Reset to half health upon revival? Or logic from store...
+        // Previous store logic: "if wasDestroyed and newHealth >= MAX ... newHealth = 500"
+        // That logic was weird. Let's simplify:
+        // You have to fill the bar to revive.
+    }
+    
+    this.calculateIntegrity();
+  }
+
+  public decayPanel(id: string, amount: number) {
+     const state = this.panelStates.get(id);
+     if (!state || !state.isDestroyed) return;
+     state.health = Math.max(0, state.health - amount);
+  }
+
+  private calculateIntegrity() {
+    let current = 0;
+    let max = 0;
+    for (const state of this.panelStates.values()) {
+        max += MAX_PANEL_HEALTH;
+        if (!state.isDestroyed) current += state.health;
+    }
+    this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
+  }
+
+  // --- REGISTRY API ---
+
+  public register(id: string, element: HTMLElement) {
+    this.observedElements.set(id, element);
+    if (!this.panelStates.has(id)) {
+        this.panelStates.set(id, { health: MAX_PANEL_HEALTH, isDestroyed: false });
+    }
+    this.refreshSingle(id);
+  }
+
+  public unregister(id: string) {
+    this.observedElements.delete(id);
+    this.panelRects.delete(id);
+    // We keep state in case it remounts? No, delete state too.
+    this.panelStates.delete(id);
+  }
+
+  public refreshSingle(id: string) {
+    const el = this.observedElements.get(id);
+    if (!el || !el.isConnected) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    this.panelRects.set(id, ViewportHelper.domToWorld(id, rect));
+  }
+
+  public refreshAll() {
+    const ids = Array.from(this.observedElements.keys());
+    for (const id of ids) this.refreshSingle(id);
+  }
+
+  // --- GETTERS ---
+
+  public getPanelRect(id: string): WorldRect | undefined {
+    return this.panelRects.get(id);
+  }
+
+  public getPanelState(id: string): PanelState | undefined {
+    return this.panelStates.get(id);
+  }
+  
+  public getAllPanels() {
+      // Return combined data
+      const result = [];
+      for(const [id, rect] of this.panelRects) {
+          const state = this.panelStates.get(id) || { health: 0, isDestroyed: true };
+          result.push({ ...rect, ...state });
+      }
+      return result;
+  }
+}
+
+export const PanelRegistry = new PanelRegistrySystemClass();
+
+
+=====================================
+FILE: ./src/game/systems/GameStateSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
+
+export class GameStateSystem implements IGameSystem {
+  public playerHealth: number = PLAYER_CONFIG.maxHealth;
+  public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
+  public playerRebootProgress: number = 0;
+  
+  public score: number = 0;
+  public xp: number = 0;
+  public level: number = 1;
+  public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
+  public upgradePoints: number = 0;
+  public activeUpgrades: Record<string, number> = {
+    'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0
+  };
+
+  public isGameOver: boolean = false;
+
+  setup(locator: IServiceLocator): void {
+    this.reset();
+    
+    // Listen for Upgrades
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        this.applyUpgrade(p.option);
+    });
+    
+    // REMOVED: Listener that caused Game Over on Identity Panel destruction.
+    // The panel is now just another piece of hardware that can break and be fixed.
+  }
+
+  update(delta: number, time: number): void {}
+  teardown(): void {}
+
+  public reset() {
+    this.playerHealth = this.maxPlayerHealth;
+    this.playerRebootProgress = 0;
+    this.score = 0;
+    this.xp = 0;
+    this.level = 1;
+    this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
+    this.upgradePoints = 0;
+    this.isGameOver = false;
+    this.activeUpgrades = { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 };
+  }
+
+  public applyUpgrade(option: string) {
+      if (this.upgradePoints > 0) {
+          this.upgradePoints--;
+          this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
+          
+          if (option === 'REPAIR_NANITES') {
+             this.healPlayer(this.maxPlayerHealth * 0.2);
+          }
+      }
+  }
+
+  public damagePlayer(amount: number) {
+    if (this.isGameOver) return;
+    if (this.playerHealth > 0) {
+        this.playerHealth = Math.max(0, this.playerHealth - amount);
+    } else {
+        this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
+    }
+  }
+
+  public healPlayer(amount: number) {
+    this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
+  }
+
+  public addScore(amount: number) {
+    this.score += amount;
+  }
+
+  public addXp(amount: number) {
+    this.xp += amount;
+    while (this.xp >= this.xpToNextLevel) {
+        this.xp -= this.xpToNextLevel;
+        this.level++;
+        this.upgradePoints++;
+        this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
+        
+        GameEventBus.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
+    }
+  }
+
+  public tickReboot(amount: number) {
+    if (this.playerHealth > 0) return;
+    this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+    if (this.playerRebootProgress >= 100) {
+        this.playerHealth = this.maxPlayerHealth / 2;
+        this.playerRebootProgress = 0;
+    }
   }
 }
 
@@ -6404,72 +6803,66 @@ FILE: ./src/game/store/useGameStore.ts
 =====================================
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { GameState } from '../types/game.types';
+import { UpgradeOption } from '../types/game.types';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 
 const MAX_PANEL_HEALTH = 1000;
 
-export type UpgradeOption = 'RAPID_FIRE' | 'MULTI_SHOT' | 'SPEED_UP' | 'REPAIR_NANITES';
-
-interface ExtendedGameState extends GameState {
+interface GameStateUI {
+  isPlaying: boolean;
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
-  
-  // SCORING
-  score: number; // Current Session Kills
-  highScore: number; // Best Session Kills
-  
-  // PROGRESSION
+  score: number;
+  highScore: number;
   xp: number;
-  xpToNextLevel: number;
   level: number;
+  xpToNextLevel: number;
   upgradePoints: number;
-  activeUpgrades: Record<UpgradeOption, number>;
-  
   systemIntegrity: number;
   
-  // ACTIONS
+  availableUpgrades: UpgradeOption[];
+  activeUpgrades: Record<string, number>;
+  panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
+  
   startGame: () => void;
   stopGame: () => void;
+  registerPanel: (id: string, element: HTMLElement) => void;
+  unregisterPanel: (id: string) => void;
+  syncGameState: (data: Partial<GameStateUI>) => void;
+  syncPanels: (panelsData: Record<string, any>) => void;
+  selectUpgrade: (option: UpgradeOption) => void;
+  addScore: (amount: number) => void;
+  addXp: (amount: number) => void;
   damagePlayer: (amount: number) => void;
   healPlayer: (amount: number) => void;
   tickPlayerReboot: (amount: number) => void;
-  damageRebootProgress: (amount: number) => void;
   healPanel: (id: string, amount: number) => void;
   decayReboot: (id: string, amount: number) => void;
-  
-  incrementKills: (amount: number) => void;
-  addXp: (amount: number) => void;
-  selectUpgrade: (option: UpgradeOption) => void;
+  damagePanel: (id: string, amount: number) => void;
   resetGame: () => void;
   recalculateIntegrity: () => void;
 }
 
-export const useGameStore = create<ExtendedGameState>()(
+export const useGameStore = create<GameStateUI>()(
   persist(
     (set, get) => ({
       isPlaying: false,
-      score: 0,
-      highScore: 0,
-      threatLevel: 1,
-      panels: {},
       playerHealth: PLAYER_CONFIG.maxHealth,
       maxPlayerHealth: PLAYER_CONFIG.maxHealth,
       playerRebootProgress: 0,
-      
+      score: 0,
+      highScore: 0,
       xp: 0,
-      xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       level: 1,
+      xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
-      activeUpgrades: {
-        'RAPID_FIRE': 0,
-        'MULTI_SHOT': 0,
-        'SPEED_UP': 0,
-        'REPAIR_NANITES': 0
-      },
-      
       systemIntegrity: 100,
+      availableUpgrades: [],
+      activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
+      panels: {},
 
       startGame: () => {
         if (get().isPlaying) return;
@@ -6481,12 +6874,9 @@ export const useGameStore = create<ExtendedGameState>()(
             playerRebootProgress: 0,
             xp: 0,
             level: 1,
-            activeUpgrades: {
-                'RAPID_FIRE': 0,
-                'MULTI_SHOT': 0,
-                'SPEED_UP': 0,
-                'REPAIR_NANITES': 0
-            },
+            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+            availableUpgrades: [],
+            activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
             panels: Object.fromEntries(
                 Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
             )
@@ -6494,139 +6884,53 @@ export const useGameStore = create<ExtendedGameState>()(
       },
       
       stopGame: () => {
-        const { score, highScore } = get();
-        set({ 
-          isPlaying: false,
-          highScore: Math.max(score, highScore)
-        });
+          const { score, highScore } = get();
+          set({ isPlaying: false, highScore: Math.max(score, highScore) });
       },
 
-      incrementKills: (amount) => set((state) => {
-        const newScore = state.score + amount;
-        return { 
-            score: newScore,
-            highScore: Math.max(newScore, state.highScore)
-        };
-      }),
-
-      addXp: (amount) => set((state) => {
-        let newXp = state.xp + amount;
-        let newLevel = state.level;
-        let nextReq = state.xpToNextLevel;
-        let newPoints = state.upgradePoints;
-
-        while (newXp >= nextReq) {
-          newXp -= nextReq;
-          newLevel++;
-          newPoints++; 
-          nextReq = Math.floor(nextReq * PLAYER_CONFIG.xpScalingFactor);
-        }
-
-        return {
-          xp: newXp,
-          level: newLevel,
-          xpToNextLevel: nextReq,
-          upgradePoints: newPoints
-        };
-      }),
-
-      selectUpgrade: (option) => set((state) => {
-        if (state.upgradePoints <= 0) return state;
-        const currentLevel = state.activeUpgrades[option] || 0;
-        return {
-            activeUpgrades: {
-                ...state.activeUpgrades,
-                [option]: currentLevel + 1
-            },
-            upgradePoints: state.upgradePoints - 1
-        };
-      }),
-
-      damagePlayer: (amount) => set((state) => {
-        const newHealth = Math.max(0, state.playerHealth - amount);
-        return { playerHealth: newHealth };
-      }),
-
-      healPlayer: (amount) => set((state) => ({
-        playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount)
-      })),
+      syncGameState: (data) => set((state) => ({ ...state, ...data })),
       
-      tickPlayerReboot: (amount) => set((state) => {
-        if (state.playerHealth > 0) return { playerRebootProgress: 0 };
-        const newProgress = Math.max(0, Math.min(100, state.playerRebootProgress + amount));
-        if (newProgress >= 100) {
-            return {
-                playerRebootProgress: 0,
-                playerHealth: state.maxPlayerHealth / 2
-            };
-        }
-        return { playerRebootProgress: newProgress };
+      syncPanels: (incomingPanels) => set((state) => {
+          const merged = { ...state.panels };
+          for (const key in incomingPanels) {
+              if (merged[key]) {
+                  merged[key].health = incomingPanels[key].health;
+                  merged[key].isDestroyed = incomingPanels[key].isDestroyed;
+              } else {
+                  merged[key] = incomingPanels[key];
+              }
+          }
+          return { panels: merged };
       }),
-      
-      damageRebootProgress: (amount) => set((state) => {
-        if (state.playerHealth > 0) return state;
-        return { playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) };
-      }),
-
-      resetGame: () => set({
-        score: 0,
-        playerHealth: PLAYER_CONFIG.maxHealth,
-        isPlaying: true
-      }),
-
-      recalculateIntegrity: () => {
-        const { panels } = get();
-        const pKeys = Object.keys(panels);
-        if (pKeys.length === 0) return;
-        let currentSum = 0;
-        let maxSum = pKeys.length * MAX_PANEL_HEALTH;
-        for (const key of pKeys) {
-          const p = panels[key];
-          if (!p.isDestroyed) currentSum += p.health;
-        }
-        set({ systemIntegrity: (currentSum / maxSum) * 100 });
-      },
 
       registerPanel: (id, element) => set((state) => ({
-        panels: { ...state.panels, [id]: { id, element, health: MAX_PANEL_HEALTH, isDestroyed: false } }
+          panels: { ...state.panels, [id]: { id, element, health: 1000, isDestroyed: false } }
       })),
-
+      
       unregisterPanel: (id) => set((state) => {
-        const newPanels = { ...state.panels };
-        delete newPanels[id];
-        return { panels: newPanels };
+          const next = { ...state.panels };
+          delete next[id];
+          return { panels: next };
       }),
 
-      damagePanel: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel || panel.isDestroyed) return state;
-        const newHealth = Math.max(0, panel.health - amount);
-        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: newHealth <= 0 } } };
-      }),
+      selectUpgrade: (option) => {
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
+      },
 
-      healPanel: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel) return state;
-        if (!panel.isDestroyed && panel.health >= MAX_PANEL_HEALTH) return state;
-        let newHealth = Math.min(MAX_PANEL_HEALTH, panel.health + amount);
-        let wasDestroyed = panel.isDestroyed;
-        if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
-            wasDestroyed = false;
-            newHealth = 500;
-        }
-        return { panels: { ...state.panels, [id]: { ...panel, health: newHealth, isDestroyed: wasDestroyed } } };
-      }),
-
-      decayReboot: (id, amount) => set((state) => {
-        const panel = state.panels[id];
-        if (!panel || !panel.isDestroyed) return state;
-        if (panel.health <= 0) return state;
-        const newProgress = Math.max(0, panel.health - amount);
-        return { panels: { ...state.panels, [id]: { ...panel, health: newProgress } } };
-      }),
+      // Fallback getters/setters for legacy consumers (will be overwritten by sync)
+      addScore: (amount) => set(state => ({ score: state.score + amount })),
+      addXp: (amount) => set(state => ({ xp: state.xp + amount })),
+      damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
+      healPlayer: (amount) => set(state => ({ playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) })),
+      tickPlayerReboot: (amount) => set(state => ({ playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) })),
+      healPanel: (id, amount) => {}, // Handled by ECS event
+      decayReboot: (id, amount) => {}, // Handled by ECS
+      damagePanel: (id, amount) => {}, // Handled by ECS
+      resetGame: () => {},
+      recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage', // REVERTED
+      name: 'mesoelfy-os-storage-v2', // VERSION BUMP
       partialize: (state) => ({ highScore: state.highScore }),
     }
   )

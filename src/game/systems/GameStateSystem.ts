@@ -22,18 +22,13 @@ export class GameStateSystem implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.reset();
     
-    // FIX: Listen for Upgrades
+    // Listen for Upgrades
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
     
-    // FIX: Listen for Panel Death (Identity = Game Over)
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
-        if (p.id === 'identity') {
-            this.isGameOver = true;
-            GameEventBus.emit(GameEvents.GAME_OVER, { score: this.score });
-        }
-    });
+    // REMOVED: Listener that caused Game Over on Identity Panel destruction.
+    // The panel is now just another piece of hardware that can break and be fixed.
   }
 
   update(delta: number, time: number): void {}
@@ -57,7 +52,6 @@ export class GameStateSystem implements IGameSystem {
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
           
           if (option === 'REPAIR_NANITES') {
-             // Instant effect: Heal 20%
              this.healPlayer(this.maxPlayerHealth * 0.2);
           }
       }

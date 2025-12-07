@@ -25,22 +25,23 @@ export class InteractionSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
     
-    // FIX: Strictly return if Game Over
+    // STRICT CHECK: If game is over (Integrity 0), disable ALL interaction
     if (this.gameSystem.isGameOver) {
         return; 
     }
     
     const cursor = this.locator.getInputService().getCursor();
     
-    // Player Dead logic (but not Game Over)
+    // Player Dead logic (Revive Player)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
         return; 
     }
 
+    // Panel Repair Logic
     this.handlePanelRepair(cursor, time);
     
-    // Decay Logic
+    // Decay Logic for destroyed panels
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
         const panels = PanelRegistry.getAllPanels();
         for (const p of panels) {
@@ -93,9 +94,6 @@ export class InteractionSystem implements IGameSystem {
         const state = PanelRegistry.getPanelState(hoveringPanelId);
         if (!state) return;
         
-        // Don't allow healing identity if it's dead (Game Over handles this, but safety check)
-        if (hoveringPanelId === 'identity' && state.isDestroyed) return;
-
         this.repairState = state.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {

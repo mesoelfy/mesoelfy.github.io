@@ -8,8 +8,7 @@ import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { InteractionSystem } from './InteractionSystem';
-import { GameStateSystem } from './GameStateSystem'; // NEW
-import { PanelRegistry } from './PanelRegistrySystem'; // NEW
+import { GameStateSystem } from './GameStateSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -43,7 +42,6 @@ export class PlayerSystem implements IGameSystem {
     // 3. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
-        // FIX: Read from GameSystem
         if (this.gameSystem.playerHealth <= 0) {
             stateComp.current = 'DEAD';
         } else {
@@ -62,7 +60,7 @@ export class PlayerSystem implements IGameSystem {
 
     // 4. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
-        const upgrades = this.gameSystem.activeUpgrades; // Read from GameSystem
+        const upgrades = this.gameSystem.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
         const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
 
@@ -77,26 +75,13 @@ export class PlayerSystem implements IGameSystem {
 
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
-      // Logic handled in CollisionSystem mostly, but check death here?
-      // CollisionSystem calls gameSystem.damagePlayer.
-      // We just check if game over logic triggers.
-      if (this.gameSystem.playerHealth <= 0) this.handlePlayerDeath();
+       // Death logic is handled by state/HUD. Game Over is mostly unused until we define a true lose condition (like failing reboot)
     });
 
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-      // FIX: Write to GameSystem
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
     });
-  }
-
-  private handlePlayerDeath() {
-    // FIX: Check PanelRegistry directly
-    const identityState = PanelRegistry.getPanelState('identity');
-    if (identityState && identityState.isDestroyed) {
-        this.gameSystem.isGameOver = true;
-        GameEventBus.emit(GameEvents.GAME_OVER, { score: this.gameSystem.score });
-    }
   }
 
   private attemptAutoFire(time: number, player: any) {

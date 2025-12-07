@@ -12,8 +12,15 @@ class AudioSystemController {
   private isInitialized = false;
   private isMuted = false;
 
-  public async init() {
-    if (this.isInitialized) return;
+  public init() {
+    if (this.isInitialized) {
+        // Always try to resume if context exists but is suspended
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+        return;
+    }
+
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
@@ -39,7 +46,11 @@ class AudioSystemController {
     this.setupMusic();
 
     this.isInitialized = true;
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    
+    // Resume immediately (this works if called from a click/key handler)
+    if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+    }
   }
 
   private setupMusic() {
@@ -52,6 +63,10 @@ class AudioSystemController {
   }
 
   public startMusic() {
+    // Resume context again to be safe
+    if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+    }
     if (this.musicElement) this.musicElement.play().catch(e => console.warn(e));
   }
 
@@ -67,7 +82,7 @@ class AudioSystemController {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playHeal());
   }
 
-  // --- ADJUSTED VOLUMES ---
+  // --- AUDIO LOGIC ---
 
   private playLaser() {
     if (this.isMuted || !this.ctx) return;
@@ -78,7 +93,6 @@ class AudioSystemController {
     osc.frequency.setValueAtTime(880, t);
     osc.frequency.exponentialRampToValueAtTime(110, t + 0.15);
     
-    // INCREASED: 0.1 -> 0.25
     gain.gain.setValueAtTime(0.25, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     
@@ -97,7 +111,6 @@ class AudioSystemController {
       osc.frequency.linearRampToValueAtTime(880, t + 0.2);
       const gain = this.ctx.createGain();
       
-      // DECREASED: 0.1 -> 0.05
       gain.gain.setValueAtTime(0.05, t);
       gain.gain.linearRampToValueAtTime(0, t + 0.2);
       
@@ -107,7 +120,6 @@ class AudioSystemController {
       osc.stop(t + 0.2);
   }
 
-  // ... (Rest unchanged)
   private playExplosion(type: string) {
     if (this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;

@@ -4,13 +4,13 @@ import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
 import { Registry } from './ecs/EntityRegistry';
 import { Tag } from './ecs/types';
-import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; // NEW IMPORT
+import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; 
+import { GameStateSystem } from '../systems/GameStateSystem';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   private locator!: IServiceLocator;
 
-  // Bridge getters to Registry
   public get enemies() { return Registry.getByTag(Tag.ENEMY); }
   public get bullets() { return Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY)); }
   public get enemyBullets() { return Registry.getByTag(Tag.BULLET).filter(b => b.hasTag(Tag.ENEMY)); }
@@ -33,11 +33,19 @@ export class GameEngineCore implements IGameSystem {
 
   update(delta: number, time: number): void {
     const store = useGameStore.getState();
+    const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
+    // SYNC GLOBAL GAME OVER STATE
     if (store.isPlaying && store.systemIntegrity <= 0) {
         store.stopGame();
         FXManager.addTrauma(1.0);
+        gameSys.isGameOver = true; // FORCE SYNC
         return;
+    }
+
+    // Force GameStateSystem to respect store if stopped manually
+    if (!store.isPlaying) {
+        gameSys.isGameOver = true;
     }
 
     for (const sys of this.systems) {
@@ -53,16 +61,11 @@ export class GameEngineCore implements IGameSystem {
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
-    // 1. Update the Math Helper
     ViewportHelper.update(vpW, vpH, screenW, screenH);
-    
-    // 2. CRITICAL FIX: Tell the Registry to recalculate all DOM positions 
-    // now that we know the real screen size.
     try {
         const panelSys = this.locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
         panelSys.refreshAll();
     } catch (e) {
-        // System might not be ready on first frame, ignore.
     }
   }
 }

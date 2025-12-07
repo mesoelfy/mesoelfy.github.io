@@ -78,7 +78,8 @@ const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boole
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm",
-        isVideo ? "bg-black/20" : "bg-black/90"
+        // FIX: If it's the video panel, make background fully transparent so static is visible.
+        isVideo ? "bg-transparent" : "bg-black/90"
     )}>
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div

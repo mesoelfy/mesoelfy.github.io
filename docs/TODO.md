@@ -69,3 +69,5 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - Game Over left most broken frame looks weird as broken - should retain full shape
 
 - Power UP - Heal panel faster
+
+- should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
