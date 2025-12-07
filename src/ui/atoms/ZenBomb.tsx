@@ -10,14 +10,12 @@ export const ZenBomb = () => {
   const activateZenMode = useGameStore(state => state.activateZenMode);
   const [clicked, setClicked] = useState(false);
 
-  // Only show if Game Over AND NOT yet in Zen Mode
   if (!isGameOver || isZenMode) return null;
 
   const handleClick = () => {
     setClicked(true);
     AudioSystem.playClick();
     
-    // Delay actual activation to let animation play
     setTimeout(() => {
         activateZenMode();
     }, 800);
@@ -33,36 +31,35 @@ export const ZenBomb = () => {
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
           
           onClick={handleClick}
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-[90] flex flex-col items-center group cursor-pointer"
+          // Z-30 is correct (behind Header z-40)
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center group cursor-pointer"
         >
-          {/* CONNECTOR LINE (Longer and positioned higher to tuck behind header) */}
+          {/* CONNECTOR LINE: Increased width and opacity for visibility */}
           <motion.div 
             initial={{ height: 0 }}
-            animate={{ height: 120 }} // Taller wire
+            animate={{ height: 160 }} 
             transition={{ delay: 1.0, duration: 0.8, ease: "easeOut" }}
-            className="w-[1px] bg-elfy-red/50 absolute -top-32 left-1/2 -translate-x-1/2"
+            className="w-[2px] bg-elfy-red/80 absolute -top-64 left-1/2 -translate-x-1/2 shadow-[0_0_8px_#FF003C]"
           />
 
           {/* THE BOMB BUTTON */}
           <div className="relative p-1 border border-elfy-red bg-black/90 backdrop-blur-md shadow-[0_0_20px_#FF003C] overflow-hidden group-hover:shadow-[0_0_40px_#FF003C] transition-shadow duration-300 z-10">
              
-             {/* Hazard Stripes */}
              <div className="absolute inset-0 opacity-20 pointer-events-none" 
                   style={{ backgroundImage: 'repeating-linear-gradient(45deg, #FF003C 0, #FF003C 5px, transparent 5px, transparent 10px)' }} 
              />
 
-             {/* Inner Box */}
              <div className="relative w-16 h-16 border border-elfy-red/50 flex items-center justify-center bg-black hover:bg-elfy-red transition-colors duration-300 group-hover:text-black text-elfy-red">
                  <motion.div
                    animate={{ rotate: [0, -10, 10, 0] }}
-                   transition={{ repeat: Infinity, duration: 0.3, repeatDelay: 2 }} // Panic shake
+                   transition={{ repeat: Infinity, duration: 0.3, repeatDelay: 2 }} 
                  >
                     <Bomb size={32} strokeWidth={2} />
                  </motion.div>
              </div>
           </div>
 
-          {/* LABEL (Increased spacing with mt-4) */}
+          {/* LABEL */}
           <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-elfy-red/10 border border-elfy-red/50 backdrop-blur-md z-10">
              <Skull size={10} className="text-elfy-red animate-pulse" />
              <span className="text-[10px] font-mono font-black text-elfy-red tracking-widest uppercase group-hover:text-white transition-colors">

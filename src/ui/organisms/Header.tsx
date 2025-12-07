@@ -70,13 +70,14 @@ export const Header = () => {
 
   const isCritical = systemIntegrity < 30;
   const isWarning = systemIntegrity < 60;
+  const isGameOver = systemIntegrity <= 0;
   
   let statusColor = "text-elfy-green";
   if (isCritical) statusColor = "text-elfy-red";
   else if (isWarning) statusColor = "text-elfy-yellow";
 
   return (
-    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5">
+    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
@@ -103,8 +104,6 @@ export const Header = () => {
 
       {/* RIGHT: Status & Audio Controls */}
       <div className="flex items-center gap-4">
-        
-        {/* Audio Group - Passes statusColor to turn buttons Red/Yellow */}
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
             
@@ -129,16 +128,18 @@ export const Header = () => {
       </div>
 
       {/* BOTTOM BORDER */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900">
-        <div 
-          className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
-              isCritical ? "bg-elfy-red" : isWarning ? "bg-elfy-yellow" : "bg-elfy-green"
-          )} 
-          style={{ width: `${systemIntegrity}%` }}
-        />
-      </div>
+      {!isGameOver && (
+        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
+          <div 
+            className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
+                isCritical ? "bg-elfy-red" : isWarning ? "bg-elfy-yellow" : "bg-elfy-green"
+            )} 
+            style={{ width: `${systemIntegrity}%` }}
+          />
+        </div>
+      )}
       
-      {/* Integrity Text changes color at 60% */}
+      {/* INTEGRITY TEXT */}
       <div className={clsx(
           "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
           isCritical ? "text-elfy-red" : isWarning ? "text-elfy-yellow" : "text-elfy-green-dim"

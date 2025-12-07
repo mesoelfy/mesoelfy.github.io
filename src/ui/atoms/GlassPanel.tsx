@@ -79,8 +79,7 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
   const isInteracting = gameId && interactionTarget === gameId;
   
   const healthPercent = (health / MAX_HEALTH) * 100;
-  // Adjusted threshold: any damage shows the warning until healed full
-  const isDamaged = !isDestroyed && health < MAX_HEALTH;
+  const isDamaged = !isDestroyed && healthPercent < 100;
 
   // --- OPTIMAL ICON STATE LOGIC ---
   const [showOptimal, setShowOptimal] = useReactState(false);
@@ -89,8 +88,9 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
     if (health < MAX_HEALTH) {
       setShowOptimal(true);
     }
+    // FIX: Reduced success icon duration from 3000 -> 1500
     if (health >= MAX_HEALTH && showOptimal) {
-      const timer = setTimeout(() => setShowOptimal(false), 3000);
+      const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
   }, [health, showOptimal]);
@@ -193,15 +193,14 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                         </motion.div>
 
                     ) : isDamaged ? (
-                        // VIBRATION ANIMATION FIX: Explicit opacity: 1, No fade-in
                         <motion.div 
                             key="damaged"
                             initial={{ opacity: 1, scale: 1 }}
                             animate={{ 
-                                x: [-2, 2, -2, 2, -2, 2, 0, 0, 0, 0, 0, 0, 0], // Shake then pause
+                                x: [-2, 2, -2, 2, -2, 2, 0, 0, 0, 0, 0, 0, 0], 
                                 filter: [
                                     'drop-shadow(0 0 0px rgba(234,231,71,0))',
-                                    'drop-shadow(0 0 8px rgba(234,231,71,1))', // Pulse glow
+                                    'drop-shadow(0 0 8px rgba(234,231,71,1))', 
                                     'drop-shadow(0 0 0px rgba(234,231,71,0))'
                                 ]
                             }}

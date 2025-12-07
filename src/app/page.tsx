@@ -31,6 +31,9 @@ export default function Home() {
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
+  // Track Game Over locally for layout switching
+  const isGameOver = systemIntegrity <= 0;
+  
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
   const [showScene, setShowScene] = useState(false); 
 
@@ -84,18 +87,18 @@ export default function Home() {
           
           <Header />
 
-          {/* FIX: Layout Container (flex-1) is permanent. Content vanishes inside. */}
           <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
             <AnimatePresence>
               {!isZenMode && (
                 <motion.div 
                   className={clsx(
                       "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                      "overflow-y-auto md:overflow-hidden"
+                      // FIX: Force overflow visible on Game Over so falling panels aren't clipped by the container
+                      isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
                   )}
                   initial="hidden"
                   animate="visible"
-                  exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 0.5 } }}
+                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
                   variants={{
                     hidden: { opacity: 0 },
                     visible: { 

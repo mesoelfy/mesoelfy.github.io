@@ -48,7 +48,7 @@
 
 bullet width upgrade lmited
 
-- OPNE_SOURCE video overlay shouldn't be red, since that is for dangerous bad stuff - update design language -
+
 
 we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
 
@@ -72,7 +72,7 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 
 - should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
 
-MESOELFY ASCII not animating properly
+
 
 What are screenshake best practices?
 
@@ -85,7 +85,7 @@ When player regenerates itself, the health bar shows 50% but I think it might ac
 
 Music should get distorted, glitchy, and reverbed when Game Over state
 
-make some of the streaming matrix rain characters red at the moment UNSAFE CONNECTION DETECTED is triggered.
+
 
 
 
