@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
@@ -62,26 +63,204 @@ const AsciiRenderer = () => {
   );
 };
 
-const BootHeader = () => (
-  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
-    <span className="text-xs text-elfy-green-dim font-mono tracking-widest uppercase">BOOT_LOADER.SYS</span>
-    <div className="flex gap-1 items-center">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="w-1 bg-elfy-green/50 animate-pulse" style={{ height: `${i * 4 + 4}px`, animationDelay: `${i * 0.1}s` }} />
-      ))}
-    </div>
-  </div>
-);
+const BootHeader = ({ step }: { step: number }) => {
+  const isUnsafe = step === 3;
+  const isBypass = step === 4;
+  const isSecure = step >= 5;
 
-const CoreHeader = () => (
-  <div className="flex shrink-0 items-center justify-between border-b border-elfy-green/30 bg-elfy-green/10 px-3 py-1 mb-2 select-none">
-    <span className="text-sm text-elfy-green font-mono font-bold tracking-widest uppercase">MESOELFY_CORE</span>
-    <div className="relative w-3 h-3 flex items-center justify-center">
-      <div className="absolute inset-0 border border-elfy-green rounded-full animate-spin-slow border-t-transparent" />
-      <div className="w-1 h-1 bg-elfy-green rounded-full animate-pulse" />
+  let color = "text-elfy-green-dim";
+  let statusText = "ESTABLISHING...";
+  let bgClass = "bg-elfy-green/5";
+  
+  if (isUnsafe) {
+      color = "text-elfy-red";
+      statusText = "SIGNAL_CORRUPTED";
+      bgClass = "bg-elfy-red/10 border-elfy-red/30";
+  } else if (isBypass) {
+      color = "text-elfy-purple-light";
+      statusText = "INJECTING_PAYLOAD";
+      bgClass = "bg-elfy-purple/10 border-elfy-purple/30";
+  } else if (isSecure) {
+      color = "text-elfy-green";
+      statusText = "UPLINK_STABLE";
+      bgClass = "bg-elfy-green/10 border-elfy-green/30";
+  } else if (step >= 1) {
+      statusText = "HANDSHAKING...";
+  }
+
+  return (
+    <div className={`flex shrink-0 items-center justify-between border-b border-white/10 ${bgClass} px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300`}>
+      <div className="flex flex-col leading-none gap-1.5 mt-0.5">
+          <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
+            BOOT_LOADER.SYS
+          </span>
+          <span className="text-[8px] text-gray-500 font-mono tracking-wider opacity-80">{statusText}</span>
+      </div>
+      
+      <div className="flex gap-1 items-end h-3">
+        {[1, 2, 3, 4].map(i => {
+           let heightClass = "h-1";
+           let animClass = "";
+           let barColor = isUnsafe ? "bg-elfy-red" : isBypass ? "bg-elfy-purple-light" : "bg-elfy-green";
+           
+           if (isUnsafe) {
+               heightClass = i % 2 === 0 ? "h-3" : "h-1";
+               animClass = "animate-pulse";
+           } else if (isBypass) {
+               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
+           } else if (isSecure) {
+               heightClass = "h-3"; 
+           } else {
+               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
+               animClass = step >= (i-1) ? "animate-pulse" : "";
+           }
+
+           return (
+               <div 
+                 key={i} 
+                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
+                 style={{ opacity: isSecure ? 1 : 0.7 }} 
+               />
+           );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+const CoreHeader = ({ step }: { step: number }) => {
+  const isUnsafe = step === 3;
+  const isBypass = step === 4;
+  const isDecrypted = step === 5;
+  const isCaution = step >= 6;
+
+  // Local state to handle the Lock -> CPU transition during step 5
+  const [showCpu, setShowCpu] = useState(false);
+
+  useEffect(() => {
+    if (step === 5) {
+      setShowCpu(false);
+      const timer = setTimeout(() => {
+        setShowCpu(true);
+      }, 700); // Wait 0.7s showing the Locked icon, then flip to CPU
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  let borderColor = "border-elfy-green/30";
+  let bgColor = "bg-elfy-green/10";
+  let textColor = "text-elfy-green";
+
+  // Base colors
+  if (isUnsafe) {
+    borderColor = "border-elfy-red/50";
+    bgColor = "bg-elfy-red/10";
+    textColor = "text-elfy-red";
+  } else if (isBypass) {
+    borderColor = "border-elfy-purple/50";
+    bgColor = "bg-elfy-purple/10";
+    textColor = "text-elfy-purple-light";
+  }
+
+  return (
+    <motion.div 
+      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
+      animate={isCaution ? {
+        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
+        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+      } : {}}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+    >
+      <motion.span 
+        className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
+        animate={isCaution ? {
+            color: ['#78F654', '#eae747', '#78F654']
+        } : {}}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        MESOELFY_CORE
+      </motion.span>
+      
+      <div className="relative w-6 h-6 flex items-center justify-center">
+         <AnimatePresence mode="wait">
+            {isUnsafe ? (
+                <motion.div 
+                    key="unsafe"
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1, x: [-2, 2, -2, 2, 0] }}
+                    exit={{ scale: 0 }}
+                    transition={{ x: { repeat: Infinity, duration: 0.1 } }}
+                >
+                    <ShieldAlert size={18} className="text-elfy-red" />
+                </motion.div>
+            ) : isBypass ? (
+                <motion.div 
+                    key="bypass"
+                    initial={{ opacity: 0, scale: 0.8 }} 
+                    animate={{ opacity: 1, scale: 1.1 }} 
+                    exit={{ opacity: 0 }}
+                    transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
+                >
+                     <Unlock size={18} className="text-elfy-purple-light" />
+                </motion.div>
+            ) : isDecrypted ? (
+                // DECRYPTED PHASE: LOCK -> CPU
+                !showCpu ? (
+                    <motion.div 
+                        key="locked"
+                        initial={{ scale: 1.5, opacity: 0 }} 
+                        animate={{ scale: 1, opacity: 1 }} 
+                        exit={{ scale: 0.5, opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    >
+                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        key="cpu"
+                        initial={{ scale: 0, rotate: -45 }} 
+                        animate={{ scale: 1, rotate: 0 }} 
+                        exit={{ scale: 0 }}
+                        transition={{ duration: 0.4, ease: "backOut" }}
+                    >
+                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                    </motion.div>
+                )
+            ) : isCaution ? (
+                // CAUTION PHASE: SKULL
+                <motion.div 
+                    key="caution"
+                    initial={{ scale: 0, opacity: 0 }} 
+                    animate={{ scale: 1, opacity: 1 }}
+                >
+                    <motion.div
+                       animate={{
+                           filter: ['drop-shadow(0 0 8px rgba(120,246,84,0.8))', 'drop-shadow(0 0 15px rgba(234,231,71,1))', 'drop-shadow(0 0 8px rgba(120,246,84,0.8))'],
+                           color: ['#78F654', '#eae747', '#78F654'],
+                           rotate: [0, 8, -8, 0] // Pirate Swagger
+                       }}
+                       transition={{ duration: 2.0, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                         <Skull size={18} />
+                    </motion.div>
+                </motion.div>
+            ) : (
+                // LOADING PHASE (Step 0-2)
+                <motion.div 
+                    key="loading"
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1, rotate: 360 }} 
+                    exit={{ opacity: 0 }}
+                    transition={{ rotate: { repeat: Infinity, duration: 2, ease: "linear" } }}
+                >
+                     <div className="w-4 h-4 border-2 border-elfy-green border-t-transparent rounded-full" />
+                </motion.div>
+            )}
+         </AnimatePresence>
+      </div>
+    </motion.div>
+  );
+};
 
 const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
@@ -144,13 +323,14 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   }, [step]);
 
   useEffect(() => {
+    // FIX: Tightened timeline for Step 4 -> 5 to prevent Purple Padlock from lingering
     const sequence = [
       { t: 3000, step: 1 }, 
       { t: 4000, step: 2 }, 
-      { t: 8000, step: 3 }, 
-      { t: 9500, step: 4 }, 
-      { t: 12500, step: 5 }, 
-      { t: 13500, step: 6 }, 
+      { t: 8000, step: 3 }, // Unsafe
+      { t: 9500, step: 4 }, // Bypass (Purple)
+      { t: 11500, step: 5 }, // Decrypted (Green Lock -> CPU) (Moved up from 12500)
+      { t: 13500, step: 6 }, // Caution (Skull)
     ];
     const timeouts = sequence.map(({ t, step: s }) => setTimeout(() => {
       if (!isBreaching) setStep(s);
@@ -260,7 +440,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
       >
         <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
-          <BootHeader />
+          <BootHeader step={step} />
           <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
             {logsToShow.map((line, i) => (
               <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
@@ -276,10 +456,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
               className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
-              <CoreHeader />
+              <CoreHeader step={step} />
               
-              {/* FIX: Reduced gap-8 to gap-7 to tighten layout between ASCII and Warning */}
-              <div className="p-6 flex flex-col items-center gap-7">
+              <div className="p-6 flex flex-col items-center gap-4">
                 <AsciiRenderer />
                 {showWarningBox && (
                   <motion.div 
