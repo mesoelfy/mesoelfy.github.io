@@ -86,3 +86,13 @@ When player regenerates itself, the health bar shows 50% but I think it might ac
 Music should get distorted, glitchy, and reverbed when Game Over state
 
 make some of the streaming matrix rain characters red at the moment UNSAFE CONNECTION DETECTED is triggered.
+
+
+
+
+“	•	The Skull Glitch:
+	◦	We will overlay a 2D, glitchy "Skull" graphic over the 3D canvas.
+	◦	This skull stays at opacity: 0 normally.
+	◦	As health drops, it randomly flickers to opacity: 1 for a single frame (subliminal glitch).
+	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
+“
