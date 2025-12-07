@@ -71,3 +71,9 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - Power UP - Heal panel faster
 
 - should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
+
+MESOELFY ASCII not animating properly
+
+What are screenshake best practices?
+
+- the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.

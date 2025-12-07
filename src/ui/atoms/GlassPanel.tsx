@@ -74,13 +74,13 @@ const ScrollingRow = ({ direction, text }: { direction: number, text: string }) 
   );
 };
 
-const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boolean }) => {
+const BreachOverlay = ({ progress, isVideo, showInteractive }: { progress: number, isVideo: boolean, showInteractive: boolean }) => {
   return (
     <div className={clsx(
-        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden backdrop-blur-sm",
-        // FIX: If it's the video panel, make background fully transparent so static is visible.
-        isVideo ? "bg-transparent" : "bg-black/90"
+        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
+        isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
     )}>
+        {/* Background Scrolling Text */}
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
                className="flex flex-col gap-8"
@@ -101,50 +101,53 @@ const BreachOverlay = ({ progress, isVideo }: { progress: number, isVideo: boole
             </motion.div>
         </div>
 
-        <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
-            <div className="relative">
-                <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
-                    <motion.div 
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-red drop-shadow-md"
-                    >
-                        <ChevronUp size={64} strokeWidth={3} />
-                    </motion.div>
-                </div>
+        {/* Interactive "Reboot" UI */}
+        {showInteractive && (
+          <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
+              <div className="relative">
+                  <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
+                      <motion.div 
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          className="text-elfy-red drop-shadow-md"
+                      >
+                          <ChevronUp size={64} strokeWidth={3} />
+                      </motion.div>
+                  </div>
 
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
-                    <motion.div 
-                        animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
-                        transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
-                    >
-                        <ChevronUp size={64} strokeWidth={4} />
-                    </motion.div>
-                </div>
-                
-                <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
-            </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
+                      <motion.div 
+                          animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
+                          className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                      >
+                          <ChevronUp size={64} strokeWidth={4} />
+                      </motion.div>
+                  </div>
+                  
+                  <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
+              </div>
 
-            <div className="flex flex-col items-center text-center">
-                <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
-                    HOLD TO REBOOT
-                </span>
-                
-                <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
-                    <motion.div 
-                        className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ type: "tween", duration: 0.1 }}
-                    />
-                </div>
-                
-                <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
-                    INTEGRITY: {Math.floor(progress)}%
-                </div>
-            </div>
-        </div>
+              <div className="flex flex-col items-center text-center">
+                  <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
+                      HOLD TO REBOOT
+                  </span>
+                  
+                  <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
+                      <motion.div 
+                          className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ type: "tween", duration: 0.1 }}
+                      />
+                  </div>
+                  
+                  <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
+                      INTEGRITY: {Math.floor(progress)}%
+                  </div>
+              </div>
+          </div>
+        )}
     </div>
   );
 };
@@ -194,13 +197,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const prevDestroyed = useReactRef(isDestroyed);
 
   useReactEffect(() => {
-    if (prevDestroyed.current && !isDestroyed) {
+    // Only show reboot overlay if we revived AND the game isn't over
+    if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
         const timer = setTimeout(() => setShowReboot(false), 2000); 
         return () => clearTimeout(timer);
     }
     prevDestroyed.current = isDestroyed;
-  }, [isDestroyed]);
+  }, [isDestroyed, isGameOver]);
 
   let borderColor = "border-elfy-green-dim/30";
   if (isDestroyed) borderColor = "border-elfy-red animate-pulse"; 
@@ -214,7 +218,11 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
-  const purpleCircleClass = isDestroyed ? "bg-elfy-purple" : "border border-elfy-purple-dim";
+  
+  // FIX: Purple circle turns RED filled on Game Over
+  let purpleCircleClass = "border border-elfy-purple-dim";
+  if (isGameOver) purpleCircleClass = "bg-elfy-red animate-pulse shadow-[0_0_8px_#ff003c]";
+  else if (isDestroyed) purpleCircleClass = "bg-elfy-purple";
 
   return (
     <motion.div 
@@ -245,7 +253,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
               <div className={`w-2 h-2 rounded-full ${purpleCircleClass}`} />
             </div>
           </div>
-          {gameId && (
+          
+          {/* HIDE HEALTH BAR ON GAME OVER */}
+          {gameId && !isGameOver && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
                 className={clsx("h-full transition-colors duration-200", barColor)}
@@ -259,22 +269,30 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {isDestroyed && !isGameOver && (
-            <BreachOverlay progress={healthPercent} isVideo={gameId === 'video'} />
-        )}
+        {/* FIX: Content remains mounted to preserve layout size, but is completely invisible via CSS */}
+        <div className={isGameOver ? "invisible" : "visible"}>
+            {children}
+            {/* Render Breach Overlay here so it inherits visibility hidden */}
+            {isDestroyed && (
+                <BreachOverlay 
+                    progress={healthPercent} 
+                    isVideo={gameId === 'video'} 
+                    showInteractive={true} 
+                />
+            )}
+        </div>
 
         <AnimatePresence>
             {showReboot && <RebootOverlay key="reboot" />}
         </AnimatePresence>
         
+        {/* FIX: Exclusive Game Over overlay */}
         {isGameOver && (
-            <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center gap-4">
-                <Skull className="text-elfy-red animate-pulse w-20 h-20" />
-                <span className="text-elfy-red font-header font-black text-2xl tracking-widest">SYSTEM FAILURE</span>
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
+                <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
+                <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
         )}
-        
-        {children}
       </div>
     </motion.div>
   );

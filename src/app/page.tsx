@@ -21,18 +21,21 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
+import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone } = useStore(); // Added setIntroDone
+  const { openModal, setIntroDone } = useStore(); 
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
+  const systemIntegrity = useGameStore(s => s.systemIntegrity);
+  const isGameOver = systemIntegrity <= 0;
   
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
 
   const handleBootComplete = () => {
     setTimeout(() => {
       setBootState('active');
-      setIntroDone(true); // FIX: Signal that intro is over so Cursor fades out
+      setIntroDone(true);
       startGame();
     }, 200);
   };
@@ -71,7 +74,11 @@ export default function Home() {
           <Header />
 
           <motion.div 
-            className="flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 overflow-y-auto md:overflow-hidden max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black"
+            className={clsx(
+                "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                // FIX: When Game Over, allow overflow so falling panels aren't clipped by the grid container
+                isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+            )}
             initial="hidden"
             animate={bootState === 'active' ? "visible" : "hidden"}
             variants={{

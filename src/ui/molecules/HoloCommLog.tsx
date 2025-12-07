@@ -148,7 +148,9 @@ const VideoSlot = ({
       )}
       
       {isOffline && (
-          <div className="absolute bottom-1 right-1 z-[110] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+          // FIX: Reduced Z-Index from 110 to 60. 
+          // This puts it BENEATH the BreachOverlay (Z-70), ensuring it gets blurred.
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
              CAM_0{slotIndex + 1} [ERR]
           </div>
       )}
