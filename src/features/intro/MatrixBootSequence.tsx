@@ -17,7 +17,6 @@ const ASCII_TITLE = `
 ░  ░      ░ ░ ░  ░ ░ ▒  ░   ░ ▒ ▒░  ░ ░  ░░ ░ ▒  ░ ░       ▓██ ░▒░ 
 ░      ░      ░    ░ ░    ░ ░ ░ ▒     ░     ░ ░    ░ ░     ▒ ▒ ░░  
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
-                                                                 
 `;
 
 // --- RESTORED ASCII RENDERER ---
@@ -131,6 +130,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
+  const stepRef = useRef(0); // Track step in ref for loop access
   const [isBreaching, setIsBreaching] = useState(false);
   const logsToShow = LOG_DATA.slice(0, step + 1);
   
@@ -138,6 +138,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const showPayloadWindow = step >= 2; 
   const showWarningBox = step >= 3;    
   const showButton = step >= 6;        
+
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
 
   useEffect(() => {
     const sequence = [
@@ -171,24 +175,41 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       ctx.font = '14px "Courier New"';
+
+      const currentStep = stepRef.current;
+      
+      // UNSAFE: Starts at step 3 and NEVER stops (continues indefinitely)
+      const isUnsafePhase = currentStep >= 3;
       
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
 
-        const isPurple = Math.random() > 0.85;
+        // Increased Purple Density: > 0.6 means 40% chance of purple (was 15%)
+        const isPurple = Math.random() > 0.6;
         
-        ctx.fillStyle = isPurple ? '#9E4EA5' : '#0F0';
+        // Red Logic: Keep rate same (> 0.6), but persists forever now
+        const isRed = isUnsafePhase && Math.random() > 0.6; 
         
-        if (isPurple) {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = '#9E4EA5';
-        } else {
-            ctx.shadowBlur = 0;
+        let color = '#0F0';
+        let blur = 0;
+
+        if (isRed) {
+            color = '#FF003C';
+            blur = 8;
+        } else if (isPurple) {
+            color = '#9E4EA5';
+            blur = 8;
         }
 
+        ctx.fillStyle = color;
+        ctx.shadowBlur = blur;
+        ctx.shadowColor = color;
+
         ctx.fillText(text, x, y);
+        
+        // Reset shadow for next op (performance)
         ctx.shadowBlur = 0;
 
         const speed = isBreaching ? 100 : 20; 
@@ -198,7 +219,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     };
     const interval = setInterval(matrixEffect, 50);
     return () => clearInterval(interval);
-  }, [showMatrix, isBreaching]);
+  }, [showMatrix, isBreaching]); 
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -256,7 +277,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
               className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
               <CoreHeader />
-              <div className="p-6 flex flex-col items-center gap-8">
+              
+              {/* FIX: Reduced gap-8 to gap-7 to tighten layout between ASCII and Warning */}
+              <div className="p-6 flex flex-col items-center gap-7">
                 <AsciiRenderer />
                 {showWarningBox && (
                   <motion.div 

@@ -85,4 +85,4 @@ When player regenerates itself, the health bar shows 50% but I think it might ac
 
 Music should get distorted, glitchy, and reverbed when Game Over state
 
-make some of the streaming matrix rain characters red at the moment  UNSAFE CONNECTION DETECTED is triggered.
+make some of the streaming matrix rain characters red at the moment UNSAFE CONNECTION DETECTED is triggered.

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec  6 21:23:40 CST 2025
+Generated on: Sat Dec  6 21:46:37 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -298,6 +298,15 @@ MESOELFY ASCII not animating properly
 What are screenshake best practices?
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
+
+- 
+- a sound should happen when clicking on an upgrade
+
+When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
+
+Music should get distorted, glitchy, and reverbed when Game Over state
+
+make some of the streaming matrix rain characters red at the moment  UNSAFE CONNECTION DETECTED is triggered.
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -1435,7 +1444,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const prevDestroyed = useReactRef(isDestroyed);
 
   useReactEffect(() => {
-    // Only show reboot overlay if we revived AND the game isn't over
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
         const timer = setTimeout(() => setShowReboot(false), 2000); 
@@ -1457,7 +1465,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const greenCircleClass = isDestroyed ? "border border-elfy-green" : "bg-elfy-green";
   
-  // FIX: Purple circle turns RED filled on Game Over
   let purpleCircleClass = "border border-elfy-purple-dim";
   if (isGameOver) purpleCircleClass = "bg-elfy-red animate-pulse shadow-[0_0_8px_#ff003c]";
   else if (isDestroyed) purpleCircleClass = "bg-elfy-purple";
@@ -1492,7 +1499,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
             </div>
           </div>
           
-          {/* HIDE HEALTH BAR ON GAME OVER */}
           {gameId && !isGameOver && (
             <div className="w-full h-1 bg-black/50">
               <motion.div 
@@ -1507,10 +1513,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        {/* FIX: Content remains mounted to preserve layout size, but is completely invisible via CSS */}
-        <div className={isGameOver ? "invisible" : "visible"}>
+        {/* FIX: ADDED h-full flex flex-col to enable IdentityHUD vertical alignment */}
+        <div className={clsx("h-full flex flex-col", isGameOver ? "invisible" : "visible")}>
             {children}
-            {/* Render Breach Overlay here so it inherits visibility hidden */}
             {isDestroyed && (
                 <BreachOverlay 
                     progress={healthPercent} 
@@ -1524,7 +1529,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
             {showReboot && <RebootOverlay key="reboot" />}
         </AnimatePresence>
         
-        {/* FIX: Exclusive Game Over overlay */}
         {isGameOver && (
             <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
                 <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
@@ -1658,14 +1662,44 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/organisms/Header.tsx
 =====================================
-import { Volume2, VolumeX, Radio, Trophy, Skull } from 'lucide-react';
+import { Volume2, VolumeX, Radio, Trophy, Skull, Music } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useEffect, useState } from 'react';
+import { clsx } from 'clsx';
+
+// SUB-COMPONENTS for Audio Controls
+const SfxBtn = ({ active, onClick }: { active: boolean, onClick: () => void }) => (
+  <button 
+    onClick={onClick}
+    className={clsx(
+      "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
+      active 
+        ? "text-elfy-green hover:text-elfy-yellow bg-elfy-green/10 border-elfy-green/20" 
+        : "text-elfy-green-dim/30 hover:text-elfy-red decoration-line-through"
+    )}
+  >
+    SFX
+  </button>
+);
+
+const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon }: any) => (
+  <button 
+    onClick={onClick}
+    className={clsx(
+      "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
+      active 
+        ? "text-elfy-green hover:text-elfy-yellow bg-elfy-green/5" 
+        : "text-elfy-green-dim/30 hover:text-elfy-red"
+    )}
+  >
+    {active ? <Icon size={14} /> : <OffIcon size={14} />}
+  </button>
+);
 
 export const Header = () => {
-  const { musicEnabled, toggleMusic } = useStore();
+  const { audioSettings, toggleMaster, toggleMusic, toggleSfx } = useStore();
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const score = useGameStore(state => state.score);
@@ -1673,12 +1707,6 @@ export const Header = () => {
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
-  const handleToggle = () => {
-      AudioSystem.playClick();
-      toggleMusic();
-      AudioSystem.setMute(!musicEnabled ? false : true); 
-  };
 
   let integrityColor = "bg-elfy-green";
   if (systemIntegrity < 40) integrityColor = "bg-elfy-red";
@@ -1714,15 +1742,29 @@ export const Header = () => {
         )}
       </div>
 
-      {/* RIGHT: Status */}
-      <div className="flex items-center gap-6">
-        <button 
-          onClick={handleToggle}
-          onMouseEnter={() => AudioSystem.playHover()}
-          className="flex items-center gap-2 text-xs font-mono text-elfy-green-dim hover:text-elfy-green transition-colors pl-4 border-l border-elfy-green-dim/20"
-        >
-          {musicEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-        </button>
+      {/* RIGHT: Status & Audio Controls */}
+      <div className="flex items-center gap-4">
+        
+        {/* Audio Group */}
+        <div className="flex items-center gap-1 border-l border-elfy-green-dim/20 pl-4">
+            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} />
+            
+            <AudioBtn 
+                active={audioSettings.music} 
+                onClick={toggleMusic} 
+                icon={Music} 
+                offIcon={Music}
+            />
+
+            <div className="w-[1px] h-4 bg-elfy-green-dim/20 mx-1" />
+
+            <AudioBtn 
+                active={audioSettings.master} 
+                onClick={toggleMaster} 
+                icon={Volume2} 
+                offIcon={VolumeX} 
+            />
+        </div>
       </div>
 
       {/* BOTTOM BORDER: OS INTEGRITY BAR */}
@@ -1755,14 +1797,14 @@ class AudioSystemController {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   private compressor: DynamicsCompressorNode | null = null;
+  
   private musicSource: MediaElementAudioSourceNode | null = null;
   private musicElement: HTMLAudioElement | null = null;
+  
   private isInitialized = false;
-  private isMuted = false;
 
   public init() {
     if (this.isInitialized) {
-        // Always try to resume if context exists but is suspended
         if (this.ctx && this.ctx.state === 'suspended') {
             this.ctx.resume().catch(() => {});
         }
@@ -1773,33 +1815,72 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
+    // 1. Create Nodes
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.5;
-
-    this.compressor = this.ctx.createDynamicsCompressor();
-    this.compressor.threshold.value = -24;
-    
+    this.musicGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
+    this.compressor = this.ctx.createDynamicsCompressor();
+
+    // 2. Initial Volumes (Matches default Store State: Master 0.5, Music 0, SFX 0.8)
+    this.masterGain.gain.value = 0.5;
+    this.musicGain.gain.value = 0; // Default off
     this.sfxGain.gain.value = 0.8; 
 
-    this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.6; 
-
+    // 3. Wiring: Bus -> Compressor -> Master -> Out
     this.sfxGain.connect(this.compressor);
     this.musicGain.connect(this.compressor);
     this.compressor.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
+
+    // 4. Compressor Settings (Prevent clipping)
+    this.compressor.threshold.value = -24;
+    this.compressor.knee.value = 30;
+    this.compressor.ratio.value = 12;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.25;
 
     this.setupEventListeners();
     this.setupMusic();
 
     this.isInitialized = true;
     
-    // Resume immediately (this works if called from a click/key handler)
     if (this.ctx.state === 'suspended') {
         this.ctx.resume().catch(() => {});
     }
   }
+
+  // --- BUS CONTROLS ---
+
+  public setMasterMute(muted: boolean, instant = false) {
+    if (!this.masterGain || !this.ctx) return;
+    const val = muted ? 0 : 0.5;
+    const t = this.ctx.currentTime;
+    instant 
+      ? (this.masterGain.gain.value = val) 
+      : this.masterGain.gain.setTargetAtTime(val, t, 0.1);
+  }
+
+  public setMusicMute(muted: boolean, instant = false) {
+    if (!this.musicGain || !this.ctx) return;
+    const val = muted ? 0 : 0.4; // Music slightly quieter than SFX
+    const t = this.ctx.currentTime;
+    // Slower fade for music
+    instant 
+      ? (this.musicGain.gain.value = val) 
+      : this.musicGain.gain.setTargetAtTime(val, t, 0.5);
+  }
+
+  public setSfxMute(muted: boolean, instant = false) {
+    if (!this.sfxGain || !this.ctx) return;
+    const val = muted ? 0 : 0.8;
+    const t = this.ctx.currentTime;
+    // Fast fade for SFX
+    instant 
+      ? (this.sfxGain.gain.value = val) 
+      : this.sfxGain.gain.setTargetAtTime(val, t, 0.05);
+  }
+
+  // --- MUSIC SETUP ---
 
   private setupMusic() {
     if (!this.ctx || !this.musicGain) return;
@@ -1811,12 +1892,13 @@ class AudioSystemController {
   }
 
   public startMusic() {
-    // Resume context again to be safe
     if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume().catch(() => {});
     }
     if (this.musicElement) this.musicElement.play().catch(e => console.warn(e));
   }
+
+  // --- SFX LOGIC ---
 
   private setupEventListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playLaser());
@@ -1830,10 +1912,8 @@ class AudioSystemController {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playHeal());
   }
 
-  // --- AUDIO LOGIC ---
-
   private playLaser() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -1845,13 +1925,13 @@ class AudioSystemController {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     
     osc.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain); // Route to SFX Bus
     osc.start(t);
     osc.stop(t + 0.15);
   }
 
   private playHeal() {
-      if (this.isMuted || !this.ctx) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.type = 'triangle';
@@ -1863,13 +1943,13 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(0, t + 0.2);
       
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t + 0.2);
   }
 
   private playExplosion(type: string) {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const isBig = type !== 'driller';
     const bufferSize = this.ctx.sampleRate * (isBig ? 0.8 : 0.4);
@@ -1887,12 +1967,12 @@ class AudioSystemController {
     gain.gain.exponentialRampToValueAtTime(0.001, t + (isBig ? 0.6 : 0.3));
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain);
     noise.start(t);
   }
 
   private playImpact(isPlayer: boolean) {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'square';
@@ -1902,13 +1982,13 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.3, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
     osc.connect(gain);
-    gain.connect(this.sfxGain!);
+    gain.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.1);
   }
 
   private playDamageAlert() {
-      if (!this.ctx || this.isMuted) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.frequency.setValueAtTime(300, t);
@@ -1917,14 +1997,14 @@ class AudioSystemController {
       gain.gain.setValueAtTime(0.03, t); 
       gain.gain.linearRampToValueAtTime(0, t+0.05);
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t+0.05);
   }
 
   private playMassiveExplosion() {
      this.playExplosion('kamikaze');
-     if (this.ctx) {
+     if (this.ctx && this.masterGain) { // Connect bass rumble to master or sfx? SFX is better.
          const t = this.ctx.currentTime;
          const osc = this.ctx.createOscillator();
          osc.type = 'sine';
@@ -1934,14 +2014,14 @@ class AudioSystemController {
          gain.gain.setValueAtTime(0.5, t);
          gain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
          osc.connect(gain);
-         gain.connect(this.masterGain!);
+         gain.connect(this.sfxGain!);
          osc.start(t);
          osc.stop(t + 2.0);
      }
   }
   
   private playAlarm() {
-      if (this.isMuted || !this.ctx) return;
+      if (!this.ctx || !this.sfxGain) return;
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.type = 'sine';
@@ -1951,7 +2031,7 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(0.2, t + 0.1);
       gain.gain.linearRampToValueAtTime(0, t + 0.2);
       osc.connect(gain);
-      gain.connect(this.sfxGain!);
+      gain.connect(this.sfxGain);
       osc.start(t);
       osc.stop(t + 0.3);
   }
@@ -1964,7 +2044,7 @@ class AudioSystemController {
   }
   
   public playHover() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'sine';
@@ -1973,13 +2053,13 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.02, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     osc.connect(gain);
-    gain.connect(this.masterGain!);
+    gain.connect(this.sfxGain); // Use SFX Bus
     osc.start(t);
     osc.stop(t + 0.05);
   }
 
   public playClick() {
-    if (this.isMuted || !this.ctx) return;
+    if (!this.ctx || !this.sfxGain) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     osc.type = 'square';
@@ -1989,16 +2069,12 @@ class AudioSystemController {
     gain.gain.setValueAtTime(0.1, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
     osc.connect(gain);
-    gain.connect(this.masterGain!);
+    gain.connect(this.sfxGain); // Use SFX Bus
     osc.start(t);
     osc.stop(t + 0.1);
   }
 
   public playBootSequence() { this.playAlarm(); }
-  public setMute(muted: boolean) {
-    this.isMuted = muted;
-    if (this.masterGain) this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx!.currentTime, 0.1);
-  }
 }
 
 export const AudioSystem = new AudioSystemController();
@@ -2010,45 +2086,95 @@ FILE: ./src/core/store/useStore.ts
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 
+interface AudioSettings {
+  master: boolean;
+  music: boolean;
+  sfx: boolean;
+}
+
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
 
 interface AppState {
   introDone: boolean;
   activeModal: ModalType;
   hoveredItem: string | null;
-  musicEnabled: boolean; // Acts as Master Audio Switch
-  volume: number;
+  
+  // New Audio State
+  audioSettings: AudioSettings;
+  
   setIntroDone: (done: boolean) => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
+  
+  // New Audio Actions
+  toggleMaster: () => void;
   toggleMusic: () => void;
+  toggleSfx: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
-  musicEnabled: true, // Default to true, but engine starts suspended
-  volume: 0.5,
+  
+  // Default Settings: Master ON, Music OFF (User must enable), SFX ON
+  audioSettings: {
+    master: true,
+    music: false,
+    sfx: true,
+  },
 
   setIntroDone: (done) => set({ introDone: done }),
+  
   openModal: (modal) => {
-      AudioSystem.playClick(); // Click sound on modal open
+      // Check Master & SFX state before playing sound
+      if (get().audioSettings.master && get().audioSettings.sfx) {
+          AudioSystem.playClick(); 
+      }
       set({ activeModal: modal });
   },
+  
   closeModal: () => {
-      AudioSystem.playClick(); // Click sound on modal close
+      if (get().audioSettings.master && get().audioSettings.sfx) {
+          AudioSystem.playClick();
+      }
       set({ activeModal: 'none' });
   },
+  
   setHovered: (item) => set({ hoveredItem: item }),
   
+  // --- GRANULAR AUDIO ACTIONS ---
+
+  toggleMaster: () => {
+      const prev = get().audioSettings.master;
+      const next = !prev;
+      set(state => ({ audioSettings: { ...state.audioSettings, master: next } }));
+      
+      AudioSystem.setMasterMute(!next);
+      
+      // Feedback sound if turning ON
+      if (next && get().audioSettings.sfx) AudioSystem.playClick(); 
+  },
+
   toggleMusic: () => {
-      const newState = !get().musicEnabled;
-      set({ musicEnabled: newState });
-      // In web audio, we don't necessarily "mute" the context, 
-      // we just stop triggering playHover/playClick, 
-      // but we can also ramp master gain to 0 if we want to kill background music later.
+      const prev = get().audioSettings.music;
+      const next = !prev;
+      set(state => ({ audioSettings: { ...state.audioSettings, music: next } }));
+      
+      AudioSystem.setMusicMute(!next);
+      
+      if (next && get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
+  },
+
+  toggleSfx: () => {
+      const prev = get().audioSettings.sfx;
+      const next = !prev;
+      set(state => ({ audioSettings: { ...state.audioSettings, sfx: next } }));
+      
+      AudioSystem.setSfxMute(!next);
+      
+      if (next && get().audioSettings.master) AudioSystem.playClick();
   },
 }));
 
@@ -2164,6 +2290,12 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   
   const [bootState, setBootState] = useState<'standby' | 'active'>('standby');
+  const [showScene, setShowScene] = useState(false); // Controls Grid Visibility
+
+  const handleBreachStart = () => {
+    // Reveal the 3D Scene immediately when breach animation starts
+    setShowScene(true);
+  };
 
   const handleBootComplete = () => {
     setTimeout(() => {
@@ -2182,14 +2314,15 @@ export default function Home() {
   const playHover = () => AudioSystem.playHover();
 
   return (
-    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none">
+    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
       <GlobalShakeManager />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        <SceneCanvas className="opacity-100 blur-0" />
+        {/* FIX: Scene starts invisible (opacity-0) to prevent Grid FOUC over black screen */}
+        <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
 
         {bootState === 'active' && <GameOverlay />}
 
@@ -2199,7 +2332,10 @@ export default function Home() {
         <ContactModal />
 
         {bootState === 'standby' && (
-          <MatrixBootSequence onComplete={handleBootComplete} />
+          <MatrixBootSequence 
+             onComplete={handleBootComplete} 
+             onBreachStart={handleBreachStart} 
+          />
         )}
 
         <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -2209,7 +2345,6 @@ export default function Home() {
           <motion.div 
             className={clsx(
                 "flex-1 p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 max-w-[1600px] mx-auto w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
-                // FIX: When Game Over, allow overflow so falling panels aren't clipped by the grid container
                 isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
             )}
             initial="hidden"
@@ -2238,15 +2373,18 @@ export default function Home() {
 
             <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
               <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                <div className="flex flex-col items-center justify-center h-full text-elfy-green-dim font-mono text-sm border border-dashed border-elfy-green-dim/30 m-2 bg-black/20">
-                  <p className="animate-pulse mb-4">&gt; ESTABLISHING UPLINK...</p>
-                  <button 
-                    onClick={() => openModal('feed')} 
-                    onMouseEnter={playHover}
-                    className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg"
-                  >
-                    [ ACCESS TERMINAL ]
-                  </button>
+                {/* FIX: Centered Dashed Box that hugs content */}
+                <div className="w-full h-full flex items-center justify-center p-4">
+                  <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
+                    <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                    <button 
+                      onClick={() => openModal('feed')} 
+                      onMouseEnter={playHover}
+                      className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                    >
+                      [ ACCESS TERMINAL ]
+                    </button>
+                  </div>
                 </div>
               </GlassPanel>
 
@@ -2414,6 +2552,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface Props {
   onComplete: () => void;
+  onBreachStart: () => void;
 }
 
 const ASCII_TITLE = `
@@ -2428,6 +2567,49 @@ const ASCII_TITLE = `
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
                                                                  
 `;
+
+// --- RESTORED ASCII RENDERER ---
+const AsciiRenderer = () => {
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+
+      let animClass = '';
+      
+      // 1. Solid Blocks = Green Matrix Animation
+      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+        animClass = 'animate-matrix-green text-elfy-green-dark';
+      } 
+      // 2. Shaded Blocks = Purple Matrix Animation (The "Shimmer")
+      else if (['░', '▒', '▓'].includes(char)) {
+        animClass = 'animate-matrix-purple text-elfy-purple';
+      } 
+      // 3. Fallback
+      else {
+        animClass = 'text-elfy-green-dark';
+      }
+
+      const delay = Math.random() * 2 + 's';
+
+      return (
+        <span 
+          key={i} 
+          className={animClass} 
+          style={{ animationDelay: delay }}
+        >
+          {char}
+        </span>
+      );
+    });
+  }, []);
+
+  return (
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
+      {renderedChars}
+    </div>
+  );
+};
 
 const BootHeader = () => (
   <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
@@ -2449,18 +2631,6 @@ const CoreHeader = () => (
     </div>
   </div>
 );
-
-const AsciiRenderer = () => {
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-      const animClass = ['█','▀','▄'].includes(char) ? 'animate-matrix-green text-elfy-green-dark' : 'text-elfy-green-dark';
-      return <span key={i} className={animClass} style={{ animationDelay: Math.random() + 's' }}>{char}</span>;
-    });
-  }, []);
-  return <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">{renderedChars}</div>;
-};
 
 const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
@@ -2505,7 +2675,7 @@ const LOG_DATA = [
   { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20, hasDots: false },
 ];
 
-export const MatrixBootSequence = ({ onComplete }: Props) => {
+export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [step, setStep] = useState(0); 
@@ -2547,13 +2717,28 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     const matrixEffect = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#0F0';
+      
       ctx.font = '14px "Courier New"';
+      
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
+
+        const isPurple = Math.random() > 0.85;
+        
+        ctx.fillStyle = isPurple ? '#9E4EA5' : '#0F0';
+        
+        if (isPurple) {
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#9E4EA5';
+        } else {
+            ctx.shadowBlur = 0;
+        }
+
         ctx.fillText(text, x, y);
+        ctx.shadowBlur = 0;
+
         const speed = isBreaching ? 100 : 20; 
         if (y > canvas.height + Math.random() * 10000) ypos[ind] = 0;
         else ypos[ind] = y + speed;
@@ -2563,7 +2748,6 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  // Handle ESC via Window Listener (No focus required)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -2578,7 +2762,8 @@ export const MatrixBootSequence = ({ onComplete }: Props) => {
     if (isBreaching) return;
     setIsBreaching(true);
     
-    // SYNCHRONOUSLY call Audio Init to capture User Gesture
+    onBreachStart();
+
     AudioSystem.init();
     AudioSystem.playBootSequence();
     AudioSystem.startMusic();
