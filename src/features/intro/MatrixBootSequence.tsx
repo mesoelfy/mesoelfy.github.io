@@ -4,7 +4,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface Props {
   onComplete: () => void;
-  onBreachStart: () => void; // New Prop
+  onBreachStart: () => void;
 }
 
 const ASCII_TITLE = `
@@ -19,6 +19,49 @@ const ASCII_TITLE = `
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
                                                                  
 `;
+
+// --- RESTORED ASCII RENDERER ---
+const AsciiRenderer = () => {
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+
+      let animClass = '';
+      
+      // 1. Solid Blocks = Green Matrix Animation
+      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+        animClass = 'animate-matrix-green text-elfy-green-dark';
+      } 
+      // 2. Shaded Blocks = Purple Matrix Animation (The "Shimmer")
+      else if (['░', '▒', '▓'].includes(char)) {
+        animClass = 'animate-matrix-purple text-elfy-purple';
+      } 
+      // 3. Fallback
+      else {
+        animClass = 'text-elfy-green-dark';
+      }
+
+      const delay = Math.random() * 2 + 's';
+
+      return (
+        <span 
+          key={i} 
+          className={animClass} 
+          style={{ animationDelay: delay }}
+        >
+          {char}
+        </span>
+      );
+    });
+  }, []);
+
+  return (
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
+      {renderedChars}
+    </div>
+  );
+};
 
 const BootHeader = () => (
   <div className="flex shrink-0 items-center justify-between border-b border-elfy-green-dim/30 bg-elfy-green/5 px-3 py-1 mb-2 select-none relative z-20">
@@ -40,18 +83,6 @@ const CoreHeader = () => (
     </div>
   </div>
 );
-
-const AsciiRenderer = () => {
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-      const animClass = ['█','▀','▄'].includes(char) ? 'animate-matrix-green text-elfy-green-dark' : 'text-elfy-green-dark';
-      return <span key={i} className={animClass} style={{ animationDelay: Math.random() + 's' }}>{char}</span>;
-    });
-  }, []);
-  return <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">{renderedChars}</div>;
-};
 
 const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
   const [displayed, setDisplayed] = useState("");
@@ -169,7 +200,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]);
 
-  // Handle ESC via Window Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -184,7 +214,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     if (isBreaching) return;
     setIsBreaching(true);
     
-    // Call the Scene Trigger immediately
     onBreachStart();
 
     AudioSystem.init();
