@@ -23,7 +23,7 @@ import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
-import { SimulationHUD } from '@/features/sandbox/SimulationHUD'; // NEW
+import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -36,6 +36,7 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
+  // "showScene" is used for the Intro transition trigger
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
@@ -58,6 +59,9 @@ export default function Home() {
 
   const playHover = () => AudioSystem.playHover();
 
+  // FIX: Grid should be visible if explicitly shown OR if we are past the standby phase
+  const isGridVisible = showScene || bootState !== 'standby';
+
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
@@ -67,11 +71,11 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
+        {/* BACKGROUND SCENE */}
+        <SceneCanvas className={clsx("blur-0", isGridVisible ? "opacity-100" : "opacity-0")} />
 
         {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
 
-        {/* SANDBOX UI LAYER */}
         {isSandbox && <SimulationHUD />}
 
         {!isSandbox && (

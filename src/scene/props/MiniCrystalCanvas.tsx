@@ -2,18 +2,76 @@
 
 import { Canvas } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useGameStore } from '@/game/store/useGameStore';
+
+// CONSTANTS
+const COLORS = {
+  SAFE: new THREE.Color("#78F654"),
+  WARN: new THREE.Color("#F7D277"),
+  // UPDATED: Brighter/Hotter Red Values
+  CRIT: new THREE.Color("#FF4D6D"), 
+  EMISSIVE_SAFE: new THREE.Color("#15530A"),
+  EMISSIVE_WARN: new THREE.Color("#5e4b00"),
+  EMISSIVE_CRIT: new THREE.Color("#FF003C"), 
+};
 
 const SpinningGem = () => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<any>(null);
+  
+  // Access global integrity
+  const integrity = useGameStore(state => state.systemIntegrity);
 
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.01;
-      meshRef.current.rotation.z += 0.005;
+  // Internal visual state
+  const currentColor = useRef(COLORS.SAFE.clone());
+  const currentEmissive = useRef(COLORS.EMISSIVE_SAFE.clone());
+
+  useFrame((state, delta) => {
+    if (!meshRef.current || !materialRef.current) return;
+
+    // 1. DETERMINE STATE
+    let targetColor = COLORS.SAFE;
+    let targetEmissive = COLORS.EMISSIVE_SAFE;
+    let speed = 0.01;
+    let distort = 0.3;
+    let shake = 0;
+
+    if (integrity < 30) {
+        targetColor = COLORS.CRIT;
+        targetEmissive = COLORS.EMISSIVE_CRIT;
+        speed = 0.08;  // Fast panic spin
+        distort = 0.8; // Heavy glitch
+        shake = 0.1;   // Vibration
+    } else if (integrity < 60) {
+        targetColor = COLORS.WARN;
+        targetEmissive = COLORS.EMISSIVE_WARN;
+        speed = 0.04;
+        distort = 0.5;
+        shake = 0.02;
     }
+
+    // 2. APPLY ROTATION & SHAKE
+    meshRef.current.rotation.y += speed;
+    meshRef.current.rotation.z += speed * 0.5;
+    
+    if (shake > 0) {
+        meshRef.current.position.x = (Math.random() - 0.5) * shake;
+        meshRef.current.position.y = (Math.random() - 0.5) * shake;
+    } else {
+        meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, 0.1);
+        meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, 0.1);
+    }
+
+    // 3. COLOR TRANSITION (Lerp)
+    currentColor.current.lerp(targetColor, delta * 3.0);
+    currentEmissive.current.lerp(targetEmissive, delta * 3.0);
+
+    materialRef.current.color.copy(currentColor.current);
+    materialRef.current.emissive.copy(currentEmissive.current);
+    materialRef.current.distort = THREE.MathUtils.lerp(materialRef.current.distort, distort, delta);
   });
 
   return (
@@ -21,7 +79,8 @@ const SpinningGem = () => {
       <mesh ref={meshRef} scale={1.8}>
         <octahedronGeometry args={[1, 0]} />
         <MeshDistortMaterial
-          color="#78F654"
+          ref={materialRef}
+          color="#78F654" // Initial (overridden by ref)
           emissive="#15530A"
           roughness={0.1}
           metalness={0.8}
@@ -40,7 +99,7 @@ export const MiniCrystalCanvas = () => {
       <Canvas 
         camera={{ position: [0, 0, 5] }} 
         gl={{ alpha: true }}
-        style={{ background: '#000000' }} // <--- THE FIX: Force canvas to be black instantly
+        style={{ background: '#000000' }}
       >
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color="#C2FE9A" />

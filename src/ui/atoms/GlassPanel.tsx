@@ -4,6 +4,7 @@ import { ReactNode, useEffect as useReactEffect, useState as useReactState, useR
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { PanelSparks } from './PanelSparks'; // NEW
 
 // --- CONSTANTS ---
 const MAX_HEALTH = 1000;
@@ -81,21 +82,18 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
   const healthPercent = (health / MAX_HEALTH) * 100;
   const isDamaged = !isDestroyed && healthPercent < 100;
 
-  // --- OPTIMAL ICON STATE LOGIC ---
   const [showOptimal, setShowOptimal] = useReactState(false);
 
   useReactEffect(() => {
     if (health < MAX_HEALTH) {
       setShowOptimal(true);
     }
-    // FIX: Reduced success icon duration from 3000 -> 1500
     if (health >= MAX_HEALTH && showOptimal) {
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
   }, [health, showOptimal]);
 
-  // Determine Colors & Status
   let mainColor = "text-elfy-green";
   let statusText = "SECURE";
   
@@ -126,27 +124,17 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
         "bg-elfy-green/5 border-elfy-green-dim/30"
     )}>
         <div className="flex items-center justify-between px-3 py-1.5 h-8">
-            
-            {/* LEFT: Title & Status Text */}
             <div className="flex items-baseline gap-2">
-                <span className={clsx(
-                    "text-sm md:text-base font-header font-bold uppercase tracking-wider drop-shadow-md transition-colors duration-300",
-                    mainColor
-                )}>
+                <span className={clsx("text-sm md:text-base font-header font-bold uppercase tracking-wider drop-shadow-md transition-colors duration-300", mainColor)}>
                     {title}
                 </span>
-                <span className={clsx(
-                    "text-[8px] font-mono tracking-widest opacity-80",
-                    mainColor
-                )}>
+                <span className={clsx("text-[8px] font-mono tracking-widest opacity-80", mainColor)}>
                     [{statusText}]
                 </span>
             </div>
 
-            {/* RIGHT: The "Action Node" */}
             <div className="w-5 h-5 flex items-center justify-center">
                 <AnimatePresence mode="wait">
-                    
                     {isGameOver ? (
                         <motion.div 
                             key="gameover"
@@ -156,7 +144,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                         >
                             <Skull size={16} />
                         </motion.div>
-
                     ) : isDestroyed ? (
                         isInteracting ? (
                             <motion.div 
@@ -179,7 +166,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                 <Power size={10} className="text-elfy-purple" />
                             </motion.div>
                         )
-
                     ) : isInteracting && isDamaged ? (
                         <motion.div 
                             key="healing"
@@ -191,7 +177,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                 <RefreshCw size={10} className="text-black" />
                             </motion.div>
                         </motion.div>
-
                     ) : isDamaged ? (
                         <motion.div 
                             key="damaged"
@@ -204,16 +189,11 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                     'drop-shadow(0 0 0px rgba(234,231,71,0))'
                                 ]
                             }}
-                            transition={{ 
-                                duration: 1.5,
-                                repeat: Infinity,
-                                ease: "linear"
-                            }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                             className="text-elfy-yellow"
                         >
                             <AlertTriangle size={16} />
                         </motion.div>
-
                     ) : showOptimal ? (
                         <motion.div 
                             key="optimal"
@@ -225,7 +205,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                             <Check size={10} className="text-black stroke-[3px]" />
                         </motion.div>
                     ) : null}
-
                 </AnimatePresence>
             </div>
         </div>
@@ -411,7 +390,12 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        <div className={clsx("h-full flex flex-col", isGameOver ? "invisible" : "visible")}>
+        {/* NEW: Panel Sparks VFX Overlay */}
+        {(isDestroyed || isGameOver) && (
+            <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+        )}
+
+        <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
             {isDestroyed && (
                 <BreachOverlay 
@@ -427,7 +411,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         </AnimatePresence>
         
         {isGameOver && (
-            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
                 <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
                 <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
