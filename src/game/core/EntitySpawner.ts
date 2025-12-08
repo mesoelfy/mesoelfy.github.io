@@ -59,25 +59,42 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number): Entity {
+  // UPDATED: Accepts Damage and Width Multiplier
+  public spawnBullet(
+      x: number, y: number, 
+      vx: number, vy: number, 
+      isEnemy: boolean, 
+      life: number,
+      damage: number = 1,
+      widthMult: number = 1.0
+  ): Entity {
     const e = this.registry.createEntity();
     e.addTag(Tag.BULLET);
     if (isEnemy) e.addTag(Tag.ENEMY); else e.addTag(Tag.PLAYER); 
     
-    e.addComponent(new TransformComponent(x, y, Math.atan2(vy, vx), 1));
+    // Transform with Width Scaling
+    const t = new TransformComponent(x, y, Math.atan2(vy, vx), 1);
+    
+    // NOTE: We don't have separate ScaleX/Y in TransformComponent yet (it uses uniform 'scale').
+    // BUT we can use the 'scale' property for width if we assume length is handled by the renderer geometry.
+    // Actually, BulletRenderer uses PlaneGeometry(1.2, 1.2).
+    // Let's overload 'scale' to mean Width Multiplier for Bullets.
+    t.scale = widthMult; 
+    
+    e.addComponent(t);
     e.addComponent(new MotionComponent(vx, vy, 0));
     e.addComponent(new LifetimeComponent(life, life));
     
-    // NEW: Ballistic Health
-    // Enemy Bullets (Hunter Orbs) are tough (3 HP).
-    // Player Bullets start weak (1 HP).
-    const hp = isEnemy ? 3 : 1; 
-    e.addComponent(new HealthComponent(hp));
-    e.addComponent(new CombatComponent(hp)); // Damage usually equals Mass
+    // Health = Damage (Mass)
+    e.addComponent(new HealthComponent(damage));
+    e.addComponent(new CombatComponent(damage)); 
 
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-    const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
+    
+    // Collider Radius scales with Width
+    const baseRadius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
+    const radius = baseRadius * widthMult;
 
     e.addComponent(new ColliderComponent(radius, layer, mask));
     this.registry.updateCache(e);

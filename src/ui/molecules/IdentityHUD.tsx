@@ -1,9 +1,19 @@
 import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
-import { useGameStore, UpgradeOption } from '@/game/store/useGameStore';
+import { useGameStore } from '@/game/store/useGameStore';
+import { UpgradeOption } from '@/game/types/game.types';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, AlertCircle } from 'lucide-react';
+import { Unplug, Zap, AlertCircle, Cpu, ShieldAlert, Wifi, Zap as ZapIcon } from 'lucide-react';
+
+// Map Internal IDs to Display Names & Icons
+const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
+  'OVERCLOCK': { label: 'Overclock', icon: ZapIcon },
+  'ROOT_ACCESS': { label: 'Root Access', icon: ShieldAlert },
+  'BANDWIDTH': { label: 'Bandwidth', icon: Wifi },
+  'PARALLEL_PROC': { label: 'Parallel', icon: Cpu },
+  'REPAIR_NANITES': { label: 'Repair', icon: Unplug }
+};
 
 export const IdentityHUD = () => {
   const { openModal } = useStore();
@@ -23,7 +33,8 @@ export const IdentityHUD = () => {
   const isPlayerDead = hp <= 0;
 
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
-  const xpPercent = Math.min(100, (xp / nextXp) * 100);
+  // Safe XP Calculation
+  const xpPercent = nextXp > 0 ? Math.min(100, (xp / nextXp) * 100) : 0;
 
   const size = 160; 
   const center = size / 2;
@@ -40,7 +51,8 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  const availableOptions: UpgradeOption[] = ['RAPID_FIRE', 'MULTI_SHOT', 'SPEED_UP', 'REPAIR_NANITES'];
+  // Define available options (could be randomized later)
+  const availableOptions: UpgradeOption[] = ['OVERCLOCK', 'PARALLEL_PROC', 'BANDWIDTH', 'ROOT_ACCESS'];
 
   const handleUpgrade = (u: UpgradeOption) => {
       if (isPanelDead || isPlayerDead) return; 
@@ -59,7 +71,7 @@ export const IdentityHUD = () => {
            <MiniCrystalCanvas />
         </div>
 
-        {/* REBOOT INDICATOR (Center Text) */}
+        {/* REBOOT INDICATOR */}
         {isPlayerDead && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {rebootProgress > 0 ? (
@@ -76,9 +88,11 @@ export const IdentityHUD = () => {
 
         {/* HUD RINGS */}
         <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
+          {/* Backgrounds */}
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="4 4" />
           
+          {/* Progress */}
           <circle 
             cx={center} cy={center} r={radiusHp} 
             stroke={displayHpColor} 
@@ -99,7 +113,7 @@ export const IdentityHUD = () => {
           />
         </svg>
 
-        {/* Level Badge - Pill Style */}
+        {/* Level Badge */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
           LVL_{level}
         </div>
@@ -135,16 +149,21 @@ export const IdentityHUD = () => {
             </div>
             
             <div className="grid grid-cols-2 gap-1">
-              {availableOptions.map(u => (
-                <button 
-                  key={u}
-                  className={`text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
-                  onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                  onClick={() => handleUpgrade(u)}
-                >
-                  {u.replace('_', ' ')}
-                </button>
-              ))}
+              {availableOptions.map(u => {
+                const info = UPGRADE_MAP[u] || { label: u, icon: Zap };
+                const Icon = info.icon;
+                return (
+                  <button 
+                    key={u}
+                    className={`flex items-center justify-center gap-1 text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1.5 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
+                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                    onClick={() => handleUpgrade(u)}
+                  >
+                    <Icon size={8} />
+                    <span>{info.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

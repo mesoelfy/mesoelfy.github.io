@@ -54,11 +54,13 @@ export class PlayerSystem implements IGameSystem {
 
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
-        const rapidLevel = upgrades['RAPID_FIRE'] || 0;
-        const currentFireRate = PLAYER_CONFIG.fireRate * Math.pow(0.85, rapidLevel);
+        
+        // 1. ATTACK SPEED (OVERCLOCK)
+        const overclock = upgrades['OVERCLOCK'] || 0;
+        const currentFireRate = PLAYER_CONFIG.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
-            this.attemptAutoFire(time, playerEntity);
+            this.attemptAutoFire(time, playerEntity, upgrades);
         }
     }
   }
@@ -67,23 +69,20 @@ export class PlayerSystem implements IGameSystem {
 
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload) => {
-      console.log("[PlayerSystem] Enemy Destroyed. Adding Score.", payload);
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
     });
   }
 
-  private attemptAutoFire(time: number, player: any) {
+  private attemptAutoFire(time: number, player: any, upgrades: Record<string, number>) {
     const cursor = this.locator.getInputService().getCursor();
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
-    const RANGE = 12; 
+    const RANGE = 14; 
     let targetEnemy: any = null;
 
     for (const e of enemies) {
       if (!e.active) continue;
-      
-      // Skip spawning enemies to prevent spawn-camping
       const state = e.getComponent<StateComponent>('State');
       if (state && state.current === 'SPAWN') continue;
 
@@ -99,10 +98,20 @@ export class PlayerSystem implements IGameSystem {
     }
 
     if (targetEnemy) {
-      const upgrades = this.gameSystem.activeUpgrades;
-      const multiLevel = upgrades['MULTI_SHOT'] || 0;
+      // 2. MULTISHOT (PARALLEL_PROC)
+      const multiLevel = upgrades['PARALLEL_PROC'] || 0;
       const projectileCount = 1 + (multiLevel * 2);
-      const spreadAngle = 0.2; 
+      
+      // 3. DAMAGE (ROOT_ACCESS)
+      const dmgLevel = upgrades['ROOT_ACCESS'] || 0;
+      const damage = 1 + dmgLevel;
+
+      // 4. WIDTH (BANDWIDTH)
+      const widthLevel = upgrades['BANDWIDTH'] || 0;
+      const width = 1.0 + (widthLevel * 0.5);
+
+      const baseSpread = 0.15;
+      const spreadAngle = baseSpread * width; 
       
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;
@@ -117,7 +126,9 @@ export class PlayerSystem implements IGameSystem {
 
           this.spawner.spawnBullet(
               cursor.x, cursor.y, vx, vy, false, 
-              PLAYER_CONFIG.bulletLife, PLAYER_CONFIG.bulletRadius
+              PLAYER_CONFIG.bulletLife, 
+              damage, 
+              width
           );
       }
       

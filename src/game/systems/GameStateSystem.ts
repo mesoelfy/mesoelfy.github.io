@@ -14,8 +14,13 @@ export class GameStateSystem implements IGameSystem {
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
+
   public activeUpgrades: Record<string, number> = {
-    'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0
+    'OVERCLOCK': 0, 
+    'ROOT_ACCESS': 0, 
+    'BANDWIDTH': 0, // RENAMED
+    'PARALLEL_PROC': 0,
+    'REPAIR_NANITES': 0
   };
 
   public isGameOver: boolean = false;
@@ -40,7 +45,13 @@ export class GameStateSystem implements IGameSystem {
     this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
     this.upgradePoints = 0;
     this.isGameOver = false;
-    this.activeUpgrades = { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 };
+    this.activeUpgrades = { 
+        'OVERCLOCK': 0, 
+        'ROOT_ACCESS': 0, 
+        'BANDWIDTH': 0, 
+        'PARALLEL_PROC': 0,
+        'REPAIR_NANITES': 0
+    };
   }
 
   public applyUpgrade(option: string) {
@@ -63,7 +74,6 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {
-        // If already dead, damage reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -83,7 +93,6 @@ export class GameStateSystem implements IGameSystem {
         this.level++;
         this.upgradePoints++;
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
-        
         GameEventBus.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
     }
   }
@@ -97,7 +106,6 @@ export class GameStateSystem implements IGameSystem {
     }
   }
 
-  // NEW: Decay logic for when player stops charging
   public decayReboot(amount: number) {
       if (this.playerHealth > 0) return; 
       this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);

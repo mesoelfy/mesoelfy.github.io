@@ -19,7 +19,6 @@ import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// REMOVED: GlobalShakeManager
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
@@ -62,7 +61,6 @@ export default function Home() {
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
-      {/* GlobalShakeManager is gone. ShakeSystem drives #global-app-root via CSS vars now. */}
       <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
@@ -70,7 +68,7 @@ export default function Home() {
         <WebGLErrorBoundary>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
-            <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
+            <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
                 <GameOverlay />
             </div>
         </WebGLErrorBoundary>

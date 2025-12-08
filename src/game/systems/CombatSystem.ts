@@ -46,21 +46,13 @@ export class CombatSystem implements IGameSystem {
       // 2. PLAYER vs ENEMY_PROJECTILE (Hit)
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
           this.damagePlayer(10);
-          this.destroyProjectile(b, 'IMPACT_RED'); // Always destroy bullet if it hits player
+          this.destroyProjectile(b, 'IMPACT_RED'); 
       }
 
       // 3. ENEMY vs PLAYER_PROJECTILE (Damage)
       else if (layerA === CollisionLayers.ENEMY && layerB === CollisionLayers.PLAYER_PROJECTILE) {
-          this.handleMassExchange(b, a, 'IMPACT_WHITE'); // a=Enemy, b=Bullet
-          // Check if enemy died
-          const healthA = a.getComponent<HealthComponent>('Health');
-          if (healthA && healthA.isDead) {
-              GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: a.id as number, damage: 1, type: 'unknown' });
-              this.destroyEnemy(a, true);
-          } else {
-              // Just a hit
-              GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: a.id as number, damage: 1, type: 'unknown' });
-          }
+          // a=Enemy, b=Bullet
+          this.handleMassExchange(a, b, 'IMPACT_WHITE');
       }
 
       // 4. PROJECTILE vs PROJECTILE (Clash)
@@ -70,32 +62,33 @@ export class CombatSystem implements IGameSystem {
       }
   }
 
-  // THE PHYSICS LOGIC: Two objects hit. They damage each other.
   private handleMassExchange(entityA: Entity, entityB: Entity, fx: FXVariant) {
       const hpA = entityA.getComponent<HealthComponent>('Health');
       const hpB = entityB.getComponent<HealthComponent>('Health');
 
-      // Default to 1 damage if no health component (legacy fallback)
       const healthA = hpA ? hpA.current : 1;
       const healthB = hpB ? hpB.current : 1;
 
-      // The Force of impact is the smaller of the two healths (Mass)
       const impact = Math.min(healthA, healthB);
 
-      // Apply Damage
       if (hpA) hpA.damage(impact);
       if (hpB) hpB.damage(impact);
 
-      // Trigger FX at impact point
       const tA = entityA.getComponent<TransformComponent>('Transform');
       if (tA) GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: tA.x, y: tA.y });
 
-      // Destroy if dead
+      // FIX: Use destroyEnemy / destroyProjectile helper methods to ensure Events are emitted!
       if (hpA && hpA.isDead) {
-          this.registry.destroyEntity(entityA.id);
+          if (entityA.getComponent('Identity')) {
+              this.destroyEnemy(entityA, true); // It's an Enemy
+          } else {
+              this.destroyProjectile(entityA, 'IMPACT_WHITE'); // It's a projectile (unlikely for entityA here but safe)
+          }
       }
+      
       if (hpB && hpB.isDead) {
-          this.registry.destroyEntity(entityB.id);
+          // Entity B is usually the bullet in Enemy vs Bullet
+          this.destroyProjectile(entityB, 'IMPACT_WHITE');
       }
   }
 
@@ -108,6 +101,7 @@ export class CombatSystem implements IGameSystem {
       const transform = entity.getComponent<TransformComponent>('Transform');
       const identity = entity.getComponent<IdentityComponent>('Identity');
       
+      // EMIT KILL EVENT (XP)
       if (transform && identity) {
           GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 
               id: entity.id as number, 
@@ -123,7 +117,6 @@ export class CombatSystem implements IGameSystem {
           let fx: FXVariant = 'EXPLOSION_PURPLE';
           if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
           if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
-          
           GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
       }
   }
