@@ -1,19 +1,12 @@
-import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { ActiveEngine } from './GameDirector';
 import { Tag } from '../core/ecs/types';
-import { TransformComponent } from '../components/data/TransformComponent';
-import { IdentityComponent } from '../components/data/IdentityComponent';
-import { StateComponent } from '../components/data/StateComponent';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
+import { InstancedActor } from './common/InstancedActor';
 import { addBarycentricCoordinates, createHunterSpear } from '../utils/GeometryUtils';
-
-const MAX_ENEMIES = 1000;
-const tempObj = new THREE.Object3D();
-const tempColor = new THREE.Color();
-const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
+import { IdentityComponent } from '../data/IdentityComponent';
+import { StateComponent } from '../data/StateComponent';
 
 const vertexShader = `
   #ifndef USE_INSTANCING_COLOR
@@ -40,107 +33,79 @@ const fragmentShader = `
   void main() {
     float width = 2.0; 
     float edge = edgeFactor(vBarycentric, width);
-    float glow = 1.0 - edge;
-    glow = pow(glow, 0.4); 
+    float glow = pow(1.0 - edge, 0.4); 
     vec3 coreColor = vColor;
     vec3 edgeColor = mix(vColor, vec3(1.0), 0.6);
-    vec3 finalColor = mix(coreColor, edgeColor, glow);
-    gl_FragColor = vec4(finalColor, 1.0);
+    gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);
   }
 `;
 
 export const EnemyRenderer = () => {
-  const drillerRef = useRef<THREE.InstancedMesh>(null);
-  const kamikazeRef = useRef<THREE.InstancedMesh>(null);
-  const hunterRef = useRef<THREE.InstancedMesh>(null);
-  
   const drillerGeo = useMemo(() => addBarycentricCoordinates(new THREE.ConeGeometry(0.3, 0.8, 4)), []);
   const kamikazeGeo = useMemo(() => addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0)), []);
   const hunterGeo = useMemo(() => createHunterSpear(), []);
 
-  const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
+  const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader, uniforms: {}, vertexColors: true,
     extensions: { derivatives: true }, side: THREE.DoubleSide,
   }), []);
 
-  useFrame((state) => {
-    if (!drillerRef.current || !kamikazeRef.current || !hunterRef.current || !ActiveEngine) return;
-
-    const enemies = ActiveEngine.registry.getByTag(Tag.ENEMY);
-    const currentTime = state.clock.elapsedTime;
-    
-    let mCount = 0;
-    let kCount = 0;
-    let hCount = 0;
-
-    for (const e of enemies) {
-      const transform = e.getComponent<TransformComponent>('Transform');
-      const identity = e.getComponent<IdentityComponent>('Identity');
-      if (!transform || !identity) continue;
-
-      tempObj.position.set(transform.x, transform.y, 5.0);
-      tempObj.rotation.set(0, 0, transform.rotation); 
-      tempObj.scale.set(transform.scale, transform.scale, 1);
-      
-      const type = identity.variant;
-      
-      if (type === EnemyTypes.DRILLER) {
-        if (mCount >= MAX_ENEMIES) continue;
-        const stateComp = e.getComponent<StateComponent>('State');
-        const speed = (stateComp && stateComp.current === 'DRILLING') ? 20.0 : 5.0;
-        tempObj.rotateY(currentTime * speed); 
-        tempColor.set(GAME_THEME.enemy.muncher);
-        tempObj.updateMatrix();
-        drillerRef.current.setMatrixAt(mCount, tempObj.matrix);
-        drillerRef.current.setColorAt(mCount, tempColor);
-        mCount++;
-      }
-      else if (type === EnemyTypes.KAMIKAZE) {
-        if (kCount >= MAX_ENEMIES) continue;
-        tempObj.rotateX(currentTime);
-        tempObj.rotateY(currentTime * 0.5);
-        tempColor.set(GAME_THEME.enemy.kamikaze);
-        tempObj.updateMatrix();
-        kamikazeRef.current.setMatrixAt(kCount, tempObj.matrix);
-        kamikazeRef.current.setColorAt(kCount, tempColor);
-        kCount++;
-      }
-      else if (type === EnemyTypes.HUNTER) {
-        if (hCount >= MAX_ENEMIES) continue;
-        const stateComp = e.getComponent<StateComponent>('State');
-        const isCharging = stateComp && stateComp.current === 'CHARGE';
-        tempColor.set(GAME_THEME.enemy.hunter);
-        if (isCharging) {
-             const alpha = (Math.sin(currentTime * 20) + 1) / 2;
-             tempColor.lerp(chargeColor, alpha);
-        }
-        const spin = stateComp?.data?.spinAngle || 0;
-        tempObj.rotateY(spin);
-        tempObj.updateMatrix();
-        hunterRef.current.setMatrixAt(hCount, tempObj.matrix);
-        hunterRef.current.setColorAt(hCount, tempColor);
-        hCount++;
-      }
-    }
-
-    drillerRef.current.count = mCount;
-    drillerRef.current.instanceMatrix.needsUpdate = true;
-    if (drillerRef.current.instanceColor) drillerRef.current.instanceColor.needsUpdate = true;
-
-    kamikazeRef.current.count = kCount;
-    kamikazeRef.current.instanceMatrix.needsUpdate = true;
-    if (kamikazeRef.current.instanceColor) kamikazeRef.current.instanceColor.needsUpdate = true;
-
-    hunterRef.current.count = hCount;
-    hunterRef.current.instanceMatrix.needsUpdate = true;
-    if (hunterRef.current.instanceColor) hunterRef.current.instanceColor.needsUpdate = true;
-  });
+  const chargeColor = useMemo(() => new THREE.Color(GAME_THEME.enemy.charge), []);
 
   return (
-    <group>
-        <instancedMesh ref={drillerRef} args={[drillerGeo, shaderMaterial, MAX_ENEMIES]} />
-        <instancedMesh ref={kamikazeRef} args={[kamikazeGeo, shaderMaterial, MAX_ENEMIES]} />
-        <instancedMesh ref={hunterRef} args={[hunterGeo, shaderMaterial, MAX_ENEMIES]} />
-    </group>
+    <>
+      <InstancedActor 
+        tag={Tag.ENEMY}
+        geometry={drillerGeo}
+        material={material}
+        maxCount={500}
+        baseColor={GAME_THEME.enemy.muncher}
+        colorSource="base" 
+        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
+        updateEntity={(e, obj, color, delta) => {
+            const state = e.getComponent<StateComponent>('State');
+            const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
+            obj.position.z = 5.0;
+            obj.rotateY(performance.now() * 0.001 * speed); 
+        }}
+      />
+
+      <InstancedActor 
+        tag={Tag.ENEMY}
+        geometry={kamikazeGeo}
+        material={material}
+        maxCount={200}
+        baseColor={GAME_THEME.enemy.kamikaze}
+        colorSource="base"
+        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.KAMIKAZE}
+        updateEntity={(e, obj, color, delta) => {
+            const time = performance.now() * 0.001;
+            obj.position.z = 5.0;
+            obj.rotateX(time);
+            obj.rotateY(time * 0.5);
+        }}
+      />
+
+      <InstancedActor 
+        tag={Tag.ENEMY}
+        geometry={hunterGeo}
+        material={material}
+        maxCount={100}
+        baseColor={GAME_THEME.enemy.hunter}
+        colorSource="base"
+        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.HUNTER}
+        updateEntity={(e, obj, color, delta) => {
+            const state = e.getComponent<StateComponent>('State');
+            const time = performance.now() * 0.001;
+            if (state && state.current === 'CHARGE') {
+                const alpha = (Math.sin(time * 20) + 1) / 2;
+                color.lerp(chargeColor, alpha);
+            }
+            const spin = state?.data?.spinAngle || 0;
+            obj.position.z = 5.0;
+            obj.rotateY(spin);
+        }}
+      />
+    </>
   );
 };
