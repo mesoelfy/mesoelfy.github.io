@@ -4,7 +4,7 @@ import { UpgradeOption } from '@/game/types/game.types';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, AlertCircle, GitFork, Swords, Wifi, Zap as ZapIcon, LocateFixed, Gitlab, DoorOpen, Biohazard, CircleDotDashed } from 'lucide-react';
+import { Unplug, Zap, AlertCircle, GitFork, Swords, Wifi, Zap as ZapIcon, LocateFixed, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot } from 'lucide-react';
 
 const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
   'OVERCLOCK': { label: 'Overclock', icon: ZapIcon },
@@ -13,8 +13,9 @@ const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
   'FORK': { label: 'Fork', icon: GitFork }, 
   'SNIFFER': { label: 'Sniffer', icon: Gitlab }, 
   'BACKDOOR': { label: 'Backdoor', icon: DoorOpen }, 
-  'PURGE': { label: 'Purge', icon: Biohazard },        // NEW
-  'RESTORE': { label: 'Restore', icon: CircleDotDashed }, // NEW
+  'DAEMON': { label: 'Daemon', icon: Bot }, // NEW
+  'PURGE': { label: 'Purge', icon: Biohazard },
+  'RESTORE': { label: 'Restore', icon: CircleDotDashed },
   'REPAIR_NANITES': { label: 'Repair', icon: Unplug }
 };
 
@@ -53,7 +54,6 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  // Available options
   const availableOptions: UpgradeOption[] = [
       'OVERCLOCK', 
       'FORK', 
@@ -61,6 +61,7 @@ export const IdentityHUD = () => {
       'EXECUTE',
       'SNIFFER',
       'BACKDOOR',
+      'DAEMON',
       'PURGE',
       'RESTORE'
   ];

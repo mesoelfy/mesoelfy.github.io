@@ -7,26 +7,20 @@ import { CombatComponent } from '../components/data/CombatComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
+import { OrbitalComponent } from '../components/data/OrbitalComponent';
 import { Component } from './ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
 
 export const ComponentBuilder: Record<string, ComponentFactory> = {
   Transform: (data) => new TransformComponent(data.x || 0, data.y || 0, data.rotation || 0, data.scale || 1),
-  
   Motion: (data) => new MotionComponent(data.vx || 0, data.vy || 0, data.friction || 0, data.angularVelocity || 0),
-  
   Health: (data) => new HealthComponent(data.max, data.invincibilityTime || 0),
-  
   Identity: (data) => new IdentityComponent(data.variant),
-  
   Lifetime: (data) => new LifetimeComponent(data.remaining, data.total || data.remaining),
-  
   Combat: (data) => new CombatComponent(data.damage, data.cooldown || 0, data.range || 0),
-  
   State: (data) => new StateComponent(data.current, data.timers || {}, data.data || {}),
-  
   Collider: (data) => new ColliderComponent(data.radius, data.layer, data.mask),
-  
-  Target: (data) => new TargetComponent(data.id, data.type, data.x, data.y, data.locked)
+  Target: (data) => new TargetComponent(data.id, data.type, data.x, data.y, data.locked),
+  Orbital: (data) => new OrbitalComponent(data.parentId, data.radius, data.speed, data.angle, data.active)
 };

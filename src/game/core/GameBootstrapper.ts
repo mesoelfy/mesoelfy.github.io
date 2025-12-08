@@ -18,7 +18,8 @@ import { PanelRegistry } from '../systems/PanelRegistrySystem';
 import { GameStateSystem } from '../systems/GameStateSystem'; 
 import { UISyncSystem } from '../systems/UISyncSystem'; 
 import { TargetingSystem } from '../systems/TargetingSystem'; 
-import { GuidanceSystem } from '../systems/GuidanceSystem'; // NEW
+import { GuidanceSystem } from '../systems/GuidanceSystem'; 
+import { OrbitalSystem } from '../systems/OrbitalSystem'; // NEW
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
@@ -46,7 +47,8 @@ export const GameBootstrapper = () => {
   const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
   const targetingSys = new TargetingSystem(); 
-  const guidanceSys = new GuidanceSystem(); // NEW
+  const guidanceSys = new GuidanceSystem(); 
+  const orbitalSys = new OrbitalSystem(); // NEW
 
   // Register
   const systems = {
@@ -65,7 +67,8 @@ export const GameBootstrapper = () => {
       'UISyncSystem': syncSys,
       'PanelRegistrySystem': panelSys,
       'TargetingSystem': targetingSys,
-      'GuidanceSystem': guidanceSys // NEW
+      'GuidanceSystem': guidanceSys,
+      'OrbitalSystem': orbitalSys // NEW
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
@@ -77,12 +80,13 @@ export const GameBootstrapper = () => {
   engine.registerSystem(gameSys);
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
+  
   engine.registerSystem(targetingSys); 
+  
+  engine.registerSystem(orbitalSys); // Update orbital positions before logic
   engine.registerSystem(playerSys); 
   engine.registerSystem(behaviorSys); 
-  
-  // Guidance runs after spawn (PlayerSystem) but before Physics
-  engine.registerSystem(guidanceSys); // NEW
+  engine.registerSystem(guidanceSys); 
 
   engine.registerSystem(physicsSys); 
   engine.registerSystem(collisionSys); 

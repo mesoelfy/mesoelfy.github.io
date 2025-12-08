@@ -15,7 +15,6 @@ export class GameStateSystem implements IGameSystem {
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
 
-  // Persistent Stats
   public activeUpgrades: Record<string, number> = {
     'OVERCLOCK': 0, 
     'EXECUTE': 0, 
@@ -63,13 +62,16 @@ export class GameStateSystem implements IGameSystem {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           
-          // ACTIONS (One-Time Use)
           if (option === 'PURGE' || option === 'RESTORE') {
-              // Do not save these to activeUpgrades
               return; 
           }
 
-          // STATS (Permanent)
+          // Trigger Daemon Spawn
+          if (option === 'DAEMON') {
+              GameEventBus.emit(GameEvents.SPAWN_DAEMON, null);
+              return; // Daemons are entities, not just stats
+          }
+
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
           
           if (option === 'REPAIR_NANITES') {
@@ -80,10 +82,8 @@ export class GameStateSystem implements IGameSystem {
 
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
-
     const { godMode } = useStore.getState().debugFlags;
     if (godMode) return;
-
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {

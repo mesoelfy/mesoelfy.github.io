@@ -32,26 +32,24 @@ const fragmentShader = `
     return min(min(a3.x, a3.y), a3.z);
   }
   void main() {
-    float width = 2.0; 
+    float width = 1.5; 
     float edge = edgeFactor(vBarycentric, width);
     float glow = pow(1.0 - edge, 0.4); 
     vec3 coreColor = vColor;
-    vec3 edgeColor = mix(vColor, vec3(1.0), 0.6);
+    vec3 edgeColor = mix(vColor, vec3(1.0), 0.8);
     gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);
   }
 `;
 
 export const EnemyRenderer = () => {
-  // GEOMETRY GENERATION USING CONFIG
   const drillerGeo = useMemo(() => {
       const { radius, height, segments } = MODEL_CONFIG.DRILLER;
-      // Cone geometry pivots at center. Tip is at Y = +height/2.
       return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
   }, []);
 
+  // RESTORED: IcosahedronGeometry (Detail 0)
   const kamikazeGeo = useMemo(() => {
-      const { radius, detail } = MODEL_CONFIG.KAMIKAZE;
-      return addBarycentricCoordinates(new THREE.IcosahedronGeometry(radius, detail));
+      return addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0));
   }, []);
 
   const hunterGeo = useMemo(() => createHunterSpear(), []);
@@ -86,8 +84,10 @@ export const EnemyRenderer = () => {
             const state = e.getComponent<StateComponent>('State');
             const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
             obj.position.z = 5.0;
-            // Rotate Y (Spinning Axis)
             obj.rotateY(performance.now() * 0.001 * speed); 
+            
+            // FIX: Ensure base scale is 1.0 before applying spawn effect
+            obj.scale.setScalar(1.0); 
             applySpawnEffect(obj, state);
         }}
       />
@@ -104,8 +104,10 @@ export const EnemyRenderer = () => {
             const state = e.getComponent<StateComponent>('State');
             const time = performance.now() * 0.001;
             obj.position.z = 5.0;
-            obj.rotateX(time);
-            obj.rotateY(time * 0.5);
+            obj.rotation.set(time * 2, time, 0); 
+            
+            // FIX: Ensure base scale is 1.0
+            obj.scale.setScalar(1.0);
             applySpawnEffect(obj, state);
         }}
       />
@@ -127,7 +129,10 @@ export const EnemyRenderer = () => {
             }
             const spin = state?.data?.spinAngle || 0;
             obj.position.z = 5.0;
-            obj.rotateY(spin);
+            obj.rotation.set(0, spin, 0);
+            
+            // FIX: Ensure base scale is 1.0
+            obj.scale.setScalar(1.0);
             applySpawnEffect(obj, state);
         }}
       />

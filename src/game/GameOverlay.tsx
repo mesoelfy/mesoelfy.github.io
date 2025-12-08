@@ -11,6 +11,9 @@ import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
 import { ProjectileTrails } from './components/ProjectileTrails'; 
 import { GalleryStage } from './components/GalleryStage';
+import { DaemonRenderer } from './components/DaemonRenderer'; 
+import { DaemonChargeRenderer } from './components/DaemonChargeRenderer';
+import { DaemonBulletRenderer } from './components/DaemonBulletRenderer'; // NEW
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { useStore } from '@/core/store/useStore';
 import { useEffect, useState } from 'react';
@@ -23,7 +26,6 @@ export const GameOverlay = () => {
 
   useEffect(() => {
       setMounted(true);
-      // Simple touch detection
       const onTouch = () => setIsTouch(true);
       window.addEventListener('touchstart', onTouch, { once: true });
       return () => window.removeEventListener('touchstart', onTouch);
@@ -54,6 +56,9 @@ export const GameOverlay = () => {
                     <ScreenShaker />
                     <ProjectileTrails />
                     <PlayerAvatar />
+                    <DaemonRenderer /> 
+                    <DaemonChargeRenderer />
+                    <DaemonBulletRenderer /> {/* NEW */}
                     <BulletRenderer />
                     <HunterChargeRenderer /> 
                     <EnemyBulletRenderer />
@@ -64,7 +69,6 @@ export const GameOverlay = () => {
           </Canvas>
         </div>
         
-        {/* Show Joystick if Touch is detected AND we are in Game Mode (not Gallery) */}
         {isTouch && !isGallery && <VirtualJoystick />}
     </>
   );
