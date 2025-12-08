@@ -17,9 +17,11 @@ export class GameStateSystem implements IGameSystem {
 
   public activeUpgrades: Record<string, number> = {
     'OVERCLOCK': 0, 
-    'ROOT_ACCESS': 0, 
-    'BANDWIDTH': 0, // RENAMED
-    'PARALLEL_PROC': 0,
+    'EXECUTE': 0,     // Renamed
+    'BANDWIDTH': 0, 
+    'FORK': 0,
+    'SNIFFER': 0,
+    'BACKDOOR': 0,
     'REPAIR_NANITES': 0
   };
 
@@ -47,9 +49,11 @@ export class GameStateSystem implements IGameSystem {
     this.isGameOver = false;
     this.activeUpgrades = { 
         'OVERCLOCK': 0, 
-        'ROOT_ACCESS': 0, 
+        'EXECUTE': 0, 
         'BANDWIDTH': 0, 
-        'PARALLEL_PROC': 0,
+        'FORK': 0,
+        'SNIFFER': 0,
+        'BACKDOOR': 0,
         'REPAIR_NANITES': 0
     };
   }

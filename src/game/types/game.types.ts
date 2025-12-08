@@ -7,9 +7,11 @@ export interface RegisteredPanel {
 
 export type UpgradeOption = 
   | 'OVERCLOCK'      // Attack Speed
-  | 'ROOT_ACCESS'    // Damage
-  | 'BANDWIDTH'      // Width (Renamed from FAT_PIPE)
-  | 'PARALLEL_PROC'  // Multishot
+  | 'EXECUTE'        // Damage (Renamed from ROOT)
+  | 'BANDWIDTH'      // Width
+  | 'FORK'           // Multishot
+  | 'SNIFFER'        // Homing Independent
+  | 'BACKDOOR'       // Rear Gun
   | 'REPAIR_NANITES'; // Heal
 
 export interface GameState {

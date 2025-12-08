@@ -4,14 +4,15 @@ import { UpgradeOption } from '@/game/types/game.types';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, AlertCircle, Cpu, ShieldAlert, Wifi, Zap as ZapIcon } from 'lucide-react';
+import { Unplug, Zap, AlertCircle, GitFork, Swords, Wifi, Zap as ZapIcon, Gitlab, DoorOpen } from 'lucide-react';
 
-// Map Internal IDs to Display Names & Icons
 const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
   'OVERCLOCK': { label: 'Overclock', icon: ZapIcon },
-  'ROOT_ACCESS': { label: 'Root Access', icon: ShieldAlert },
+  'EXECUTE': { label: 'Execute', icon: Swords }, // Renamed from ROOT
   'BANDWIDTH': { label: 'Bandwidth', icon: Wifi },
-  'PARALLEL_PROC': { label: 'Parallel', icon: Cpu },
+  'FORK': { label: 'Fork', icon: GitFork }, 
+  'SNIFFER': { label: 'Sniffer', icon: Gitlab }, // Fox Icon
+  'BACKDOOR': { label: 'Backdoor', icon: DoorOpen }, // Door Icon
   'REPAIR_NANITES': { label: 'Repair', icon: Unplug }
 };
 
@@ -33,7 +34,6 @@ export const IdentityHUD = () => {
   const isPlayerDead = hp <= 0;
 
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
-  // Safe XP Calculation
   const xpPercent = nextXp > 0 ? Math.min(100, (xp / nextXp) * 100) : 0;
 
   const size = 160; 
@@ -51,8 +51,14 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  // Define available options (could be randomized later)
-  const availableOptions: UpgradeOption[] = ['OVERCLOCK', 'PARALLEL_PROC', 'BANDWIDTH', 'ROOT_ACCESS'];
+  const availableOptions: UpgradeOption[] = [
+      'OVERCLOCK', 
+      'FORK', 
+      'BANDWIDTH', 
+      'EXECUTE',
+      'SNIFFER',
+      'BACKDOOR'
+  ];
 
   const handleUpgrade = (u: UpgradeOption) => {
       if (isPanelDead || isPlayerDead) return; 
@@ -63,15 +69,11 @@ export const IdentityHUD = () => {
   return (
     <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
-      {/* 1. THE AVATAR (Top) */}
       <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> 
-        
-        {/* AVATAR LAYER */}
         <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
            <MiniCrystalCanvas />
         </div>
 
-        {/* REBOOT INDICATOR */}
         {isPlayerDead && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {rebootProgress > 0 ? (
@@ -86,13 +88,10 @@ export const IdentityHUD = () => {
             </div>
         )}
 
-        {/* HUD RINGS */}
         <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
-          {/* Backgrounds */}
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="4 4" />
           
-          {/* Progress */}
           <circle 
             cx={center} cy={center} r={radiusHp} 
             stroke={displayHpColor} 
@@ -113,13 +112,11 @@ export const IdentityHUD = () => {
           />
         </svg>
 
-        {/* Level Badge */}
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
           LVL_{level}
         </div>
       </div>
 
-      {/* 2. INFO & UPGRADES (Middle) */}
       <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-1 min-h-0">
         
         {isPlayerDead && !isPanelDead ? (
@@ -138,7 +135,6 @@ export const IdentityHUD = () => {
             </div>
         )}
 
-        {/* UPGRADE MODULE (Stacking) */}
         {upgradePoints > 0 && !isPlayerDead && (
           <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 rounded-sm pointer-events-auto z-50 animate-pulse">
             <div className="flex items-center justify-center gap-2 mb-1">
@@ -169,7 +165,6 @@ export const IdentityHUD = () => {
         )}
       </div>
 
-      {/* 3. NAVIGATION */}
       <div className="w-full grid grid-cols-2 gap-3 mt-auto pt-2 border-t border-elfy-green-dim/10">
         <button 
           onClick={() => !isPanelDead && openModal('about')} 

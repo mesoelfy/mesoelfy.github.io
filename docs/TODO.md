@@ -76,7 +76,7 @@ Lucide icons: gitlab(a fox head) and shovel and puzzle and pickaxe and bow-arrow
 
 Damage from drillers should be at a constant rate.
 
-
+Bullet trails need to match the new sizes of bullets after upgrading them. Let's overhaul how trails are rendered.
 
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.

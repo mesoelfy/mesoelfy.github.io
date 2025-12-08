@@ -13,11 +13,12 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { ShakeSystem } from '../systems/ShakeSystem'; // REPLACES CameraSystem
+import { ShakeSystem } from '../systems/ShakeSystem'; 
 import { PanelRegistry } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem'; 
 import { UISyncSystem } from '../systems/UISyncSystem'; 
 import { TargetingSystem } from '../systems/TargetingSystem'; 
+import { GuidanceSystem } from '../systems/GuidanceSystem'; // NEW
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
@@ -40,11 +41,12 @@ export const GameBootstrapper = () => {
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
-  const shakeSys = new ShakeSystem(); // NEW
+  const shakeSys = new ShakeSystem(); 
   const gameSys = new GameStateSystem(); 
   const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
   const targetingSys = new TargetingSystem(); 
+  const guidanceSys = new GuidanceSystem(); // NEW
 
   // Register
   const systems = {
@@ -58,11 +60,12 @@ export const GameBootstrapper = () => {
       'WaveSystem': waveSys,
       'PlayerSystem': playerSys,
       'InteractionSystem': interactionSys,
-      'ShakeSystem': shakeSys, // NEW
+      'ShakeSystem': shakeSys, 
       'GameStateSystem': gameSys,
       'UISyncSystem': syncSys,
       'PanelRegistrySystem': panelSys,
-      'TargetingSystem': targetingSys
+      'TargetingSystem': targetingSys,
+      'GuidanceSystem': guidanceSys // NEW
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
@@ -77,10 +80,14 @@ export const GameBootstrapper = () => {
   engine.registerSystem(targetingSys); 
   engine.registerSystem(playerSys); 
   engine.registerSystem(behaviorSys); 
+  
+  // Guidance runs after spawn (PlayerSystem) but before Physics
+  engine.registerSystem(guidanceSys); // NEW
+
   engine.registerSystem(physicsSys); 
   engine.registerSystem(collisionSys); 
   engine.registerSystem(lifeSys); 
-  engine.registerSystem(shakeSys); // Run near end to calc final offsets
+  engine.registerSystem(shakeSys); 
   engine.registerSystem(syncSys); 
   
   // Setup
