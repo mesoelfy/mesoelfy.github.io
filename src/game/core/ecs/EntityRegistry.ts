@@ -11,9 +11,10 @@ export class EntityRegistry implements IEntityRegistry {
   private entityPool: ObjectPool<Entity>;
 
   constructor() {
+      // Pool init: 1000 entities pre-allocated
       this.entityPool = new ObjectPool<Entity>(
           () => new Entity(createEntityID(0)),
-          (e) => {}, 
+          (e) => {}, // Reset is handled manually in createEntity
           1000 
       );
   }
@@ -21,7 +22,10 @@ export class EntityRegistry implements IEntityRegistry {
   public createEntity(): Entity {
     const newId = createEntityID(++this.nextId);
     const entity = this.entityPool.acquire();
+    
+    // Strict Reset
     entity.reset(newId);
+    
     this.entities.set(newId, entity);
     return entity;
   }
@@ -29,12 +33,20 @@ export class EntityRegistry implements IEntityRegistry {
   public destroyEntity(id: number) {
     const eid = id as EntityID;
     const entity = this.entities.get(eid);
-    if (entity) {
-        entity.active = false;
-        this.removeFromCache(entity);
-        this.entities.delete(eid);
-        this.entityPool.release(entity);
-    }
+    
+    // ZOMBIE CHECK: If entity is missing or already inactive, do nothing.
+    if (!entity || !entity.active) return;
+
+    // 1. Mark inactive immediately
+    entity.active = false;
+    
+    // 2. Clean up cache
+    this.removeFromCache(entity);
+    this.entities.delete(eid);
+    
+    // 3. Prepare for pool
+    entity.release();
+    this.entityPool.release(entity);
   }
 
   public getEntity(id: number): Entity | undefined {
@@ -52,6 +64,8 @@ export class EntityRegistry implements IEntityRegistry {
     }
     const ids = this.tagCache.get(t)!;
     const results: Entity[] = [];
+    
+    // Filter active entities only
     for (const id of ids) {
         const e = this.entities.get(id);
         if (e && e.active) results.push(e);
@@ -83,7 +97,9 @@ export class EntityRegistry implements IEntityRegistry {
   }
 
   public clear() {
+      // Bulk return to pool
       for (const entity of this.entities.values()) {
+          entity.release();
           this.entityPool.release(entity);
       }
       this.entities.clear();
