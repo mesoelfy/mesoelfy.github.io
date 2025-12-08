@@ -21,6 +21,14 @@ export class BehaviorSystem implements IGameSystem {
       [EnemyTypes.HUNTER]: HunterLogic
   };
 
+  private readonly PURPLE_PALETTE = [
+      '#9E4EA5', // Base
+      '#D0A3D8', // Lavender
+      '#E0B0FF', // Bright
+      '#7A2F8F', // Dark
+      '#B57EDC'  // Soft
+  ];
+
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
@@ -31,7 +39,7 @@ export class BehaviorSystem implements IGameSystem {
       delta,
       time,
       spawnProjectile: (x, y, vx, vy) => this.spawner.spawnBullet(x, y, vx, vy, true, 3.0),
-      spawnDrillSparks: (x, y, baseColor) => this.spawnSparks(x, y),
+      spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle),
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 
@@ -57,15 +65,34 @@ export class BehaviorSystem implements IGameSystem {
     }
   }
 
-  // UPDATED: Mixed colors for sparks
-  private spawnSparks(x: number, y: number) {
-      const colors = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#FFFFFF']; // Dark, Light, Pale, White
-      const color = colors[Math.floor(Math.random() * colors.length)];
+  private spawnDirectionalSparks(x: number, y: number, drillAngle: number) {
+      // High Density for "Solid" stream
+      const count = 5; 
       
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 3;
-      // Slightly shorter life for "grinding" feel
-      this.spawner.spawnParticle(x, y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.2);
+      // FIX: Angle Correction
+      // Cone points UP (+Y) in local space.
+      // We want particles to fly DOWN (-Y).
+      // Local -Y is -PI/2 relative to rotation.
+      const baseEjectAngle = drillAngle - (Math.PI / 2);
+
+      for(let i=0; i<count; i++) {
+          const color = this.PURPLE_PALETTE[Math.floor(Math.random() * this.PURPLE_PALETTE.length)];
+          
+          // Spread: Narrow cone (approx 30 degrees total)
+          const spread = (Math.random() - 0.5) * 0.5; 
+          const angle = baseEjectAngle + spread;
+          
+          // Speed: High variance for "Spray" look
+          const speed = 6 + Math.random() * 8;
+          
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+
+          // Lifetime: Very fast decay for "Fizz" effect
+          const life = 0.1 + Math.random() * 0.15;
+
+          this.spawner.spawnParticle(x, y, color, vx, vy, life);
+      }
   }
 
   teardown(): void {}

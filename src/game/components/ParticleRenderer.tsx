@@ -40,7 +40,13 @@ export const ParticleRenderer = () => {
          if (life) {
              const scale = life.remaining / life.total;
              obj.scale.setScalar(scale);
-             obj.position.z = 2.0; // Force particles above enemies/floor
+             
+             // VOLUMETRIC EFFECT:
+             // Enemies are at Z=5.0. 
+             // We split particles 50/50 to be In Front (6.0) or Behind (4.0).
+             // Using ID ensures it doesn't flicker frame-to-frame.
+             const isInFront = (e.id as number) % 2 === 0;
+             obj.position.z = isInFront ? 6.0 : 4.0;
          }
       }}
     />
