@@ -144,6 +144,8 @@ Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
 
 mobile - chrome devtools - device toolbar - confirm compatibility with different devices - right now the touch joystick isn't working because touching anywhere on skin moves character. also, everything isn't being resized properly for mobile and needs an overhaul.
 
+Sometime green system restored animation appears in a panel during game over state.
+
 
 
 

@@ -9,7 +9,7 @@ const MAX_PANEL_HEALTH = 1000;
 
 interface GameStateUI {
   isPlaying: boolean;
-  isZenMode: boolean; // NEW
+  isZenMode: boolean;
   playerHealth: number;
   maxPlayerHealth: number;
   playerRebootProgress: number;
@@ -27,9 +27,16 @@ interface GameStateUI {
   activeUpgrades: Record<string, number>;
   panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
   
+  // --- TRANSIENT UPDATE SYSTEM (Direct DOM) ---
+  transientElements: Map<string, { el: HTMLElement, type: 'text' | 'width' | 'css-var' }>;
+  registerTransientElement: (id: string, el: HTMLElement, type: 'text' | 'width' | 'css-var') => void;
+  unregisterTransientElement: (id: string) => void;
+  updateTransient: (id: string, value: string | number) => void;
+
+  // --- ACTIONS ---
   startGame: () => void;
   stopGame: () => void;
-  activateZenMode: () => void; // NEW
+  activateZenMode: () => void;
   
   registerPanel: (id: string, element: HTMLElement) => void;
   unregisterPanel: (id: string) => void;
@@ -69,13 +76,39 @@ export const useGameStore = create<GameStateUI>()(
       activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
       panels: {},
 
+      // --- TRANSIENT SYSTEM ---
+      transientElements: new Map(),
+
+      registerTransientElement: (id, el, type) => {
+        // We modify the Map directly to avoid triggering a React re-render
+        get().transientElements.set(id, { el, type });
+      },
+
+      unregisterTransientElement: (id) => {
+        get().transientElements.delete(id);
+      },
+
+      updateTransient: (id, value) => {
+        const item = get().transientElements.get(id);
+        if (!item) return;
+
+        if (item.type === 'text') {
+            item.el.innerText = String(value);
+        } else if (item.type === 'width') {
+            item.el.style.width = `${value}%`;
+        } else if (item.type === 'css-var') {
+            item.el.style.setProperty(`--${id}`, String(value));
+        }
+      },
+
+      // --- GAME ACTIONS ---
+
       startGame: () => {
         if (get().isPlaying) return;
         set({ 
             isPlaying: true, 
             isZenMode: false,
             score: 0, 
-            threatLevel: 1,
             playerHealth: PLAYER_CONFIG.maxHealth,
             playerRebootProgress: 0,
             xp: 0,
@@ -87,6 +120,9 @@ export const useGameStore = create<GameStateUI>()(
                 Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
             )
         });
+        // Reset visual elements immediately
+        get().updateTransient('score-display', '0000');
+        get().updateTransient('player-health', 100);
       },
       
       stopGame: () => {

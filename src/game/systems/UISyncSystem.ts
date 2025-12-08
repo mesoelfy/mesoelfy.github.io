@@ -28,21 +28,33 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // Sync Global State
-    store.syncGameState({
-        playerHealth: this.gameSystem.playerHealth,
-        playerRebootProgress: this.gameSystem.playerRebootProgress,
-        score: this.gameSystem.score,
-        xp: this.gameSystem.xp,
-        level: this.gameSystem.level,
-        xpToNextLevel: this.gameSystem.xpToNextLevel,
-        upgradePoints: this.gameSystem.upgradePoints,
-        systemIntegrity: PanelRegistry.systemIntegrity,
-        activeUpgrades: { ...this.gameSystem.activeUpgrades },
-        
-        // NEW: Sync Interaction Target so React knows what player is doing
-        interactionTarget: this.interactionSystem.hoveringPanelId 
-    });
+    // 1. FAST PATH: Direct DOM Updates (Transient)
+    // This updates the text numbers instantly without React rendering
+    const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
+    store.updateTransient('score-display', formattedScore);
+    
+    // 2. SLOW PATH: React State Sync
+    // We MUST check if XP or Score changed so the IdentityHUD (React component) updates the SVG rings.
+    const shouldSyncReact = 
+        store.xp !== this.gameSystem.xp || 
+        store.score !== this.gameSystem.score ||
+        store.level !== this.gameSystem.level ||
+        store.upgradePoints !== this.gameSystem.upgradePoints ||
+        store.interactionTarget !== this.interactionSystem.hoveringPanelId ||
+        Math.abs(store.systemIntegrity - PanelRegistry.systemIntegrity) > 1.0; 
+
+    if (shouldSyncReact) {
+        store.syncGameState({
+            level: this.gameSystem.level,
+            xp: this.gameSystem.xp,                // Fix: Sync XP
+            score: this.gameSystem.score,          // Fix: Sync Score (for HUD rings/logic)
+            xpToNextLevel: this.gameSystem.xpToNextLevel,
+            upgradePoints: this.gameSystem.upgradePoints,
+            activeUpgrades: { ...this.gameSystem.activeUpgrades },
+            systemIntegrity: PanelRegistry.systemIntegrity,
+            interactionTarget: this.interactionSystem.hoveringPanelId 
+        });
+    }
 
     // Sync Panels
     const uiPanels: Record<string, any> = {};
