@@ -13,14 +13,17 @@ export const CustomCursor = () => {
   
   const playerHealth = useGameStore(state => state.playerHealth);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
-  const isDead = playerHealth <= 0 || systemIntegrity <= 0;
+  
+  // Logic: Show cursor if Intro/Debug/Sandbox. 
+  // Hide if Game Over (User requested 3D triangle takeover, though debugging might need cursor)
+  // FIX: Always show cursor if Debug is open, even if dead.
+  const isDead = (playerHealth <= 0 || systemIntegrity <= 0) && !isDebugOpen;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      // Hover triggers on buttons, inputs, links, labels, and specific interactive zones
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
@@ -49,16 +52,13 @@ export const CustomCursor = () => {
 
       <motion.div
         className={clsx(
-            "fixed top-0 left-0 pointer-events-none z-[10000]",
+            "fixed top-0 left-0 pointer-events-none z-[20000]", // FIX: Increased Z-Index
             (isHovering && !isDead) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {/* Show cursor during Intro/Debug/Sandbox. 
-              If DEAD: Custom red cursor logic in future, but for now we hide the SVG if dead 
-              because user requested 3D triangle takes over. */}
           {isVisible && !isDead && (
             <motion.div
               key="custom-cursor"

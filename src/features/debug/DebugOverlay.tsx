@@ -3,7 +3,7 @@ import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -23,8 +23,7 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
 ];
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, toggleDebugMinimize, setDebugFlag, bootState, resetApplication } = useStore();
-  const { startGame } = useGameStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication } = useStore();
   
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
@@ -32,22 +31,20 @@ export const DebugOverlay = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' || e.key === '`' || e.key === '~') {
         if (isDebugMinimized) {
+            // Restore from minimized
             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
+            // Toggle normally (Open <-> Close)
             toggleDebugMenu();
-        }
-      } else if (e.key === '`' || e.key === '~') {
-        if (!isDebugOpen && !isDebugMinimized) {
-            toggleDebugMenu();
-            if (!useStore.getState().debugFlags.godMode) {
+            
+            // Auto-enable cheats on first open if using tilde
+            if (!isDebugOpen && (e.key === '`' || e.key === '~') && !useStore.getState().debugFlags.godMode) {
                 setDebugFlag('godMode', true);
                 setDebugFlag('panelGodMode', true);
                 setDebugFlag('peaceMode', true);
             }
-        } else {
-            toggleDebugMenu();
         }
       }
     };
@@ -70,7 +67,6 @@ export const DebugOverlay = () => {
     const pollInterval = setInterval(() => {
         let fps = 0;
         let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
-        
         try {
             const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
             fps = timeSys.fps;
@@ -92,30 +88,73 @@ export const DebugOverlay = () => {
     };
   }, [isDebugOpen, isDebugMinimized]);
 
-  const exitSimulation = () => {
-      resetApplication(); 
-  };
-
   if (!isDebugOpen && !isDebugMinimized) return null;
 
   if (bootState === 'sandbox') {
       return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
             <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
                 <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
                 <div className="flex flex-col gap-4">
                     <button onClick={toggleDebugMenu} className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
-                    <button onClick={exitSimulation} className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
+                    <button onClick={resetApplication} className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
                 </div>
             </div>
         </div>
       );
   }
 
-  if (isDebugMinimized) return null;
+  // --- MINIMIZED TELEMETRY VIEW ---
+  if (isDebugMinimized) {
+      return (
+        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-none">
+            <div className="bg-black/90 border border-elfy-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
+                <div className="flex items-center justify-between border-b border-elfy-green/20 pb-1 mb-1">
+                    <span className="text-[10px] font-bold text-elfy-green tracking-wider">DEBUG_LIVE</span>
+                    <button 
+                        onClick={() => {
+                            useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+                        }} 
+                        className="text-elfy-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
+                        title="Maximize"
+                    >
+                        <Maximize2 size={12} />
+                    </button>
+                </div>
+                
+                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                    <span className="flex items-center gap-1"><Activity size={10} /> FPS</span>
+                    <span className="text-elfy-green font-bold">{stats.fps}</span>
+                </div>
+                
+                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                    <span className="flex items-center gap-1"><Cpu size={10} /> ENT</span>
+                    <span className="text-elfy-green font-bold">{stats.active}</span>
+                </div>
 
+                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                    <span className="flex items-center gap-1"><Database size={10} /> POOL</span>
+                    <span className="text-elfy-green font-bold">{stats.pooled}</span>
+                </div>
+                
+                <div className="h-[1px] bg-elfy-green/20 my-1" />
+                
+                <button 
+                    onClick={() => {
+                        useStore.setState({ isDebugMinimized: false, isDebugOpen: false });
+                    }} 
+                    className="text-[9px] bg-elfy-red/10 border border-elfy-red/30 text-elfy-red hover:bg-elfy-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
+                >
+                    CLOSE_DEBUG
+                </button>
+            </div>
+        </div>
+      );
+  }
+
+  // --- FULL VIEW ---
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4 pointer-events-auto">
       <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
         <div className="h-10 border-b border-elfy-green/50 bg-elfy-green/10 flex items-center justify-center relative px-4 shrink-0">
           <div className="flex items-center gap-2">
@@ -123,8 +162,14 @@ export const DebugOverlay = () => {
             <span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span>
           </div>
           <div className="absolute right-4 flex items-center gap-2">
-             <button onClick={toggleDebugMinimize} className="hover:text-white transition-colors" title="Mini Mode"><MinusSquare size={16} /></button>
-             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors" title="Close"><X size={16} /></button>
+             <button 
+                onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} 
+                className="hover:text-white transition-colors p-1" 
+                title="Mini Mode"
+             >
+                <MinusSquare size={16} />
+             </button>
+             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1" title="Close"><X size={16} /></button>
           </div>
         </div>
         <div className="flex flex-1 min-h-0">

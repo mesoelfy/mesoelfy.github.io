@@ -4,16 +4,17 @@ import { Tag } from './ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
-import { IdentityComponent } from '../components/data/IdentityComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { CombatComponent } from '../components/data/CombatComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent'; 
-import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { IdentityComponent } from '../components/data/IdentityComponent';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
 import { EntityRegistry } from './ecs/EntityRegistry';
 import { EnemyTypes } from '../config/Identifiers';
+import { ARCHETYPES } from '../data/Archetypes';
+import { ComponentBuilder } from './ComponentBuilder';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -35,22 +36,31 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
-    const config = ENEMY_CONFIG[type];
-    const e = this.registry.createEntity();
-    e.addTag(Tag.ENEMY);
-    e.addTag(Tag.OBSTACLE);
-    e.addComponent(new TransformComponent(x, y, 0, 1));
-    e.addComponent(new IdentityComponent(type));
-    e.addComponent(new MotionComponent(0, 0, 0, 0)); 
-    e.addComponent(new HealthComponent(config.hp));
-    e.addComponent(new StateComponent('SPAWN', { spawn: 1.5 })); 
-    if (config.damage) e.addComponent(new CombatComponent(config.damage));
-    
-    let radius = PhysicsConfig.HITBOX.DRILLER;
-    if (type === EnemyTypes.KAMIKAZE) radius = PhysicsConfig.HITBOX.KAMIKAZE;
-    if (type === EnemyTypes.HUNTER) radius = PhysicsConfig.HITBOX.HUNTER;
+    const archetype = ARCHETYPES[type];
+    if (!archetype) {
+        console.warn(`[EntitySpawner] Unknown archetype: ${type}`);
+        return this.registry.createEntity();
+    }
 
-    e.addComponent(new ColliderComponent(radius, CollisionLayers.ENEMY, PhysicsConfig.MASKS.ENEMY));
+    const e = this.registry.createEntity();
+    archetype.tags.forEach(tag => e.addTag(tag));
+
+    // 1. Build Components First
+    for (const compDef of archetype.components) {
+        // Skip Transform in the builder loop if we want to enforce the spawned position
+        if (compDef.type === 'Transform') continue;
+
+        const builder = ComponentBuilder[compDef.type];
+        if (builder) {
+            // Deep clone to prevent shared references across entities
+            const freshData = JSON.parse(JSON.stringify(compDef.data || {}));
+            e.addComponent(builder(freshData));
+        }
+    }
+
+    // 2. Explicitly Set Transform (Overrides any defaults)
+    e.addComponent(new TransformComponent(x, y, 0, 1));
+
     this.registry.updateCache(e);
     return e;
   }

@@ -22,16 +22,13 @@ export class CombatSystem implements IGameSystem {
     this.spawner = locator.getSpawner();
   }
 
-  update(delta: number, time: number): void {
-    // Passive System - driven by resolveCollision call
-  }
+  update(delta: number, time: number): void {}
 
   public resolveCollision(e1: Entity, e2: Entity) {
       const col1 = e1.getComponent<ColliderComponent>('Collider');
       const col2 = e2.getComponent<ColliderComponent>('Collider');
       if (!col1 || !col2) return;
 
-      // Sort: Player (1) < Enemy (2) < PlayerProj (4) < EnemyProj (8)
       let a = e1, b = e2;
       let layerA = col1.layer, layerB = col2.layer;
 
@@ -40,23 +37,21 @@ export class CombatSystem implements IGameSystem {
           layerA = col2.layer; layerB = col1.layer;
       }
 
-      // --- RESOLUTION LOGIC ---
-
-      // 1. PLAYER vs ENEMY
+      // PLAYER vs ENEMY
       if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY) {
           const id = b.getComponent<IdentityComponent>('Identity');
           const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
           this.damagePlayer(damage);
-          this.destroyEnemy(b, true); // Explode
+          this.destroyEnemy(b, true); // Player body hits enemy -> Instant kill + explode
       }
 
-      // 2. PLAYER vs ENEMY_PROJECTILE
+      // PLAYER vs ENEMY_PROJECTILE
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
           this.damagePlayer(10);
           this.destroyProjectile(b, '#FF003C');
       }
 
-      // 3. ENEMY vs PLAYER_PROJECTILE
+      // ENEMY vs PLAYER_PROJECTILE
       else if (layerA === CollisionLayers.ENEMY && layerB === CollisionLayers.PLAYER_PROJECTILE) {
           const health = a.getComponent<HealthComponent>('Health');
           if (health) {
@@ -64,11 +59,15 @@ export class CombatSystem implements IGameSystem {
               GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { 
                   id: a.id as number, damage: 1, type: 'unknown' 
               });
+              
+              if (health.isDead) {
+                  this.destroyEnemy(a, true);
+              }
           }
           this.destroyProjectile(b, '#FFFFFF', 0.2);
       }
 
-      // 4. PROJECTILE vs PROJECTILE (Clash)
+      // PROJECTILE vs PROJECTILE
       else if (layerA === CollisionLayers.PLAYER_PROJECTILE && layerB === CollisionLayers.ENEMY_PROJECTILE) {
           this.destroyProjectile(a, '#F7D277');
           this.destroyProjectile(b, '#F7D277');
@@ -83,10 +82,23 @@ export class CombatSystem implements IGameSystem {
   }
 
   private destroyEnemy(entity: Entity, explode: boolean) {
+      // FIX: Emit Event BEFORE destroying, so PlayerSystem can count score/xp
+      const transform = entity.getComponent<TransformComponent>('Transform');
+      const identity = entity.getComponent<IdentityComponent>('Identity');
+      
+      if (transform && identity) {
+          GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 
+              id: entity.id as number, 
+              type: identity.variant,
+              x: transform.x,
+              y: transform.y
+          });
+      }
+
       this.registry.destroyEntity(entity.id);
-      if (explode) {
-          const t = entity.getComponent<TransformComponent>('Transform');
-          if (t) this.spawnExplosion(t.x, t.y, '#9E4EA5');
+      
+      if (explode && transform) {
+          this.spawnExplosion(transform.x, transform.y, '#9E4EA5');
       }
   }
 

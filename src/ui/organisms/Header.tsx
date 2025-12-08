@@ -4,7 +4,6 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { useTransientRef } from '@/game/hooks/useTransientRef';
 
 // --- SUB-COMPONENTS ---
 
@@ -62,12 +61,10 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx } = useStore();
   
-  // Low frequency updates via React
+  // React State Subscriptions (Guaranteed to update)
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
-  
-  // High frequency updates via Ref
-  const scoreRef = useTransientRef('score-display', 'text');
+  const score = useGameStore(state => state.score);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -98,12 +95,8 @@ export const Header = () => {
             
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
-                {/* 
-                   We use the ref here. React will render '0000' initially, 
-                   but the UISyncSystem will overwrite innerText 60fps.
-                */}
-                <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">
-                    0000
+                <span className="font-bold text-lg tabular-nums tracking-widest">
+                    {score.toString().padStart(4, '0')}
                 </span>
             </div>
           </div>

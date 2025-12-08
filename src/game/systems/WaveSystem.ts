@@ -4,6 +4,7 @@ import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '../config/Identifiers';
 
+// Faster initial timeline for testing
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
@@ -22,7 +23,7 @@ export class WaveSystem implements IGameSystem {
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
   
-  private nextBreachTime = 0;
+  private nextBreachTime = 2.0; // Aggressive start
 
   setup(locator: IServiceLocator): void {
     this.spawner = locator.getSpawner();
@@ -34,7 +35,7 @@ export class WaveSystem implements IGameSystem {
     this.currentWaveIndex = 0;
     this.spawnQueue = [];
     this.loopCount = 0;
-    this.nextBreachTime = 3.0; 
+    this.nextBreachTime = 2.0; 
   }
 
   update(delta: number, time: number): void {
@@ -50,31 +51,37 @@ export class WaveSystem implements IGameSystem {
 
   private checkBreaches(delta: number, time: number) {
       if (this.waveTime > this.nextBreachTime) {
-          const deadPanels = PanelRegistry.getAllPanels().filter(p => p.isDestroyed);
+          const allPanels = PanelRegistry.getAllPanels();
+          const deadPanels = allPanels.filter(p => p.isDestroyed);
           
           if (deadPanels.length > 0) {
               const p = deadPanels[Math.floor(Math.random() * deadPanels.length)];
               
-              const intensity = Math.floor(this.waveTime / 20) + 1;
-              const rand = Math.random();
-              let type = EnemyTypes.DRILLER;
-              if (rand > 0.85) type = EnemyTypes.HUNTER;
-              else if (rand > 0.55) type = EnemyTypes.KAMIKAZE;
+              // Calculate Intensity based on time
+              const intensity = Math.min(4, Math.floor(this.waveTime / 15) + 1);
+              
+              console.log(`[WaveSystem] BREACH SPAWN at Panel '${p.id}'. Count: ${intensity}. Coords: ${p.x.toFixed(1)}, ${p.y.toFixed(1)}`);
 
               for(let i=0; i<intensity; i++) {
-                  // FIX: Constrain offset to panel dimensions (with padding)
-                  // width/height are full size, so half is the radius from center
-                  const safeW = (p.width * 0.4); 
-                  const safeH = (p.height * 0.4);
+                  // Random type logic
+                  const rand = Math.random();
+                  let type = EnemyTypes.DRILLER;
+                  if (rand > 0.8) type = EnemyTypes.HUNTER;
+                  else if (rand > 0.6) type = EnemyTypes.KAMIKAZE;
+
+                  // 50% width/height padding from center
+                  const spawnW = p.width * 0.5;
+                  const spawnH = p.height * 0.5;
                   
-                  const offsetX = (Math.random() - 0.5) * 2 * safeW;
-                  const offsetY = (Math.random() - 0.5) * 2 * safeH;
+                  const offsetX = (Math.random() - 0.5) * spawnW;
+                  const offsetY = (Math.random() - 0.5) * spawnH;
                   
                   this.spawner.spawnEnemy(type, p.x + offsetX, p.y + offsetY);
               }
           }
 
-          this.nextBreachTime = this.waveTime + 2.0 + (Math.random() * 2.0);
+          // Schedule next breach (Every 3-6 seconds)
+          this.nextBreachTime = this.waveTime + 3.0 + (Math.random() * 3.0);
       }
   }
 

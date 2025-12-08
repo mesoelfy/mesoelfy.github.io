@@ -66,7 +66,8 @@ export class PlayerSystem implements IGameSystem {
   teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload) => {
+      console.log("[PlayerSystem] Enemy Destroyed. Adding Score.", payload);
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
     });
@@ -81,6 +82,11 @@ export class PlayerSystem implements IGameSystem {
 
     for (const e of enemies) {
       if (!e.active) continue;
+      
+      // Skip spawning enemies to prevent spawn-camping
+      const state = e.getComponent<StateComponent>('State');
+      if (state && state.current === 'SPAWN') continue;
+
       const t = e.getComponent<TransformComponent>('Transform');
       if (!t) continue;
       const dx = t.x - cursor.x;
