@@ -20,12 +20,23 @@ export enum GameEvents {
   ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED',
   
   // --- DEBUG ---
-  DEBUG_SPAWN = 'DEBUG_SPAWN', // NEW
+  DEBUG_SPAWN = 'DEBUG_SPAWN',
   
-  // --- VISUAL ---
+  // --- VISUAL (NEW) ---
   TRAUMA_ADDED = 'TRAUMA_ADDED',
-  SCENE_READY = 'SCENE_READY'
+  SCENE_READY = 'SCENE_READY',
+  SPAWN_FX = 'SPAWN_FX' 
 }
+
+export type FXVariant = 
+  | 'EXPLOSION_PURPLE' 
+  | 'EXPLOSION_YELLOW' 
+  | 'EXPLOSION_RED'
+  | 'IMPACT_WHITE'
+  | 'IMPACT_RED'
+  | 'IMPACT_YELLOW'
+  | 'DRILL_SPARKS'
+  | 'HUNTER_RECOIL';
 
 export interface GameEventPayloads {
   [GameEvents.PLAYER_FIRED]: { x: number; y: number };
@@ -45,8 +56,17 @@ export interface GameEventPayloads {
   [GameEvents.UPGRADE_SELECTED]: { option: string };
   [GameEvents.ZEN_MODE_ENABLED]: null;
   
-  [GameEvents.DEBUG_SPAWN]: { type: string; count: number }; // NEW
+  [GameEvents.DEBUG_SPAWN]: { type: string; count: number };
   
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
+
+  // NEW: FX Payload
+  [GameEvents.SPAWN_FX]: { 
+      type: FXVariant; 
+      x: number; 
+      y: number; 
+      angle?: number; // For directional sparks
+      count?: number; 
+  };
 }

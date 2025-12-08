@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { Entity } from '../core/ecs/Entity';
 import { GameStateSystem } from './GameStateSystem';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
@@ -7,19 +7,17 @@ import { IdentityComponent } from '../components/data/IdentityComponent';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { GameEvents, FXVariant } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
 import { CollisionLayers } from '../config/PhysicsConfig';
 
 export class CombatSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
   private registry!: EntityRegistry;
-  private spawner!: IEntitySpawner;
 
   setup(locator: IServiceLocator): void {
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
-    this.spawner = locator.getSpawner();
   }
 
   update(delta: number, time: number): void {}
@@ -48,7 +46,7 @@ export class CombatSystem implements IGameSystem {
       // PLAYER vs ENEMY_PROJECTILE
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
           this.damagePlayer(10);
-          this.destroyProjectile(b, '#FF003C');
+          this.destroyProjectile(b, 'IMPACT_RED');
       }
 
       // ENEMY vs PLAYER_PROJECTILE
@@ -64,15 +62,13 @@ export class CombatSystem implements IGameSystem {
                   this.destroyEnemy(a, true);
               }
           }
-          this.destroyProjectile(b, '#FFFFFF', 0.2);
+          this.destroyProjectile(b, 'IMPACT_WHITE');
       }
 
       // PROJECTILE vs PROJECTILE
       else if (layerA === CollisionLayers.PLAYER_PROJECTILE && layerB === CollisionLayers.ENEMY_PROJECTILE) {
-          this.destroyProjectile(a, '#F7D277');
-          this.destroyProjectile(b, '#F7D277');
-          const t = a.getComponent<TransformComponent>('Transform');
-          if (t) GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: t.x, y: t.y });
+          this.destroyProjectile(a, 'CLASH_YELLOW');
+          this.destroyProjectile(b, 'CLASH_YELLOW'); // Don't spawn double particles, simpler
       }
   }
 
@@ -97,26 +93,19 @@ export class CombatSystem implements IGameSystem {
       this.registry.destroyEntity(entity.id);
       
       if (explode && transform && identity) {
-          // UPDATED: Dynamic Color Selection
-          let color = '#9E4EA5'; // Default Purple
-          if (identity.variant === EnemyTypes.HUNTER) color = '#F7D277'; // Yellow
-          if (identity.variant === EnemyTypes.KAMIKAZE) color = '#FF003C'; // Red
+          let fx: FXVariant = 'EXPLOSION_PURPLE';
+          if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
+          if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
           
-          this.spawnExplosion(transform.x, transform.y, color);
+          GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
       }
   }
 
-  private destroyProjectile(entity: Entity, color: string, life = 0.5) {
+  private destroyProjectile(entity: Entity, fx: FXVariant) {
       this.registry.destroyEntity(entity.id);
       const t = entity.getComponent<TransformComponent>('Transform');
-      if (t) this.spawner.spawnParticle(t.x, t.y, color, 0, 0, life);
-  }
-
-  private spawnExplosion(x: number, y: number, color: string) {
-      for(let i=0; i<8; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 15;
-          this.spawner.spawnParticle(x, y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.8);
+      if (t) {
+          GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: t.x, y: t.y });
       }
   }
 
