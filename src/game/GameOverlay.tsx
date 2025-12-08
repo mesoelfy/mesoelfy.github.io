@@ -10,7 +10,7 @@ import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
 import { ProjectileTrails } from './components/ProjectileTrails'; 
-import { GalleryStage } from './components/GalleryStage'; // NEW
+import { GalleryStage } from './components/GalleryStage';
 import { useStore } from '@/core/store/useStore';
 
 export const GameOverlay = () => {

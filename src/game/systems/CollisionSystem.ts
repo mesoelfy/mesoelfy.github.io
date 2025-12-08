@@ -8,11 +8,11 @@ import { IdentityComponent } from '../components/data/IdentityComponent';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
-import { GameStateSystem } from './GameStateSystem'; // NEW
+import { GameStateSystem } from './GameStateSystem';
 
 export class CollisionSystem implements IGameSystem {
   private entitySystem!: EntitySystem;
-  private gameSystem!: GameStateSystem; // NEW
+  private gameSystem!: GameStateSystem;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
@@ -108,7 +108,6 @@ export class CollisionSystem implements IGameSystem {
   }
 
   private damagePlayer(amount: number) {
-      // FIX: Use GameStateSystem, not Store
       this.gameSystem.damagePlayer(amount);
       GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
   }

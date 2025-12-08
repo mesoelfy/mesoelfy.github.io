@@ -29,7 +29,7 @@ const fragmentShader = `
   void main() {
     vec2 p = vUv - 0.5;
     
-    // FIX: Reduced box size from (0.15, 0.4) to (0.1, 0.3) for a tighter projectile
+    // Adjusted box size for visual tightness
     vec2 boxSize = vec2(0.1, 0.3); 
     
     float d = sdBox(p, boxSize);
@@ -47,7 +47,6 @@ const fragmentShader = `
 export const BulletRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
-  // Reduced geometry plane size slightly to match new visual scale
   const geometry = useMemo(() => new THREE.PlaneGeometry(1.2, 1.2), []); 
   
   const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec  7 14:24:56 CST 2025
+Generated on: Sun Dec  7 17:44:48 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -82,6 +82,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── EffectsLayer.tsx
 │   │   │   ├── EnemyBulletRenderer.tsx
 │   │   │   ├── EnemyRenderer.tsx
+│   │   │   ├── GalleryStage.tsx
 │   │   │   ├── GameDirector.tsx
 │   │   │   ├── GlowRenderer.tsx
 │   │   │   ├── HunterChargeRenderer.tsx
@@ -163,6 +164,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       ├── atoms
 │       │   ├── CustomCursor.tsx
 │       │   ├── GlassPanel.tsx
+│       │   ├── PanelSparks.tsx
 │       │   └── ZenBomb.tsx
 │       ├── molecules
 │       │   ├── HoloCommLog.tsx
@@ -177,7 +179,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-48 directories, 121 files
+48 directories, 123 files
 
 =====================================
 FILE: ./next.config.js
@@ -260,7 +262,7 @@ FILE: ./docs/TODO.md
 ## MISC THOUGHTS
 
 
-- instead of just panel munchers (rename from seeker), what if there is also a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button, or the CONTACT and ABOUT ME buttons? What about an enemy type that enters a modal and does damage inside? Can that be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet? How do we deal with the enemies on the MESOELFY_OS screen if we are inside a modal fighting some enemies? Wouldn't that have weird game logic? I need to brainstorm this with AI.
+- what if there is a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button, or the CONTACT and ABOUT ME buttons? What about an enemy type that enters a modal and does damage inside? Can that be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet? How do we deal with the enemies on the MESOELFY_OS screen if we are inside a modal fighting some enemies? Wouldn't that have weird game logic? I need to brainstorm this with AI.
 - need health for player and lives and powerups. (increase bullet size / rate of fire)
 - need help seeing not obvious stuff that is missing.
 
@@ -268,7 +270,7 @@ FILE: ./docs/TODO.md
 
 - What things does Vampire Survivors do that I should implement? Game design and juice.
 
-- Should I have a high score patron screen where people can enter their name with links to whatever they want?
+- Should I have a high score patron screen where people can enter their name with links to whatever they want? - YES
 
 - Full functionality in the site isn't active immediately. the video slots and social media links could be broken until the first wave of munchers that are already there are dealt with. Maybe a power up that clears and heals the board is dropped?
 
@@ -280,9 +282,9 @@ we can skin the munchers/enemies differently as they get stronger with cool indi
 
 - We need a dramatic visual animation / indication signifying that a panel has reached 0% health like the system restored animation
 
-- When opening modal, our game mouse cursor needs to be visible
 
-- purple regen bar needs to slowly decay when user is not charging it
+
+
 
 sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
 
@@ -305,7 +307,7 @@ What are screenshake best practices?
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
 - 
-- a sound should happen when clicking on an upgrade
+
 
 When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
 
@@ -322,12 +324,11 @@ Music should get distorted, glitchy, and reverbed when Game Over state
 
 
 
-I’ve noticed that when I use the ESC button to skip the intro scene, I still have to click to make the audio active. Also, sometimes using the ESC button makes the driller enemies not render properly. I can see their points doing damage attached to the panels, but can’t see their bodies. I can still see the other two enemy types.
 
 
 screen shake - an individual panel should shake when brought to 0% health
 
-Player icon should be red unfilled tiny triangle after losing health.
+
 
 For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
 
@@ -349,11 +350,16 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
 
-Purple health bar needs to appear in panel header when rebooting
 
-Skipping boot mode / not clicking initialize button, seems to make the driller enemy not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
+
+Somtimes driller enemy does not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
 
 Indicate to player to press ESC or ~ in zen mode
+
+
+
+Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little taller of a panel
+
 
 =====================================
 FILE: ./docs/MESOELFY_OS_AI_INSTRUCTIONS.md
@@ -1072,7 +1078,7 @@ export const IdentityHUD = () => {
     <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
       {/* 1. THE AVATAR (Top) */}
-      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> {/* Added margin bottom to clear badge */}
+      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> 
         
         {/* AVATAR LAYER */}
         <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
@@ -1119,8 +1125,8 @@ export const IdentityHUD = () => {
           />
         </svg>
 
-        {/* Level Badge - MOVED LOWER (bottom: -16px) */}
-        <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-3 py-0.5 text-[10px] font-bold font-mono rounded-full shadow-[0_0_10px_rgba(158,78,165,0.4)] z-20">
+        {/* Level Badge - Pill Style */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
           LVL_{level}
         </div>
       </div>
@@ -1281,6 +1287,7 @@ FILE: ./src/ui/atoms/CustomCursor.tsx
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -1288,14 +1295,18 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen } = useStore();
+  const { introDone, isDebugOpen, bootState } = useStore();
+  
+  const playerHealth = useGameStore(state => state.playerHealth);
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isDead = playerHealth <= 0 || systemIntegrity <= 0;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      // Includes 'label' and 'data-interactive' check for Debug Menu items
+      // Hover triggers on buttons, inputs, links, labels, and specific interactive zones
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
     };
@@ -1314,23 +1325,27 @@ export const CustomCursor = () => {
     };
   }, []);
 
+  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox';
+
   return (
     <>
       <style jsx global>{`
-        /* Force hide system cursor on all interactive elements */
         body, a, button, input, label, select, textarea { cursor: none !important; }
       `}</style>
 
       <motion.div
         className={clsx(
             "fixed top-0 left-0 pointer-events-none z-[10000]",
-            isHovering ? "mix-blend-difference" : "" 
+            (isHovering && !isDead) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {(!introDone || isDebugOpen) && (
+          {/* Show cursor during Intro/Debug/Sandbox. 
+              If DEAD: Custom red cursor logic in future, but for now we hide the SVG if dead 
+              because user requested 3D triangle takes over. */}
+          {isVisible && !isDead && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}
@@ -1361,6 +1376,147 @@ export const CustomCursor = () => {
 
 
 =====================================
+FILE: ./src/ui/atoms/PanelSparks.tsx
+=====================================
+import { useEffect, useRef } from 'react';
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  color: string;
+}
+
+interface PanelSparksProps {
+  intensity?: 'normal' | 'extreme'; 
+}
+
+export const PanelSparks = ({ intensity }: PanelSparksProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Resize handling
+    if (canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+    }
+
+    let particles: Particle[] = [];
+    let animationFrameId: number;
+
+    const COLORS = ['#FF003C', '#CC0020', '#800010', '#FF4466'];
+    
+    // UPDATED: 500 Particles (Catastrophic Failure)
+    const PARTICLE_COUNT = 500; 
+    
+    // 1. INITIAL SPAWN (ONE SHOT)
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const edge = Math.floor(Math.random() * 3); // 0: Top, 1: Left, 2: Right
+        let x = 0, y = 0, vx = 0, vy = 0;
+
+        if (edge === 0) { // Top
+            x = Math.random() * canvas.width;
+            y = 0;
+            vx = (Math.random() - 0.5) * 8;
+            vy = (Math.random() * 5) + 2; // Down
+        } else if (edge === 1) { // Left
+            x = 0;
+            y = Math.random() * (canvas.height * 0.5); 
+            vx = (Math.random() * 5) + 2; // Right
+            vy = (Math.random() * 5) - 2;
+        } else { // Right
+            x = canvas.width;
+            y = Math.random() * (canvas.height * 0.5);
+            vx = -((Math.random() * 5) + 2); // Left
+            vy = (Math.random() * 5) - 2;
+        }
+
+        particles.push({
+            x, y, vx, vy,
+            life: 1.0,
+            maxLife: 1.0,
+            size: Math.random() * 3 + 1,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)]
+        });
+    }
+
+    // 2. ANIMATION LOOP
+    const loop = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      let activeParticles = false;
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        
+        // Physics
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15; // Gravity
+        
+        // Floor Bounce
+        if (p.y > canvas.height) {
+          p.y = canvas.height;
+          p.vy *= -0.5; 
+          p.vx *= 0.7;  
+        }
+        
+        // Wall Bounce
+        if (p.x < 0 || p.x > canvas.width) {
+          p.vx *= -0.6;
+          p.x = Math.max(0, Math.min(canvas.width, p.x));
+        }
+
+        // Slow Decay
+        p.life -= 0.005; 
+
+        // Render
+        if (p.life > 0) {
+            activeParticles = true;
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life; 
+            ctx.beginPath();
+            ctx.rect(p.x, p.y, p.size, p.size);
+            ctx.fill();
+        } else {
+            particles.splice(i, 1);
+        }
+      }
+      
+      if (activeParticles) {
+          animationFrameId = requestAnimationFrame(loop);
+      } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    loop();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [intensity]);
+
+  return (
+    <canvas 
+      ref={canvasRef} 
+      className="absolute inset-0 pointer-events-none z-0 mix-blend-screen"
+    />
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/atoms/GlassPanel.tsx
 =====================================
 import { clsx } from 'clsx';
@@ -1369,6 +1525,7 @@ import { ReactNode, useEffect as useReactEffect, useState as useReactState, useR
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ChevronUp, Skull, Power, Check, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
+import { PanelSparks } from './PanelSparks';
 
 // --- CONSTANTS ---
 const MAX_HEALTH = 1000;
@@ -1446,21 +1603,18 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
   const healthPercent = (health / MAX_HEALTH) * 100;
   const isDamaged = !isDestroyed && healthPercent < 100;
 
-  // --- OPTIMAL ICON STATE LOGIC ---
   const [showOptimal, setShowOptimal] = useReactState(false);
 
   useReactEffect(() => {
     if (health < MAX_HEALTH) {
       setShowOptimal(true);
     }
-    // FIX: Reduced success icon duration from 3000 -> 1500
     if (health >= MAX_HEALTH && showOptimal) {
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
   }, [health, showOptimal]);
 
-  // Determine Colors & Status
   let mainColor = "text-elfy-green";
   let statusText = "SECURE";
   
@@ -1491,27 +1645,17 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
         "bg-elfy-green/5 border-elfy-green-dim/30"
     )}>
         <div className="flex items-center justify-between px-3 py-1.5 h-8">
-            
-            {/* LEFT: Title & Status Text */}
             <div className="flex items-baseline gap-2">
-                <span className={clsx(
-                    "text-sm md:text-base font-header font-bold uppercase tracking-wider drop-shadow-md transition-colors duration-300",
-                    mainColor
-                )}>
+                <span className={clsx("text-sm md:text-base font-header font-bold uppercase tracking-wider drop-shadow-md transition-colors duration-300", mainColor)}>
                     {title}
                 </span>
-                <span className={clsx(
-                    "text-[8px] font-mono tracking-widest opacity-80",
-                    mainColor
-                )}>
+                <span className={clsx("text-[8px] font-mono tracking-widest opacity-80", mainColor)}>
                     [{statusText}]
                 </span>
             </div>
 
-            {/* RIGHT: The "Action Node" */}
             <div className="w-5 h-5 flex items-center justify-center">
                 <AnimatePresence mode="wait">
-                    
                     {isGameOver ? (
                         <motion.div 
                             key="gameover"
@@ -1521,7 +1665,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                         >
                             <Skull size={16} />
                         </motion.div>
-
                     ) : isDestroyed ? (
                         isInteracting ? (
                             <motion.div 
@@ -1544,7 +1687,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                 <Power size={10} className="text-elfy-purple" />
                             </motion.div>
                         )
-
                     ) : isInteracting && isDamaged ? (
                         <motion.div 
                             key="healing"
@@ -1556,7 +1698,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                 <RefreshCw size={10} className="text-black" />
                             </motion.div>
                         </motion.div>
-
                     ) : isDamaged ? (
                         <motion.div 
                             key="damaged"
@@ -1569,16 +1710,11 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                                     'drop-shadow(0 0 0px rgba(234,231,71,0))'
                                 ]
                             }}
-                            transition={{ 
-                                duration: 1.5,
-                                repeat: Infinity,
-                                ease: "linear"
-                            }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                             className="text-elfy-yellow"
                         >
                             <AlertTriangle size={16} />
                         </motion.div>
-
                     ) : showOptimal ? (
                         <motion.div 
                             key="optimal"
@@ -1590,7 +1726,6 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                             <Check size={10} className="text-black stroke-[3px]" />
                         </motion.div>
                     ) : null}
-
                 </AnimatePresence>
             </div>
         </div>
@@ -1600,6 +1735,8 @@ const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: {
                 <motion.div 
                     className={clsx(
                         "h-full transition-colors duration-200",
+                        // FIX: Added Purple bar for active rebooting
+                        (isDestroyed && isInteracting) ? "bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" :
                         isDestroyed ? "bg-transparent" : 
                         (isInteracting && isDamaged) ? "bg-elfy-cyan" :
                         isDamaged ? "bg-elfy-yellow" : 
@@ -1776,7 +1913,11 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
 
       <div className="relative z-10 p-4 h-full">
-        <div className={clsx("h-full flex flex-col", isGameOver ? "invisible" : "visible")}>
+        {(isDestroyed || isGameOver) && (
+            <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+        )}
+
+        <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
             {isDestroyed && (
                 <BreachOverlay 
@@ -1792,7 +1933,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         </AnimatePresence>
         
         {isGameOver && (
-            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-black pointer-events-none">
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
                 <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
                 <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
@@ -2489,6 +2630,7 @@ FILE: ./src/core/store/useStore.ts
 import { create } from 'zustand';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useGameStore } from '@/game/store/useGameStore';
+import { EnemyTypes } from '@/game/config/Identifiers';
 
 // --- TYPES ---
 interface AudioSettings {
@@ -2499,7 +2641,7 @@ interface AudioSettings {
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
 type BootState = 'standby' | 'active' | 'sandbox';
-type SandboxView = 'arena' | 'gallery'; // NEW
+type SandboxView = 'arena' | 'gallery';
 
 interface DebugFlags {
   godMode: boolean;
@@ -2518,6 +2660,8 @@ interface AppState {
   
   // Sandbox State
   sandboxView: SandboxView;
+  galleryTarget: string; // NEW: Which enemy to show
+  galleryAction: 'IDLE' | 'ATTACK'; // NEW: Animation state
   
   // Audio
   audioSettings: AudioSettings;
@@ -2531,16 +2675,18 @@ interface AppState {
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   setSandboxView: (view: SandboxView) => void;
+  setGalleryTarget: (target: string) => void; // NEW
+  toggleGalleryAction: () => void; // NEW
+  
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   setHovered: (item: string | null) => void;
-  resetApplication: () => void; // NEW
+  resetApplication: () => void;
   
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
   
-  // Debug Actions
   toggleDebugMenu: () => void;
   toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
@@ -2552,7 +2698,10 @@ export const useStore = create<AppState>((set, get) => ({
   introDone: false,
   activeModal: 'none',
   hoveredItem: null,
+  
   sandboxView: 'arena',
+  galleryTarget: EnemyTypes.DRILLER,
+  galleryAction: 'IDLE',
   
   audioSettings: {
     master: true,
@@ -2573,6 +2722,8 @@ export const useStore = create<AppState>((set, get) => ({
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
   setSandboxView: (view) => set({ sandboxView: view }),
+  setGalleryTarget: (target) => set({ galleryTarget: target }),
+  toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
   
   openModal: (modal) => {
       if (get().audioSettings.master && get().audioSettings.sfx) {
@@ -2590,23 +2741,20 @@ export const useStore = create<AppState>((set, get) => ({
   
   setHovered: (item) => set({ hoveredItem: item }),
   
-  // Full Reset Logic
   resetApplication: () => {
-      // 1. Reset Game Store Logic
       useGameStore.getState().stopGame();
       useGameStore.getState().resetGame(); 
       
-      // 2. Reset App State
       set({
           bootState: 'standby',
           introDone: false,
           activeModal: 'none',
           isDebugOpen: false,
           isDebugMinimized: false,
-          sandboxView: 'arena'
+          sandboxView: 'arena',
+          galleryTarget: EnemyTypes.DRILLER,
+          galleryAction: 'IDLE'
       });
-      
-      // 3. Reset Audio if needed (optional)
   },
   
   toggleMaster: () => {
@@ -2747,7 +2895,7 @@ import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
-import { SimulationHUD } from '@/features/sandbox/SimulationHUD'; // NEW
+import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -2760,6 +2908,7 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
+  // "showScene" is used for the Intro transition trigger
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
@@ -2782,6 +2931,9 @@ export default function Home() {
 
   const playHover = () => AudioSystem.playHover();
 
+  // FIX: Grid should be visible if explicitly shown OR if we are past the standby phase
+  const isGridVisible = showScene || bootState !== 'standby';
+
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
@@ -2791,11 +2943,11 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        <SceneCanvas className={clsx("blur-0", showScene ? "opacity-100" : "opacity-0")} />
+        {/* BACKGROUND SCENE */}
+        <SceneCanvas className={clsx("blur-0", isGridVisible ? "opacity-100" : "opacity-0")} />
 
         {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
 
-        {/* SANDBOX UI LAYER */}
         {isSandbox && <SimulationHUD />}
 
         {!isSandbox && (
@@ -3588,13 +3740,12 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { Registry } from '@/game/core/ecs/EntityRegistry';
 import { EnemyTypes } from '@/game/config/Identifiers';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw } from 'lucide-react';
+import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export const SimulationHUD = () => {
-  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
-  const { resetGame } = useGameStore();
-
+  const { debugFlags, setDebugFlag, sandboxView, setSandboxView, galleryTarget, setGalleryTarget, galleryAction, toggleGalleryAction } = useStore();
+  
   const spawnEnemy = (type: string) => {
       GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
   };
@@ -3613,18 +3764,20 @@ export const SimulationHUD = () => {
             <span className="font-header font-black tracking-widest text-lg">HOLO_DECK // SIMULATION</span>
         </div>
         
-        {/* TIME CONTROL */}
-        <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
-            <Clock size={16} className="text-elfy-cyan" />
-            <input 
-                type="range" 
-                min="0.0" max="2.0" step="0.1"
-                value={debugFlags.timeScale}
-                onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
-                className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
-            />
-            <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
-        </div>
+        {/* TIME CONTROL (Arena Only) */}
+        {sandboxView === 'arena' && (
+            <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
+                <Clock size={16} className="text-elfy-cyan" />
+                <input 
+                    type="range" 
+                    min="0.0" max="2.0" step="0.1"
+                    value={debugFlags.timeScale}
+                    onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
+                    className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
+                />
+                <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
+            </div>
+        )}
       </div>
 
       {/* LEFT: VIEW TOGGLES */}
@@ -3682,16 +3835,47 @@ export const SimulationHUD = () => {
           </div>
       )}
 
-      {/* CENTER: GALLERY CONTROLS (Placeholder for now) */}
+      {/* CENTER: GALLERY CONTROLS */}
       {sandboxView === 'gallery' && (
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto">
-              <div className="bg-black/80 border border-elfy-cyan/50 px-6 py-4 flex items-center gap-6 backdrop-blur-md">
-                  <div className="text-elfy-cyan text-xs font-mono opacity-70 text-center">
-                      GALLERY_MODE // DRAG TO ROTATE
-                  </div>
-                  <button className="p-2 border border-elfy-cyan text-elfy-cyan hover:bg-elfy-cyan hover:text-black rounded-full">
-                      <RotateCw size={20} />
+              
+              {/* TARGET SELECTOR */}
+              <div className="flex bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
+                  {Object.values(EnemyTypes).map(type => (
+                      <button 
+                        key={type}
+                        onClick={() => setGalleryTarget(type)}
+                        className={clsx(
+                            "px-4 py-2 text-xs font-bold uppercase transition-colors",
+                            galleryTarget === type 
+                                ? "bg-elfy-cyan text-black" 
+                                : "text-elfy-cyan hover:bg-elfy-cyan/10"
+                        )}
+                      >
+                          {type}
+                      </button>
+                  ))}
+              </div>
+
+              {/* ACTION TOGGLE */}
+              <div className="bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
+                  <button 
+                    onClick={toggleGalleryAction}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 text-xs font-bold transition-colors",
+                        galleryAction === 'ATTACK' 
+                            ? "bg-elfy-red text-black" 
+                            : "text-elfy-cyan hover:bg-elfy-cyan/10"
+                    )}
+                  >
+                      {galleryAction === 'ATTACK' ? <Play size={14} /> : <Pause size={14} />}
+                      {galleryAction === 'ATTACK' ? "ATTACK_MODE" : "IDLE_MODE"}
                   </button>
+              </div>
+
+              <div className="bg-black/80 border border-elfy-cyan/50 px-4 py-2 flex items-center gap-3 backdrop-blur-md text-elfy-cyan">
+                  <RotateCw size={16} />
+                  <span className="text-[10px] font-mono opacity-70">DRAG TO ROTATE // SCROLL TO ZOOM</span>
               </div>
           </div>
       )}
@@ -3807,7 +3991,8 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { Registry } from '@/game/core/ecs/EntityRegistry'; 
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, LogOut, Eraser, Bug, Clock, AlertTriangle } from 'lucide-react';
+import { PanelRegistry } from '@/game/systems/PanelRegistrySystem'; 
+import { Terminal, Shield, Skull, Crosshair, Play, RefreshCw, X, Box, Activity, Zap, Cpu, Database, MinusSquare, LayoutTemplate, Square, Crown, Bug, Eraser, Clock, Trash2, Sparkles, Ghost } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -3831,27 +4016,19 @@ export const DebugOverlay = () => {
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  // Derived State
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
-  // KEY LISTENER
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESCAPE: Standard Toggle (Context Aware)
       if (e.key === 'Escape') {
         if (isDebugMinimized) {
             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
             toggleDebugMenu();
         }
-      }
-      
-      // TILDE (~): GOD MODE ACTIVATION
-      else if (e.key === '`' || e.key === '~') {
+      } else if (e.key === '`' || e.key === '~') {
         if (!isDebugOpen && !isDebugMinimized) {
-            // If closed -> Open AND Enable God Suite
             toggleDebugMenu();
-            // Only enable if not already fully enabled
             if (!useStore.getState().debugFlags.godMode) {
                 setDebugFlag('godMode', true);
                 setDebugFlag('panelGodMode', true);
@@ -3917,15 +4094,46 @@ export const DebugOverlay = () => {
   };
 
   const handleForceCrash = () => {
+    if (bootState === 'standby') {
+        setIntroDone(true);
+        setBootState('active');
+    }
+    
+    // 1. Update Game Store (Score/State)
     useGameStore.setState({ systemIntegrity: 0 });
+    
+    // 2. Update Registry Logic (Destroy all Panels instantly)
+    PanelRegistry.destroyAll();
+
+    // 3. Emit Event
+    GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
     stopGame();
-    toggleDebugMenu();
+    
+    if (isDebugOpen) toggleDebugMenu();
   };
 
   const handleReboot = () => {
-    useGameStore.setState({ systemIntegrity: 100, playerHealth: 100 });
-    healPlayer(1000);
-    toggleDebugMenu();
+    useGameStore.setState({ playerHealth: 100, playerRebootProgress: 0 });
+    const panels = PanelRegistry.getAllPanels();
+    panels.forEach(p => {
+        PanelRegistry.healPanel(p.id, 1000); 
+    });
+    if (isDebugOpen) toggleDebugMenu();
+  };
+
+  const handleZenModeWrapper = () => {
+      if (bootState === 'standby') {
+          setIntroDone(true);
+          setBootState('active');
+      }
+      activateZenMode();
+      if (isDebugOpen) toggleDebugMenu();
+  };
+
+  const handleSystemFormat = () => {
+      resetApplication();
+      // FIX: Do NOT toggleDebugMenu here. resetApplication() resets the store state,
+      // setting isDebugOpen: false. Toggling it again would re-open it.
   };
 
   const toggleGodSuite = () => {
@@ -3957,34 +4165,20 @@ export const DebugOverlay = () => {
 
   if (!isDebugOpen && !isDebugMinimized) return null;
 
-  // --- SPECIAL MODE: PAUSE MENU (If in Sandbox) ---
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono">
             <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
                 <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
-                
                 <div className="flex flex-col gap-4">
-                    <button 
-                        onClick={toggleDebugMenu}
-                        className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors"
-                    >
-                        RESUME
-                    </button>
-                    
-                    <button 
-                        onClick={exitSimulation}
-                        className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors"
-                    >
-                        EXIT_TO_BOOT
-                    </button>
+                    <button onClick={toggleDebugMenu} className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
+                    <button onClick={exitSimulation} className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
                 </div>
             </div>
         </div>
       );
   }
 
-  // --- MINI MODE ---
   if (isDebugMinimized) {
       return (
         <div className="fixed top-24 left-4 z-[9999] flex flex-col gap-2 font-mono text-[10px]">
@@ -4003,7 +4197,6 @@ export const DebugOverlay = () => {
       );
   }
 
-  // --- FULL MENU ---
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
       
@@ -4024,7 +4217,6 @@ export const DebugOverlay = () => {
         {/* BODY */}
         <div className="flex flex-1 min-h-0">
           
-          {/* SIDEBAR */}
           <div className="w-48 border-r border-elfy-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
               <button
@@ -4041,36 +4233,51 @@ export const DebugOverlay = () => {
             ))}
           </div>
 
-          {/* CONTENT */}
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
             
             {activeTab === 'OVERRIDES' && (
               <div className="space-y-6">
                 
-                {/* SCENE JUMP */}
+                {/* SCENE CONTROL */}
                 <div className="space-y-3">
-                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_JUMP</h3>
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-elfy-green/50 hover:bg-elfy-green hover:text-black transition-all text-xs font-bold">
                       <Play size={14} /> SKIP_BOOT
                     </button>
+                    
+                    <button 
+                      onClick={handleZenModeWrapper} 
+                      className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"
+                    >
+                      <div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" />
+                      <div className="relative z-10 flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 font-bold tracking-widest text-xs group-hover:text-white transition-colors">
+                          <Sparkles size={14} className="text-yellow-300" /> ZEN_MODE
+                      </div>
+                    </button>
+                    <button onClick={handleSystemFormat} className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold">
+                      <Trash2 size={14} /> SYSTEM_FORMAT
+                    </button>
+                  </div>
+                </div>
+
+                {/* STATE OVERRIDES */}
+                <div className="space-y-3">
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
+                  <div className="grid grid-cols-2 gap-3">
                     <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black transition-all text-xs font-bold">
                       <Skull size={14} /> FORCE_CRASH
                     </button>
                     <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-elfy-purple/50 text-elfy-purple hover:bg-elfy-purple hover:text-black transition-all text-xs font-bold">
                       <RefreshCw size={14} /> REBOOT_CORE
                     </button>
-                    <button onClick={() => { activateZenMode(); toggleDebugMenu(); }} className="flex items-center justify-center gap-2 p-3 border border-elfy-yellow/50 text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all text-xs font-bold">
-                      <Zap size={14} /> ZEN_MODE
-                    </button>
                   </div>
                 </div>
 
-                {/* GOD TOGGLES */}
+                {/* CHEATS */}
                 <div className="space-y-3">
-                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_TOGGLES</h3>
+                  <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
                   
-                  {/* FIX: Smart Toggle Button */}
                   <button 
                     onClick={toggleGodSuite}
                     className={clsx(
@@ -4081,14 +4288,14 @@ export const DebugOverlay = () => {
                     )}
                   >
                     <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
-                    {areAllGodModesOn ? "DISABLE_GOD_SUITE" : "ENABLE_GOD_SUITE"}
+                    {areAllGodModesOn ? "DISABLE_ALL" : "ENABLE_MAX_POWER"}
                   </button>
 
                   <label 
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
                   >
-                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> GHOST_MODE (Player Invincible)</span>
+                    <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
                     <input 
                       type="checkbox" 
                       checked={debugFlags.godMode} 
@@ -4101,7 +4308,7 @@ export const DebugOverlay = () => {
                     data-interactive="true"
                     className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
                   >
-                    <span className="text-xs font-bold flex items-center gap-2"><Square size={14} /> FORTRESS_MODE (Panels Invincible)</span>
+                    <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
                     <input 
                       type="checkbox" 
                       checked={debugFlags.panelGodMode} 
@@ -4127,6 +4334,7 @@ export const DebugOverlay = () => {
               </div>
             )}
 
+            {/* (SANDBOX, STATS, CONSOLE tabs remain unchanged) */}
             {activeTab === 'SANDBOX' && (
               <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
                   <Box size={64} className="text-elfy-green animate-pulse" />
@@ -4173,7 +4381,6 @@ export const DebugOverlay = () => {
                   </div>
                 </div>
                 
-                {/* RESTORED: MINI MODE BUTTON */}
                 <div className="mt-8 flex justify-center">
                     <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-elfy-green hover:text-white transition-colors border border-elfy-green/50 px-4 py-2 hover:bg-elfy-green/10">
                         <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
@@ -4955,14 +5162,21 @@ import { HunterChargeRenderer } from './components/HunterChargeRenderer';
 import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
 import { ProjectileTrails } from './components/ProjectileTrails'; 
-// Removed GlowRenderer
+import { GalleryStage } from './components/GalleryStage'; // NEW
+import { useStore } from '@/core/store/useStore';
 
 export const GameOverlay = () => {
+  const { bootState, sandboxView } = useStore();
+  
+  // LOGIC: If in Sandbox AND Gallery Mode -> Show Gallery Stage
+  // Otherwise -> Show Standard Game Engine
+  const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
+
   return (
     <div className="fixed inset-0 z-[60] w-full h-full pointer-events-none overflow-hidden">
       <Canvas
-        orthographic
-        camera={{ zoom: 40, position: [0, 0, 100] }}
+        orthographic={!isGallery} // Perspective cam for Gallery, Ortho for Game
+        camera={isGallery ? { position: [5, 5, 10], fov: 45 } : { zoom: 40, position: [0, 0, 100] }}
         gl={{ 
           alpha: true, 
           antialias: true,
@@ -4972,17 +5186,21 @@ export const GameOverlay = () => {
         eventSource={typeof document !== 'undefined' ? document.body : undefined}
         eventPrefix="client"
       >
-        <GameDirector />
-        <ScreenShaker />
-
-        <ProjectileTrails />
-
-        <PlayerAvatar />
-        <BulletRenderer />
-        <HunterChargeRenderer /> 
-        <EnemyBulletRenderer />
-        <EnemyRenderer />
-        <ParticleRenderer /> 
+        {isGallery ? (
+            <GalleryStage />
+        ) : (
+            <>
+                <GameDirector />
+                <ScreenShaker />
+                <ProjectileTrails />
+                <PlayerAvatar />
+                <BulletRenderer />
+                <HunterChargeRenderer /> 
+                <EnemyBulletRenderer />
+                <EnemyRenderer />
+                <ParticleRenderer /> 
+            </>
+        )}
       </Canvas>
     </div>
   );
@@ -5680,13 +5898,14 @@ export const domRectToWorldRect = (rect: { x: number, y: number, width: number, 
 =====================================
 FILE: ./src/game/components/PlayerAvatar.tsx
 =====================================
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { InteractionSystem, RepairState } from '../systems/InteractionSystem'; 
+import { EntitySystem } from '../systems/EntitySystem';
 import * as THREE from 'three';
 
 export const PlayerAvatar = () => {
@@ -5696,18 +5915,21 @@ export const PlayerAvatar = () => {
   const glowRef = useRef<THREE.Sprite>(null);
   const { viewport } = useThree();
   
-  const { introDone } = useStore(); // Access Intro State
+  const { introDone } = useStore(); 
 
   const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
   const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
   const colorReboot = new THREE.Color('#9E4EA5'); 
-  const colorDead = new THREE.Color('#78F654'); 
+  const colorDead = new THREE.Color('#FF003C'); 
 
   const isDead = useGameStore(state => state.playerHealth <= 0);
-  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
-  const deadGeo = new THREE.RingGeometry(0.15, 0.2, 3);
+  const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
   
-  // Animation State for Fade-In
+  // GEOMETRIES
+  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+  // Reverted: Use Circle with 3 segments for Triangle, size 0.12
+  const deadGeo = new THREE.CircleGeometry(0.12, 3); 
+  
   const animScale = useRef(0);
 
   useFrame((state, delta) => {
@@ -5717,8 +5939,6 @@ export const PlayerAvatar = () => {
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
-    // Apply Global Scale (Entrance Animation)
-    // If intro is not done, we hide it.
     if (animScale.current < 0.01) {
         groupRef.current.visible = false;
         return;
@@ -5735,41 +5955,57 @@ export const PlayerAvatar = () => {
 
     // 2. State
     let repairState: RepairState = 'IDLE';
+    let entitySys: EntitySystem | null = null;
     try {
-        const sys = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem');
-        repairState = sys.repairState;
+        repairState = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem').repairState;
+        entitySys = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
     } catch {}
     
-    const isRepairing = repairState !== 'IDLE';
     let targetColor = colorTurret;
     if (repairState === 'HEALING') targetColor = colorRepair; 
     if (repairState === 'REBOOTING') targetColor = colorReboot; 
 
     // 3. Visuals
     if (ringRef.current && coreRef.current && glowRef.current) {
-        // Base Scale (multiplied by animScale)
         let currentBaseScale = 1.0;
 
-        if (isDead) {
+        if (isDead || isGameOver) {
+            // DEAD STATE: Red Triangle
             ringRef.current.visible = false;
-            glowRef.current.visible = isRepairing;
-            glowRef.current.material.color.set(colorReboot);
+            glowRef.current.visible = false;
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.set(isRepairing ? colorReboot : colorDead);
+            coreRef.current.material.color.set(colorDead);
+            coreRef.current.material.wireframe = true; 
             
-            if (isRepairing) {
-               coreRef.current.rotation.z -= 0.5; 
-               currentBaseScale = 1.5 + Math.sin(state.clock.elapsedTime * 30) * 0.2;
+            // ANIMATION LOGIC
+            const isRebooting = repairState === 'REBOOTING';
+            
+            if (isRebooting) {
+                // Fast Counter-Clockwise Spin
+                coreRef.current.rotation.z -= delta * 10.0;
+                
+                // Particle Spray
+                if (entitySys && Math.random() > 0.5) { // 30fps emission rate
+                    const pColor = Math.random() > 0.5 ? '#FF003C' : '#F7D277';
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 3;
+                    
+                    entitySys.spawnParticle(x, y, pColor, 1, speed, 0.4);
+                }
             } else {
-               coreRef.current.rotation.z = Math.PI; 
+                // Slow Clockwise Idle Spin
+                coreRef.current.rotation.z += delta * 1.5; 
             }
+            
         } else {
+            // ALIVE STATE
             ringRef.current.visible = true;
             glowRef.current.visible = true;
             coreRef.current.geometry = aliveGeo;
+            coreRef.current.material.wireframe = false;
             
-            if (isRepairing) {
+            if (repairState !== 'IDLE') {
                 ringRef.current.rotation.z += 0.4; 
                 ringRef.current.material.color.lerp(targetColor, 0.4);
                 coreRef.current.material.color.lerp(targetColor, 0.4);
@@ -5785,16 +6021,7 @@ export const PlayerAvatar = () => {
             }
         }
         
-        // Apply Final Scale (Entrance * State)
-        const finalScale = animScale.current * currentBaseScale;
-        
-        // Apply to sub-meshes individually or group? Group is easier for entrance.
-        // But we have logic that sets scale on sub-meshes. Let's apply to group.
         groupRef.current.scale.setScalar(animScale.current);
-        
-        // The sub-logic above set scalar on coreRef, we should respect that relative to group.
-        // Actually, previous logic set scale on coreRef/ringRef directly.
-        // Let's modify the previous logic to set local scale, while group handles global entrance.
         coreRef.current.scale.setScalar(currentBaseScale);
         ringRef.current.scale.setScalar(currentBaseScale); 
     }
@@ -6246,6 +6473,362 @@ export const HunterChargeRenderer = () => {
     <instancedMesh ref={meshRef} args={[geometry, undefined, MAX_CHARGES]}>
       <primitive object={shaderMaterial} attach="material" />
     </instancedMesh>
+  );
+};
+
+
+=====================================
+FILE: ./src/game/components/GalleryStage.tsx
+=====================================
+import { useMemo, useRef, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Grid } from '@react-three/drei';
+import * as THREE from 'three';
+import { useStore } from '@/core/store/useStore';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { GAME_THEME } from '@/game/theme';
+import { addBarycentricCoordinates, createHunterSpear } from '@/game/utils/GeometryUtils';
+
+// --- SHADERS (Enemy Body - Wireframe Glow) ---
+const bodyVertexShader = `
+  attribute vec3 barycentric;
+  varying vec3 vBarycentric;
+  void main() {
+    vBarycentric = barycentric;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const bodyFragmentShader = `
+  uniform vec3 uColor;
+  uniform float uGlow;
+  varying vec3 vBarycentric;
+  
+  float edgeFactor(vec3 bary, float width) {
+    vec3 d = fwidth(bary);
+    vec3 a3 = smoothstep(vec3(0.0), d * width, bary);
+    return min(min(a3.x, a3.y), a3.z);
+  }
+
+  void main() {
+    float width = 1.5; 
+    float edge = edgeFactor(vBarycentric, width);
+    float glow = 1.0 - edge;
+    glow = pow(glow, 0.4) + uGlow; 
+    
+    vec3 coreColor = uColor;
+    vec3 edgeColor = vec3(1.0); // Always white edges
+    vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
+    
+    // Add inner glow
+    finalColor += coreColor * uGlow * 0.5;
+
+    gl_FragColor = vec4(finalColor, 1.0);
+  }
+`;
+
+// --- SHADERS (Projectile/VFX - Billboard Glow) ---
+const vfxVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const vfxFragmentShader = `
+  varying vec2 vUv;
+  uniform vec3 uColor;
+  
+  void main() {
+    float dist = distance(vUv, vec2(0.5));
+    // Soft glow ball
+    float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+    alpha = pow(alpha, 2.0);
+    
+    // Bright core
+    float core = 1.0 - smoothstep(0.0, 0.15, dist);
+    
+    vec3 color = mix(uColor, vec3(1.0), core);
+    
+    if (alpha < 0.05) discard;
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+// --- LOCAL VFX COMPONENT ---
+const GalleryVFX = ({ type, isAttacking }: { type: string, isAttacking: boolean }) => {
+  const particlesRef = useRef<THREE.InstancedMesh>(null);
+  const projectileRef = useRef<THREE.Mesh>(null);
+  const orbRef = useRef<THREE.Mesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const { camera } = useThree();
+
+  const projectileMat = useMemo(() => new THREE.ShaderMaterial({
+      vertexShader: vfxVertexShader,
+      fragmentShader: vfxFragmentShader,
+      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.bullet.hunter) } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+  }), []);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    
+    // Billboard Logic: Make VFX face camera
+    if (orbRef.current) orbRef.current.lookAt(camera.position);
+    if (projectileRef.current) projectileRef.current.lookAt(camera.position);
+
+    // --- PARTICLE SYSTEM ---
+    if (particlesRef.current) {
+        let count = 0;
+        
+        if (type === EnemyTypes.DRILLER && isAttacking) {
+            // DRILLER SPARKS (From Tip Down)
+            for(let i=0; i<8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 0.8;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                const speed = (time * 10 + i) % 1.0;
+                
+                // Tip is at Y=2.0 (approx)
+                dummy.position.set(x, 2.0 - (speed * 2.0), z);
+                dummy.scale.setScalar(0.2 * (1.0 - speed));
+                dummy.rotation.set(Math.random(), Math.random(), Math.random());
+                dummy.updateMatrix();
+                particlesRef.current.setMatrixAt(i, dummy.matrix);
+                count++;
+            }
+        } 
+        else if (type === EnemyTypes.KAMIKAZE && isAttacking) {
+            // EXPLOSION (Pulse)
+            const cycle = time % 2.0; 
+            if (cycle > 1.5) { // Boom phase
+                const progress = (cycle - 1.5) * 2.0; // 0..1
+                const expansion = progress * 6.0;
+                
+                for(let i=0; i<30; i++) {
+                    const angle = (i / 30) * Math.PI * 2 + (Math.random() * 0.5);
+                    const yDir = (Math.random() - 0.5) * 2.0;
+                    
+                    dummy.position.set(
+                        Math.cos(angle) * expansion, 
+                        yDir * expansion, 
+                        Math.sin(angle) * expansion
+                    );
+                    dummy.scale.setScalar(0.5 * (1.0 - progress));
+                    dummy.updateMatrix();
+                    particlesRef.current.setMatrixAt(i, dummy.matrix);
+                    count++;
+                }
+            }
+        }
+        
+        particlesRef.current.count = count;
+        particlesRef.current.instanceMatrix.needsUpdate = true;
+    }
+
+    // --- HUNTER PROJECTILES ---
+    if (type === EnemyTypes.HUNTER) {
+        // Timeline: 2s Cycle. 0-1s Charge, 1-1.2s Fire, 1.2-2s Cooldown
+        const cycle = time % 2.0; 
+        
+        // CHARGE ORB (Tip at Y=1.5 approx)
+        if (orbRef.current) {
+            if (isAttacking && cycle < 1.0) {
+                const scale = cycle * 1.5; // Grow
+                orbRef.current.visible = true;
+                orbRef.current.scale.setScalar(scale);
+                orbRef.current.position.set(0, 1.8, 0); // At tip
+            } else {
+                orbRef.current.visible = false;
+            }
+        }
+
+        // BULLET (Fires Upward Y+)
+        if (projectileRef.current) {
+            if (isAttacking && cycle > 1.0 && cycle < 1.5) {
+                projectileRef.current.visible = true;
+                const travel = (cycle - 1.0) * 15.0; // Fast
+                projectileRef.current.position.set(0, 1.8 + travel, 0);
+                projectileRef.current.scale.set(1.5, 1.5, 1.5);
+            } else {
+                projectileRef.current.visible = false;
+            }
+        }
+    }
+  });
+
+  return (
+    <>
+      <instancedMesh ref={particlesRef} args={[new THREE.PlaneGeometry(0.5, 0.5), undefined, 50]}>
+        <meshBasicMaterial color="#FFF" transparent opacity={0.8} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+      </instancedMesh>
+      
+      {type === EnemyTypes.HUNTER && (
+          <>
+            <mesh ref={orbRef}>
+                <planeGeometry args={[1.5, 1.5]} />
+                <primitive object={projectileMat} attach="material" />
+            </mesh>
+            <mesh ref={projectileRef}>
+                <planeGeometry args={[1.0, 2.0]} />
+                <primitive object={projectileMat} attach="material" />
+            </mesh>
+          </>
+      )}
+    </>
+  );
+};
+
+export const GalleryStage = () => {
+  const { galleryTarget, galleryAction } = useStore();
+  const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
+
+  // --- GEOMETRY ---
+  const drillerGeo = useMemo(() => addBarycentricCoordinates(new THREE.ConeGeometry(1.5, 4.0, 4)), []);
+  const kamikazeGeo = useMemo(() => addBarycentricCoordinates(new THREE.IcosahedronGeometry(2.5, 1)), []); // Detail 1 for better wireframe
+  const hunterGeo = useMemo(() => createHunterSpear().scale(2, 2, 2), []); 
+
+  // --- SHADER MAT ---
+  const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader: bodyVertexShader,
+    fragmentShader: bodyFragmentShader,
+    uniforms: {
+        uColor: { value: new THREE.Color('#FFFFFF') }, // Default white to ensure visibility if prop fails
+        uGlow: { value: 0.0 }
+    },
+    side: THREE.DoubleSide,
+    extensions: { derivatives: true },
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false, // Helps with "Hologram" feel
+  }), []);
+
+  useFrame((state, delta) => {
+    if (!meshRef.current || !materialRef.current) return;
+
+    const time = state.clock.elapsedTime;
+    const isAttack = galleryAction === 'ATTACK';
+
+    // 1. BEHAVIOR ANIMATIONS
+    if (galleryTarget === EnemyTypes.DRILLER) {
+        // Idle: Slow Float | Attack: Fast Spin + Shake
+        const speed = isAttack ? 20.0 : 1.0;
+        meshRef.current.rotation.y += speed * delta;
+        
+        if (isAttack) {
+            meshRef.current.position.x = (Math.random() - 0.5) * 0.1;
+            meshRef.current.position.z = (Math.random() - 0.5) * 0.1;
+        } else {
+            meshRef.current.position.set(0, 0, 0);
+            // Bobbing
+            meshRef.current.position.y = Math.sin(time) * 0.2;
+        }
+    } 
+    else if (galleryTarget === EnemyTypes.KAMIKAZE) {
+        // Idle: Tumble | Attack: Violent Shake + Expansion Pulse
+        const tumbleSpeed = isAttack ? 5.0 : 0.5;
+        meshRef.current.rotation.x += tumbleSpeed * delta;
+        meshRef.current.rotation.z += tumbleSpeed * delta;
+
+        if (isAttack) {
+            const cycle = time % 2.0; // 2s cycle
+            // Shake (0 - 1.5s)
+            if (cycle < 1.5) {
+                const shake = (cycle / 1.5) * 0.5; // Shake gets harder
+                meshRef.current.position.x = (Math.random() - 0.5) * shake;
+                meshRef.current.position.y = (Math.random() - 0.5) * shake;
+                meshRef.current.scale.setScalar(1.0 + (shake * 0.5)); // Swell
+            } 
+            // Boom (1.5 - 2.0s) -> Shrink/Hide
+            else {
+                meshRef.current.scale.setScalar(0.01);
+            }
+        } else {
+            meshRef.current.position.set(0,0,0);
+            meshRef.current.scale.setScalar(1.0);
+        }
+    } 
+    else if (galleryTarget === EnemyTypes.HUNTER) {
+        // Idle: Spin Y | Attack: Face Front, Charge, Recoil
+        if (isAttack) {
+            meshRef.current.rotation.set(0,0,0); // Reset
+            const cycle = time % 2.0;
+            
+            // Recoil Effect at 1.0s (Fire)
+            if (cycle > 1.0 && cycle < 1.3) {
+                meshRef.current.position.y = -1.0; // Kick down (since firing up)
+            } else {
+                meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, delta * 5);
+            }
+        } else {
+            meshRef.current.rotation.y += delta;
+            meshRef.current.position.y = Math.sin(time) * 0.3;
+        }
+    }
+
+    // 2. COLOR UPDATES
+    let baseColor = new THREE.Color();
+    let glow = 0.2;
+
+    if (galleryTarget === EnemyTypes.DRILLER) {
+        baseColor.set(GAME_THEME.enemy.muncher);
+        if (isAttack) glow = 0.8;
+    } 
+    else if (galleryTarget === EnemyTypes.KAMIKAZE) {
+        baseColor.set(GAME_THEME.enemy.kamikaze);
+        if (isAttack) {
+            const flash = Math.sin(time * 30) > 0;
+            if (flash) baseColor.set('#FFFFFF'); // Strobe
+            glow = 1.0;
+        }
+    } 
+    else if (galleryTarget === EnemyTypes.HUNTER) {
+        baseColor.set(GAME_THEME.enemy.hunter);
+        if (isAttack) {
+            // Charge up color
+            const cycle = time % 2.0;
+            if (cycle < 1.0) glow = cycle; 
+        }
+    }
+
+    materialRef.current.uniforms.uColor.value.copy(baseColor);
+    materialRef.current.uniforms.uGlow.value = glow;
+  });
+
+  const activeGeo = useMemo(() => {
+      switch(galleryTarget) {
+          case EnemyTypes.DRILLER: return drillerGeo;
+          case EnemyTypes.KAMIKAZE: return kamikazeGeo;
+          case EnemyTypes.HUNTER: return hunterGeo;
+          default: return drillerGeo;
+      }
+  }, [galleryTarget, drillerGeo, kamikazeGeo, hunterGeo]);
+
+  return (
+    <>
+        <OrbitControls makeDefault minDistance={5} maxDistance={20} />
+        
+        {/* FLOOR GRID */}
+        <Grid 
+            position={[0, -4, 0]} 
+            args={[20, 20]} 
+            sectionColor="#00F0FF" 
+            cellColor="#001a33" 
+            fadeDistance={20}
+        />
+
+        {/* ENEMY MODEL */}
+        <mesh ref={meshRef} geometry={activeGeo} material={shaderMaterial} />
+        
+        {/* VFX LAYER */}
+        <GalleryVFX type={galleryTarget} isAttacking={galleryAction === 'ATTACK'} />
+    </>
   );
 };
 
@@ -7268,7 +7851,7 @@ export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
 export class InteractionSystem implements IGameSystem {
   public repairState: RepairState = 'IDLE';
-  public hoveringPanelId: string | null = null; // Exposed for UI Sync
+  public hoveringPanelId: string | null = null;
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
@@ -7286,23 +7869,29 @@ export class InteractionSystem implements IGameSystem {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
     
-    // STRICT CHECK: If game is over, disable interaction
+    // If Game Over, no interaction allowed.
     if (this.gameSystem.isGameOver) {
         return; 
     }
     
     const cursor = this.locator.getInputService().getCursor();
     
-    // Player Dead logic (Revive Player)
+    // PLAYER DEAD LOGIC
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
+        
+        // NEW: If we are not actively rebooting, decay the progress
+        if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
+            // Decay speed: 15% per second (adjust as needed)
+            this.gameSystem.decayReboot(delta * 15);
+        }
         return; 
     }
 
-    // Panel Repair Logic
+    // NORMAL LOGIC
     this.handlePanelRepair(cursor, time);
     
-    // Decay Logic for destroyed panels
+    // Decay for destroyed panels
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
         const panels = PanelRegistry.getAllPanels();
         for (const p of panels) {
@@ -7326,29 +7915,22 @@ export class InteractionSystem implements IGameSystem {
         cursor.y <= rect.top + padding;
 
     if (isHovering) {
-        this.hoveringPanelId = 'identity'; // Consider self-repair as hovering identity
+        this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(2.5);
+            this.gameSystem.tickReboot(2.5); // Charge Speed
             this.lastRepairTime = time;
             if (Math.random() > 0.3) this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
-        }
-    } else {
-        if (this.gameSystem.playerRebootProgress > 0 && time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(-2.0);
         }
     }
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
     const panels = PanelRegistry.getAllPanels();
-    
     for (const p of panels) {
-      // Logic: Is mouse inside?
       if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
         this.hoveringPanelId = p.id;
         
-        // Only trigger repair/logic if needed
         if (!p.isDestroyed && p.health >= 1000) continue;
 
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
@@ -7463,14 +8045,16 @@ export class PlayerSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (this.gameSystem.isGameOver) return;
+    // 1. DEAD / GAME OVER CHECK
+    // If dead or game over, no input processing or shooting.
+    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // 1. GET PLAYER ENTITY
+    // 2. GET PLAYER ENTITY
     const players = Registry.getByTag(Tag.PLAYER);
     const playerEntity = players[0]; 
     if (!playerEntity) return;
 
-    // 2. SYNC POSITION
+    // 3. SYNC POSITION
     const cursor = this.locator.getInputService().getCursor();
     const transform = playerEntity.getComponent<TransformComponent>('Transform');
     if (transform) {
@@ -7478,26 +8062,22 @@ export class PlayerSystem implements IGameSystem {
         transform.y = cursor.y;
     }
 
-    // 3. UPDATE STATE
+    // 4. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
-        if (this.gameSystem.playerHealth <= 0) {
-            stateComp.current = 'DEAD';
-        } else {
-            try {
-                const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
-                if (interact && interact.repairState !== 'IDLE') {
-                    stateComp.current = 'REBOOTING';
-                } else {
-                    stateComp.current = 'ACTIVE';
-                }
-            } catch {
+        try {
+            const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
+            if (interact && interact.repairState !== 'IDLE') {
+                stateComp.current = 'REBOOTING';
+            } else {
                 stateComp.current = 'ACTIVE';
             }
+        } catch {
+            stateComp.current = 'ACTIVE';
         }
     }
 
-    // 4. COMBAT LOGIC
+    // 5. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
@@ -7509,14 +8089,9 @@ export class PlayerSystem implements IGameSystem {
     }
   }
 
-  teardown(): void {
-  }
+  teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (payload) => {
-       // Death logic is handled by state/HUD. Game Over is mostly unused until we define a true lose condition (like failing reboot)
-    });
-
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
@@ -7921,7 +8496,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useStore } from '@/core/store/useStore'; // Global Store for Debug Flags
+import { useStore } from '@/core/store/useStore';
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -7931,14 +8506,10 @@ interface PanelState {
 }
 
 class PanelRegistrySystemClass implements IGameSystem {
-  // Spatial Data
   private panelRects = new Map<string, WorldRect>();
   private observedElements = new Map<string, HTMLElement>();
-  
-  // Game Logic Data
   private panelStates = new Map<string, PanelState>();
 
-  // Derived Metric
   public systemIntegrity: number = 100;
 
   setup(locator: IServiceLocator): void {
@@ -7950,8 +8521,7 @@ class PanelRegistrySystemClass implements IGameSystem {
     // Passive
   }
 
-  teardown(): void {
-  }
+  teardown(): void {}
 
   public resetLogic() {
     for (const id of this.observedElements.keys()) {
@@ -7963,7 +8533,6 @@ class PanelRegistrySystemClass implements IGameSystem {
   // --- ACTIONS ---
 
   public damagePanel(id: string, amount: number) {
-    // CHECK: Panel God Mode
     if (useStore.getState().debugFlags.panelGodMode) return;
 
     const state = this.panelStates.get(id);
@@ -8002,6 +8571,16 @@ class PanelRegistrySystemClass implements IGameSystem {
      state.health = Math.max(0, state.health - amount);
   }
 
+  // NEW: Forcefully destroy everything for FORCE_CRASH
+  public destroyAll() {
+      for (const [id, state] of this.panelStates) {
+          state.health = 0;
+          state.isDestroyed = true;
+          GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+      }
+      this.calculateIntegrity();
+  }
+
   private calculateIntegrity() {
     let current = 0;
     let max = 0;
@@ -8011,8 +8590,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     }
     this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
   }
-
-  // --- REGISTRY API ---
 
   public register(id: string, element: HTMLElement) {
     this.observedElements.set(id, element);
@@ -8040,8 +8617,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     const ids = Array.from(this.observedElements.keys());
     for (const id of ids) this.refreshSingle(id);
   }
-
-  // --- GETTERS ---
 
   public getPanelRect(id: string): WorldRect | undefined {
     return this.panelRects.get(id);
@@ -8071,7 +8646,7 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useStore } from '@/core/store/useStore'; // Import Global Store
+import { useStore } from '@/core/store/useStore'; 
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -8092,7 +8667,6 @@ export class GameStateSystem implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.reset();
     
-    // Listen for Upgrades
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
@@ -8127,13 +8701,13 @@ export class GameStateSystem implements IGameSystem {
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
 
-    // DEBUG: GHOST MODE CHECK
     const { godMode } = useStore.getState().debugFlags;
     if (godMode) return;
 
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
     } else {
+        // If already dead, damage reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -8165,6 +8739,12 @@ export class GameStateSystem implements IGameSystem {
         this.playerHealth = this.maxPlayerHealth / 2;
         this.playerRebootProgress = 0;
     }
+  }
+
+  // NEW: Decay logic for when player stops charging
+  public decayReboot(amount: number) {
+      if (this.playerHealth > 0) return; 
+      this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
   }
 }
 
@@ -8558,18 +9138,76 @@ FILE: ./src/scene/props/MiniCrystalCanvas.tsx
 
 import { Canvas } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useGameStore } from '@/game/store/useGameStore';
+
+// CONSTANTS
+const COLORS = {
+  SAFE: new THREE.Color("#78F654"),
+  WARN: new THREE.Color("#F7D277"),
+  // UPDATED: Brighter/Hotter Red Values
+  CRIT: new THREE.Color("#FF4D6D"), 
+  EMISSIVE_SAFE: new THREE.Color("#15530A"),
+  EMISSIVE_WARN: new THREE.Color("#5e4b00"),
+  EMISSIVE_CRIT: new THREE.Color("#FF003C"), 
+};
 
 const SpinningGem = () => {
   const meshRef = useRef<THREE.Mesh>(null);
+  const materialRef = useRef<any>(null);
+  
+  // Access global integrity
+  const integrity = useGameStore(state => state.systemIntegrity);
 
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.01;
-      meshRef.current.rotation.z += 0.005;
+  // Internal visual state
+  const currentColor = useRef(COLORS.SAFE.clone());
+  const currentEmissive = useRef(COLORS.EMISSIVE_SAFE.clone());
+
+  useFrame((state, delta) => {
+    if (!meshRef.current || !materialRef.current) return;
+
+    // 1. DETERMINE STATE
+    let targetColor = COLORS.SAFE;
+    let targetEmissive = COLORS.EMISSIVE_SAFE;
+    let speed = 0.01;
+    let distort = 0.3;
+    let shake = 0;
+
+    if (integrity < 30) {
+        targetColor = COLORS.CRIT;
+        targetEmissive = COLORS.EMISSIVE_CRIT;
+        speed = 0.08;  // Fast panic spin
+        distort = 0.8; // Heavy glitch
+        shake = 0.1;   // Vibration
+    } else if (integrity < 60) {
+        targetColor = COLORS.WARN;
+        targetEmissive = COLORS.EMISSIVE_WARN;
+        speed = 0.04;
+        distort = 0.5;
+        shake = 0.02;
     }
+
+    // 2. APPLY ROTATION & SHAKE
+    meshRef.current.rotation.y += speed;
+    meshRef.current.rotation.z += speed * 0.5;
+    
+    if (shake > 0) {
+        meshRef.current.position.x = (Math.random() - 0.5) * shake;
+        meshRef.current.position.y = (Math.random() - 0.5) * shake;
+    } else {
+        meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, 0, 0.1);
+        meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, 0.1);
+    }
+
+    // 3. COLOR TRANSITION (Lerp)
+    currentColor.current.lerp(targetColor, delta * 3.0);
+    currentEmissive.current.lerp(targetEmissive, delta * 3.0);
+
+    materialRef.current.color.copy(currentColor.current);
+    materialRef.current.emissive.copy(currentEmissive.current);
+    materialRef.current.distort = THREE.MathUtils.lerp(materialRef.current.distort, distort, delta);
   });
 
   return (
@@ -8577,7 +9215,8 @@ const SpinningGem = () => {
       <mesh ref={meshRef} scale={1.8}>
         <octahedronGeometry args={[1, 0]} />
         <MeshDistortMaterial
-          color="#78F654"
+          ref={materialRef}
+          color="#78F654" // Initial (overridden by ref)
           emissive="#15530A"
           roughness={0.1}
           metalness={0.8}
@@ -8596,7 +9235,7 @@ export const MiniCrystalCanvas = () => {
       <Canvas 
         camera={{ position: [0, 0, 5] }} 
         gl={{ alpha: true }}
-        style={{ background: '#000000' }} // <--- THE FIX: Force canvas to be black instantly
+        style={{ background: '#000000' }}
       >
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color="#C2FE9A" />
@@ -8837,7 +9476,7 @@ export const MatrixGrid = () => {
   const gridRef = useRef<any>(null);
 
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
-  const bootState = useStore(state => state.bootState); // NEW
+  const bootState = useStore(state => state.bootState);
 
   const SECTION_SIZE = 5;   
   const SPEED = 0.5;
@@ -8855,10 +9494,9 @@ export const MatrixGrid = () => {
       section: new THREE.Color("#4d0000"),
       cell: new THREE.Color("#ff003c")
     },
-    // NEW: Sandbox Palette (Blueprint / TRON)
     sandbox: {
-      section: new THREE.Color("#001a33"), // Deep Blue
-      cell: new THREE.Color("#00F0FF")     // Cyan
+      section: new THREE.Color("#001a33"), 
+      cell: new THREE.Color("#00F0FF")     
     }
   }), []);
 
@@ -8868,6 +9506,7 @@ export const MatrixGrid = () => {
   useFrame((state, delta) => {
     if (groupRef.current) {
       groupRef.current.position.z += SPEED * delta;
+      // Loop logic for infinite scrolling effect
       if (groupRef.current.position.z >= SECTION_SIZE) {
         groupRef.current.position.z = 0;
       }
@@ -8876,7 +9515,6 @@ export const MatrixGrid = () => {
     let targetSection = colors.safe.section;
     let targetCell = colors.safe.cell;
 
-    // Logic Priority: Sandbox > Critical > Warning > Safe
     if (bootState === 'sandbox') {
         targetSection = colors.sandbox.section;
         targetCell = colors.sandbox.cell;
@@ -8903,18 +9541,34 @@ export const MatrixGrid = () => {
 
   return (
     <group ref={groupRef} position={[0, -2, 0]}>
-      <Grid
-        ref={gridRef}
-        renderOrder={-1}
-        infiniteGrid
-        cellSize={1}
-        sectionSize={SECTION_SIZE}
-        fadeDistance={bootState === 'sandbox' ? 40 : 25} // Further visibility in sandbox
-        sectionColor="#003300"
-        cellColor="#044d0f"
-        sectionThickness={1.2} 
-        cellThickness={1.1}
-      />
+      {/* 
+         FIX: Nested group to offset geometry without breaking the scrolling logic.
+         Z = -10 shifts the center point forward so the "front" edge is well behind the camera.
+      */}
+      <group position={[0, 0, -10]}>
+        <Grid
+          ref={gridRef}
+          renderOrder={-1}
+          infiniteGrid
+          
+          args={[60, 60]} 
+          
+          cellSize={1}
+          sectionSize={SECTION_SIZE}
+          
+          // FIX: Reduced fadeDistance slightly to hide distant sub-pixels
+          fadeDistance={bootState === 'sandbox' ? 35 : 30}
+          
+          // FIX: Increased fadeStrength (default is 1)
+          // Higher values = sharper falloff. This hides the distant Moiré patterns.
+          fadeStrength={2.5}
+          
+          sectionColor="#003300"
+          cellColor="#044d0f"
+          sectionThickness={1.2} 
+          cellThickness={1.1}
+        />
+      </group>
     </group>
   );
 };

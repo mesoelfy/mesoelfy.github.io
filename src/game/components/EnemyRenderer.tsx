@@ -43,7 +43,6 @@ const fragmentShader = `
   }
 
   void main() {
-    // FIX: Thicker lines (2.0)
     float width = 2.0; 
     float edge = edgeFactor(vBarycentric, width);
     float glow = 1.0 - edge;
@@ -82,7 +81,7 @@ export const EnemyRenderer = () => {
     uniforms: {},
     vertexColors: true,
     extensions: { derivatives: true },
-    side: THREE.DoubleSide, // FIX: Render both sides for visibility
+    side: THREE.DoubleSide,
   }), []);
 
   useFrame((state) => {
@@ -101,7 +100,7 @@ export const EnemyRenderer = () => {
       
       if (!transform || !identity) continue;
 
-      // FIX: Z=5.0 to ensure they are well above the panel plane
+      // Z=5.0 to ensure they are well above the panel plane
       tempObj.position.set(transform.x, transform.y, 5.0);
       
       tempObj.rotation.set(0, 0, transform.rotation); 
@@ -112,7 +111,6 @@ export const EnemyRenderer = () => {
       if (type === EnemyTypes.DRILLER) {
         if (mCount >= MAX_ENEMIES) continue;
         
-        // Pure spin on Y
         const stateComp = e.getComponent<StateComponent>('State');
         const speed = (stateComp && stateComp.current === 'DRILLING') ? 20.0 : 5.0;
         tempObj.rotateY(currentTime * speed); 

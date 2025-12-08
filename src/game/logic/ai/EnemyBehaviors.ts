@@ -3,7 +3,7 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
-import { EnemyTypes, GameEvents } from '../../events/GameEvents';
+import { GameEvents } from '../../events/GameEvents';
 import { EnemyTypes as Types } from '../../config/Identifiers';
 import { Registry } from '../../core/ecs/EntityRegistry';
 
@@ -31,7 +31,7 @@ export interface AIContext {
   spawnProjectile: (x: number, y: number, vx: number, vy: number) => void;
   damagePanel: (id: string, amount: number) => void;
   triggerExplosion: (x: number, y: number, color: string) => void;
-  spawnDrillSparks: (x, y, color: string) => void; 
+  spawnDrillSparks: (x: number, y: number, color: string) => void; 
   emitEvent: (name: string, payload: any) => void;
 }
 
@@ -102,12 +102,10 @@ export const DrillerBehavior: EnemyBehavior = {
       motion.vy = 0;
     }
     
-    // ROTATION LOGIC
+    // Rotation Logic: Face the drill target or movement direction
     if (isDrilling) {
-        // FIX: Force rotation to face the contact point on the panel
-        // This ensures the drill tip is "locked" visually to the surface.
         const angleToPanel = Math.atan2(targetY - pos.y, targetX - pos.x) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, angleToPanel, 0.2); // Fast snap
+        pos.rotation = rotateTowards(pos.rotation, angleToPanel, 0.2);
     } 
     else if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
         const targetAngle = Math.atan2(motion.vy, motion.vx) - Math.PI/2;
@@ -116,7 +114,6 @@ export const DrillerBehavior: EnemyBehavior = {
   }
 };
 
-// ... Kamikaze and Hunter behaviors remain unchanged below ...
 export const KamikazeBehavior: EnemyBehavior = {
   update: (e, ctx) => {
     const pos = getPos(e);
