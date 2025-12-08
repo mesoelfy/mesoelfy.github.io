@@ -10,6 +10,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
 import { BehaviorSystem } from '../systems/BehaviorSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
+import { CombatSystem } from '../systems/CombatSystem'; // NEW
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
@@ -25,17 +26,17 @@ export const GameBootstrapper = () => {
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
-  // Register Core Services
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  // Instantiate Systems
+  // Instantiate
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
   const physicsSys = new PhysicsSystem();
   const lifeSys = new LifeCycleSystem();
   const behaviorSys = new BehaviorSystem();
   const collisionSys = new CollisionSystem();
+  const combatSys = new CombatSystem(); // NEW
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
@@ -44,7 +45,7 @@ export const GameBootstrapper = () => {
   const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
 
-  // Register Systems
+  // Register
   const systems = {
       'TimeSystem': timeSys,
       'InputSystem': inputSys,
@@ -52,6 +53,7 @@ export const GameBootstrapper = () => {
       'LifeCycleSystem': lifeSys,
       'BehaviorSystem': behaviorSys,
       'CollisionSystem': collisionSys,
+      'CombatSystem': combatSys, // NEW
       'WaveSystem': waveSys,
       'PlayerSystem': playerSys,
       'InteractionSystem': interactionSys,
@@ -63,7 +65,7 @@ export const GameBootstrapper = () => {
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
   
-  // Engine Loop Order
+  // Update Loop Order
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(panelSys);
@@ -71,10 +73,15 @@ export const GameBootstrapper = () => {
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
   engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys); // AI Logic
-  engine.registerSystem(physicsSys); // Move
+  engine.registerSystem(behaviorSys); 
+  engine.registerSystem(physicsSys); 
+  
+  // Physics Detects -> Combat Resolves
   engine.registerSystem(collisionSys); 
-  engine.registerSystem(lifeSys); // Death / Cleanup
+  // CombatSystem doesn't need an 'update' loop, it's called by CollisionSystem
+  engine.registerSystem(combatSys); 
+
+  engine.registerSystem(lifeSys); 
   engine.registerSystem(cameraSys); 
   engine.registerSystem(syncSys); 
   

@@ -3,7 +3,6 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
-import { GameEvents } from '../../events/GameEvents';
 import { EnemyTypes as Types } from '../../config/Identifiers';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
@@ -45,7 +44,6 @@ export const DrillerBehavior: EnemyBehavior = {
     const motion = getMotion(e);
     const state = getState(e);
     
-    // FIX: Transition from IDLE (post-spawn) to Moving
     if (state.current === 'IDLE') {
         state.current = 'MOVING';
     }
@@ -55,6 +53,7 @@ export const DrillerBehavior: EnemyBehavior = {
     let bestPanel: any = null;
     let nearestDist = Infinity;
 
+    // Driller Logic: Target Panels First
     for (const p of ctx.panels) {
       const dx = p.x - pos.x;
       const dy = p.y - pos.y;
@@ -83,9 +82,9 @@ export const DrillerBehavior: EnemyBehavior = {
         }
       }
     } else {
-      // Wander if no panels
-      targetX = Math.sin(ctx.time * 0.5) * 10;
-      targetY = Math.cos(ctx.time * 0.5) * 5;
+      // If no panels, wander or target player slightly
+      targetX = ctx.playerPos.x;
+      targetY = ctx.playerPos.y;
     }
 
     state.current = isDrilling ? 'DRILLING' : 'MOVING';
@@ -108,11 +107,8 @@ export const DrillerBehavior: EnemyBehavior = {
       motion.vy = 0;
     }
     
-    if (isDrilling) {
-        const angleToPanel = Math.atan2(targetY - pos.y, targetX - pos.x) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, angleToPanel, 0.2);
-    } 
-    else if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
+    // Rotation logic
+    if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
         const targetAngle = Math.atan2(motion.vy, motion.vx) - Math.PI/2;
         pos.rotation = rotateTowards(pos.rotation, targetAngle, 0.1);
     }
@@ -123,20 +119,16 @@ export const KamikazeBehavior: EnemyBehavior = {
   update: (e, ctx) => {
     const pos = getPos(e);
     const motion = getMotion(e);
-    // Kamikazes don't really have complex state, they just run.
     
+    // Simple homing
     const targetX = ctx.playerPos.x;
     const targetY = ctx.playerPos.y;
     const dx = targetX - pos.x;
     const dy = targetY - pos.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    if (dist < 1.0) {
-       ctx.destroyEntity(e.id);
-       ctx.triggerExplosion(pos.x, pos.y, '#FF003C');
-       ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
-       return; 
-    }
+    // REMOVED: Self-destruct logic (ctx.destroyEntity)
+    // We let the CollisionSystem handle the impact now.
 
     if (dist > 0.1) {
       const speed = ENEMY_CONFIG[Types.KAMIKAZE].baseSpeed;
@@ -158,7 +150,6 @@ export const HunterBehavior: EnemyBehavior = {
         state.data.spinAngle = 0;
     }
 
-    // FIX: Initialize HUNT state if coming from IDLE or SPAWN
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
         state.current = 'HUNT';
         state.timers.action = 3.0; 
@@ -174,7 +165,7 @@ export const HunterBehavior: EnemyBehavior = {
         const orbitSpeed = 0.5;
         const currentAngle = (ctx.time * orbitSpeed) + state.data.offsetAngle;
         
-        const targetRadius = 16.0;
+        const targetRadius = 10.0; // Slightly closer
         const tx = px + Math.cos(currentAngle) * targetRadius;
         const ty = py + Math.sin(currentAngle) * targetRadius;
 
@@ -198,9 +189,8 @@ export const HunterBehavior: EnemyBehavior = {
         pos.rotation = rotateTowards(pos.rotation, aimAngle, 0.05);
 
         state.timers.action -= ctx.delta;
-        const inBounds = Math.abs(pos.x) < 22 && Math.abs(pos.y) < 14;
         
-        if (state.timers.action <= 0 && inBounds) {
+        if (state.timers.action <= 0) {
             state.current = 'CHARGE';
             state.timers.action = ENEMY_CONFIG[Types.HUNTER].chargeDuration;
             motion.vx *= 0.1; 

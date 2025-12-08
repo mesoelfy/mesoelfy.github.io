@@ -28,14 +28,15 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // 1. FAST PATH: Direct DOM Updates (Transient)
-    // This updates the text numbers instantly without React rendering
+    // 1. FAST PATH: Direct DOM Updates
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
     store.updateTransient('score-display', formattedScore);
     
-    // 2. SLOW PATH: React State Sync
-    // We MUST check if XP or Score changed so the IdentityHUD (React component) updates the SVG rings.
+    // 2. REACT SYNC
+    // We check if values changed to avoid unnecessary re-renders
     const shouldSyncReact = 
+        store.playerHealth !== this.gameSystem.playerHealth || // <--- ADDED
+        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || // <--- ADDED
         store.xp !== this.gameSystem.xp || 
         store.score !== this.gameSystem.score ||
         store.level !== this.gameSystem.level ||
@@ -45,9 +46,11 @@ export class UISyncSystem implements IGameSystem {
 
     if (shouldSyncReact) {
         store.syncGameState({
+            playerHealth: this.gameSystem.playerHealth, // <--- SYNCED
+            playerRebootProgress: this.gameSystem.playerRebootProgress, // <--- SYNCED
             level: this.gameSystem.level,
-            xp: this.gameSystem.xp,                // Fix: Sync XP
-            score: this.gameSystem.score,          // Fix: Sync Score (for HUD rings/logic)
+            xp: this.gameSystem.xp,
+            score: this.gameSystem.score,
             xpToNextLevel: this.gameSystem.xpToNextLevel,
             upgradePoints: this.gameSystem.upgradePoints,
             activeUpgrades: { ...this.gameSystem.activeUpgrades },
@@ -59,7 +62,6 @@ export class UISyncSystem implements IGameSystem {
     // Sync Panels
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
-    
     for(const p of panels) {
         uiPanels[p.id] = {
             id: p.id,
@@ -67,7 +69,6 @@ export class UISyncSystem implements IGameSystem {
             isDestroyed: p.isDestroyed
         };
     }
-    
     store.syncPanels(uiPanels);
   }
 }
