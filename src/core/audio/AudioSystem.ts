@@ -1,6 +1,7 @@
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { useStore } from '@/core/store/useStore';
+import { AUDIO_CONFIG, SoundRecipe } from '@/game/config/AudioConfig';
 
 class AudioSystemController {
   private ctx: AudioContext | null = null;
@@ -8,9 +9,9 @@ class AudioSystemController {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   private musicElement: HTMLAudioElement | null = null;
-  private buffers: Map<string, AudioBuffer> = new Map();
   
-  public isReady = false; // Public flag
+  private buffers: Map<string, AudioBuffer> = new Map();
+  public isReady = false;
 
   public async init() {
     if (this.isReady) {
@@ -22,6 +23,7 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
+    // Bus Setup
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
@@ -30,96 +32,153 @@ class AudioSystemController {
     this.musicGain.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
-    const settings = useStore.getState().audioSettings;
-    this.masterGain.gain.value = settings.master ? 0.5 : 0;
-    this.musicGain.gain.value = settings.music ? 0.4 : 0;
-    this.sfxGain.gain.value = settings.sfx ? 0.8 : 0;
+    this.updateVolumes();
 
-    // Await buffer generation
-    await this.preRenderSounds();
+    // Generate Sounds from Config
+    await this.generateAllSounds();
     
     this.setupEventListeners();
     this.setupMusic();
 
     this.isReady = true;
+    console.log('[AudioSystem] Synthesized and Ready.');
   }
 
-  private async preRenderSounds() {
-      if (!this.ctx) return;
-      const render = async (duration: number, fn: (t: number, ctx: OfflineAudioContext) => void) => {
-          const sampleRate = 44100;
-          const offline = new OfflineAudioContext(1, sampleRate * duration, sampleRate);
-          fn(duration, offline);
-          return await offline.startRendering();
-      };
+  private updateVolumes() {
+      if (!this.masterGain || !this.sfxGain || !this.musicGain) return;
+      const s = useStore.getState().audioSettings;
+      this.masterGain.gain.value = s.master ? 0.5 : 0;
+      this.musicGain.gain.value = s.music ? 0.4 : 0;
+      this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
+  }
 
-      // Generate all buffers (Parallel)
-      const p = [];
+  private async generateAllSounds() {
+      const promises = Object.entries(AUDIO_CONFIG).map(([key, recipe]) => {
+          return this.synthesizeSound(recipe).then(buffer => {
+              if (buffer) this.buffers.set(key, buffer);
+          });
+      });
+      await Promise.all(promises);
+  }
+
+  private async synthesizeSound(recipe: SoundRecipe): Promise<AudioBuffer | null> {
+      if (!this.ctx) return null;
       
-      p.push(render(0.15, (d, c) => {
-          const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(880, 0); osc.frequency.exponentialRampToValueAtTime(110, d);
-          const g = c.createGain(); g.gain.setValueAtTime(0.2, 0); g.gain.exponentialRampToValueAtTime(0.01, d);
-          osc.connect(g); g.connect(c.destination); osc.start();
-      }).then(b => this.buffers.set('laser', b)));
+      const sampleRate = 44100;
+      const length = sampleRate * recipe.duration;
+      const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      p.push(render(0.4, (d, c) => {
-          const b = c.createBuffer(1, c.sampleRate * d, c.sampleRate);
-          const data = b.getChannelData(0); for(let i=0; i<data.length; i++) data[i] = Math.random()*2-1;
-          const n = c.createBufferSource(); n.buffer = b;
-          const f = c.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(1000, 0); f.frequency.exponentialRampToValueAtTime(100, d);
-          const g = c.createGain(); g.gain.setValueAtTime(0.3, 0); g.gain.exponentialRampToValueAtTime(0.01, d);
-          n.connect(f); f.connect(g); g.connect(c.destination); n.start();
-      }).then(b => this.buffers.set('explosion', b)));
+      // --- SYNTHESIS LOGIC ---
+      const gain = offline.createGain();
+      gain.connect(offline.destination);
+      
+      // Volume Envelope (Fade out at end)
+      gain.gain.setValueAtTime(recipe.volume, 0);
+      gain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
 
-      p.push(render(0.05, (d, c) => {
-          const o = c.createOscillator(); o.type='square'; o.frequency.setValueAtTime(400,0);
-          const g = c.createGain(); g.gain.setValueAtTime(0.1, 0); g.gain.exponentialRampToValueAtTime(0.01, d);
-          o.connect(g); g.connect(c.destination); o.start();
-      }).then(b => this.buffers.set('click', b)));
+      if (recipe.type === 'oscillator') {
+          const osc = offline.createOscillator();
+          osc.type = recipe.wave || 'sine';
+          osc.frequency.setValueAtTime(recipe.frequency[0], 0);
+          
+          if (recipe.frequency[1] !== recipe.frequency[0]) {
+              osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
+          }
+          
+          osc.connect(gain);
+          osc.start();
+      } 
+      else if (recipe.type === 'noise') {
+          const bufferSize = sampleRate * recipe.duration;
+          const noiseBuffer = offline.createBuffer(1, bufferSize, sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+              data[i] = Math.random() * 2 - 1;
+          }
+          const noise = offline.createBufferSource();
+          noise.buffer = noiseBuffer;
 
-      p.push(render(0.2, (d, c) => {
-          const o = c.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(300,0); o.frequency.linearRampToValueAtTime(600, d);
-          const g = c.createGain(); g.gain.setValueAtTime(0.1, 0); g.gain.linearRampToValueAtTime(0, d);
-          o.connect(g); g.connect(c.destination); o.start();
-      }).then(b => this.buffers.set('heal', b)));
+          // Filter Sweep
+          if (recipe.filter) {
+              const filter = offline.createBiquadFilter();
+              filter.type = 'lowpass';
+              filter.frequency.setValueAtTime(recipe.filter[0], 0);
+              filter.frequency.exponentialRampToValueAtTime(recipe.filter[1], recipe.duration);
+              noise.connect(filter);
+              filter.connect(gain);
+          } else {
+              noise.connect(gain);
+          }
+          noise.start();
+      }
 
-      p.push(render(1.5, (d, c) => {
-          const o = c.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(100,0); o.frequency.exponentialRampToValueAtTime(10, d);
-          const g = c.createGain(); g.gain.setValueAtTime(0.5, 0); g.gain.exponentialRampToValueAtTime(0.01, d);
-          o.connect(g); g.connect(c.destination); o.start();
-      }).then(b => this.buffers.set('destruction', b)));
-
-      await Promise.all(p);
+      return await offline.startRendering();
   }
 
-  // ... (Ducking Logic omitted for brevity, it's the same as previous step) ...
+  public playSound(key: string) {
+      if (!this.ctx || !this.sfxGain) return;
+      
+      const buffer = this.buffers.get(key);
+      const recipe = AUDIO_CONFIG[key];
+      
+      if (!buffer || !recipe) return;
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      
+      // Pitch Variance
+      if (recipe.pitchVariance > 0) {
+          const detune = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
+          source.detune.value = detune;
+      }
+
+      source.connect(this.sfxGain);
+      source.start();
+  }
+
+  private setupEventListeners() {
+    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser'));
+    
+    // Distinguish Explosions
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
+        if (p.type === 'kamikaze') this.playSound('explosion_large');
+        else this.playSound('explosion_small');
+    });
+    
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
+        this.playSound('explosion_large'); 
+        this.duckMusic(0.7, 1.0);
+    });
+    
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        this.playSound('explosion_large');
+        this.duckMusic(1.0, 3.0);
+    });
+    
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
+        this.playSound('explosion_large'); 
+        this.duckMusic(0.8, 1.5);
+    });
+  }
+
   private duckMusic(intensity: number, duration: number) {
       if (!this.ctx || !this.musicGain) return;
       const settings = useStore.getState().audioSettings;
       if (!settings.music) return;
+      
       const now = this.ctx.currentTime;
       const baseVol = 0.4;
       const targetVol = baseVol * (1.0 - intensity);
+      
       this.musicGain.gain.cancelScheduledValues(now);
       this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
       this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
       this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
 
-  public playSound(key: string, detune = 0, volume = 1.0) {
-      if (!this.ctx || !this.sfxGain) return;
-      const buffer = this.buffers.get(key);
-      if (!buffer) return;
-      const source = this.ctx.createBufferSource();
-      source.buffer = buffer;
-      source.detune.value = detune;
-      const gain = this.ctx.createGain();
-      gain.gain.value = volume;
-      source.connect(gain);
-      gain.connect(this.sfxGain);
-      source.start();
-  }
-
+  // --- PUBLIC API ---
   public startMusic() {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     if (!this.musicElement) this.setupMusic();
@@ -135,22 +194,22 @@ class AudioSystemController {
     source.connect(this.musicGain);
   }
 
-  private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser', Math.random() * 100));
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => { this.playSound('explosion', Math.random() * 200 - 100); this.duckMusic(0.3, 0.5); });
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => { this.playSound('explosion', -500); this.duckMusic(0.7, 1.0); });
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => { this.playSound('destruction', -200); this.duckMusic(1.0, 3.0); });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('heal', 200));
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => { this.playSound('destruction', 0); this.duckMusic(0.8, 1.5); });
-  }
-
   public playClick() { this.playSound('click'); }
-  public playHover() { this.playSound('click', 500, 0.2); }
-  public playBootSequence() { this.playSound('click'); } 
-  public setMasterMute(m: boolean) { if (this.masterGain) this.masterGain.gain.value = m ? 0 : 0.5; }
-  public setMusicMute(m: boolean) { if (this.musicGain) this.musicGain.gain.value = m ? 0 : 0.4; }
-  public setSfxMute(m: boolean) { if (this.sfxGain) this.sfxGain.gain.value = m ? 0 : 0.8; }
+  public playHover() { this.playSound('hover'); }
+  public playBootSequence() { this.playSound('powerup'); } 
+  
+  public setMasterMute(m: boolean) { 
+      useStore.setState(s => ({ audioSettings: { ...s.audioSettings, master: !m } }));
+      this.updateVolumes();
+  }
+  public setMusicMute(m: boolean) { 
+      useStore.setState(s => ({ audioSettings: { ...s.audioSettings, music: !m } }));
+      this.updateVolumes();
+  }
+  public setSfxMute(m: boolean) { 
+      useStore.setState(s => ({ audioSettings: { ...s.audioSettings, sfx: !m } }));
+      this.updateVolumes();
+  }
 }
 
 export const AudioSystem = new AudioSystemController();
