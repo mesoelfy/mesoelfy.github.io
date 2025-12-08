@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Tag } from '../core/ecs/types';
 import { GAME_THEME } from '../theme';
 import { InstancedActor } from './common/InstancedActor';
+import { HealthComponent } from '../components/data/HealthComponent';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
@@ -31,9 +32,20 @@ export const EnemyBulletRenderer = () => {
       maxCount={200}
       filter={(e) => e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-          // Keep bullets upright regardless of transform rotation (billboard style)
+          // Scale based on Health (Mass)
+          const hp = e.getComponent<HealthComponent>('Health');
+          let scale = 1.0;
+          
+          if (hp) {
+              // Hunter Orbs are 3HP max.
+              // 3/3 = 1.0
+              // 2/3 = 0.8
+              // 1/3 = 0.6
+              scale = 0.4 + (0.6 * (hp.current / hp.max));
+          }
+
           obj.rotation.set(0,0,0);
-          obj.scale.setScalar(1);
+          obj.scale.setScalar(scale);
       }}
     />
   );

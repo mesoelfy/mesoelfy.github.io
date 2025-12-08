@@ -3,7 +3,6 @@ import { GameEngineCore } from './GameEngine';
 import { EntityRegistry } from './ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 
-// Systems
 import { TimeSystem } from '../systems/TimeSystem';
 import { InputSystem } from '../systems/InputSystem';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
@@ -14,11 +13,11 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { CameraSystem } from '../systems/CameraSystem';
+import { ShakeSystem } from '../systems/ShakeSystem'; // REPLACES CameraSystem
 import { PanelRegistry } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem'; 
 import { UISyncSystem } from '../systems/UISyncSystem'; 
-import { TargetingSystem } from '../systems/TargetingSystem'; // NEW
+import { TargetingSystem } from '../systems/TargetingSystem'; 
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
@@ -41,11 +40,11 @@ export const GameBootstrapper = () => {
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
-  const cameraSys = new CameraSystem();
+  const shakeSys = new ShakeSystem(); // NEW
   const gameSys = new GameStateSystem(); 
   const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
-  const targetingSys = new TargetingSystem(); // NEW
+  const targetingSys = new TargetingSystem(); 
 
   // Register
   const systems = {
@@ -59,34 +58,29 @@ export const GameBootstrapper = () => {
       'WaveSystem': waveSys,
       'PlayerSystem': playerSys,
       'InteractionSystem': interactionSys,
-      'CameraSystem': cameraSys,
+      'ShakeSystem': shakeSys, // NEW
       'GameStateSystem': gameSys,
       'UISyncSystem': syncSys,
       'PanelRegistrySystem': panelSys,
-      'TargetingSystem': targetingSys // NEW
+      'TargetingSystem': targetingSys
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
   
-  // Update Loop Order
+  // Update Loop
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(panelSys);
   engine.registerSystem(gameSys);
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
-  
-  // AI Loop
-  engine.registerSystem(targetingSys); // 1. Find Targets
+  engine.registerSystem(targetingSys); 
   engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys);  // 2. Move towards Targets
-  
-  // Physics Loop
+  engine.registerSystem(behaviorSys); 
   engine.registerSystem(physicsSys); 
-  engine.registerSystem(collisionSys); // (Delegates to CombatSystem)
-
+  engine.registerSystem(collisionSys); 
   engine.registerSystem(lifeSys); 
-  engine.registerSystem(cameraSys); 
+  engine.registerSystem(shakeSys); // Run near end to calc final offsets
   engine.registerSystem(syncSys); 
   
   // Setup

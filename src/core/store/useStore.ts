@@ -26,7 +26,7 @@ interface AppState {
   // App Flow
   bootState: BootState;
   introDone: boolean;
-  isBreaching: boolean; // NEW: Tracks the transition period
+  isBreaching: boolean;
   activeModal: ModalType;
   hoveredItem: string | null;
   
@@ -35,8 +35,9 @@ interface AppState {
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK';
   
-  // Audio
+  // Audio & Accessibility
   audioSettings: AudioSettings;
+  screenShakeStrength: number; // 0.0 to 1.0
   
   // Debug
   isDebugOpen: boolean;
@@ -46,7 +47,7 @@ interface AppState {
   // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
-  startBreach: () => void; // NEW
+  startBreach: () => void;
   
   setSandboxView: (view: SandboxView) => void;
   setGalleryTarget: (target: string) => void;
@@ -61,6 +62,9 @@ interface AppState {
   toggleMusic: () => void;
   toggleSfx: () => void;
   
+  // NEW: Shake Control
+  setScreenShake: (val: number) => void;
+  
   toggleDebugMenu: () => void;
   toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
@@ -70,7 +74,7 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   bootState: 'standby',
   introDone: false,
-  isBreaching: false, // Default false
+  isBreaching: false,
   activeModal: 'none',
   hoveredItem: null,
   
@@ -84,6 +88,8 @@ export const useStore = create<AppState>((set, get) => ({
     sfx: true,
   },
   
+  screenShakeStrength: 1.0, // Default 100%
+  
   isDebugOpen: false,
   isDebugMinimized: false,
   debugFlags: {
@@ -96,7 +102,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
-  startBreach: () => set({ isBreaching: true }), // Action
+  startBreach: () => set({ isBreaching: true }),
   
   setSandboxView: (view) => set({ sandboxView: view }),
   setGalleryTarget: (target) => set({ galleryTarget: target }),
@@ -158,6 +164,8 @@ export const useStore = create<AppState>((set, get) => ({
       AudioSystem.setSfxMute(!next);
       if (next && get().audioSettings.master) AudioSystem.playClick();
   },
+  
+  setScreenShake: (val) => set({ screenShakeStrength: val }),
   
   toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
   toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),

@@ -45,22 +45,16 @@ export class EntitySpawner implements IEntitySpawner {
     const e = this.registry.createEntity();
     archetype.tags.forEach(tag => e.addTag(tag));
 
-    // 1. Build Components First
     for (const compDef of archetype.components) {
-        // Skip Transform in the builder loop if we want to enforce the spawned position
         if (compDef.type === 'Transform') continue;
-
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            // Deep clone to prevent shared references across entities
             const freshData = JSON.parse(JSON.stringify(compDef.data || {}));
             e.addComponent(builder(freshData));
         }
     }
 
-    // 2. Explicitly Set Transform (Overrides any defaults)
     e.addComponent(new TransformComponent(x, y, 0, 1));
-
     this.registry.updateCache(e);
     return e;
   }
@@ -69,10 +63,17 @@ export class EntitySpawner implements IEntitySpawner {
     const e = this.registry.createEntity();
     e.addTag(Tag.BULLET);
     if (isEnemy) e.addTag(Tag.ENEMY); else e.addTag(Tag.PLAYER); 
+    
     e.addComponent(new TransformComponent(x, y, Math.atan2(vy, vx), 1));
     e.addComponent(new MotionComponent(vx, vy, 0));
     e.addComponent(new LifetimeComponent(life, life));
-    e.addComponent(new CombatComponent(1)); 
+    
+    // NEW: Ballistic Health
+    // Enemy Bullets (Hunter Orbs) are tough (3 HP).
+    // Player Bullets start weak (1 HP).
+    const hp = isEnemy ? 3 : 1; 
+    e.addComponent(new HealthComponent(hp));
+    e.addComponent(new CombatComponent(hp)); // Damage usually equals Mass
 
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;

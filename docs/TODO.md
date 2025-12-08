@@ -60,7 +60,10 @@ we can skin the munchers/enemies differently as they get stronger with cool indi
 
 sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
 
-- each upgrade needs its own bespoke icon that looks like what it does
+Lucide icons: gitlab(a fox head) and shovel and puzzle and pickaxe and bow-arrow and biohazard and battery-charging and battery-plus and circle-dot-dashed and gem and loader-pinwheel and locate-fixed and swords and sparkles and snail and snowflake and ship-wheel look good. the cannabis one looks like an explosion. maybe the different chess pieces could be used for something. fan looks like a razer blade.
+
+
+
 
 - there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
 
@@ -71,14 +74,10 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 - Power UP - Heal panel faster
 
 
-
-Total refactor overhaul of screenshake is needed.
-
-- should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies? Right now they are disjointed.
+Damage from drillers should be at a constant rate.
 
 
 
-What are screenshake best practices?
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
@@ -102,7 +101,6 @@ Should a panel jitter when driller damages it and jitter more when more drillers
 
 
 
-screen shake - an individual panel should shake when brought to 0% health
 
 
 

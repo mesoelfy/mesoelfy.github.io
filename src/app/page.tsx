@@ -19,7 +19,7 @@ import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GlobalShakeManager } from '@/features/effects/GlobalShakeManager';
+// REMOVED: GlobalShakeManager
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
@@ -38,9 +38,7 @@ export default function Home() {
   const isSandbox = bootState === 'sandbox';
 
   const handleBreachStart = () => {
-    // 1. Audio
     AudioSystem.init();
-    // 2. Set Flag to reveal 3D scene immediately
     startBreach();
   };
 
@@ -58,22 +56,18 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [bootState, recalcIntegrity]);
 
-  // VISIBILITY LOGIC:
-  // Show scene if we are Active, Sandbox, OR in the middle of the Breach transition.
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
-      <GlobalShakeManager />
+      {/* GlobalShakeManager is gone. ShakeSystem drives #global-app-root via CSS vars now. */}
       <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        {/* SCENE & GAME OVERLAY */}
         <WebGLErrorBoundary>
-            {/* Canvas is always mounted for pre-warming, visibility controlled by CSS opacity */}
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
             <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
@@ -100,7 +94,6 @@ export default function Home() {
           />
         )}
 
-        {/* DASHBOARD UI (Panels) */}
         {!isSandbox && (
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />

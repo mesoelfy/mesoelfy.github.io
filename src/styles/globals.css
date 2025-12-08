@@ -4,24 +4,41 @@
 
 :root {
   --foreground-rgb: 0, 255, 65;
+  
+  /* DEFAULT SHAKE VALUES */
+  --shake-x: 0px;
+  --shake-y: 0px;
+  --shake-r: 0rad;
 }
 
 html, body {
   background-color: #000000;
-  overscroll-behavior: none; /* Prevent pull-to-refresh */
-  touch-action: none; /* Disable native touch gestures */
+  overscroll-behavior: none; 
+  touch-action: none; 
+  cursor: none !important;
+}
+
+/* Ensure interactive elements don't bring it back */
+a, button, input, select, textarea, label, [role="button"] {
+  cursor: none !important;
 }
 
 body {
   color: #78F654;
   overflow: hidden; 
   font-family: 'Courier New', monospace;
-  height: 100dvh; /* Fix for Mobile Safari */
+  height: 100dvh; 
   width: 100vw;
 }
 
+/* 
+   THE UNIFIED SHAKE CONTAINER 
+   We apply the transform to the root div that holds everything.
+*/
 #global-app-root {
   height: 100dvh;
+  transform: translate3d(var(--shake-x), var(--shake-y), 0) rotate(var(--shake-r));
+  will-change: transform; /* Performance hint */
 }
 
 ::-webkit-scrollbar {

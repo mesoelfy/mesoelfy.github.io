@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Tag } from '../core/ecs/types';
 import { GAME_THEME } from '../theme';
 import { InstancedActor } from './common/InstancedActor';
+import { HealthComponent } from '../components/data/HealthComponent';
 
 const vertexShader = `
   varying vec2 vUv;
@@ -38,8 +39,15 @@ export const BulletRenderer = () => {
       maxCount={500} 
       filter={(e) => !e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-         // Fix Rotation offset for Bullets (pointing up vs right)
+         // Scale based on Health (Mass)
+         const hp = e.getComponent<HealthComponent>('Health');
+         let scale = 1.0;
+         if (hp && hp.max > 1) {
+             scale = 0.5 + (0.5 * (hp.current / hp.max));
+         }
+         
          obj.rotation.z -= Math.PI / 2;
+         obj.scale.setScalar(scale);
       }}
     />
   );

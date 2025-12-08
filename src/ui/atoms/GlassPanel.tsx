@@ -1,12 +1,13 @@
 import { clsx } from 'clsx';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
 import { useGameStore } from '@/game/store/useGameStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
 
-// SUB-COMPONENTS
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
@@ -56,6 +57,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
+  
+  // Local Shake Controls
+  const controls = useAnimation();
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -65,6 +69,21 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
     }
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
+
+  // LISTEN FOR DAMAGE EVENTS TO TRIGGER LOCAL SHAKE
+  useReactEffect(() => {
+      if (!gameId) return;
+      const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+          if (p.id === gameId) {
+              // High frequency glitch shake
+              controls.start({
+                  x: [0, -5, 5, -5, 5, 0],
+                  transition: { duration: 0.2 }
+              });
+          }
+      });
+      return unsub;
+  }, [gameId, controls]);
 
   let borderColor = "border-elfy-green-dim/30";
   if (isDestroyed) {
@@ -76,9 +95,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   else if (isDamaged) borderColor = "border-elfy-yellow/50";
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
-
-  // FIX: Dynamic Background Opacity
-  // If destroyed, make background transparent so we can see 3D enemies spawning "inside"
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
   return (
@@ -86,11 +102,12 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      animate={isGameOver ? "shattered" : "visible"}
+      // Use 'animate' prop to control variants, but use 'controls' for transient shake overrides
+      animate={isGameOver ? "shattered" : ["visible", controls as any]}
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
-        bgClass, // <--- Dynamic Background
+        bgClass, 
         "border",
         borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
