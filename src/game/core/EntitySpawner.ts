@@ -1,39 +1,40 @@
-import { Registry } from './ecs/EntityRegistry';
+import { IEntitySpawner, IEntityRegistry } from './interfaces';
 import { Entity } from './ecs/Entity';
 import { Tag } from './ecs/types';
-
-// Components
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { CombatComponent } from '../components/data/CombatComponent';
-import { StateComponent } from '../components/data/StateComponent'; // NEW
-
-// Configs
+import { StateComponent } from '../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { EnemyTypes, EnemyType } from '../config/Identifiers';
+import { EntityRegistry } from './ecs/EntityRegistry';
 
-export class EntityFactory {
-  
-  public static createPlayer(): Entity {
-    const e = Registry.createEntity();
+export class EntitySpawner implements IEntitySpawner {
+  private registry: EntityRegistry;
+
+  constructor(registry: IEntityRegistry) {
+    this.registry = registry as EntityRegistry;
+  }
+
+  public spawnPlayer(): Entity {
+    const e = this.registry.createEntity();
     e.addTag(Tag.PLAYER);
     
     e.addComponent(new TransformComponent(0, 0, 0, 1));
     e.addComponent(new MotionComponent(0, 0, 0.9)); 
     e.addComponent(new HealthComponent(PLAYER_CONFIG.maxHealth));
-    e.addComponent(new StateComponent('IDLE')); // Track status
+    e.addComponent(new StateComponent('IDLE')); 
     
-    Registry.updateCache(e);
+    this.registry.updateCache(e);
     return e;
   }
 
-  public static createEnemy(type: EnemyType, x: number, y: number): Entity {
+  public spawnEnemy(type: string, x: number, y: number): Entity {
     const config = ENEMY_CONFIG[type];
-    const e = Registry.createEntity();
+    const e = this.registry.createEntity();
     
     e.addTag(Tag.ENEMY);
     e.addTag(Tag.OBSTACLE);
@@ -42,25 +43,23 @@ export class EntityFactory {
     e.addComponent(new IdentityComponent(type));
     e.addComponent(new MotionComponent(0, 0, 0, 0)); 
     e.addComponent(new HealthComponent(config.hp));
-    
-    // Default state for everyone is IDLE or ORBIT depending on logic
     e.addComponent(new StateComponent('SPAWN')); 
     
     if (config.damage) {
         e.addComponent(new CombatComponent(config.damage));
     }
 
-    Registry.updateCache(e);
+    this.registry.updateCache(e);
     return e;
   }
 
-  public static createBullet(
+  public spawnBullet(
     x: number, y: number, 
     vx: number, vy: number, 
     isEnemy: boolean, 
     life: number
   ): Entity {
-    const e = Registry.createEntity();
+    const e = this.registry.createEntity();
     e.addTag(Tag.BULLET);
     if (isEnemy) e.addTag(Tag.ENEMY); 
     else e.addTag(Tag.PLAYER); 
@@ -70,17 +69,17 @@ export class EntityFactory {
     e.addComponent(new LifetimeComponent(life, life));
     e.addComponent(new CombatComponent(1)); 
 
-    Registry.updateCache(e);
+    this.registry.updateCache(e);
     return e;
   }
 
-  public static createParticle(
+  public spawnParticle(
     x: number, y: number, 
     color: string, 
     vx: number, vy: number, 
     life: number
-  ): Entity {
-    const e = Registry.createEntity();
+  ): void {
+    const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
 
     e.addComponent(new TransformComponent(x, y, 0, 1));
@@ -88,7 +87,6 @@ export class EntityFactory {
     e.addComponent(new LifetimeComponent(life, life));
     e.addComponent(new IdentityComponent(color));
 
-    Registry.updateCache(e);
-    return e;
+    this.registry.updateCache(e);
   }
 }

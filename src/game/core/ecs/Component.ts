@@ -1,4 +1,5 @@
 export abstract class Component {
-  // A unique string key for this component type (e.g., 'Transform', 'Health')
+  // Use a static property for the type key to enforce consistency
+  static readonly TYPE: string;
   abstract readonly _type: string;
 }

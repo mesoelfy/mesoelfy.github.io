@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Registry } from '../core/ecs/EntityRegistry';
+import { ActiveEngine } from './GameDirector';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { GAME_THEME } from '../theme';
@@ -28,60 +28,43 @@ const fragmentShader = `
 
   void main() {
     vec2 p = vUv - 0.5;
-    
-    // Adjusted box size for visual tightness
     vec2 boxSize = vec2(0.1, 0.3); 
-    
     float d = sdBox(p, boxSize);
-    
     float core = 1.0 - smoothstep(0.0, 0.02, d);
     float glow = exp(-20.0 * max(0.0, d));
-    
     vec3 color = mix(uColor, vec3(1.0), core); 
     float alpha = max(core, glow);
-
     gl_FragColor = vec4(color, alpha);
   }
 `;
 
 export const BulletRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  
   const geometry = useMemo(() => new THREE.PlaneGeometry(1.2, 1.2), []); 
-  
   const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader,
-    fragmentShader,
-    uniforms: {
-      uColor: { value: new THREE.Color(GAME_THEME.bullet.plasma) }
-    },
-    transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
+    vertexShader, fragmentShader,
+    uniforms: { uColor: { value: new THREE.Color(GAME_THEME.bullet.plasma) } },
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   }), []);
 
   useFrame(() => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || !ActiveEngine) return;
     
-    const allBullets = Registry.getByTag(Tag.BULLET);
+    const allBullets = ActiveEngine.registry.getByTag(Tag.BULLET);
     let count = 0;
 
     for (const b of allBullets) {
       if (b.hasTag(Tag.ENEMY)) continue; 
-      
       const transform = b.getComponent<TransformComponent>('Transform');
       if (!transform) continue;
-
       if (count >= MAX_BULLETS) break;
 
       tempObj.position.set(transform.x, transform.y, 0);
       tempObj.rotation.z = transform.rotation - (Math.PI / 2);
-      
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       count++;
     }
-
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
   });

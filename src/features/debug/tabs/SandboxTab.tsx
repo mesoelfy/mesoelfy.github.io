@@ -1,7 +1,7 @@
 import { Box } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
-import { Registry } from '@/game/core/ecs/EntityRegistry';
+import { ServiceLocator } from '@/game/core/ServiceLocator';
 
 interface SandboxTabProps {
   closeDebug: () => void;
@@ -14,7 +14,10 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const enterSandbox = () => {
       setIntroDone(true);
       setBootState('sandbox');
-      Registry.clear();
+      try {
+          const reg = ServiceLocator.getRegistry();
+          if (reg) reg.clear();
+      } catch {}
       startGame();
       closeDebug();
   };

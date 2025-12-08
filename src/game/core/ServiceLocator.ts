@@ -1,11 +1,12 @@
-import { IServiceLocator, IGameSystem, IAudioService, IInputService } from './interfaces';
+import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner } from './interfaces';
 
 class ServiceLocatorImpl implements IServiceLocator {
   private systems = new Map<string, IGameSystem>();
   private audioService?: IAudioService;
   private inputService?: IInputService;
+  private registry?: IEntityRegistry;
+  private spawner?: IEntitySpawner;
 
-  // Generic getter allows accessing any registered system type-safely
   public getSystem<T extends IGameSystem>(id: string): T {
     const sys = this.systems.get(id);
     if (!sys) throw new Error(`System not registered: ${id}`);
@@ -17,9 +18,16 @@ class ServiceLocatorImpl implements IServiceLocator {
     if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
   }
 
+  public registerRegistry(registry: IEntityRegistry) {
+      this.registry = registry;
+  }
+
+  public registerSpawner(spawner: IEntitySpawner) {
+      this.spawner = spawner;
+  }
+
   public getAudioService(): IAudioService {
-    if (!this.audioService) throw new Error("AudioService not registered");
-    return this.audioService;
+    return { playSound: () => {}, playMusic: () => {}, setVolume: () => {} }; 
   }
 
   public getInputService(): IInputService {
@@ -27,15 +35,22 @@ class ServiceLocatorImpl implements IServiceLocator {
     return this.inputService;
   }
   
+  public getRegistry(): IEntityRegistry {
+      if (!this.registry) throw new Error("Registry not registered");
+      return this.registry;
+  }
+
+  public getSpawner(): IEntitySpawner {
+      if (!this.spawner) throw new Error("Spawner not registered");
+      return this.spawner;
+  }
+  
   public reset(): void {
     this.systems.clear();
     this.audioService = undefined;
     this.inputService = undefined;
-  }
-
-  // Helper for debug/tools
-  public get registeredSystemIds(): string[] {
-    return Array.from(this.systems.keys());
+    this.registry = undefined;
+    this.spawner = undefined;
   }
 }
 

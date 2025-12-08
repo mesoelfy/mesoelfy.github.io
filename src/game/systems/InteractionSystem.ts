@@ -1,5 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntitySystem } from './EntitySystem';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PanelRegistry } from './PanelRegistrySystem'; 
@@ -14,12 +13,12 @@ export class InteractionSystem implements IGameSystem {
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
-  private entitySystem!: EntitySystem;
+  private spawner!: IEntitySpawner;
   private gameSystem!: GameStateSystem; 
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.spawner = locator.getSpawner();
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
   }
 
@@ -27,29 +26,20 @@ export class InteractionSystem implements IGameSystem {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
     
-    // If Game Over, no interaction allowed.
-    if (this.gameSystem.isGameOver) {
-        return; 
-    }
+    if (this.gameSystem.isGameOver) return; 
     
     const cursor = this.locator.getInputService().getCursor();
     
-    // PLAYER DEAD LOGIC
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
-        
-        // NEW: If we are not actively rebooting, decay the progress
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
-            // Decay speed: 15% per second (adjust as needed)
             this.gameSystem.decayReboot(delta * 15);
         }
         return; 
     }
 
-    // NORMAL LOGIC
     this.handlePanelRepair(cursor, time);
     
-    // Decay for destroyed panels
     if (time > this.lastRepairTime + this.REPAIR_RATE) {
         const panels = PanelRegistry.getAllPanels();
         for (const p of panels) {
@@ -78,7 +68,11 @@ export class InteractionSystem implements IGameSystem {
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.gameSystem.tickReboot(2.5); // Charge Speed
             this.lastRepairTime = time;
-            if (Math.random() > 0.3) this.entitySystem.spawnParticle(cursor.x, cursor.y, '#9E4EA5', 4);
+            if (Math.random() > 0.3) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 2;
+                this.spawner.spawnParticle(cursor.x, cursor.y, '#9E4EA5', Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
+            }
         }
     }
   }
@@ -99,7 +93,9 @@ export class InteractionSystem implements IGameSystem {
             if (!p.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
             if (Math.random() > 0.3) {
                 const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
-                this.entitySystem.spawnParticle(cursor.x, cursor.y, color, 4);
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 2;
+                this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
             }
         }
         break; 

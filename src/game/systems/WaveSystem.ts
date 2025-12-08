@@ -1,5 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntitySystem } from './EntitySystem';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 
@@ -15,14 +14,14 @@ const WAVE_TIMELINE = [
 ];
 
 export class WaveSystem implements IGameSystem {
-  private entitySystem!: EntitySystem;
+  private spawner!: IEntitySpawner;
   private waveTime = 0;
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
 
   setup(locator: IServiceLocator): void {
-    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.spawner = locator.getSpawner();
     this.reset();
   }
 
@@ -34,14 +33,8 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // STOP CONDITIONS:
-    // 1. Zen Mode (System Purge)
     if (useGameStore.getState().isZenMode) return;
-    
-    // 2. Peace Protocol (Debug Flag)
     if (useStore.getState().debugFlags.peaceMode) return;
-
-    // 3. Sandbox Mode (Manual Spawning Only)
     if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
@@ -77,7 +70,11 @@ export class WaveSystem implements IGameSystem {
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
         const spawn = this.spawnQueue[i];
         if (this.waveTime >= spawn.time) {
-            this.entitySystem.spawnEnemy(spawn.type as any);
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 25; 
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            this.spawner.spawnEnemy(spawn.type, x, y);
             this.spawnQueue.splice(i, 1);
         }
     }

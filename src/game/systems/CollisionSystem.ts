@@ -1,6 +1,6 @@
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntitySystem } from './EntitySystem';
-import { Registry } from '../core/ecs/EntityRegistry';
+import { PhysicsSystem } from './PhysicsSystem';
+import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
@@ -9,27 +9,31 @@ import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
 import { GameStateSystem } from './GameStateSystem';
+import { IEntitySpawner } from '../core/interfaces';
 
 export class CollisionSystem implements IGameSystem {
-  private entitySystem!: EntitySystem;
+  private physicsSystem!: PhysicsSystem;
   private gameSystem!: GameStateSystem;
+  private registry!: EntityRegistry;
+  private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
+    this.physicsSystem = locator.getSystem<PhysicsSystem>('PhysicsSystem');
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.registry = locator.getRegistry() as EntityRegistry;
+    this.spawner = locator.getSpawner();
   }
 
   update(delta: number, time: number): void {
-    const spatial = this.entitySystem.spatialGrid;
+    const spatial = this.physicsSystem.spatialGrid;
     const cursor = this.locator.getInputService().getCursor();
 
     this.handleBulletCollisions(spatial);
     this.handleProjectileClash(spatial);
 
-    // Enemy Bullets vs Player
-    const bullets = Registry.getByTag(Tag.BULLET);
+    const bullets = this.registry.getByTag(Tag.BULLET);
     for (const b of bullets) {
         if (!b.hasTag(Tag.ENEMY)) continue;
         const bPos = b.getComponent<TransformComponent>('Transform');
@@ -37,14 +41,13 @@ export class CollisionSystem implements IGameSystem {
         const dx = bPos.x - cursor.x;
         const dy = bPos.y - cursor.y;
         if (dx*dx + dy*dy < 0.25) { 
-            Registry.destroyEntity(b.id);
+            this.registry.destroyEntity(b.id);
             this.damagePlayer(10); 
-            this.entitySystem.spawnParticle(bPos.x, bPos.y, '#FF003C', 5);
+            this.spawner.spawnParticle(bPos.x, bPos.y, '#FF003C', 0, 0, 0.5);
         }
     }
 
-    // Body Collisions
-    const players = Registry.getByTag(Tag.PLAYER);
+    const players = this.registry.getByTag(Tag.PLAYER);
     const player = players[0];
     
     if (player && player.active) {
@@ -52,7 +55,7 @@ export class CollisionSystem implements IGameSystem {
         if (pPos) {
             const nearby = spatial.query(pPos.x, pPos.y, 1.0);
             for (const id of nearby) {
-                const enemy = Registry.getEntity(id);
+                const enemy = this.registry.getEntity(id as any);
                 if (!enemy || !enemy.active || !enemy.hasTag(Tag.ENEMY)) continue;
                 if (enemy.hasTag(Tag.BULLET)) continue; 
 
@@ -71,23 +74,23 @@ export class CollisionSystem implements IGameSystem {
   }
 
   private handleProjectileClash(spatial: any) {
-      const playerBullets = Registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY));
+      const playerBullets = this.registry.getByTag(Tag.BULLET).filter(b => !b.hasTag(Tag.ENEMY));
       for (const pb of playerBullets) {
           const pPos = pb.getComponent<TransformComponent>('Transform');
           if (!pPos) continue;
           const nearby = spatial.query(pPos.x, pPos.y, 1.0);
           for (const id of nearby) {
-              const target = Registry.getEntity(id);
+              const target = this.registry.getEntity(id as any);
               if (!target || !target.active || !target.hasTag(Tag.BULLET) || !target.hasTag(Tag.ENEMY)) continue;
               const tPos = target.getComponent<TransformComponent>('Transform');
               if (!tPos) continue;
               const dx = pPos.x - tPos.x;
               const dy = pPos.y - tPos.y;
               if (dx*dx + dy*dy < 1.0) {
-                  Registry.destroyEntity(pb.id);
-                  Registry.destroyEntity(target.id);
+                  this.registry.destroyEntity(pb.id);
+                  this.registry.destroyEntity(target.id);
                   GameEventBus.emit(GameEvents.PROJECTILE_CLASH, { x: tPos.x, y: tPos.y });
-                  this.entitySystem.spawnParticle(tPos.x, tPos.y, '#F7D277', 6);
+                  this.spawner.spawnParticle(tPos.x, tPos.y, '#F7D277', 0, 0, 0.5);
                   break; 
               }
           }
@@ -99,12 +102,20 @@ export class CollisionSystem implements IGameSystem {
       const type = identity ? identity.variant : 'unknown';
       if (type === EnemyTypes.KAMIKAZE) {
           this.damagePlayer(25); 
-          this.entitySystem.spawnParticle(x, y, '#FF003C', 15);
+          this.spawnExplosion(x, y, '#FF003C');
       } else {
           this.damagePlayer(10);
-          this.entitySystem.spawnParticle(x, y, '#9E4EA5', 8);
+          this.spawnExplosion(x, y, '#9E4EA5');
       }
-      Registry.destroyEntity(enemy.id);
+      this.registry.destroyEntity(enemy.id);
+  }
+
+  private spawnExplosion(x: number, y: number, color: string) {
+      for(let i=0; i<8; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 15;
+          this.spawner.spawnParticle(x, y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.8);
+      }
   }
 
   private damagePlayer(amount: number) {
@@ -113,7 +124,7 @@ export class CollisionSystem implements IGameSystem {
   }
 
   private handleBulletCollisions(spatial: any) {
-    const bullets = Registry.getByTag(Tag.BULLET);
+    const bullets = this.registry.getByTag(Tag.BULLET);
     for (const b of bullets) {
         if (b.hasTag(Tag.ENEMY)) continue; 
         const bPos = b.getComponent<TransformComponent>('Transform');
@@ -121,14 +132,14 @@ export class CollisionSystem implements IGameSystem {
 
         const candidates = spatial.query(bPos.x, bPos.y, 1.0);
         for (const targetId of candidates) {
-            const target = Registry.getEntity(targetId);
+            const target = this.registry.getEntity(targetId as any);
             if (!target || !target.active || !target.hasTag(Tag.ENEMY) || target.hasTag(Tag.BULLET)) continue;
             
             const dx = bPos.x - target.getComponent<TransformComponent>('Transform')!.x;
             const dy = bPos.y - target.getComponent<TransformComponent>('Transform')!.y;
 
             if (dx*dx + dy*dy < 0.49) { 
-                Registry.destroyEntity(b.id);
+                this.registry.destroyEntity(b.id);
                 const hp = target.getComponent<HealthComponent>('Health');
                 if (hp) {
                     hp.damage(1);
@@ -136,7 +147,7 @@ export class CollisionSystem implements IGameSystem {
                         id: target.id as number, damage: 1, type: 'unknown' 
                     });
                 }
-                this.entitySystem.spawnParticle(bPos.x, bPos.y, '#FFF', 2);
+                this.spawner.spawnParticle(bPos.x, bPos.y, '#FFF', 0, 0, 0.2);
                 break;
             }
         }

@@ -1,80 +1,89 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
-import { EntityFactory } from './EntityFactory';
+import { EntityRegistry } from './ecs/EntityRegistry';
+import { EntitySpawner } from './EntitySpawner';
 
 // Systems
 import { TimeSystem } from '../systems/TimeSystem';
 import { InputSystem } from '../systems/InputSystem';
-import { EntitySystem } from '../systems/EntitySystem';
+import { PhysicsSystem } from '../systems/PhysicsSystem';
+import { LifeCycleSystem } from '../systems/LifeCycleSystem';
+import { BehaviorSystem } from '../systems/BehaviorSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { CameraSystem } from '../systems/CameraSystem';
-import { PanelRegistry } from '../systems/PanelRegistrySystem'; // Singleton
-import { GameStateSystem } from '../systems/GameStateSystem'; // NEW
-import { UISyncSystem } from '../systems/UISyncSystem'; // NEW
+import { PanelRegistry } from '../systems/PanelRegistrySystem'; 
+import { GameStateSystem } from '../systems/GameStateSystem'; 
+import { UISyncSystem } from '../systems/UISyncSystem'; 
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
-  const engine = new GameEngineCore();
+  const registry = new EntityRegistry();
+  const spawner = new EntitySpawner(registry);
+  const engine = new GameEngineCore(registry);
   
+  // Register Core Services
+  ServiceLocator.registerRegistry(registry);
+  ServiceLocator.registerSpawner(spawner);
+
+  // Instantiate Systems
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
-  const entitySys = new EntitySystem();
+  const physicsSys = new PhysicsSystem();
+  const lifeSys = new LifeCycleSystem();
+  const behaviorSys = new BehaviorSystem();
   const collisionSys = new CollisionSystem();
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
   const cameraSys = new CameraSystem();
-  const gameSys = new GameStateSystem(); // NEW
-  const syncSys = new UISyncSystem(); // NEW
-  
+  const gameSys = new GameStateSystem(); 
+  const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
 
-  // Register
-  ServiceLocator.registerSystem('TimeSystem', timeSys);
-  ServiceLocator.registerSystem('InputSystem', inputSys);
-  ServiceLocator.registerSystem('EntitySystem', entitySys);
-  ServiceLocator.registerSystem('CollisionSystem', collisionSys);
-  ServiceLocator.registerSystem('WaveSystem', waveSys);
-  ServiceLocator.registerSystem('PlayerSystem', playerSys);
-  ServiceLocator.registerSystem('InteractionSystem', interactionSys);
-  ServiceLocator.registerSystem('CameraSystem', cameraSys);
-  ServiceLocator.registerSystem('PanelRegistrySystem', panelSys);
-  ServiceLocator.registerSystem('GameStateSystem', gameSys); // NEW
-  ServiceLocator.registerSystem('UISyncSystem', syncSys); // NEW
+  // Register Systems
+  const systems = {
+      'TimeSystem': timeSys,
+      'InputSystem': inputSys,
+      'PhysicsSystem': physicsSys,
+      'LifeCycleSystem': lifeSys,
+      'BehaviorSystem': behaviorSys,
+      'CollisionSystem': collisionSys,
+      'WaveSystem': waveSys,
+      'PlayerSystem': playerSys,
+      'InteractionSystem': interactionSys,
+      'CameraSystem': cameraSys,
+      'GameStateSystem': gameSys,
+      'UISyncSystem': syncSys,
+      'PanelRegistrySystem': panelSys
+  };
+
+  Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
   
-  // Engine Loop
+  // Engine Loop Order
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(panelSys);
-  engine.registerSystem(gameSys); // NEW (Logic Update)
+  engine.registerSystem(gameSys);
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
   engine.registerSystem(playerSys); 
-  engine.registerSystem(entitySys); 
+  engine.registerSystem(behaviorSys); // AI Logic
+  engine.registerSystem(physicsSys); // Move
   engine.registerSystem(collisionSys); 
+  engine.registerSystem(lifeSys); // Death / Cleanup
   engine.registerSystem(cameraSys); 
-  engine.registerSystem(syncSys); // NEW (Last in loop to sync final state)
+  engine.registerSystem(syncSys); 
   
   // Setup
-  timeSys.setup(ServiceLocator);
-  inputSys.setup(ServiceLocator);
-  gameSys.setup(ServiceLocator); // NEW
-  entitySys.setup(ServiceLocator);
-  collisionSys.setup(ServiceLocator);
-  waveSys.setup(ServiceLocator);
-  playerSys.setup(ServiceLocator);
-  interactionSys.setup(ServiceLocator);
-  cameraSys.setup(ServiceLocator);
-  panelSys.setup(ServiceLocator);
-  syncSys.setup(ServiceLocator); // NEW
+  Object.values(systems).forEach(sys => sys.setup(ServiceLocator));
   
   engine.setup(ServiceLocator);
 
-  EntityFactory.createPlayer();
+  spawner.spawnPlayer();
 
   return engine;
 };

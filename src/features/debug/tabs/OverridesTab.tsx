@@ -5,6 +5,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface OverridesTabProps {
   closeDebug: () => void;
@@ -19,19 +20,39 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   const handleSkipBoot = () => {
     setIntroDone(true);
     setBootState('active');
+    // Ensure Audio System is ready if skipping boot
+    AudioSystem.init();
+    AudioSystem.startMusic();
     startGame();
     closeDebug(); 
   };
 
-  const handleForceCrash = () => {
-    if (bootState === 'standby') {
-        setIntroDone(true);
-        setBootState('active');
-    }
+  const executeCrash = () => {
+    // 1. Kill integrity in Store (React UI updates immediately)
     useGameStore.setState({ systemIntegrity: 0 });
+    
+    // 2. Kill Registry Logic (Visuals/Game Logic updates)
     PanelRegistry.destroyAll();
+    
+    // 3. Emit Events
     GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
     stopGame();
+  };
+
+  const handleForceCrash = () => {
+    if (bootState === 'standby') {
+        // Init Audio/Engine
+        setIntroDone(true);
+        setBootState('active');
+        AudioSystem.init();
+        
+        // Wait for React to mount the GameOverlay and GameDirector to boot the engine (approx 1 frame)
+        setTimeout(() => {
+            executeCrash();
+        }, 100);
+    } else {
+        executeCrash();
+    }
     closeDebug();
   };
 
@@ -46,6 +67,8 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
       if (bootState === 'standby') {
           setIntroDone(true);
           setBootState('active');
+          AudioSystem.init();
+          AudioSystem.startMusic();
       }
       activateZenMode();
       closeDebug();
@@ -53,7 +76,6 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const handleSystemFormat = () => {
       resetApplication();
-      // Application reset clears the UI state, closing the modal naturally
   };
 
   const toggleGodSuite = () => {

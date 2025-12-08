@@ -1,9 +1,8 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntitySystem } from './EntitySystem';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { Registry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
@@ -12,28 +11,26 @@ import { GameStateSystem } from './GameStateSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
-  private entitySystem!: EntitySystem;
   private gameSystem!: GameStateSystem;
+  private registry!: EntityRegistry;
+  private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.entitySystem = locator.getSystem<EntitySystem>('EntitySystem');
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.registry = locator.getRegistry() as EntityRegistry;
+    this.spawner = locator.getSpawner();
     this.setupListeners();
   }
 
   update(delta: number, time: number): void {
-    // 1. DEAD / GAME OVER CHECK
-    // If dead or game over, no input processing or shooting.
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // 2. GET PLAYER ENTITY
-    const players = Registry.getByTag(Tag.PLAYER);
+    const players = this.registry.getByTag(Tag.PLAYER);
     const playerEntity = players[0]; 
     if (!playerEntity) return;
 
-    // 3. SYNC POSITION
     const cursor = this.locator.getInputService().getCursor();
     const transform = playerEntity.getComponent<TransformComponent>('Transform');
     if (transform) {
@@ -41,7 +38,6 @@ export class PlayerSystem implements IGameSystem {
         transform.y = cursor.y;
     }
 
-    // 4. UPDATE STATE
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
         try {
@@ -56,7 +52,6 @@ export class PlayerSystem implements IGameSystem {
         }
     }
 
-    // 5. COMBAT LOGIC
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const rapidLevel = upgrades['RAPID_FIRE'] || 0;
@@ -79,7 +74,7 @@ export class PlayerSystem implements IGameSystem {
 
   private attemptAutoFire(time: number, player: any) {
     const cursor = this.locator.getInputService().getCursor();
-    const enemies = Registry.getByTag(Tag.ENEMY);
+    const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
     const RANGE = 12; 
     let targetEnemy: any = null;
@@ -114,7 +109,7 @@ export class PlayerSystem implements IGameSystem {
           const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
           const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
 
-          this.entitySystem.spawnBullet(
+          this.spawner.spawnBullet(
               cursor.x, cursor.y, vx, vy, false, 
               PLAYER_CONFIG.bulletLife, PLAYER_CONFIG.bulletRadius
           );

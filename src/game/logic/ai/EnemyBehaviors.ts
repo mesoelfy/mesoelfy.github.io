@@ -5,7 +5,6 @@ import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { GameEvents } from '../../events/GameEvents';
 import { EnemyTypes as Types } from '../../config/Identifiers';
-import { Registry } from '../../core/ecs/EntityRegistry';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -33,6 +32,7 @@ export interface AIContext {
   triggerExplosion: (x: number, y: number, color: string) => void;
   spawnDrillSparks: (x: number, y: number, color: string) => void; 
   emitEvent: (name: string, payload: any) => void;
+  destroyEntity: (id: number) => void; // NEW: Dependency Injection for death
 }
 
 export interface EnemyBehavior {
@@ -102,7 +102,6 @@ export const DrillerBehavior: EnemyBehavior = {
       motion.vy = 0;
     }
     
-    // Rotation Logic: Face the drill target or movement direction
     if (isDrilling) {
         const angleToPanel = Math.atan2(targetY - pos.y, targetX - pos.x) - Math.PI/2;
         pos.rotation = rotateTowards(pos.rotation, angleToPanel, 0.2);
@@ -125,7 +124,7 @@ export const KamikazeBehavior: EnemyBehavior = {
     const dist = Math.sqrt(dx*dx + dy*dy);
     
     if (dist < 1.0) {
-       Registry.destroyEntity(e.id);
+       ctx.destroyEntity(e.id); // Fixed: Use Context
        ctx.triggerExplosion(pos.x, pos.y, '#FF003C');
        ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
        return; 

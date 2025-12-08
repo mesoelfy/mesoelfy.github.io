@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
-import { Registry } from '@/game/core/ecs/EntityRegistry'; 
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, LayoutTemplate } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 
-// TABS
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';
 import { StatsTab } from './tabs/StatsTab';
@@ -57,7 +55,6 @@ export const DebugOverlay = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag]);
 
-  // LOGS & STATS POLLING
   useEffect(() => {
     if (!isDebugOpen && !isDebugMinimized) return;
     
@@ -71,11 +68,14 @@ export const DebugOverlay = () => {
     });
 
     const pollInterval = setInterval(() => {
-        const regStats = Registry.getStats();
         let fps = 0;
+        let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
+        
         try {
             const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
             fps = timeSys.fps;
+            const reg = ServiceLocator.getRegistry();
+            if (reg) regStats = reg.getStats();
         } catch {}
 
         setStats({
@@ -112,30 +112,11 @@ export const DebugOverlay = () => {
       );
   }
 
-  if (isDebugMinimized) {
-      return (
-        <div className="fixed top-24 left-4 z-[9999] flex flex-col gap-2 font-mono text-[10px]">
-            <div className="bg-black/80 border border-elfy-green p-2 shadow-[0_0_20px_rgba(0,255,65,0.2)] w-32 backdrop-blur-md">
-                <div className="flex justify-between items-center border-b border-elfy-green/30 pb-1 mb-1">
-                    <span className="text-elfy-green font-bold flex items-center gap-1"><Activity size={10} /> STATS</span>
-                    <button onClick={toggleDebugMinimize} className="hover:text-white text-elfy-green"><LayoutTemplate size={10} /></button>
-                </div>
-                <div className="flex flex-col gap-1 text-elfy-green-dim">
-                    <div className="flex justify-between"><span>FPS:</span> <span className="text-white font-bold">{stats.fps}</span></div>
-                    <div className="flex justify-between"><span>ENT:</span> <span className="text-white">{stats.active}</span></div>
-                    <div className="flex justify-between"><span>MEM:</span> <span className="text-white">{stats.pooled}</span></div>
-                </div>
-            </div>
-        </div>
-      );
-  }
+  if (isDebugMinimized) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4">
-      
       <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        
-        {/* HEADER */}
         <div className="h-10 border-b border-elfy-green/50 bg-elfy-green/10 flex items-center justify-center relative px-4 shrink-0">
           <div className="flex items-center gap-2">
             <Terminal size={16} />
@@ -146,26 +127,19 @@ export const DebugOverlay = () => {
              <button onClick={toggleDebugMenu} className="hover:text-white transition-colors" title="Close"><X size={16} /></button>
           </div>
         </div>
-
-        {/* BODY */}
         <div className="flex flex-1 min-h-0">
-          
           <div className="w-48 border-r border-elfy-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={clsx(
-                  "p-3 text-left text-xs font-bold tracking-wider border-b border-elfy-green/10 flex items-center gap-2 transition-all hover:bg-elfy-green/20",
-                  activeTab === tab.id ? "bg-elfy-green text-black" : "text-elfy-green-dim"
-                )}
+                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-elfy-green/10 flex items-center gap-2 transition-all hover:bg-elfy-green/20", activeTab === tab.id ? "bg-elfy-green text-black" : "text-elfy-green-dim")}
               >
                 <tab.icon size={14} />
                 {tab.label}
               </button>
             ))}
           </div>
-
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
             {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={toggleDebugMenu} />}
             {activeTab === 'SANDBOX' && <SandboxTab closeDebug={toggleDebugMenu} />}
@@ -173,11 +147,9 @@ export const DebugOverlay = () => {
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
-        
         <div className="h-6 bg-elfy-green/5 border-t border-elfy-green/30 flex items-center px-4 text-[9px] text-elfy-green-dim">
           <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
         </div>
-
       </div>
     </div>
   );
