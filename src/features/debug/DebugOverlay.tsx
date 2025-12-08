@@ -24,27 +24,38 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
 
 export const DebugOverlay = () => {
   const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication } = useStore();
-  
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === '`' || e.key === '~') {
+      // ESC Key: Toggle or Restore
+      if (e.key === 'Escape') {
         if (isDebugMinimized) {
-            // Restore from minimized
             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
-            // Toggle normally (Open <-> Close)
             toggleDebugMenu();
-            
-            // Auto-enable cheats on first open if using tilde
-            if (!isDebugOpen && (e.key === '`' || e.key === '~') && !useStore.getState().debugFlags.godMode) {
-                setDebugFlag('godMode', true);
-                setDebugFlag('panelGodMode', true);
-                setDebugFlag('peaceMode', true);
-            }
+        }
+      } 
+      // Tilde Key: Toggle & Force God Mode
+      else if (e.key === '`' || e.key === '~') {
+        if (isDebugMinimized) {
+             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+        } else {
+             toggleDebugMenu();
+        }
+
+        // Logic: If opening, ensure ALL cheats are on.
+        const state = useStore.getState();
+        // If the menu wasn't open (we are opening it now), OR if we are just pressing tilde while open...
+        // Actually, let's just enforce: If any flag is FALSE, turn them ALL TRUE.
+        const flags = state.debugFlags;
+        if (!flags.godMode || !flags.panelGodMode || !flags.peaceMode) {
+            setDebugFlag('godMode', true);
+            setDebugFlag('panelGodMode', true);
+            setDebugFlag('peaceMode', true);
+            console.log("[Debug] God Suite Enabled");
         }
       }
     };
@@ -52,6 +63,7 @@ export const DebugOverlay = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag]);
 
+  // Telemetry Loop
   useEffect(() => {
     if (!isDebugOpen && !isDebugMinimized) return;
     
@@ -112,11 +124,8 @@ export const DebugOverlay = () => {
                 <div className="flex items-center justify-between border-b border-elfy-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-elfy-green tracking-wider">DEBUG_LIVE</span>
                     <button 
-                        onClick={() => {
-                            useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
-                        }} 
+                        onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} 
                         className="text-elfy-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
-                        title="Maximize"
                     >
                         <Maximize2 size={12} />
                     </button>
@@ -140,9 +149,7 @@ export const DebugOverlay = () => {
                 <div className="h-[1px] bg-elfy-green/20 my-1" />
                 
                 <button 
-                    onClick={() => {
-                        useStore.setState({ isDebugMinimized: false, isDebugOpen: false });
-                    }} 
+                    onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} 
                     className="text-[9px] bg-elfy-red/10 border border-elfy-red/30 text-elfy-red hover:bg-elfy-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
                 >
                     CLOSE_DEBUG
@@ -164,12 +171,11 @@ export const DebugOverlay = () => {
           <div className="absolute right-4 flex items-center gap-2">
              <button 
                 onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} 
-                className="hover:text-white transition-colors p-1" 
-                title="Mini Mode"
+                className="hover:text-white transition-colors p-1"
              >
                 <MinusSquare size={16} />
              </button>
-             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1" title="Close"><X size={16} /></button>
+             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1"><X size={16} /></button>
           </div>
         </div>
         <div className="flex flex-1 min-h-0">

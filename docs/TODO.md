@@ -147,7 +147,9 @@ mobile - chrome devtools - device toolbar - confirm compatibility with different
 Sometime green system restored animation appears in a panel during game over state.
 
 
+enemy kill count is going up even when not killing them
 
+Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
 
 
 # MESOELFY_OS // REVISED ARCHITECTURE SPECIFICATION

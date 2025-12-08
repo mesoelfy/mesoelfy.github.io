@@ -4,7 +4,6 @@ import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '../config/Identifiers';
 
-// Faster initial timeline for testing
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
   { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
@@ -22,8 +21,6 @@ export class WaveSystem implements IGameSystem {
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
-  
-  private nextBreachTime = 2.0; // Aggressive start
 
   setup(locator: IServiceLocator): void {
     this.spawner = locator.getSpawner();
@@ -35,54 +32,60 @@ export class WaveSystem implements IGameSystem {
     this.currentWaveIndex = 0;
     this.spawnQueue = [];
     this.loopCount = 0;
-    this.nextBreachTime = 2.0; 
   }
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
-    if (useStore.getState().debugFlags.peaceMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
-    this.checkTimeline();
-    this.processQueue(time);
-    this.checkBreaches(delta, time);
+    
+    // 1. Standard Waves (Disabled by Peace Mode)
+    if (!useStore.getState().debugFlags.peaceMode) {
+        this.checkTimeline();
+        this.processQueue(time);
+    }
+
+    // 2. Breach Spawns (Disabled by Fortress Mode or Peace Mode)
+    this.handleBreaches(delta);
   }
 
-  private checkBreaches(delta: number, time: number) {
-      if (this.waveTime > this.nextBreachTime) {
-          const allPanels = PanelRegistry.getAllPanels();
-          const deadPanels = allPanels.filter(p => p.isDestroyed);
-          
-          if (deadPanels.length > 0) {
-              const p = deadPanels[Math.floor(Math.random() * deadPanels.length)];
-              
-              // Calculate Intensity based on time
-              const intensity = Math.min(4, Math.floor(this.waveTime / 15) + 1);
-              
-              console.log(`[WaveSystem] BREACH SPAWN at Panel '${p.id}'. Count: ${intensity}. Coords: ${p.x.toFixed(1)}, ${p.y.toFixed(1)}`);
+  private handleBreaches(delta: number) {
+      const flags = useStore.getState().debugFlags;
+      
+      // If Fortress Mode is on, we assume the "Breach" is sealed/contained.
+      // If Peace Mode is on, no enemies should spawn at all.
+      if (flags.panelGodMode || flags.peaceMode) return;
 
-              for(let i=0; i<intensity; i++) {
-                  // Random type logic
-                  const rand = Math.random();
-                  let type = EnemyTypes.DRILLER;
-                  if (rand > 0.8) type = EnemyTypes.HUNTER;
-                  else if (rand > 0.6) type = EnemyTypes.KAMIKAZE;
+      const allPanels = PanelRegistry.getAllPanels();
+      const deadPanels = allPanels.filter(p => p.isDestroyed && p.width > 0);
+      
+      if (deadPanels.length === 0) return;
 
-                  // 50% width/height padding from center
-                  const spawnW = p.width * 0.5;
-                  const spawnH = p.height * 0.5;
-                  
-                  const offsetX = (Math.random() - 0.5) * spawnW;
-                  const offsetY = (Math.random() - 0.5) * spawnH;
-                  
-                  this.spawner.spawnEnemy(type, p.x + offsetX, p.y + offsetY);
-              }
+      // "Leak Rate" Calculation:
+      const enemiesPerSecondPerPanel = 0.2 + (this.waveTime * 0.005);
+      const spawnChance = enemiesPerSecondPerPanel * delta;
+
+      for (const p of deadPanels) {
+          if (Math.random() < spawnChance) {
+              this.spawnBreachEnemy(p);
           }
-
-          // Schedule next breach (Every 3-6 seconds)
-          this.nextBreachTime = this.waveTime + 3.0 + (Math.random() * 3.0);
       }
+  }
+
+  private spawnBreachEnemy(p: any) {
+      const rand = Math.random();
+      let type = EnemyTypes.DRILLER;
+      if (rand > 0.85) type = EnemyTypes.HUNTER;
+      else if (rand > 0.60) type = EnemyTypes.KAMIKAZE;
+
+      const safeW = p.width * 0.7; 
+      const safeH = p.height * 0.7;
+      
+      const offsetX = (Math.random() - 0.5) * safeW;
+      const offsetY = (Math.random() - 0.5) * safeH;
+      
+      this.spawner.spawnEnemy(type, p.x + offsetX, p.y + offsetY);
   }
 
   private checkTimeline() {

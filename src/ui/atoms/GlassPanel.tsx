@@ -77,6 +77,10 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
+  // FIX: Dynamic Background Opacity
+  // If destroyed, make background transparent so we can see 3D enemies spawning "inside"
+  const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
+
   return (
     <motion.div 
       ref={registryRef}
@@ -86,7 +90,8 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
-        "bg-black border",
+        bgClass, // <--- Dynamic Background
+        "border",
         borderColor, 
         "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
         "rounded-sm",
