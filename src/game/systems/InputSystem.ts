@@ -2,31 +2,57 @@ import { IGameSystem, IServiceLocator, IInputService } from '../core/interfaces'
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
-  private _keys = new Set<string>();
+  private _virtualVector = { x: 0, y: 0 };
+  private _usingJoystick = false;
+  
+  // Bounds for clamping (updated by GameEngine/ViewportHelper)
+  private _bounds = { width: 30, height: 20 }; 
 
   setup(locator: IServiceLocator): void {
-    // In Phase 5, we will add event listeners here.
-    // For now, we rely on the React Component passing cursor data, 
-    // effectively "mocking" the listeners.
+    // Initial setup
   }
 
   update(delta: number, time: number): void {
-    // No-op for now, cursor is updated externally via public method
+    // If using joystick, move the cursor based on the vector
+    if (this._usingJoystick) {
+        const speed = 30.0; // Virtual cursor speed
+        
+        this._cursor.x += this._virtualVector.x * speed * delta;
+        this._cursor.y += this._virtualVector.y * speed * delta;
+
+        // Clamp to logical world bounds (approximate, refined by viewport)
+        const halfW = this._bounds.width / 2;
+        const halfH = this._bounds.height / 2;
+        
+        this._cursor.x = Math.max(-halfW, Math.min(halfW, this._cursor.x));
+        this._cursor.y = Math.max(-halfH, Math.min(halfH, this._cursor.y));
+    }
   }
 
-  teardown(): void {
-    this._keys.clear();
-  }
+  teardown(): void {}
 
   // --- IInputService Implementation ---
   
   public updateCursor(x: number, y: number) {
+    // Mouse movement overrides joystick
+    this._usingJoystick = false;
     this._cursor.x = x;
     this._cursor.y = y;
   }
 
-  public getCursorPosition() {
-    return this._cursor;
+  public setJoystickVector(x: number, y: number) {
+      if (x === 0 && y === 0) {
+          this._usingJoystick = false;
+      } else {
+          this._usingJoystick = true;
+      }
+      this._virtualVector.x = x;
+      this._virtualVector.y = y;
+  }
+  
+  public updateBounds(width: number, height: number) {
+      this._bounds.width = width;
+      this._bounds.height = height;
   }
 
   public getCursor() {
@@ -34,6 +60,7 @@ export class InputSystem implements IGameSystem, IInputService {
   }
 
   public isPressed(action: string): boolean {
-    return this._keys.has(action);
+    // Placeholder for future button mapping
+    return false;
   }
 }

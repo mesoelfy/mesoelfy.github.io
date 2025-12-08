@@ -6,18 +6,24 @@
   --foreground-rgb: 0, 255, 65;
 }
 
-html {
+html, body {
   background-color: #000000;
+  overscroll-behavior: none; /* Prevent pull-to-refresh */
+  touch-action: none; /* Disable native touch gestures */
 }
 
 body {
   color: #78F654;
-  background-color: #000000;
   overflow: hidden; 
   font-family: 'Courier New', monospace;
+  height: 100dvh; /* Fix for Mobile Safari */
+  width: 100vw;
 }
 
-/* --- HACKER SCROLLBAR --- */
+#global-app-root {
+  height: 100dvh;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -38,23 +44,15 @@ body {
   background: #78F654;
 }
 
-/* Utilities */
 .glitch-text {
   text-shadow: 2px 0 #ff003c, -2px 0 #008f11;
 }
 
 .clip-corner-btn {
-  clip-path: polygon(
-    0 0, 
-    100% 0, 
-    100% 70%, 
-    90% 100%, 
-    0 100%
-  );
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%);
 }
 
-/* --- NUCLEAR OPTION: HIDE NEXT.JS INDICATORS --- */
-/* Force hides the "N" button, build spinners, and static route indicators */
+/* Hide Next.js Indicators */
 body > div[data-nextjs-toast],
 body > div[data-nextjs-dialog-overlay],
 #next-route-announcer,
