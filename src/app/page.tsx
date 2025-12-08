@@ -24,6 +24,7 @@ import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
+import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -36,10 +37,13 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
-  // "showScene" is used for the Intro transition trigger
   const [showScene, setShowScene] = useState(false); 
 
   const handleBreachStart = () => {
+    // Start Audio Preload when "Breach" begins (User clicked Initialize)
+    AudioSystem.init().then(() => {
+        // Audio is ready
+    });
     setShowScene(true);
   };
 
@@ -57,9 +61,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [bootState, recalcIntegrity]);
 
-  const playHover = () => AudioSystem.playHover();
-
-  // FIX: Grid should be visible if explicitly shown OR if we are past the standby phase
   const isGridVisible = showScene || bootState !== 'standby';
 
   return (
@@ -71,10 +72,11 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        {/* BACKGROUND SCENE */}
-        <SceneCanvas className={clsx("blur-0", isGridVisible ? "opacity-100" : "opacity-0")} />
-
-        {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
+        {/* WRAP 3D SCENE IN ERROR BOUNDARY */}
+        <WebGLErrorBoundary>
+            <SceneCanvas className={clsx("blur-0", isGridVisible ? "opacity-100" : "opacity-0")} />
+            {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
+        </WebGLErrorBoundary>
 
         {isSandbox && <SimulationHUD />}
 
@@ -138,7 +140,6 @@ export default function Home() {
                               <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
                               <button 
                                 onClick={() => openModal('feed')} 
-                                onMouseEnter={playHover}
                                 className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
                               >
                                 [ ACCESS TERMINAL ]

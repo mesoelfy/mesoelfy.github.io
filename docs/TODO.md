@@ -135,8 +135,11 @@ Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little talle
 
 Hunter weapon needs to start small and get bigger before launching
 
+kamikaze should hurt player. if kamikaze explodes in panel, it does same amount of damage to panel as it does to player.
+player colliding with any enemy should hurt player and make that enemy explode (by doing damage to them)
 
 
+Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
 
 
 
