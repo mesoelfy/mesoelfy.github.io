@@ -24,7 +24,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           mask: PhysicsConfig.MASKS.ENEMY 
         } 
       },
-      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } }
+      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: 'Target', data: { type: 'PANEL' } } // Drillers prefer Panels
     ]
   },
 
@@ -43,7 +44,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           mask: PhysicsConfig.MASKS.ENEMY 
         } 
       },
-      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } }
+      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: 'Target', data: { type: 'PLAYER' } }
     ]
   },
 
@@ -62,7 +64,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           mask: PhysicsConfig.MASKS.ENEMY 
         } 
       },
-      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } }
+      { type: 'State', data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: 'Target', data: { type: 'PLAYER' } }
     ]
   }
 };

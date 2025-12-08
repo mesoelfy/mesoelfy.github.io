@@ -7,6 +7,7 @@ import { InstancedActor } from './common/InstancedActor';
 import { addBarycentricCoordinates, createHunterSpear } from '../utils/GeometryUtils';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
+import { MODEL_CONFIG } from '../config/ModelConfig';
 
 const vertexShader = `
   #ifndef USE_INSTANCING_COLOR
@@ -41,8 +42,18 @@ const fragmentShader = `
 `;
 
 export const EnemyRenderer = () => {
-  const drillerGeo = useMemo(() => addBarycentricCoordinates(new THREE.ConeGeometry(0.3, 0.8, 4)), []);
-  const kamikazeGeo = useMemo(() => addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0)), []);
+  // GEOMETRY GENERATION USING CONFIG
+  const drillerGeo = useMemo(() => {
+      const { radius, height, segments } = MODEL_CONFIG.DRILLER;
+      // Cone geometry pivots at center. Tip is at Y = +height/2.
+      return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
+  }, []);
+
+  const kamikazeGeo = useMemo(() => {
+      const { radius, detail } = MODEL_CONFIG.KAMIKAZE;
+      return addBarycentricCoordinates(new THREE.IcosahedronGeometry(radius, detail));
+  }, []);
+
   const hunterGeo = useMemo(() => createHunterSpear(), []);
 
   const material = useMemo(() => new THREE.ShaderMaterial({
@@ -52,16 +63,11 @@ export const EnemyRenderer = () => {
 
   const chargeColor = useMemo(() => new THREE.Color(GAME_THEME.enemy.charge), []);
 
-  // Shared Helper for "Materialization" visual
   const applySpawnEffect = (obj: THREE.Object3D, state?: StateComponent) => {
       if (state && state.current === 'SPAWN') {
-          // Timer goes 1.5 -> 0.
-          // Scale goes 0 -> 1.
           const progress = 1.0 - (state.timers.spawn / 1.5);
-          const eased = Math.pow(progress, 2); // Ease out
+          const eased = Math.pow(progress, 2); 
           obj.scale.setScalar(eased);
-          
-          // Jitter position slightly for "Hologram" effect
           obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
       }
   };
@@ -80,6 +86,7 @@ export const EnemyRenderer = () => {
             const state = e.getComponent<StateComponent>('State');
             const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
             obj.position.z = 5.0;
+            // Rotate Y (Spinning Axis)
             obj.rotateY(performance.now() * 0.001 * speed); 
             applySpawnEffect(obj, state);
         }}

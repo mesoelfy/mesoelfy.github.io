@@ -151,6 +151,16 @@ enemy kill count is going up even when not killing them
 
 Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
 
+drillers aren't pixel perfect drilling the edge of a panel. Sometimes they overshoot or undershoot by a pixel or couple pixels. (if that is that right measurement - - - what unit are we using?) also, sometimes they are drilling slightly at a side angle.  Also, 
+
+
+
+
+
+
+Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
+
+
 
 # MESOELFY_OS // REVISED ARCHITECTURE SPECIFICATION
 

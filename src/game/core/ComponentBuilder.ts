@@ -6,6 +6,7 @@ import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { CombatComponent } from '../components/data/CombatComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
+import { TargetComponent } from '../components/data/TargetComponent';
 import { Component } from './ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
@@ -25,5 +26,7 @@ export const ComponentBuilder: Record<string, ComponentFactory> = {
   
   State: (data) => new StateComponent(data.current, data.timers || {}, data.data || {}),
   
-  Collider: (data) => new ColliderComponent(data.radius, data.layer, data.mask)
+  Collider: (data) => new ColliderComponent(data.radius, data.layer, data.mask),
+  
+  Target: (data) => new TargetComponent(data.id, data.type, data.x, data.y, data.locked)
 };

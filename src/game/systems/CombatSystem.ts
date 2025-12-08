@@ -42,7 +42,7 @@ export class CombatSystem implements IGameSystem {
           const id = b.getComponent<IdentityComponent>('Identity');
           const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
           this.damagePlayer(damage);
-          this.destroyEnemy(b, true); // Player body hits enemy -> Instant kill + explode
+          this.destroyEnemy(b, true); 
       }
 
       // PLAYER vs ENEMY_PROJECTILE
@@ -82,7 +82,6 @@ export class CombatSystem implements IGameSystem {
   }
 
   private destroyEnemy(entity: Entity, explode: boolean) {
-      // FIX: Emit Event BEFORE destroying, so PlayerSystem can count score/xp
       const transform = entity.getComponent<TransformComponent>('Transform');
       const identity = entity.getComponent<IdentityComponent>('Identity');
       
@@ -97,8 +96,13 @@ export class CombatSystem implements IGameSystem {
 
       this.registry.destroyEntity(entity.id);
       
-      if (explode && transform) {
-          this.spawnExplosion(transform.x, transform.y, '#9E4EA5');
+      if (explode && transform && identity) {
+          // UPDATED: Dynamic Color Selection
+          let color = '#9E4EA5'; // Default Purple
+          if (identity.variant === EnemyTypes.HUNTER) color = '#F7D277'; // Yellow
+          if (identity.variant === EnemyTypes.KAMIKAZE) color = '#FF003C'; // Red
+          
+          this.spawnExplosion(transform.x, transform.y, color);
       }
   }
 

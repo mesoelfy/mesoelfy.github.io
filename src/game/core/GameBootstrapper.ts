@@ -10,7 +10,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
 import { BehaviorSystem } from '../systems/BehaviorSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
-import { CombatSystem } from '../systems/CombatSystem'; // NEW
+import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
@@ -18,6 +18,7 @@ import { CameraSystem } from '../systems/CameraSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem'; 
 import { UISyncSystem } from '../systems/UISyncSystem'; 
+import { TargetingSystem } from '../systems/TargetingSystem'; // NEW
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
@@ -36,7 +37,7 @@ export const GameBootstrapper = () => {
   const lifeSys = new LifeCycleSystem();
   const behaviorSys = new BehaviorSystem();
   const collisionSys = new CollisionSystem();
-  const combatSys = new CombatSystem(); // NEW
+  const combatSys = new CombatSystem();
   const waveSys = new WaveSystem();
   const playerSys = new PlayerSystem();
   const interactionSys = new InteractionSystem();
@@ -44,6 +45,7 @@ export const GameBootstrapper = () => {
   const gameSys = new GameStateSystem(); 
   const syncSys = new UISyncSystem(); 
   const panelSys = PanelRegistry; 
+  const targetingSys = new TargetingSystem(); // NEW
 
   // Register
   const systems = {
@@ -53,14 +55,15 @@ export const GameBootstrapper = () => {
       'LifeCycleSystem': lifeSys,
       'BehaviorSystem': behaviorSys,
       'CollisionSystem': collisionSys,
-      'CombatSystem': combatSys, // NEW
+      'CombatSystem': combatSys,
       'WaveSystem': waveSys,
       'PlayerSystem': playerSys,
       'InteractionSystem': interactionSys,
       'CameraSystem': cameraSys,
       'GameStateSystem': gameSys,
       'UISyncSystem': syncSys,
-      'PanelRegistrySystem': panelSys
+      'PanelRegistrySystem': panelSys,
+      'TargetingSystem': targetingSys // NEW
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
@@ -72,14 +75,15 @@ export const GameBootstrapper = () => {
   engine.registerSystem(gameSys);
   engine.registerSystem(interactionSys); 
   engine.registerSystem(waveSys); 
-  engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys); 
-  engine.registerSystem(physicsSys); 
   
-  // Physics Detects -> Combat Resolves
-  engine.registerSystem(collisionSys); 
-  // CombatSystem doesn't need an 'update' loop, it's called by CollisionSystem
-  engine.registerSystem(combatSys); 
+  // AI Loop
+  engine.registerSystem(targetingSys); // 1. Find Targets
+  engine.registerSystem(playerSys); 
+  engine.registerSystem(behaviorSys);  // 2. Move towards Targets
+  
+  // Physics Loop
+  engine.registerSystem(physicsSys); 
+  engine.registerSystem(collisionSys); // (Delegates to CombatSystem)
 
   engine.registerSystem(lifeSys); 
   engine.registerSystem(cameraSys); 
