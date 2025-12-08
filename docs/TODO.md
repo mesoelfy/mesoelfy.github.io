@@ -109,11 +109,7 @@ Maybe we can have the motion grid affected by the music like a music player visu
 Your cursor could leave a psychedelic trail of colors behind it
 
 
-1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
 
-2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
-
-3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
 
 4     I’d like a quick simple chime blip to indicate panel healed 100%.
 
@@ -151,7 +147,26 @@ enemy kill count is going up even when not killing them
 
 Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
 
-drillers aren't pixel perfect drilling the edge of a panel. Sometimes they overshoot or undershoot by a pixel or couple pixels. (if that is that right measurement - - - what unit are we using?) also, sometimes they are drilling slightly at a side angle.  Also, 
+
+
+
+
+
+
+
+We're using (Waveforms, Envelopes, Frequency Ramps) for our SFX. With those, what are some more really cool sounding techniques to implement that we haven't yet? And what are other things besides those three categories?
+
+How do these ideas sound for what is missing?
+
+1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
+
+2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
+
+3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
+
+What are some other moments in the game so far that are missing sounds? 
+
+I think the drilling sound needs to be overhauled.
 
 
 

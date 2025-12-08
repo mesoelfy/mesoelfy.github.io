@@ -21,13 +21,8 @@ export class BehaviorSystem implements IGameSystem {
       [EnemyTypes.HUNTER]: HunterLogic
   };
 
-  private readonly PURPLE_PALETTE = [
-      '#9E4EA5', // Base
-      '#D0A3D8', // Lavender
-      '#E0B0FF', // Bright
-      '#7A2F8F', // Dark
-      '#B57EDC'  // Soft
-  ];
+  private readonly PURPLE_PALETTE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
+  private readonly YELLOW_PALETTE = ['#F7D277', '#FFE5A0', '#FFA500', '#FFFFFF'];
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
@@ -39,7 +34,9 @@ export class BehaviorSystem implements IGameSystem {
       delta,
       time,
       spawnProjectile: (x, y, vx, vy) => this.spawner.spawnBullet(x, y, vx, vy, true, 3.0),
-      spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle),
+      spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.PURPLE_PALETTE, 5, 8),
+      // NEW: Hunter Launch Sparks (Yellow, faster, more explosive)
+      spawnLaunchSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.YELLOW_PALETTE, 12, 15),
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
     };
 
@@ -65,31 +62,25 @@ export class BehaviorSystem implements IGameSystem {
     }
   }
 
-  private spawnDirectionalSparks(x: number, y: number, drillAngle: number) {
-      // High Density for "Solid" stream
-      const count = 5; 
+  private spawnDirectionalSparks(x: number, y: number, angleFacing: number, palette: string[], count: number, speedBase: number) {
+      // Eject backwards (Opposite to facing)
+      // Hunter/Driller facing is aligned to wall/target. 
+      // Facing = Angle. Backwards = Angle + PI (or -PI)
+      // NOTE: Our rotation logic is usually Angle - PI/2 for "Up" facing models.
+      // So if 'angleFacing' is the rotation value of the entity:
+      // Entity points UP relative to rotation. Backwards is DOWN (-Y relative).
+      // That is rotation - PI/2.
       
-      // FIX: Angle Correction
-      // Cone points UP (+Y) in local space.
-      // We want particles to fly DOWN (-Y).
-      // Local -Y is -PI/2 relative to rotation.
-      const baseEjectAngle = drillAngle - (Math.PI / 2);
+      const baseEject = angleFacing - (Math.PI / 2);
 
       for(let i=0; i<count; i++) {
-          const color = this.PURPLE_PALETTE[Math.floor(Math.random() * this.PURPLE_PALETTE.length)];
-          
-          // Spread: Narrow cone (approx 30 degrees total)
-          const spread = (Math.random() - 0.5) * 0.5; 
-          const angle = baseEjectAngle + spread;
-          
-          // Speed: High variance for "Spray" look
-          const speed = 6 + Math.random() * 8;
-          
+          const color = palette[Math.floor(Math.random() * palette.length)];
+          const spread = (Math.random() - 0.5) * 0.8; 
+          const angle = baseEject + spread;
+          const speed = speedBase + Math.random() * 5;
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
-
-          // Lifetime: Very fast decay for "Fizz" effect
-          const life = 0.1 + Math.random() * 0.15;
+          const life = 0.2 + Math.random() * 0.2;
 
           this.spawner.spawnParticle(x, y, color, vx, vy, life);
       }

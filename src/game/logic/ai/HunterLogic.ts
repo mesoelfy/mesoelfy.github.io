@@ -6,6 +6,7 @@ import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
+import { MODEL_CONFIG } from '../../config/ModelConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -30,7 +31,6 @@ export const HunterLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // Initialization
     if (state.data.spinVelocity === undefined) {
         state.data.spinVelocity = 2.0;
         state.data.spinAngle = 0;
@@ -43,13 +43,12 @@ export const HunterLogic: EnemyLogic = {
 
     let targetSpinSpeed = 2.0; 
 
-    // --- STATE MACHINE ---
+    // --- STATES ---
 
     if (state.current === 'HUNT') {
+        // ... Orbit Logic ...
         const orbitSpeed = 0.5;
         const currentAngle = (ctx.time * orbitSpeed) + state.data.offsetAngle;
-        
-        // Orbit around TARGET (Player)
         const targetRadius = 10.0;
         const tx = target.x + Math.cos(currentAngle) * targetRadius;
         const ty = target.y + Math.sin(currentAngle) * targetRadius;
@@ -64,37 +63,36 @@ export const HunterLogic: EnemyLogic = {
             motion.vy += (dy / dist) * speed * ctx.delta * 2.0;
         }
         
-        motion.vx *= 0.92; // Damping for smooth movement
+        motion.vx *= 0.92;
         motion.vy *= 0.92;
 
-        // Face Target
         const aimDx = target.x - pos.x;
         const aimDy = target.y - pos.y;
         const aimAngle = Math.atan2(aimDy, aimDx) - Math.PI/2;
         pos.rotation = rotateTowards(pos.rotation, aimAngle, 0.05);
 
-        // Timer
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGE';
             state.timers.action = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
-            motion.vx *= 0.1; // Brake
+            motion.vx *= 0.1; 
             motion.vy *= 0.1;
         }
     } 
     
     else if (state.current === 'CHARGE') {
+        // Charging... (Renderer handles the growing orb visual)
         state.timers.action -= ctx.delta;
         motion.vx *= 0.8;
         motion.vy *= 0.8;
 
-        // Hard lock aim on target
+        // Hard Lock Aim
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
         pos.rotation = rotateTowards(pos.rotation, targetAngle, 0.15);
 
-        targetSpinSpeed = -8.0; // Visuals: Spin fast reverse
+        targetSpinSpeed = -8.0; 
 
         if (state.timers.action <= 0) {
             state.current = 'FIRE';
@@ -105,21 +103,31 @@ export const HunterLogic: EnemyLogic = {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // Calculate Launch Direction
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
+        // TIP CALCULATION:
+        // Hunter Scale = 2.0 (Config)
+        // Local Tip Y is approx 0.8 (Geometry)
+        // Global Offset = 1.6 units
         const offset = 1.6;
+        
         const spawnX = pos.x + (dirX * offset);
         const spawnY = pos.y + (dirY * offset);
         const SPEED = 25; 
 
+        // 1. Spawn Projectile
         ctx.spawnProjectile(spawnX, spawnY, dirX * SPEED, dirY * SPEED);
+        
+        // 2. Spawn Visual Recoil (Sparks)
+        ctx.spawnLaunchSparks(spawnX, spawnY, pos.rotation);
 
         state.current = 'HUNT';
         state.timers.action = 2.0 + Math.random() * 2.0;
     }
 
-    // Update Spin Data (Visuals)
     state.data.spinVelocity = lerp(state.data.spinVelocity, targetSpinSpeed, ctx.delta * 2.0);
     state.data.spinAngle += state.data.spinVelocity * ctx.delta;
   }

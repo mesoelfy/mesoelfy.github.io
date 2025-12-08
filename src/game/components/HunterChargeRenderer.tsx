@@ -7,8 +7,8 @@ import { InstancedActor } from './common/InstancedActor';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
 import { TransformComponent } from '../data/TransformComponent';
+import { ENEMY_CONFIG } from '../config/EnemyConfig';
 
-// Reuse Shader Logic from EnemyBullet (Same Orb visual)
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
   varying vec2 vUv; uniform vec3 uColor;
@@ -42,20 +42,33 @@ export const HunterChargeRenderer = () => {
       updateEntity={(e, obj) => {
           const transform = e.getComponent<TransformComponent>('Transform');
           const state = e.getComponent<StateComponent>('State');
+          
           if (transform && state) {
-              const progress = Math.max(0, Math.min(1, 1.0 - (state.timers.state || 0)));
-              const scale = Math.min(1.0, progress * 1.1);
+              const maxDuration = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
+              const remaining = state.timers.action || 0;
               
+              // Progress: 0.0 (Start) -> 1.0 (Ready to Fire)
+              const progress = 1.0 - (remaining / maxDuration);
+              
+              // Exponential Growth for "Swell" effect
+              const scale = Math.pow(progress, 2) * 1.2;
+              
+              // Rumble: Jitter intensity increases with progress
+              const rumble = progress > 0.8 ? (progress - 0.8) * 0.3 : 0;
+              const jitterX = (Math.random() - 0.5) * rumble;
+              const jitterY = (Math.random() - 0.5) * rumble;
+
               const offset = 1.6;
+              // +PI/2 because Rotation 0 is Right, but Model points Up.
               const dirX = Math.cos(transform.rotation + Math.PI/2);
               const dirY = Math.sin(transform.rotation + Math.PI/2);
               
-              // Override position to be in front of Hunter
-              obj.position.x += dirX * offset;
-              obj.position.y += dirY * offset;
-              obj.position.z = 0.1; // Layer above
+              obj.position.x = transform.x + (dirX * offset) + jitterX;
+              obj.position.y = transform.y + (dirY * offset) + jitterY;
+              obj.position.z = 0.1; 
+              
               obj.scale.setScalar(scale);
-              obj.rotation.set(0,0,0);
+              obj.rotation.set(0,0,0); // Billboarding
           }
       }}
     />

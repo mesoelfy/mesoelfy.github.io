@@ -4,13 +4,14 @@ import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '../config/Identifiers';
 
+// UPDATED TIMELINE: Early Hunters
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
-  { at: 2,     type: 'driller', count: 5, interval: 0.5 }, 
-  { at: 5,     type: 'kamikaze', count: 2, interval: 1.0 },
-  { at: 8,     type: 'driller', count: 8, interval: 0.2 }, 
-  { at: 12,    type: 'hunter',  count: 1, interval: 0 },   
-  { at: 15,    type: 'driller', count: 10, interval: 0.1 },
+  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   // <--- Early Hunter
+  { at: 5,     type: 'driller', count: 5, interval: 0.5 }, 
+  { at: 8,     type: 'kamikaze', count: 2, interval: 1.0 },
+  { at: 12,    type: 'driller', count: 8, interval: 0.2 }, 
+  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, // <--- More Hunters
   { at: 20,    type: 'kamikaze', count: 5, interval: 0.5 },
   { at: 25,    type: 'hunter',  count: 3, interval: 1.0 }, 
 ];
@@ -40,21 +41,16 @@ export class WaveSystem implements IGameSystem {
 
     this.waveTime += delta;
     
-    // 1. Standard Waves (Disabled by Peace Mode)
     if (!useStore.getState().debugFlags.peaceMode) {
         this.checkTimeline();
         this.processQueue(time);
     }
 
-    // 2. Breach Spawns (Disabled by Fortress Mode or Peace Mode)
     this.handleBreaches(delta);
   }
 
   private handleBreaches(delta: number) {
       const flags = useStore.getState().debugFlags;
-      
-      // If Fortress Mode is on, we assume the "Breach" is sealed/contained.
-      // If Peace Mode is on, no enemies should spawn at all.
       if (flags.panelGodMode || flags.peaceMode) return;
 
       const allPanels = PanelRegistry.getAllPanels();
@@ -62,7 +58,6 @@ export class WaveSystem implements IGameSystem {
       
       if (deadPanels.length === 0) return;
 
-      // "Leak Rate" Calculation:
       const enemiesPerSecondPerPanel = 0.2 + (this.waveTime * 0.005);
       const spawnChance = enemiesPerSecondPerPanel * delta;
 
