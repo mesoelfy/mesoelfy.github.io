@@ -21,13 +21,44 @@ class PanelRegistrySystemClass implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.resetLogic();
     this.refreshAll();
+    
+    // LISTEN FOR RESTORE
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'RESTORE') {
+            this.triggerSystemRestore();
+        }
+    });
   }
 
-  update(delta: number, time: number): void {
-    // Passive
-  }
-
+  update(delta: number, time: number): void {}
   teardown(): void {}
+
+  private triggerSystemRestore() {
+      let restoredCount = 0;
+      for (const [id, state] of this.panelStates) {
+          if (state.isDestroyed) {
+              state.isDestroyed = false;
+              state.health = 500; // 50%
+              restoredCount++;
+              
+              // Find center of panel for FX
+              const rect = this.panelRects.get(id);
+              if (rect) {
+                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: rect.x, y: rect.y });
+              }
+          } else {
+              // Heal damaged panels fully
+              if (state.health < MAX_PANEL_HEALTH) {
+                  state.health = MAX_PANEL_HEALTH;
+              }
+          }
+      }
+      
+      this.calculateIntegrity();
+      if (restoredCount > 0) {
+          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); // Satisfying thud
+      }
+  }
 
   public resetLogic() {
     for (const id of this.observedElements.keys()) {
@@ -35,8 +66,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     }
     this.calculateIntegrity();
   }
-
-  // --- ACTIONS ---
 
   public damagePanel(id: string, amount: number) {
     if (useStore.getState().debugFlags.panelGodMode) return;
@@ -77,7 +106,6 @@ class PanelRegistrySystemClass implements IGameSystem {
      state.health = Math.max(0, state.health - amount);
   }
 
-  // NEW: Forcefully destroy everything for FORCE_CRASH
   public destroyAll() {
       for (const [id, state] of this.panelStates) {
           state.health = 0;

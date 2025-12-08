@@ -71,6 +71,38 @@ export class PlayerSystem implements IGameSystem {
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
     });
+
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this.triggerPurge();
+        }
+    });
+  }
+
+  private triggerPurge() {
+      const cursor = this.locator.getInputService().getCursor();
+      const count = 360; // Full Circle Density (1 per degree)
+      const speed = 45;  // Extremely Fast
+      const damage = 100; // Instakill
+      const width = 3.0; // Thick Wall
+
+      GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: cursor.x, y: cursor.y });
+      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); // Max Shake
+
+      for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count;
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+          
+          this.spawner.spawnBullet(
+              cursor.x, cursor.y, 
+              vx, vy, 
+              false, // Not Enemy
+              2.0,   // Life
+              damage, 
+              width
+          );
+      }
   }
 
   private attemptAutoFire(time: number, player: any, upgrades: Record<string, number>) {
@@ -97,77 +129,49 @@ export class PlayerSystem implements IGameSystem {
     }
 
     if (targetEnemy) {
-      // --- SHARED STATS ---
-      const damage = 1 + (upgrades['EXECUTE'] || 0); // Renamed from ROOT
-      const width = 1.0 + ((upgrades['BANDWIDTH'] || 0) * 0.5);
+      const forkLevel = upgrades['FORK'] || 0;
+      const projectileCount = 1 + (forkLevel * 2);
+      const dmgLevel = upgrades['EXECUTE'] || 0;
+      const damage = 1 + dmgLevel;
+      const widthLevel = upgrades['BANDWIDTH'] || 0;
+      const width = 1.0 + (widthLevel * 0.5);
+      const snifferLevel = upgrades['SNIFFER'] || 0;
+      const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
+      const baseSpread = 0.15;
+      const spreadAngle = baseSpread * width; 
+      
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;
       const dy = tPos.y - cursor.y;
       const baseAngle = Math.atan2(dy, dx);
+      const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-      // ------------------------------------
-      // 1. MAIN GUN (FORK)
-      // ------------------------------------
-      const forkLevel = upgrades['FORK'] || 0;
-      const mainCount = 1 + (forkLevel * 2);
-      const baseSpread = 0.15;
-      const spreadAngle = baseSpread * width; 
-      const startAngle = baseAngle - ((mainCount - 1) * spreadAngle) / 2;
-
-      for (let i = 0; i < mainCount; i++) {
+      // 1. FORK (Main)
+      for (let i = 0; i < projectileCount; i++) {
           const angle = startAngle + (i * spreadAngle);
           const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
           const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
 
-          this.spawner.spawnBullet(
-              cursor.x, cursor.y, vx, vy, false, 
-              PLAYER_CONFIG.bulletLife, 
-              damage, 
-              width
-          );
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
       }
 
-      // ------------------------------------
-      // 2. REAR GUN (BACKDOOR)
-      // ------------------------------------
-      const backdoorLevel = upgrades['BACKDOOR'] || 0;
+      // 2. BACKDOOR
       if (backdoorLevel > 0) {
           const rearAngle = baseAngle + Math.PI; 
           const vx = Math.cos(rearAngle) * PLAYER_CONFIG.bulletSpeed;
           const vy = Math.sin(rearAngle) * PLAYER_CONFIG.bulletSpeed;
-
-          this.spawner.spawnBullet(
-              cursor.x, cursor.y, vx, vy, false, 
-              PLAYER_CONFIG.bulletLife, 
-              damage, 
-              width
-          );
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
       }
 
-      // ------------------------------------
-      // 3. SNIFFER (HOMING MISSILES)
-      // ------------------------------------
-      const snifferLevel = upgrades['SNIFFER'] || 0;
+      // 3. SNIFFER
       if (snifferLevel > 0) {
-          // Radial Distribution: equal distance from each other
           const angleStep = (Math.PI * 2) / snifferLevel;
-          // Offset start angle so if count=1 it goes forward, if count=2 it goes sides?
-          // Let's align first shot with baseAngle.
-          
           for(let i=0; i<snifferLevel; i++) {
               const angle = baseAngle + (i * angleStep);
               const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
               const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
-
-              const bullet = this.spawner.spawnBullet(
-                  cursor.x, cursor.y, vx, vy, false, 
-                  PLAYER_CONFIG.bulletLife, 
-                  damage, 
-                  width
-              );
-              
-              // Only Sniffer Bullets get Guidance
+              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
               bullet.addComponent(new TargetComponent(null, 'ENEMY'));
           }
       }

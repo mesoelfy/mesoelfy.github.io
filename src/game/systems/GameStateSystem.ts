@@ -15,9 +15,10 @@ export class GameStateSystem implements IGameSystem {
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
 
+  // Persistent Stats
   public activeUpgrades: Record<string, number> = {
     'OVERCLOCK': 0, 
-    'EXECUTE': 0,     // Renamed
+    'EXECUTE': 0, 
     'BANDWIDTH': 0, 
     'FORK': 0,
     'SNIFFER': 0,
@@ -61,6 +62,14 @@ export class GameStateSystem implements IGameSystem {
   public applyUpgrade(option: string) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
+          
+          // ACTIONS (One-Time Use)
+          if (option === 'PURGE' || option === 'RESTORE') {
+              // Do not save these to activeUpgrades
+              return; 
+          }
+
+          // STATS (Permanent)
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
           
           if (option === 'REPAIR_NANITES') {
