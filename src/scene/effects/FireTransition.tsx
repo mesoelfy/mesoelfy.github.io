@@ -3,7 +3,6 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '@/core/store/useStore';
 
-// Vertex Shader: Standard full-screen quad
 const vertexShader = `
   varying vec2 vUv;
   void main() {
@@ -12,14 +11,12 @@ const vertexShader = `
   }
 `;
 
-// Fragment Shader: The Burn Logic
 const fragmentShader = `
   uniform float uTime;
   uniform float uProgress;
   uniform vec2 uResolution;
   varying vec2 vUv;
 
-  // Simplex Noise 2D
   vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
   float snoise(vec2 v){
     const vec4 C = vec4(0.211324865405187, 0.366025403784439,
@@ -48,22 +45,21 @@ const fragmentShader = `
   }
 
   void main() {
-    // Noise Scale
     float noise = snoise(vUv * 3.0 + vec2(0.0, uTime * 0.2));
     
-    // Calculate Burn Edge
-    // We modify progress to ensure it goes fully from black (-1) to clear (1)
+    // Progress Calculation
+    // Map uProgress (0..1) to (-1..1) for full coverage
     float prog = (uProgress * 2.5) - 1.0; 
     
     float alpha = smoothstep(prog, prog + 0.2, noise);
     
-    // Edge Color (The Green Flame)
+    // Green Flame Edge
     float edge = 1.0 - smoothstep(prog, prog + 0.05, noise);
     vec3 flameColor = vec3(0.47, 0.96, 0.33); // #78F654
     
     vec3 finalColor = mix(vec3(0.0), flameColor, edge);
 
-    if (alpha <= 0.01) discard; // Cut out the transparent parts
+    if (alpha <= 0.01) discard; 
 
     gl_FragColor = vec4(finalColor, alpha);
   }
@@ -72,29 +68,22 @@ const fragmentShader = `
 export const FireTransition = () => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const { introDone } = useStore();
+  const { introDone, isBreaching } = useStore();
   const { viewport } = useThree();
 
-  // Animation State
-  const animState = useRef({ value: 0 }); // 0 = Black, 1 = Clear
+  const animState = useRef({ value: 0 });
 
   useFrame((state, delta) => {
     if (!materialRef.current) return;
 
-    // Update Time
     materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
 
-    // Logic: If Intro is DONE, animate progress 0 -> 1
-    // If Intro is NOT DONE, keep progress at 0 (Solid Black)
-    const target = introDone ? 1 : 0;
+    // LOGIC: Start burning if Intro Done OR if we are currently breaching
+    const target = (introDone || isBreaching) ? 1 : 0;
     
-    // Linear Interpolation (Lerp) for smoothness
-    // Adjust 1.5 to make fire faster/slower
     animState.current.value = THREE.MathUtils.lerp(animState.current.value, target, delta * 1.5);
-    
     materialRef.current.uniforms.uProgress.value = animState.current.value;
 
-    // Disable rendering if fully cleared to save GPU
     if (meshRef.current) {
         meshRef.current.visible = animState.current.value < 0.99;
     }
@@ -103,7 +92,7 @@ export const FireTransition = () => {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uProgress: { value: 0 }, // Starts Black
+      uProgress: { value: 0 }, 
       uResolution: { value: new THREE.Vector2(viewport.width, viewport.height) },
     }),
     [viewport]
@@ -111,7 +100,6 @@ export const FireTransition = () => {
 
   return (
     <mesh ref={meshRef} position={[0, 0, 1]}> 
-      {/* Plane fills the screen */}
       <planeGeometry args={[viewport.width, viewport.height]} />
       <shaderMaterial
         ref={materialRef}
@@ -119,7 +107,7 @@ export const FireTransition = () => {
         fragmentShader={fragmentShader}
         uniforms={uniforms}
         transparent={true}
-        depthTest={false} // Always draw on top
+        depthTest={false} 
       />
     </mesh>
   );

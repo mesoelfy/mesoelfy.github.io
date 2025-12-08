@@ -1,10 +1,8 @@
 import { EntityID } from './ecs/types';
-import { Registry } from './ecs/EntityRegistry';
-import { TransformComponent } from '../components/data/TransformComponent';
 
 export class SpatialGrid {
   private cellSize: number;
-  private buckets = new Map<string, Set<EntityID>>();
+  private buckets = new Map<string, EntityID[]>(); // Changed Set to Array for faster iteration
 
   constructor(cellSize: number = 4) {
     this.cellSize = cellSize;
@@ -22,18 +20,20 @@ export class SpatialGrid {
 
   public insert(id: EntityID, x: number, y: number) {
     const key = this.getKey(x, y);
-    if (!this.buckets.has(key)) {
-      this.buckets.set(key, new Set());
+    let bucket = this.buckets.get(key);
+    if (!bucket) {
+      bucket = []; // Simple array, cleaner than Set for iteration
+      this.buckets.set(key, bucket);
     }
-    this.buckets.get(key)!.add(id);
+    bucket.push(id);
   }
 
   /**
-   * Returns a Set of EntityIDs that are in the cells near the query position.
-   * This is a "Broad Phase" check. Precise collision must still be checked after.
+   * Zero-Allocation Query.
+   * Populates the provided 'outResults' Set with neighbors.
    */
-  public query(x: number, y: number, radius: number): Set<EntityID> {
-    const results = new Set<EntityID>();
+  public query(x: number, y: number, radius: number, outResults: Set<EntityID>) {
+    outResults.clear();
     
     // Calculate range of cells to check
     const startX = Math.floor((x - radius) / this.cellSize);
@@ -46,13 +46,12 @@ export class SpatialGrid {
         const key = `${cx}:${cy}`;
         const bucket = this.buckets.get(key);
         if (bucket) {
-          for (const id of bucket) {
-            results.add(id);
+          const len = bucket.length;
+          for (let i = 0; i < len; i++) {
+            outResults.add(bucket[i]);
           }
         }
       }
     }
-
-    return results;
   }
 }

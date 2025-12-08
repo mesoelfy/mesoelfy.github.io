@@ -24,11 +24,11 @@ import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
-import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary'; // NEW
+import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone, bootState, setBootState } = useStore(); 
+  const { openModal, setIntroDone, bootState, setBootState, isBreaching, startBreach } = useStore(); 
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
@@ -37,14 +37,11 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
-  const [showScene, setShowScene] = useState(false); 
-
   const handleBreachStart = () => {
-    // Start Audio Preload when "Breach" begins (User clicked Initialize)
-    AudioSystem.init().then(() => {
-        // Audio is ready
-    });
-    setShowScene(true);
+    // 1. Audio
+    AudioSystem.init();
+    // 2. Set Flag to reveal 3D scene immediately
+    startBreach();
   };
 
   const handleBootComplete = () => {
@@ -61,7 +58,9 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [bootState, recalcIntegrity]);
 
-  const isGridVisible = showScene || bootState !== 'standby';
+  // VISIBILITY LOGIC:
+  // Show scene if we are Active, Sandbox, OR in the middle of the Breach transition.
+  const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
@@ -72,10 +71,14 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
         
-        {/* WRAP 3D SCENE IN ERROR BOUNDARY */}
+        {/* SCENE & GAME OVERLAY */}
         <WebGLErrorBoundary>
-            <SceneCanvas className={clsx("blur-0", isGridVisible ? "opacity-100" : "opacity-0")} />
-            {(bootState === 'active' || bootState === 'sandbox') && <GameOverlay />}
+            {/* Canvas is always mounted for pre-warming, visibility controlled by CSS opacity */}
+            <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
+            
+            <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
+                <GameOverlay />
+            </div>
         </WebGLErrorBoundary>
 
         {isSandbox && <SimulationHUD />}
@@ -97,6 +100,7 @@ export default function Home() {
           />
         )}
 
+        {/* DASHBOARD UI (Panels) */}
         {!isSandbox && (
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />

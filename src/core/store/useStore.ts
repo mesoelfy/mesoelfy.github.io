@@ -26,13 +26,14 @@ interface AppState {
   // App Flow
   bootState: BootState;
   introDone: boolean;
+  isBreaching: boolean; // NEW: Tracks the transition period
   activeModal: ModalType;
   hoveredItem: string | null;
   
   // Sandbox State
   sandboxView: SandboxView;
-  galleryTarget: string; // NEW: Which enemy to show
-  galleryAction: 'IDLE' | 'ATTACK'; // NEW: Animation state
+  galleryTarget: string;
+  galleryAction: 'IDLE' | 'ATTACK';
   
   // Audio
   audioSettings: AudioSettings;
@@ -45,9 +46,11 @@ interface AppState {
   // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
+  startBreach: () => void; // NEW
+  
   setSandboxView: (view: SandboxView) => void;
-  setGalleryTarget: (target: string) => void; // NEW
-  toggleGalleryAction: () => void; // NEW
+  setGalleryTarget: (target: string) => void;
+  toggleGalleryAction: () => void;
   
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
@@ -67,6 +70,7 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   bootState: 'standby',
   introDone: false,
+  isBreaching: false, // Default false
   activeModal: 'none',
   hoveredItem: null,
   
@@ -92,6 +96,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   setBootState: (bs) => set({ bootState: bs }),
   setIntroDone: (done) => set({ introDone: done }),
+  startBreach: () => set({ isBreaching: true }), // Action
+  
   setSandboxView: (view) => set({ sandboxView: view }),
   setGalleryTarget: (target) => set({ galleryTarget: target }),
   toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
@@ -119,6 +125,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({
           bootState: 'standby',
           introDone: false,
+          isBreaching: false,
           activeModal: 'none',
           isDebugOpen: false,
           isDebugMinimized: false,

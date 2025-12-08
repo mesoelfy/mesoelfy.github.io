@@ -11,7 +11,7 @@ import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
 import { ProjectileTrails } from './components/ProjectileTrails'; 
 import { GalleryStage } from './components/GalleryStage';
-import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick'; // NEW
+import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { useStore } from '@/core/store/useStore';
 import { useEffect, useState } from 'react';
 
@@ -19,13 +19,17 @@ export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const [isTouch, setIsTouch] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+      setMounted(true);
       // Simple touch detection
       const onTouch = () => setIsTouch(true);
       window.addEventListener('touchstart', onTouch, { once: true });
       return () => window.removeEventListener('touchstart', onTouch);
   }, []);
+
+  if (!mounted) return null;
 
   return (
     <>
@@ -39,7 +43,7 @@ export const GameOverlay = () => {
               stencil: false,
               powerPreference: "high-performance"
             }}
-            eventSource={typeof document !== 'undefined' ? document.body : undefined}
+            eventSource={document.body}
             eventPrefix="client"
           >
             {isGallery ? (

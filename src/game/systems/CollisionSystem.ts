@@ -4,13 +4,18 @@ import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
-import { CombatSystem } from './CombatSystem'; // Import Combat
+import { CombatSystem } from './CombatSystem'; 
 import { Entity } from '../core/ecs/Entity';
+import { EntityID } from '../core/ecs/types';
 
 export class CollisionSystem implements IGameSystem {
   private physicsSystem!: PhysicsSystem;
   private registry!: EntityRegistry;
   private combatSystem!: CombatSystem;
+
+  // OPTIMIZATION: Reusable buffers to avoid Garbage Collection stutter
+  private resultBuffer = new Set<EntityID>();
+  private handledPairs = new Set<string>();
 
   setup(locator: IServiceLocator): void {
     this.physicsSystem = locator.getSystem<PhysicsSystem>('PhysicsSystem');
@@ -21,7 +26,9 @@ export class CollisionSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     const allEntities = this.registry.getAll();
-    const handledPairs = new Set<string>();
+    
+    // Clear the pair cache once per frame
+    this.handledPairs.clear();
 
     for (const entity of allEntities) {
         if (!entity.active) continue;
@@ -34,17 +41,18 @@ export class CollisionSystem implements IGameSystem {
         const state = entity.getComponent<StateComponent>('State');
         if (state && state.current === 'SPAWN') continue;
 
-        const nearby = spatial.query(transform.x, transform.y, collider.radius + 1.0);
+        // OPTIMIZED QUERY: Pass the buffer, don't create a new one
+        spatial.query(transform.x, transform.y, collider.radius + 1.0, this.resultBuffer);
 
-        for (const otherId of nearby) {
+        for (const otherId of this.resultBuffer) {
             if (otherId === entity.id) continue;
             
             const id1 = entity.id < (otherId as number) ? entity.id : otherId;
             const id2 = entity.id < (otherId as number) ? otherId : entity.id;
             const pairId = `${id1}:${id2}`;
             
-            if (handledPairs.has(pairId)) continue;
-            handledPairs.add(pairId);
+            if (this.handledPairs.has(pairId)) continue;
+            this.handledPairs.add(pairId);
 
             const other = this.registry.getEntity(otherId as number);
             if (!other || !other.active) continue;
@@ -64,7 +72,6 @@ export class CollisionSystem implements IGameSystem {
             const radiusSum = collider.radius + otherCollider.radius;
 
             if (distSq < radiusSum * radiusSum) {
-                // DELEGATE TO COMBAT SYSTEM
                 this.combatSystem.resolveCollision(entity, other);
             }
         }

@@ -70,7 +70,11 @@ sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsul
 
 - Power UP - Heal panel faster
 
-- should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies?
+
+
+Total refactor overhaul of screenshake is needed.
+
+- should the screen shake just affect the game world mesoelfy_OS and panels and not the player and enemies? Right now they are disjointed.
 
 
 
@@ -94,7 +98,7 @@ Music should get distorted, glitchy, and reverbed when Game Over state
 	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
 “
 
-
+Should a panel jitter when driller damages it and jitter more when more drillers are drilling?
 
 
 
@@ -174,7 +178,7 @@ I think the drilling sound needs to be overhauled.
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 
 
-Should a panel jitter more as more enemies drill it?
+
 
 
 
