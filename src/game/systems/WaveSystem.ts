@@ -1,6 +1,8 @@
 import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
+import { PanelRegistry } from './PanelRegistrySystem'; 
+import { EnemyTypes } from '../config/Identifiers';
 
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
@@ -19,6 +21,8 @@ export class WaveSystem implements IGameSystem {
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
+  
+  private nextBreachTime = 0;
 
   setup(locator: IServiceLocator): void {
     this.spawner = locator.getSpawner();
@@ -30,6 +34,7 @@ export class WaveSystem implements IGameSystem {
     this.currentWaveIndex = 0;
     this.spawnQueue = [];
     this.loopCount = 0;
+    this.nextBreachTime = 3.0; 
   }
 
   update(delta: number, time: number): void {
@@ -40,6 +45,37 @@ export class WaveSystem implements IGameSystem {
     this.waveTime += delta;
     this.checkTimeline();
     this.processQueue(time);
+    this.checkBreaches(delta, time);
+  }
+
+  private checkBreaches(delta: number, time: number) {
+      if (this.waveTime > this.nextBreachTime) {
+          const deadPanels = PanelRegistry.getAllPanels().filter(p => p.isDestroyed);
+          
+          if (deadPanels.length > 0) {
+              const p = deadPanels[Math.floor(Math.random() * deadPanels.length)];
+              
+              const intensity = Math.floor(this.waveTime / 20) + 1;
+              const rand = Math.random();
+              let type = EnemyTypes.DRILLER;
+              if (rand > 0.85) type = EnemyTypes.HUNTER;
+              else if (rand > 0.55) type = EnemyTypes.KAMIKAZE;
+
+              for(let i=0; i<intensity; i++) {
+                  // FIX: Constrain offset to panel dimensions (with padding)
+                  // width/height are full size, so half is the radius from center
+                  const safeW = (p.width * 0.4); 
+                  const safeH = (p.height * 0.4);
+                  
+                  const offsetX = (Math.random() - 0.5) * 2 * safeW;
+                  const offsetY = (Math.random() - 0.5) * 2 * safeH;
+                  
+                  this.spawner.spawnEnemy(type, p.x + offsetX, p.y + offsetY);
+              }
+          }
+
+          this.nextBreachTime = this.waveTime + 2.0 + (Math.random() * 2.0);
+      }
   }
 
   private checkTimeline() {

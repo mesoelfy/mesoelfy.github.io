@@ -52,6 +52,20 @@ export const EnemyRenderer = () => {
 
   const chargeColor = useMemo(() => new THREE.Color(GAME_THEME.enemy.charge), []);
 
+  // Shared Helper for "Materialization" visual
+  const applySpawnEffect = (obj: THREE.Object3D, state?: StateComponent) => {
+      if (state && state.current === 'SPAWN') {
+          // Timer goes 1.5 -> 0.
+          // Scale goes 0 -> 1.
+          const progress = 1.0 - (state.timers.spawn / 1.5);
+          const eased = Math.pow(progress, 2); // Ease out
+          obj.scale.setScalar(eased);
+          
+          // Jitter position slightly for "Hologram" effect
+          obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
+      }
+  };
+
   return (
     <>
       <InstancedActor 
@@ -67,6 +81,7 @@ export const EnemyRenderer = () => {
             const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
             obj.position.z = 5.0;
             obj.rotateY(performance.now() * 0.001 * speed); 
+            applySpawnEffect(obj, state);
         }}
       />
 
@@ -79,10 +94,12 @@ export const EnemyRenderer = () => {
         colorSource="base"
         filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.KAMIKAZE}
         updateEntity={(e, obj, color, delta) => {
+            const state = e.getComponent<StateComponent>('State');
             const time = performance.now() * 0.001;
             obj.position.z = 5.0;
             obj.rotateX(time);
             obj.rotateY(time * 0.5);
+            applySpawnEffect(obj, state);
         }}
       />
 
@@ -104,6 +121,7 @@ export const EnemyRenderer = () => {
             const spin = state?.data?.spinAngle || 0;
             obj.position.z = 5.0;
             obj.rotateY(spin);
+            applySpawnEffect(obj, state);
         }}
       />
     </>

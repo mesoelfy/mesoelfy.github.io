@@ -12,6 +12,7 @@ class AudioSystemController {
   private buffers: Map<string, AudioBuffer> = new Map();
   
   private isInitialized = false;
+  private lastDuckTime = 0;
 
   public init() {
     if (this.isInitialized) {
@@ -43,6 +44,32 @@ class AudioSystemController {
     this.isInitialized = true;
   }
 
+  // --- DUCKING LOGIC ---
+  private duckMusic(intensity: number = 0.5, duration: number = 0.8) {
+      if (!this.ctx || !this.musicGain) return;
+      
+      const settings = useStore.getState().audioSettings;
+      if (!settings.music) return; // Don't duck if already muted
+
+      const now = this.ctx.currentTime;
+      
+      // Prevent stuttering: Only re-trigger if enough time passed or priority is high
+      if (now - this.lastDuckTime < 0.1) return;
+      this.lastDuckTime = now;
+
+      const baseVol = 0.4;
+      const targetVol = baseVol * (1.0 - intensity);
+
+      this.musicGain.gain.cancelScheduledValues(now);
+      this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
+      
+      // Dip fast
+      this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
+      
+      // Recover slow (exponential sounds more natural)
+      this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
+  }
+
   private async preRenderSounds() {
       if (!this.ctx) return;
       
@@ -53,7 +80,6 @@ class AudioSystemController {
           return await offline.startRendering();
       };
 
-      // LASER
       this.buffers.set('laser', await render(0.15, (d, c) => {
           const osc = c.createOscillator();
           const gain = c.createGain();
@@ -67,7 +93,6 @@ class AudioSystemController {
           osc.start();
       }));
 
-      // EXPLOSION
       this.buffers.set('explosion', await render(0.4, (d, c) => {
           const bufferSize = c.sampleRate * d;
           const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
@@ -88,7 +113,6 @@ class AudioSystemController {
           noise.start();
       }));
 
-      // CLICK
       this.buffers.set('click', await render(0.05, (d, c) => {
           const osc = c.createOscillator();
           const gain = c.createGain();
@@ -101,7 +125,6 @@ class AudioSystemController {
           osc.start();
       }));
 
-      // HEAL
       this.buffers.set('heal', await render(0.2, (d, c) => {
           const osc = c.createOscillator();
           const gain = c.createGain();
@@ -115,7 +138,6 @@ class AudioSystemController {
           osc.start();
       }));
 
-      // DESTRUCTION (Deep Rumble)
       this.buffers.set('destruction', await render(1.5, (d, c) => {
           const osc = c.createOscillator();
           const gain = c.createGain();
@@ -164,16 +186,32 @@ class AudioSystemController {
 
   private setupEventListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser', Math.random() * 100));
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => this.playSound('explosion', Math.random() * 200 - 100));
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => this.playSound('explosion', -500));
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => this.playSound('destruction', -200));
     
-    // HEAL
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+        this.playSound('explosion', Math.random() * 200 - 100);
+        // Slight ducking for enemy death
+        this.duckMusic(0.3, 0.5); 
+    });
+
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
+        this.playSound('explosion', -500);
+        // Heavy ducking for player hit
+        this.duckMusic(0.7, 1.0);
+    });
+
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        this.playSound('destruction', -200);
+        this.duckMusic(1.0, 3.0); // Silence music briefly
+    });
+    
     GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('heal', 200));
 
-    // PANEL DESTROYED
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => this.playSound('destruction', 0));
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
+        this.playSound('destruction', 0);
+        // Heavy ducking for panel destruction
+        this.duckMusic(0.8, 1.5); 
+    });
   }
 
   public playClick() { this.playSound('click'); }

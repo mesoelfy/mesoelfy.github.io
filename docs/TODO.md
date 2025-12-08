@@ -133,6 +133,9 @@ Indicate to player to press ESC or ~ in zen mode
 Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little taller of a panel
 
 
+Hunter weapon needs to start small and get bigger before launching
+
+
 
 
 
@@ -280,6 +283,9 @@ This is a comprehensive architectural audit of the **MESOELFY_OS** codebase. Bas
 98. **Keyboard Access:** Ensure game controls (WASD) don't conflict with UI navigation (Tab/Enter).
 99. **Touch Controls:** Add a virtual joystick overlay for Mobile players (currently missing).
 100. **Debug Strip:** In production builds, strip the `DebugOverlay` code entirely via Tree Shaking (conditional imports).
+
+
+
 
 
 

@@ -22,12 +22,10 @@ export class EntitySpawner implements IEntitySpawner {
   public spawnPlayer(): Entity {
     const e = this.registry.createEntity();
     e.addTag(Tag.PLAYER);
-    
     e.addComponent(new TransformComponent(0, 0, 0, 1));
     e.addComponent(new MotionComponent(0, 0, 0.9)); 
     e.addComponent(new HealthComponent(PLAYER_CONFIG.maxHealth));
     e.addComponent(new StateComponent('IDLE')); 
-    
     this.registry.updateCache(e);
     return e;
   }
@@ -39,12 +37,13 @@ export class EntitySpawner implements IEntitySpawner {
     e.addTag(Tag.ENEMY);
     e.addTag(Tag.OBSTACLE);
 
-    // Z=5 to match Renderer expectation
     e.addComponent(new TransformComponent(x, y, 0, 1));
     e.addComponent(new IdentityComponent(type));
     e.addComponent(new MotionComponent(0, 0, 0, 0)); 
     e.addComponent(new HealthComponent(config.hp));
-    e.addComponent(new StateComponent('SPAWN')); 
+    
+    // NEW: Spawn Timer (1.5s materialization)
+    e.addComponent(new StateComponent('SPAWN', { spawn: 1.5 })); 
     
     if (config.damage) {
         e.addComponent(new CombatComponent(config.damage));
@@ -82,17 +81,10 @@ export class EntitySpawner implements IEntitySpawner {
   ): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
-
-    // FIX: Set Z=2.0 so particles appear above UI Panels (which are technically HTML but game is overlay? 
-    // Actually game is UNDER UI. But if game is z-60, it overlays UI? 
-    // GameOverlay is z-60. Panels are normal DOM flow. 
-    // Particles need Z to be safe against SceneCanvas fog or depth. 
-    // Let's force Z=2.
     e.addComponent(new TransformComponent(x, y, 0, 1));
     e.addComponent(new MotionComponent(vx, vy, 0.05));
     e.addComponent(new LifetimeComponent(life, life));
     e.addComponent(new IdentityComponent(color));
-
     this.registry.updateCache(e);
   }
 }

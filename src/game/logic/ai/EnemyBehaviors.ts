@@ -32,7 +32,7 @@ export interface AIContext {
   triggerExplosion: (x: number, y: number, color: string) => void;
   spawnDrillSparks: (x: number, y: number, color: string) => void; 
   emitEvent: (name: string, payload: any) => void;
-  destroyEntity: (id: number) => void; // NEW: Dependency Injection for death
+  destroyEntity: (id: number) => void;
 }
 
 export interface EnemyBehavior {
@@ -45,6 +45,11 @@ export const DrillerBehavior: EnemyBehavior = {
     const motion = getMotion(e);
     const state = getState(e);
     
+    // FIX: Transition from IDLE (post-spawn) to Moving
+    if (state.current === 'IDLE') {
+        state.current = 'MOVING';
+    }
+
     let targetX = 0;
     let targetY = 0;
     let bestPanel: any = null;
@@ -78,8 +83,9 @@ export const DrillerBehavior: EnemyBehavior = {
         }
       }
     } else {
-      targetX = Math.sin(ctx.time) * 5;
-      targetY = Math.cos(ctx.time) * 5;
+      // Wander if no panels
+      targetX = Math.sin(ctx.time * 0.5) * 10;
+      targetY = Math.cos(ctx.time * 0.5) * 5;
     }
 
     state.current = isDrilling ? 'DRILLING' : 'MOVING';
@@ -117,6 +123,8 @@ export const KamikazeBehavior: EnemyBehavior = {
   update: (e, ctx) => {
     const pos = getPos(e);
     const motion = getMotion(e);
+    // Kamikazes don't really have complex state, they just run.
+    
     const targetX = ctx.playerPos.x;
     const targetY = ctx.playerPos.y;
     const dx = targetX - pos.x;
@@ -124,7 +132,7 @@ export const KamikazeBehavior: EnemyBehavior = {
     const dist = Math.sqrt(dx*dx + dy*dy);
     
     if (dist < 1.0) {
-       ctx.destroyEntity(e.id); // Fixed: Use Context
+       ctx.destroyEntity(e.id);
        ctx.triggerExplosion(pos.x, pos.y, '#FF003C');
        ctx.emitEvent(GameEvents.PLAYER_HIT, { damage: 10 });
        return; 
@@ -150,7 +158,8 @@ export const HunterBehavior: EnemyBehavior = {
         state.data.spinAngle = 0;
     }
 
-    if (state.current === 'SPAWN') {
+    // FIX: Initialize HUNT state if coming from IDLE or SPAWN
+    if (state.current === 'SPAWN' || state.current === 'IDLE') {
         state.current = 'HUNT';
         state.timers.action = 3.0; 
         state.data.offsetAngle = (e.id.valueOf() % 10) * 0.6; 

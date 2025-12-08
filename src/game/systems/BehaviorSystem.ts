@@ -2,6 +2,7 @@ import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { IdentityComponent } from '../components/data/IdentityComponent';
+import { StateComponent } from '../components/data/StateComponent';
 import { Behaviors, AIContext } from '../logic/ai/EnemyBehaviors';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { GameEventBus } from '../events/GameEventBus';
@@ -33,12 +34,31 @@ export class BehaviorSystem implements IGameSystem {
       spawnDrillSparks: (x, y, color) => this.spawnSparks(x, y, color),
       emitEvent: (name, payload) => GameEventBus.emit(name as any, payload),
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
-      destroyEntity: (id) => this.registry.destroyEntity(id) // Fixed: Implementation
+      destroyEntity: (id) => this.registry.destroyEntity(id)
     };
 
     const enemies = this.registry.getByTag(Tag.ENEMY);
     for (const entity of enemies) {
         if (!entity.active) continue;
+        
+        // 1. Check for Spawn State (Materializing)
+        const state = entity.getComponent<StateComponent>('State');
+        if (state && state.current === 'SPAWN') {
+            if (state.timers.spawn > 0) {
+                state.timers.spawn -= delta;
+                // Add a "glitch" jump effect while spawning
+                if (Math.random() > 0.9) {
+                    const t = entity.getComponent<any>('Transform');
+                    t.x += (Math.random() - 0.5) * 0.1;
+                    t.y += (Math.random() - 0.5) * 0.1;
+                }
+                continue; // Skip AI behavior while spawning
+            } else {
+                state.current = 'IDLE'; // Transition to active
+            }
+        }
+
+        // 2. Run Standard AI
         const identity = entity.getComponent<IdentityComponent>('Identity');
         if (identity) {
              const behavior = Behaviors[identity.variant];

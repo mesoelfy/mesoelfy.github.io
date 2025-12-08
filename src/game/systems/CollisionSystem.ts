@@ -5,6 +5,7 @@ import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
+import { StateComponent } from '../components/data/StateComponent';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
@@ -56,7 +57,12 @@ export class CollisionSystem implements IGameSystem {
             const nearby = spatial.query(pPos.x, pPos.y, 1.0);
             for (const id of nearby) {
                 const enemy = this.registry.getEntity(id as any);
+                
+                // NEW: Ignore if spawning
                 if (!enemy || !enemy.active || !enemy.hasTag(Tag.ENEMY)) continue;
+                const state = enemy.getComponent<StateComponent>('State');
+                if (state && state.current === 'SPAWN') continue;
+
                 if (enemy.hasTag(Tag.BULLET)) continue; 
 
                 const ePos = enemy.getComponent<TransformComponent>('Transform');
@@ -133,7 +139,11 @@ export class CollisionSystem implements IGameSystem {
         const candidates = spatial.query(bPos.x, bPos.y, 1.0);
         for (const targetId of candidates) {
             const target = this.registry.getEntity(targetId as any);
+            
+            // NEW: Ignore if spawning
             if (!target || !target.active || !target.hasTag(Tag.ENEMY) || target.hasTag(Tag.BULLET)) continue;
+            const state = target.getComponent<StateComponent>('State');
+            if (state && state.current === 'SPAWN') continue;
             
             const dx = bPos.x - target.getComponent<TransformComponent>('Transform')!.x;
             const dy = bPos.y - target.getComponent<TransformComponent>('Transform')!.y;
