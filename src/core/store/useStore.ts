@@ -11,18 +11,18 @@ interface AudioSettings {
   sfx: boolean;
   ambience: boolean;
   
-  // Levels (0.0 - 2.0)
+  // Levels (0.0 - 3.0)
   volumeMaster: number;
   volumeMusic: number;
   volumeSfx: number;
   volumeAmbience: number;
   
   // Ambience Lab (0.0 - 4.0+)
-  ambFilter: number;   // Density
-  ambSpeed: number;    // Circulation
-  ambWidth: number;    // Width
-  ambModSpeed: number; // Fluctuation (NEW)
-  ambModDepth: number; // Instability (NEW)
+  ambFilter: number;   
+  ambSpeed: number;    
+  ambWidth: number;    
+  ambModSpeed: number; 
+  ambModDepth: number; 
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
@@ -71,7 +71,6 @@ interface AppState {
   isDebugMinimized: boolean;
   debugFlags: DebugFlags;
   
-  // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   startBreach: () => void;
@@ -87,7 +86,6 @@ interface AppState {
   setHovered: (item: string | null) => void;
   resetApplication: () => void;
   
-  // Audio Controls
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
@@ -172,7 +170,6 @@ export const useStore = create<AppState>()(
           });
       },
       
-      // --- AUDIO ACTIONS ---
       toggleMaster: () => {
           set(s => ({ audioSettings: { ...s.audioSettings, master: !s.audioSettings.master } }));
           AudioSystem.updateVolumes();
@@ -193,11 +190,13 @@ export const useStore = create<AppState>()(
           AudioSystem.updateVolumes();
           if (get().audioSettings.ambience) AudioSystem.playClick();
       },
+      
       setVolume: (channel, value, max = 2.0) => {
           const clamped = Math.max(0, Math.min(max, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
           AudioSystem.updateVolumes();
       },
+      
       resetAudioSettings: () => {
           set({ audioSettings: { ...DEFAULT_AUDIO } });
           AudioSystem.updateVolumes();
@@ -216,8 +215,7 @@ export const useStore = create<AppState>()(
       })
     }),
     {
-      // CHANGED: v3 forces reset of old bad data
-      name: 'mesoelfy-ui-settings-v3', 
+      name: 'mesoelfy-ui-settings-v3',
       partialize: (state) => ({ 
           audioSettings: state.audioSettings,
           screenShakeStrength: state.screenShakeStrength,

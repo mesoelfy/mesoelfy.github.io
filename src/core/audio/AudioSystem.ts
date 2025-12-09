@@ -113,9 +113,11 @@ class AudioSystemController {
           this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
       }
 
-      // AMBIENCE LAB: Exponential Scaling
-      // This ensures 0.5 (Default) perfectly matches the original hardcoded values.
-      // Math.pow(10, (val - 0.5)) creates a curve where 0.5 -> 1.0 multiplier.
+      // AMBIENCE LAB: RECALIBRATED TO MATCH DEFAULT (0.5)
+      // Math.pow(10, (val - 0.5) * 2)
+      // If val = 0.5, pow = 1. (Exact Base)
+      // If val = 0.0, pow = 0.1. (1/10th Base)
+      // If val = 1.0, pow = 10. (10x Base)
       
       if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
           const filter = s.ambFilter ?? 0.5;
@@ -124,23 +126,25 @@ class AudioSystemController {
           const modSpeed = s.ambModSpeed ?? 0.5;
           const modDepth = s.ambModDepth ?? 0.5;
 
-          // 1. DENSITY (Base 300Hz)
-          // Range: 30Hz to 3000Hz (at 1.5 input)
+          // 1. DENSITY (Base 300Hz) -> Range 30Hz to 3000Hz
           this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
 
-          // 2. CIRCULATION (Base 0.05Hz)
-          // Range: 0.005Hz to 0.5Hz
+          // 2. CIRCULATION (Base 0.05Hz) -> Range 0.005Hz to 0.5Hz
           this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
 
-          // 3. STEREO WIDTH (Base 0.1 Gain)
-          // Range: 0.01 to 1.0 (Extreme)
-          // Use 4^x for a slightly gentler curve than 10^x
-          this.ambiencePanConstraint.gain.value = 0.1 * Math.pow(8, (width - 0.5));
+          // 3. STEREO WIDTH (Base 0.1 Gain) -> Range 0.01 to 1.0
+          // Using slightly different curve for width to allow full 0
+          // But to keep 0.5 = 0.1, let's use the same power logic roughly?
+          // No, width feels better with simple scaling, but let's anchor it.
+          // Let's use: val^3 * 0.8. 
+          // 0.5^3 * 0.8 = 0.125 * 0.8 = 0.1. (Matches)
+          // 1.0^3 * 0.8 = 0.8 (Wide)
+          this.ambiencePanConstraint.gain.value = Math.pow(width, 3) * 0.8;
           
-          // 4. FLUCTUATION (Base 0.2Hz)
+          // 4. FLUCTUATION (Base 0.2Hz) -> Range 0.02Hz to 2.0Hz
           this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
           
-          // 5. INSTABILITY (Base 10Hz)
+          // 5. INSTABILITY (Base 10Hz) -> Range 1Hz to 100Hz
           this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
       }
   }

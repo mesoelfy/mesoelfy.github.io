@@ -12,34 +12,42 @@ export const SoundTab = () => {
       <div className="space-y-4">
         <h3 className="text-sm font-header font-black text-primary-green border-b border-primary-green/30 pb-2 mb-4 tracking-widest flex justify-between items-center">
           <span>GLOBAL_MIXER</span>
-          <span className="text-[9px] font-mono opacity-50">HEADROOM: 200%</span>
+          <span className="text-[9px] font-mono opacity-50">HEADROOM: 300%</span>
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <RangeSlider 
             label="MASTER_GAIN" 
             value={audioSettings.volumeMaster} 
-            onChange={(v) => setVolume('volumeMaster', v)} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeMaster', v, 3.0)} 
           />
           <RangeSlider 
             label="MUSIC_LEVEL" 
             value={audioSettings.volumeMusic} 
-            onChange={(v) => setVolume('volumeMusic', v)} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeMusic', v, 3.0)} 
           />
           <RangeSlider 
             label="SFX_LEVEL" 
             value={audioSettings.volumeSfx} 
-            onChange={(v) => setVolume('volumeSfx', v)} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeSfx', v, 3.0)} 
           />
           <RangeSlider 
             label="AMBIENCE_LEVEL" 
             value={audioSettings.volumeAmbience} 
-            onChange={(v) => setVolume('volumeAmbience', v)} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeAmbience', v, 3.0)} 
           />
         </div>
       </div>
 
-      {/* SECTION 2: AMBIENCE LAB (DRAMATIC TUNING) */}
+      {/* SECTION 2: AMBIENCE LAB (CALIBRATED) */}
       <div className="space-y-4 pt-4 border-t border-white/10">
         <div className="flex items-center justify-between border-b border-alert-yellow/30 pb-2 mb-4">
             <h3 className="text-sm font-header font-black text-alert-yellow tracking-widest">
@@ -60,20 +68,29 @@ export const SoundTab = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
           <RangeSlider 
             label="DENSITY (FILTER)" 
-            value={audioSettings.ambFilter * 2} 
-            max={4.0} // Allow up to 2.0 input value (stored)
-            onChange={(v) => setVolume('ambFilter', v / 2, 4.0)} 
+            value={audioSettings.ambFilter * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambFilter', v / 100, 1.0)} 
             color="accent-alert-yellow"
             // Math: 300 * 10^((val-0.5)*2)
-            format={(v) => `${(300 * Math.pow(10, (v/2 - 0.5) * 2)).toFixed(0)} Hz`}
+            format={(v) => {
+                const norm = v / 100;
+                const hz = 300 * Math.pow(10, (norm - 0.5) * 2);
+                return `${hz.toFixed(0)} Hz`;
+            }}
           />
           <RangeSlider 
             label="WIDTH (STEREO)" 
-            value={audioSettings.ambWidth * 2}
-            max={4.0} 
-            onChange={(v) => setVolume('ambWidth', v / 2, 4.0)} 
+            value={audioSettings.ambWidth * 100}
+            max={100} 
+            markerValue={50}
+            onChange={(v) => setVolume('ambWidth', v / 100, 1.0)} 
             color="accent-alert-yellow"
-            format={(v) => `${((0.1 * Math.pow(8, (v/2 - 0.5))) * 1000).toFixed(0)}%`}
+            format={(v) => {
+                const norm = v / 100;
+                return `${(Math.pow(norm, 3) * 80).toFixed(0)}% Sep`;
+            }}
           />
         </div>
 
@@ -81,33 +98,38 @@ export const SoundTab = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <RangeSlider 
             label="CIRCULATION (SPEED)" 
-            value={audioSettings.ambSpeed * 2} 
-            max={4.0}
-            onChange={(v) => setVolume('ambSpeed', v / 2, 4.0)} 
+            value={audioSettings.ambSpeed * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambSpeed', v / 100, 1.0)} 
             color="accent-alert-yellow"
             format={(v) => {
-                const hz = 0.05 * Math.pow(10, (v/2 - 0.5) * 2);
+                const norm = v / 100;
+                const hz = 0.05 * Math.pow(10, (norm - 0.5) * 2);
                 return `${(1/hz).toFixed(1)}s`;
             }}
           />
           <RangeSlider 
             label="FLUCTUATION (MOD)" 
-            value={audioSettings.ambModSpeed * 2} 
-            max={4.0}
-            onChange={(v) => setVolume('ambModSpeed', v / 2, 4.0)} 
+            value={audioSettings.ambModSpeed * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambModSpeed', v / 100, 1.0)} 
             color="accent-alert-yellow"
             format={(v) => {
-                const hz = 0.2 * Math.pow(10, (v/2 - 0.5) * 2);
+                const norm = v / 100;
+                const hz = 0.2 * Math.pow(10, (norm - 0.5) * 2);
                 return `${(1/hz).toFixed(1)}s`;
             }}
           />
           <RangeSlider 
             label="INSTABILITY (DEPTH)" 
-            value={audioSettings.ambModDepth * 2} 
-            max={4.0}
-            onChange={(v) => setVolume('ambModDepth', v / 2, 4.0)} 
+            value={audioSettings.ambModDepth * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambModDepth', v / 100, 1.0)} 
             color="accent-alert-yellow"
-            format={(v) => `+/- ${(10 * Math.pow(10, (v/2 - 0.5) * 2)).toFixed(0)} Hz`}
+            format={(v) => `+/- ${(10 * Math.pow(10, (v/100 - 0.5) * 2)).toFixed(0)} Hz`}
           />
         </div>
       </div>
