@@ -23,7 +23,6 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
-    // Bus Setup
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
@@ -65,7 +64,6 @@ class AudioSystemController {
     const n_samples = 44100;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
-    
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
       curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
@@ -80,19 +78,21 @@ class AudioSystemController {
       const length = sampleRate * recipe.duration;
       const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      // --- SIGNAL CHAIN ---
-      // Source -> [Tremolo Gain] -> [Filter] -> [Distortion] -> Master Envelope -> Dest
-      
+      // --- ENVELOPE LOGIC ---
       const mainGain = offline.createGain();
       mainGain.connect(offline.destination);
       
-      // Volume Envelope
-      mainGain.gain.setValueAtTime(recipe.volume, 0);
+      const attack = recipe.attack || 0.005; // Default tiny fade to prevent pops
+      
+      // Start at 0
+      mainGain.gain.setValueAtTime(0, 0);
+      // Ramp to Peak
+      mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
+      // Decay to Silence
       mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
 
       let outputNode: AudioNode = mainGain;
 
-      // 1. Distortion
       if (recipe.distortion) {
           const shaper = offline.createWaveShaper();
           shaper.curve = this.makeDistortionCurve(recipe.distortion);
@@ -100,10 +100,8 @@ class AudioSystemController {
           outputNode = shaper; 
       }
 
-      // 2. Tremolo (Pulsing)
-      let tremoloNode: GainNode | null = null;
       if (recipe.tremolo) {
-          tremoloNode = offline.createGain();
+          const tremoloNode = offline.createGain();
           tremoloNode.connect(outputNode);
           outputNode = tremoloNode;
 
@@ -112,10 +110,8 @@ class AudioSystemController {
           lfo.frequency.value = recipe.tremolo.rate;
           
           const lfoGain = offline.createGain();
-          lfoGain.gain.value = recipe.tremolo.depth; // Modulation depth
+          lfoGain.gain.value = recipe.tremolo.depth; 
           
-          // Connect LFO to the Gain of the Tremolo Node
-          // Base gain is 1 - depth (so it pulses down)
           tremoloNode.gain.value = 1.0 - (recipe.tremolo.depth / 2);
           lfo.connect(lfoGain);
           lfoGain.connect(tremoloNode.gain);
@@ -123,11 +119,9 @@ class AudioSystemController {
           lfo.start();
       }
 
-      // 3. Synthesis Source
       if (recipe.type === 'oscillator') {
           const osc = offline.createOscillator();
           osc.type = recipe.wave || 'sine';
-          
           osc.frequency.setValueAtTime(recipe.frequency[0], 0);
           if (recipe.frequency[1] !== recipe.frequency[0]) {
               osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);

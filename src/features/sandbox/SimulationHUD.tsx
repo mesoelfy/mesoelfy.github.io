@@ -58,9 +58,9 @@ export const SimulationHUD = () => {
   };
 
   const prototypes = [
-      { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan' },
-      { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red' },
-      { id: 'HP', label: 'LOW_HEALTH_TEST', icon: Heart, keys: ['proto_lowhp_a', 'proto_lowhp_b', 'proto_lowhp_c'], color: 'text-alert-yellow' },
+      { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan', metas: ['CLASSIC', 'TURBINE', 'HUM'] },
+      { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red', metas: ['BASS', 'KLAXON', 'GLITCH'] },
+      { id: 'HP', label: 'LOW_HEALTH_FIX', icon: Heart, keys: ['proto_lowhp_a', 'proto_lowhp_b', 'proto_lowhp_c'], color: 'text-alert-yellow', metas: ['SLOW_ATK', 'SOFT_FM', 'MUFFLED_TRI'] },
   ];
 
   return (
@@ -86,7 +86,7 @@ export const SimulationHUD = () => {
         )}
       </div>
 
-      {/* LEFT SIDEBAR (NAVIGATION) */}
+      {/* LEFT SIDEBAR */}
       <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto w-40">
          <button 
             onClick={() => setSandboxView('audio')}
@@ -119,7 +119,7 @@ export const SimulationHUD = () => {
                       <h3 className="font-header font-black text-xl text-white tracking-widest">PROTOTYPE_BENCH</h3>
                   </div>
                   
-                  {/* SELECTED FINALISTS ROW */}
+                  {/* FINALISTS */}
                   <div className="bg-primary-green/5 border border-primary-green/30 p-4 rounded-sm">
                       <div className="flex items-center gap-2 mb-4">
                           <CheckCircle2 className="text-primary-green" size={18} />
@@ -162,6 +162,7 @@ export const SimulationHUD = () => {
                               {proto.keys.map((key, idx) => {
                                   const label = idx === 0 ? 'VARIANT_A' : idx === 1 ? 'VARIANT_B' : 'VARIANT_C';
                                   const isPlaying = lastPlayed === key;
+                                  const meta = proto.metas ? proto.metas[idx] : AUDIO_CONFIG[key].type.toUpperCase();
                                   return (
                                       <button 
                                           key={key}
@@ -174,7 +175,7 @@ export const SimulationHUD = () => {
                                           )}
                                       >
                                           <span className="text-xs font-bold mb-1">{label}</span>
-                                          <span className="text-[9px] opacity-50 font-mono">{AUDIO_CONFIG[key].type.toUpperCase()}</span>
+                                          <span className="text-[9px] opacity-50 font-mono">{meta}</span>
                                       </button>
                                   );
                               })}
@@ -183,7 +184,7 @@ export const SimulationHUD = () => {
                   ))}
               </div>
 
-              {/* RIGHT: LIBRARY (ALL SOUNDS) */}
+              {/* RIGHT: LIBRARY */}
               <div className="w-80 bg-black/90 backdrop-blur-md border border-service-cyan/30 flex flex-col overflow-hidden">
                   <div className="p-3 border-b border-service-cyan/30 bg-service-cyan/5">
                       <span className="font-mono font-bold text-xs text-service-cyan tracking-widest">ACTIVE_LIBRARY</span>

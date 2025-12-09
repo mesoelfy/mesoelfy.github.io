@@ -154,7 +154,7 @@ Resetting via debug menu then starting another game, player wasn't shooting corr
 
 
 
-Sometimes the heartbeat sound clips slightly, sometimes it doesn't. I just want the nice deeper heart beat sound that it is doing well, not the shrill tic that also happens sometimes.
+
 
 
 Make the red crystal pulse with the heartbeat too
@@ -165,6 +165,10 @@ the glow when MESOELFY_OS pulses should decay slowly.
 The LV_XX text isn't rendering properly in Firefox. (try other browswers)
 
 Increase the reboot heal rate by 50%.
+
+heartbeat pulse increases even more in speed closer to 0% health
+
+subtle quiet brown noise noise floor that always plays (a separate channel from SFX/Music and doesn't have a toggle)
 
 
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
