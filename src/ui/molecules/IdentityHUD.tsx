@@ -105,11 +105,9 @@ export const IdentityHUD = () => {
 
             {/* SVG RINGS */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
-              {/* Background Rings */}
               <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
               <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
               
-              {/* HP Ring (-90deg start) */}
               <circle 
                 cx={center} cy={center} r={radiusHp} 
                 stroke={displayHpColor} 
@@ -121,7 +119,6 @@ export const IdentityHUD = () => {
                 className="transition-all duration-100 ease-linear"
               />
               
-              {/* XP Ring (-90deg start) */}
               <circle 
                 cx={center} cy={center} r={radiusXp} 
                 stroke="#9E4EA5" 
@@ -133,8 +130,6 @@ export const IdentityHUD = () => {
                 className="transition-all duration-500 ease-out"
               />
 
-              {/* CURVED LEVEL TEXT */}
-              {/* Modified path to hug the XP ring (Radius ~72) at the bottom */}
               <defs>
                   <path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /> 
               </defs>
@@ -167,7 +162,6 @@ export const IdentityHUD = () => {
                     exit={{ opacity: 0, y: -10 }}
                     className="flex flex-col gap-4"
                 >
-                    {/* Header with Padding to prevent arrow clip */}
                     <div className="flex items-center gap-2 pb-1 border-b border-elfy-green/20 pt-2">
                         <ArrowUpCircle size={12} className="text-elfy-green animate-bounce" />
                         <span className="text-[9px] font-bold text-elfy-green tracking-widest">
@@ -221,7 +215,6 @@ export const IdentityHUD = () => {
                             const info = UPGRADE_MAP[u];
                             const Icon = info.icon;
                             
-                            // Consumables don't show Version
                             return (
                                 <button
                                     key={u}
@@ -245,7 +238,6 @@ export const IdentityHUD = () => {
                                         </div>
                                     </div>
                                     
-                                    {/* Warning Icon for actions */}
                                     <AlertTriangle size={12} className="text-elfy-yellow/50 group-hover:text-elfy-yellow" />
                                 </button>
                             );
@@ -258,7 +250,8 @@ export const IdentityHUD = () => {
                     key="status"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 border border-dashed border-white/10 p-4 rounded bg-black/20"
+                    // UPDATED: Marching ants container
+                    className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 p-4 rounded bg-black/20 marching-ants [--ant-color:rgba(255,255,255,0.1)]"
                 >
                     <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
                         <div className="w-1 h-1 bg-white/50 rounded-full" />

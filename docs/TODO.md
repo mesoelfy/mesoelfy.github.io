@@ -180,6 +180,9 @@ For portfolio and social media items and youtube videos, instead of for example 
 
 
 
+IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?
+
+
 
 Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
 

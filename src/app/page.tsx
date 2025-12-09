@@ -133,10 +133,10 @@ export default function Home() {
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
-                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8 w-full max-w-lg">
+                            {/* UPDATED CONTAINER: Marching Ants Effect */}
+                            <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-elfy-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
                               
-                              {/* UPDATED BUTTON STYLE */}
                               <button 
                                 onClick={() => openModal('feed')} 
                                 onMouseEnter={() => AudioSystem.playHover()}
