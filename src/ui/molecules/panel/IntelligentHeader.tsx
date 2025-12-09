@@ -33,34 +33,34 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
     }
   }, [health, showOptimal]);
 
-  let mainColor = "text-elfy-green";
+  let mainColor = "text-primary-green";
   let statusText = "SECURE";
   
   if (isGameOver) {
-      mainColor = "text-elfy-red";
+      mainColor = "text-critical-red";
       statusText = "SYSTEM_FAILURE";
   } else if (isDestroyed) {
-      mainColor = isInteracting ? "text-elfy-purple" : "text-elfy-red";
+      mainColor = isInteracting ? "text-latent-purple" : "text-critical-red";
       statusText = isInteracting ? "REBOOTING..." : "OFFLINE";
   } else if (isInteracting && isDamaged) {
-      mainColor = "text-elfy-cyan";
+      mainColor = "text-service-cyan";
       statusText = "HEALING...";
   } else if (isDamaged) {
-      mainColor = "text-elfy-yellow"; 
+      mainColor = "text-alert-yellow"; 
       statusText = "ATTENTION_REQ";
   } else if (!showOptimal) {
-      mainColor = "text-elfy-green-dim";
+      mainColor = "text-primary-green-dim";
       statusText = "ONLINE";
   }
 
   return (
     <div className={clsx(
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
-        isGameOver ? "bg-elfy-red/10 border-elfy-red/50" :
-        isDestroyed ? (isInteracting ? "bg-elfy-purple/10 border-elfy-purple/50" : "bg-elfy-red/10 border-elfy-red/50") :
-        (isInteracting && isDamaged) ? "bg-elfy-cyan/10 border-elfy-cyan/50" :
-        isDamaged ? "bg-elfy-yellow/10 border-elfy-yellow/30" : 
-        "bg-elfy-green/5 border-elfy-green-dim/30"
+        isGameOver ? "bg-critical-red/10 border-critical-red/50" :
+        isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
+        (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
+        isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
+        "bg-primary-green/5 border-primary-green-dim/30"
     )}>
         <div className="flex items-center justify-between px-3 py-1.5 h-8">
             <div className="flex items-baseline gap-2">
@@ -79,7 +79,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             key="gameover"
                             initial={{ scale: 0, rotate: -90 }}
                             animate={{ scale: 1, rotate: 0 }}
-                            className="text-elfy-red drop-shadow-[0_0_8px_currentColor]"
+                            className="text-critical-red drop-shadow-[0_0_8px_currentColor]"
                         >
                             <Skull size={16} />
                         </motion.div>
@@ -89,7 +89,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 key="rebooting"
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="w-4 h-4 bg-elfy-purple rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                                className="w-4 h-4 bg-latent-purple rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
                             >
                                 <motion.div animate={{ rotate: 360, opacity: [0.6, 1, 0.6] }} transition={{ duration: 0.5, repeat: Infinity }}>
                                     <Zap size={10} className="text-black fill-current" />
@@ -100,9 +100,9 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 key="destroyed"
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="w-4 h-4 border border-elfy-purple rounded-full flex items-center justify-center opacity-80"
+                                className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"
                             >
-                                <Power size={10} className="text-elfy-purple" />
+                                <Power size={10} className="text-latent-purple" />
                             </motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
@@ -110,7 +110,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             key="healing"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="w-4 h-4 bg-elfy-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                            className="w-4 h-4 bg-service-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
                         >
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
                                 <RefreshCw size={10} className="text-black" />
@@ -129,7 +129,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 ]
                             }}
                             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                            className="text-elfy-yellow"
+                            className="text-alert-yellow"
                         >
                             <AlertTriangle size={16} />
                         </motion.div>
@@ -139,7 +139,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
-                            className="w-4 h-4 bg-elfy-green rounded-full flex items-center justify-center shadow-[0_0_5px_currentColor]"
+                            className="w-4 h-4 bg-primary-green rounded-full flex items-center justify-center shadow-[0_0_5px_currentColor]"
                         >
                             <Check size={10} className="text-black stroke-[3px]" />
                         </motion.div>
@@ -153,11 +153,11 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                 <motion.div 
                     className={clsx(
                         "h-full transition-colors duration-200",
-                        (isDestroyed && isInteracting) ? "bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" :
+                        (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         isDestroyed ? "bg-transparent" : 
-                        (isInteracting && isDamaged) ? "bg-elfy-cyan" :
-                        isDamaged ? "bg-elfy-yellow" : 
-                        "bg-elfy-green"
+                        (isInteracting && isDamaged) ? "bg-service-cyan" :
+                        isDamaged ? "bg-alert-yellow" : 
+                        "bg-primary-green"
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}

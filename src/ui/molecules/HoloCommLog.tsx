@@ -9,9 +9,9 @@ const VIDEO_POOL = [
 ];
 
 const OfflineStatic = () => (
-  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
+  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-critical-red/20 overflow-hidden w-full h-full">
     <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-40 bg-cover mix-blend-screen pointer-events-none" />
-    <div className="relative z-10 animate-pulse text-elfy-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
+    <div className="relative z-10 animate-pulse text-critical-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
         <WifiOff size={12} />
         <span>SIGNAL_LOST</span>
     </div>
@@ -83,7 +83,7 @@ const VideoSlot = ({
   }, [videoId, isOffline, getNextVideo]);
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/30 bg-black overflow-hidden group/video hover:border-elfy-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
       
       {isOffline ? (
           <OfflineStatic />
@@ -108,12 +108,12 @@ const VideoSlot = ({
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
-                    <Radio className="text-elfy-green animate-pulse w-6 h-6 mb-2" />
-                    <span className="text-[10px] font-mono text-elfy-green animate-pulse">ESTABLISHING_UPLINK...</span>
+                    <Radio className="text-primary-green animate-pulse w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-mono text-primary-green animate-pulse">ESTABLISHING_UPLINK...</span>
                 </div>
              ) : (
                  // HOVER STATE: Yellow Text & Border
-                 <div className="flex items-center gap-2 text-elfy-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-yellow rounded-sm pointer-events-auto">
+                 <div className="flex items-center gap-2 text-alert-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-alert-yellow rounded-sm pointer-events-auto">
                     <span>OPEN_SOURCE</span>
                     <ExternalLink size={12} />
                  </div>
@@ -129,14 +129,14 @@ const VideoSlot = ({
           />
 
           {/* CAM TEXT: Green by default, stays visible */}
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-elfy-yellow transition-colors">
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
              CAM_0{slotIndex + 1}
           </div>
         </>
       )}
       
       {isOffline && (
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-critical-red font-mono bg-black/80 px-1 pointer-events-none">
              CAM_0{slotIndex + 1} [ERR]
           </div>
       )}

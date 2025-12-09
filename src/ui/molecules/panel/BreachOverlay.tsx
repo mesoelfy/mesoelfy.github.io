@@ -6,12 +6,12 @@ const ScrollingRow = ({ direction, text }: { direction: number, text: string }) 
   return (
     <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
       <motion.div 
-        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
+        className="flex gap-4 font-header font-black text-xl md:text-2xl text-critical-red tracking-widest uppercase py-1"
         animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
         transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
       >
         {Array.from({ length: 12 }).map((_, i) => (
-          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
+          <span key={i} className={i % 2 === 0 ? "text-critical-red" : "text-transparent stroke-critical-red stroke-1"}>
              {text}
           </span>
         ))}
@@ -59,7 +59,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       <motion.div 
                           animate={{ y: [0, -10, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-elfy-red drop-shadow-md"
+                          className="text-critical-red drop-shadow-md"
                       >
                           <ChevronUp size={64} strokeWidth={3} />
                       </motion.div>
@@ -69,7 +69,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       <motion.div 
                           animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
                           transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                          className="text-latent-purple drop-shadow-[0_0_15px_#9E4EA5]"
                       >
                           <ChevronUp size={64} strokeWidth={4} />
                       </motion.div>
@@ -79,20 +79,20 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
               </div>
 
               <div className="flex flex-col items-center text-center">
-                  <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
+                  <span className="text-sm font-header font-black tracking-widest text-critical-red group-hover:text-latent-purple transition-colors duration-200 drop-shadow-md">
                       HOLD TO REBOOT
                   </span>
                   
                   <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
                       <motion.div 
-                          className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                          className="h-full bg-latent-purple shadow-[0_0_10px_#9E4EA5]" 
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
                       />
                   </div>
                   
-                  <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
+                  <div className="text-[10px] font-mono text-latent-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
                       INTEGRITY: {Math.floor(progress)}%
                   </div>
               </div>

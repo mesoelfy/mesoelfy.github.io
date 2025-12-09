@@ -36,8 +36,8 @@ const SfxBtn = ({ active, onClick, color }: { active: boolean, onClick: () => vo
     className={clsx(
       "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
       active 
-        ? `hover:text-elfy-yellow bg-white/5 border-white/10 ${color}`
-        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100 decoration-line-through`
+        ? `hover:text-alert-yellow bg-white/5 border-white/10 ${color}`
+        : `${color} opacity-40 hover:text-critical-red hover:opacity-100 decoration-line-through`
     )}
   >
     SFX
@@ -50,8 +50,8 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
     className={clsx(
       "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
       active 
-        ? `hover:text-elfy-yellow bg-white/5 ${color}`
-        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100`
+        ? `hover:text-alert-yellow bg-white/5 ${color}`
+        : `${color} opacity-40 hover:text-critical-red hover:opacity-100`
     )}
   >
     {active ? <Icon size={14} /> : <OffIcon size={14} />}
@@ -73,9 +73,9 @@ export const Header = () => {
   const isWarning = systemIntegrity < 60;
   const isGameOver = systemIntegrity <= 0;
   
-  let statusColor = "text-elfy-green";
-  if (isCritical) statusColor = "text-elfy-red";
-  else if (isWarning) statusColor = "text-elfy-yellow";
+  let statusColor = "text-primary-green";
+  if (isCritical) statusColor = "text-critical-red";
+  else if (isWarning) statusColor = "text-alert-yellow";
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
@@ -133,7 +133,7 @@ export const Header = () => {
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <div 
             className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
-                isCritical ? "bg-elfy-red" : isWarning ? "bg-elfy-yellow" : "bg-elfy-green"
+                isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
             )} 
             style={{ width: `${systemIntegrity}%` }}
           />
@@ -143,7 +143,7 @@ export const Header = () => {
       {/* INTEGRITY TEXT */}
       <div className={clsx(
           "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
-          isCritical ? "text-elfy-red" : isWarning ? "text-elfy-yellow" : "text-elfy-green-dim"
+          isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"
       )}>
         <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
         <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>

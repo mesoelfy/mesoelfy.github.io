@@ -30,11 +30,11 @@ const AsciiRenderer = () => {
       let animClass = '';
       
       if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        animClass = 'animate-matrix-green text-elfy-green-dark';
+        animClass = 'animate-matrix-green text-primary-green-dark';
       } else if (['░', '▒', '▓'].includes(char)) {
-        animClass = 'animate-matrix-purple text-elfy-purple';
+        animClass = 'animate-matrix-purple text-latent-purple';
       } else {
-        animClass = 'text-elfy-green-dark';
+        animClass = 'text-primary-green-dark';
       }
 
       const delay = Math.random() * 2 + 's';
@@ -63,22 +63,22 @@ const BootHeader = ({ step }: { step: number }) => {
   const isBypass = step === 4;
   const isSecure = step >= 5;
 
-  let color = "text-elfy-green-dim";
+  let color = "text-primary-green-dim";
   let statusText = "ESTABLISHING...";
-  let bgClass = "bg-elfy-green/5";
+  let bgClass = "bg-primary-green/5";
   
   if (isUnsafe) {
-      color = "text-elfy-red";
+      color = "text-critical-red";
       statusText = "SIGNAL_CORRUPTED";
-      bgClass = "bg-elfy-red/10 border-elfy-red/30";
+      bgClass = "bg-critical-red/10 border-critical-red/30";
   } else if (isBypass) {
-      color = "text-elfy-purple-light";
+      color = "text-latent-purple-light";
       statusText = "INJECTING_PAYLOAD";
-      bgClass = "bg-elfy-purple/10 border-elfy-purple/30";
+      bgClass = "bg-latent-purple/10 border-latent-purple/30";
   } else if (isSecure) {
-      color = "text-elfy-green";
+      color = "text-primary-green";
       statusText = "UPLINK_STABLE";
-      bgClass = "bg-elfy-green/10 border-elfy-green/30";
+      bgClass = "bg-primary-green/10 border-primary-green/30";
   } else if (step >= 1) {
       statusText = "HANDSHAKING...";
   }
@@ -96,7 +96,7 @@ const BootHeader = ({ step }: { step: number }) => {
         {[1, 2, 3, 4].map(i => {
            let heightClass = "h-1";
            let animClass = "";
-           let barColor = isUnsafe ? "bg-elfy-red" : isBypass ? "bg-elfy-purple-light" : "bg-elfy-green";
+           let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
            
            if (isUnsafe) {
                heightClass = i % 2 === 0 ? "h-3" : "h-1";
@@ -141,18 +141,18 @@ const CoreHeader = ({ step }: { step: number }) => {
     }
   }, [step]);
 
-  let borderColor = "border-elfy-green/30";
-  let bgColor = "bg-elfy-green/10";
-  let textColor = "text-elfy-green";
+  let borderColor = "border-primary-green/30";
+  let bgColor = "bg-primary-green/10";
+  let textColor = "text-primary-green";
 
   if (isUnsafe) {
-    borderColor = "border-elfy-red/50";
-    bgColor = "bg-elfy-red/10";
-    textColor = "text-elfy-red";
+    borderColor = "border-critical-red/50";
+    bgColor = "bg-critical-red/10";
+    textColor = "text-critical-red";
   } else if (isBypass) {
-    borderColor = "border-elfy-purple/50";
-    bgColor = "bg-elfy-purple/10";
-    textColor = "text-elfy-purple-light";
+    borderColor = "border-latent-purple/50";
+    bgColor = "bg-latent-purple/10";
+    textColor = "text-latent-purple-light";
   }
 
   return (
@@ -184,7 +184,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ scale: 0 }}
                     transition={{ x: { repeat: Infinity, duration: 0.1 } }}
                 >
-                    <ShieldAlert size={18} className="text-elfy-red" />
+                    <ShieldAlert size={18} className="text-critical-red" />
                 </motion.div>
             ) : isBypass ? (
                 <motion.div 
@@ -194,7 +194,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
                     transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
                 >
-                     <Unlock size={18} className="text-elfy-purple-light" />
+                     <Unlock size={18} className="text-latent-purple-light" />
                 </motion.div>
             ) : isCaution ? (
                 <motion.div 
@@ -222,7 +222,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                         exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
                     >
-                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                         <Lock size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
                     </motion.div>
                 ) : (
                     <motion.div 
@@ -232,7 +232,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                         exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
                         transition={{ duration: 0.4, ease: "backOut" }}
                     >
-                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                         <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
                     </motion.div>
                 )
             ) : (
@@ -243,7 +243,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ opacity: 0 }}
                     transition={{ rotate: { repeat: Infinity, duration: 2, ease: "linear" } }}
                 >
-                     <div className="w-4 h-4 border-2 border-elfy-green border-t-transparent rounded-full" />
+                     <div className="w-4 h-4 border-2 border-primary-green border-t-transparent rounded-full" />
                 </motion.div>
             )}
          </AnimatePresence>
@@ -280,19 +280,19 @@ const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false,
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
       {isDoneTyping && showDots && <span>{isPast ? '...' : (Math.floor(Date.now() / 300) % 4 === 0 ? '' : '...')}</span>}
-      {isActive && <span className="ml-1 animate-cursor-blink text-elfy-green font-bold">_</span>}
+      {isActive && <span className="ml-1 animate-cursor-blink text-primary-green font-bold">_</span>}
     </div>
   );
 };
 
 const LOG_DATA = [
-  { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
-  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20, hasDots: false },
-  { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
-  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20, hasDots: false },
-  { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40, hasDots: true },
-  { text: "> DECRYPTED.", color: "text-elfy-green", speed: 20, hasDots: false },
-  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20, hasDots: false },
+  { text: "> INITIALIZE NEURAL_LACE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> MOUNT MESOELFY_CORE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-critical-red", speed: 20, hasDots: false },
+  { text: "> BYPASSING SENTINEL_NODES", color: "text-latent-purple-light", speed: 40, hasDots: true },
+  { text: "> DECRYPTED.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-alert-yellow", speed: 20, hasDots: false },
 ];
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
@@ -413,7 +413,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
         transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
       >
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
+        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
           <BootHeader step={step} />
           <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
             {logsToShow.map((line, i) => (
@@ -428,7 +428,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
               initial={{ y: 50, opacity: 0, height: 0 }}
               animate={{ y: 0, opacity: 1, height: "auto" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
+              className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
               <CoreHeader step={step} />
               
@@ -442,11 +442,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                       boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                     }}
                     transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                    className="relative border border-elfy-red bg-elfy-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                    className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
                   >
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-elfy-red">⚠</motion.span>
-                    <span className="text-sm font-header font-black tracking-widest text-center text-elfy-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-elfy-red">⚠</motion.span>
+                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                    <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
+                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
                   </motion.div>
                 )}
                 {showButton && (
@@ -454,10 +454,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     <button 
                       onClick={handleInitialize}
                       onMouseEnter={() => AudioSystem.playHover()}
-                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                      className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                     >
-                      <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
+                      <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
                         [ INITIALIZE_SYSTEM.EXE ]
                       </span>
                     </button>

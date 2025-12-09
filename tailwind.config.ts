@@ -7,33 +7,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- BRAND CORE (Existing UI) ---
-        elfy: {
-          green: {
-            light: '#7FF65F',
-            DEFAULT: 'rgba(96, 196, 68, 1)',
-            dim: '#1bb930ff',
-            dark: '#217e10ff',
-          },
-          purple: {
-            light: '#BC86BA',
-            DEFAULT: '#9E4EA5',
-            dim: '#822B8A',
-            deep: '#350E3A',
-          },
-          cyan: {
-            DEFAULT: '#00F0FF', // NEW: Repair Color
-            dim: '#008ba3',
-          },
-          yellow: {
-            DEFAULT: '#eae747ff',
-          },
-          red: '#FF003C', 
-          gray: '#27282A',
-          black: '#050505',
+        // --- SEMANTIC PALETTE ---
+        
+        // The core system color (Safe, Online, Active)
+        'primary-green': {
+          light: '#7FF65F',
+          DEFAULT: 'rgba(96, 196, 68, 1)',
+          dim: '#1bb930ff',
+          dark: '#217e10ff',
         },
         
-        // --- LATENT DEFENSE (Game Layer) ---
+        // Lore, Regeneration, Special Enemies
+        'latent-purple': {
+          light: '#BC86BA',
+          DEFAULT: '#9E4EA5',
+          dim: '#822B8A',
+          deep: '#350E3A',
+        },
+        
+        // Repair, Friendly AI, Constructive
+        'service-cyan': {
+          DEFAULT: '#00F0FF', 
+          dim: '#008ba3',
+        },
+        
+        // Warnings, Highlights, Interaction Focus
+        'alert-yellow': {
+          DEFAULT: '#eae747ff',
+        },
+        
+        // Critical Failure, Enemies, Destruction
+        'critical-red': {
+          DEFAULT: '#FF003C', 
+        },
+        
+        // Backgrounds and Structures
+        'muted-gray': '#27282A',
+        'void-black': '#050505',
+        
+        // --- LEGACY GAME TOKENS (Keep for Logic/Canvas referencing if needed) ---
         game: {
           turret: {
             base: '#78F654',

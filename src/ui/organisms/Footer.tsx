@@ -24,10 +24,10 @@ export const Footer = () => {
   const isCritical = systemIntegrity < 30;
   const isWarning = systemIntegrity < 60;
 
-  let globalColor = "text-elfy-green-dim border-elfy-green-dim/30";
-  if (isGameOver) globalColor = "text-elfy-red border-elfy-red/50";
-  else if (isCritical) globalColor = "text-elfy-red border-elfy-red/30";
-  else if (isWarning) globalColor = "text-elfy-yellow border-elfy-yellow/30";
+  let globalColor = "text-primary-green-dim border-primary-green-dim/30";
+  if (isGameOver) globalColor = "text-critical-red border-critical-red/50";
+  else if (isCritical) globalColor = "text-critical-red border-critical-red/30";
+  else if (isWarning) globalColor = "text-alert-yellow border-alert-yellow/30";
 
   const [log, setLog] = useState<{ text: string, type: 'info' | 'warn' | 'crit' }>({ 
       text: "SYSTEM_ONLINE", type: 'info' 
@@ -121,10 +121,10 @@ export const Footer = () => {
                 className={clsx(
                     "whitespace-nowrap font-bold tracking-wider truncate",
                     // If Game Over, FORCE Red. Otherwise respect message type colors
-                    isGameOver ? "text-elfy-red animate-pulse" : 
-                    log.type === 'crit' ? "text-elfy-red animate-pulse" : 
-                    log.type === 'warn' ? "text-elfy-yellow" : 
-                    "text-elfy-green"
+                    isGameOver ? "text-critical-red animate-pulse" : 
+                    log.type === 'crit' ? "text-critical-red animate-pulse" : 
+                    log.type === 'warn' ? "text-alert-yellow" : 
+                    "text-primary-green"
                 )}
             >
                 {log.text}

@@ -68,12 +68,12 @@ export const VirtualJoystick = () => {
     <div className="fixed bottom-8 right-8 w-32 h-32 z-[90] touch-none select-none">
       {/* Base */}
       <div 
-        className="w-full h-full rounded-full border-2 border-elfy-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
+        className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
         ref={stickRef}
       >
         {/* Stick */}
         <div 
-          className="w-12 h-12 rounded-full bg-elfy-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear"
+          className="w-12 h-12 rounded-full bg-primary-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear"
           style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -81,7 +81,7 @@ export const VirtualJoystick = () => {
           onPointerCancel={handlePointerUp}
         />
       </div>
-      <div className="absolute -top-6 w-full text-center text-[10px] text-elfy-green/50 font-mono tracking-widest">
+      <div className="absolute -top-6 w-full text-center text-[10px] text-primary-green/50 font-mono tracking-widest">
           [ NAV ]
       </div>
     </div>

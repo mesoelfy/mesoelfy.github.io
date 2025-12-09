@@ -58,7 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
       <body 
-        className="bg-black text-elfy-green selection:bg-elfy-green selection:text-black font-mono"
+        className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} // Hardcode black to prevent FOUC
       >
         <div className="relative w-full h-full">

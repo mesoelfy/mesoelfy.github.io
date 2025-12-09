@@ -24,16 +24,16 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
-        <Box size={64} className="text-elfy-green animate-pulse" />
+        <Box size={64} className="text-primary-green animate-pulse" />
         <div>
             <h2 className="text-xl font-bold mb-2">INITIALIZE_SIMULATION?</h2>
-            <p className="text-xs text-elfy-green-dim max-w-xs mx-auto">
+            <p className="text-xs text-primary-green-dim max-w-xs mx-auto">
                 Loads the 'Holo-Deck' simulation environment. The main OS will be suspended.
             </p>
         </div>
         <button 
             onClick={enterSandbox}
-            className="px-8 py-3 bg-elfy-green text-black font-bold tracking-widest hover:bg-white transition-colors"
+            className="px-8 py-3 bg-primary-green text-black font-bold tracking-widest hover:bg-white transition-colors"
         >
             [ ENTER_HOLO_DECK ]
         </button>

@@ -53,24 +53,24 @@ export const LiveArtGrid = () => {
                 className={clsx(
                     "w-full aspect-square relative border group overflow-hidden flex items-center justify-center rounded-[1px] transition-colors",
                     isCorrupt 
-                        ? "bg-black border-elfy-red/20" 
-                        : "bg-black/50 border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)]"
+                        ? "bg-black border-critical-red/20" 
+                        : "bg-black/50 border-primary-green-dim/30 hover:border-alert-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)]"
                 )}
               >
                 <div className={clsx(
                     "absolute inset-0 transition-colors",
-                    isCorrupt ? "bg-elfy-red/5" : "bg-elfy-green/5 group-hover:bg-elfy-green/10"
+                    isCorrupt ? "bg-critical-red/5" : "bg-primary-green/5 group-hover:bg-primary-green/10"
                 )} />
                 
                 <span className={clsx(
                     "relative z-10 text-[9px] font-mono transition-colors",
-                    isCorrupt ? "text-elfy-red/50 animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-yellow"
+                    isCorrupt ? "text-critical-red/50 animate-pulse" : "text-primary-green-dim group-hover:text-alert-yellow"
                 )}>
                   {isCorrupt ? (Math.random() > 0.5 ? "0x00" : "ERR") : `IMG_${id}`}
                 </span>
 
                 {!isCorrupt && (
-                    <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-elfy-green-dim/50 group-hover:border-elfy-yellow" />
+                    <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-primary-green-dim/50 group-hover:border-alert-yellow" />
                 )}
               </motion.button>
             );

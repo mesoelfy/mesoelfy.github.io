@@ -63,7 +63,7 @@ export default function Home() {
       <CustomCursor />
       <DebugOverlay />
 
-      <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
+      <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
         <WebGLErrorBoundary>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
@@ -101,7 +101,7 @@ export default function Home() {
                   {!isZenMode && (
                     <motion.div 
                       className={clsx(
-                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
                           isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
                       )}
                       initial="hidden"
@@ -135,12 +135,12 @@ export default function Home() {
                           <div className="w-full h-full flex items-center justify-center p-4">
                             {/* UPDATED CONTAINER: Marching Ants Effect */}
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
-                              <p className="animate-pulse text-elfy-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+                              <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
                               
                               <button 
                                 onClick={() => openModal('feed')} 
                                 onMouseEnter={() => AudioSystem.playHover()}
-                                className="group w-full py-3 border border-elfy-green-dim/50 text-elfy-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-elfy-yellow hover:text-elfy-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-elfy-yellow/5 relative overflow-hidden"
+                                className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
                               >
                                 <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
                                     [ ACCESS_TERMINAL ]

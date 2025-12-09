@@ -85,14 +85,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       return unsub;
   }, [gameId, controls]);
 
-  let borderColor = "border-elfy-green-dim/30";
+  let borderColor = "border-primary-green-dim/30";
   if (isDestroyed) {
       borderColor = isInteracting 
-        ? "border-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
-        : "border-elfy-red animate-pulse"; 
+        ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" 
+        : "border-critical-red animate-pulse"; 
   }
-  else if (isInteracting && isDamaged) borderColor = "border-elfy-cyan shadow-[0_0_10px_#00F0FF]";
-  else if (isDamaged) borderColor = "border-elfy-yellow/50";
+  else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
+  else if (isDamaged) borderColor = "border-alert-yellow/50";
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
@@ -149,8 +149,8 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         
         {isGameOver && (
             <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
-                <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
-                <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
+                <Skull className="text-critical-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
+                <span className="text-critical-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
         )}
       </div>

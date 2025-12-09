@@ -90,9 +90,9 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
       
       {/* SCENE CONTROL */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-elfy-green/50 hover:bg-elfy-green hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-primary-green/50 hover:bg-primary-green hover:text-black transition-all text-xs font-bold">
             <Play size={14} /> SKIP_BOOT
           </button>
           
@@ -113,12 +113,12 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
       {/* STATE OVERRIDES */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold">
             <Skull size={14} /> FORCE_CRASH
           </button>
-          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-elfy-purple/50 text-elfy-purple hover:bg-elfy-purple hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black transition-all text-xs font-bold">
             <RefreshCw size={14} /> REBOOT_CORE
           </button>
         </div>
@@ -126,15 +126,15 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
       {/* CHEATS */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
         
         <button 
           onClick={toggleGodSuite}
           className={clsx(
               "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
               areAllGodModesOn
-                  ? "bg-elfy-green text-black border-elfy-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
-                  : "bg-elfy-green/10 text-elfy-green border-elfy-green/50 hover:bg-elfy-green hover:text-black"
+                  ? "bg-primary-green text-black border-primary-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
+                  : "bg-primary-green/10 text-primary-green border-primary-green/50 hover:bg-primary-green hover:text-black"
           )}
         >
           <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
@@ -143,40 +143,40 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.godMode} 
             onChange={(e) => setDebugFlag('godMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.panelGodMode} 
             onChange={(e) => setDebugFlag('panelGodMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.peaceMode} 
             onChange={(e) => setDebugFlag('peaceMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
       </div>

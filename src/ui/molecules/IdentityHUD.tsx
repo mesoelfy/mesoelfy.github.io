@@ -89,15 +89,15 @@ export const IdentityHUD = () => {
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                     {rebootProgress > 0 ? (
                         <div className="flex flex-col items-center">
-                            <span className="text-2xl font-header font-black text-elfy-yellow drop-shadow-md animate-pulse">
+                            <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">
                                 {Math.floor(rebootProgress)}%
                             </span>
-                            <span className="text-[8px] text-elfy-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
+                            <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
                         </div>
                     ) : (
                         <div className="animate-pulse flex flex-col items-center">
                             <Unplug className="text-white/50 w-8 h-8 mb-1" />
-                            <span className="text-[8px] text-elfy-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
+                            <span className="text-[8px] text-critical-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
                         </div>
                     )}
                 </div>
@@ -144,8 +144,8 @@ export const IdentityHUD = () => {
 
         {/* Identity Info */}
         <div className="text-center z-20 mb-2">
-            <h2 className="text-xl font-header font-black text-elfy-green tracking-wider drop-shadow-md">{identity.name}</h2>
-            <div className="text-[8px] text-elfy-purple-light uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border border-elfy-purple/20">
+            <h2 className="text-xl font-header font-black text-primary-green tracking-wider drop-shadow-md">{identity.name}</h2>
+            <div className="text-[8px] text-latent-purple-light uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border border-latent-purple/20">
                 {identity.class}
             </div>
         </div>
@@ -162,16 +162,16 @@ export const IdentityHUD = () => {
                     exit={{ opacity: 0, y: -10 }}
                     className="flex flex-col gap-4"
                 >
-                    <div className="flex items-center gap-2 pb-1 border-b border-elfy-green/20 pt-2">
-                        <ArrowUpCircle size={12} className="text-elfy-green animate-bounce" />
-                        <span className="text-[9px] font-bold text-elfy-green tracking-widest">
+                    <div className="flex items-center gap-2 pb-1 border-b border-primary-green/20 pt-2">
+                        <ArrowUpCircle size={12} className="text-primary-green animate-bounce" />
+                        <span className="text-[9px] font-bold text-primary-green tracking-widest">
                             SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
                         </span>
                     </div>
 
                     {/* KERNEL UPGRADES */}
                     <div className="flex flex-col gap-1.5">
-                        <span className="text-[8px] font-bold text-elfy-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
+                        <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
                         {CORE_UPGRADES.map(u => {
                             const info = UPGRADE_MAP[u];
                             const Icon = info.icon;
@@ -182,16 +182,16 @@ export const IdentityHUD = () => {
                                     key={u}
                                     onClick={() => handleUpgrade(u)}
                                     onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                                    className="group relative flex items-center justify-between p-2 border border-elfy-green-dim/30 bg-black/40 hover:border-elfy-green transition-all duration-200 overflow-hidden"
+                                    className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-elfy-green opacity-20" />
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
                                     
                                     <div className="flex items-center gap-3 relative z-10">
-                                        <div className="p-1.5 rounded-sm bg-elfy-green/10 text-elfy-green group-hover:bg-elfy-green group-hover:text-black">
+                                        <div className="p-1.5 rounded-sm bg-primary-green/10 text-primary-green group-hover:bg-primary-green group-hover:text-black">
                                             <Icon size={14} />
                                         </div>
                                         <div className="flex flex-col items-start">
-                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-elfy-green">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-primary-green">
                                                 {info.label}
                                             </span>
                                             <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
@@ -200,7 +200,7 @@ export const IdentityHUD = () => {
                                         </div>
                                     </div>
 
-                                    <div className="text-[9px] font-mono text-elfy-green-dim border border-elfy-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-elfy-green group-hover:text-elfy-green relative z-10">
+                                    <div className="text-[9px] font-mono text-primary-green-dim border border-primary-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-primary-green group-hover:text-primary-green relative z-10">
                                         v{currentLvl}
                                     </div>
                                 </button>
@@ -210,7 +210,7 @@ export const IdentityHUD = () => {
 
                     {/* SYSTEM OPS */}
                     <div className="flex flex-col gap-1.5">
-                        <span className="text-[8px] font-bold text-elfy-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
+                        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
                         {SYSTEM_OPS.map(u => {
                             const info = UPGRADE_MAP[u];
                             const Icon = info.icon;
@@ -220,16 +220,16 @@ export const IdentityHUD = () => {
                                     key={u}
                                     onClick={() => handleUpgrade(u)}
                                     onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                                    className="group relative flex items-center justify-between p-2 border border-elfy-yellow/30 bg-elfy-yellow/5 hover:border-elfy-yellow transition-all duration-200 overflow-hidden"
+                                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-elfy-yellow opacity-20" />
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
                                     
                                     <div className="flex items-center gap-3 relative z-10">
-                                        <div className="p-1.5 rounded-sm bg-elfy-yellow/10 text-elfy-yellow group-hover:bg-elfy-yellow group-hover:text-black">
+                                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
                                             <Icon size={14} />
                                         </div>
                                         <div className="flex flex-col items-start">
-                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-elfy-yellow">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
                                                 {info.label}
                                             </span>
                                             <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
@@ -238,7 +238,7 @@ export const IdentityHUD = () => {
                                         </div>
                                     </div>
                                     
-                                    <AlertTriangle size={12} className="text-elfy-yellow/50 group-hover:text-elfy-yellow" />
+                                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
                                 </button>
                             );
                         })}
@@ -264,18 +264,18 @@ export const IdentityHUD = () => {
       </div>
 
       {/* BOTTOM SECTION: Footer Links */}
-      <div className="flex-none grid grid-cols-2 gap-px bg-elfy-green-dim/20 border-t border-elfy-green-dim/30 mt-auto">
+      <div className="flex-none grid grid-cols-2 gap-px bg-primary-green-dim/20 border-t border-primary-green-dim/30 mt-auto">
         <button 
           onClick={() => !isPanelDead && openModal('about')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-3 bg-black/80 hover:bg-elfy-green hover:text-black text-elfy-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
+          className="py-3 bg-black/80 hover:bg-primary-green hover:text-black text-primary-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
           About_Me
         </button>
         <button 
           onClick={() => !isPanelDead && openModal('contact')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-3 bg-black/80 hover:bg-elfy-yellow hover:text-black text-elfy-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
+          className="py-3 bg-black/80 hover:bg-alert-yellow hover:text-black text-alert-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
           Contact_Link
         </button>

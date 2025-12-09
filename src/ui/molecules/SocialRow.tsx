@@ -37,21 +37,21 @@ export const SocialRow = () => {
             className={clsx(
                 "group flex flex-col items-center justify-center p-2 border transition-all duration-200",
                 isDestroyed 
-                    ? "border-elfy-red/20 bg-elfy-red/5 grayscale" 
-                    : "border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-yellow/5 hover:border-elfy-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.15)]"
+                    ? "border-critical-red/20 bg-critical-red/5 grayscale" 
+                    : "border-primary-green-dim/30 bg-black/40 hover:bg-alert-yellow/5 hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.15)]"
             )}
           >
             <Icon 
               className={clsx(
                   "w-5 h-5 mb-1 transition-transform duration-200",
-                  isDestroyed ? "text-elfy-red animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-yellow group-hover:scale-110",
+                  isDestroyed ? "text-critical-red animate-pulse" : "text-primary-green-dim group-hover:text-alert-yellow group-hover:scale-110",
                   isGlitch ? "translate-x-1" : ""
               )}
               style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' } : {}}
             />
             <span className={clsx(
                 "text-[9px] uppercase tracking-wider font-mono transition-colors duration-200",
-                isDestroyed ? "text-elfy-red/60" : "text-elfy-green-dim/60 group-hover:text-elfy-yellow"
+                isDestroyed ? "text-critical-red/60" : "text-primary-green-dim/60 group-hover:text-alert-yellow"
             )}>
               {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name.split(' ')[0]}
             </span>
