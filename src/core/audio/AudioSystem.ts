@@ -8,13 +8,19 @@ class AudioSystemController {
   private masterGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private ambienceGain: GainNode | null = null;
-  private currentAmbienceNode: AudioBufferSourceNode | null = null;
   
+  // Ambience Chain
+  private ambienceGain: GainNode | null = null;
+  private ambiencePanner: StereoPannerNode | null = null;
+  private ambienceLFO: OscillatorNode | null = null;
+  private ambiencePanConstraint: GainNode | null = null; // NEW: Limits Pan Width
+  
+  private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private musicElement: HTMLAudioElement | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
   
   public isReady = false;
+  private hasInteracted = false; 
   private isMusicStarted = false; 
 
   public async init() {
@@ -27,23 +33,43 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
+    // 1. Create Nodes
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
+    
+    // Ambience Nodes
     this.ambienceGain = this.ctx.createGain();
+    this.ambiencePanner = this.ctx.createStereoPanner();
+    this.ambienceLFO = this.ctx.createOscillator();
+    this.ambiencePanConstraint = this.ctx.createGain(); // NEW
 
+    // 2. Wiring Main Audio
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
-    this.ambienceGain.connect(this.masterGain); 
+    
+    // Ambience Signal Chain: Source -> Volume -> Panner -> Master
+    this.ambienceGain.connect(this.ambiencePanner); 
+    this.ambiencePanner.connect(this.masterGain);
+    
     this.masterGain.connect(this.ctx.destination);
+
+    // 3. Setup Ambience Automation (Subtle Sweep)
+    // LFO -> Constraint Gain (0.3) -> Panner Pan
+    this.ambienceLFO.type = 'sine'; 
+    this.ambienceLFO.frequency.value = 0.05; // Slower: 20 seconds per cycle
+    this.ambiencePanConstraint.gain.value = 0.3; // Restricts pan to +/- 30%
+    
+    this.ambienceLFO.connect(this.ambiencePanConstraint);
+    this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
+    
+    this.ambienceLFO.start();
 
     this.updateVolumes();
 
     await this.generateAllSounds();
     
     this.setupEventListeners();
-    
-    // Setup Global Interaction Listener
     this.setupGlobalInteraction();
 
     this.isReady = true;
@@ -57,16 +83,12 @@ class AudioSystemController {
   private setupGlobalInteraction() {
       const wakeUp = () => {
           if (this.hasInteracted) return;
-          this.hasInteracted = true; // Use a class property? It's not defined in class yet.
-          // Wait, 'hasInteracted' isn't defined on the class in this snippet. 
-          // Let's define it properly or use a local flag logic if we can't persist.
-          // Actually, we can check if context is running.
+          this.hasInteracted = true; 
           
           if (this.ctx && this.ctx.state === 'suspended') {
               this.ctx.resume().catch(() => {});
           }
           
-          // Start ambience on first click
           this.playAmbience('ambience_b');
 
           window.removeEventListener('pointerdown', wakeUp);
@@ -117,9 +139,9 @@ class AudioSystemController {
       const mainGain = offline.createGain();
       mainGain.connect(offline.destination);
       
-      // LOGIC FIX:
-      // If attack is defined, start at 0 and ramp up.
-      // If attack is UNDEFINED (Ambience loops), start at full volume.
+      const attack = recipe.attack || 0.005; 
+      
+      // Attack Logic
       if (recipe.attack !== undefined) {
           mainGain.gain.setValueAtTime(0, 0);
           mainGain.gain.linearRampToValueAtTime(recipe.volume, recipe.attack);
@@ -127,7 +149,7 @@ class AudioSystemController {
           mainGain.gain.setValueAtTime(recipe.volume, 0);
       }
       
-      // Don't fade out long loops (Ambience)
+      // Decay Logic (Ambience vs One-Shot)
       if (recipe.duration < 10.0) {
           mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
       } else {
@@ -213,7 +235,6 @@ class AudioSystemController {
   public playAmbience(key: string) {
       if (!this.ctx || !this.ambienceGain) return;
       
-      // Stop old if exists
       if (this.currentAmbienceNode) {
           const oldNode = this.currentAmbienceNode;
           try { oldNode.stop(this.ctx.currentTime + 0.5); } catch {}
@@ -228,8 +249,6 @@ class AudioSystemController {
       source.loop = true;
       
       const gain = this.ctx.createGain();
-      
-      // Real-time fade-in handled here
       gain.gain.setValueAtTime(0, this.ctx.currentTime);
       gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); 
 
@@ -297,13 +316,10 @@ class AudioSystemController {
 
   public startMusic() {
     this.isMusicStarted = true;
-    
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
-    
     if (this.isReady) {
         this.playAmbience('ambience_b');
     }
-
     if (!this.musicElement) this.setupMusic();
     if (this.musicElement) this.musicElement.play().catch(() => {});
   }
