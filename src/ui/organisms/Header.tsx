@@ -4,6 +4,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
+import { useHeartbeat } from '@/game/hooks/useHeartbeat'; // Import Hook
 
 // --- SUB-COMPONENTS ---
 
@@ -61,7 +62,6 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx } = useStore();
   
-  // React State Subscriptions (Guaranteed to update)
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
   const score = useGameStore(state => state.score);
@@ -77,17 +77,24 @@ export const Header = () => {
   if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
 
+  // --- HEARTBEAT HOOK ---
+  const heartbeatAnim = useHeartbeat();
+
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
-        <span className={clsx(
-            "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
-            statusColor
-        )}>
+        {/* Pulsing Text */}
+        <motion.span 
+            animate={isCritical ? heartbeatAnim : {}}
+            className={clsx(
+                "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
+                statusColor
+            )}
+        >
           MESOELFY_OS
-        </span>
+        </motion.span>
         
         {mounted && (
           <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
@@ -112,7 +119,7 @@ export const Header = () => {
                 active={audioSettings.music} 
                 onClick={toggleMusic} 
                 icon={Music} 
-                offIcon={Music}
+                offIcon={Music} 
                 color={statusColor}
             />
 
@@ -128,10 +135,12 @@ export const Header = () => {
         </div>
       </div>
 
-      {/* BOTTOM BORDER */}
+      {/* BOTTOM BORDER / HEALTH BAR */}
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <div 
+          <motion.div 
+            // Pulse the bar brightness/height slightly
+            animate={isCritical ? heartbeatAnim : {}}
             className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
                 isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
             )} 

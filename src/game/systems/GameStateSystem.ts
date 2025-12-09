@@ -3,7 +3,7 @@ import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { useStore } from '@/core/store/useStore'; 
-import { AudioSystem } from '@/core/audio/AudioSystem'; // Direct audio access
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
 
 export class GameStateSystem implements IGameSystem {
@@ -29,12 +29,10 @@ export class GameStateSystem implements IGameSystem {
 
   public isGameOver: boolean = false;
   
-  // Heartbeat Logic
   private heartbeatTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
     this.reset();
-    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
@@ -43,15 +41,23 @@ export class GameStateSystem implements IGameSystem {
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
 
-      // --- LOW SYSTEM INTEGRITY HEARTBEAT (Variant F) ---
-      // Threshold: 30% Integrity
+      // Heartbeat Logic (< 30% Integrity)
+      // Note: Integrity is 0-100
       if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
               AudioSystem.playSound('warning_heartbeat');
-              // Pace increases as health gets lower
-              const urgency = Math.max(0.1, PanelRegistry.systemIntegrity / 100); 
-              this.heartbeatTimer = 1.0 + urgency; // 1.0s to 1.3s delay
+              
+              // Calculate urgency (0.0 = 30% health, 1.0 = 0% health)
+              // integrity 30 -> urgency 0
+              // integrity 0  -> urgency 1
+              const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
+              
+              // Emit event for UI Sync
+              GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
+
+              // Timer: 1.5s at 30%, speeding up to 0.6s at near death
+              this.heartbeatTimer = 1.5 - (urgency * 0.9);
           }
       } else {
           this.heartbeatTimer = 0;
@@ -70,34 +76,21 @@ export class GameStateSystem implements IGameSystem {
     this.upgradePoints = 0;
     this.isGameOver = false;
     this.activeUpgrades = { 
-        'OVERCLOCK': 0, 
-        'EXECUTE': 0, 
-        'BANDWIDTH': 0, 
-        'FORK': 0,
-        'SNIFFER': 0,
-        'BACKDOOR': 0,
-        'REPAIR_NANITES': 0
+        'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+        'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
     };
   }
 
   public applyUpgrade(option: string) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
-          
-          if (option === 'PURGE' || option === 'RESTORE') {
-              return; 
-          }
-
+          if (option === 'PURGE' || option === 'RESTORE') return;
           if (option === 'DAEMON') {
               GameEventBus.emit(GameEvents.SPAWN_DAEMON, null);
               return; 
           }
-
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
-          
-          if (option === 'REPAIR_NANITES') {
-             this.healPlayer(this.maxPlayerHealth * 0.2);
-          }
+          if (option === 'REPAIR_NANITES') this.healPlayer(this.maxPlayerHealth * 0.2);
       }
   }
 
@@ -108,11 +101,7 @@ export class GameStateSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        
-        // --- PLAYER DEATH SOUND (Variant K) ---
-        if (this.playerHealth <= 0) {
-            AudioSystem.playSound('player_down_glitch');
-        }
+        if (this.playerHealth <= 0) AudioSystem.playSound('player_down_glitch');
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -143,7 +132,7 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
-        AudioSystem.playSound('powerup'); // Revival sound
+        AudioSystem.playSound('powerup');
     }
   }
 

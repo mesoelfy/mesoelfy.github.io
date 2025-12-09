@@ -154,7 +154,7 @@ Resetting via debug menu then starting another game, player wasn't shooting corr
 
 
 
-
+Sometimes the heartbeat sound clips slightly, sometimes it doesn't. I just want the nice deeper heart beat sound that it is doing well, not the shrill tic that also happens sometimes.
 
 
 

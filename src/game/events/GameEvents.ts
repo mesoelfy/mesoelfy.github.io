@@ -17,8 +17,10 @@ export enum GameEvents {
   TRAUMA_ADDED = 'TRAUMA_ADDED',
   SCENE_READY = 'SCENE_READY',
   SPAWN_FX = 'SPAWN_FX',
+  SPAWN_DAEMON = 'SPAWN_DAEMON',
   
-  SPAWN_DAEMON = 'SPAWN_DAEMON' // NEW
+  // NEW: UI SYNC
+  HEARTBEAT = 'HEARTBEAT' 
 }
 
 export type FXVariant = 
@@ -29,7 +31,8 @@ export type FXVariant =
   | 'IMPACT_RED'
   | 'IMPACT_YELLOW'
   | 'DRILL_SPARKS'
-  | 'HUNTER_RECOIL';
+  | 'HUNTER_RECOIL'
+  | 'CLASH_YELLOW';
 
 export interface GameEventPayloads {
   [GameEvents.PLAYER_FIRED]: { x: number; y: number };
@@ -50,5 +53,6 @@ export interface GameEventPayloads {
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
   [GameEvents.SPAWN_FX]: { type: FXVariant; x: number; y: number; angle?: number; count?: number; };
-  [GameEvents.SPAWN_DAEMON]: null; // NEW
+  [GameEvents.SPAWN_DAEMON]: null;
+  [GameEvents.HEARTBEAT]: { urgency: number }; // 0.0 to 1.0 (Low to High stress)
 }

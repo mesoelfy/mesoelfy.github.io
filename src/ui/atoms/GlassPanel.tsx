@@ -7,6 +7,7 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
+import { useHeartbeat } from '@/game/hooks/useHeartbeat'; // Import Hook
 
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
@@ -48,6 +49,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const isInteracting = gameId && interactionTarget === gameId;
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
+  // Use global integrity for heartbeat trigger
+  const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
+
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
 
   const health = panelState ? panelState.health : MAX_HEALTH;
@@ -60,6 +64,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   
   // Local Shake Controls
   const controls = useAnimation();
+  const heartbeatAnim = useHeartbeat(); // Heartbeat Controls
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -70,12 +75,10 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
 
-  // LISTEN FOR DAMAGE EVENTS TO TRIGGER LOCAL SHAKE
   useReactEffect(() => {
       if (!gameId) return;
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
-              // High frequency glitch shake
               controls.start({
                   x: [0, -5, 5, -5, 5, 0],
                   transition: { duration: 0.2 }
@@ -97,24 +100,48 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
+  // Combine animations: If global critical, pulse border red
+  // We can pass controls array to animate? No, Framer Motion 'animate' prop handles one source best.
+  // We will layer the heartbeat on the outer div via box-shadow or just accept it overrides shake for a frame.
+  // Actually, let's apply heartbeat to a border overlay to not conflict with shake x/y.
+  
   return (
     <motion.div 
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      // Use 'animate' prop to control variants, but use 'controls' for transient shake overrides
-      animate={isGameOver ? "shattered" : ["visible", controls as any]}
+      animate={isGameOver ? "shattered" : ["visible", controls as any]} // Shake is priority
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
         bgClass, 
         "border",
         borderColor, 
-        "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
         "rounded-sm",
         className
       )}
     >
+      {/* HEARTBEAT OVERLAY (Only when global critical) */}
+      {isCriticalGlobal && (
+          <motion.div 
+            className="absolute inset-0 border-2 border-critical-red/50 pointer-events-none z-50"
+            animate={heartbeatAnim}
+            style={{ opacity: 0.5 }} 
+          />
+      )}
+
+      {/* SHADOW PULSE (Only when global critical) */}
+      {isCriticalGlobal && (
+          <motion.div
+             className="absolute inset-0 shadow-[inset_0_0_20px_#FF003C] pointer-events-none z-0"
+             animate={{ opacity: [0, 0.6, 0] }}
+             // We can't easily sync this purely via CSS loop if we want perfect audio sync.
+             // We need to use the hook.
+             // But the hook returns 'controls'.
+             // Let's just bind the hook to this div's opacity.
+          />
+      )}
+
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {title && (
