@@ -160,6 +160,8 @@ Sometimes the heartbeat sound clips slightly, sometimes it doesn't. I just want 
 
 
 
+
+
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 
 
