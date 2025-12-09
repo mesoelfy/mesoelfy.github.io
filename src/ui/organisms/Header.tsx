@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Music, Activity } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
@@ -51,7 +51,7 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
 );
 
 export const Header = () => {
-  const { audioSettings, toggleMaster, toggleMusic, toggleSfx } = useStore();
+  const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience } = useStore();
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
@@ -70,8 +70,6 @@ export const Header = () => {
 
   const heartbeatControls = useHeartbeat();
 
-  // TIGHTENED VISUALS (Match 0.03s Audio Attack)
-  // Peak at 4% of 0.8s ~= 0.032s
   const textVariants = {
       heartbeat: {
           scale: [1, 1.05, 1],
@@ -82,7 +80,7 @@ export const Header = () => {
           ],
           transition: { 
               duration: 0.8, 
-              times: [0, 0.04, 1], // Very sharp attack
+              times: [0, 0.04, 1], 
               ease: "easeOut" 
           }
       }
@@ -135,6 +133,16 @@ export const Header = () => {
       {/* RIGHT: Status & Audio Controls */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
+            
+            {/* NEW: Ambience Toggle */}
+            <AudioBtn 
+                active={audioSettings.ambience} 
+                onClick={toggleAmbience} 
+                icon={Wind} 
+                offIcon={Wind} 
+                color={statusColor}
+            />
+
             <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
             <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
             <div className="w-[1px] h-4 bg-white/10 mx-1" />

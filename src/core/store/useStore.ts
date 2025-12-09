@@ -8,6 +8,7 @@ interface AudioSettings {
   master: boolean;
   music: boolean;
   sfx: boolean;
+  ambience: boolean; // NEW
 }
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
@@ -37,7 +38,7 @@ interface AppState {
   
   // Audio & Accessibility
   audioSettings: AudioSettings;
-  screenShakeStrength: number; // 0.0 to 1.0
+  screenShakeStrength: number; 
   
   // Debug
   isDebugOpen: boolean;
@@ -61,8 +62,8 @@ interface AppState {
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
+  toggleAmbience: () => void; // NEW
   
-  // NEW: Shake Control
   setScreenShake: (val: number) => void;
   
   toggleDebugMenu: () => void;
@@ -78,7 +79,6 @@ export const useStore = create<AppState>((set, get) => ({
   activeModal: 'none',
   hoveredItem: null,
   
-  // UPDATED: Default is now 'audio'
   sandboxView: 'audio',
   galleryTarget: EnemyTypes.DRILLER,
   galleryAction: 'IDLE',
@@ -87,6 +87,7 @@ export const useStore = create<AppState>((set, get) => ({
     master: true,
     music: false,
     sfx: true,
+    ambience: true, // NEW: Default On
   },
   
   screenShakeStrength: 1.0, 
@@ -136,7 +137,7 @@ export const useStore = create<AppState>((set, get) => ({
           activeModal: 'none',
           isDebugOpen: false,
           isDebugMinimized: false,
-          sandboxView: 'audio', // Reset to audio
+          sandboxView: 'audio',
           galleryTarget: EnemyTypes.DRILLER,
           galleryAction: 'IDLE'
       });
@@ -163,6 +164,15 @@ export const useStore = create<AppState>((set, get) => ({
       const next = !prev;
       set(state => ({ audioSettings: { ...state.audioSettings, sfx: next } }));
       AudioSystem.setSfxMute(!next);
+      if (next && get().audioSettings.master) AudioSystem.playClick();
+  },
+
+  // NEW: Ambience Toggle
+  toggleAmbience: () => {
+      const prev = get().audioSettings.ambience;
+      const next = !prev;
+      set(state => ({ audioSettings: { ...state.audioSettings, ambience: next } }));
+      AudioSystem.setAmbienceMute(!next);
       if (next && get().audioSettings.master) AudioSystem.playClick();
   },
   

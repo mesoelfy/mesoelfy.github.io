@@ -183,6 +183,10 @@ When daemon ball dies, daemon color is dark blue and then transitions into norma
 IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?
 
 
+Need to add some kind of "begin" click prompt to enable sound in the intro. then we can add variable typing sounds, a ... sound in sync with how they appear, and sparkly shimmer sounds for the matrix rain.
+
+
+
 
 Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
 

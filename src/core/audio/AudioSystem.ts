@@ -70,18 +70,18 @@ class AudioSystemController {
     // A. Stereo Pan Automation (20s cycle)
     this.ambienceLFO.type = 'sine';
     this.ambienceLFO.frequency.value = 0.05; 
-    this.ambiencePanConstraint.gain.value = 0.1; // +/- 10% Width (Subtle drift)
+    this.ambiencePanConstraint.gain.value = 0.1; 
     
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
     
     // B. Depth/Filter Automation (5s cycle - Polyrhythm)
     this.ambienceFilter.type = 'lowpass';
-    this.ambienceFilter.frequency.value = 300; // Center Freq
+    this.ambienceFilter.frequency.value = 300; 
     
     this.ambienceDepthLFO.type = 'sine';
     this.ambienceDepthLFO.frequency.value = 0.2; 
-    this.ambienceDepthGain.gain.value = 10; // Modulates +/- 10Hz (290Hz to 310Hz range)
+    this.ambienceDepthGain.gain.value = 10; 
     
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
@@ -130,7 +130,11 @@ class AudioSystemController {
       this.masterGain.gain.value = s.master ? 0.5 : 0;
       this.musicGain.gain.value = s.music ? 0.4 : 0;
       this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
-      if (this.ambienceGain) this.ambienceGain.gain.value = 1.0; 
+      
+      // UPDATED: Check ambience setting
+      if (this.ambienceGain) {
+          this.ambienceGain.gain.value = s.ambience ? 1.0 : 0.0;
+      }
   }
 
   private async generateAllSounds() {
@@ -276,7 +280,6 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); 
 
       source.connect(gain);
-      // Connect to Filter chain
       gain.connect(this.ambienceGain); 
       source.start();
       
@@ -373,6 +376,12 @@ class AudioSystemController {
   }
   public setSfxMute(m: boolean) { 
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, sfx: !m } }));
+      this.updateVolumes();
+  }
+  
+  // NEW
+  public setAmbienceMute(m: boolean) {
+      useStore.setState(s => ({ audioSettings: { ...s.audioSettings, ambience: !m } }));
       this.updateVolumes();
   }
 }
