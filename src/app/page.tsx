@@ -14,6 +14,7 @@ import { AboutModal } from '@/features/identity/AboutModal';
 import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
+import { SettingsModal } from '@/features/settings/SettingsModal'; // NEW
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -41,7 +42,6 @@ export default function Home() {
   }, []);
 
   const handleBreachStart = () => {
-    // NEW: Dramatic impact sound
     AudioSystem.playSound('initialize_impact');
     startBreach();
   };
@@ -87,6 +87,7 @@ export default function Home() {
                 <FeedModal />
                 <GalleryModal />
                 <ContactModal />
+                <SettingsModal /> {/* NEW */}
                 <ZenBomb />
             </>
         )}

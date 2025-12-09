@@ -1,10 +1,11 @@
-import { Volume2, VolumeX, Music, Activity, Wind } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -51,7 +52,7 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
 );
 
 export const Header = () => {
-  const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience } = useStore();
+  const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
@@ -134,15 +135,20 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            {/* NEW: Ambience Toggle */}
-            <AudioBtn 
-                active={audioSettings.ambience} 
-                onClick={toggleAmbience} 
-                icon={Wind} 
-                offIcon={Wind} 
-                color={statusColor}
-            />
+            {/* Settings Button */}
+            <button 
+                onClick={() => { toggleSettings(); AudioSystem.playClick(); }}
+                className={clsx(
+                  "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
+                  statusColor
+                )}
+            >
+                <Settings size={14} />
+            </button>
 
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+            <AudioBtn active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} offIcon={Wind} color={statusColor} />
             <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
             <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
             <div className="w-[1px] h-4 bg-white/10 mx-1" />

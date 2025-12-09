@@ -9,15 +9,14 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen, bootState } = useStore();
+  const { introDone, isDebugOpen, bootState, activeModal } = useStore();
   
   const playerHealth = useGameStore(state => state.playerHealth);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
-  // Logic: Show cursor if Intro/Debug/Sandbox. 
-  // Hide if Game Over (User requested 3D triangle takeover, though debugging might need cursor)
-  // FIX: Always show cursor if Debug is open, even if dead.
-  const isDead = (playerHealth <= 0 || systemIntegrity <= 0) && !isDebugOpen;
+  // Logic: Show cursor if Intro/Debug/Sandbox/Settings.
+  // Hide if Game Over AND Settings is NOT open.
+  const isDead = (playerHealth <= 0 || systemIntegrity <= 0) && !isDebugOpen && activeModal !== 'settings';
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -42,7 +41,7 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox';
+  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox' || activeModal === 'settings';
 
   return (
     <>
@@ -52,7 +51,7 @@ export const CustomCursor = () => {
 
       <motion.div
         className={clsx(
-            "fixed top-0 left-0 pointer-events-none z-[20000]", // FIX: Increased Z-Index
+            "fixed top-0 left-0 pointer-events-none z-[20000]", 
             (isHovering && !isDead) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}

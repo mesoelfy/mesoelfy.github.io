@@ -25,28 +25,30 @@ export class GameEngineCore implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    const store = useStore.getState();
+    const gameStore = useGameStore.getState();
+    
     // 1. CHECK BOOT STATE
-    // If we are in 'standby' (Boot Sequence), we PAUSE the logic loop.
-    // The Render loop (R3F) continues running, keeping shaders warm.
-    const bootState = useStore.getState().bootState;
-    if (bootState === 'standby') return;
+    if (store.bootState === 'standby') return;
 
-    const store = useGameStore.getState();
+    // 2. CHECK PAUSE STATE (Settings Menu)
+    if (store.activeModal === 'settings') return;
+
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
-    // 2. GAME OVER CHECK
-    if (store.isPlaying && store.systemIntegrity <= 0) {
-        store.stopGame();
+    // 3. GAME OVER CHECK
+    if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
+        gameStore.stopGame();
         FXManager.addTrauma(1.0);
         gameSys.isGameOver = true; 
         return;
     }
 
-    if (!store.isPlaying) {
+    if (!gameStore.isPlaying) {
         gameSys.isGameOver = true;
     }
 
-    // 3. RUN SYSTEMS
+    // 4. RUN SYSTEMS
     for (const sys of this.systems) {
       sys.update(delta, time);
     }

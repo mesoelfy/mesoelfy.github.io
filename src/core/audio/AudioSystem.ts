@@ -60,29 +60,22 @@ class AudioSystemController {
     this.masterGain.connect(this.ctx.destination);
 
     // 4. Ambience Audio Chain
-    // Signal Flow: Gain -> Filter -> Panner -> Master
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner);
     this.ambiencePanner.connect(this.masterGain);
 
     // 5. Modulation Setup
-    
-    // A. Stereo Pan Automation (20s cycle)
     this.ambienceLFO.type = 'sine';
     this.ambienceLFO.frequency.value = 0.05; 
-    this.ambiencePanConstraint.gain.value = 0.1; 
-    
+    this.ambiencePanConstraint.gain.value = 0.1;
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
     
-    // B. Depth/Filter Automation (5s cycle - Polyrhythm)
     this.ambienceFilter.type = 'lowpass';
-    this.ambienceFilter.frequency.value = 300; 
-    
+    this.ambienceFilter.frequency.value = 300;
     this.ambienceDepthLFO.type = 'sine';
     this.ambienceDepthLFO.frequency.value = 0.2; 
     this.ambienceDepthGain.gain.value = 10; 
-    
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
 
@@ -90,7 +83,7 @@ class AudioSystemController {
     this.ambienceLFO.start();
     this.ambienceDepthLFO.start();
 
-    this.updateVolumes();
+    this.updateVolumes(); // Apply stored settings immediately
 
     await this.generateAllSounds();
     
@@ -124,16 +117,42 @@ class AudioSystemController {
       window.addEventListener('keydown', wakeUp);
   }
 
-  private updateVolumes() {
+  // UPDATED: Full 5-Knob Parameter Mapping with Safety Checks
+  public updateVolumes() {
       if (!this.masterGain || !this.sfxGain || !this.musicGain) return;
       const s = useStore.getState().audioSettings;
-      this.masterGain.gain.value = s.master ? 0.5 : 0;
-      this.musicGain.gain.value = s.music ? 0.4 : 0;
-      this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
       
-      // UPDATED: Check ambience setting
+      this.masterGain.gain.value = s.master ? (s.volumeMaster * 0.5) : 0;
+      this.musicGain.gain.value = s.music ? (s.volumeMusic * 0.4) : 0;
+      this.sfxGain.gain.value = s.sfx ? (s.volumeSfx * 0.8) : 0;
+      
       if (this.ambienceGain) {
-          this.ambienceGain.gain.value = s.ambience ? 1.0 : 0.0;
+          this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
+      }
+
+      // AMBIENCE LAB
+      if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
+          // Use defaults (0.5) if undefined to prevent NaN crashes from old localstorage
+          const filter = s.ambFilter ?? 0.5;
+          const speed = s.ambSpeed ?? 0.5;
+          const width = s.ambWidth ?? 0.5;
+          const modSpeed = s.ambModSpeed ?? 0.5;
+          const modDepth = s.ambModDepth ?? 0.5;
+
+          // 1. DENSITY (Filter Freq): 300Hz base.
+          this.ambienceFilter.frequency.value = 300 * (0.5 + filter);
+
+          // 2. CIRCULATION (Pan Speed): 0.05Hz base.
+          this.ambienceLFO.frequency.value = 0.05 * (0.5 + speed);
+
+          // 3. STEREO WIDTH (Pan Gain): 0.2 base.
+          this.ambiencePanConstraint.gain.value = 0.2 * width;
+          
+          // 4. FLUCTUATION (Depth Speed): 0.2Hz base.
+          this.ambienceDepthLFO.frequency.value = 0.2 * (0.5 + modSpeed);
+          
+          // 5. INSTABILITY (Depth Intensity): 20Hz base.
+          this.ambienceDepthGain.gain.value = 20 * modDepth;
       }
   }
 
@@ -378,8 +397,6 @@ class AudioSystemController {
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, sfx: !m } }));
       this.updateVolumes();
   }
-  
-  // NEW
   public setAmbienceMute(m: boolean) {
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, ambience: !m } }));
       this.updateVolumes();
