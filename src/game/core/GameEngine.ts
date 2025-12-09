@@ -31,8 +31,8 @@ export class GameEngineCore implements IGameSystem {
     // 1. CHECK BOOT STATE
     if (store.bootState === 'standby') return;
 
-    // 2. CHECK PAUSE STATE (Settings Menu)
-    if (store.activeModal === 'settings') return;
+    // 2. CHECK PAUSE STATE (Settings or Debug)
+    if (store.activeModal === 'settings' || store.isDebugOpen) return;
 
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     

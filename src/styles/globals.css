@@ -4,8 +4,6 @@
 
 :root {
   --foreground-rgb: 0, 255, 65;
-  
-  /* DEFAULT SHAKE VALUES */
   --shake-x: 0px;
   --shake-y: 0px;
   --shake-r: 0rad;
@@ -18,7 +16,8 @@ html, body {
   cursor: none !important;
 }
 
-a, button, input, select, textarea, label, [role="button"] {
+/* Aggressive Cursor Hiding */
+* {
   cursor: none !important;
 }
 
@@ -64,18 +63,9 @@ body {
   clip-path: polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%);
 }
 
-/* MARCHING ANTS ANIMATION */
 @keyframes marching {
-  0% {
-    background-position: 0 0, 0 100%, 0 0, 100% 0;
-  }
-  100% {
-    /* 
-       Match the move distance (20px) to the background-size (20px) 
-       Order: Top, Bottom, Left, Right 
-    */
-    background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px;
-  }
+  0% { background-position: 0 0, 0 100%, 0 0, 100% 0; }
+  100% { background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px; }
 }
 
 .marching-ants {
@@ -84,19 +74,12 @@ body {
     linear-gradient(to right, var(--ant-color) 50%, transparent 50%),
     linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%),
     linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%);
-  
-  /* 
-     UPDATED: 20px Pattern Size (10px dash, 10px gap) 
-     This matches the 20px translation in @keyframes marching
-  */
   background-size: 20px 1px, 20px 1px, 1px 20px, 1px 20px;
-  
   background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
   animation: marching 1s linear infinite;
   border: none !important; 
 }
 
-/* Hide Next.js Indicators */
 body > div[data-nextjs-toast],
 body > div[data-nextjs-dialog-overlay],
 #next-route-announcer,

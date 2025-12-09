@@ -39,7 +39,7 @@ export const SoundTab = () => {
         </div>
       </div>
 
-      {/* SECTION 2: AMBIENCE LAB (5 KNOBS) */}
+      {/* SECTION 2: AMBIENCE LAB (DRAMATIC TUNING) */}
       <div className="space-y-4 pt-4 border-t border-white/10">
         <div className="flex items-center justify-between border-b border-alert-yellow/30 pb-2 mb-4">
             <h3 className="text-sm font-header font-black text-alert-yellow tracking-widest">
@@ -52,7 +52,7 @@ export const SoundTab = () => {
         </div>
 
         <p className="text-[10px] font-mono text-gray-400 mb-6 max-w-2xl leading-relaxed">
-          The "Noise Floor" is a generative background hum designed to prevent digital silence. 
+          The "Noise Floor" prevents digital silence. 
           Modify the physics below to reshape the room acoustics in real-time.
         </p>
 
@@ -60,58 +60,54 @@ export const SoundTab = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
           <RangeSlider 
             label="DENSITY (FILTER)" 
-            value={audioSettings.ambFilter} 
-            max={4.0}
-            onChange={(v) => setVolume('ambFilter', v, 4.0)} 
+            value={audioSettings.ambFilter * 2} 
+            max={4.0} // Allow up to 2.0 input value (stored)
+            onChange={(v) => setVolume('ambFilter', v / 2, 4.0)} 
             color="accent-alert-yellow"
-            // Math: 300 * (0.5 + val)
-            format={(v) => `${(300 * (0.5 + v)).toFixed(0)} Hz`}
+            // Math: 300 * 10^((val-0.5)*2)
+            format={(v) => `${(300 * Math.pow(10, (v/2 - 0.5) * 2)).toFixed(0)} Hz`}
           />
           <RangeSlider 
             label="WIDTH (STEREO)" 
-            value={audioSettings.ambWidth}
+            value={audioSettings.ambWidth * 2}
             max={4.0} 
-            onChange={(v) => setVolume('ambWidth', v, 4.0)} 
+            onChange={(v) => setVolume('ambWidth', v / 2, 4.0)} 
             color="accent-alert-yellow"
-            // Math: 0.2 * val (Gain)
-            format={(v) => `${(v * 20).toFixed(0)}% Sep`}
+            format={(v) => `${((0.1 * Math.pow(8, (v/2 - 0.5))) * 1000).toFixed(0)}%`}
           />
         </div>
 
         {/* ROW 2: MOVEMENT */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <RangeSlider 
-            label="CIRCULATION (PAN_SPEED)" 
-            value={audioSettings.ambSpeed} 
+            label="CIRCULATION (SPEED)" 
+            value={audioSettings.ambSpeed * 2} 
             max={4.0}
-            onChange={(v) => setVolume('ambSpeed', v, 4.0)} 
+            onChange={(v) => setVolume('ambSpeed', v / 2, 4.0)} 
             color="accent-alert-yellow"
-            // Math: 0.05 * (0.5 + val) -> Convert Hz to Seconds
             format={(v) => {
-                const hz = 0.05 * (0.5 + v);
-                return `${(1/hz).toFixed(1)}s Cycle`;
+                const hz = 0.05 * Math.pow(10, (v/2 - 0.5) * 2);
+                return `${(1/hz).toFixed(1)}s`;
             }}
           />
           <RangeSlider 
-            label="FLUCTUATION (MOD_SPEED)" 
-            value={audioSettings.ambModSpeed} 
+            label="FLUCTUATION (MOD)" 
+            value={audioSettings.ambModSpeed * 2} 
             max={4.0}
-            onChange={(v) => setVolume('ambModSpeed', v, 4.0)} 
+            onChange={(v) => setVolume('ambModSpeed', v / 2, 4.0)} 
             color="accent-alert-yellow"
-            // Math: 0.2 * (0.5 + val) -> Convert Hz to Seconds
             format={(v) => {
-                const hz = 0.2 * (0.5 + v);
-                return `${(1/hz).toFixed(1)}s Breath`;
+                const hz = 0.2 * Math.pow(10, (v/2 - 0.5) * 2);
+                return `${(1/hz).toFixed(1)}s`;
             }}
           />
           <RangeSlider 
-            label="INSTABILITY (MOD_DEPTH)" 
-            value={audioSettings.ambModDepth} 
+            label="INSTABILITY (DEPTH)" 
+            value={audioSettings.ambModDepth * 2} 
             max={4.0}
-            onChange={(v) => setVolume('ambModDepth', v, 4.0)} 
+            onChange={(v) => setVolume('ambModDepth', v / 2, 4.0)} 
             color="accent-alert-yellow"
-            // Math: 20 * val (Hz Depth)
-            format={(v) => `+/- ${(20 * v).toFixed(0)} Hz`}
+            format={(v) => `+/- ${(10 * Math.pow(10, (v/2 - 0.5) * 2)).toFixed(0)} Hz`}
           />
         </div>
       </div>

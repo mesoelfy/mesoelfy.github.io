@@ -9,18 +9,18 @@ class AudioSystemController {
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
   
-  // Ambience Chain
   private ambienceGain: GainNode | null = null;
   private ambiencePanner: StereoPannerNode | null = null;
   private ambienceLFO: OscillatorNode | null = null;
   private ambiencePanConstraint: GainNode | null = null;
   
-  // Depth Modulation Nodes
   private ambienceFilter: BiquadFilterNode | null = null;
   private ambienceDepthLFO: OscillatorNode | null = null;
   private ambienceDepthGain: GainNode | null = null;
   
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
+  private currentAmbienceKey: string | null = null;
+  
   private musicElement: HTMLAudioElement | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
   
@@ -38,52 +38,38 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
-    // 1. Create Main Nodes
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
-    
-    // 2. Ambience Graph Creation
     this.ambienceGain = this.ctx.createGain();
     this.ambiencePanner = this.ctx.createStereoPanner();
     this.ambiencePanConstraint = this.ctx.createGain();
     this.ambienceLFO = this.ctx.createOscillator();
-    
-    // Depth Graph
     this.ambienceFilter = this.ctx.createBiquadFilter(); 
     this.ambienceDepthLFO = this.ctx.createOscillator(); 
     this.ambienceDepthGain = this.ctx.createGain();      
 
-    // 3. Main Connections
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
-    // 4. Ambience Audio Chain
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner);
     this.ambiencePanner.connect(this.masterGain);
 
-    // 5. Modulation Setup
     this.ambienceLFO.type = 'sine';
-    this.ambienceLFO.frequency.value = 0.05; 
-    this.ambiencePanConstraint.gain.value = 0.1;
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
     
     this.ambienceFilter.type = 'lowpass';
-    this.ambienceFilter.frequency.value = 300;
     this.ambienceDepthLFO.type = 'sine';
-    this.ambienceDepthLFO.frequency.value = 0.2; 
-    this.ambienceDepthGain.gain.value = 10; 
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
 
-    // 6. Start Engines
     this.ambienceLFO.start();
     this.ambienceDepthLFO.start();
 
-    this.updateVolumes(); // Apply stored settings immediately
+    this.updateVolumes(); 
 
     await this.generateAllSounds();
     
@@ -102,22 +88,19 @@ class AudioSystemController {
       const wakeUp = () => {
           if (this.hasInteracted) return;
           this.hasInteracted = true; 
-          
           if (this.ctx && this.ctx.state === 'suspended') {
               this.ctx.resume().catch(() => {});
           }
-          
-          this.playAmbience('ambience_b');
-
+          if (!this.currentAmbienceKey) {
+              this.playAmbience('ambience_b');
+          }
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
       };
-
       window.addEventListener('pointerdown', wakeUp);
       window.addEventListener('keydown', wakeUp);
   }
 
-  // UPDATED: Full 5-Knob Parameter Mapping with Safety Checks
   public updateVolumes() {
       if (!this.masterGain || !this.sfxGain || !this.musicGain) return;
       const s = useStore.getState().audioSettings;
@@ -130,29 +113,35 @@ class AudioSystemController {
           this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
       }
 
-      // AMBIENCE LAB
+      // AMBIENCE LAB: Exponential Scaling
+      // This ensures 0.5 (Default) perfectly matches the original hardcoded values.
+      // Math.pow(10, (val - 0.5)) creates a curve where 0.5 -> 1.0 multiplier.
+      
       if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
-          // Use defaults (0.5) if undefined to prevent NaN crashes from old localstorage
           const filter = s.ambFilter ?? 0.5;
           const speed = s.ambSpeed ?? 0.5;
           const width = s.ambWidth ?? 0.5;
           const modSpeed = s.ambModSpeed ?? 0.5;
           const modDepth = s.ambModDepth ?? 0.5;
 
-          // 1. DENSITY (Filter Freq): 300Hz base.
-          this.ambienceFilter.frequency.value = 300 * (0.5 + filter);
+          // 1. DENSITY (Base 300Hz)
+          // Range: 30Hz to 3000Hz (at 1.5 input)
+          this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
 
-          // 2. CIRCULATION (Pan Speed): 0.05Hz base.
-          this.ambienceLFO.frequency.value = 0.05 * (0.5 + speed);
+          // 2. CIRCULATION (Base 0.05Hz)
+          // Range: 0.005Hz to 0.5Hz
+          this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
 
-          // 3. STEREO WIDTH (Pan Gain): 0.2 base.
-          this.ambiencePanConstraint.gain.value = 0.2 * width;
+          // 3. STEREO WIDTH (Base 0.1 Gain)
+          // Range: 0.01 to 1.0 (Extreme)
+          // Use 4^x for a slightly gentler curve than 10^x
+          this.ambiencePanConstraint.gain.value = 0.1 * Math.pow(8, (width - 0.5));
           
-          // 4. FLUCTUATION (Depth Speed): 0.2Hz base.
-          this.ambienceDepthLFO.frequency.value = 0.2 * (0.5 + modSpeed);
+          // 4. FLUCTUATION (Base 0.2Hz)
+          this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
           
-          // 5. INSTABILITY (Depth Intensity): 20Hz base.
-          this.ambienceDepthGain.gain.value = 20 * modDepth;
+          // 5. INSTABILITY (Base 10Hz)
+          this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
       }
   }
 
@@ -281,6 +270,10 @@ class AudioSystemController {
   public playAmbience(key: string) {
       if (!this.ctx || !this.ambienceGain) return;
       
+      if (this.currentAmbienceKey === key && this.currentAmbienceNode) {
+          return; 
+      }
+
       if (this.currentAmbienceNode) {
           const oldNode = this.currentAmbienceNode;
           try { oldNode.stop(this.ctx.currentTime + 0.5); } catch {}
@@ -303,6 +296,7 @@ class AudioSystemController {
       source.start();
       
       this.currentAmbienceNode = source;
+      this.currentAmbienceKey = key;
   }
 
   public playSound(key: string) {

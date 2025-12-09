@@ -14,9 +14,18 @@ export const CustomCursor = () => {
   const playerHealth = useGameStore(state => state.playerHealth);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
-  // Logic: Show cursor if Intro/Debug/Sandbox/Settings.
-  // Hide if Game Over AND Settings is NOT open.
-  const isDead = (playerHealth <= 0 || systemIntegrity <= 0) && !isDebugOpen && activeModal !== 'settings';
+  // Logic: 
+  // 1. Always show if in Standby (Intro), Sandbox, or Settings.
+  // 2. Always show if Debug is open.
+  // 3. If Game Active, show unless Dead.
+  const isDead = (playerHealth <= 0 || systemIntegrity <= 0);
+  
+  const isVisible = 
+    bootState === 'standby' || 
+    bootState === 'sandbox' || 
+    activeModal === 'settings' ||
+    isDebugOpen || 
+    (!isDead && introDone);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -41,8 +50,6 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox' || activeModal === 'settings';
-
   return (
     <>
       <style jsx global>{`
@@ -52,13 +59,13 @@ export const CustomCursor = () => {
       <motion.div
         className={clsx(
             "fixed top-0 left-0 pointer-events-none z-[20000]", 
-            (isHovering && !isDead) ? "mix-blend-difference" : "" 
+            (isHovering && isVisible) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {isVisible && !isDead && (
+          {isVisible && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}
