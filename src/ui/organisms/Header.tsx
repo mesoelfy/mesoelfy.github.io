@@ -4,7 +4,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { useHeartbeat } from '@/game/hooks/useHeartbeat'; // Import Hook
+import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 
 // --- SUB-COMPONENTS ---
 
@@ -77,17 +77,45 @@ export const Header = () => {
   if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
 
-  // --- HEARTBEAT HOOK ---
-  const heartbeatAnim = useHeartbeat();
+  const heartbeatControls = useHeartbeat();
+
+  // SMOOTH DECAY VARIANTS (1.2s Duration)
+  const textVariants = {
+      heartbeat: {
+          scale: [1, 1.05, 1],
+          textShadow: [
+              "0 0 0px #FF003C",
+              "0 0 25px #FF003C", // Peak Glow
+              "0 0 5px #FF003C",  // Decay start
+              "0 0 0px #FF003C"   // Fade out
+          ],
+          transition: { 
+              duration: 1.2, 
+              times: [0, 0.1, 0.4, 1], 
+              ease: "easeOut" 
+          }
+      }
+  };
+
+  const barVariants = {
+      heartbeat: {
+          filter: [
+              "brightness(1) drop-shadow(0 0 0px #FF003C)",
+              "brightness(2) drop-shadow(0 0 10px #FF003C)",
+              "brightness(1) drop-shadow(0 0 0px #FF003C)"
+          ],
+          transition: { duration: 1.2, ease: "easeOut" }
+      }
+  };
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
-        {/* Pulsing Text */}
         <motion.span 
-            animate={isCritical ? heartbeatAnim : {}}
+            animate={isCritical ? heartbeatControls : undefined}
+            variants={textVariants}
             className={clsx(
                 "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
                 statusColor
@@ -114,24 +142,9 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
-            
-            <AudioBtn 
-                active={audioSettings.music} 
-                onClick={toggleMusic} 
-                icon={Music} 
-                offIcon={Music} 
-                color={statusColor}
-            />
-
+            <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-            <AudioBtn 
-                active={audioSettings.master} 
-                onClick={toggleMaster} 
-                icon={Volume2} 
-                offIcon={VolumeX} 
-                color={statusColor}
-            />
+            <AudioBtn active={audioSettings.master} onClick={toggleMaster} icon={Volume2} offIcon={VolumeX} color={statusColor} />
         </div>
       </div>
 
@@ -139,8 +152,8 @@ export const Header = () => {
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <motion.div 
-            // Pulse the bar brightness/height slightly
-            animate={isCritical ? heartbeatAnim : {}}
+            animate={isCritical ? heartbeatControls : undefined}
+            variants={barVariants}
             className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
                 isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
             )} 

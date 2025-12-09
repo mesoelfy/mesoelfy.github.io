@@ -7,7 +7,7 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
-import { useHeartbeat } from '@/game/hooks/useHeartbeat'; // Import Hook
+import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
@@ -15,6 +15,7 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 
 const MAX_HEALTH = 1000;
 
+// Panel Enter/Exit Animations
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
@@ -34,6 +35,19 @@ const panelVariants = {
   })
 };
 
+// Heartbeat Pulse Animation (1.2s Duration)
+const pulseVariants = {
+    heartbeat: {
+        opacity: [0, 0.6, 0.3, 0], // Flash up, linger, fade
+        scale: [1, 1.005, 1], // Subtle expansion
+        transition: { 
+            duration: 1.2, 
+            times: [0, 0.05, 0.3, 1], // Fast attack, slow decay
+            ease: "easeOut" 
+        }
+    }
+};
+
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
@@ -44,16 +58,14 @@ interface GlassPanelProps {
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
-  
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
-  // Use global integrity for heartbeat trigger
+  // Trigger if global health is low, even if this specific panel is fine
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
-
   const health = panelState ? panelState.health : MAX_HEALTH;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   const healthPercent = (health / MAX_HEALTH) * 100; 
@@ -62,9 +74,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
   
-  // Local Shake Controls
-  const controls = useAnimation();
-  const heartbeatAnim = useHeartbeat(); // Heartbeat Controls
+  // Controls
+  const shakeControls = useAnimation();
+  const heartbeatControls = useHeartbeat(); // Listens to event
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -79,14 +91,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       if (!gameId) return;
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
-              controls.start({
+              shakeControls.start({
                   x: [0, -5, 5, -5, 5, 0],
                   transition: { duration: 0.2 }
               });
           }
       });
       return unsub;
-  }, [gameId, controls]);
+  }, [gameId, shakeControls]);
 
   let borderColor = "border-primary-green-dim/30";
   if (isDestroyed) {
@@ -100,17 +112,12 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
-  // Combine animations: If global critical, pulse border red
-  // We can pass controls array to animate? No, Framer Motion 'animate' prop handles one source best.
-  // We will layer the heartbeat on the outer div via box-shadow or just accept it overrides shake for a frame.
-  // Actually, let's apply heartbeat to a border overlay to not conflict with shake x/y.
-  
   return (
     <motion.div 
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      animate={isGameOver ? "shattered" : ["visible", controls as any]} // Shake is priority
+      animate={isGameOver ? "shattered" : ["visible", shakeControls as any]}
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
@@ -121,24 +128,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
-      {/* HEARTBEAT OVERLAY (Only when global critical) */}
+      {/* GLOBAL ALARM OVERLAY */}
+      {/* This renders on TOP of the panel content but ignores clicks */}
       {isCriticalGlobal && (
           <motion.div 
-            className="absolute inset-0 border-2 border-critical-red/50 pointer-events-none z-50"
-            animate={heartbeatAnim}
-            style={{ opacity: 0.5 }} 
-          />
-      )}
-
-      {/* SHADOW PULSE (Only when global critical) */}
-      {isCriticalGlobal && (
-          <motion.div
-             className="absolute inset-0 shadow-[inset_0_0_20px_#FF003C] pointer-events-none z-0"
-             animate={{ opacity: [0, 0.6, 0] }}
-             // We can't easily sync this purely via CSS loop if we want perfect audio sync.
-             // We need to use the hook.
-             // But the hook returns 'controls'.
-             // Let's just bind the hook to this div's opacity.
+            className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
+            animate={heartbeatControls}
+            variants={pulseVariants}
+            initial={{ opacity: 0 }}
           />
       )}
 
