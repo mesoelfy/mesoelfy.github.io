@@ -5,7 +5,7 @@ import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause, Speaker, Activity, Waves, Zap, Heart, Database, Settings2, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause, Speaker, Activity, Waves, Zap, Heart, Database, Settings2, ShieldAlert, CheckCircle2, Wind } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 
@@ -25,7 +25,12 @@ export const SimulationHUD = () => {
   };
 
   const playSound = (key: string) => {
-      AudioSystem.playSound(key);
+      // Ambience requires special method
+      if (key.includes('ambience')) {
+          AudioSystem.playAmbience(key);
+      } else {
+          AudioSystem.playSound(key);
+      }
       setLastPlayed(key);
       setTimeout(() => setLastPlayed(null), 200);
   };
@@ -50,7 +55,7 @@ export const SimulationHUD = () => {
           icon: Database
       },
       MISC: {
-          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('misc_')),
+          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('misc_') || k.includes('proto_')),
           color: 'text-alert-yellow',
           borderColor: 'border-alert-yellow',
           icon: Database
@@ -60,7 +65,8 @@ export const SimulationHUD = () => {
   const prototypes = [
       { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan', metas: ['CLASSIC', 'TURBINE', 'HUM'] },
       { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red', metas: ['BASS', 'KLAXON', 'GLITCH'] },
-      { id: 'HP', label: 'LOW_HEALTH_FIX', icon: Heart, keys: ['proto_lowhp_a', 'proto_lowhp_b', 'proto_lowhp_c'], color: 'text-alert-yellow', metas: ['SLOW_ATK', 'SOFT_FM', 'MUFFLED_TRI'] },
+      // NEW: Ambience Row
+      { id: 'AMB', label: 'NOISE_FLOOR', icon: Wind, keys: ['ambience_a', 'ambience_b', 'ambience_c'], color: 'text-gray-400', metas: ['DEEP', 'AIRY', 'PULSE'] },
   ];
 
   return (
@@ -86,7 +92,7 @@ export const SimulationHUD = () => {
         )}
       </div>
 
-      {/* LEFT SIDEBAR */}
+      {/* LEFT SIDEBAR (NAVIGATION) */}
       <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto w-40">
          <button 
             onClick={() => setSandboxView('audio')}
@@ -119,7 +125,7 @@ export const SimulationHUD = () => {
                       <h3 className="font-header font-black text-xl text-white tracking-widest">PROTOTYPE_BENCH</h3>
                   </div>
                   
-                  {/* FINALISTS */}
+                  {/* SELECTED FINALISTS */}
                   <div className="bg-primary-green/5 border border-primary-green/30 p-4 rounded-sm">
                       <div className="flex items-center gap-2 mb-4">
                           <CheckCircle2 className="text-primary-green" size={18} />

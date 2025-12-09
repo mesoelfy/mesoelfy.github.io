@@ -166,10 +166,7 @@ The LV_XX text isn't rendering properly in Firefox. (try other browswers)
 
 Increase the reboot heal rate by 50%.
 
-heartbeat pulse increases even more in speed closer to 0% health
-
-
-
+Stereo panning, so sounds on the left side of the screen have most of their volume in the left side, and SFX from entities happening on the right side of the screen have most of their volume on the right side, and to have the percentage degree of how much this happens depend on their position.
 
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 

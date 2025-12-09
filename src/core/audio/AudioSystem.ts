@@ -8,8 +8,11 @@ class AudioSystemController {
   private masterGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private musicElement: HTMLAudioElement | null = null;
+  // New: Ambience Channel
+  private ambienceGain: GainNode | null = null;
+  private currentAmbienceNode: AudioBufferSourceNode | null = null;
   
+  private musicElement: HTMLAudioElement | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
   public isReady = false;
 
@@ -26,9 +29,12 @@ class AudioSystemController {
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
+    this.ambienceGain = this.ctx.createGain();
 
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
+    // Ambience connects to Master (bypasses SFX/Music toggles, but respects Master)
+    this.ambienceGain.connect(this.masterGain); 
     this.masterGain.connect(this.ctx.destination);
 
     this.updateVolumes();
@@ -48,6 +54,8 @@ class AudioSystemController {
       this.masterGain.gain.value = s.master ? 0.5 : 0;
       this.musicGain.gain.value = s.music ? 0.4 : 0;
       this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
+      // Ambience is always on if Master is on, typically quiet
+      this.ambienceGain!.gain.value = 1.0; 
   }
 
   private async generateAllSounds() {
@@ -85,7 +93,19 @@ class AudioSystemController {
       
       mainGain.gain.setValueAtTime(0, 0);
       mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
-      mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+      
+      // If it's a short sound, fade out. If it's long/looping (like ambience), keep volume up at end?
+      // Actually, standard `playSound` logic expects one-shots. 
+      // For looping ambience, we want the buffer to be seamless.
+      // If we fade out to 0 at the end of the buffer, it will click/dip when looping.
+      // Strategy: For Ambience, we don't fade out in the *buffer*. We crossfade in real-time.
+      // But `synthesizeSound` is generic.
+      // Let's assume if duration > 4s, it's an ambience loop, so stay at volume.
+      if (recipe.duration < 4.0) {
+          mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+      } else {
+          mainGain.gain.setValueAtTime(recipe.volume, recipe.duration);
+      }
 
       let outputNode: AudioNode = mainGain;
 
@@ -163,12 +183,40 @@ class AudioSystemController {
       return await offline.startRendering();
   }
 
+  // --- AMBIENCE CONTROL ---
+  public playAmbience(key: string) {
+      if (!this.ctx || !this.ambienceGain) return;
+      
+      // Stop previous
+      if (this.currentAmbienceNode) {
+          const oldNode = this.currentAmbienceNode;
+          // Fade out old
+          try { oldNode.stop(this.ctx.currentTime + 0.5); } catch {}
+          this.currentAmbienceNode = null;
+      }
+
+      const buffer = this.buffers.get(key);
+      if (!buffer) return;
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); // 2s Fade In
+
+      source.connect(gain);
+      gain.connect(this.ambienceGain);
+      source.start();
+      
+      this.currentAmbienceNode = source;
+  }
+
   public playSound(key: string) {
       if (!this.ctx || !this.sfxGain) return;
-      
       const buffer = this.buffers.get(key);
       const recipe = AUDIO_CONFIG[key];
-      
       if (!buffer || !recipe) return;
 
       const source = this.ctx.createBufferSource();
@@ -197,10 +245,7 @@ class AudioSystemController {
         this.playSound('explosion_large');
         this.duckMusic(1.0, 3.0);
     });
-    
-    // RESTORED: Play Healing Chime
     GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
-    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.playSound('explosion_large'); 
