@@ -168,7 +168,7 @@ Increase the reboot heal rate by 50%.
 
 heartbeat pulse increases even more in speed closer to 0% health
 
-subtle quiet brown noise noise floor that always plays (a separate channel from SFX/Music and doesn't have a toggle)
+
 
 
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?

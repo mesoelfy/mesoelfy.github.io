@@ -78,17 +78,13 @@ class AudioSystemController {
       const length = sampleRate * recipe.duration;
       const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      // --- ENVELOPE LOGIC ---
       const mainGain = offline.createGain();
       mainGain.connect(offline.destination);
       
-      const attack = recipe.attack || 0.005; // Default tiny fade to prevent pops
+      const attack = recipe.attack || 0.005; 
       
-      // Start at 0
       mainGain.gain.setValueAtTime(0, 0);
-      // Ramp to Peak
       mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
-      // Decay to Silence
       mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
 
       let outputNode: AudioNode = mainGain;
@@ -201,7 +197,10 @@ class AudioSystemController {
         this.playSound('explosion_large');
         this.duckMusic(1.0, 3.0);
     });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {});
+    
+    // RESTORED: Play Healing Chime
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
+    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.playSound('explosion_large'); 
