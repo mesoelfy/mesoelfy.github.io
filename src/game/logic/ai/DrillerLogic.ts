@@ -21,7 +21,9 @@ export const DrillerLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // Default target coords
+    // Init audio timer if missing
+    if (typeof state.data.audioTimer === 'undefined') state.data.audioTimer = 0;
+
     let destX = target.x;
     let destY = target.y;
     
@@ -37,17 +39,15 @@ export const DrillerLogic: EnemyLogic = {
     const dy = destY - pos.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
-    
-    // Rotation: Face the wall
     const angle = Math.atan2(dy, dx) - Math.PI/2;
-
     const TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2;
     const SNAP_THRESHOLD = 0.1;
 
+    // --- DRILLING STATE ---
     if (dist <= TIP_OFFSET + SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Exact Snap
+        // Snap
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -59,20 +59,30 @@ export const DrillerLogic: EnemyLogic = {
         motion.vy = 0;
         pos.rotation = angle;
 
-        // VISUALS: Constant Stream (Called Every Frame)
         ctx.spawnDrillSparks(destX, destY, angle);
 
-        // LOGIC: Damage Tick (Probabilistic)
+        // --- AUDIO LOGIC ---
+        // Play sound every 0.3 seconds while drilling
+        state.data.audioTimer -= ctx.delta;
+        if (state.data.audioTimer <= 0) {
+            ctx.playSound('driller_drill');
+            // Randomize slightly to avoid machine-gun effect
+            state.data.audioTimer = 0.25 + Math.random() * 0.1; 
+        }
+
         if (Math.random() < ctx.delta * 2.0) { 
              if (target.type === 'PANEL' && target.id) {
                  ctx.damagePanel(target.id, ENEMY_CONFIG[EnemyTypes.DRILLER].damage);
              }
         }
     } else {
+        // --- MOVING STATE ---
         state.current = 'MOVING';
         
+        // Reset timer so it plays immediately upon contact
+        state.data.audioTimer = 0;
+
         const speed = ENEMY_CONFIG[EnemyTypes.DRILLER].baseSpeed;
-        
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;

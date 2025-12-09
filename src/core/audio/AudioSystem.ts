@@ -61,6 +61,21 @@ class AudioSystemController {
       await Promise.all(promises);
   }
 
+  // --- HELPER: Create Distortion Curve ---
+  private makeDistortionCurve(amount: number) {
+    const k = typeof amount === 'number' ? amount : 50;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      // Classic sigmoid distortion function
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
   private async synthesizeSound(recipe: SoundRecipe): Promise<AudioBuffer | null> {
       if (!this.ctx) return null;
       
@@ -68,24 +83,52 @@ class AudioSystemController {
       const length = sampleRate * recipe.duration;
       const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      // --- SYNTHESIS LOGIC ---
-      const gain = offline.createGain();
-      gain.connect(offline.destination);
+      // --- OUTPUT CHAIN ---
+      // Source -> [Filter] -> [Distortion] -> Gain -> Dest
       
-      // Volume Envelope (Fade out at end)
-      gain.gain.setValueAtTime(recipe.volume, 0);
-      gain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+      const mainGain = offline.createGain();
+      mainGain.connect(offline.destination);
+      
+      // Volume Envelope
+      mainGain.gain.setValueAtTime(recipe.volume, 0);
+      mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
 
+      let outputNode: AudioNode = mainGain;
+
+      // 1. Distortion Effect (Optional)
+      if (recipe.distortion) {
+          const shaper = offline.createWaveShaper();
+          shaper.curve = this.makeDistortionCurve(recipe.distortion);
+          shaper.connect(outputNode);
+          outputNode = shaper; // The source connects to shaper, shaper connects to gain
+      }
+
+      // 2. Synthesis Source
       if (recipe.type === 'oscillator') {
           const osc = offline.createOscillator();
           osc.type = recipe.wave || 'sine';
-          osc.frequency.setValueAtTime(recipe.frequency[0], 0);
           
+          // Pitch Envelope
+          osc.frequency.setValueAtTime(recipe.frequency[0], 0);
           if (recipe.frequency[1] !== recipe.frequency[0]) {
               osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
           }
-          
-          osc.connect(gain);
+
+          // --- FM SYNTHESIS BLOCK ---
+          if (recipe.fm) {
+             const modOsc = offline.createOscillator();
+             const modGain = offline.createGain();
+             
+             modOsc.type = recipe.fm.modType;
+             modOsc.frequency.value = recipe.fm.modFreq;
+             modGain.gain.value = recipe.fm.modIndex;
+
+             modOsc.connect(modGain);
+             modGain.connect(osc.frequency); // Modulate the Carrier Frequency
+             modOsc.start();
+          }
+
+          osc.connect(outputNode);
           osc.start();
       } 
       else if (recipe.type === 'noise') {
@@ -105,9 +148,9 @@ class AudioSystemController {
               filter.frequency.setValueAtTime(recipe.filter[0], 0);
               filter.frequency.exponentialRampToValueAtTime(recipe.filter[1], recipe.duration);
               noise.connect(filter);
-              filter.connect(gain);
+              filter.connect(outputNode);
           } else {
-              noise.connect(gain);
+              noise.connect(outputNode);
           }
           noise.start();
       }
@@ -155,7 +198,14 @@ class AudioSystemController {
         this.duckMusic(1.0, 3.0);
     });
     
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {
+        // Only play if actively healing (handled in InteractionSystem logic)
+        // But for distinct "100%" chime, we'll need a new event or logic.
+        // For now, this is the "during" heal sound.
+        // Actually, let's keep it simple. InteractionSystem emits this rapidly.
+        // We might want to limit this or use a looping sound later.
+    });
+    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.playSound('explosion_large'); 
@@ -197,6 +247,9 @@ class AudioSystemController {
   public playClick() { this.playSound('click'); }
   public playHover() { this.playSound('hover'); }
   public playBootSequence() { this.playSound('powerup'); } 
+  // Public accessor for the new sound
+  public playDrillSound() { this.playSound('driller_drill'); }
+  public playRebootZap() { this.playSound('reboot_tick'); }
   
   public setMasterMute(m: boolean) { 
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, master: !m } }));

@@ -7,6 +7,7 @@ import { EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus'; 
 import { GameEvents } from '../events/GameEvents'; 
 import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem'; // Import AudioSystem
 
 import { DrillerLogic } from '../logic/ai/DrillerLogic';
 import { KamikazeLogic } from '../logic/ai/KamikazeLogic';
@@ -54,10 +55,11 @@ export class BehaviorSystem implements IGameSystem {
       },
       spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.PURPLE_PALETTE, 5, 8),
       spawnLaunchSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.YELLOW_PALETTE, 12, 15),
-      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
+      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
+      // --- NEW: Audio Hook ---
+      playSound: (key) => AudioSystem.playSound(key)
     };
 
-    // Dynamic Damage for Daemons
     const upgrades = useGameStore.getState().activeUpgrades;
     const executeLevel = upgrades['EXECUTE'] || 0;
     const daemonDamage = 10 + executeLevel;
@@ -66,7 +68,6 @@ export class BehaviorSystem implements IGameSystem {
       ...aiContext,
       daemonMaxDamage: daemonDamage,
       spawnProjectile: (x, y, vx, vy) => {
-          // Note: Logic will override this call to inject the specific shield HP damage
           const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
           bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
           GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x, y }); 

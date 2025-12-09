@@ -156,19 +156,6 @@ Resetting via debug menu then starting another game, player wasn't shooting corr
 
 
 
-We're using (Waveforms, Envelopes, Frequency Ramps) for our SFX. With those, what are some more really cool sounding techniques to implement that we haven't yet? And what are other things besides those three categories?
-
-How do these ideas sound for what is missing?
-
-1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
-
-2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
-
-3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
-
-What are some other moments in the game so far that are missing sounds? 
-
-I think the drilling sound needs to be overhauled.
 
 
 
@@ -178,6 +165,9 @@ Can we detect if a user is having a poor FPS experience, pause everything, then 
 
 For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
 
+
+
+When daemon ball dies, daemon color is dark blue and then transitions into normal color instantly instead of gradually.
 
 
 IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?

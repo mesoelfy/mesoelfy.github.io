@@ -6,8 +6,16 @@ export interface SoundRecipe {
   frequency: [number, number]; // [Start, End] in Hz
   duration: number; // Seconds
   volume: number; // Base volume (0.0 - 1.0)
-  pitchVariance: number; // Random detune range in cents (e.g., 100 = +/- 1 semitone)
+  pitchVariance: number; // Random detune range in cents
   filter?: [number, number]; // [Start, End] Cutoff Hz (for Noise)
+  
+  // --- NEW CAPABILITIES ---
+  distortion?: number; // 0 to 100+ (Amount of grit)
+  fm?: {
+    modFreq: number; // Frequency of the modulator
+    modIndex: number; // Intensity of the modulation (The "Grit" factor)
+    modType: OscillatorType;
+  };
 }
 
 export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
@@ -31,22 +39,39 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
     pitchVariance: 50
   },
   
+  // --- UPDATED DRILLER (FM SYNTHESIS) ---
+  'driller_drill': {
+    type: 'oscillator',
+    wave: 'triangle', // Carrier
+    frequency: [100, 80], // Low rumble
+    duration: 1.5, // Longer loopable segment
+    volume: 0.3,
+    pitchVariance: 50,
+    fm: {
+      modType: 'square', // Gritty modulator
+      modFreq: 60,       // Fast vibration
+      modIndex: 500      // High index = Metal grinding sound
+    }
+  },
+  
   // EXPLOSIONS
   'explosion_small': {
     type: 'noise',
-    frequency: [0, 0], // Ignored for noise
-    filter: [1000, 100], // Lowpass sweep
+    frequency: [0, 0], 
+    filter: [1000, 100], 
     duration: 0.4,
     volume: 0.3,
-    pitchVariance: 200
+    pitchVariance: 200,
+    distortion: 20 // Added grit
   },
   'explosion_large': {
     type: 'noise',
     frequency: [0, 0],
-    filter: [600, 50], // Deep rumble
+    filter: [600, 50],
     duration: 1.5,
     volume: 0.5,
-    pitchVariance: 0
+    pitchVariance: 0,
+    distortion: 50 // Heavy crunch
   },
   
   // UI & FEEDBACK
@@ -69,7 +94,7 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'heal': {
     type: 'oscillator',
     wave: 'sine',
-    frequency: [300, 600], // Rising chime
+    frequency: [300, 600],
     duration: 0.2,
     volume: 0.1,
     pitchVariance: 0
@@ -81,5 +106,16 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
     duration: 0.4,
     volume: 0.2,
     pitchVariance: 0
+  },
+  
+  // --- NEW: REBOOT TICK (DISTORTION) ---
+  'reboot_tick': {
+    type: 'oscillator',
+    wave: 'sawtooth',
+    frequency: [60, 40], // Low voltage hum
+    duration: 0.1,
+    volume: 0.3,
+    pitchVariance: 20,
+    distortion: 400 // Extreme clipping -> "Zap" sound
   }
 };

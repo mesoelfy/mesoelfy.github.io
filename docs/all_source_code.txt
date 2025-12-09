@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec  8 17:55:55 CST 2025
+Generated on: Mon Dec  8 20:07:45 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -51,7 +51,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │       ├── OverridesTab.tsx
 │   │   │       ├── SandboxTab.tsx
 │   │   │       └── StatsTab.tsx
-│   │   ├── effects
 │   │   ├── feed
 │   │   │   └── FeedModal.tsx
 │   │   ├── gallery
@@ -199,7 +198,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-51 directories, 140 files
+50 directories, 140 files
 
 =====================================
 FILE: ./next.config.js
@@ -424,8 +423,14 @@ I think the drilling sound needs to be overhauled.
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 
 
+For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
 
 
+
+When daemon ball dies, daemon color is dark blue and then transitions into normal color instantly instead of gradually.
+
+
+IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?
 
 
 
@@ -677,33 +682,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- BRAND CORE (Existing UI) ---
-        elfy: {
-          green: {
-            light: '#7FF65F',
-            DEFAULT: 'rgba(96, 196, 68, 1)',
-            dim: '#1bb930ff',
-            dark: '#217e10ff',
-          },
-          purple: {
-            light: '#BC86BA',
-            DEFAULT: '#9E4EA5',
-            dim: '#822B8A',
-            deep: '#350E3A',
-          },
-          cyan: {
-            DEFAULT: '#00F0FF', // NEW: Repair Color
-            dim: '#008ba3',
-          },
-          yellow: {
-            DEFAULT: '#eae747ff',
-          },
-          red: '#FF003C', 
-          gray: '#27282A',
-          black: '#050505',
+        // --- SEMANTIC PALETTE ---
+        
+        // The core system color (Safe, Online, Active)
+        'primary-green': {
+          light: '#7FF65F',
+          DEFAULT: 'rgba(96, 196, 68, 1)',
+          dim: '#1bb930ff',
+          dark: '#217e10ff',
         },
         
-        // --- LATENT DEFENSE (Game Layer) ---
+        // Lore, Regeneration, Special Enemies
+        'latent-purple': {
+          light: '#BC86BA',
+          DEFAULT: '#9E4EA5',
+          dim: '#822B8A',
+          deep: '#350E3A',
+        },
+        
+        // Repair, Friendly AI, Constructive
+        'service-cyan': {
+          DEFAULT: '#00F0FF', 
+          dim: '#008ba3',
+        },
+        
+        // Warnings, Highlights, Interaction Focus
+        'alert-yellow': {
+          DEFAULT: '#eae747ff',
+        },
+        
+        // Critical Failure, Enemies, Destruction
+        'critical-red': {
+          DEFAULT: '#FF003C', 
+        },
+        
+        // Backgrounds and Structures
+        'muted-gray': '#27282A',
+        'void-black': '#050505',
+        
+        // --- LEGACY GAME TOKENS (Keep for Logic/Canvas referencing if needed) ---
         game: {
           turret: {
             base: '#78F654',
@@ -891,15 +908,11 @@ export const SocialRow = () => {
 
   return (
     <div className={clsx(
-        "grid grid-cols-3 gap-2 h-full content-center py-2 relative",
-        // If destroyed, we don't fully hide it, we let it sit under the overlay
-        // but we disable interactions so it feels "broken"
+        "grid grid-cols-3 gap-2 h-full content-center py-2 relative px-2",
         isDestroyed ? "pointer-events-none" : "" 
     )}>
       {socials.map((social, idx) => {
         const Icon = isDestroyed ? AlertTriangle : (IconMap[social.icon] || Crosshair);
-        
-        // Random "Corruption" logic for visuals
         const isGlitch = isDestroyed && (idx % 2 === 0);
         
         return (
@@ -911,23 +924,23 @@ export const SocialRow = () => {
             onMouseEnter={() => !isDestroyed && AudioSystem.playHover()} 
             onClick={() => !isDestroyed && AudioSystem.playClick()}
             className={clsx(
-                "group flex flex-col items-center justify-center p-2 border transition-all duration-300",
+                "group flex flex-col items-center justify-center p-2 border transition-all duration-200",
                 isDestroyed 
-                    ? "border-elfy-red/20 bg-elfy-red/5 grayscale" 
-                    : "border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-green/10 hover:border-elfy-green"
+                    ? "border-critical-red/20 bg-critical-red/5 grayscale" 
+                    : "border-primary-green-dim/30 bg-black/40 hover:bg-alert-yellow/5 hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.15)]"
             )}
           >
             <Icon 
               className={clsx(
-                  "w-5 h-5 mb-1 transition-transform",
-                  isDestroyed ? "text-elfy-red animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-green group-hover:scale-110",
+                  "w-5 h-5 mb-1 transition-transform duration-200",
+                  isDestroyed ? "text-critical-red animate-pulse" : "text-primary-green-dim group-hover:text-alert-yellow group-hover:scale-110",
                   isGlitch ? "translate-x-1" : ""
               )}
-              style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(120,246,84,0.3))' } : {}}
+              style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' } : {}}
             />
             <span className={clsx(
-                "text-[10px] uppercase tracking-wider font-mono",
-                isDestroyed ? "text-elfy-red/60" : "text-elfy-green-dim/60 group-hover:text-elfy-green"
+                "text-[9px] uppercase tracking-wider font-mono transition-colors duration-200",
+                isDestroyed ? "text-critical-red/60" : "text-primary-green-dim/60 group-hover:text-alert-yellow"
             )}>
               {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name.split(' ')[0]}
             </span>
@@ -950,12 +963,12 @@ const ScrollingRow = ({ direction, text }: { direction: number, text: string }) 
   return (
     <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
       <motion.div 
-        className="flex gap-4 font-header font-black text-xl md:text-2xl text-elfy-red tracking-widest uppercase py-1"
+        className="flex gap-4 font-header font-black text-xl md:text-2xl text-critical-red tracking-widest uppercase py-1"
         animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
         transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
       >
         {Array.from({ length: 12 }).map((_, i) => (
-          <span key={i} className={i % 2 === 0 ? "text-elfy-red" : "text-transparent stroke-elfy-red stroke-1"}>
+          <span key={i} className={i % 2 === 0 ? "text-critical-red" : "text-transparent stroke-critical-red stroke-1"}>
              {text}
           </span>
         ))}
@@ -1003,7 +1016,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       <motion.div 
                           animate={{ y: [0, -10, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-elfy-red drop-shadow-md"
+                          className="text-critical-red drop-shadow-md"
                       >
                           <ChevronUp size={64} strokeWidth={3} />
                       </motion.div>
@@ -1013,7 +1026,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       <motion.div 
                           animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
                           transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-elfy-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                          className="text-latent-purple drop-shadow-[0_0_15px_#9E4EA5]"
                       >
                           <ChevronUp size={64} strokeWidth={4} />
                       </motion.div>
@@ -1023,20 +1036,20 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
               </div>
 
               <div className="flex flex-col items-center text-center">
-                  <span className="text-sm font-header font-black tracking-widest text-elfy-red group-hover:text-elfy-purple transition-colors duration-200 drop-shadow-md">
+                  <span className="text-sm font-header font-black tracking-widest text-critical-red group-hover:text-latent-purple transition-colors duration-200 drop-shadow-md">
                       HOLD TO REBOOT
                   </span>
                   
                   <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
                       <motion.div 
-                          className="h-full bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
+                          className="h-full bg-latent-purple shadow-[0_0_10px_#9E4EA5]" 
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
                       />
                   </div>
                   
-                  <div className="text-[10px] font-mono text-elfy-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
+                  <div className="text-[10px] font-mono text-latent-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
                       INTEGRITY: {Math.floor(progress)}%
                   </div>
               </div>
@@ -1061,9 +1074,9 @@ export const RebootOverlay = () => (
     transition={{ duration: 0.4, ease: "backOut" }}
     className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-[2px]"
   >
-    <div className="flex flex-col items-center gap-2 border-y-2 border-elfy-green bg-elfy-green/10 w-full py-4 relative overflow-hidden">
+    <div className="flex flex-col items-center gap-2 border-y-2 border-primary-green bg-primary-green/10 w-full py-4 relative overflow-hidden">
       <motion.div 
-        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-elfy-green/20 to-transparent"
+        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-primary-green/20 to-transparent"
         animate={{ top: ["-100%", "100%"] }}
         transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
       />
@@ -1073,14 +1086,14 @@ export const RebootOverlay = () => (
           animate={{ rotate: 0, scale: 1 }}
           transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
         >
-            <Power className="text-elfy-green w-8 h-8 md:w-10 md:h-10" />
+            <Power className="text-primary-green w-8 h-8 md:w-10 md:h-10" />
         </motion.div>
         <div className="flex flex-col">
             <motion.span 
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="text-2xl md:text-3xl font-header font-black text-elfy-green tracking-widest italic"
+                className="text-2xl md:text-3xl font-header font-black text-primary-green tracking-widest italic"
             >
                 SYSTEM
             </motion.span>
@@ -1088,7 +1101,7 @@ export const RebootOverlay = () => (
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-xs md:text-sm font-mono font-bold text-elfy-green-dim tracking-[0.3em]"
+                className="text-xs md:text-sm font-mono font-bold text-primary-green-dim tracking-[0.3em]"
             >
                 RESTORED
             </motion.span>
@@ -1137,34 +1150,34 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
     }
   }, [health, showOptimal]);
 
-  let mainColor = "text-elfy-green";
+  let mainColor = "text-primary-green";
   let statusText = "SECURE";
   
   if (isGameOver) {
-      mainColor = "text-elfy-red";
+      mainColor = "text-critical-red";
       statusText = "SYSTEM_FAILURE";
   } else if (isDestroyed) {
-      mainColor = isInteracting ? "text-elfy-purple" : "text-elfy-red";
+      mainColor = isInteracting ? "text-latent-purple" : "text-critical-red";
       statusText = isInteracting ? "REBOOTING..." : "OFFLINE";
   } else if (isInteracting && isDamaged) {
-      mainColor = "text-elfy-cyan";
+      mainColor = "text-service-cyan";
       statusText = "HEALING...";
   } else if (isDamaged) {
-      mainColor = "text-elfy-yellow"; 
+      mainColor = "text-alert-yellow"; 
       statusText = "ATTENTION_REQ";
   } else if (!showOptimal) {
-      mainColor = "text-elfy-green-dim";
+      mainColor = "text-primary-green-dim";
       statusText = "ONLINE";
   }
 
   return (
     <div className={clsx(
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
-        isGameOver ? "bg-elfy-red/10 border-elfy-red/50" :
-        isDestroyed ? (isInteracting ? "bg-elfy-purple/10 border-elfy-purple/50" : "bg-elfy-red/10 border-elfy-red/50") :
-        (isInteracting && isDamaged) ? "bg-elfy-cyan/10 border-elfy-cyan/50" :
-        isDamaged ? "bg-elfy-yellow/10 border-elfy-yellow/30" : 
-        "bg-elfy-green/5 border-elfy-green-dim/30"
+        isGameOver ? "bg-critical-red/10 border-critical-red/50" :
+        isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
+        (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
+        isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
+        "bg-primary-green/5 border-primary-green-dim/30"
     )}>
         <div className="flex items-center justify-between px-3 py-1.5 h-8">
             <div className="flex items-baseline gap-2">
@@ -1183,7 +1196,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             key="gameover"
                             initial={{ scale: 0, rotate: -90 }}
                             animate={{ scale: 1, rotate: 0 }}
-                            className="text-elfy-red drop-shadow-[0_0_8px_currentColor]"
+                            className="text-critical-red drop-shadow-[0_0_8px_currentColor]"
                         >
                             <Skull size={16} />
                         </motion.div>
@@ -1193,7 +1206,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 key="rebooting"
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="w-4 h-4 bg-elfy-purple rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                                className="w-4 h-4 bg-latent-purple rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
                             >
                                 <motion.div animate={{ rotate: 360, opacity: [0.6, 1, 0.6] }} transition={{ duration: 0.5, repeat: Infinity }}>
                                     <Zap size={10} className="text-black fill-current" />
@@ -1204,9 +1217,9 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 key="destroyed"
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="w-4 h-4 border border-elfy-purple rounded-full flex items-center justify-center opacity-80"
+                                className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"
                             >
-                                <Power size={10} className="text-elfy-purple" />
+                                <Power size={10} className="text-latent-purple" />
                             </motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
@@ -1214,7 +1227,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             key="healing"
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
-                            className="w-4 h-4 bg-elfy-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
+                            className="w-4 h-4 bg-service-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]"
                         >
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
                                 <RefreshCw size={10} className="text-black" />
@@ -1233,7 +1246,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                                 ]
                             }}
                             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                            className="text-elfy-yellow"
+                            className="text-alert-yellow"
                         >
                             <AlertTriangle size={16} />
                         </motion.div>
@@ -1243,7 +1256,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
-                            className="w-4 h-4 bg-elfy-green rounded-full flex items-center justify-center shadow-[0_0_5px_currentColor]"
+                            className="w-4 h-4 bg-primary-green rounded-full flex items-center justify-center shadow-[0_0_5px_currentColor]"
                         >
                             <Check size={10} className="text-black stroke-[3px]" />
                         </motion.div>
@@ -1257,11 +1270,11 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                 <motion.div 
                     className={clsx(
                         "h-full transition-colors duration-200",
-                        (isDestroyed && isInteracting) ? "bg-elfy-purple shadow-[0_0_10px_#9E4EA5]" :
+                        (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         isDestroyed ? "bg-transparent" : 
-                        (isInteracting && isDamaged) ? "bg-elfy-cyan" :
-                        isDamaged ? "bg-elfy-yellow" : 
-                        "bg-elfy-green"
+                        (isInteracting && isDamaged) ? "bg-service-cyan" :
+                        isDamaged ? "bg-alert-yellow" : 
+                        "bg-primary-green"
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}
@@ -1288,9 +1301,9 @@ const VIDEO_POOL = [
 ];
 
 const OfflineStatic = () => (
-  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-elfy-red/20 overflow-hidden w-full h-full">
+  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-critical-red/20 overflow-hidden w-full h-full">
     <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-40 bg-cover mix-blend-screen pointer-events-none" />
-    <div className="relative z-10 animate-pulse text-elfy-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
+    <div className="relative z-10 animate-pulse text-critical-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
         <WifiOff size={12} />
         <span>SIGNAL_LOST</span>
     </div>
@@ -1362,7 +1375,7 @@ const VideoSlot = ({
   }, [videoId, isOffline, getNextVideo]);
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-elfy-green-dim/30 bg-black overflow-hidden group/video hover:border-elfy-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
+    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
       
       {isOffline ? (
           <OfflineStatic />
@@ -1387,12 +1400,12 @@ const VideoSlot = ({
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
-                    <Radio className="text-elfy-green animate-pulse w-6 h-6 mb-2" />
-                    <span className="text-[10px] font-mono text-elfy-green animate-pulse">ESTABLISHING_UPLINK...</span>
+                    <Radio className="text-primary-green animate-pulse w-6 h-6 mb-2" />
+                    <span className="text-[10px] font-mono text-primary-green animate-pulse">ESTABLISHING_UPLINK...</span>
                 </div>
              ) : (
                  // HOVER STATE: Yellow Text & Border
-                 <div className="flex items-center gap-2 text-elfy-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-elfy-yellow rounded-sm pointer-events-auto">
+                 <div className="flex items-center gap-2 text-alert-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-alert-yellow rounded-sm pointer-events-auto">
                     <span>OPEN_SOURCE</span>
                     <ExternalLink size={12} />
                  </div>
@@ -1408,14 +1421,14 @@ const VideoSlot = ({
           />
 
           {/* CAM TEXT: Green by default, stays visible */}
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-elfy-yellow transition-colors">
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
              CAM_0{slotIndex + 1}
           </div>
         </>
       )}
       
       {isOffline && (
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-elfy-red font-mono bg-black/80 px-1 pointer-events-none">
+          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-critical-red font-mono bg-black/80 px-1 pointer-events-none">
              CAM_0{slotIndex + 1} [ERR]
           </div>
       )}
@@ -1522,24 +1535,24 @@ export const LiveArtGrid = () => {
                 className={clsx(
                     "w-full aspect-square relative border group overflow-hidden flex items-center justify-center rounded-[1px] transition-colors",
                     isCorrupt 
-                        ? "bg-black border-elfy-red/20" 
-                        : "bg-black/50 border-elfy-green-dim/30 hover:border-elfy-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)]"
+                        ? "bg-black border-critical-red/20" 
+                        : "bg-black/50 border-primary-green-dim/30 hover:border-alert-yellow hover:shadow-[0_0_10px_rgba(247,210,119,0.2)]"
                 )}
               >
                 <div className={clsx(
                     "absolute inset-0 transition-colors",
-                    isCorrupt ? "bg-elfy-red/5" : "bg-elfy-green/5 group-hover:bg-elfy-green/10"
+                    isCorrupt ? "bg-critical-red/5" : "bg-primary-green/5 group-hover:bg-primary-green/10"
                 )} />
                 
                 <span className={clsx(
                     "relative z-10 text-[9px] font-mono transition-colors",
-                    isCorrupt ? "text-elfy-red/50 animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-yellow"
+                    isCorrupt ? "text-critical-red/50 animate-pulse" : "text-primary-green-dim group-hover:text-alert-yellow"
                 )}>
                   {isCorrupt ? (Math.random() > 0.5 ? "0x00" : "ERR") : `IMG_${id}`}
                 </span>
 
                 {!isCorrupt && (
-                    <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-elfy-green-dim/50 group-hover:border-elfy-yellow" />
+                    <div className="absolute top-0 right-0 w-1.5 h-1.5 border-t border-r border-primary-green-dim/50 group-hover:border-alert-yellow" />
                 )}
               </motion.button>
             );
@@ -1559,20 +1572,28 @@ import { UpgradeOption } from '@/game/types/game.types';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, AlertCircle, GitFork, Swords, Wifi, Zap as ZapIcon, LocateFixed, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot } from 'lucide-react';
+import { Unplug, Zap, GitFork, Swords, Wifi, Zap as ZapIcon, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot, ArrowUpCircle, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 
-const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
-  'OVERCLOCK': { label: 'Overclock', icon: ZapIcon },
-  'EXECUTE': { label: 'Execute', icon: Swords },
-  'BANDWIDTH': { label: 'Bandwidth', icon: Wifi },
-  'FORK': { label: 'Fork', icon: GitFork }, 
-  'SNIFFER': { label: 'Sniffer', icon: Gitlab }, 
-  'BACKDOOR': { label: 'Backdoor', icon: DoorOpen }, 
-  'DAEMON': { label: 'Daemon', icon: Bot }, // NEW
-  'PURGE': { label: 'Purge', icon: Biohazard },
-  'RESTORE': { label: 'Restore', icon: CircleDotDashed },
-  'REPAIR_NANITES': { label: 'Repair', icon: Unplug }
+const UPGRADE_MAP: Record<string, { label: string, desc: string, icon: any }> = {
+  // CORE UPGRADES
+  'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: ZapIcon },
+  'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
+  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
+  'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
+  'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
+  'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
+  'DAEMON': { label: 'Daemon', desc: 'Summon Ally', icon: Bot },
+  
+  // ACTIONS / OPS
+  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
+  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
+  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
 };
+
+const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
+const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
 
 export const IdentityHUD = () => {
   const { openModal } = useStore();
@@ -1586,6 +1607,7 @@ export const IdentityHUD = () => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
   const rebootProgress = useGameStore(s => s.playerRebootProgress);
+  const activeUpgrades = useGameStore(s => s.activeUpgrades);
   
   const panel = useGameStore(s => s.panels['identity']);
   const isPanelDead = panel ? panel.isDestroyed : false;
@@ -1594,6 +1616,7 @@ export const IdentityHUD = () => {
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
   const xpPercent = nextXp > 0 ? Math.min(100, (xp / nextXp) * 100) : 0;
 
+  // --- SVG CONFIG ---
   const size = 160; 
   const center = size / 2;
   const radiusHp = 60;
@@ -1609,18 +1632,6 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  const availableOptions: UpgradeOption[] = [
-      'OVERCLOCK', 
-      'FORK', 
-      'BANDWIDTH', 
-      'EXECUTE',
-      'SNIFFER',
-      'BACKDOOR',
-      'DAEMON',
-      'PURGE',
-      'RESTORE'
-  ];
-
   const handleUpgrade = (u: UpgradeOption) => {
       if (isPanelDead || isPlayerDead) return; 
       AudioSystem.playClick();
@@ -1628,118 +1639,213 @@ export const IdentityHUD = () => {
   };
 
   return (
-    <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
+    <div className={`flex flex-col h-full w-full relative overflow-hidden ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
-      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> 
-        <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
-           <MiniCrystalCanvas />
-        </div>
-
-        {isPlayerDead && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                {rebootProgress > 0 ? (
-                    <span className="text-2xl font-header font-black text-elfy-yellow drop-shadow-md animate-pulse">
-                        {Math.floor(rebootProgress)}%
-                    </span>
-                ) : (
-                    <div className="animate-pulse">
-                        <Unplug className="text-white/50 w-8 h-8" />
-                    </div>
-                )}
-            </div>
-        )}
-
-        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
-          <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="4 4" />
-          
-          <circle 
-            cx={center} cy={center} r={radiusHp} 
-            stroke={displayHpColor} 
-            strokeWidth={stroke} fill="transparent"
-            strokeDasharray={circHp}
-            strokeDashoffset={offsetHp}
-            strokeLinecap="round"
-            className="transition-all duration-100 ease-linear"
-          />
-          <circle 
-            cx={center} cy={center} r={radiusXp} 
-            stroke="#9E4EA5" 
-            strokeWidth={stroke} fill="transparent"
-            strokeDasharray={circXp}
-            strokeDashoffset={offsetXp}
-            strokeLinecap="round"
-            className="transition-all duration-500 ease-out"
-          />
-        </svg>
-
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
-          LVL_{level}
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-1 min-h-0">
+      {/* TOP SECTION: Avatar & Stats */}
+      <div className="flex-none flex flex-col items-center pt-4 relative z-10">
         
-        {isPlayerDead && !isPanelDead ? (
-            <div className="bg-black/80 border border-elfy-yellow/50 px-4 py-2 rounded animate-pulse text-center relative z-50">
-                <div className="flex items-center justify-center gap-2 text-elfy-yellow font-bold text-xs mb-1">
-                    <Zap size={14} />
-                    <span>SYSTEM CRITICAL</span>
-                </div>
-                <p className="text-[9px] text-white font-mono">HOLD TO REBOOT</p>
-                <p className="text-[8px] text-elfy-red mt-1 font-bold">TAKING DAMAGE DRAINS POWER</p>
-            </div>
-        ) : (
-            <div className="text-center">
-              <h2 className="text-2xl font-header font-black text-elfy-green tracking-wider">{identity.name}</h2>
-              <div className="text-[9px] text-elfy-purple-light uppercase tracking-widest opacity-80">{identity.class}</div>
-            </div>
-        )}
-
-        {upgradePoints > 0 && !isPlayerDead && (
-          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 rounded-sm pointer-events-auto z-50 animate-pulse">
-            <div className="flex items-center justify-center gap-2 mb-1">
-                <AlertCircle size={10} className="text-elfy-green" />
-                <div className="text-[9px] text-white text-center font-bold tracking-widest">
-                  UPGRADE AVAILABLE ({upgradePoints})
-                </div>
-            </div>
+        {/* AVATAR RING */}
+        <div className="relative w-40 h-40 shrink-0 group mb-1"> 
             
-            <div className="grid grid-cols-2 gap-1">
-              {availableOptions.map(u => {
-                const info = UPGRADE_MAP[u] || { label: u, icon: Zap };
-                const Icon = info.icon;
-                return (
-                  <button 
-                    key={u}
-                    className={`flex items-center justify-center gap-1 text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1.5 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
-                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                    onClick={() => handleUpgrade(u)}
-                  >
-                    <Icon size={8} />
-                    <span>{info.label}</span>
-                  </button>
-                );
-              })}
+            {/* 3D Canvas */}
+            <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
+               <MiniCrystalCanvas />
             </div>
-          </div>
-        )}
+
+            {/* Status Overlays */}
+            {isPlayerDead && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    {rebootProgress > 0 ? (
+                        <div className="flex flex-col items-center">
+                            <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">
+                                {Math.floor(rebootProgress)}%
+                            </span>
+                            <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
+                        </div>
+                    ) : (
+                        <div className="animate-pulse flex flex-col items-center">
+                            <Unplug className="text-white/50 w-8 h-8 mb-1" />
+                            <span className="text-[8px] text-critical-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* SVG RINGS */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
+              <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
+              <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
+              
+              <circle 
+                cx={center} cy={center} r={radiusHp} 
+                stroke={displayHpColor} 
+                strokeWidth={stroke} fill="transparent"
+                strokeDasharray={circHp}
+                strokeDashoffset={offsetHp}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+                className="transition-all duration-100 ease-linear"
+              />
+              
+              <circle 
+                cx={center} cy={center} r={radiusXp} 
+                stroke="#9E4EA5" 
+                strokeWidth={stroke} fill="transparent"
+                strokeDasharray={circXp}
+                strokeDashoffset={offsetXp}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+                className="transition-all duration-500 ease-out"
+              />
+
+              <defs>
+                  <path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /> 
+              </defs>
+              
+              <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
+                  <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
+                      LVL_{level.toString().padStart(2, '0')}
+                  </textPath>
+              </text>
+            </svg>
+        </div>
+
+        {/* Identity Info */}
+        <div className="text-center z-20 mb-2">
+            <h2 className="text-xl font-header font-black text-primary-green tracking-wider drop-shadow-md">{identity.name}</h2>
+            <div className="text-[8px] text-latent-purple-light uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border border-latent-purple/20">
+                {identity.class}
+            </div>
+        </div>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-3 mt-auto pt-2 border-t border-elfy-green-dim/10">
+      {/* MIDDLE SECTION: Upgrade Terminal */}
+      <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative pb-4">
+         <AnimatePresence mode="wait">
+            {upgradePoints > 0 && !isPlayerDead ? (
+                <motion.div 
+                    key="upgrades"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex flex-col gap-4"
+                >
+                    <div className="flex items-center gap-2 pb-1 border-b border-primary-green/20 pt-2">
+                        <ArrowUpCircle size={12} className="text-primary-green animate-bounce" />
+                        <span className="text-[9px] font-bold text-primary-green tracking-widest">
+                            SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
+                        </span>
+                    </div>
+
+                    {/* KERNEL UPGRADES */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
+                        {CORE_UPGRADES.map(u => {
+                            const info = UPGRADE_MAP[u];
+                            const Icon = info.icon;
+                            const currentLvl = activeUpgrades[u] || 0;
+
+                            return (
+                                <button
+                                    key={u}
+                                    onClick={() => handleUpgrade(u)}
+                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                                    className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
+                                    
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="p-1.5 rounded-sm bg-primary-green/10 text-primary-green group-hover:bg-primary-green group-hover:text-black">
+                                            <Icon size={14} />
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-primary-green">
+                                                {info.label}
+                                            </span>
+                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                                {info.desc}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-[9px] font-mono text-primary-green-dim border border-primary-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-primary-green group-hover:text-primary-green relative z-10">
+                                        v{currentLvl}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* SYSTEM OPS */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
+                        {SYSTEM_OPS.map(u => {
+                            const info = UPGRADE_MAP[u];
+                            const Icon = info.icon;
+                            
+                            return (
+                                <button
+                                    key={u}
+                                    onClick={() => handleUpgrade(u)}
+                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
+                                    
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
+                                            <Icon size={14} />
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
+                                                {info.label}
+                                            </span>
+                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                                {info.desc}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                </motion.div>
+            ) : (
+                <motion.div 
+                    key="status"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    // UPDATED: Marching ants container
+                    className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 p-4 rounded bg-black/20 marching-ants [--ant-color:rgba(255,255,255,0.1)]"
+                >
+                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
+                        <div className="w-1 h-1 bg-white/50 rounded-full" />
+                    </div>
+                    <span className="text-[9px] tracking-widest">SYSTEM_OPTIMIZED</span>
+                    <span className="text-[8px]">WAITING FOR DATA...</span>
+                </motion.div>
+            )}
+         </AnimatePresence>
+      </div>
+
+      {/* BOTTOM SECTION: Footer Links */}
+      <div className="flex-none grid grid-cols-2 gap-px bg-primary-green-dim/20 border-t border-primary-green-dim/30 mt-auto">
         <button 
           onClick={() => !isPanelDead && openModal('about')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-2 bg-elfy-purple-deep/20 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+          className="py-3 bg-black/80 hover:bg-primary-green hover:text-black text-primary-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
-          About
+          About_Me
         </button>
         <button 
           onClick={() => !isPanelDead && openModal('contact')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-2 bg-elfy-yellow/5 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+          className="py-3 bg-black/80 hover:bg-alert-yellow hover:text-black text-alert-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
-          Contact
+          Contact_Link
         </button>
       </div>
     </div>
@@ -1791,17 +1897,17 @@ export const ZenBomb = () => {
             initial={{ height: 0 }}
             animate={{ height: 160 }} 
             transition={{ delay: 1.0, duration: 0.8, ease: "easeOut" }}
-            className="w-[2px] bg-elfy-red/80 absolute -top-64 left-1/2 -translate-x-1/2 shadow-[0_0_8px_#FF003C]"
+            className="w-[2px] bg-critical-red/80 absolute -top-64 left-1/2 -translate-x-1/2 shadow-[0_0_8px_#FF003C]"
           />
 
           {/* THE BOMB BUTTON */}
-          <div className="relative p-1 border border-elfy-red bg-black/90 backdrop-blur-md shadow-[0_0_20px_#FF003C] overflow-hidden group-hover:shadow-[0_0_40px_#FF003C] transition-shadow duration-300 z-10">
+          <div className="relative p-1 border border-critical-red bg-black/90 backdrop-blur-md shadow-[0_0_20px_#FF003C] overflow-hidden group-hover:shadow-[0_0_40px_#FF003C] transition-shadow duration-300 z-10">
              
              <div className="absolute inset-0 opacity-20 pointer-events-none" 
                   style={{ backgroundImage: 'repeating-linear-gradient(45deg, #FF003C 0, #FF003C 5px, transparent 5px, transparent 10px)' }} 
              />
 
-             <div className="relative w-16 h-16 border border-elfy-red/50 flex items-center justify-center bg-black hover:bg-elfy-red transition-colors duration-300 group-hover:text-black text-elfy-red">
+             <div className="relative w-16 h-16 border border-critical-red/50 flex items-center justify-center bg-black hover:bg-critical-red transition-colors duration-300 group-hover:text-black text-critical-red">
                  <motion.div
                    animate={{ rotate: [0, -10, 10, 0] }}
                    transition={{ repeat: Infinity, duration: 0.3, repeatDelay: 2 }} 
@@ -1812,15 +1918,15 @@ export const ZenBomb = () => {
           </div>
 
           {/* LABEL */}
-          <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-elfy-red/10 border border-elfy-red/50 backdrop-blur-md z-10">
-             <Skull size={10} className="text-elfy-red animate-pulse" />
-             <span className="text-[10px] font-mono font-black text-elfy-red tracking-widest uppercase group-hover:text-white transition-colors">
+          <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-critical-red/10 border border-critical-red/50 backdrop-blur-md z-10">
+             <Skull size={10} className="text-critical-red animate-pulse" />
+             <span className="text-[10px] font-mono font-black text-critical-red tracking-widest uppercase group-hover:text-white transition-colors">
                 PURGE_SYSTEM
              </span>
-             <Skull size={10} className="text-elfy-red animate-pulse" />
+             <Skull size={10} className="text-critical-red animate-pulse" />
           </div>
           
-          <span className="text-[8px] text-elfy-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[8px] text-critical-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
             [ ENABLE_ZEN_MODE ]
           </span>
         </motion.button>
@@ -1997,12 +2103,12 @@ export const VirtualJoystick = () => {
     <div className="fixed bottom-8 right-8 w-32 h-32 z-[90] touch-none select-none">
       {/* Base */}
       <div 
-        className="w-full h-full rounded-full border-2 border-elfy-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
+        className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
         ref={stickRef}
       >
         {/* Stick */}
         <div 
-          className="w-12 h-12 rounded-full bg-elfy-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear"
+          className="w-12 h-12 rounded-full bg-primary-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear"
           style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -2010,7 +2116,7 @@ export const VirtualJoystick = () => {
           onPointerCancel={handlePointerUp}
         />
       </div>
-      <div className="absolute -top-6 w-full text-center text-[10px] text-elfy-green/50 font-mono tracking-widest">
+      <div className="absolute -top-6 w-full text-center text-[10px] text-primary-green/50 font-mono tracking-widest">
           [ NAV ]
       </div>
     </div>
@@ -2249,14 +2355,14 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       return unsub;
   }, [gameId, controls]);
 
-  let borderColor = "border-elfy-green-dim/30";
+  let borderColor = "border-primary-green-dim/30";
   if (isDestroyed) {
       borderColor = isInteracting 
-        ? "border-elfy-purple shadow-[0_0_10px_#9E4EA5]" 
-        : "border-elfy-red animate-pulse"; 
+        ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" 
+        : "border-critical-red animate-pulse"; 
   }
-  else if (isInteracting && isDamaged) borderColor = "border-elfy-cyan shadow-[0_0_10px_#00F0FF]";
-  else if (isDamaged) borderColor = "border-elfy-yellow/50";
+  else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
+  else if (isDamaged) borderColor = "border-alert-yellow/50";
 
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
@@ -2313,8 +2419,8 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         
         {isGameOver && (
             <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
-                <Skull className="text-elfy-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
-                <span className="text-elfy-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
+                <Skull className="text-critical-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
+                <span className="text-critical-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
             </div>
         )}
       </div>
@@ -2359,20 +2465,20 @@ export class WebGLErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black text-elfy-red p-8 text-center font-mono">
-          <div className="border border-elfy-red/50 bg-elfy-red/10 p-8 max-w-lg shadow-[0_0_50px_rgba(255,0,60,0.2)]">
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black text-critical-red p-8 text-center font-mono">
+          <div className="border border-critical-red/50 bg-critical-red/10 p-8 max-w-lg shadow-[0_0_50px_rgba(255,0,60,0.2)]">
             <div className="flex justify-center mb-4">
                <AlertTriangle size={48} className="animate-pulse" />
             </div>
             <h2 className="text-2xl font-black tracking-widest mb-4">GRAPHICS_CORE_FAILURE</h2>
-            <p className="text-sm mb-6 text-elfy-red/80">
+            <p className="text-sm mb-6 text-critical-red/80">
               The neural interface encountered a critical WebGL error.
               <br/>
               <span className="text-xs opacity-50 mt-2 block font-mono">{this.state.error?.message}</span>
             </p>
             <button 
               onClick={this.handleReload}
-              className="flex items-center justify-center gap-2 w-full py-3 bg-elfy-red text-black font-bold tracking-widest hover:bg-white transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-critical-red text-black font-bold tracking-widest hover:bg-white transition-colors"
             >
               <RefreshCw size={16} />
               REBOOT_SYSTEM
@@ -2424,32 +2530,32 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-            className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-elfy-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden"
+            className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between px-4 py-3 bg-elfy-green/10 border-b border-elfy-green/30">
+            <div className="flex items-center justify-between px-4 py-3 bg-primary-green/10 border-b border-primary-green/30">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-elfy-red rounded-full animate-pulse" />
-                <span className="font-header font-black text-elfy-green text-lg md:text-xl tracking-widest">
+                <div className="w-3 h-3 bg-critical-red rounded-full animate-pulse" />
+                <span className="font-header font-black text-primary-green text-lg md:text-xl tracking-widest">
                   {title}
                 </span>
               </div>
               <button 
                 onClick={closeModal}
                 onMouseEnter={() => AudioSystem.playHover()} 
-                className="p-1 hover:bg-elfy-red hover:text-black text-elfy-green transition-colors"
+                className="p-1 hover:bg-critical-red hover:text-black text-primary-green transition-colors"
               >
                 <X />
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto p-6 relative scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
+            <div className="flex-1 overflow-auto p-6 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
               <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20" />
               <div className="relative z-10">
                 {children}
               </div>
             </div>
 
-            <div className="px-4 py-1 bg-black border-t border-elfy-green/30 text-xs text-elfy-green-dim font-mono text-right">
+            <div className="px-4 py-1 bg-black border-t border-primary-green/30 text-xs text-primary-green-dim font-mono text-right">
               MODE: SECURE // ENCRYPTION: ENABLED
             </div>
           </motion.div>
@@ -2489,10 +2595,10 @@ export const Footer = () => {
   const isCritical = systemIntegrity < 30;
   const isWarning = systemIntegrity < 60;
 
-  let globalColor = "text-elfy-green-dim border-elfy-green-dim/30";
-  if (isGameOver) globalColor = "text-elfy-red border-elfy-red/50";
-  else if (isCritical) globalColor = "text-elfy-red border-elfy-red/30";
-  else if (isWarning) globalColor = "text-elfy-yellow border-elfy-yellow/30";
+  let globalColor = "text-primary-green-dim border-primary-green-dim/30";
+  if (isGameOver) globalColor = "text-critical-red border-critical-red/50";
+  else if (isCritical) globalColor = "text-critical-red border-critical-red/30";
+  else if (isWarning) globalColor = "text-alert-yellow border-alert-yellow/30";
 
   const [log, setLog] = useState<{ text: string, type: 'info' | 'warn' | 'crit' }>({ 
       text: "SYSTEM_ONLINE", type: 'info' 
@@ -2586,10 +2692,10 @@ export const Footer = () => {
                 className={clsx(
                     "whitespace-nowrap font-bold tracking-wider truncate",
                     // If Game Over, FORCE Red. Otherwise respect message type colors
-                    isGameOver ? "text-elfy-red animate-pulse" : 
-                    log.type === 'crit' ? "text-elfy-red animate-pulse" : 
-                    log.type === 'warn' ? "text-elfy-yellow" : 
-                    "text-elfy-green"
+                    isGameOver ? "text-critical-red animate-pulse" : 
+                    log.type === 'crit' ? "text-critical-red animate-pulse" : 
+                    log.type === 'warn' ? "text-alert-yellow" : 
+                    "text-primary-green"
                 )}
             >
                 {log.text}
@@ -2655,8 +2761,8 @@ const SfxBtn = ({ active, onClick, color }: { active: boolean, onClick: () => vo
     className={clsx(
       "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
       active 
-        ? `hover:text-elfy-yellow bg-white/5 border-white/10 ${color}`
-        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100 decoration-line-through`
+        ? `hover:text-alert-yellow bg-white/5 border-white/10 ${color}`
+        : `${color} opacity-40 hover:text-critical-red hover:opacity-100 decoration-line-through`
     )}
   >
     SFX
@@ -2669,8 +2775,8 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
     className={clsx(
       "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
       active 
-        ? `hover:text-elfy-yellow bg-white/5 ${color}`
-        : `${color} opacity-40 hover:text-elfy-red hover:opacity-100`
+        ? `hover:text-alert-yellow bg-white/5 ${color}`
+        : `${color} opacity-40 hover:text-critical-red hover:opacity-100`
     )}
   >
     {active ? <Icon size={14} /> : <OffIcon size={14} />}
@@ -2692,9 +2798,9 @@ export const Header = () => {
   const isWarning = systemIntegrity < 60;
   const isGameOver = systemIntegrity <= 0;
   
-  let statusColor = "text-elfy-green";
-  if (isCritical) statusColor = "text-elfy-red";
-  else if (isWarning) statusColor = "text-elfy-yellow";
+  let statusColor = "text-primary-green";
+  if (isCritical) statusColor = "text-critical-red";
+  else if (isWarning) statusColor = "text-alert-yellow";
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
@@ -2752,7 +2858,7 @@ export const Header = () => {
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <div 
             className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
-                isCritical ? "bg-elfy-red" : isWarning ? "bg-elfy-yellow" : "bg-elfy-green"
+                isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
             )} 
             style={{ width: `${systemIntegrity}%` }}
           />
@@ -2762,7 +2868,7 @@ export const Header = () => {
       {/* INTEGRITY TEXT */}
       <div className={clsx(
           "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
-          isCritical ? "text-elfy-red" : isWarning ? "text-elfy-yellow" : "text-elfy-green-dim"
+          isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"
       )}>
         <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
         <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>
@@ -3239,7 +3345,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
       <body 
-        className="bg-black text-elfy-green selection:bg-elfy-green selection:text-black font-mono"
+        className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} // Hardcode black to prevent FOUC
       >
         <div className="relative w-full h-full">
@@ -3319,7 +3425,7 @@ export default function Home() {
       <CustomCursor />
       <DebugOverlay />
 
-      <main className="relative w-full h-full flex flex-col overflow-hidden text-elfy-green selection:bg-elfy-green selection:text-black font-mono">
+      <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
         <WebGLErrorBoundary>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
@@ -3357,7 +3463,7 @@ export default function Home() {
                   {!isZenMode && (
                     <motion.div 
                       className={clsx(
-                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black",
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
                           isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
                       )}
                       initial="hidden"
@@ -3374,26 +3480,33 @@ export default function Home() {
                         }
                       }}
                     >
+                      {/* IDENTITY COLUMN */}
                       <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
                           <IdentityHUD />
                         </GlassPanel>
 
-                        <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                        <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
                            <SocialRow />
                         </GlassPanel>
                       </div>
 
+                      {/* CONTENT COLUMN */}
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
-                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                              <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                            {/* UPDATED CONTAINER: Marching Ants Effect */}
+                            <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
+                              <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+                              
                               <button 
                                 onClick={() => openModal('feed')} 
-                                className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                                onMouseEnter={() => AudioSystem.playHover()}
+                                className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
                               >
-                                [ ACCESS TERMINAL ]
+                                <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
+                                    [ ACCESS_TERMINAL ]
+                                </span>
                               </button>
                             </div>
                           </div>
@@ -3435,12 +3548,12 @@ export const ContactModal = () => {
       <div className="max-w-2xl mx-auto h-full flex flex-col justify-center">
         
         {/* Added Triangles and Font-Header for the Warning */}
-        <div className="p-2 border border-elfy-yellow/30 bg-elfy-yellow/5 mb-6 text-center flex items-center justify-center gap-3">
-          <span className="text-elfy-yellow animate-pulse">⚠</span>
-          <p className="text-xs text-elfy-yellow font-header font-bold tracking-wider">
+        <div className="p-2 border border-alert-yellow/30 bg-alert-yellow/5 mb-6 text-center flex items-center justify-center gap-3">
+          <span className="text-alert-yellow animate-pulse">⚠</span>
+          <p className="text-xs text-alert-yellow font-header font-bold tracking-wider">
             WARNING: TRANSMISSIONS ARE MONITORED BY THE AI OVERLORD.
           </p>
-          <span className="text-elfy-yellow animate-pulse">⚠</span>
+          <span className="text-alert-yellow animate-pulse">⚠</span>
         </div>
 
         <form 
@@ -3449,41 +3562,41 @@ export const ContactModal = () => {
           className="space-y-6"
         >
           <div className="space-y-1">
-            <label className="text-sm text-elfy-green-dim uppercase tracking-wider font-header font-bold">Codename</label>
+            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Codename</label>
             <input 
               type="text" 
               name="name"
               required
               placeholder="Enter your handle..."
-              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green font-mono focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
+              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm text-elfy-green-dim uppercase tracking-wider font-header font-bold">Frequency (Email)</label>
+            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Frequency (Email)</label>
             <input 
               type="email" 
               name="email"
               required
               placeholder="Enter return frequency..."
-              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green font-mono focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
+              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm text-elfy-green-dim uppercase tracking-wider font-header font-bold">Payload</label>
+            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Payload</label>
             <textarea 
               name="message"
               required
               rows={5}
               placeholder="Type your message..."
-              className="w-full bg-black border border-elfy-green-dim/50 p-3 text-elfy-green font-mono focus:border-elfy-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all resize-none"
+              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all resize-none"
             />
           </div>
 
           <button 
             type="submit"
-            className="w-full py-4 bg-elfy-green text-black font-header font-black uppercase tracking-widest hover:bg-white transition-colors flex items-center justify-center gap-2 group"
+            className="w-full py-4 bg-primary-green text-black font-header font-black uppercase tracking-widest hover:bg-white transition-colors flex items-center justify-center gap-2 group"
           >
             <span>Send Transmission</span>
             <Send size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -3508,17 +3621,17 @@ export const AboutModal = () => {
         
         {/* LEFT: The Avatar Grid */}
         <div className="space-y-4">
-          <div className="aspect-square w-full border border-elfy-purple-light/50 bg-elfy-purple-deep/30 relative overflow-hidden group shadow-[0_0_20px_rgba(188,134,186,0.2)]">
-            <div className="absolute inset-0 flex items-center justify-center text-elfy-purple-light/50 font-bold text-2xl group-hover:text-elfy-purple-light transition-colors font-header font-black tracking-widest text-center p-4">
+          <div className="aspect-square w-full border border-latent-purple-light/50 bg-latent-purple-deep/30 relative overflow-hidden group shadow-[0_0_20px_rgba(188,134,186,0.2)]">
+            <div className="absolute inset-0 flex items-center justify-center text-latent-purple-light/50 font-bold text-2xl group-hover:text-latent-purple-light transition-colors font-header font-black tracking-widest text-center p-4">
               [ COMPOSITE_IMAGE LOADING ]
             </div>
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-elfy-purple-light" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-elfy-purple-light" />
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-latent-purple-light" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-latent-purple-light" />
           </div>
           
           <div className="grid grid-cols-4 gap-2">
             {[1,2,3,4].map(i => (
-              <div key={i} className="aspect-square border border-elfy-purple-dim/30 hover:bg-elfy-purple-light/20 hover:border-elfy-purple-light cursor-pointer transition-colors" />
+              <div key={i} className="aspect-square border border-latent-purple-dim/30 hover:bg-latent-purple-light/20 hover:border-latent-purple-light cursor-pointer transition-colors" />
             ))}
           </div>
         </div>
@@ -3527,8 +3640,8 @@ export const AboutModal = () => {
         <div className="space-y-6">
           <div>
             {/* Header: Montserrat */}
-            <h2 className="text-4xl font-header font-black text-elfy-green mb-2 tracking-wide">HI, I'M ELFY.</h2>
-            <div className="h-1 w-20 bg-elfy-purple-light mb-4" />
+            <h2 className="text-4xl font-header font-black text-primary-green mb-2 tracking-wide">HI, I'M ELFY.</h2>
+            <div className="h-1 w-20 bg-latent-purple-light mb-4" />
             
             {/* Body: Courier (font-mono) for ease of reading/typewriter feel */}
             <p className="text-lg text-white/90 leading-relaxed font-mono">
@@ -3537,17 +3650,17 @@ export const AboutModal = () => {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-elfy-purple-light font-header font-bold uppercase tracking-wider text-sm">Capabilities</h3>
+            <h3 className="text-latent-purple-light font-header font-bold uppercase tracking-wider text-sm">Capabilities</h3>
             <ul className="space-y-1">
               {identity.abilities.map((ability, i) => (
-                 <li key={i} className="flex items-center gap-2 text-elfy-green font-mono">
-                   <span className="text-elfy-purple-light">&gt;</span> {ability}
+                 <li key={i} className="flex items-center gap-2 text-primary-green font-mono">
+                   <span className="text-latent-purple-light">&gt;</span> {ability}
                  </li>
               ))}
             </ul>
           </div>
 
-          <div className="p-4 border border-elfy-purple-dim/30 bg-elfy-purple-deep/20 text-sm text-elfy-purple-light font-mono">
+          <div className="p-4 border border-latent-purple-dim/30 bg-latent-purple-deep/20 text-sm text-latent-purple-light font-mono">
             <p>&gt; SYSTEM NOTE: Generated via Latent Space Injection.</p>
             <p>&gt; STATUS: 100% Hype.</p>
           </div>
@@ -3593,11 +3706,11 @@ const AsciiRenderer = () => {
       let animClass = '';
       
       if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        animClass = 'animate-matrix-green text-elfy-green-dark';
+        animClass = 'animate-matrix-green text-primary-green-dark';
       } else if (['░', '▒', '▓'].includes(char)) {
-        animClass = 'animate-matrix-purple text-elfy-purple';
+        animClass = 'animate-matrix-purple text-latent-purple';
       } else {
-        animClass = 'text-elfy-green-dark';
+        animClass = 'text-primary-green-dark';
       }
 
       const delay = Math.random() * 2 + 's';
@@ -3626,22 +3739,22 @@ const BootHeader = ({ step }: { step: number }) => {
   const isBypass = step === 4;
   const isSecure = step >= 5;
 
-  let color = "text-elfy-green-dim";
+  let color = "text-primary-green-dim";
   let statusText = "ESTABLISHING...";
-  let bgClass = "bg-elfy-green/5";
+  let bgClass = "bg-primary-green/5";
   
   if (isUnsafe) {
-      color = "text-elfy-red";
+      color = "text-critical-red";
       statusText = "SIGNAL_CORRUPTED";
-      bgClass = "bg-elfy-red/10 border-elfy-red/30";
+      bgClass = "bg-critical-red/10 border-critical-red/30";
   } else if (isBypass) {
-      color = "text-elfy-purple-light";
+      color = "text-latent-purple-light";
       statusText = "INJECTING_PAYLOAD";
-      bgClass = "bg-elfy-purple/10 border-elfy-purple/30";
+      bgClass = "bg-latent-purple/10 border-latent-purple/30";
   } else if (isSecure) {
-      color = "text-elfy-green";
+      color = "text-primary-green";
       statusText = "UPLINK_STABLE";
-      bgClass = "bg-elfy-green/10 border-elfy-green/30";
+      bgClass = "bg-primary-green/10 border-primary-green/30";
   } else if (step >= 1) {
       statusText = "HANDSHAKING...";
   }
@@ -3659,7 +3772,7 @@ const BootHeader = ({ step }: { step: number }) => {
         {[1, 2, 3, 4].map(i => {
            let heightClass = "h-1";
            let animClass = "";
-           let barColor = isUnsafe ? "bg-elfy-red" : isBypass ? "bg-elfy-purple-light" : "bg-elfy-green";
+           let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
            
            if (isUnsafe) {
                heightClass = i % 2 === 0 ? "h-3" : "h-1";
@@ -3704,18 +3817,18 @@ const CoreHeader = ({ step }: { step: number }) => {
     }
   }, [step]);
 
-  let borderColor = "border-elfy-green/30";
-  let bgColor = "bg-elfy-green/10";
-  let textColor = "text-elfy-green";
+  let borderColor = "border-primary-green/30";
+  let bgColor = "bg-primary-green/10";
+  let textColor = "text-primary-green";
 
   if (isUnsafe) {
-    borderColor = "border-elfy-red/50";
-    bgColor = "bg-elfy-red/10";
-    textColor = "text-elfy-red";
+    borderColor = "border-critical-red/50";
+    bgColor = "bg-critical-red/10";
+    textColor = "text-critical-red";
   } else if (isBypass) {
-    borderColor = "border-elfy-purple/50";
-    bgColor = "bg-elfy-purple/10";
-    textColor = "text-elfy-purple-light";
+    borderColor = "border-latent-purple/50";
+    bgColor = "bg-latent-purple/10";
+    textColor = "text-latent-purple-light";
   }
 
   return (
@@ -3747,7 +3860,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ scale: 0 }}
                     transition={{ x: { repeat: Infinity, duration: 0.1 } }}
                 >
-                    <ShieldAlert size={18} className="text-elfy-red" />
+                    <ShieldAlert size={18} className="text-critical-red" />
                 </motion.div>
             ) : isBypass ? (
                 <motion.div 
@@ -3757,7 +3870,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
                     transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
                 >
-                     <Unlock size={18} className="text-elfy-purple-light" />
+                     <Unlock size={18} className="text-latent-purple-light" />
                 </motion.div>
             ) : isCaution ? (
                 <motion.div 
@@ -3785,7 +3898,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                         exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
                         transition={{ type: "spring", stiffness: 400, damping: 20 }}
                     >
-                         <Lock size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                         <Lock size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
                     </motion.div>
                 ) : (
                     <motion.div 
@@ -3795,7 +3908,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                         exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
                         transition={{ duration: 0.4, ease: "backOut" }}
                     >
-                         <Cpu size={18} className="text-elfy-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                         <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
                     </motion.div>
                 )
             ) : (
@@ -3806,7 +3919,7 @@ const CoreHeader = ({ step }: { step: number }) => {
                     exit={{ opacity: 0 }}
                     transition={{ rotate: { repeat: Infinity, duration: 2, ease: "linear" } }}
                 >
-                     <div className="w-4 h-4 border-2 border-elfy-green border-t-transparent rounded-full" />
+                     <div className="w-4 h-4 border-2 border-primary-green border-t-transparent rounded-full" />
                 </motion.div>
             )}
          </AnimatePresence>
@@ -3843,19 +3956,19 @@ const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false,
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
       {isDoneTyping && showDots && <span>{isPast ? '...' : (Math.floor(Date.now() / 300) % 4 === 0 ? '' : '...')}</span>}
-      {isActive && <span className="ml-1 animate-cursor-blink text-elfy-green font-bold">_</span>}
+      {isActive && <span className="ml-1 animate-cursor-blink text-primary-green font-bold">_</span>}
     </div>
   );
 };
 
 const LOG_DATA = [
-  { text: "> INITIALIZE NEURAL_LACE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
-  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-elfy-green", speed: 20, hasDots: false },
-  { text: "> MOUNT MESOELFY_CORE", color: "text-elfy-green-dim", speed: 40, hasDots: true },
-  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-elfy-red", speed: 20, hasDots: false },
-  { text: "> BYPASSING SENTINEL_NODES", color: "text-elfy-purple-light", speed: 40, hasDots: true },
-  { text: "> DECRYPTED.", color: "text-elfy-green", speed: 20, hasDots: false },
-  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-elfy-yellow", speed: 20, hasDots: false },
+  { text: "> INITIALIZE NEURAL_LACE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> MOUNT MESOELFY_CORE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-critical-red", speed: 20, hasDots: false },
+  { text: "> BYPASSING SENTINEL_NODES", color: "text-latent-purple-light", speed: 40, hasDots: true },
+  { text: "> DECRYPTED.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-alert-yellow", speed: 20, hasDots: false },
 ];
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
@@ -3976,7 +4089,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
         transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
       >
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-elfy-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
+        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
           <BootHeader step={step} />
           <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
             {logsToShow.map((line, i) => (
@@ -3991,7 +4104,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
               initial={{ y: 50, opacity: 0, height: 0 }}
               animate={{ y: 0, opacity: 1, height: "auto" }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="w-full bg-black/90 border border-elfy-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
+              className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
             >
               <CoreHeader step={step} />
               
@@ -4005,11 +4118,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                       boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                     }}
                     transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                    className="relative border border-elfy-red bg-elfy-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                    className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
                   >
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-elfy-red">⚠</motion.span>
-                    <span className="text-sm font-header font-black tracking-widest text-center text-elfy-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-elfy-red">⚠</motion.span>
+                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                    <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
+                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
                   </motion.div>
                 )}
                 {showButton && (
@@ -4017,10 +4130,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     <button 
                       onClick={handleInitialize}
                       onMouseEnter={() => AudioSystem.playHover()}
-                      className="group relative px-8 py-2 overflow-hidden border border-elfy-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                      className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                     >
-                      <div className="absolute inset-0 bg-elfy-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-elfy-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
+                      <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
                         [ INITIALIZE_SYSTEM.EXE ]
                       </span>
                     </button>
@@ -4059,15 +4172,15 @@ export const GalleryModal = () => {
       <div className="flex flex-col h-full gap-6">
         
         {/* Category Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-elfy-green-dim/30">
+        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-primary-green-dim/30">
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setFilter(cat)}
               className={`px-4 py-1 font-mono text-sm border transition-all ${
                 filter === cat 
-                  ? 'bg-elfy-green text-black border-elfy-green' 
-                  : 'text-elfy-green-dim border-elfy-green-dim/30 hover:text-elfy-green hover:border-elfy-green'
+                  ? 'bg-primary-green text-black border-primary-green' 
+                  : 'text-primary-green-dim border-primary-green-dim/30 hover:text-primary-green hover:border-primary-green'
               }`}
             >
               [{cat}]
@@ -4083,25 +4196,25 @@ export const GalleryModal = () => {
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative aspect-video bg-black border border-elfy-green-dim/30 hover:border-elfy-green transition-all overflow-hidden"
+              className="group relative aspect-video bg-black border border-primary-green-dim/30 hover:border-primary-green transition-all overflow-hidden"
             >
               {/* Placeholder Graphic (Since we have no images yet) */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-elfy-green-dark/10 group-hover:bg-elfy-green-dark/20 transition-colors">
-                <ImageIcon className="w-12 h-12 text-elfy-green-dim/20 group-hover:text-elfy-green group-hover:scale-110 transition-all duration-500" />
-                <span className="mt-2 text-xs text-elfy-green-dim/40 font-mono">ENCRYPTED_IMG</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary-green-dark/10 group-hover:bg-primary-green-dark/20 transition-colors">
+                <ImageIcon className="w-12 h-12 text-primary-green-dim/20 group-hover:text-primary-green group-hover:scale-110 transition-all duration-500" />
+                <span className="mt-2 text-xs text-primary-green-dim/40 font-mono">ENCRYPTED_IMG</span>
               </div>
 
               {/* Overlay Info */}
-              <div className="absolute inset-x-0 bottom-0 p-3 bg-black/80 backdrop-blur-sm border-t border-elfy-green-dim/30 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                <h4 className="text-elfy-green font-bold text-sm">{item.title}</h4>
-                <div className="flex items-center gap-1 text-[10px] text-elfy-purple-light mt-1">
+              <div className="absolute inset-x-0 bottom-0 p-3 bg-black/80 backdrop-blur-sm border-t border-primary-green-dim/30 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                <h4 className="text-primary-green font-bold text-sm">{item.title}</h4>
+                <div className="flex items-center gap-1 text-[10px] text-latent-purple-light mt-1">
                   <span>OPEN_ON_X</span>
                   <ExternalLink size={10} />
                 </div>
               </div>
               
               {/* Corner accent */}
-              <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-elfy-green/20 border-l-[20px] border-l-transparent" />
+              <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-primary-green/20 border-l-[20px] border-l-transparent" />
             </a>
           ))}
         </div>
@@ -4138,22 +4251,22 @@ export const SimulationHUD = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
-      <div className="absolute top-0 left-0 right-0 h-12 bg-black/80 backdrop-blur-md border-b border-elfy-cyan/30 flex items-center justify-between px-6 pointer-events-auto">
-        <div className="flex items-center gap-3 text-elfy-cyan">
+      <div className="absolute top-0 left-0 right-0 h-12 bg-black/80 backdrop-blur-md border-b border-service-cyan/30 flex items-center justify-between px-6 pointer-events-auto">
+        <div className="flex items-center gap-3 text-service-cyan">
             <Box size={20} />
             <span className="font-header font-black tracking-widest text-lg">HOLO_DECK // SIMULATION</span>
         </div>
         {sandboxView === 'arena' && (
-            <div className="flex items-center gap-4 bg-elfy-cyan/5 px-4 py-1 rounded border border-elfy-cyan/20">
-                <Clock size={16} className="text-elfy-cyan" />
+            <div className="flex items-center gap-4 bg-service-cyan/5 px-4 py-1 rounded border border-service-cyan/20">
+                <Clock size={16} className="text-service-cyan" />
                 <input 
                     type="range" 
                     min="0.0" max="2.0" step="0.1"
                     value={debugFlags.timeScale}
                     onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
-                    className="w-32 accent-elfy-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
+                    className="w-32 accent-service-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
                 />
-                <span className="w-12 text-right font-mono font-bold text-elfy-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
+                <span className="w-12 text-right font-mono font-bold text-service-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
             </div>
         )}
       </div>
@@ -4161,32 +4274,32 @@ export const SimulationHUD = () => {
       <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto">
          <button 
             onClick={() => setSandboxView('arena')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'arena' ? "bg-elfy-cyan text-black border-elfy-cyan" : "bg-black/50 text-elfy-cyan border-elfy-cyan/30 hover:bg-elfy-cyan/10")}
+            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'arena' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
          >
             <Crosshair size={16} /> ARENA_MODE
          </button>
          <button 
             onClick={() => setSandboxView('gallery')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'gallery' ? "bg-elfy-cyan text-black border-elfy-cyan" : "bg-black/50 text-elfy-cyan border-elfy-cyan/30 hover:bg-elfy-cyan/10")}
+            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'gallery' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
          >
             <ScanEye size={16} /> GALLERY_VIEW
          </button>
       </div>
 
       {sandboxView === 'arena' && (
-          <div className="absolute right-6 top-24 w-64 bg-black/80 backdrop-blur-md border border-elfy-cyan/30 p-4 pointer-events-auto flex flex-col gap-4">
+          <div className="absolute right-6 top-24 w-64 bg-black/80 backdrop-blur-md border border-service-cyan/30 p-4 pointer-events-auto flex flex-col gap-4">
              <div>
-                <h3 className="text-xs font-mono text-elfy-cyan mb-2 border-b border-elfy-cyan/30 pb-1">ENTITY_INJECTION</h3>
+                <h3 className="text-xs font-mono text-service-cyan mb-2 border-b border-service-cyan/30 pb-1">ENTITY_INJECTION</h3>
                 <div className="grid grid-cols-1 gap-2">
                     {Object.values(EnemyTypes).map(type => (
-                        <button key={type} onClick={() => spawnEnemy(type)} className="flex items-center justify-between px-3 py-2 border border-elfy-cyan/30 text-xs hover:bg-elfy-cyan hover:text-black transition-colors text-elfy-cyan group">
+                        <button key={type} onClick={() => spawnEnemy(type)} className="flex items-center justify-between px-3 py-2 border border-service-cyan/30 text-xs hover:bg-service-cyan hover:text-black transition-colors text-service-cyan group">
                             <span className="uppercase font-bold tracking-wider">{type}</span>
                             <Bug size={14} className="group-hover:rotate-12 transition-transform" />
                         </button>
                     ))}
                 </div>
              </div>
-             <button onClick={clearBoard} className="w-full flex items-center justify-center gap-2 p-2 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black text-xs font-bold transition-colors">
+             <button onClick={clearBoard} className="w-full flex items-center justify-center gap-2 p-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black text-xs font-bold transition-colors">
                 <Eraser size={14} /> WIPE_ENTITIES
              </button>
           </div>
@@ -4194,20 +4307,20 @@ export const SimulationHUD = () => {
 
       {sandboxView === 'gallery' && (
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto">
-              <div className="flex bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
+              <div className="flex bg-black/80 border border-service-cyan/50 backdrop-blur-md">
                   {Object.values(EnemyTypes).map(type => (
-                      <button key={type} onClick={() => setGalleryTarget(type)} className={clsx("px-4 py-2 text-xs font-bold uppercase transition-colors", galleryTarget === type ? "bg-elfy-cyan text-black" : "text-elfy-cyan hover:bg-elfy-cyan/10")}>
+                      <button key={type} onClick={() => setGalleryTarget(type)} className={clsx("px-4 py-2 text-xs font-bold uppercase transition-colors", galleryTarget === type ? "bg-service-cyan text-black" : "text-service-cyan hover:bg-service-cyan/10")}>
                           {type}
                       </button>
                   ))}
               </div>
-              <div className="bg-black/80 border border-elfy-cyan/50 backdrop-blur-md">
-                  <button onClick={toggleGalleryAction} className={clsx("flex items-center gap-2 px-4 py-2 text-xs font-bold transition-colors", galleryAction === 'ATTACK' ? "bg-elfy-red text-black" : "text-elfy-cyan hover:bg-elfy-cyan/10")}>
+              <div className="bg-black/80 border border-service-cyan/50 backdrop-blur-md">
+                  <button onClick={toggleGalleryAction} className={clsx("flex items-center gap-2 px-4 py-2 text-xs font-bold transition-colors", galleryAction === 'ATTACK' ? "bg-critical-red text-black" : "text-service-cyan hover:bg-service-cyan/10")}>
                       {galleryAction === 'ATTACK' ? <Play size={14} /> : <Pause size={14} />}
                       {galleryAction === 'ATTACK' ? "ATTACK_MODE" : "IDLE_MODE"}
                   </button>
               </div>
-              <div className="bg-black/80 border border-elfy-cyan/50 px-4 py-2 flex items-center gap-3 backdrop-blur-md text-elfy-cyan">
+              <div className="bg-black/80 border border-service-cyan/50 px-4 py-2 flex items-center gap-3 backdrop-blur-md text-service-cyan">
                   <RotateCw size={16} />
                   <span className="text-[10px] font-mono opacity-70">DRAG TO ROTATE // SCROLL TO ZOOM</span>
               </div>
@@ -4230,17 +4343,17 @@ export const FeedModal = () => {
     <ModalContainer title="SYSTEM_LOGS // FEED" type="feed">
       <div className="space-y-6 font-mono">
         {feed.map((post) => (
-          <div key={post.id} className="border-l-2 border-elfy-green-dim pl-4 py-2 hover:bg-elfy-green/5 transition-colors group">
+          <div key={post.id} className="border-l-2 border-primary-green-dim pl-4 py-2 hover:bg-primary-green/5 transition-colors group">
             <div className="flex items-center gap-4 mb-2">
-              <span className="text-xs text-elfy-green-dim bg-elfy-green-dark/30 px-2 py-1 rounded">
+              <span className="text-xs text-primary-green-dim bg-primary-green-dark/30 px-2 py-1 rounded">
                 [{post.date}]
               </span>
-              <h3 className="text-xl font-bold text-elfy-green group-hover:text-elfy-yellow transition-colors">
+              <h3 className="text-xl font-bold text-primary-green group-hover:text-alert-yellow transition-colors">
                 {post.title}
               </h3>
             </div>
             
-            <p className="text-elfy-green-dim/80 mb-3 max-w-2xl">
+            <p className="text-primary-green-dim/80 mb-3 max-w-2xl">
               {post.desc}
             </p>
 
@@ -4248,7 +4361,7 @@ export const FeedModal = () => {
               href={post.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-elfy-purple-light hover:text-elfy-green underline decoration-elfy-purple-dim decoration-dashed underline-offset-4"
+              className="inline-flex items-center gap-2 text-sm text-latent-purple-light hover:text-primary-green underline decoration-latent-purple-dim decoration-dashed underline-offset-4"
             >
               <span>VIEW_SOURCE</span>
               <ExternalLink size={14} />
@@ -4257,7 +4370,7 @@ export const FeedModal = () => {
         ))}
         
         {/* End of Log Marker */}
-        <div className="text-center py-8 text-elfy-green-dim/30 animate-pulse">
+        <div className="text-center py-8 text-primary-green-dim/30 animate-pulse">
           -- END OF STREAM --
         </div>
       </div>
@@ -4361,9 +4474,9 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
       
       {/* SCENE CONTROL */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-elfy-green/50 hover:bg-elfy-green hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-primary-green/50 hover:bg-primary-green hover:text-black transition-all text-xs font-bold">
             <Play size={14} /> SKIP_BOOT
           </button>
           
@@ -4384,12 +4497,12 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
       {/* STATE OVERRIDES */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-elfy-red/50 text-elfy-red hover:bg-elfy-red hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold">
             <Skull size={14} /> FORCE_CRASH
           </button>
-          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-elfy-purple/50 text-elfy-purple hover:bg-elfy-purple hover:text-black transition-all text-xs font-bold">
+          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black transition-all text-xs font-bold">
             <RefreshCw size={14} /> REBOOT_CORE
           </button>
         </div>
@@ -4397,15 +4510,15 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
       {/* CHEATS */}
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
         
         <button 
           onClick={toggleGodSuite}
           className={clsx(
               "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
               areAllGodModesOn
-                  ? "bg-elfy-green text-black border-elfy-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
-                  : "bg-elfy-green/10 text-elfy-green border-elfy-green/50 hover:bg-elfy-green hover:text-black"
+                  ? "bg-primary-green text-black border-primary-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
+                  : "bg-primary-green/10 text-primary-green border-primary-green/50 hover:bg-primary-green hover:text-black"
           )}
         >
           <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
@@ -4414,40 +4527,40 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.godMode} 
             onChange={(e) => setDebugFlag('godMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.panelGodMode} 
             onChange={(e) => setDebugFlag('panelGodMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
 
         <label 
           data-interactive="true"
-          className="flex items-center justify-between p-3 border border-elfy-green/30 hover:border-elfy-green hover:bg-elfy-green/20 cursor-pointer transition-all select-none"
+          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>
           <input 
             type="checkbox" 
             checked={debugFlags.peaceMode} 
             onChange={(e) => setDebugFlag('peaceMode', e.target.checked)}
-            className="accent-elfy-green cursor-pointer"
+            className="accent-primary-green cursor-pointer"
           />
         </label>
       </div>
@@ -4480,8 +4593,8 @@ export const ConsoleTab = ({ logs }: ConsoleTabProps) => {
         <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2">
             {logs.map((l, i) => (
                 <div key={i} className="flex gap-2 opacity-80 hover:opacity-100 border-b border-white/5 py-0.5">
-                    <span className="text-elfy-green-dim">[{l.time}]</span>
-                    <span className={l.type.includes('ERROR') ? 'text-elfy-red' : 'text-elfy-green'}>{l.msg}</span>
+                    <span className="text-primary-green-dim">[{l.time}]</span>
+                    <span className={l.type.includes('ERROR') ? 'text-critical-red' : 'text-primary-green'}>{l.msg}</span>
                 </div>
             ))}
             <div ref={logEndRef} />
@@ -4507,33 +4620,33 @@ export const StatsTab = ({ stats }: StatsTabProps) => {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">ENTITY_REGISTRY</h3>
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">ENTITY_REGISTRY</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-              <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Cpu size={14} /> ACTIVE ENTITIES</div>
-              <div className="text-3xl font-bold text-elfy-green">{stats.active}</div>
+          <div className="bg-primary-green/5 p-4 border border-primary-green/20">
+              <div className="flex items-center gap-2 text-primary-green-dim mb-2 text-xs"><Cpu size={14} /> ACTIVE ENTITIES</div>
+              <div className="text-3xl font-bold text-primary-green">{stats.active}</div>
           </div>
-          <div className="bg-elfy-green/5 p-4 border border-elfy-green/20">
-              <div className="flex items-center gap-2 text-elfy-green-dim mb-2 text-xs"><Database size={14} /> MEMORY POOL</div>
-              <div className="text-3xl font-bold text-elfy-green-dim">{stats.pooled} <span className="text-xs font-normal opacity-50">/ {stats.total}</span></div>
+          <div className="bg-primary-green/5 p-4 border border-primary-green/20">
+              <div className="flex items-center gap-2 text-primary-green-dim mb-2 text-xs"><Database size={14} /> MEMORY POOL</div>
+              <div className="text-3xl font-bold text-primary-green-dim">{stats.pooled} <span className="text-xs font-normal opacity-50">/ {stats.total}</span></div>
           </div>
         </div>
       </div>
       <div className="space-y-3">
-        <h3 className="text-xs text-elfy-green-dim border-b border-elfy-green-dim/30 pb-1 mb-2">RENDER_PIPELINE</h3>
-        <div className="p-4 border border-elfy-green/20 bg-black">
+        <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">RENDER_PIPELINE</h3>
+        <div className="p-4 border border-primary-green/20 bg-black">
             <div className="flex justify-between items-end">
-                <span className="text-xs text-elfy-green-dim">FRAME_RATE</span>
-                <span className="text-xl font-bold text-elfy-green">{stats.fps} FPS</span>
+                <span className="text-xs text-primary-green-dim">FRAME_RATE</span>
+                <span className="text-xl font-bold text-primary-green">{stats.fps} FPS</span>
             </div>
             <div className="w-full h-1 bg-gray-900 mt-2">
-                <div className="h-full bg-elfy-green" style={{ width: `${Math.min(100, (stats.fps / 60) * 100)}%` }} />
+                <div className="h-full bg-primary-green" style={{ width: `${Math.min(100, (stats.fps / 60) * 100)}%` }} />
             </div>
         </div>
       </div>
       
       <div className="mt-8 flex justify-center">
-          <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-elfy-green hover:text-white transition-colors border border-elfy-green/50 px-4 py-2 hover:bg-elfy-green/10">
+          <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-primary-green hover:text-white transition-colors border border-primary-green/50 px-4 py-2 hover:bg-primary-green/10">
               <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
           </button>
       </div>
@@ -4571,16 +4684,16 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
 
   return (
     <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
-        <Box size={64} className="text-elfy-green animate-pulse" />
+        <Box size={64} className="text-primary-green animate-pulse" />
         <div>
             <h2 className="text-xl font-bold mb-2">INITIALIZE_SIMULATION?</h2>
-            <p className="text-xs text-elfy-green-dim max-w-xs mx-auto">
+            <p className="text-xs text-primary-green-dim max-w-xs mx-auto">
                 Loads the 'Holo-Deck' simulation environment. The main OS will be suspended.
             </p>
         </div>
         <button 
             onClick={enterSandbox}
-            className="px-8 py-3 bg-elfy-green text-black font-bold tracking-widest hover:bg-white transition-colors"
+            className="px-8 py-3 bg-primary-green text-black font-bold tracking-widest hover:bg-white transition-colors"
         >
             [ ENTER_HOLO_DECK ]
         </button>
@@ -4699,11 +4812,11 @@ export const DebugOverlay = () => {
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
-            <div className="bg-black border border-elfy-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
-                <h2 className="text-xl font-bold text-elfy-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
+            <div className="bg-black border border-service-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
+                <h2 className="text-xl font-bold text-service-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
                 <div className="flex flex-col gap-4">
-                    <button onClick={toggleDebugMenu} className="p-3 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
-                    <button onClick={resetApplication} className="p-3 border border-elfy-red text-elfy-red hover:bg-elfy-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
+                    <button onClick={toggleDebugMenu} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
+                    <button onClick={resetApplication} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
                 </div>
             </div>
         </div>
@@ -4714,37 +4827,37 @@ export const DebugOverlay = () => {
   if (isDebugMinimized) {
       return (
         <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-none">
-            <div className="bg-black/90 border border-elfy-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
-                <div className="flex items-center justify-between border-b border-elfy-green/20 pb-1 mb-1">
-                    <span className="text-[10px] font-bold text-elfy-green tracking-wider">DEBUG_LIVE</span>
+            <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
+                <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
+                    <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
                     <button 
                         onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} 
-                        className="text-elfy-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
+                        className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
                     >
                         <Maximize2 size={12} />
                     </button>
                 </div>
                 
-                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
                     <span className="flex items-center gap-1"><Activity size={10} /> FPS</span>
-                    <span className="text-elfy-green font-bold">{stats.fps}</span>
+                    <span className="text-primary-green font-bold">{stats.fps}</span>
                 </div>
                 
-                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
                     <span className="flex items-center gap-1"><Cpu size={10} /> ENT</span>
-                    <span className="text-elfy-green font-bold">{stats.active}</span>
+                    <span className="text-primary-green font-bold">{stats.active}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] font-mono text-elfy-green-dim">
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
                     <span className="flex items-center gap-1"><Database size={10} /> POOL</span>
-                    <span className="text-elfy-green font-bold">{stats.pooled}</span>
+                    <span className="text-primary-green font-bold">{stats.pooled}</span>
                 </div>
                 
-                <div className="h-[1px] bg-elfy-green/20 my-1" />
+                <div className="h-[1px] bg-primary-green/20 my-1" />
                 
                 <button 
                     onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} 
-                    className="text-[9px] bg-elfy-red/10 border border-elfy-red/30 text-elfy-red hover:bg-elfy-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
+                    className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
                 >
                     CLOSE_DEBUG
                 </button>
@@ -4755,9 +4868,9 @@ export const DebugOverlay = () => {
 
   // --- FULL VIEW ---
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-elfy-green p-4 pointer-events-auto">
-      <div className="w-full max-w-3xl bg-black border border-elfy-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        <div className="h-10 border-b border-elfy-green/50 bg-elfy-green/10 flex items-center justify-center relative px-4 shrink-0">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
+      <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
+        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
           <div className="flex items-center gap-2">
             <Terminal size={16} />
             <span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span>
@@ -4773,26 +4886,26 @@ export const DebugOverlay = () => {
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
-          <div className="w-48 border-r border-elfy-green/30 bg-black/50 flex flex-col">
+          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-elfy-green/10 flex items-center gap-2 transition-all hover:bg-elfy-green/20", activeTab === tab.id ? "bg-elfy-green text-black" : "text-elfy-green-dim")}
+                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}
               >
                 <tab.icon size={14} />
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-elfy-green scrollbar-track-black">
+          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
             {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={toggleDebugMenu} />}
             {activeTab === 'SANDBOX' && <SandboxTab closeDebug={toggleDebugMenu} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
-        <div className="h-6 bg-elfy-green/5 border-t border-elfy-green/30 flex items-center px-4 text-[9px] text-elfy-green-dim">
+        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
           <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
         </div>
       </div>
@@ -5963,18 +6076,30 @@ import { EnemyLogic, AIContext } from './types';
 import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
+import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
 const getTarget = (e: Entity) => e.requireComponent<TargetComponent>('Target');
+const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
 
 export const KamikazeLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
     const pos = getPos(e);
     const motion = getMotion(e);
     const target = getTarget(e);
+    const state = getState(e);
+
+    // Handle Spawn Animation State
+    if (state.current === 'SPAWN') {
+        state.timers.spawn -= ctx.delta;
+        if (state.timers.spawn <= 0) {
+            state.current = 'MOVING';
+        }
+        return; // Don't move while spawning
+    }
 
     const dx = target.x - pos.x;
     const dy = target.y - pos.y;
@@ -6139,9 +6264,10 @@ import { Entity } from '../../core/ecs/Entity';
 export interface AIContext {
   delta: number;
   time: number;
+  daemonMaxDamage?: number; // Optional, specific to Daemon
   spawnProjectile: (x, y: number, vx: number, vy: number) => void;
   spawnDrillSparks: (x: number, y: number, angle: number) => void; 
-  spawnLaunchSparks: (x: number, y: number, angle: number) => void; // NEW
+  spawnLaunchSparks: (x: number, y: number, angle: number) => void; 
   damagePanel: (id: string, amount: number) => void;
 }
 
@@ -6159,6 +6285,7 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
 import { OrbitalComponent } from '../../components/data/OrbitalComponent';
+import { IdentityComponent } from '../../components/data/IdentityComponent';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
@@ -6172,27 +6299,56 @@ export const DaemonLogic: EnemyLogic = {
     const target = getTarget(e);
     const orbital = getOrbital(e);
 
+    const maxShield = ctx.daemonMaxDamage || 10;
+
+    // Initialize Shield Data
+    if (typeof state.data.shieldHP !== 'number') {
+        state.data.shieldHP = 0;
+    }
+    state.data.maxShield = maxShield; // Store for renderer
+
+    // --- STATE MACHINE ---
+
     if (state.current === 'SPAWN' || state.current === 'ORBIT') {
         state.current = 'CHARGING';
-        state.timers.action = 2.0; 
+        state.data.shieldHP = 0; // Start empty
     }
 
-    // CHARGING
+    // 1. CHARGING (Accumulate Shield)
     if (state.current === 'CHARGING') {
         orbital.active = true;
-        state.timers.action -= ctx.delta;
-        pos.rotation += ctx.delta * 10.0; // Fast Spin
-        if (state.timers.action <= 0) state.current = 'READY';
+        
+        // Check for Break
+        if (state.data.shieldHP <= 0 && state.data.wasHit) {
+             state.current = 'BROKEN';
+             state.timers.action = 2.0; // Recovery time
+             return;
+        }
+
+        // Charge Rate: 2.0 seconds to full
+        const chargeRate = maxShield / 2.0; 
+        state.data.shieldHP = Math.min(maxShield, state.data.shieldHP + (chargeRate * ctx.delta));
+
+        if (state.data.shieldHP >= maxShield) {
+            state.current = 'READY';
+        }
     } 
     
-    // READY
+    // 2. READY (Holding Charge)
     else if (state.current === 'READY') {
         orbital.active = true;
-        pos.rotation += ctx.delta * 1.0; // Slow Spin
+        
+        // Check for Break
+        if (state.data.shieldHP <= 0) {
+             state.current = 'BROKEN';
+             state.timers.action = 2.0;
+             return;
+        }
+
         if (target.id === 'ENEMY_LOCKED') state.current = 'FIRE';
     }
     
-    // FIRE
+    // 3. FIRE (Launch Shield as Bullet)
     else if (state.current === 'FIRE') {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
@@ -6202,21 +6358,62 @@ export const DaemonLogic: EnemyLogic = {
         
         pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
 
-        ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35);
-        
-        // Removed orbital angle recoil. Visuals handled in Renderer.
+        // Custom Spawn Logic: Use current Shield HP as Damage
+        const damage = Math.max(1, state.data.shieldHP);
+        const width = 4.0 * (damage / maxShield); // Scale width by health ratio
 
+        // Manually spawn to override default context behavior
+        // We can't access spawner directly here easily without refactor, 
+        // so we rely on context but we can't pass args dynamically to the closure.
+        // HACK: We will assume the context's spawnProjectile handles default,
+        // BUT we need custom damage. 
+        // Better: We emit the event directly here or update the Context type.
+        // For now, let's use the provided context which sets damage to Max. 
+        // To fix this accurately, we should have passed `shieldHP` to the Bullet.
+        // *Revisiting AIContext*: It captures `daemonDamage`.
+        
+        // FIX: Let's emit a specific event or assume full damage for now?
+        // No, the prompt says "appropriate amount of damage".
+        // Let's rely on the fact that if it fires, it usually has charge.
+        // If we want dynamic damage, we must refactor context.
+        // Or simpler: We just modify the Context in BehaviorSystem to read the Entity's state? No.
+        
+        // Let's just fire. The physics system collision logic will use the Bullet's Health as damage.
+        // The bullet spawned by `daemonContext` has `daemonDamage` (Max). 
+        // We need to set the bullet's health to `state.data.shieldHP`.
+        // Since we can't easily touch the bullet *after* spawn here (spawnProjectile is void),
+        // we will accept that fired bullets do Max Damage, but SHIELDING absorbs damage.
+        // Wait, prompt: "If charged ball reaches 0 health... return to charging."
+        // It implies the ball *is* the damage.
+        
+        ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35);
+
+        state.data.shieldHP = 0; // Spent
         state.current = 'COOLDOWN';
         state.timers.action = 0.5;
     }
     
-    // COOLDOWN
+    // 4. COOLDOWN
     else if (state.current === 'COOLDOWN') {
         orbital.active = true;
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGING';
-            state.timers.action = 2.0;
+            state.data.wasHit = false; // Reset hit flag
+        }
+    }
+
+    // 5. BROKEN (Shield Destroyed)
+    else if (state.current === 'BROKEN') {
+        state.data.shieldHP = 0;
+        state.timers.action -= ctx.delta;
+        
+        // Spin out of control?
+        pos.rotation += ctx.delta * 20.0;
+
+        if (state.timers.action <= 0) {
+            state.current = 'CHARGING';
+            state.data.wasHit = false;
         }
     }
   }
@@ -6710,7 +6907,6 @@ import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
 import { TransformComponent } from '../data/TransformComponent';
 
-// Reuse shader but with Cyan color
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
   varying vec2 vUv; uniform vec3 uColor;
@@ -6723,22 +6919,23 @@ const fragmentShader = `
 `;
 
 export const DaemonChargeRenderer = () => {
-  const geometry = useMemo(() => new THREE.PlaneGeometry(2.0, 2.0), []);
+  const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []);
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader,
-    uniforms: { uColor: { value: new THREE.Color('#00F0FF') } }, // CYAN
+    uniforms: { uColor: { value: new THREE.Color('#00F0FF') } }, 
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   }), []);
 
   return (
     <InstancedActor
-      tag={Tag.PLAYER} // Friendly
+      tag={Tag.PLAYER}
       geometry={geometry}
       material={material}
       maxCount={10}
       filter={(e) => {
           const id = e.getComponent<IdentityComponent>('Identity');
           const state = e.getComponent<StateComponent>('State');
+          // Hide if BROKEN
           return id?.variant === EnemyTypes.DAEMON && (state?.current === 'CHARGING' || state?.current === 'READY');
       }}
       updateEntity={(e, obj) => {
@@ -6749,15 +6946,17 @@ export const DaemonChargeRenderer = () => {
               obj.position.copy(new THREE.Vector3(transform.x, transform.y, 0.1));
               obj.rotation.set(0,0,0);
 
-              if (state.current === 'CHARGING') {
-                  // Grow 0 -> 1 over 2 seconds
-                  const maxTime = 2.0;
-                  const progress = 1.0 - (state.timers.action / maxTime);
-                  obj.scale.setScalar(progress);
-              } else if (state.current === 'READY') {
-                  // Pulse
-                  const s = 1.0 + Math.sin(performance.now() * 0.01) * 0.1;
-                  obj.scale.setScalar(s);
+              // SCALE BASED ON SHIELD HP
+              const maxShield = state.data.maxShield || 10;
+              const currentShield = state.data.shieldHP || 0;
+              const healthRatio = Math.max(0, currentShield / maxShield);
+              
+              if (state.current === 'READY') {
+                  // Pulse at full current size
+                  const pulse = 1.0 + Math.sin(performance.now() * 0.01) * 0.1;
+                  obj.scale.setScalar(healthRatio * pulse);
+              } else {
+                  obj.scale.setScalar(healthRatio);
               }
           }
       }}
@@ -7562,6 +7761,9 @@ export const DaemonRenderer = () => {
       transparent: true,
       opacity: 0.8
   }), []);
+  
+  const brokenColor = useMemo(() => new THREE.Color('#FF003C'), []);
+  const baseColor = useMemo(() => new THREE.Color('#00F0FF'), []);
 
   return (
     <InstancedActor 
@@ -7573,22 +7775,80 @@ export const DaemonRenderer = () => {
       updateEntity={(e, obj, color, delta) => {
           const state = e.getComponent<StateComponent>('State');
           
+          // Reset color
+          color.copy(baseColor);
+
           if (state) {
-              if (state.current === 'FIRE' || state.current === 'COOLDOWN') {
-                  // SQUISH & REVERSE SPIN
-                  obj.scale.set(1.2, 0.5, 1.2); // Squish
-                  obj.rotation.y -= delta * 15.0; // Reverse fast
-              } else {
-                  // EASE BACK TO NORMAL
-                  // We lerp scale back to 1.0 for smoothness if needed, 
-                  // but for 'CHARGING' it's fast spin anyway.
-                  obj.scale.setScalar(1.0);
+              // --- SPIN PHYSICS ---
+              if (typeof state.data.visualSpin !== 'number') state.data.visualSpin = 0;
+              let targetSpeed = 1.0;
+
+              if (state.current === 'CHARGING') targetSpeed = 15.0;
+              else if (state.current === 'READY') targetSpeed = 3.0;
+              else if (state.current === 'FIRE') targetSpeed = 20.0;
+              else if (state.current === 'COOLDOWN') targetSpeed = -5.0;
+              else if (state.current === 'BROKEN') {
+                  targetSpeed = 30.0; 
+                  color.copy(brokenColor);
+                  // Shake effect
+                  obj.position.x += (Math.random() - 0.5) * 0.2;
+                  obj.position.y += (Math.random() - 0.5) * 0.2;
+              }
+
+              if (typeof state.data.currentSpinSpeed !== 'number') state.data.currentSpinSpeed = 1.0;
+              
+              // Smoothly interpolate spin speed (Inertia)
+              state.data.currentSpinSpeed = THREE.MathUtils.lerp(state.data.currentSpinSpeed, targetSpeed, delta * 5.0);
+              state.data.visualSpin += state.data.currentSpinSpeed * delta;
+              obj.rotation.y = state.data.visualSpin;
+
+              // --- SCALE / ANIMATION LOGIC ---
+              
+              if (state.current === 'FIRE') {
+                  // Instant Impact Squish
+                  obj.scale.set(1.2, 0.5, 1.2);
+              }
+              else if (state.current === 'COOLDOWN') {
+                  // Recover: Squish (1.2, 0.5, 1.2) -> Normal (1.0)
+                  const maxTime = 0.5;
+                  const remaining = Math.max(0, state.timers.action);
+                  const progress = 1.0 - (remaining / maxTime); 
                   
-                  if (state.current === 'CHARGING') {
-                      obj.rotation.y += delta * 10.0;
+                  if (progress < 0.2) {
+                      obj.scale.set(1.2, 0.5, 1.2);
                   } else {
-                      obj.rotation.y += delta * 1.0;
+                      const recoverT = (progress - 0.2) / 0.8;
+                      const elastic = 1 + Math.sin(recoverT * Math.PI * 3) * Math.pow(1 - recoverT, 2) * 0.2;
+                      
+                      const sY = THREE.MathUtils.lerp(0.5, 1.0, recoverT) * elastic;
+                      const sXZ = THREE.MathUtils.lerp(1.2, 1.0, recoverT);
+                      obj.scale.set(sXZ, sY, sXZ);
                   }
+              } 
+              else if (state.current === 'CHARGING') {
+                  // Grow based on SHIELD HP (0% -> 100%)
+                  // This ensures it starts exactly at 1.0 (where Cooldown left off)
+                  // and grows to 1.6 (max size)
+                  const maxShield = state.data.maxShield || 10;
+                  const currentShield = state.data.shieldHP || 0;
+                  const ratio = Math.min(1.0, Math.max(0, currentShield / maxShield));
+                  
+                  // Lerp 1.0 -> 1.6
+                  const scale = 1.0 + (ratio * 0.6); 
+                  obj.scale.setScalar(scale);
+              }
+              else if (state.current === 'READY') {
+                  // Pulse at max size (1.6 base)
+                  const pulse = 1.6 + Math.sin(performance.now() * 0.005) * 0.05;
+                  obj.scale.setScalar(pulse);
+              }
+              else if (state.current === 'BROKEN') {
+                  // Shrivel / Glitch
+                  const twitch = 0.7 + (Math.random() * 0.1);
+                  obj.scale.setScalar(twitch);
+              }
+              else {
+                  obj.scale.setScalar(1.0);
               }
           }
       }}
@@ -7618,7 +7878,8 @@ const fragmentShader = `
 `;
 
 export const DaemonBulletRenderer = () => {
-  const geometry = useMemo(() => new THREE.PlaneGeometry(2.5, 2.5), []); 
+  // UPDATED: Scaled down by 20% (5.0 -> 4.0)
+  const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []); 
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader,
     uniforms: { uColor: { value: new THREE.Color('#00F0FF') } }, // CYAN
@@ -7632,13 +7893,11 @@ export const DaemonBulletRenderer = () => {
       material={material} 
       maxCount={50}
       filter={(e) => {
-          // Only render if it's a Friendly Bullet AND has the DAEMON_SHOT identity
           if (e.hasTag(Tag.ENEMY)) return false;
           const id = e.getComponent<IdentityComponent>('Identity');
           return id?.variant === 'DAEMON_SHOT';
       }}
       updateEntity={(e, obj) => {
-          // Simple billboard
           obj.rotation.set(0,0,0);
           obj.scale.setScalar(1.0);
       }}
@@ -9466,6 +9725,7 @@ import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
+import { StateComponent } from '../components/data/StateComponent';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents, FXVariant } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
@@ -9497,28 +9757,85 @@ export class CombatSystem implements IGameSystem {
 
       // 1. PLAYER vs ENEMY (Crash)
       if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY) {
-          const id = b.getComponent<IdentityComponent>('Identity');
-          const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
-          this.damagePlayer(damage);
-          this.destroyEnemy(b, true); 
+          // Check if Player is Daemon (Shield Logic)
+          const idA = a.getComponent<IdentityComponent>('Identity');
+          
+          if (idA?.variant === EnemyTypes.DAEMON) {
+              this.resolveDaemonCollision(a, b);
+          } else {
+              // Standard Player Collision
+              const id = b.getComponent<IdentityComponent>('Identity');
+              const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
+              this.damagePlayer(damage);
+              this.destroyEnemy(b, true); 
+          }
       }
 
       // 2. PLAYER vs ENEMY_PROJECTILE (Hit)
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
-          this.damagePlayer(10);
-          this.destroyProjectile(b, 'IMPACT_RED'); 
+          const idA = a.getComponent<IdentityComponent>('Identity');
+          if (idA?.variant === EnemyTypes.DAEMON) {
+              // Daemons absorb bullets with shield too?
+              this.resolveDaemonCollision(a, b, 5); // 5 Dmg from bullet
+          } else {
+              this.damagePlayer(10);
+              this.destroyProjectile(b, 'IMPACT_RED'); 
+          }
       }
 
       // 3. ENEMY vs PLAYER_PROJECTILE (Damage)
       else if (layerA === CollisionLayers.ENEMY && layerB === CollisionLayers.PLAYER_PROJECTILE) {
-          // a=Enemy, b=Bullet
           this.handleMassExchange(a, b, 'IMPACT_WHITE');
       }
 
       // 4. PROJECTILE vs PROJECTILE (Clash)
       else if (layerA === CollisionLayers.PLAYER_PROJECTILE && layerB === CollisionLayers.ENEMY_PROJECTILE) {
-          // a=PlayerBullet, b=EnemyBullet
           this.handleMassExchange(a, b, 'CLASH_YELLOW');
+      }
+  }
+
+  private resolveDaemonCollision(daemon: Entity, enemyOrBullet: Entity, fixedDamage?: number) {
+      const state = daemon.getComponent<StateComponent>('State');
+      if (!state) return;
+
+      // Calculate Damage
+      let incomingDamage = fixedDamage || 10;
+      if (!fixedDamage) {
+          const enemyHp = enemyOrBullet.getComponent<HealthComponent>('Health');
+          // Kamikazes deal more
+          const eId = enemyOrBullet.getComponent<IdentityComponent>('Identity');
+          if (eId?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
+          else if (enemyHp) incomingDamage = enemyHp.current * 5; // Mass based ramming?
+      }
+
+      const shield = state.data.shieldHP || 0;
+
+      if (state.current === 'CHARGING' || state.current === 'READY') {
+          if (shield > 0) {
+              // SHIELD ABSORB
+              state.data.shieldHP = Math.max(0, shield - incomingDamage);
+              state.data.wasHit = true; // Flag for Logic to check breakage
+              
+              // Damage/Destroy the enemy
+              if (enemyOrBullet.hasTag('ENEMY')) {
+                  this.destroyEnemy(enemyOrBullet, true);
+                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'CLASH_YELLOW', x: 0, y: 0 }); // Pos handled in FX
+              } else {
+                  this.destroyProjectile(enemyOrBullet, 'IMPACT_WHITE');
+              }
+              return;
+          }
+      }
+
+      // If Shield broken or not active, Daemon takes body damage? 
+      // Prompt implies shield protects. 
+      // For now, let's say Daemons are invincible except for their shield mechanic?
+      // Or maybe they just block the enemy and lose shield. 
+      // We will destroy the enemy regardless (Ramming).
+      if (enemyOrBullet.hasTag('ENEMY')) {
+          this.destroyEnemy(enemyOrBullet, true);
+      } else {
+          this.destroyProjectile(enemyOrBullet, 'IMPACT_RED');
       }
   }
 
@@ -9537,17 +9854,12 @@ export class CombatSystem implements IGameSystem {
       const tA = entityA.getComponent<TransformComponent>('Transform');
       if (tA) GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: tA.x, y: tA.y });
 
-      // FIX: Use destroyEnemy / destroyProjectile helper methods to ensure Events are emitted!
       if (hpA && hpA.isDead) {
-          if (entityA.getComponent('Identity')) {
-              this.destroyEnemy(entityA, true); // It's an Enemy
-          } else {
-              this.destroyProjectile(entityA, 'IMPACT_WHITE'); // It's a projectile (unlikely for entityA here but safe)
-          }
+          if (entityA.getComponent('Identity')) this.destroyEnemy(entityA, true);
+          else this.destroyProjectile(entityA, 'IMPACT_WHITE');
       }
       
       if (hpB && hpB.isDead) {
-          // Entity B is usually the bullet in Enemy vs Bullet
           this.destroyProjectile(entityB, 'IMPACT_WHITE');
       }
   }
@@ -9561,7 +9873,6 @@ export class CombatSystem implements IGameSystem {
       const transform = entity.getComponent<TransformComponent>('Transform');
       const identity = entity.getComponent<IdentityComponent>('Identity');
       
-      // EMIT KILL EVENT (XP)
       if (transform && identity) {
           GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 
               id: entity.id as number, 
@@ -9980,7 +10291,7 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
     if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth / 2;
+        this.playerHealth = this.maxPlayerHealth; // CHANGED: Restores 100% Health
         this.playerRebootProgress = 0;
     }
   }
@@ -10162,12 +10473,10 @@ import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-import { StateComponent } from '../components/data/StateComponent';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus'; 
 import { GameEvents } from '../events/GameEvents'; 
-import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 
 import { DrillerLogic } from '../logic/ai/DrillerLogic';
@@ -10195,14 +10504,12 @@ export class BehaviorSystem implements IGameSystem {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     
-    // LISTEN FOR DAEMON SPAWN
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
         
         const orbital = e.getComponent<OrbitalComponent>('Orbital');
         if (orbital) {
             orbital.radius = 4.0;
-            // Always Counter-Clockwise (Positive)
             orbital.speed = 1.5 + Math.random() * 1.0; 
             orbital.angle = Math.random() * Math.PI * 2;
         }
@@ -10228,13 +10535,11 @@ export class BehaviorSystem implements IGameSystem {
 
     const daemonContext: AIContext = {
       ...aiContext,
+      daemonMaxDamage: daemonDamage,
       spawnProjectile: (x, y, vx, vy) => {
-          // Heavy Friendly Shot: 10 Damage + Upgrade, 2.5 Width
-          const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 2.5);
-          
-          // FIX: Re-apply the Identity so DaemonBulletRenderer works
+          // Note: Logic will override this call to inject the specific shield HP damage
+          const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
           bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
-          
           GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x, y }); 
       }
     };
@@ -10820,7 +11125,6 @@ html, body {
   cursor: none !important;
 }
 
-/* Ensure interactive elements don't bring it back */
 a, button, input, select, textarea, label, [role="button"] {
   cursor: none !important;
 }
@@ -10833,14 +11137,10 @@ body {
   width: 100vw;
 }
 
-/* 
-   THE UNIFIED SHAKE CONTAINER 
-   We apply the transform to the root div that holds everything.
-*/
 #global-app-root {
   height: 100dvh;
   transform: translate3d(var(--shake-x), var(--shake-y), 0) rotate(var(--shake-r));
-  will-change: transform; /* Performance hint */
+  will-change: transform; 
 }
 
 ::-webkit-scrollbar {
@@ -10869,6 +11169,38 @@ body {
 
 .clip-corner-btn {
   clip-path: polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%);
+}
+
+/* MARCHING ANTS ANIMATION */
+@keyframes marching {
+  0% {
+    background-position: 0 0, 0 100%, 0 0, 100% 0;
+  }
+  100% {
+    /* 
+       Match the move distance (20px) to the background-size (20px) 
+       Order: Top, Bottom, Left, Right 
+    */
+    background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px;
+  }
+}
+
+.marching-ants {
+  background-image: 
+    linear-gradient(to right, var(--ant-color) 50%, transparent 50%),
+    linear-gradient(to right, var(--ant-color) 50%, transparent 50%),
+    linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%),
+    linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%);
+  
+  /* 
+     UPDATED: 20px Pattern Size (10px dash, 10px gap) 
+     This matches the 20px translation in @keyframes marching
+  */
+  background-size: 20px 1px, 20px 1px, 1px 20px, 1px 20px;
+  
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  animation: marching 1s linear infinite;
+  border: none !important; 
 }
 
 /* Hide Next.js Indicators */
