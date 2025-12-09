@@ -36,8 +36,13 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
+  useEffect(() => {
+      AudioSystem.init();
+  }, []);
+
   const handleBreachStart = () => {
-    AudioSystem.init();
+    // NEW: Dramatic impact sound
+    AudioSystem.playSound('initialize_impact');
     startBreach();
   };
 
@@ -45,6 +50,7 @@ export default function Home() {
     setTimeout(() => {
       setBootState('active');
       setIntroDone(true);
+      AudioSystem.startMusic(); 
       startGame();
     }, 200);
   };
@@ -133,10 +139,8 @@ export default function Home() {
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
-                            {/* UPDATED CONTAINER: Marching Ants Effect */}
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                              
                               <button 
                                 onClick={() => openModal('feed')} 
                                 onMouseEnter={() => AudioSystem.playHover()}

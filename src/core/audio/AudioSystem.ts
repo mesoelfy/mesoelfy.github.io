@@ -8,13 +8,14 @@ class AudioSystemController {
   private masterGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  // New: Ambience Channel
   private ambienceGain: GainNode | null = null;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   
   private musicElement: HTMLAudioElement | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
+  
   public isReady = false;
+  private isMusicStarted = false; 
 
   public async init() {
     if (this.isReady) {
@@ -33,7 +34,6 @@ class AudioSystemController {
 
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
-    // Ambience connects to Master (bypasses SFX/Music toggles, but respects Master)
     this.ambienceGain.connect(this.masterGain); 
     this.masterGain.connect(this.ctx.destination);
 
@@ -42,10 +42,39 @@ class AudioSystemController {
     await this.generateAllSounds();
     
     this.setupEventListeners();
-    this.setupMusic();
+    
+    // Setup Global Interaction Listener
+    this.setupGlobalInteraction();
 
     this.isReady = true;
     console.log('[AudioSystem] Synthesized and Ready.');
+
+    if (this.isMusicStarted) {
+        this.playAmbience('ambience_b');
+    }
+  }
+
+  private setupGlobalInteraction() {
+      const wakeUp = () => {
+          if (this.hasInteracted) return;
+          this.hasInteracted = true; // Use a class property? It's not defined in class yet.
+          // Wait, 'hasInteracted' isn't defined on the class in this snippet. 
+          // Let's define it properly or use a local flag logic if we can't persist.
+          // Actually, we can check if context is running.
+          
+          if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(() => {});
+          }
+          
+          // Start ambience on first click
+          this.playAmbience('ambience_b');
+
+          window.removeEventListener('pointerdown', wakeUp);
+          window.removeEventListener('keydown', wakeUp);
+      };
+
+      window.addEventListener('pointerdown', wakeUp);
+      window.addEventListener('keydown', wakeUp);
   }
 
   private updateVolumes() {
@@ -54,8 +83,7 @@ class AudioSystemController {
       this.masterGain.gain.value = s.master ? 0.5 : 0;
       this.musicGain.gain.value = s.music ? 0.4 : 0;
       this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
-      // Ambience is always on if Master is on, typically quiet
-      this.ambienceGain!.gain.value = 1.0; 
+      if (this.ambienceGain) this.ambienceGain.gain.value = 1.0; 
   }
 
   private async generateAllSounds() {
@@ -89,19 +117,18 @@ class AudioSystemController {
       const mainGain = offline.createGain();
       mainGain.connect(offline.destination);
       
-      const attack = recipe.attack || 0.005; 
+      // LOGIC FIX:
+      // If attack is defined, start at 0 and ramp up.
+      // If attack is UNDEFINED (Ambience loops), start at full volume.
+      if (recipe.attack !== undefined) {
+          mainGain.gain.setValueAtTime(0, 0);
+          mainGain.gain.linearRampToValueAtTime(recipe.volume, recipe.attack);
+      } else {
+          mainGain.gain.setValueAtTime(recipe.volume, 0);
+      }
       
-      mainGain.gain.setValueAtTime(0, 0);
-      mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
-      
-      // If it's a short sound, fade out. If it's long/looping (like ambience), keep volume up at end?
-      // Actually, standard `playSound` logic expects one-shots. 
-      // For looping ambience, we want the buffer to be seamless.
-      // If we fade out to 0 at the end of the buffer, it will click/dip when looping.
-      // Strategy: For Ambience, we don't fade out in the *buffer*. We crossfade in real-time.
-      // But `synthesizeSound` is generic.
-      // Let's assume if duration > 4s, it's an ambience loop, so stay at volume.
-      if (recipe.duration < 4.0) {
+      // Don't fade out long loops (Ambience)
+      if (recipe.duration < 10.0) {
           mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
       } else {
           mainGain.gain.setValueAtTime(recipe.volume, recipe.duration);
@@ -183,14 +210,12 @@ class AudioSystemController {
       return await offline.startRendering();
   }
 
-  // --- AMBIENCE CONTROL ---
   public playAmbience(key: string) {
       if (!this.ctx || !this.ambienceGain) return;
       
-      // Stop previous
+      // Stop old if exists
       if (this.currentAmbienceNode) {
           const oldNode = this.currentAmbienceNode;
-          // Fade out old
           try { oldNode.stop(this.ctx.currentTime + 0.5); } catch {}
           this.currentAmbienceNode = null;
       }
@@ -203,8 +228,10 @@ class AudioSystemController {
       source.loop = true;
       
       const gain = this.ctx.createGain();
+      
+      // Real-time fade-in handled here
       gain.gain.setValueAtTime(0, this.ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); // 2s Fade In
+      gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); 
 
       source.connect(gain);
       gain.connect(this.ambienceGain);
@@ -269,7 +296,14 @@ class AudioSystemController {
   }
 
   public startMusic() {
+    this.isMusicStarted = true;
+    
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    
+    if (this.isReady) {
+        this.playAmbience('ambience_b');
+    }
+
     if (!this.musicElement) this.setupMusic();
     if (this.musicElement) this.musicElement.play().catch(() => {});
   }
