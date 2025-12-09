@@ -16,7 +16,6 @@ export class LifeCycleSystem implements IGameSystem {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     
-    // RESTORED: Listen for Zen Mode to wipe the board
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.registry.clear();
         this.spawnPurgeEffect();
@@ -37,7 +36,8 @@ export class LifeCycleSystem implements IGameSystem {
       }
 
       const health = entity.getComponent<HealthComponent>('Health');
-      if (health && health.isDead) {
+      // REFACTOR: Check property directly instead of .isDead getter
+      if (health && health.current <= 0) {
           const identity = entity.getComponent<IdentityComponent>('Identity');
           const transform = entity.getComponent<TransformComponent>('Transform');
           
@@ -67,7 +67,6 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   private spawnPurgeEffect() {
-      // Big white explosion from center to signify "Cleansing"
       for(let i=0; i<50; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 10 + Math.random() * 20;

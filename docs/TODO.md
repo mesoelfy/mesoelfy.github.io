@@ -1,35 +1,15 @@
 # MESOELFY_OS // REFACTOR ROADMAP
 
-## 🟢 COMPLETED 
 
 
 
-
-## 🔊 AUDIO ENGINEERING
-*Goal: Professional mixing and dynamic sound control.*
-- [ ] **Audio Bus System:** Create `GainNodes` for Master, Music, and SFX.
-- [ ] **Ducking Logic:** Lower Music volume slightly when heavy SFX (Explosions) trigger.
-- [ ] **Sound Pooling:** Prevent audio glitches by recycling Audio nodes.
-
-## 🖥 UI & REACT INTEGRATION
-*Goal: Seamless communication between the App and the Game.*
-- [ ] **Transient Updates:** Refactor HUD (Health/XP) to bypass React State and update DOM directly for 60fps performance.
-- [ ] **Viewport System:** Robust Screen-to-World mapping for resizing/mobile.
-- [ ] **Mobile Controls:** Implement Virtual Joystick overlay for touch devices.
-- [ ] **Touch Input:** Map touch events to the `InputSystem`.
-- [ ] **Asset Loader:** Preload sounds/textures with a progress bar.
-- [ ] **Debug Overlay:** FPS, Entity Count, Pool Usage stats toggle.
-- [ ] **Settings Modal:** Volume sliders (Music/SFX) and Graphics Quality toggles.
-
-## 🏁 FINAL POLISH & SHIP
-- [ ] **Code Freeze & Lint:** Cleanup imports and unused files.
 - [ ] **Deployment Check:** Verify GitHub Pages behavior.
-- [ ] **Readme Update:** Documentation for future contributors.
+
 
 
 ## 🐛 KNOWN BUGS
 - [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.
-- [ ] **Mobile Controls:** Unplayable on mobile (Need Virtual Joystick).
+- [ ] **Mobile Controls:** fine tune on mobile 
 
 ## MISC THOUGHTS
 
@@ -44,18 +24,11 @@
 
 - Should I have a high score patron screen where people can enter their name with links to whatever they want? - YES
 
-- Full functionality in the site isn't active immediately. the video slots and social media links could be broken until the first wave of munchers that are already there are dealt with. Maybe a power up that clears and heals the board is dropped?
-
-bullet width upgrade lmited
 
 
-
-we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
+- we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
 
 - We need a dramatic visual animation / indication signifying that a panel has reached 0% health like the system restored animation
-
-
-
 
 
 sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
@@ -65,28 +38,18 @@ Lucide icons: gitlab(a fox head) and shovel and puzzle and pickaxe and bow-arrow
 
 
 
-- there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
-
-- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating.
-
-- Game Over left most broken frame looks weird as broken - should retain full shape
-
-- Power UP - Heal panel faster
+- Power UP - Heal panel faster (cursor should show a visual upgrade - - - there should be additional upgrades to the visuals of the cursor to indicate upgrades - - - ask AI how it is currently being put together) - dead cursor needs updating too.
 
 
-Damage from drillers should be at a constant rate.
+- Damage from drillers should be at a constant rate.
 
-Bullet trails need to match the new sizes of bullets after upgrading them. Let's overhaul how trails are rendered.
-
+- Bullet trails need to match the new sizes of bullets after upgrading them. Let's overhaul how trails are rendered.
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
-- 
+- even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
 
-
-When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
-
-Music should get distorted, glitchy, and reverbed when Game Over state
+- Music should get distorted, glitchy, and reverbed when Game Over state for a moment before returning to normal
 
 
 
@@ -97,12 +60,7 @@ Music should get distorted, glitchy, and reverbed when Game Over state
 	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
 “
 
-Should a panel jitter when driller damages it and jitter more when more drillers are drilling?
-
-
-
-
-
+- Should a panel jitter when driller damages it and jitter more when more drillers are drilling?
 
 For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
 
@@ -110,209 +68,178 @@ Maybe we can have the motion grid affected by the music like a music player visu
 
 Your cursor could leave a psychedelic trail of colors behind it
 
+- a quick simple chime blip to indicate panel healed 100%.
+
+
+- DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
+
+
+- Indicate to player to press ESC or ~ in zen mode
 
 
 
-4     I’d like a quick simple chime blip to indicate panel healed 100%.
+- there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
+
+- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating.
+
+- Hunter weapon needs to start small and get bigger before launching
+
+- kamikaze should hurt player. if kamikaze explodes in panel, it does same amount of damage to panel as it does to player.
+
+- player colliding with any enemy should hurt player and make that enemy explode (by doing damage to them)
 
 
 
-
-DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
-
+- Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
 
 
-Somtimes driller enemy does not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
+- mobile - chrome devtools - device toolbar - confirm compatibility with different devices - right now the touch joystick isn't working because touching anywhere on skin moves character. also, everything isn't being resized properly for mobile and needs an overhaul.
 
-Indicate to player to press ESC or ~ in zen mode
+- Sometime green system restored animation appears in a panel during game over state.
 
+- enemy kill count is going up even when not killing them
 
-
-Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little taller of a panel
-
-
-Hunter weapon needs to start small and get bigger before launching
-
-kamikaze should hurt player. if kamikaze explodes in panel, it does same amount of damage to panel as it does to player.
-player colliding with any enemy should hurt player and make that enemy explode (by doing damage to them)
-
-
-Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
-
-
-mobile - chrome devtools - device toolbar - confirm compatibility with different devices - right now the touch joystick isn't working because touching anywhere on skin moves character. also, everything isn't being resized properly for mobile and needs an overhaul.
-
-Sometime green system restored animation appears in a panel during game over state.
-
-
-enemy kill count is going up even when not killing them
-
-Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
+- Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
 
 
 
 
+- Make the red crystal pulse with the heartbeat too
+
+- have the panels behave more like the glitched local one where you can see the lines - CSS layer thing? - - - have panels glow opposite direction/timing as the heart beat?
 
 
+- The LV_XX text isn't rendering properly in Firefox. (try other browswers)
+
+- Increase the reboot heal rate by 50%.
+
+- Stereo panning, so sounds on the left side of the screen have most of their volume in the left side, and SFX from entities happening on the right side of the screen have most of their volume on the right side, and to have the percentage degree of how much this happens depend on their position.
 
 
-
-Make the red crystal pulse with the heartbeat too
-have the panels behave more like the glitched local one where you can see the lines - CSS layer thing?
-
-the glow when MESOELFY_OS pulses should decay slowly.
-
-The LV_XX text isn't rendering properly in Firefox. (try other browswers)
-
-Increase the reboot heal rate by 50%.
-
-Stereo panning, so sounds on the left side of the screen have most of their volume in the left side, and SFX from entities happening on the right side of the screen have most of their volume on the right side, and to have the percentage degree of how much this happens depend on their position.
+- Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 
 
+- For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
 
-Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
-
-
-For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
-
-
-
-When daemon ball dies, daemon color is dark blue and then transitions into normal color instantly instead of gradually.
-
-
-IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?
-
-
-Need to add some kind of "begin" click prompt to enable sound in the intro. then we can add variable typing sounds, a ... sound in sync with how they appear, and sparkly shimmer sounds for the matrix rain.
 
 Entering and exiting system settings or debug should make a soft sound. (ask AI to give a bunch of samples for sounds that are still needed)
 
-Have Boot_Loader.sys be a pixel art folder of Elfy's face that does a cute animation after double clicking (coyote time or whatever with a larger grace window than MAC and PC open folder, but still a timing window that needs to be a double click, not clicked too far apart in time) - maybe each click moves forward an animation frame a total of three clicks without timing at all and she blows a kiss?
+
+- Need to add some kind of "begin" click prompt to enable sound in the intro. then we can add variable typing sounds, a ... sound in sync with how they appear, and sparkly shimmer sounds for the matrix rain.
+
+  - Have Boot_Loader.sys be a pixel art folder of Elfy's face that does a cute animation after double clicking (coyote time or whatever with a larger grace window than MAC and PC open folder, but still a timing window that needs to be a double click, not clicked too far apart in time) - maybe each click moves forward an animation frame a total of three clicks without timing at all and she blows a kiss?
+
+
+
+- If you are in system settings and press ~, it should close the system settings when it opens the debug menu.
+
+    - When you are in the debug menu, if you press ESC, it should close the debug menu and open the system settings.
+
+        - next is "feel' for sliders with snapping and SFX in increments of 5 units.
 
 
 
 
-Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
+- Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
 
 
 
-# MESOELFY_OS // REVISED ARCHITECTURE SPECIFICATION
 
-## **1. CORE PHILOSOPHY**
-*   **Separation of Concerns:** `CollisionSystem` detects hits. `CombatSystem` resolves damage. `FXManager` plays sounds. They do not overlap.
-*   **Data over Code:** If a value affects gameplay (speed, damage, color), it belongs in a Config file, not a Class file.
-*   **Event-Driven:** Systems communicate via `GameEventBus`. They rarely call each other directly.
+- Look for God-Components and violations of the Single Responsibility Principle.
 
----
+- Where am I wasting resources and could optimize to have a cleaner faster running build without removing functionality?
 
-## **2. PHASE 1: PHYSICS & COMBAT (The "Bleeding Edge")**
-*Goal: Untangle the `CollisionSystem`. Currently, it handles physics, damage, particle spawning, and event emission all in one loop. This is the hardest part to maintain.*
+- Am I doing anything in a clunky way in the codebase?
 
-*   **Step 1.1: Physics Configuration & Layers**
-    *   Create `src/game/config/PhysicsConfig.ts`.
-    *   Define **Collision Layers** (Bitmasks): `NONE`, `PLAYER`, `ENEMY`, `BULLET`, `PANEL`, `PICKUP`.
-    *   Define **Hitbox Sizes** in config, removing hardcoded numbers like `0.36` or `0.49` from `CollisionSystem`.
-*   **Step 1.2: The Collider Component**
-    *   Create `ColliderComponent.ts`.
-    *   Properties: `radius`, `layer` (what I am), `mask` (what I hit).
-    *   *Refactor:* Update `EntitySpawner` to attach this component instead of relying on implicit tag checks.
-*   **Step 1.3: Pure Collision System**
-    *   Refactor `CollisionSystem.ts`.
-    *   **Sole Responsibility:** Update the `SpatialGrid`, query it, check overlaps using `ColliderComponent` data.
-    *   **Output:** It does *not* destroy entities. It creates a `CollisionEvent` or attaches a `CollisionResultComponent` to the entity for processing next frame.
-*   **Step 1.4: The Combat System**
-    *   Create `CombatSystem.ts`.
-    *   **Responsibility:** Listens for Collision events/components.
-    *   **Logic:** "Bullet hit Enemy" -> Deduct HP -> If HP <= 0, emit `ENEMY_DESTROYED`.
-    *   **Logic:** "Enemy hit Panel" -> Deduct Panel HP -> Emit `PANEL_DAMAGED`.
+- ESC should bring up system settings in INTRO scene.
+    - Pressing ~ turns on god suite toggles when debug opened, but doesn't effect toggles when you press ~ in the debug menu to close the window. What I mean is, the user might have unchecked one more toggles. Pressing ~ shouldn't toggle them back on when the leave the debug menu.
 
----
 
-## **3. PHASE 2: DATA-DRIVEN SPAWNING (Scalability)**
-*Goal: Stop editing `EntitySpawner.ts` every time we add a new enemy. We want to define enemies in JSON/Objects.*
 
-*   **Step 2.1: The Archetype System**
-    *   Create `src/game/data/Archetypes.ts`.
-    *   Define templates:
-        ```typescript
-        export const ARCHETYPES = {
-          HUNTER: {
-            components: [
-              { type: 'Transform', args: { scale: 1.5 } },
-              { type: 'Motion', args: { maxSpeed: 12 } },
-              { type: 'Health', args: { max: 3 } },
-              { type: 'Identity', args: { variant: 'hunter' } }
-            ]
-          }
-        }
-        ```
-*   **Step 2.2: Generic Spawner**
-    *   Refactor `EntitySpawner.ts`.
-    *   Replace `spawnHunter()`, `spawnDriller()` with a single `spawn(archetypeId: string, x: y)`.
-    *   The spawner reads the Archetype config and assembles the entity dynamically.
+
+
+
+
+Here is the phase-based action plan to execute the audit recommendations. We will move from **safe, isolated UI refactoring** to **deep engine architecture changes**.
+
+### **Phase 1: UI Decomposition (The `IdentityHUD` Refactor)**
+**Goal:** Break the "God Component" into manageable pieces and fix React performance via granular state selection.
+
+1.  **Create Atomic Component: `VitalsRing`**
+    *   Extract the SVG logic for Health and XP rings into `src/ui/atoms/VitalsRing.tsx`.
+    *   Ensure it accepts simple props (`health`, `maxHealth`, `xp`, `level`) and contains **no** store subscriptions.
+
+2.  **Create Molecular Component: `UpgradeTerminal`**
+    *   Extract the list of upgrades (Kernel Modules) into `src/ui/molecules/UpgradeTerminal.tsx`.
+    *   Implement granular Zustand selectors so this component *only* re-renders when `upgradePoints` or `activeUpgrades` change, ignoring health changes.
+
+3.  **Create Molecular Component: `SystemOps`**
+    *   Extract the "System Ops" buttons (Purge, Restore, Repair) into `src/ui/molecules/SystemOps.tsx`.
+    *   Isolate the specific click handlers for these actions.
+
+4.  **Create Molecular Component: `IdentityFooter`**
+    *   Extract the "About" and "Contact" buttons into `src/ui/molecules/IdentityFooter.tsx`.
+    *   This component should be virtually static.
+
+5.  **Reassemble `IdentityHUD`**
+    *   Rewrite `src/ui/molecules/IdentityHUD.tsx` to act as a "dumb" layout container that simply imports and positions the four components created above.
+    *   Remove all heavy logic calculations from this file.
 
 ---
 
-## **4. PHASE 3: BEHAVIORS & STATE (The "Brain")**
-*Goal: Clean up `EnemyBehaviors.ts` and allow for complex enemy states without massive `if/else` chains.*
+### **Phase 2: ECS Data Purity & Configuration**
+**Goal:** strictly enforce the "Data-Only" rule for ECS Components and centralize magic numbers.
 
-*   **Step 3.1: Finite State Machine (FSM) Utility**
-    *   Create a lightweight FSM class in `src/game/utils/FSM.ts`.
-    *   Structure: `enter()`, `update()`, `exit()`.
-*   **Step 3.2: Behavior Strategies**
-    *   Refactor `EnemyBehaviors.ts`. Break it into separate files:
-        *   `src/game/logic/ai/DrillerLogic.ts`
-        *   `src/game/logic/ai/HunterLogic.ts`
-    *   Refactor `BehaviorSystem.ts` to simply delegate: `behaviors[id].update(entity, delta)`.
-*   **Step 3.3: Panel Targeting**
-    *   Implement logic for enemies to specifically target Panels (Social, Video, etc).
-    *   Add `TargetComponent` to enemies to store *what* they are attacking (Player vs Panel ID).
+1.  **Purify Data Components**
+    *   Audit `HealthComponent.ts`, `CombatComponent.ts`, and others.
+    *   **Action:** Remove all methods (e.g., `.damage()`, `.heal()`, `.isDead`).
+    *   Refactor these files to contain *only* public properties.
 
----
+2.  **Migrate Logic to Systems**
+    *   Open `CombatSystem.ts` and `InteractionSystem.ts`.
+    *   **Action:** Move the logic previously found in `.damage()` directly into these systems. Instead of calling `entity.health.damage(10)`, the system will explicitly perform `health.current -= 10`.
 
-## **5. PHASE 4: GAME FEEL & AUDIO (The "Juice")**
-*Goal: Make the game sound and look professional by centralizing assets.*
-
-*   **Step 4.1: Audio Configuration**
-    *   Create `src/game/config/AudioConfig.ts`.
-    *   Map logical events to sounds: `PLAYER_FIRE: { id: 'laser', vol: 0.5, pitchVar: 0.2 }`.
-    *   Refactor `AudioSystem` to read from this config, removing hardcoded strings.
-*   **Step 4.2: Visual Telegraphs**
-    *   Create `TelegraphComponent` (duration, color, shape).
-    *   Create `TelegraphSystem`.
-    *   Logic: When an enemy prepares an attack, add this component. The System renders a warning indicator (line/circle) automatically.
-*   **Step 4.3: Global FX Listener**
-    *   Refactor `FXManager.ts`. Ensure it is the *only* place spawning particles.
-    *   Systems emit events (`SPAWN_PARTICLE`); they do not call `spawner.spawnParticle` directly.
+3.  **Centralize Logic Constants**
+    *   Audit `HunterLogic.ts`, `DaemonLogic.ts`, and `DrillerLogic.ts`.
+    *   Identify hardcoded values (Rotation speeds, engagement distances, timers).
+    *   **Action:** Move these values into `src/game/config/EnemyConfig.ts` or a new `AIConfig.ts`.
+    *   Refactor the Logic files to import values from the config.
 
 ---
 
-## **6. PHASE 5: OPTIMIZATION & CLEANUP**
-*Goal: Ensure 60 FPS on lower-end devices.*
+### **Phase 3: Interface Enforcement (Tightening the Architecture)**
+**Goal:** Remove "Leaky Abstractions" by enforcing strict interface usage between systems.
 
-*   **Step 5.1: Strict Object Pooling**
-    *   Audit `ObjectPool.ts`. Ensure `reset()` actually clears *all* dirty data from recycled entities.
-    *   Implement pooling for Particles (currently they might be generating garbage).
-*   **Step 5.2: Transient Updates**
-    *   Review `UISyncSystem.ts`. Ensure no high-frequency data (like current HP or Score) triggers React re-renders.
-    *   Ensure all HUD elements use `useTransientRef`.
+1.  **Define System Interfaces**
+    *   Update `src/game/core/interfaces.ts`.
+    *   Create specific interfaces for systems that are dependencies of others (e.g., `IPhysicsSystem` exposing `querySpatialGrid`, `ICombatSystem` exposing `resolveCollision`).
 
----
+2.  **Refactor Service Locator Usage**
+    *   Update `CollisionSystem.ts` and `PlayerSystem.ts`.
+    *   **Action:** Change properties from concrete classes (e.g., `private physics: PhysicsSystem`) to interfaces (`private physics: IPhysicsSystem`).
+    *   Ensure `ServiceLocator` returns the interface type, preventing access to private system internals.
 
-## **DIRECTORY STRUCTURE TARGET**
-*Final visual of where files will live:*
-
-```text
-src/game/
-├── config/             # ALL magic numbers go here (Balance, Audio, Physics)
-├── components/         # React Views (Renderers)
-│   └── data/           # ECS Data Containers (Schema only, no logic)
-├── core/               # Engine, Loop, Input, SpatialGrid
-├── data/               # Archetypes, LootTables
-├── events/             # EventBus, Enum definitions
-├── logic/              # Pure math strategies (AI, Movement patterns)
-├── systems/            # The worker bees (Physics, Combat, Behavior)
-└── types/              # TS Interfaces
-```
+3.  **Decouple Systems via Events**
+    *   Audit instances where Systems call methods on other Systems directly (e.g., Behavior calling Spawner).
+    *   **Action:** Replace direct method calls with `GameEventBus.emit(...)`.
+    *   Update `EntitySpawner` or `WaveSystem` to listen for these events and react, creating a true one-way data flow.
 
 ---
+
+### **Phase 4: The Simulation Loop (Engine Core)**
+**Goal:** Decouple Game Logic speed from Frame Rate (Rendering speed).
+
+1.  **Implement Accumulator in `GameEngine`**
+    *   Modify `src/game/core/GameEngine.ts`.
+    *   **Action:** Introduce an `accumulator` variable.
+    *   **Action:** Define a constant `FIXED_TIMESTEP` (e.g., 1/60th of a second).
+
+2.  **Refactor the Update Loop**
+    *   Change the `update()` loop to a `while (accumulator >= FIXED_TIMESTEP)` loop.
+    *   Pass the fixed timestep to all Systems instead of the variable `delta` from requestAnimationFrame.
+
+3.  **Interpolation (Optional but Recommended)**
+    *   Pass an `alpha` (interpolation factor) to the Renderers (Components) to smooth out visual jitter between the fixed physics steps and the variable render steps.
+
+4.  **Final Polish**
+    *   Run a full regression test to ensure physics (collisions, movement speeds) feel identical at 30fps and 144fps.

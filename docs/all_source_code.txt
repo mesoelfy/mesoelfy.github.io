@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec  8 20:07:45 CST 2025
+Generated on: Tue Dec  9 15:43:17 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -12,7 +12,6 @@ PROJECT DIRECTORY STRUCTURE:
 ├── README.md
 ├── docs
 │   ├── MESOELFY_OS_AI_INSTRUCTIONS.md
-│   ├── TODO.md
 │   └── all_source_code.txt
 ├── next-env.d.ts
 ├── next.config.js
@@ -59,8 +58,14 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── AboutModal.tsx
 │   │   ├── intro
 │   │   │   └── MatrixBootSequence.tsx
-│   │   └── sandbox
-│   │       └── SimulationHUD.tsx
+│   │   ├── sandbox
+│   │   │   └── SimulationHUD.tsx
+│   │   └── settings
+│   │       ├── SettingsModal.tsx
+│   │       ├── components
+│   │       │   └── RangeSlider.tsx
+│   │       └── tabs
+│   │           └── SoundTab.tsx
 │   ├── game
 │   │   ├── GameOverlay.tsx
 │   │   ├── components
@@ -121,6 +126,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GameEventBus.ts
 │   │   │   └── GameEvents.ts
 │   │   ├── hooks
+│   │   │   ├── useHeartbeat.ts
 │   │   │   ├── usePanelRegistry.ts
 │   │   │   └── useTransientRef.ts
 │   │   ├── logic
@@ -198,7 +204,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-50 directories, 140 files
+53 directories, 143 files
 
 =====================================
 FILE: ./next.config.js
@@ -240,324 +246,6 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
-
-
-=====================================
-FILE: ./docs/TODO.md
-=====================================
-# MESOELFY_OS // REFACTOR ROADMAP
-
-## 🟢 COMPLETED 
-
-
-
-
-## 🔊 AUDIO ENGINEERING
-*Goal: Professional mixing and dynamic sound control.*
-- [ ] **Audio Bus System:** Create `GainNodes` for Master, Music, and SFX.
-- [ ] **Ducking Logic:** Lower Music volume slightly when heavy SFX (Explosions) trigger.
-- [ ] **Sound Pooling:** Prevent audio glitches by recycling Audio nodes.
-
-## 🖥 UI & REACT INTEGRATION
-*Goal: Seamless communication between the App and the Game.*
-- [ ] **Transient Updates:** Refactor HUD (Health/XP) to bypass React State and update DOM directly for 60fps performance.
-- [ ] **Viewport System:** Robust Screen-to-World mapping for resizing/mobile.
-- [ ] **Mobile Controls:** Implement Virtual Joystick overlay for touch devices.
-- [ ] **Touch Input:** Map touch events to the `InputSystem`.
-- [ ] **Asset Loader:** Preload sounds/textures with a progress bar.
-- [ ] **Debug Overlay:** FPS, Entity Count, Pool Usage stats toggle.
-- [ ] **Settings Modal:** Volume sliders (Music/SFX) and Graphics Quality toggles.
-
-## 🏁 FINAL POLISH & SHIP
-- [ ] **Code Freeze & Lint:** Cleanup imports and unused files.
-- [ ] **Deployment Check:** Verify GitHub Pages behavior.
-- [ ] **Readme Update:** Documentation for future contributors.
-
-
-## 🐛 KNOWN BUGS
-- [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.
-- [ ] **Mobile Controls:** Unplayable on mobile (Need Virtual Joystick).
-
-## MISC THOUGHTS
-
-
-- what if there is a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button, or the CONTACT and ABOUT ME buttons? What about an enemy type that enters a modal and does damage inside? Can that be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet? How do we deal with the enemies on the MESOELFY_OS screen if we are inside a modal fighting some enemies? Wouldn't that have weird game logic? I need to brainstorm this with AI.
-- need health for player and lives and powerups. (increase bullet size / rate of fire)
-- need help seeing not obvious stuff that is missing.
-
-- Kamekazi should be bigger and slow. If it blows up on player and is inside a panel, it does damage to that panel.
-
-- What things does Vampire Survivors do that I should implement? Game design and juice.
-
-- Should I have a high score patron screen where people can enter their name with links to whatever they want? - YES
-
-- Full functionality in the site isn't active immediately. the video slots and social media links could be broken until the first wave of munchers that are already there are dealt with. Maybe a power up that clears and heals the board is dropped?
-
-bullet width upgrade lmited
-
-
-
-we can skin the munchers/enemies differently as they get stronger with cool indicators including skins and animations of their pattern, and even glow or particles floating around them.
-
-- We need a dramatic visual animation / indication signifying that a panel has reached 0% health like the system restored animation
-
-
-
-
-
-sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image.
-
-Lucide icons: gitlab(a fox head) and shovel and puzzle and pickaxe and bow-arrow and biohazard and battery-charging and battery-plus and circle-dot-dashed and gem and loader-pinwheel and locate-fixed and swords and sparkles and snail and snowflake and ship-wheel look good. the cannabis one looks like an explosion. maybe the different chess pieces could be used for something. fan looks like a razer blade.
-
-
-
-
-- there could be "burrow" waves where they burrow into modal - - - and there can be a wave indicator in the header so you can keep track of when you need to go back
-
-- hunter spinning animation needs fine tuning - - - hunter bullet needs to start at size 0 and then grow to full size before being launched at player - - - hunter movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating.
-
-- Game Over left most broken frame looks weird as broken - should retain full shape
-
-- Power UP - Heal panel faster
-
-
-Damage from drillers should be at a constant rate.
-
-Bullet trails need to match the new sizes of bullets after upgrading them. Let's overhaul how trails are rendered.
-
-
-- the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
-
-- 
-
-
-When player regenerates itself, the health bar shows 50% but I think it might actually be a different number of health that it actually has? Also, even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
-
-Music should get distorted, glitchy, and reverbed when Game Over state
-
-
-
-“	•	The Skull Glitch:
-	◦	We will overlay a 2D, glitchy "Skull" graphic over the 3D canvas.
-	◦	This skull stays at opacity: 0 normally.
-	◦	As health drops, it randomly flickers to opacity: 1 for a single frame (subliminal glitch).
-	◦	At 0% Health, the Crystal vanishes entirely, and the Skull locks in permanently (Red).
-“
-
-Should a panel jitter when driller damages it and jitter more when more drillers are drilling?
-
-
-
-
-
-
-For zen mode, can we cycle through cool prismatic color patterns for elements in the header/footer/and the motion grid lines? Making it very cool and psychedelic and chill. We can make flavor text in the header and footer say something cheeky and diegetic too. Something about safe/chill/vibe mode.
-
-Maybe we can have the motion grid affected by the music like a music player visualizer, affected by the song that is playing?
-
-Your cursor could leave a psychedelic trail of colors behind it
-
-
-
-
-4     I’d like a quick simple chime blip to indicate panel healed 100%.
-
-
-
-
-DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
-
-
-
-Somtimes driller enemy does not render correctly on the screen. you can see the tip where it is drilling but not rest of body. other enemies render fine.
-
-Indicate to player to press ESC or ~ in zen mode
-
-
-
-Make IDENTITY_CORE a little shorter or a panel, and SOCIAL_UPLINK a little taller of a panel
-
-
-Hunter weapon needs to start small and get bigger before launching
-
-kamikaze should hurt player. if kamikaze explodes in panel, it does same amount of damage to panel as it does to player.
-player colliding with any enemy should hurt player and make that enemy explode (by doing damage to them)
-
-
-Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
-
-
-mobile - chrome devtools - device toolbar - confirm compatibility with different devices - right now the touch joystick isn't working because touching anywhere on skin moves character. also, everything isn't being resized properly for mobile and needs an overhaul.
-
-Sometime green system restored animation appears in a panel during game over state.
-
-
-enemy kill count is going up even when not killing them
-
-Resetting via debug menu then starting another game, player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
-
-
-
-
-
-
-
-
-We're using (Waveforms, Envelopes, Frequency Ramps) for our SFX. With those, what are some more really cool sounding techniques to implement that we haven't yet? And what are other things besides those three categories?
-
-How do these ideas sound for what is missing?
-
-1	"Reboot Tick" (Purple State): A gritty, low-pitched electric "zap" (Sawtooth wave) that played while you were actively regenerating a dead panel. designed to sound like forcing power into a broken system, distinct from the clean "healing" chime.
-
-2	"System Restored" (Happy Sound): A "power-on" sweep (Sine wave rising in pitch + high-frequency sparkle) that plays the moment a panel reached 100% and came back online.
-
-3	"Upgrade Selected": A satisfying ascending major arpeggio (3-note chime) when clicking a button in the level-up menu.
-
-What are some other moments in the game so far that are missing sounds? 
-
-I think the drilling sound needs to be overhauled.
-
-
-
-
-Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
-
-
-For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
-
-
-
-When daemon ball dies, daemon color is dark blue and then transitions into normal color instantly instead of gradually.
-
-
-IdentityHUD seems quite large. Is it a god-thing? Can we or should we break it down into smaller pieces?
-
-
-
-Clean chrome console log of all the youtube errors. the youtube stuff is working just fine as intended, but something in the console doesn't know that. Can we make it stop giving us all the warnings so I can read the console stuff that actually matters?
-
-
-
-# MESOELFY_OS // REVISED ARCHITECTURE SPECIFICATION
-
-## **1. CORE PHILOSOPHY**
-*   **Separation of Concerns:** `CollisionSystem` detects hits. `CombatSystem` resolves damage. `FXManager` plays sounds. They do not overlap.
-*   **Data over Code:** If a value affects gameplay (speed, damage, color), it belongs in a Config file, not a Class file.
-*   **Event-Driven:** Systems communicate via `GameEventBus`. They rarely call each other directly.
-
----
-
-## **2. PHASE 1: PHYSICS & COMBAT (The "Bleeding Edge")**
-*Goal: Untangle the `CollisionSystem`. Currently, it handles physics, damage, particle spawning, and event emission all in one loop. This is the hardest part to maintain.*
-
-*   **Step 1.1: Physics Configuration & Layers**
-    *   Create `src/game/config/PhysicsConfig.ts`.
-    *   Define **Collision Layers** (Bitmasks): `NONE`, `PLAYER`, `ENEMY`, `BULLET`, `PANEL`, `PICKUP`.
-    *   Define **Hitbox Sizes** in config, removing hardcoded numbers like `0.36` or `0.49` from `CollisionSystem`.
-*   **Step 1.2: The Collider Component**
-    *   Create `ColliderComponent.ts`.
-    *   Properties: `radius`, `layer` (what I am), `mask` (what I hit).
-    *   *Refactor:* Update `EntitySpawner` to attach this component instead of relying on implicit tag checks.
-*   **Step 1.3: Pure Collision System**
-    *   Refactor `CollisionSystem.ts`.
-    *   **Sole Responsibility:** Update the `SpatialGrid`, query it, check overlaps using `ColliderComponent` data.
-    *   **Output:** It does *not* destroy entities. It creates a `CollisionEvent` or attaches a `CollisionResultComponent` to the entity for processing next frame.
-*   **Step 1.4: The Combat System**
-    *   Create `CombatSystem.ts`.
-    *   **Responsibility:** Listens for Collision events/components.
-    *   **Logic:** "Bullet hit Enemy" -> Deduct HP -> If HP <= 0, emit `ENEMY_DESTROYED`.
-    *   **Logic:** "Enemy hit Panel" -> Deduct Panel HP -> Emit `PANEL_DAMAGED`.
-
----
-
-## **3. PHASE 2: DATA-DRIVEN SPAWNING (Scalability)**
-*Goal: Stop editing `EntitySpawner.ts` every time we add a new enemy. We want to define enemies in JSON/Objects.*
-
-*   **Step 2.1: The Archetype System**
-    *   Create `src/game/data/Archetypes.ts`.
-    *   Define templates:
-        ```typescript
-        export const ARCHETYPES = {
-          HUNTER: {
-            components: [
-              { type: 'Transform', args: { scale: 1.5 } },
-              { type: 'Motion', args: { maxSpeed: 12 } },
-              { type: 'Health', args: { max: 3 } },
-              { type: 'Identity', args: { variant: 'hunter' } }
-            ]
-          }
-        }
-        ```
-*   **Step 2.2: Generic Spawner**
-    *   Refactor `EntitySpawner.ts`.
-    *   Replace `spawnHunter()`, `spawnDriller()` with a single `spawn(archetypeId: string, x: y)`.
-    *   The spawner reads the Archetype config and assembles the entity dynamically.
-
----
-
-## **4. PHASE 3: BEHAVIORS & STATE (The "Brain")**
-*Goal: Clean up `EnemyBehaviors.ts` and allow for complex enemy states without massive `if/else` chains.*
-
-*   **Step 3.1: Finite State Machine (FSM) Utility**
-    *   Create a lightweight FSM class in `src/game/utils/FSM.ts`.
-    *   Structure: `enter()`, `update()`, `exit()`.
-*   **Step 3.2: Behavior Strategies**
-    *   Refactor `EnemyBehaviors.ts`. Break it into separate files:
-        *   `src/game/logic/ai/DrillerLogic.ts`
-        *   `src/game/logic/ai/HunterLogic.ts`
-    *   Refactor `BehaviorSystem.ts` to simply delegate: `behaviors[id].update(entity, delta)`.
-*   **Step 3.3: Panel Targeting**
-    *   Implement logic for enemies to specifically target Panels (Social, Video, etc).
-    *   Add `TargetComponent` to enemies to store *what* they are attacking (Player vs Panel ID).
-
----
-
-## **5. PHASE 4: GAME FEEL & AUDIO (The "Juice")**
-*Goal: Make the game sound and look professional by centralizing assets.*
-
-*   **Step 4.1: Audio Configuration**
-    *   Create `src/game/config/AudioConfig.ts`.
-    *   Map logical events to sounds: `PLAYER_FIRE: { id: 'laser', vol: 0.5, pitchVar: 0.2 }`.
-    *   Refactor `AudioSystem` to read from this config, removing hardcoded strings.
-*   **Step 4.2: Visual Telegraphs**
-    *   Create `TelegraphComponent` (duration, color, shape).
-    *   Create `TelegraphSystem`.
-    *   Logic: When an enemy prepares an attack, add this component. The System renders a warning indicator (line/circle) automatically.
-*   **Step 4.3: Global FX Listener**
-    *   Refactor `FXManager.ts`. Ensure it is the *only* place spawning particles.
-    *   Systems emit events (`SPAWN_PARTICLE`); they do not call `spawner.spawnParticle` directly.
-
----
-
-## **6. PHASE 5: OPTIMIZATION & CLEANUP**
-*Goal: Ensure 60 FPS on lower-end devices.*
-
-*   **Step 5.1: Strict Object Pooling**
-    *   Audit `ObjectPool.ts`. Ensure `reset()` actually clears *all* dirty data from recycled entities.
-    *   Implement pooling for Particles (currently they might be generating garbage).
-*   **Step 5.2: Transient Updates**
-    *   Review `UISyncSystem.ts`. Ensure no high-frequency data (like current HP or Score) triggers React re-renders.
-    *   Ensure all HUD elements use `useTransientRef`.
-
----
-
-## **DIRECTORY STRUCTURE TARGET**
-*Final visual of where files will live:*
-
-```text
-src/game/
-├── config/             # ALL magic numbers go here (Balance, Audio, Physics)
-├── components/         # React Views (Renderers)
-│   └── data/           # ECS Data Containers (Schema only, no logic)
-├── core/               # Engine, Loop, Input, SpatialGrid
-├── data/               # Archetypes, LootTables
-├── events/             # EventBus, Enum definitions
-├── logic/              # Pure math strategies (AI, Movement patterns)
-├── systems/            # The worker bees (Physics, Combat, Behavior)
-└── types/              # TS Interfaces
-```
-
----
 
 
 =====================================
@@ -1950,15 +1638,23 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen, bootState } = useStore();
+  const { introDone, isDebugOpen, bootState, activeModal } = useStore();
   
   const playerHealth = useGameStore(state => state.playerHealth);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
-  // Logic: Show cursor if Intro/Debug/Sandbox. 
-  // Hide if Game Over (User requested 3D triangle takeover, though debugging might need cursor)
-  // FIX: Always show cursor if Debug is open, even if dead.
-  const isDead = (playerHealth <= 0 || systemIntegrity <= 0) && !isDebugOpen;
+  // Logic: 
+  // 1. Always show if in Standby (Intro), Sandbox, or Settings.
+  // 2. Always show if Debug is open.
+  // 3. If Game Active, show unless Dead.
+  const isDead = (playerHealth <= 0 || systemIntegrity <= 0);
+  
+  const isVisible = 
+    bootState === 'standby' || 
+    bootState === 'sandbox' || 
+    activeModal === 'settings' ||
+    isDebugOpen || 
+    (!isDead && introDone);
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -1983,8 +1679,6 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  const isVisible = !introDone || isDebugOpen || bootState === 'sandbox';
-
   return (
     <>
       <style jsx global>{`
@@ -1993,14 +1687,14 @@ export const CustomCursor = () => {
 
       <motion.div
         className={clsx(
-            "fixed top-0 left-0 pointer-events-none z-[20000]", // FIX: Increased Z-Index
-            (isHovering && !isDead) ? "mix-blend-difference" : "" 
+            "fixed top-0 left-0 pointer-events-none z-[20000]", 
+            (isHovering && isVisible) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {isVisible && !isDead && (
+          {isVisible && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}
@@ -2277,6 +1971,7 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
+import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
@@ -2284,6 +1979,7 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 
 const MAX_HEALTH = 1000;
 
+// Panel Enter/Exit Animations
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
@@ -2303,6 +1999,19 @@ const panelVariants = {
   })
 };
 
+// TIGHTENED PULSE (4% Attack to match 0.03s Audio)
+const pulseVariants = {
+    heartbeat: {
+        opacity: [0, 0.6, 0],
+        scale: [1, 1.005, 1], 
+        transition: { 
+            duration: 0.8, 
+            times: [0, 0.04, 1], 
+            ease: "easeOut" 
+        }
+    }
+};
+
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
@@ -2313,13 +2022,13 @@ interface GlassPanelProps {
 export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
-  
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
-  const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
+  const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
+  const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
   const health = panelState ? panelState.health : MAX_HEALTH;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   const healthPercent = (health / MAX_HEALTH) * 100; 
@@ -2328,8 +2037,9 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
   
-  // Local Shake Controls
-  const controls = useAnimation();
+  // Controls
+  const shakeControls = useAnimation();
+  const heartbeatControls = useHeartbeat(); 
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -2340,20 +2050,18 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
 
-  // LISTEN FOR DAMAGE EVENTS TO TRIGGER LOCAL SHAKE
   useReactEffect(() => {
       if (!gameId) return;
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
-              // High frequency glitch shake
-              controls.start({
+              shakeControls.start({
                   x: [0, -5, 5, -5, 5, 0],
                   transition: { duration: 0.2 }
               });
           }
       });
       return unsub;
-  }, [gameId, controls]);
+  }, [gameId, shakeControls]);
 
   let borderColor = "border-primary-green-dim/30";
   if (isDestroyed) {
@@ -2372,19 +2080,27 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      // Use 'animate' prop to control variants, but use 'controls' for transient shake overrides
-      animate={isGameOver ? "shattered" : ["visible", controls as any]}
+      animate={isGameOver ? "shattered" : ["visible", shakeControls as any]}
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
         bgClass, 
         "border",
         borderColor, 
-        "shadow-[0_0_15px_rgba(11,212,38,0.05)]", 
         "rounded-sm",
         className
       )}
     >
+      {/* GLOBAL ALARM OVERLAY */}
+      {isCriticalGlobal && (
+          <motion.div 
+            className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
+            animate={heartbeatControls}
+            variants={pulseVariants}
+            initial={{ opacity: 0 }}
+          />
+      )}
+
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {title && (
@@ -2723,14 +2439,14 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/organisms/Header.tsx
 =====================================
-import { Volume2, VolumeX, Music, Activity } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-
-// --- SUB-COMPONENTS ---
+import { useHeartbeat } from '@/game/hooks/useHeartbeat';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -2738,18 +2454,11 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
          style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
     <div className="absolute w-full h-[1px] bg-current opacity-40" />
     <div className="absolute h-full w-[1px] bg-current opacity-40" />
-    
     <motion.div 
       className="absolute inset-0 origin-bottom-right opacity-40"
-      style={{ 
-        background: 'conic-gradient(from 0deg, transparent 270deg, currentColor 360deg)',
-      }}
+      style={{ background: 'conic-gradient(from 0deg, transparent 270deg, currentColor 360deg)' }}
       animate={{ rotate: 360 }}
-      transition={{ 
-        repeat: Infinity, 
-        ease: "linear", 
-        duration: panic ? 1.0 : 4.0 
-      }}
+      transition={{ repeat: Infinity, ease: "linear", duration: panic ? 1.0 : 4.0 }}
     />
     <div className={`w-1 h-1 rounded-full bg-current ${active ? 'animate-pulse' : ''}`} />
   </div>
@@ -2784,9 +2493,8 @@ const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any)
 );
 
 export const Header = () => {
-  const { audioSettings, toggleMaster, toggleMusic, toggleSfx } = useStore();
+  const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   
-  // React State Subscriptions (Guaranteed to update)
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
   const score = useGameStore(state => state.score);
@@ -2802,22 +2510,58 @@ export const Header = () => {
   if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
 
+  const heartbeatControls = useHeartbeat();
+
+  const textVariants = {
+      heartbeat: {
+          scale: [1, 1.05, 1],
+          textShadow: [
+              "0 0 0px #FF003C",
+              "0 0 25px #FF003C", 
+              "0 0 0px #FF003C"
+          ],
+          transition: { 
+              duration: 0.8, 
+              times: [0, 0.04, 1], 
+              ease: "easeOut" 
+          }
+      }
+  };
+
+  const barVariants = {
+      heartbeat: {
+          filter: [
+              "brightness(1) drop-shadow(0 0 0px #FF003C)",
+              "brightness(2) drop-shadow(0 0 10px #FF003C)",
+              "brightness(1) drop-shadow(0 0 0px #FF003C)"
+          ],
+          transition: { 
+              duration: 0.8, 
+              times: [0, 0.04, 1],
+              ease: "easeOut" 
+          }
+      }
+  };
+
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
-        <span className={clsx(
-            "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
-            statusColor
-        )}>
+        <motion.span 
+            animate={isCritical ? heartbeatControls : undefined}
+            variants={textVariants}
+            className={clsx(
+                "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
+                statusColor
+            )}
+        >
           MESOELFY_OS
-        </span>
+        </motion.span>
         
         {mounted && (
           <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
             <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
-            
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
                 <span className="font-bold text-lg tabular-nums tracking-widest">
@@ -2831,32 +2575,34 @@ export const Header = () => {
       {/* RIGHT: Status & Audio Controls */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
-            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
             
-            <AudioBtn 
-                active={audioSettings.music} 
-                onClick={toggleMusic} 
-                icon={Music} 
-                offIcon={Music}
-                color={statusColor}
-            />
+            {/* Settings Button */}
+            <button 
+                onClick={() => { toggleSettings(); AudioSystem.playClick(); }}
+                className={clsx(
+                  "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
+                  statusColor
+                )}
+            >
+                <Settings size={14} />
+            </button>
 
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
-            <AudioBtn 
-                active={audioSettings.master} 
-                onClick={toggleMaster} 
-                icon={Volume2} 
-                offIcon={VolumeX} 
-                color={statusColor}
-            />
+            <AudioBtn active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} offIcon={Wind} color={statusColor} />
+            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
+            <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            <AudioBtn active={audioSettings.master} onClick={toggleMaster} icon={Volume2} offIcon={VolumeX} color={statusColor} />
         </div>
       </div>
 
-      {/* BOTTOM BORDER */}
+      {/* BOTTOM BORDER / HEALTH BAR */}
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <div 
+          <motion.div 
+            animate={isCritical ? heartbeatControls : undefined}
+            variants={barVariants}
             className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
                 isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
             )} 
@@ -2892,10 +2638,25 @@ class AudioSystemController {
   private masterGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private musicElement: HTMLAudioElement | null = null;
   
+  private ambienceGain: GainNode | null = null;
+  private ambiencePanner: StereoPannerNode | null = null;
+  private ambienceLFO: OscillatorNode | null = null;
+  private ambiencePanConstraint: GainNode | null = null;
+  
+  private ambienceFilter: BiquadFilterNode | null = null;
+  private ambienceDepthLFO: OscillatorNode | null = null;
+  private ambienceDepthGain: GainNode | null = null;
+  
+  private currentAmbienceNode: AudioBufferSourceNode | null = null;
+  private currentAmbienceKey: string | null = null;
+  
+  private musicElement: HTMLAudioElement | null = null;
   private buffers: Map<string, AudioBuffer> = new Map();
+  
   public isReady = false;
+  private hasInteracted = false; 
+  private isMusicStarted = false; 
 
   public async init() {
     if (this.isReady) {
@@ -2907,33 +2668,115 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
-    // Bus Setup
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
+    this.ambienceGain = this.ctx.createGain();
+    this.ambiencePanner = this.ctx.createStereoPanner();
+    this.ambiencePanConstraint = this.ctx.createGain();
+    this.ambienceLFO = this.ctx.createOscillator();
+    this.ambienceFilter = this.ctx.createBiquadFilter(); 
+    this.ambienceDepthLFO = this.ctx.createOscillator(); 
+    this.ambienceDepthGain = this.ctx.createGain();      
 
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
-    this.updateVolumes();
+    this.ambienceGain.connect(this.ambienceFilter);
+    this.ambienceFilter.connect(this.ambiencePanner);
+    this.ambiencePanner.connect(this.masterGain);
 
-    // Generate Sounds from Config
+    this.ambienceLFO.type = 'sine';
+    this.ambienceLFO.connect(this.ambiencePanConstraint);
+    this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
+    
+    this.ambienceFilter.type = 'lowpass';
+    this.ambienceDepthLFO.type = 'sine';
+    this.ambienceDepthLFO.connect(this.ambienceDepthGain);
+    this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
+
+    this.ambienceLFO.start();
+    this.ambienceDepthLFO.start();
+
+    this.updateVolumes(); 
+
     await this.generateAllSounds();
     
     this.setupEventListeners();
-    this.setupMusic();
+    this.setupGlobalInteraction();
 
     this.isReady = true;
     console.log('[AudioSystem] Synthesized and Ready.');
+
+    if (this.isMusicStarted) {
+        this.playAmbience('ambience_b');
+    }
   }
 
-  private updateVolumes() {
+  private setupGlobalInteraction() {
+      const wakeUp = () => {
+          if (this.hasInteracted) return;
+          this.hasInteracted = true; 
+          if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(() => {});
+          }
+          if (!this.currentAmbienceKey) {
+              this.playAmbience('ambience_b');
+          }
+          window.removeEventListener('pointerdown', wakeUp);
+          window.removeEventListener('keydown', wakeUp);
+      };
+      window.addEventListener('pointerdown', wakeUp);
+      window.addEventListener('keydown', wakeUp);
+  }
+
+  public updateVolumes() {
       if (!this.masterGain || !this.sfxGain || !this.musicGain) return;
       const s = useStore.getState().audioSettings;
-      this.masterGain.gain.value = s.master ? 0.5 : 0;
-      this.musicGain.gain.value = s.music ? 0.4 : 0;
-      this.sfxGain.gain.value = s.sfx ? 0.8 : 0;
+      
+      this.masterGain.gain.value = s.master ? (s.volumeMaster * 0.5) : 0;
+      this.musicGain.gain.value = s.music ? (s.volumeMusic * 0.4) : 0;
+      this.sfxGain.gain.value = s.sfx ? (s.volumeSfx * 0.8) : 0;
+      
+      if (this.ambienceGain) {
+          this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
+      }
+
+      // AMBIENCE LAB: RECALIBRATED TO MATCH DEFAULT (0.5)
+      // Math.pow(10, (val - 0.5) * 2)
+      // If val = 0.5, pow = 1. (Exact Base)
+      // If val = 0.0, pow = 0.1. (1/10th Base)
+      // If val = 1.0, pow = 10. (10x Base)
+      
+      if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
+          const filter = s.ambFilter ?? 0.5;
+          const speed = s.ambSpeed ?? 0.5;
+          const width = s.ambWidth ?? 0.5;
+          const modSpeed = s.ambModSpeed ?? 0.5;
+          const modDepth = s.ambModDepth ?? 0.5;
+
+          // 1. DENSITY (Base 300Hz) -> Range 30Hz to 3000Hz
+          this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
+
+          // 2. CIRCULATION (Base 0.05Hz) -> Range 0.005Hz to 0.5Hz
+          this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
+
+          // 3. STEREO WIDTH (Base 0.1 Gain) -> Range 0.01 to 1.0
+          // Using slightly different curve for width to allow full 0
+          // But to keep 0.5 = 0.1, let's use the same power logic roughly?
+          // No, width feels better with simple scaling, but let's anchor it.
+          // Let's use: val^3 * 0.8. 
+          // 0.5^3 * 0.8 = 0.125 * 0.8 = 0.1. (Matches)
+          // 1.0^3 * 0.8 = 0.8 (Wide)
+          this.ambiencePanConstraint.gain.value = Math.pow(width, 3) * 0.8;
+          
+          // 4. FLUCTUATION (Base 0.2Hz) -> Range 0.02Hz to 2.0Hz
+          this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
+          
+          // 5. INSTABILITY (Base 10Hz) -> Range 1Hz to 100Hz
+          this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
+      }
   }
 
   private async generateAllSounds() {
@@ -2945,6 +2788,18 @@ class AudioSystemController {
       await Promise.all(promises);
   }
 
+  private makeDistortionCurve(amount: number) {
+    const k = typeof amount === 'number' ? amount : 50;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
   private async synthesizeSound(recipe: SoundRecipe): Promise<AudioBuffer | null> {
       if (!this.ctx) return null;
       
@@ -2952,24 +2807,72 @@ class AudioSystemController {
       const length = sampleRate * recipe.duration;
       const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      // --- SYNTHESIS LOGIC ---
-      const gain = offline.createGain();
-      gain.connect(offline.destination);
+      const mainGain = offline.createGain();
+      mainGain.connect(offline.destination);
       
-      // Volume Envelope (Fade out at end)
-      gain.gain.setValueAtTime(recipe.volume, 0);
-      gain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+      const attack = recipe.attack || 0.005; 
+      
+      if (recipe.attack !== undefined) {
+          mainGain.gain.setValueAtTime(0, 0);
+          mainGain.gain.linearRampToValueAtTime(recipe.volume, recipe.attack);
+      } else {
+          mainGain.gain.setValueAtTime(recipe.volume, 0);
+      }
+      
+      if (recipe.duration < 10.0) {
+          mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+      } else {
+          mainGain.gain.setValueAtTime(recipe.volume, recipe.duration);
+      }
+
+      let outputNode: AudioNode = mainGain;
+
+      if (recipe.distortion) {
+          const shaper = offline.createWaveShaper();
+          shaper.curve = this.makeDistortionCurve(recipe.distortion);
+          shaper.connect(outputNode);
+          outputNode = shaper; 
+      }
+
+      if (recipe.tremolo) {
+          const tremoloNode = offline.createGain();
+          tremoloNode.connect(outputNode);
+          outputNode = tremoloNode;
+
+          const lfo = offline.createOscillator();
+          lfo.type = recipe.tremolo.wave || 'sine';
+          lfo.frequency.value = recipe.tremolo.rate;
+          
+          const lfoGain = offline.createGain();
+          lfoGain.gain.value = recipe.tremolo.depth; 
+          
+          tremoloNode.gain.value = 1.0 - (recipe.tremolo.depth / 2);
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremoloNode.gain);
+          
+          lfo.start();
+      }
 
       if (recipe.type === 'oscillator') {
           const osc = offline.createOscillator();
           osc.type = recipe.wave || 'sine';
           osc.frequency.setValueAtTime(recipe.frequency[0], 0);
-          
           if (recipe.frequency[1] !== recipe.frequency[0]) {
               osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
           }
-          
-          osc.connect(gain);
+
+          if (recipe.fm) {
+             const modOsc = offline.createOscillator();
+             const modGain = offline.createGain();
+             modOsc.type = recipe.fm.modType;
+             modOsc.frequency.value = recipe.fm.modFreq;
+             modGain.gain.value = recipe.fm.modIndex;
+             modOsc.connect(modGain);
+             modGain.connect(osc.frequency); 
+             modOsc.start();
+          }
+
+          osc.connect(outputNode);
           osc.start();
       } 
       else if (recipe.type === 'noise') {
@@ -2982,16 +2885,15 @@ class AudioSystemController {
           const noise = offline.createBufferSource();
           noise.buffer = noiseBuffer;
 
-          // Filter Sweep
           if (recipe.filter) {
               const filter = offline.createBiquadFilter();
               filter.type = 'lowpass';
               filter.frequency.setValueAtTime(recipe.filter[0], 0);
               filter.frequency.exponentialRampToValueAtTime(recipe.filter[1], recipe.duration);
               noise.connect(filter);
-              filter.connect(gain);
+              filter.connect(outputNode);
           } else {
-              noise.connect(gain);
+              noise.connect(outputNode);
           }
           noise.start();
       }
@@ -2999,18 +2901,47 @@ class AudioSystemController {
       return await offline.startRendering();
   }
 
+  public playAmbience(key: string) {
+      if (!this.ctx || !this.ambienceGain) return;
+      
+      if (this.currentAmbienceKey === key && this.currentAmbienceNode) {
+          return; 
+      }
+
+      if (this.currentAmbienceNode) {
+          const oldNode = this.currentAmbienceNode;
+          try { oldNode.stop(this.ctx.currentTime + 0.5); } catch {}
+          this.currentAmbienceNode = null;
+      }
+
+      const buffer = this.buffers.get(key);
+      if (!buffer) return;
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); 
+
+      source.connect(gain);
+      gain.connect(this.ambienceGain); 
+      source.start();
+      
+      this.currentAmbienceNode = source;
+      this.currentAmbienceKey = key;
+  }
+
   public playSound(key: string) {
       if (!this.ctx || !this.sfxGain) return;
-      
       const buffer = this.buffers.get(key);
       const recipe = AUDIO_CONFIG[key];
-      
       if (!buffer || !recipe) return;
 
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       
-      // Pitch Variance
       if (recipe.pitchVariance > 0) {
           const detune = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
           source.detune.value = detune;
@@ -3022,23 +2953,18 @@ class AudioSystemController {
 
   private setupEventListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser'));
-    
-    // Distinguish Explosions
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
         if (p.type === 'kamikaze') this.playSound('explosion_large');
         else this.playSound('explosion_small');
     });
-    
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
         this.playSound('explosion_large'); 
         this.duckMusic(0.7, 1.0);
     });
-    
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
         this.playSound('explosion_large');
         this.duckMusic(1.0, 3.0);
     });
-    
     GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
@@ -3062,9 +2988,12 @@ class AudioSystemController {
       this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
 
-  // --- PUBLIC API ---
   public startMusic() {
+    this.isMusicStarted = true;
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    if (this.isReady) {
+        this.playAmbience('ambience_b');
+    }
     if (!this.musicElement) this.setupMusic();
     if (this.musicElement) this.musicElement.play().catch(() => {});
   }
@@ -3081,6 +3010,8 @@ class AudioSystemController {
   public playClick() { this.playSound('click'); }
   public playHover() { this.playSound('hover'); }
   public playBootSequence() { this.playSound('powerup'); } 
+  public playDrillSound() { this.playSound('driller_drill'); }
+  public playRebootZap() { this.playSound('reboot_tick'); }
   
   public setMasterMute(m: boolean) { 
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, master: !m } }));
@@ -3094,6 +3025,10 @@ class AudioSystemController {
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, sfx: !m } }));
       this.updateVolumes();
   }
+  public setAmbienceMute(m: boolean) {
+      useStore.setState(s => ({ audioSettings: { ...s.audioSettings, ambience: !m } }));
+      this.updateVolumes();
+  }
 }
 
 export const AudioSystem = new AudioSystemController();
@@ -3103,6 +3038,7 @@ export const AudioSystem = new AudioSystemController();
 FILE: ./src/core/store/useStore.ts
 =====================================
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useGameStore } from '@/game/store/useGameStore';
 import { EnemyTypes } from '@/game/config/Identifiers';
@@ -3112,11 +3048,41 @@ interface AudioSettings {
   master: boolean;
   music: boolean;
   sfx: boolean;
+  ambience: boolean;
+  
+  // Levels (0.0 - 3.0)
+  volumeMaster: number;
+  volumeMusic: number;
+  volumeSfx: number;
+  volumeAmbience: number;
+  
+  // Ambience Lab (0.0 - 4.0+)
+  ambFilter: number;   
+  ambSpeed: number;    
+  ambWidth: number;    
+  ambModSpeed: number; 
+  ambModDepth: number; 
 }
 
-type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
+const DEFAULT_AUDIO: AudioSettings = {
+  master: true,
+  music: false,
+  sfx: true,
+  ambience: true,
+  volumeMaster: 1.0,
+  volumeMusic: 1.0,
+  volumeSfx: 1.0,
+  volumeAmbience: 1.0,
+  ambFilter: 0.5,
+  ambSpeed: 0.5,
+  ambWidth: 0.5,
+  ambModSpeed: 0.5, 
+  ambModDepth: 0.5, 
+};
+
+type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
 type BootState = 'standby' | 'active' | 'sandbox';
-type SandboxView = 'arena' | 'gallery';
+type SandboxView = 'arena' | 'gallery' | 'audio';
 
 interface DebugFlags {
   godMode: boolean;
@@ -3127,28 +3093,23 @@ interface DebugFlags {
 }
 
 interface AppState {
-  // App Flow
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
   activeModal: ModalType;
   hoveredItem: string | null;
   
-  // Sandbox State
   sandboxView: SandboxView;
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK';
   
-  // Audio & Accessibility
   audioSettings: AudioSettings;
-  screenShakeStrength: number; // 0.0 to 1.0
+  screenShakeStrength: number; 
   
-  // Debug
   isDebugOpen: boolean;
   isDebugMinimized: boolean;
   debugFlags: DebugFlags;
   
-  // Actions
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   startBreach: () => void;
@@ -3159,14 +3120,18 @@ interface AppState {
   
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
+  toggleSettings: () => void;
+  
   setHovered: (item: string | null) => void;
   resetApplication: () => void;
   
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
+  toggleAmbience: () => void;
+  setVolume: (channel: keyof AudioSettings, value: number, max?: number) => void;
+  resetAudioSettings: () => void;
   
-  // NEW: Shake Control
   setScreenShake: (val: number) => void;
   
   toggleDebugMenu: () => void;
@@ -3175,111 +3140,129 @@ interface AppState {
   resetDebugFlags: () => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  bootState: 'standby',
-  introDone: false,
-  isBreaching: false,
-  activeModal: 'none',
-  hoveredItem: null,
-  
-  sandboxView: 'arena',
-  galleryTarget: EnemyTypes.DRILLER,
-  galleryAction: 'IDLE',
-  
-  audioSettings: {
-    master: true,
-    music: false,
-    sfx: true,
-  },
-  
-  screenShakeStrength: 1.0, // Default 100%
-  
-  isDebugOpen: false,
-  isDebugMinimized: false,
-  debugFlags: {
-    godMode: false,
-    panelGodMode: false,
-    peaceMode: false,
-    showHitboxes: false,
-    timeScale: 1.0,
-  },
-
-  setBootState: (bs) => set({ bootState: bs }),
-  setIntroDone: (done) => set({ introDone: done }),
-  startBreach: () => set({ isBreaching: true }),
-  
-  setSandboxView: (view) => set({ sandboxView: view }),
-  setGalleryTarget: (target) => set({ galleryTarget: target }),
-  toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
-  
-  openModal: (modal) => {
-      if (get().audioSettings.master && get().audioSettings.sfx) {
-          AudioSystem.playClick(); 
-      }
-      set({ activeModal: modal });
-  },
-  
-  closeModal: () => {
-      if (get().audioSettings.master && get().audioSettings.sfx) {
-          AudioSystem.playClick();
-      }
-      set({ activeModal: 'none' });
-  },
-  
-  setHovered: (item) => set({ hoveredItem: item }),
-  
-  resetApplication: () => {
-      useGameStore.getState().stopGame();
-      useGameStore.getState().resetGame(); 
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      bootState: 'standby',
+      introDone: false,
+      isBreaching: false,
+      activeModal: 'none',
+      hoveredItem: null,
       
-      set({
-          bootState: 'standby',
-          introDone: false,
-          isBreaching: false,
-          activeModal: 'none',
-          isDebugOpen: false,
-          isDebugMinimized: false,
-          sandboxView: 'arena',
-          galleryTarget: EnemyTypes.DRILLER,
-          galleryAction: 'IDLE'
-      });
-  },
-  
-  toggleMaster: () => {
-      const prev = get().audioSettings.master;
-      const next = !prev;
-      set(state => ({ audioSettings: { ...state.audioSettings, master: next } }));
-      AudioSystem.setMasterMute(!next);
-      if (next && get().audioSettings.sfx) AudioSystem.playClick(); 
-  },
+      sandboxView: 'audio',
+      galleryTarget: EnemyTypes.DRILLER,
+      galleryAction: 'IDLE',
+      
+      audioSettings: { ...DEFAULT_AUDIO },
+      
+      screenShakeStrength: 1.0, 
+      
+      isDebugOpen: false,
+      isDebugMinimized: false,
+      debugFlags: {
+        godMode: false,
+        panelGodMode: false,
+        peaceMode: false,
+        showHitboxes: false,
+        timeScale: 1.0,
+      },
 
-  toggleMusic: () => {
-      const prev = get().audioSettings.music;
-      const next = !prev;
-      set(state => ({ audioSettings: { ...state.audioSettings, music: next } }));
-      AudioSystem.setMusicMute(!next);
-      if (next && get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
-  },
+      setBootState: (bs) => set({ bootState: bs }),
+      setIntroDone: (done) => set({ introDone: done }),
+      startBreach: () => set({ isBreaching: true }),
+      
+      setSandboxView: (view) => set({ sandboxView: view }),
+      setGalleryTarget: (target) => set({ galleryTarget: target }),
+      toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
+      
+      openModal: (modal) => {
+          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick(); 
+          set({ activeModal: modal });
+      },
+      
+      closeModal: () => {
+          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
+          set({ activeModal: 'none' });
+      },
 
-  toggleSfx: () => {
-      const prev = get().audioSettings.sfx;
-      const next = !prev;
-      set(state => ({ audioSettings: { ...state.audioSettings, sfx: next } }));
-      AudioSystem.setSfxMute(!next);
-      if (next && get().audioSettings.master) AudioSystem.playClick();
-  },
-  
-  setScreenShake: (val) => set({ screenShakeStrength: val }),
-  
-  toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
-  toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
-  setDebugFlag: (key, value) => set(state => ({ 
-      debugFlags: { ...state.debugFlags, [key]: value } 
-  })),
-  resetDebugFlags: () => set({
-      debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
-  })
-}));
+      toggleSettings: () => {
+          const current = get().activeModal;
+          if (current === 'settings') get().closeModal();
+          else get().openModal('settings');
+      },
+      
+      setHovered: (item) => set({ hoveredItem: item }),
+      
+      resetApplication: () => {
+          useGameStore.getState().stopGame();
+          useGameStore.getState().resetGame(); 
+          set({
+              bootState: 'standby',
+              introDone: false,
+              isBreaching: false,
+              activeModal: 'none',
+              isDebugOpen: false,
+              isDebugMinimized: false,
+              sandboxView: 'audio',
+              galleryTarget: EnemyTypes.DRILLER,
+              galleryAction: 'IDLE'
+          });
+      },
+      
+      toggleMaster: () => {
+          set(s => ({ audioSettings: { ...s.audioSettings, master: !s.audioSettings.master } }));
+          AudioSystem.updateVolumes();
+          if (get().audioSettings.master) AudioSystem.playClick(); 
+      },
+      toggleMusic: () => {
+          set(s => ({ audioSettings: { ...s.audioSettings, music: !s.audioSettings.music } }));
+          AudioSystem.updateVolumes();
+          if (get().audioSettings.music) AudioSystem.playClick();
+      },
+      toggleSfx: () => {
+          set(s => ({ audioSettings: { ...s.audioSettings, sfx: !s.audioSettings.sfx } }));
+          AudioSystem.updateVolumes();
+          if (get().audioSettings.sfx) AudioSystem.playClick();
+      },
+      toggleAmbience: () => {
+          set(s => ({ audioSettings: { ...s.audioSettings, ambience: !s.audioSettings.ambience } }));
+          AudioSystem.updateVolumes();
+          if (get().audioSettings.ambience) AudioSystem.playClick();
+      },
+      
+      setVolume: (channel, value, max = 2.0) => {
+          const clamped = Math.max(0, Math.min(max, value));
+          set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
+          AudioSystem.updateVolumes();
+      },
+      
+      resetAudioSettings: () => {
+          set({ audioSettings: { ...DEFAULT_AUDIO } });
+          AudioSystem.updateVolumes();
+          AudioSystem.playClick();
+      },
+      
+      setScreenShake: (val) => set({ screenShakeStrength: val }),
+      
+      toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
+      toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
+      setDebugFlag: (key, value) => set(state => ({ 
+          debugFlags: { ...state.debugFlags, [key]: value } 
+      })),
+      resetDebugFlags: () => set({
+          debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
+      })
+    }),
+    {
+      name: 'mesoelfy-ui-settings-v3',
+      partialize: (state) => ({ 
+          audioSettings: state.audioSettings,
+          screenShakeStrength: state.screenShakeStrength,
+          introDone: state.introDone
+      }), 
+    }
+  )
+);
 
 
 =====================================
@@ -3376,6 +3359,7 @@ import { AboutModal } from '@/features/identity/AboutModal';
 import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
+import { SettingsModal } from '@/features/settings/SettingsModal'; // NEW
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -3398,8 +3382,12 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
 
+  useEffect(() => {
+      AudioSystem.init();
+  }, []);
+
   const handleBreachStart = () => {
-    AudioSystem.init();
+    AudioSystem.playSound('initialize_impact');
     startBreach();
   };
 
@@ -3407,6 +3395,7 @@ export default function Home() {
     setTimeout(() => {
       setBootState('active');
       setIntroDone(true);
+      AudioSystem.startMusic(); 
       startGame();
     }, 200);
   };
@@ -3443,6 +3432,7 @@ export default function Home() {
                 <FeedModal />
                 <GalleryModal />
                 <ContactModal />
+                <SettingsModal /> {/* NEW */}
                 <ZenBomb />
             </>
         )}
@@ -3495,10 +3485,8 @@ export default function Home() {
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
-                            {/* UPDATED CONTAINER: Marching Ants Effect */}
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                              
                               <button 
                                 onClick={() => openModal('feed')} 
                                 onMouseEnter={() => AudioSystem.playHover()}
@@ -3534,6 +3522,382 @@ export default function Home() {
     </div>
   );
 }
+
+
+=====================================
+FILE: ./src/features/settings/tabs/SoundTab.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { RangeSlider } from '../components/RangeSlider';
+import { RotateCcw, Info } from 'lucide-react';
+
+export const SoundTab = () => {
+  const { audioSettings, setVolume, resetAudioSettings } = useStore();
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+      
+      {/* SECTION 1: GLOBAL MIXER */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-header font-black text-primary-green border-b border-primary-green/30 pb-2 mb-4 tracking-widest flex justify-between items-center">
+          <span>GLOBAL_MIXER</span>
+          <span className="text-[9px] font-mono opacity-50">HEADROOM: 300%</span>
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+          <RangeSlider 
+            label="MASTER_GAIN" 
+            value={audioSettings.volumeMaster} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeMaster', v, 3.0)} 
+          />
+          <RangeSlider 
+            label="MUSIC_LEVEL" 
+            value={audioSettings.volumeMusic} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeMusic', v, 3.0)} 
+          />
+          <RangeSlider 
+            label="SFX_LEVEL" 
+            value={audioSettings.volumeSfx} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeSfx', v, 3.0)} 
+          />
+          <RangeSlider 
+            label="AMBIENCE_LEVEL" 
+            value={audioSettings.volumeAmbience} 
+            max={3.0}
+            displayMax={300}
+            onChange={(v) => setVolume('volumeAmbience', v, 3.0)} 
+          />
+        </div>
+      </div>
+
+      {/* SECTION 2: AMBIENCE LAB (CALIBRATED) */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between border-b border-alert-yellow/30 pb-2 mb-4">
+            <h3 className="text-sm font-header font-black text-alert-yellow tracking-widest">
+              AMBIENCE_LAB // NOISE_FLOOR_SYNTH
+            </h3>
+            <div className="flex items-center gap-2 text-[9px] text-alert-yellow opacity-70">
+                <Info size={12} />
+                <span>PROCEDURAL_GENERATION</span>
+            </div>
+        </div>
+
+        <p className="text-[10px] font-mono text-gray-400 mb-6 max-w-2xl leading-relaxed">
+          The "Noise Floor" prevents digital silence. 
+          Modify the physics below to reshape the room acoustics in real-time.
+        </p>
+
+        {/* ROW 1: TONE & SPACE */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+          <RangeSlider 
+            label="DENSITY (FILTER)" 
+            value={audioSettings.ambFilter * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambFilter', v / 100, 1.0)} 
+            color="accent-alert-yellow"
+            // Math: 300 * 10^((val-0.5)*2)
+            format={(v) => {
+                const norm = v / 100;
+                const hz = 300 * Math.pow(10, (norm - 0.5) * 2);
+                return `${hz.toFixed(0)} Hz`;
+            }}
+          />
+          <RangeSlider 
+            label="WIDTH (STEREO)" 
+            value={audioSettings.ambWidth * 100}
+            max={100} 
+            markerValue={50}
+            onChange={(v) => setVolume('ambWidth', v / 100, 1.0)} 
+            color="accent-alert-yellow"
+            format={(v) => {
+                const norm = v / 100;
+                return `${(Math.pow(norm, 3) * 80).toFixed(0)}% Sep`;
+            }}
+          />
+        </div>
+
+        {/* ROW 2: MOVEMENT */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <RangeSlider 
+            label="CIRCULATION (SPEED)" 
+            value={audioSettings.ambSpeed * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambSpeed', v / 100, 1.0)} 
+            color="accent-alert-yellow"
+            format={(v) => {
+                const norm = v / 100;
+                const hz = 0.05 * Math.pow(10, (norm - 0.5) * 2);
+                return `${(1/hz).toFixed(1)}s`;
+            }}
+          />
+          <RangeSlider 
+            label="FLUCTUATION (MOD)" 
+            value={audioSettings.ambModSpeed * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambModSpeed', v / 100, 1.0)} 
+            color="accent-alert-yellow"
+            format={(v) => {
+                const norm = v / 100;
+                const hz = 0.2 * Math.pow(10, (norm - 0.5) * 2);
+                return `${(1/hz).toFixed(1)}s`;
+            }}
+          />
+          <RangeSlider 
+            label="INSTABILITY (DEPTH)" 
+            value={audioSettings.ambModDepth * 100} 
+            max={100}
+            markerValue={50}
+            onChange={(v) => setVolume('ambModDepth', v / 100, 1.0)} 
+            color="accent-alert-yellow"
+            format={(v) => `+/- ${(10 * Math.pow(10, (v/100 - 0.5) * 2)).toFixed(0)} Hz`}
+          />
+        </div>
+      </div>
+
+      {/* SECTION 3: ACTIONS */}
+      <div className="pt-8 flex justify-end">
+        <button 
+          onClick={resetAudioSettings}
+          className="flex items-center gap-2 px-4 py-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black font-mono text-xs font-bold transition-all"
+        >
+          <RotateCcw size={14} />
+          FACTORY_RESET
+        </button>
+      </div>
+
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/settings/components/RangeSlider.tsx
+=====================================
+import { clsx } from 'clsx';
+
+interface RangeSliderProps {
+  label: string;
+  value: number; 
+  onChange: (val: number) => void;
+  max?: number; // Logic Max (e.g. 3.0)
+  displayMax?: number; // UI Max (e.g. 300)
+  format?: (val: number) => string;
+  markerValue?: number; // Where the "Normal" line is (default 1.0)
+}
+
+export const RangeSlider = ({ 
+  label, 
+  value, 
+  onChange, 
+  max = 3.0,
+  displayMax = 300,
+  markerValue = 1.0,
+  format
+}: RangeSliderProps) => {
+  
+  // Logic: Map 0..max to 0..displayMax
+  const currentPercent = (value / max) * 100;
+  const uiValue = value * (displayMax / max);
+  
+  // Marker Position (e.g. 1.0 / 3.0 = 33.3%)
+  const markerPercent = (markerValue / max) * 100;
+
+  // Dynamic Color Logic
+  let trackColor = "bg-primary-green";
+  let glowColor = "shadow-[0_0_10px_#78F654]";
+  
+  // If overdrive (assuming 1.0 is base)
+  if (value > 2.0) {
+      trackColor = "bg-critical-red";
+      glowColor = "shadow-[0_0_15px_#FF003C]";
+  } else if (value > 1.0) {
+      trackColor = "bg-alert-yellow";
+      glowColor = "shadow-[0_0_10px_#eae747]";
+  }
+
+  const displayString = format ? format(value) : `${Math.round(uiValue)}%`;
+
+  return (
+    <div className="flex flex-col gap-1.5 w-full group">
+      <div className="flex justify-between items-end">
+        <span className="text-[10px] font-bold font-mono tracking-wider opacity-80 text-gray-400 group-hover:text-white transition-colors">{label}</span>
+        <span className={clsx("text-xs font-mono font-bold transition-colors", 
+            value > 2.0 ? "text-critical-red animate-pulse" : 
+            value > 1.0 ? "text-alert-yellow" : "text-primary-green"
+        )}>
+            {displayString}
+        </span>
+      </div>
+      
+      <div className="relative h-6 flex items-center">
+        {/* Background Track (Dark) */}
+        <div className="absolute inset-x-0 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/10">
+             {/* Filled Track (Dynamic Color) */}
+             <div 
+                className={clsx("h-full transition-all duration-75 ease-out", trackColor, glowColor)} 
+                style={{ width: `${currentPercent}%` }}
+             />
+        </div>
+
+        {/* 100% Marker Line */}
+        <div 
+            className="absolute top-0 bottom-0 w-[2px] bg-white/20 z-0 pointer-events-none group-hover:bg-white/50 transition-colors" 
+            style={{ left: `${markerPercent}%` }}
+        >
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white/50 rounded-full" />
+        </div>
+        
+        {/* Invisible Input for Interaction */}
+        <input 
+          type="range"
+          min="0" 
+          max={displayMax} 
+          step="1"
+          value={uiValue}
+          onChange={(e) => {
+              const raw = parseFloat(e.target.value);
+              // Convert back to logic value: (raw / displayMax) * max
+              const logicVal = (raw / displayMax) * max;
+              onChange(logicVal);
+          }}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+          data-interactive="true"
+        />
+        
+        {/* Thumb Visual (Optional, CSS-only track usually cleaner, but let's add a sliding block) */}
+        <div 
+            className="absolute h-3 w-1 bg-white z-10 pointer-events-none shadow-sm"
+            style={{ left: `calc(${currentPercent}% - 2px)` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/settings/SettingsModal.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Settings, Volume2, Cpu, Monitor } from 'lucide-react';
+import { clsx } from 'clsx';
+import { useState } from 'react';
+import { SoundTab } from './tabs/SoundTab';
+
+const TABS = [
+  { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },
+  { id: 'GRAPHICS', label: 'DISPLAY', icon: Monitor }, 
+  { id: 'SYSTEM', label: 'SYSTEM', icon: Cpu },       
+];
+
+export const SettingsModal = () => {
+  const { activeModal, closeModal } = useStore();
+  const [activeTab, setActiveTab] = useState('SOUND');
+  const isOpen = activeModal === 'settings';
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+          
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeModal}
+            className="absolute inset-0 bg-black/90 backdrop-blur-md cursor-pointer"
+          />
+
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+            className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0">
+              <div className="flex items-center gap-3">
+                <Settings className="text-primary-green animate-spin-slow" size={24} />
+                <span className="font-header font-black text-2xl text-primary-green tracking-widest">
+                  SYSTEM_SETTINGS
+                </span>
+              </div>
+              <button 
+                onClick={closeModal}
+                onMouseEnter={() => AudioSystem.playHover()} 
+                className="p-2 hover:bg-critical-red hover:text-black text-primary-green transition-colors border border-transparent hover:border-critical-red"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+                <div className="w-64 border-r border-primary-green/30 flex flex-col bg-black/50">
+                    {TABS.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => {
+                                setActiveTab(tab.id);
+                                AudioSystem.playClick();
+                            }}
+                            className={clsx(
+                                "flex items-center gap-3 px-6 py-4 text-sm font-bold tracking-wider transition-all border-l-4",
+                                activeTab === tab.id
+                                    ? "bg-primary-green/10 text-primary-green border-primary-green"
+                                    : "border-transparent text-primary-green-dim hover:text-primary-green hover:bg-primary-green/5"
+                            )}
+                        >
+                            <tab.icon size={18} />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+                    <div className="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-green/20 via-black to-black" />
+                    
+                    <div className="relative z-10">
+                        {activeTab === 'SOUND' && <SoundTab />}
+                        
+                        {activeTab !== 'SOUND' && (
+                            <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono">
+                                <span className="animate-pulse">[ MODULE_OFFLINE ]</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-6 py-2 bg-black border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0">
+              <div className="flex gap-4">
+                  <span className="flex items-center gap-2">
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">ESC</span> 
+                      CLOSE_MENU
+                  </span>
+                  <span className="flex items-center gap-2">
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">~</span> 
+                      DEBUG_CONSOLE
+                  </span>
+              </div>
+              <div className="opacity-50">FIRMWARE v2.0.4</div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 
 =====================================
@@ -4232,11 +4596,15 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { EnemyTypes } from '@/game/config/Identifiers';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause } from 'lucide-react';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
+import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause, Speaker, Activity, Waves, Zap, Heart, Database, Settings2, ShieldAlert, CheckCircle2, Wind } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useState } from 'react';
 
 export const SimulationHUD = () => {
   const { debugFlags, setDebugFlag, sandboxView, setSandboxView, galleryTarget, setGalleryTarget, galleryAction, toggleGalleryAction } = useStore();
+  const [lastPlayed, setLastPlayed] = useState<string | null>(null);
   
   const spawnEnemy = (type: string) => {
       GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
@@ -4249,8 +4617,54 @@ export const SimulationHUD = () => {
       } catch (e) { console.warn("Registry not ready"); }
   };
 
+  const playSound = (key: string) => {
+      // Ambience requires special method
+      if (key.includes('ambience')) {
+          AudioSystem.playAmbience(key);
+      } else {
+          AudioSystem.playSound(key);
+      }
+      setLastPlayed(key);
+      setTimeout(() => setLastPlayed(null), 200);
+  };
+
+  const library = {
+      CORE: { 
+          keys: Object.keys(AUDIO_CONFIG).filter(k => !k.includes('proto_') && !k.includes('drill_') && !k.includes('misc_') && (k.includes('laser') || k.includes('click') || k.includes('hover') || k.includes('heal') || k.includes('powerup'))),
+          color: 'text-primary-green',
+          borderColor: 'border-primary-green',
+          icon: Zap
+      },
+      COMBAT: { 
+          keys: ['driller_drill', 'enemy_fire', 'explosion_small', 'explosion_large', 'player_down_glitch', 'warning_heartbeat'],
+          color: 'text-critical-red',
+          borderColor: 'border-critical-red',
+          icon: Bug
+      },
+      MISC_DRILLS: {
+          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('drill_') && k !== 'driller_drill'),
+          color: 'text-latent-purple',
+          borderColor: 'border-latent-purple',
+          icon: Database
+      },
+      MISC: {
+          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('misc_') || k.includes('proto_')),
+          color: 'text-alert-yellow',
+          borderColor: 'border-alert-yellow',
+          icon: Database
+      }
+  };
+
+  const prototypes = [
+      { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan', metas: ['CLASSIC', 'TURBINE', 'HUM'] },
+      { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red', metas: ['BASS', 'KLAXON', 'GLITCH'] },
+      // NEW: Ambience Row
+      { id: 'AMB', label: 'NOISE_FLOOR', icon: Wind, keys: ['ambience_a', 'ambience_b', 'ambience_c'], color: 'text-gray-400', metas: ['DEEP', 'AIRY', 'PULSE'] },
+  ];
+
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
+      {/* HEADER */}
       <div className="absolute top-0 left-0 right-0 h-12 bg-black/80 backdrop-blur-md border-b border-service-cyan/30 flex items-center justify-between px-6 pointer-events-auto">
         <div className="flex items-center gap-3 text-service-cyan">
             <Box size={20} />
@@ -4271,61 +4685,144 @@ export const SimulationHUD = () => {
         )}
       </div>
 
-      <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto">
+      {/* LEFT SIDEBAR (NAVIGATION) */}
+      <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto w-40">
+         <button 
+            onClick={() => setSandboxView('audio')}
+            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'audio' ? "bg-service-cyan text-black border-service-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)]" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
+         >
+            <Speaker size={16} /> SOUND_TEST
+         </button>
          <button 
             onClick={() => setSandboxView('arena')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'arena' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
+            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'arena' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
          >
             <Crosshair size={16} /> ARENA_MODE
          </button>
          <button 
             onClick={() => setSandboxView('gallery')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold w-40", sandboxView === 'gallery' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
+            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'gallery' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
          >
             <ScanEye size={16} /> GALLERY_VIEW
          </button>
       </div>
 
-      {sandboxView === 'arena' && (
-          <div className="absolute right-6 top-24 w-64 bg-black/80 backdrop-blur-md border border-service-cyan/30 p-4 pointer-events-auto flex flex-col gap-4">
-             <div>
-                <h3 className="text-xs font-mono text-service-cyan mb-2 border-b border-service-cyan/30 pb-1">ENTITY_INJECTION</h3>
-                <div className="grid grid-cols-1 gap-2">
-                    {Object.values(EnemyTypes).map(type => (
-                        <button key={type} onClick={() => spawnEnemy(type)} className="flex items-center justify-between px-3 py-2 border border-service-cyan/30 text-xs hover:bg-service-cyan hover:text-black transition-colors text-service-cyan group">
-                            <span className="uppercase font-bold tracking-wider">{type}</span>
-                            <Bug size={14} className="group-hover:rotate-12 transition-transform" />
-                        </button>
-                    ))}
-                </div>
-             </div>
-             <button onClick={clearBoard} className="w-full flex items-center justify-center gap-2 p-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black text-xs font-bold transition-colors">
-                <Eraser size={14} /> WIPE_ENTITIES
-             </button>
+      {/* AUDIO WORKBENCH */}
+      {sandboxView === 'audio' && (
+          <div className="absolute left-52 top-24 bottom-6 right-6 flex gap-6 pointer-events-auto">
+              
+              {/* CENTER: WORKBENCH */}
+              <div className="flex-1 bg-black/80 backdrop-blur-md border border-white/20 p-6 flex flex-col gap-6 overflow-y-auto">
+                  <div className="flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
+                      <Settings2 className="text-white" size={20} />
+                      <h3 className="font-header font-black text-xl text-white tracking-widest">PROTOTYPE_BENCH</h3>
+                  </div>
+                  
+                  {/* SELECTED FINALISTS */}
+                  <div className="bg-primary-green/5 border border-primary-green/30 p-4 rounded-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                          <CheckCircle2 className="text-primary-green" size={18} />
+                          <span className="font-mono font-bold tracking-wider text-sm text-primary-green">SELECTED_IMPLEMENTATIONS</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                          {[
+                              { label: 'DRILLER (MOD_G)', key: 'driller_drill', sub: 'IMPACT' },
+                              { label: 'LOW_INTEGRITY (VAR_F)', key: 'warning_heartbeat', sub: 'SUB-BASS' },
+                              { label: 'PLAYER_DEATH (VAR_K)', key: 'player_down_glitch', sub: 'CHOPPER' }
+                          ].map(item => {
+                              const isPlaying = lastPlayed === item.key;
+                              return (
+                                  <button 
+                                      key={item.key}
+                                      onClick={() => playSound(item.key)}
+                                      className={clsx(
+                                          "flex flex-col items-center justify-center py-6 border transition-all duration-100",
+                                          isPlaying 
+                                              ? "bg-primary-green text-black border-primary-green shadow-[0_0_20px_#78F654] scale-95" 
+                                              : "bg-black border-primary-green/30 hover:border-primary-green hover:bg-primary-green/10 text-primary-green"
+                                      )}
+                                  >
+                                      <span className="text-xs font-black mb-1">{item.label}</span>
+                                      <span className="text-[8px] opacity-70 font-mono tracking-tighter">{item.sub}</span>
+                                  </button>
+                              );
+                          })}
+                      </div>
+                  </div>
+
+                  {/* PROTOTYPE ROWS */}
+                  {prototypes.map(proto => (
+                      <div key={proto.id} className="bg-white/5 border border-white/10 p-4 rounded-sm">
+                          <div className="flex items-center gap-2 mb-4">
+                              <proto.icon className={proto.color} size={18} />
+                              <span className={clsx("font-mono font-bold tracking-wider text-sm", proto.color)}>{proto.label}</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                              {proto.keys.map((key, idx) => {
+                                  const label = idx === 0 ? 'VARIANT_A' : idx === 1 ? 'VARIANT_B' : 'VARIANT_C';
+                                  const isPlaying = lastPlayed === key;
+                                  const meta = proto.metas ? proto.metas[idx] : AUDIO_CONFIG[key].type.toUpperCase();
+                                  return (
+                                      <button 
+                                          key={key}
+                                          onClick={() => playSound(key)}
+                                          className={clsx(
+                                              "flex flex-col items-center justify-center py-6 border transition-all duration-100",
+                                              isPlaying 
+                                                  ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-95" 
+                                                  : "bg-black border-white/20 hover:border-white/50 hover:bg-white/5"
+                                          )}
+                                      >
+                                          <span className="text-xs font-bold mb-1">{label}</span>
+                                          <span className="text-[9px] opacity-50 font-mono">{meta}</span>
+                                      </button>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+
+              {/* RIGHT: LIBRARY */}
+              <div className="w-80 bg-black/90 backdrop-blur-md border border-service-cyan/30 flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-service-cyan/30 bg-service-cyan/5">
+                      <span className="font-mono font-bold text-xs text-service-cyan tracking-widest">ACTIVE_LIBRARY</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-service-cyan scrollbar-track-black">
+                      {Object.entries(library).map(([name, group]) => (
+                          <div key={name}>
+                              <div className={clsx("flex items-center gap-2 text-[10px] font-bold mb-2 pb-1 border-b uppercase tracking-wider", group.color, group.borderColor)}>
+                                  <group.icon size={12} />
+                                  {name}
+                              </div>
+                              <div className="grid grid-cols-1 gap-1">
+                                  {group.keys.map(key => {
+                                      const isPlaying = lastPlayed === key;
+                                      return (
+                                          <button 
+                                              key={key} 
+                                              onClick={() => playSound(key)}
+                                              className={clsx(
+                                                  "flex items-center justify-between px-2 py-1.5 border text-[10px] font-mono transition-all",
+                                                  isPlaying 
+                                                      ? `${group.borderColor} bg-white text-black` 
+                                                      : `border-transparent hover:border-white/30 bg-white/5 text-gray-300 hover:bg-white/10`
+                                              )}
+                                          >
+                                              <span>{key}</span>
+                                              <Play size={10} className={isPlaying ? "fill-black" : ""} />
+                                          </button>
+                                      );
+                                  })}
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
           </div>
       )}
 
-      {sandboxView === 'gallery' && (
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 pointer-events-auto">
-              <div className="flex bg-black/80 border border-service-cyan/50 backdrop-blur-md">
-                  {Object.values(EnemyTypes).map(type => (
-                      <button key={type} onClick={() => setGalleryTarget(type)} className={clsx("px-4 py-2 text-xs font-bold uppercase transition-colors", galleryTarget === type ? "bg-service-cyan text-black" : "text-service-cyan hover:bg-service-cyan/10")}>
-                          {type}
-                      </button>
-                  ))}
-              </div>
-              <div className="bg-black/80 border border-service-cyan/50 backdrop-blur-md">
-                  <button onClick={toggleGalleryAction} className={clsx("flex items-center gap-2 px-4 py-2 text-xs font-bold transition-colors", galleryAction === 'ATTACK' ? "bg-critical-red text-black" : "text-service-cyan hover:bg-service-cyan/10")}>
-                      {galleryAction === 'ATTACK' ? <Play size={14} /> : <Pause size={14} />}
-                      {galleryAction === 'ATTACK' ? "ATTACK_MODE" : "IDLE_MODE"}
-                  </button>
-              </div>
-              <div className="bg-black/80 border border-service-cyan/50 px-4 py-2 flex items-center gap-3 backdrop-blur-md text-service-cyan">
-                  <RotateCw size={16} />
-                  <span className="text-[10px] font-mono opacity-70">DRAG TO ROTATE // SCROLL TO ZOOM</span>
-              </div>
-          </div>
-      )}
+      {/* ... ARENA/GALLERY (UNCHANGED) ... */}
     </div>
   );
 };
@@ -4662,6 +5159,7 @@ import { Box } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface SandboxTabProps {
   closeDebug: () => void;
@@ -4672,12 +5170,21 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const { startGame } = useGameStore();
 
   const enterSandbox = () => {
+      // 1. Wake up Audio Engine (User Interaction)
+      AudioSystem.init();
+      AudioSystem.startMusic();
+
+      // 2. Set State
       setIntroDone(true);
       setBootState('sandbox');
+      
+      // 3. Clean Registry
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
+      
+      // 4. Start Loop
       startGame();
       closeDebug();
   };
@@ -4707,7 +5214,6 @@ FILE: ./src/features/debug/DebugOverlay.tsx
 =====================================
 import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
 import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database } from 'lucide-react';
@@ -4730,47 +5236,44 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
 ];
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
 
+  // KEYBOARD HANDLERS (Global)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC Key: Toggle or Restore
-      if (e.key === 'Escape') {
-        if (isDebugMinimized) {
-            useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
-        } else {
-            toggleDebugMenu();
-        }
-      } 
-      // Tilde Key: Toggle & Force God Mode
-      else if (e.key === '`' || e.key === '~') {
+      // Tilde: Debug Menu
+      if (e.key === '`' || e.key === '~') {
         if (isDebugMinimized) {
              useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
              toggleDebugMenu();
         }
-
-        // Logic: If opening, ensure ALL cheats are on.
+        // Force Enable Cheats if opening
         const state = useStore.getState();
-        // If the menu wasn't open (we are opening it now), OR if we are just pressing tilde while open...
-        // Actually, let's just enforce: If any flag is FALSE, turn them ALL TRUE.
-        const flags = state.debugFlags;
-        if (!flags.godMode || !flags.panelGodMode || !flags.peaceMode) {
+        if (!state.debugFlags.godMode) {
             setDebugFlag('godMode', true);
             setDebugFlag('panelGodMode', true);
             setDebugFlag('peaceMode', true);
-            console.log("[Debug] God Suite Enabled");
         }
+      } 
+      // ESC: Close Debug OR Toggle Settings
+      else if (e.key === 'Escape') {
+          if (isDebugOpen) {
+              toggleDebugMenu();
+          } else if (activeModal !== 'none') {
+              closeModal();
+          } else {
+              toggleSettings();
+          }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag]);
+  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal]);
 
-  // Telemetry Loop
   useEffect(() => {
     if (!isDebugOpen && !isDebugMinimized) return;
     
@@ -4823,79 +5326,38 @@ export const DebugOverlay = () => {
       );
   }
 
-  // --- MINIMIZED TELEMETRY VIEW ---
   if (isDebugMinimized) {
       return (
         <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-none">
             <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
                 <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
-                    <button 
-                        onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} 
-                        className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
-                    >
-                        <Maximize2 size={12} />
-                    </button>
+                    <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"><Maximize2 size={12} /></button>
                 </div>
-                
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
-                    <span className="flex items-center gap-1"><Activity size={10} /> FPS</span>
-                    <span className="text-primary-green font-bold">{stats.fps}</span>
-                </div>
-                
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
-                    <span className="flex items-center gap-1"><Cpu size={10} /> ENT</span>
-                    <span className="text-primary-green font-bold">{stats.active}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim">
-                    <span className="flex items-center gap-1"><Database size={10} /> POOL</span>
-                    <span className="text-primary-green font-bold">{stats.pooled}</span>
-                </div>
-                
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Database size={10} /> POOL</span><span className="text-primary-green font-bold">{stats.pooled}</span></div>
                 <div className="h-[1px] bg-primary-green/20 my-1" />
-                
-                <button 
-                    onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} 
-                    className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
-                >
-                    CLOSE_DEBUG
-                </button>
+                <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center">CLOSE_DEBUG</button>
             </div>
         </div>
       );
   }
 
-  // --- FULL VIEW ---
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
         <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <Terminal size={16} />
-            <span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span>
-          </div>
+          <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
-             <button 
-                onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} 
-                className="hover:text-white transition-colors p-1"
-             >
-                <MinusSquare size={16} />
-             </button>
+             <button onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} className="hover:text-white transition-colors p-1"><MinusSquare size={16} /></button>
              <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1"><X size={16} /></button>
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
           <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}
-              >
-                <tab.icon size={14} />
-                {tab.label}
-              </button>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
             ))}
           </div>
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
@@ -5711,28 +6173,30 @@ export class GameEngineCore implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    const store = useStore.getState();
+    const gameStore = useGameStore.getState();
+    
     // 1. CHECK BOOT STATE
-    // If we are in 'standby' (Boot Sequence), we PAUSE the logic loop.
-    // The Render loop (R3F) continues running, keeping shaders warm.
-    const bootState = useStore.getState().bootState;
-    if (bootState === 'standby') return;
+    if (store.bootState === 'standby') return;
 
-    const store = useGameStore.getState();
+    // 2. CHECK PAUSE STATE (Settings or Debug)
+    if (store.activeModal === 'settings' || store.isDebugOpen) return;
+
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
-    // 2. GAME OVER CHECK
-    if (store.isPlaying && store.systemIntegrity <= 0) {
-        store.stopGame();
+    // 3. GAME OVER CHECK
+    if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
+        gameStore.stopGame();
         FXManager.addTrauma(1.0);
         gameSys.isGameOver = true; 
         return;
     }
 
-    if (!store.isPlaying) {
+    if (!gameStore.isPlaying) {
         gameSys.isGameOver = true;
     }
 
-    // 3. RUN SYSTEMS
+    // 4. RUN SYSTEMS
     for (const sys of this.systems) {
       sys.update(delta, time);
     }
@@ -5918,86 +6382,96 @@ export type SoundType = 'oscillator' | 'noise';
 
 export interface SoundRecipe {
   type: SoundType;
-  wave?: OscillatorType; // 'sine', 'square', 'sawtooth', 'triangle'
-  frequency: [number, number]; // [Start, End] in Hz
-  duration: number; // Seconds
-  volume: number; // Base volume (0.0 - 1.0)
-  pitchVariance: number; // Random detune range in cents (e.g., 100 = +/- 1 semitone)
-  filter?: [number, number]; // [Start, End] Cutoff Hz (for Noise)
+  wave?: OscillatorType; 
+  frequency: [number, number]; 
+  duration: number; 
+  volume: number; 
+  pitchVariance: number; 
+  filter?: [number, number]; 
+  distortion?: number; 
+  attack?: number; 
+  fm?: {
+    modFreq: number; 
+    modIndex: number; 
+    modType: OscillatorType;
+  };
+  tremolo?: {
+    rate: number; 
+    depth: number; 
+    wave?: OscillatorType;
+  };
 }
 
 export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
-  // PLAYER
-  'laser': {
-    type: 'oscillator',
-    wave: 'sawtooth',
-    frequency: [880, 110], // Drop pitch
-    duration: 0.15,
-    volume: 0.15,
-    pitchVariance: 100
+  // --- PLAYER & CORE ---
+  'laser': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.15, pitchVariance: 100 },
+  'click': { type: 'oscillator', wave: 'square', frequency: [400, 400], duration: 0.05, volume: 0.1, pitchVariance: 0 },
+  'hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50 },
+  'heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
+  'powerup': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
+  'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
+  'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
+
+  // --- ENEMIES & COMBAT ---
+  'enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
+  'driller_drill': { 
+    type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60 
   },
-  
-  // ENEMIES
-  'enemy_fire': {
-    type: 'oscillator',
-    wave: 'square',
-    frequency: [440, 220],
-    duration: 0.2,
-    volume: 0.15,
-    pitchVariance: 50
+  'explosion_small': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
+  'explosion_large': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
+
+  // --- GAMEPLAY STATES ---
+  'warning_heartbeat': { 
+    type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, 
+    attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } 
   },
-  
-  // EXPLOSIONS
-  'explosion_small': {
-    type: 'noise',
-    frequency: [0, 0], // Ignored for noise
-    filter: [1000, 100], // Lowpass sweep
-    duration: 0.4,
-    volume: 0.3,
-    pitchVariance: 200
+  'player_down_glitch': { 
+    type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, 
+    tremolo: { rate: 12, depth: 1.0, wave: 'square' } 
   },
-  'explosion_large': {
-    type: 'noise',
-    frequency: [0, 0],
-    filter: [600, 50], // Deep rumble
-    duration: 1.5,
-    volume: 0.5,
+
+  // --- AMBIENCE ---
+  // Variant B: Filter raised to 800Hz to allow dynamic filtering
+  'ambience_b': { 
+    type: 'noise', 
+    frequency: [0,0], 
+    filter: [800, 800], 
+    duration: 40.0, 
+    volume: 0.05,   
     pitchVariance: 0
   },
-  
-  // UI & FEEDBACK
-  'click': {
-    type: 'oscillator',
-    wave: 'square',
-    frequency: [400, 400],
-    duration: 0.05,
-    volume: 0.1,
-    pitchVariance: 0
-  },
-  'hover': {
-    type: 'oscillator',
-    wave: 'sine',
-    frequency: [800, 800],
-    duration: 0.03,
-    volume: 0.05,
-    pitchVariance: 50
-  },
-  'heal': {
-    type: 'oscillator',
-    wave: 'sine',
-    frequency: [300, 600], // Rising chime
-    duration: 0.2,
-    volume: 0.1,
-    pitchVariance: 0
-  },
-  'powerup': {
-    type: 'oscillator',
-    wave: 'triangle',
-    frequency: [440, 880],
-    duration: 0.4,
-    volume: 0.2,
-    pitchVariance: 0
-  }
+
+  // --- BENCH ---
+  'ambience_a': { type: 'noise', frequency: [0,0], filter: [80, 80], duration: 5.0, volume: 0.25, pitchVariance: 0 },
+  'ambience_c': { type: 'noise', frequency: [0,0], filter: [100, 100], duration: 5.0, volume: 0.3, pitchVariance: 0, tremolo: { rate: 0.2, depth: 0.4, wave: 'sine' } },
+
+  // --- DRILLERS ---
+  'drill_a': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
+  'drill_b': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50 },
+  'drill_c': { type: 'oscillator', wave: 'triangle', frequency: [150, 100], duration: 0.6, volume: 0.3, pitchVariance: 20, fm: { modType: 'square', modFreq: 57, modIndex: 1000 } },
+  'drill_d': { type: 'oscillator', wave: 'sawtooth', frequency: [400, 50], duration: 0.3, volume: 0.3, pitchVariance: 50, distortion: 100 },
+  'drill_e': { type: 'noise', frequency: [0, 0], filter: [800, 2000], duration: 0.4, volume: 0.3, pitchVariance: 0, distortion: 400 },
+  'drill_f': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.5, volume: 0.6, pitchVariance: 0, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
+  'drill_g': { type: 'noise', frequency: [0,0], filter: [200, 100], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 50, tremolo: { rate: 2, depth: 0.8, wave: 'sine' } },
+  'drill_h': { type: 'noise', frequency: [0,0], filter: [1500, 800], duration: 3.0, volume: 0.3, pitchVariance: 0, distortion: 10, tremolo: { rate: 12, depth: 1.0, wave: 'sawtooth' } },
+  'drill_i': { type: 'noise', frequency: [0,0], filter: [800, 400], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 100, tremolo: { rate: 6, depth: 0.6, wave: 'square' } },
+  'drill_j': { type: 'noise', frequency: [0,0], filter: [100, 1000], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 20, tremolo: { rate: 15, depth: 0.5, wave: 'sine' } },
+  'drill_k': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' } },
+  'drill_l': { type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' } },
+
+  // --- MISC ---
+  'proto_charge_a': { type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0 },
+  'proto_charge_b': { type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 } },
+  'proto_charge_c': { type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 } },
+  'proto_wave_a': { type: 'oscillator', wave: 'sine', frequency: [60, 20], duration: 2.5, volume: 0.6, pitchVariance: 0, distortion: 20 },
+  'proto_wave_b': { type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 } },
+  'proto_wave_c': { type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100 },
+  'misc_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
+  'misc_denied': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50 },
+  'misc_ui_open': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
+  'proto_lowhp_a': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.15, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
+  'proto_lowhp_b': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },
+  'proto_lowhp_c': { type: 'oscillator', wave: 'triangle', frequency: [50, 40], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, filter: [150, 50] },
 };
 
 
@@ -6264,11 +6738,13 @@ import { Entity } from '../../core/ecs/Entity';
 export interface AIContext {
   delta: number;
   time: number;
-  daemonMaxDamage?: number; // Optional, specific to Daemon
+  daemonMaxDamage?: number;
   spawnProjectile: (x, y: number, vx: number, vy: number) => void;
   spawnDrillSparks: (x: number, y: number, angle: number) => void; 
   spawnLaunchSparks: (x: number, y: number, angle: number) => void; 
   damagePanel: (id: string, amount: number) => void;
+  // --- NEW ---
+  playSound: (key: string) => void;
 }
 
 export interface EnemyLogic {
@@ -6446,7 +6922,9 @@ export const DrillerLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // Default target coords
+    // Init audio timer if missing
+    if (typeof state.data.audioTimer === 'undefined') state.data.audioTimer = 0;
+
     let destX = target.x;
     let destY = target.y;
     
@@ -6462,17 +6940,15 @@ export const DrillerLogic: EnemyLogic = {
     const dy = destY - pos.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
-    
-    // Rotation: Face the wall
     const angle = Math.atan2(dy, dx) - Math.PI/2;
-
     const TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2;
     const SNAP_THRESHOLD = 0.1;
 
+    // --- DRILLING STATE ---
     if (dist <= TIP_OFFSET + SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Exact Snap
+        // Snap
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -6484,20 +6960,30 @@ export const DrillerLogic: EnemyLogic = {
         motion.vy = 0;
         pos.rotation = angle;
 
-        // VISUALS: Constant Stream (Called Every Frame)
         ctx.spawnDrillSparks(destX, destY, angle);
 
-        // LOGIC: Damage Tick (Probabilistic)
+        // --- AUDIO LOGIC ---
+        // Play sound every 0.3 seconds while drilling
+        state.data.audioTimer -= ctx.delta;
+        if (state.data.audioTimer <= 0) {
+            ctx.playSound('driller_drill');
+            // Randomize slightly to avoid machine-gun effect
+            state.data.audioTimer = 0.25 + Math.random() * 0.1; 
+        }
+
         if (Math.random() < ctx.delta * 2.0) { 
              if (target.type === 'PANEL' && target.id) {
                  ctx.damagePanel(target.id, ENEMY_CONFIG[EnemyTypes.DRILLER].damage);
              }
         }
     } else {
+        // --- MOVING STATE ---
         state.current = 'MOVING';
         
+        // Reset timer so it plays immediately upon contact
+        state.data.audioTimer = 0;
+
         const speed = ENEMY_CONFIG[EnemyTypes.DRILLER].baseSpeed;
-        
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;
@@ -8685,6 +9171,31 @@ export const useTransientRef = (id: string, type: 'text' | 'width' | 'css-var') 
 
 
 =====================================
+FILE: ./src/game/hooks/useHeartbeat.ts
+=====================================
+import { useEffect } from 'react';
+import { useAnimation, AnimationControls } from 'framer-motion';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+
+export const useHeartbeat = (): AnimationControls => {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    const unsub = GameEventBus.subscribe(GameEvents.HEARTBEAT, (payload) => {
+        // We trigger the 'heartbeat' variant defined in the component.
+        // We pass the urgency as a 'custom' prop to the variant if needed.
+        controls.start("heartbeat");
+    });
+
+    return () => unsub();
+  }, [controls]);
+
+  return controls;
+};
+
+
+=====================================
 FILE: ./src/game/theme.ts
 =====================================
 export const GAME_THEME = {
@@ -8739,8 +9250,10 @@ export enum GameEvents {
   TRAUMA_ADDED = 'TRAUMA_ADDED',
   SCENE_READY = 'SCENE_READY',
   SPAWN_FX = 'SPAWN_FX',
+  SPAWN_DAEMON = 'SPAWN_DAEMON',
   
-  SPAWN_DAEMON = 'SPAWN_DAEMON' // NEW
+  // NEW: UI SYNC
+  HEARTBEAT = 'HEARTBEAT' 
 }
 
 export type FXVariant = 
@@ -8751,7 +9264,8 @@ export type FXVariant =
   | 'IMPACT_RED'
   | 'IMPACT_YELLOW'
   | 'DRILL_SPARKS'
-  | 'HUNTER_RECOIL';
+  | 'HUNTER_RECOIL'
+  | 'CLASH_YELLOW';
 
 export interface GameEventPayloads {
   [GameEvents.PLAYER_FIRED]: { x: number; y: number };
@@ -8772,7 +9286,8 @@ export interface GameEventPayloads {
   [GameEvents.TRAUMA_ADDED]: { amount: number };
   [GameEvents.SCENE_READY]: null;
   [GameEvents.SPAWN_FX]: { type: FXVariant; x: number; y: number; angle?: number; count?: number; };
-  [GameEvents.SPAWN_DAEMON]: null; // NEW
+  [GameEvents.SPAWN_DAEMON]: null;
+  [GameEvents.HEARTBEAT]: { urgency: number }; // 0.0 to 1.0 (Low to High stress)
 }
 
 
@@ -10180,6 +10695,8 @@ import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { useStore } from '@/core/store/useStore'; 
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -10193,26 +10710,46 @@ export class GameStateSystem implements IGameSystem {
   public upgradePoints: number = 0;
 
   public activeUpgrades: Record<string, number> = {
-    'OVERCLOCK': 0, 
-    'EXECUTE': 0, 
-    'BANDWIDTH': 0, 
-    'FORK': 0,
-    'SNIFFER': 0,
-    'BACKDOOR': 0,
-    'REPAIR_NANITES': 0
+    'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+    'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
   public isGameOver: boolean = false;
+  
+  private heartbeatTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
     this.reset();
-    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      if (this.isGameOver) return;
+
+      // Heartbeat Logic (< 30% Integrity)
+      if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
+          this.heartbeatTimer -= delta;
+          
+          if (this.heartbeatTimer <= 0) {
+              // 1. Calculate Urgency (0.0 at 30% -> 1.0 at 0%)
+              const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
+              
+              // 2. Play Sound & Emit Event
+              AudioSystem.playSound('warning_heartbeat');
+              GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
+
+              // 3. Set Next Timer (Acceleration Curve)
+              // Low Urgency: ~1.4s delay (Slow thud)
+              // Max Urgency: ~0.35s delay (Fast panic)
+              this.heartbeatTimer = 1.4 - (urgency * 1.05); 
+          }
+      } else {
+          this.heartbeatTimer = 0;
+      }
+  }
+
   teardown(): void {}
 
   public reset() {
@@ -10225,35 +10762,21 @@ export class GameStateSystem implements IGameSystem {
     this.upgradePoints = 0;
     this.isGameOver = false;
     this.activeUpgrades = { 
-        'OVERCLOCK': 0, 
-        'EXECUTE': 0, 
-        'BANDWIDTH': 0, 
-        'FORK': 0,
-        'SNIFFER': 0,
-        'BACKDOOR': 0,
-        'REPAIR_NANITES': 0
+        'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+        'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
     };
   }
 
   public applyUpgrade(option: string) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
-          
-          if (option === 'PURGE' || option === 'RESTORE') {
-              return; 
-          }
-
-          // Trigger Daemon Spawn
+          if (option === 'PURGE' || option === 'RESTORE') return;
           if (option === 'DAEMON') {
               GameEventBus.emit(GameEvents.SPAWN_DAEMON, null);
-              return; // Daemons are entities, not just stats
+              return; 
           }
-
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
-          
-          if (option === 'REPAIR_NANITES') {
-             this.healPlayer(this.maxPlayerHealth * 0.2);
-          }
+          if (option === 'REPAIR_NANITES') this.healPlayer(this.maxPlayerHealth * 0.2);
       }
   }
 
@@ -10261,8 +10784,10 @@ export class GameStateSystem implements IGameSystem {
     if (this.isGameOver) return;
     const { godMode } = useStore.getState().debugFlags;
     if (godMode) return;
+    
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
+        if (this.playerHealth <= 0) AudioSystem.playSound('player_down_glitch');
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -10291,8 +10816,9 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
     if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth; // CHANGED: Restores 100% Health
+        this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
+        AudioSystem.playSound('powerup');
     }
   }
 
@@ -10478,6 +11004,7 @@ import { EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus'; 
 import { GameEvents } from '../events/GameEvents'; 
 import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem'; // Import AudioSystem
 
 import { DrillerLogic } from '../logic/ai/DrillerLogic';
 import { KamikazeLogic } from '../logic/ai/KamikazeLogic';
@@ -10525,10 +11052,11 @@ export class BehaviorSystem implements IGameSystem {
       },
       spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.PURPLE_PALETTE, 5, 8),
       spawnLaunchSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.YELLOW_PALETTE, 12, 15),
-      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount)
+      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
+      // --- NEW: Audio Hook ---
+      playSound: (key) => AudioSystem.playSound(key)
     };
 
-    // Dynamic Damage for Daemons
     const upgrades = useGameStore.getState().activeUpgrades;
     const executeLevel = upgrades['EXECUTE'] || 0;
     const daemonDamage = 10 + executeLevel;
@@ -10537,7 +11065,6 @@ export class BehaviorSystem implements IGameSystem {
       ...aiContext,
       daemonMaxDamage: daemonDamage,
       spawnProjectile: (x, y, vx, vy) => {
-          // Note: Logic will override this call to inject the specific shield HP damage
           const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
           bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
           GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x, y }); 
@@ -11111,8 +11638,6 @@ FILE: ./src/styles/globals.css
 
 :root {
   --foreground-rgb: 0, 255, 65;
-  
-  /* DEFAULT SHAKE VALUES */
   --shake-x: 0px;
   --shake-y: 0px;
   --shake-r: 0rad;
@@ -11125,7 +11650,8 @@ html, body {
   cursor: none !important;
 }
 
-a, button, input, select, textarea, label, [role="button"] {
+/* Aggressive Cursor Hiding */
+* {
   cursor: none !important;
 }
 
@@ -11171,18 +11697,9 @@ body {
   clip-path: polygon(0 0, 100% 0, 100% 70%, 90% 100%, 0 100%);
 }
 
-/* MARCHING ANTS ANIMATION */
 @keyframes marching {
-  0% {
-    background-position: 0 0, 0 100%, 0 0, 100% 0;
-  }
-  100% {
-    /* 
-       Match the move distance (20px) to the background-size (20px) 
-       Order: Top, Bottom, Left, Right 
-    */
-    background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px;
-  }
+  0% { background-position: 0 0, 0 100%, 0 0, 100% 0; }
+  100% { background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px; }
 }
 
 .marching-ants {
@@ -11191,19 +11708,12 @@ body {
     linear-gradient(to right, var(--ant-color) 50%, transparent 50%),
     linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%),
     linear-gradient(to bottom, var(--ant-color) 50%, transparent 50%);
-  
-  /* 
-     UPDATED: 20px Pattern Size (10px dash, 10px gap) 
-     This matches the 20px translation in @keyframes marching
-  */
   background-size: 20px 1px, 20px 1px, 1px 20px, 1px 20px;
-  
   background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
   animation: marching 1s linear infinite;
   border: none !important; 
 }
 
-/* Hide Next.js Indicators */
 body > div[data-nextjs-toast],
 body > div[data-nextjs-dialog-overlay],
 #next-route-announcer,

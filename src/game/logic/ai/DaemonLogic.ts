@@ -4,7 +4,7 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
 import { OrbitalComponent } from '../../components/data/OrbitalComponent';
-import { IdentityComponent } from '../../components/data/IdentityComponent';
+import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
@@ -20,32 +20,29 @@ export const DaemonLogic: EnemyLogic = {
 
     const maxShield = ctx.daemonMaxDamage || 10;
 
-    // Initialize Shield Data
     if (typeof state.data.shieldHP !== 'number') {
         state.data.shieldHP = 0;
     }
-    state.data.maxShield = maxShield; // Store for renderer
+    state.data.maxShield = maxShield; 
 
     // --- STATE MACHINE ---
 
     if (state.current === 'SPAWN' || state.current === 'ORBIT') {
         state.current = 'CHARGING';
-        state.data.shieldHP = 0; // Start empty
+        state.data.shieldHP = 0; 
     }
 
     // 1. CHARGING (Accumulate Shield)
     if (state.current === 'CHARGING') {
         orbital.active = true;
         
-        // Check for Break
         if (state.data.shieldHP <= 0 && state.data.wasHit) {
              state.current = 'BROKEN';
-             state.timers.action = 2.0; // Recovery time
+             state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
 
-        // Charge Rate: 2.0 seconds to full
-        const chargeRate = maxShield / 2.0; 
+        const chargeRate = maxShield / AI_CONFIG.DAEMON.SHIELD_CHARGE_TIME; 
         state.data.shieldHP = Math.min(maxShield, state.data.shieldHP + (chargeRate * ctx.delta));
 
         if (state.data.shieldHP >= maxShield) {
@@ -57,10 +54,9 @@ export const DaemonLogic: EnemyLogic = {
     else if (state.current === 'READY') {
         orbital.active = true;
         
-        // Check for Break
         if (state.data.shieldHP <= 0) {
              state.current = 'BROKEN';
-             state.timers.action = 2.0;
+             state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
 
@@ -77,39 +73,11 @@ export const DaemonLogic: EnemyLogic = {
         
         pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
 
-        // Custom Spawn Logic: Use current Shield HP as Damage
-        const damage = Math.max(1, state.data.shieldHP);
-        const width = 4.0 * (damage / maxShield); // Scale width by health ratio
-
-        // Manually spawn to override default context behavior
-        // We can't access spawner directly here easily without refactor, 
-        // so we rely on context but we can't pass args dynamically to the closure.
-        // HACK: We will assume the context's spawnProjectile handles default,
-        // BUT we need custom damage. 
-        // Better: We emit the event directly here or update the Context type.
-        // For now, let's use the provided context which sets damage to Max. 
-        // To fix this accurately, we should have passed `shieldHP` to the Bullet.
-        // *Revisiting AIContext*: It captures `daemonDamage`.
-        
-        // FIX: Let's emit a specific event or assume full damage for now?
-        // No, the prompt says "appropriate amount of damage".
-        // Let's rely on the fact that if it fires, it usually has charge.
-        // If we want dynamic damage, we must refactor context.
-        // Or simpler: We just modify the Context in BehaviorSystem to read the Entity's state? No.
-        
-        // Let's just fire. The physics system collision logic will use the Bullet's Health as damage.
-        // The bullet spawned by `daemonContext` has `daemonDamage` (Max). 
-        // We need to set the bullet's health to `state.data.shieldHP`.
-        // Since we can't easily touch the bullet *after* spawn here (spawnProjectile is void),
-        // we will accept that fired bullets do Max Damage, but SHIELDING absorbs damage.
-        // Wait, prompt: "If charged ball reaches 0 health... return to charging."
-        // It implies the ball *is* the damage.
-        
         ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35);
 
-        state.data.shieldHP = 0; // Spent
+        state.data.shieldHP = 0; 
         state.current = 'COOLDOWN';
-        state.timers.action = 0.5;
+        state.timers.action = AI_CONFIG.DAEMON.COOLDOWN_TIME;
     }
     
     // 4. COOLDOWN
@@ -118,7 +86,7 @@ export const DaemonLogic: EnemyLogic = {
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGING';
-            state.data.wasHit = false; // Reset hit flag
+            state.data.wasHit = false;
         }
     }
 
@@ -127,8 +95,7 @@ export const DaemonLogic: EnemyLogic = {
         state.data.shieldHP = 0;
         state.timers.action -= ctx.delta;
         
-        // Spin out of control?
-        pos.rotation += ctx.delta * 20.0;
+        pos.rotation += ctx.delta * AI_CONFIG.DAEMON.ROTATION_SPEED.BROKEN;
 
         if (state.timers.action <= 0) {
             state.current = 'CHARGING';

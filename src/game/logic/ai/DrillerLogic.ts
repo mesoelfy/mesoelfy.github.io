@@ -7,7 +7,7 @@ import { TargetComponent } from '../../components/data/TargetComponent';
 import { PanelRegistry } from '../../systems/PanelRegistrySystem'; 
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
-import { MODEL_CONFIG } from '../../config/ModelConfig';
+import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -21,7 +21,6 @@ export const DrillerLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // Init audio timer if missing
     if (typeof state.data.audioTimer === 'undefined') state.data.audioTimer = 0;
 
     let destX = target.x;
@@ -40,19 +39,17 @@ export const DrillerLogic: EnemyLogic = {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     const angle = Math.atan2(dy, dx) - Math.PI/2;
-    const TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2;
-    const SNAP_THRESHOLD = 0.1;
-
+    
     // --- DRILLING STATE ---
-    if (dist <= TIP_OFFSET + SNAP_THRESHOLD && target.id !== null) {
+    if (dist <= AI_CONFIG.DRILLER.TIP_OFFSET + AI_CONFIG.DRILLER.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
         // Snap
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
-            pos.x = destX - (normX * TIP_OFFSET);
-            pos.y = destY - (normY * TIP_OFFSET);
+            pos.x = destX - (normX * AI_CONFIG.DRILLER.TIP_OFFSET);
+            pos.y = destY - (normY * AI_CONFIG.DRILLER.TIP_OFFSET);
         }
 
         motion.vx = 0;
@@ -62,12 +59,10 @@ export const DrillerLogic: EnemyLogic = {
         ctx.spawnDrillSparks(destX, destY, angle);
 
         // --- AUDIO LOGIC ---
-        // Play sound every 0.3 seconds while drilling
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
             ctx.playSound('driller_drill');
-            // Randomize slightly to avoid machine-gun effect
-            state.data.audioTimer = 0.25 + Math.random() * 0.1; 
+            state.data.audioTimer = AI_CONFIG.DRILLER.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 
         if (Math.random() < ctx.delta * 2.0) { 
@@ -78,8 +73,6 @@ export const DrillerLogic: EnemyLogic = {
     } else {
         // --- MOVING STATE ---
         state.current = 'MOVING';
-        
-        // Reset timer so it plays immediately upon contact
         state.data.audioTimer = 0;
 
         const speed = ENEMY_CONFIG[EnemyTypes.DRILLER].baseSpeed;

@@ -12,17 +12,4 @@ export class HealthComponent extends Component {
     super();
     this.current = max;
   }
-
-  public get isDead(): boolean {
-    return this.current <= 0;
-  }
-
-  public damage(amount: number) {
-    // Invincibility handling will happen in Systems, this is just data
-    this.current = Math.max(0, this.current - amount);
-  }
-  
-  public heal(amount: number) {
-      this.current = Math.min(this.max, this.current + amount);
-  }
 }
