@@ -13,7 +13,12 @@ class AudioSystemController {
   private ambienceGain: GainNode | null = null;
   private ambiencePanner: StereoPannerNode | null = null;
   private ambienceLFO: OscillatorNode | null = null;
-  private ambiencePanConstraint: GainNode | null = null; // NEW: Limits Pan Width
+  private ambiencePanConstraint: GainNode | null = null;
+  
+  // Depth Modulation Nodes
+  private ambienceFilter: BiquadFilterNode | null = null;
+  private ambienceDepthLFO: OscillatorNode | null = null;
+  private ambienceDepthGain: GainNode | null = null;
   
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private musicElement: HTMLAudioElement | null = null;
@@ -33,37 +38,57 @@ class AudioSystemController {
     this.ctx = new AudioContextClass();
     if (!this.ctx) return;
 
-    // 1. Create Nodes
+    // 1. Create Main Nodes
     this.masterGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
     
-    // Ambience Nodes
+    // 2. Ambience Graph Creation
     this.ambienceGain = this.ctx.createGain();
     this.ambiencePanner = this.ctx.createStereoPanner();
+    this.ambiencePanConstraint = this.ctx.createGain();
     this.ambienceLFO = this.ctx.createOscillator();
-    this.ambiencePanConstraint = this.ctx.createGain(); // NEW
+    
+    // Depth Graph
+    this.ambienceFilter = this.ctx.createBiquadFilter(); 
+    this.ambienceDepthLFO = this.ctx.createOscillator(); 
+    this.ambienceDepthGain = this.ctx.createGain();      
 
-    // 2. Wiring Main Audio
+    // 3. Main Connections
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
-    
-    // Ambience Signal Chain: Source -> Volume -> Panner -> Master
-    this.ambienceGain.connect(this.ambiencePanner); 
-    this.ambiencePanner.connect(this.masterGain);
-    
     this.masterGain.connect(this.ctx.destination);
 
-    // 3. Setup Ambience Automation (Subtle Sweep)
-    // LFO -> Constraint Gain (0.3) -> Panner Pan
-    this.ambienceLFO.type = 'sine'; 
-    this.ambienceLFO.frequency.value = 0.05; // Slower: 20 seconds per cycle
-    this.ambiencePanConstraint.gain.value = 0.3; // Restricts pan to +/- 30%
+    // 4. Ambience Audio Chain
+    // Signal Flow: Gain -> Filter -> Panner -> Master
+    this.ambienceGain.connect(this.ambienceFilter);
+    this.ambienceFilter.connect(this.ambiencePanner);
+    this.ambiencePanner.connect(this.masterGain);
+
+    // 5. Modulation Setup
+    
+    // A. Stereo Pan Automation (20s cycle)
+    this.ambienceLFO.type = 'sine';
+    this.ambienceLFO.frequency.value = 0.05; 
+    this.ambiencePanConstraint.gain.value = 0.1; // +/- 10% Width (Subtle drift)
     
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
     
+    // B. Depth/Filter Automation (5s cycle - Polyrhythm)
+    this.ambienceFilter.type = 'lowpass';
+    this.ambienceFilter.frequency.value = 300; // Center Freq
+    
+    this.ambienceDepthLFO.type = 'sine';
+    this.ambienceDepthLFO.frequency.value = 0.2; 
+    this.ambienceDepthGain.gain.value = 10; // Modulates +/- 10Hz (290Hz to 310Hz range)
+    
+    this.ambienceDepthLFO.connect(this.ambienceDepthGain);
+    this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
+
+    // 6. Start Engines
     this.ambienceLFO.start();
+    this.ambienceDepthLFO.start();
 
     this.updateVolumes();
 
@@ -141,7 +166,6 @@ class AudioSystemController {
       
       const attack = recipe.attack || 0.005; 
       
-      // Attack Logic
       if (recipe.attack !== undefined) {
           mainGain.gain.setValueAtTime(0, 0);
           mainGain.gain.linearRampToValueAtTime(recipe.volume, recipe.attack);
@@ -149,7 +173,6 @@ class AudioSystemController {
           mainGain.gain.setValueAtTime(recipe.volume, 0);
       }
       
-      // Decay Logic (Ambience vs One-Shot)
       if (recipe.duration < 10.0) {
           mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
       } else {
@@ -253,7 +276,8 @@ class AudioSystemController {
       gain.gain.linearRampToValueAtTime(1.0, this.ctx.currentTime + 2.0); 
 
       source.connect(gain);
-      gain.connect(this.ambienceGain);
+      // Connect to Filter chain
+      gain.connect(this.ambienceGain); 
       source.start();
       
       this.currentAmbienceNode = source;

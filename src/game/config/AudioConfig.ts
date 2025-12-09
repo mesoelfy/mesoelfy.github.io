@@ -30,18 +30,7 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
   'powerup': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
   'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
-  
-  // NEW: "Spacious & Dramatic" Initialize Sound
-  // Deep noise sweep (Impact) + Long tail
-  'initialize_impact': { 
-    type: 'noise', 
-    frequency: [0, 0], 
-    filter: [1500, 50], // Wide sweep down (Whoosh -> Thud)
-    duration: 2.0, 
-    volume: 0.6, 
-    pitchVariance: 0, 
-    distortion: 30 
-  },
+  'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
 
   // --- ENEMIES & COMBAT ---
   'enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
@@ -62,15 +51,14 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   },
 
   // --- AMBIENCE ---
-  // Variant B: Volume 0.05, REMOVED attack (handled by realtime fade)
+  // Variant B: Filter raised to 800Hz to allow dynamic filtering
   'ambience_b': { 
     type: 'noise', 
     frequency: [0,0], 
-    filter: [300, 300], 
+    filter: [800, 800], 
     duration: 40.0, 
     volume: 0.05,   
     pitchVariance: 0
-    // Attack removed to prevent loop dip
   },
 
   // --- BENCH ---
