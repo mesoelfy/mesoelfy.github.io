@@ -6,26 +6,17 @@ import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 
-// --- SUB-COMPONENTS ---
-
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
     <div className="absolute inset-0 border-current opacity-20" 
          style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
     <div className="absolute w-full h-[1px] bg-current opacity-40" />
     <div className="absolute h-full w-[1px] bg-current opacity-40" />
-    
     <motion.div 
       className="absolute inset-0 origin-bottom-right opacity-40"
-      style={{ 
-        background: 'conic-gradient(from 0deg, transparent 270deg, currentColor 360deg)',
-      }}
+      style={{ background: 'conic-gradient(from 0deg, transparent 270deg, currentColor 360deg)' }}
       animate={{ rotate: 360 }}
-      transition={{ 
-        repeat: Infinity, 
-        ease: "linear", 
-        duration: panic ? 1.0 : 4.0 
-      }}
+      transition={{ repeat: Infinity, ease: "linear", duration: panic ? 1.0 : 4.0 }}
     />
     <div className={`w-1 h-1 rounded-full bg-current ${active ? 'animate-pulse' : ''}`} />
   </div>
@@ -79,19 +70,20 @@ export const Header = () => {
 
   const heartbeatControls = useHeartbeat();
 
-  // SMOOTH DECAY VARIANTS (1.2s Duration)
+  // AUDIO SYNCED VARIANTS
+  // Duration: 0.8s (Matches audio duration)
+  // Attack: 10% (0.08s, matches audio attack)
   const textVariants = {
       heartbeat: {
           scale: [1, 1.05, 1],
           textShadow: [
               "0 0 0px #FF003C",
-              "0 0 25px #FF003C", // Peak Glow
-              "0 0 5px #FF003C",  // Decay start
-              "0 0 0px #FF003C"   // Fade out
+              "0 0 25px #FF003C", // Peak at 0.08s
+              "0 0 0px #FF003C"   // Decay linearly
           ],
           transition: { 
-              duration: 1.2, 
-              times: [0, 0.1, 0.4, 1], 
+              duration: 0.8, 
+              times: [0, 0.1, 1], // Sharp attack, long decay
               ease: "easeOut" 
           }
       }
@@ -104,7 +96,11 @@ export const Header = () => {
               "brightness(2) drop-shadow(0 0 10px #FF003C)",
               "brightness(1) drop-shadow(0 0 0px #FF003C)"
           ],
-          transition: { duration: 1.2, ease: "easeOut" }
+          transition: { 
+              duration: 0.8, 
+              times: [0, 0.1, 1],
+              ease: "easeOut" 
+          }
       }
   };
 
@@ -127,7 +123,6 @@ export const Header = () => {
         {mounted && (
           <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
             <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
-            
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
                 <span className="font-bold text-lg tabular-nums tracking-widest">

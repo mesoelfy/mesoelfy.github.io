@@ -35,14 +35,14 @@ const panelVariants = {
   })
 };
 
-// Heartbeat Pulse Animation (1.2s Duration)
+// AUDIO SYNCED PULSE (0.8s)
 const pulseVariants = {
     heartbeat: {
-        opacity: [0, 0.6, 0.3, 0], // Flash up, linger, fade
-        scale: [1, 1.005, 1], // Subtle expansion
+        opacity: [0, 0.6, 0], // Flash up, fade out
+        scale: [1, 1.005, 1], 
         transition: { 
-            duration: 1.2, 
-            times: [0, 0.05, 0.3, 1], // Fast attack, slow decay
+            duration: 0.8, 
+            times: [0, 0.1, 1], // 10% attack to match audio
             ease: "easeOut" 
         }
     }
@@ -62,7 +62,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const isInteracting = gameId && interactionTarget === gameId;
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
-  // Trigger if global health is low, even if this specific panel is fine
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
@@ -76,7 +75,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   
   // Controls
   const shakeControls = useAnimation();
-  const heartbeatControls = useHeartbeat(); // Listens to event
+  const heartbeatControls = useHeartbeat(); 
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -129,7 +128,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       )}
     >
       {/* GLOBAL ALARM OVERLAY */}
-      {/* This renders on TOP of the panel content but ignores clicks */}
       {isCriticalGlobal && (
           <motion.div 
             className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"

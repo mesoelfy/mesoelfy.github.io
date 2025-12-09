@@ -18,13 +18,8 @@ export class GameStateSystem implements IGameSystem {
   public upgradePoints: number = 0;
 
   public activeUpgrades: Record<string, number> = {
-    'OVERCLOCK': 0, 
-    'EXECUTE': 0, 
-    'BANDWIDTH': 0, 
-    'FORK': 0,
-    'SNIFFER': 0,
-    'BACKDOOR': 0,
-    'REPAIR_NANITES': 0
+    'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+    'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
   public isGameOver: boolean = false;
@@ -42,22 +37,21 @@ export class GameStateSystem implements IGameSystem {
       if (this.isGameOver) return;
 
       // Heartbeat Logic (< 30% Integrity)
-      // Note: Integrity is 0-100
       if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
           this.heartbeatTimer -= delta;
+          
           if (this.heartbeatTimer <= 0) {
-              AudioSystem.playSound('warning_heartbeat');
-              
-              // Calculate urgency (0.0 = 30% health, 1.0 = 0% health)
-              // integrity 30 -> urgency 0
-              // integrity 0  -> urgency 1
+              // 1. Calculate Urgency (0.0 at 30% -> 1.0 at 0%)
               const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
               
-              // Emit event for UI Sync
+              // 2. Play Sound & Emit Event
+              AudioSystem.playSound('warning_heartbeat');
               GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
 
-              // Timer: 1.5s at 30%, speeding up to 0.6s at near death
-              this.heartbeatTimer = 1.5 - (urgency * 0.9);
+              // 3. Set Next Timer (Acceleration Curve)
+              // Low Urgency: ~1.4s delay (Slow thud)
+              // Max Urgency: ~0.35s delay (Fast panic)
+              this.heartbeatTimer = 1.4 - (urgency * 1.05); 
           }
       } else {
           this.heartbeatTimer = 0;
