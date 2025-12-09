@@ -19,15 +19,11 @@ export const SocialRow = () => {
 
   return (
     <div className={clsx(
-        "grid grid-cols-3 gap-2 h-full content-center py-2 relative",
-        // If destroyed, we don't fully hide it, we let it sit under the overlay
-        // but we disable interactions so it feels "broken"
+        "grid grid-cols-3 gap-2 h-full content-center py-2 relative px-2",
         isDestroyed ? "pointer-events-none" : "" 
     )}>
       {socials.map((social, idx) => {
         const Icon = isDestroyed ? AlertTriangle : (IconMap[social.icon] || Crosshair);
-        
-        // Random "Corruption" logic for visuals
         const isGlitch = isDestroyed && (idx % 2 === 0);
         
         return (
@@ -39,23 +35,23 @@ export const SocialRow = () => {
             onMouseEnter={() => !isDestroyed && AudioSystem.playHover()} 
             onClick={() => !isDestroyed && AudioSystem.playClick()}
             className={clsx(
-                "group flex flex-col items-center justify-center p-2 border transition-all duration-300",
+                "group flex flex-col items-center justify-center p-2 border transition-all duration-200",
                 isDestroyed 
                     ? "border-elfy-red/20 bg-elfy-red/5 grayscale" 
-                    : "border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-green/10 hover:border-elfy-green"
+                    : "border-elfy-green-dim/30 bg-black/40 hover:bg-elfy-yellow/5 hover:border-elfy-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.15)]"
             )}
           >
             <Icon 
               className={clsx(
-                  "w-5 h-5 mb-1 transition-transform",
-                  isDestroyed ? "text-elfy-red animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-green group-hover:scale-110",
+                  "w-5 h-5 mb-1 transition-transform duration-200",
+                  isDestroyed ? "text-elfy-red animate-pulse" : "text-elfy-green-dim group-hover:text-elfy-yellow group-hover:scale-110",
                   isGlitch ? "translate-x-1" : ""
               )}
-              style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(120,246,84,0.3))' } : {}}
+              style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' } : {}}
             />
             <span className={clsx(
-                "text-[10px] uppercase tracking-wider font-mono",
-                isDestroyed ? "text-elfy-red/60" : "text-elfy-green-dim/60 group-hover:text-elfy-green"
+                "text-[9px] uppercase tracking-wider font-mono transition-colors duration-200",
+                isDestroyed ? "text-elfy-red/60" : "text-elfy-green-dim/60 group-hover:text-elfy-yellow"
             )}>
               {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name.split(' ')[0]}
             </span>

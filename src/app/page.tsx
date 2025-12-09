@@ -120,13 +120,10 @@ export default function Home() {
                     >
                       {/* IDENTITY COLUMN */}
                       <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                        
-                        {/* Shorter Identity Core (Flex-1 fills remaining space) */}
                         <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
                           <IdentityHUD />
                         </GlassPanel>
 
-                        {/* Taller Social Uplink (Fixed Height) */}
                         <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
                            <SocialRow />
                         </GlassPanel>
@@ -136,13 +133,18 @@ export default function Home() {
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
-                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8">
-                              <p className="animate-pulse text-elfy-green-dim text-xs">&gt; ESTABLISHING UPLINK...</p>
+                            <div className="flex flex-col items-center justify-center gap-4 border border-dashed border-elfy-green-dim/30 bg-black/20 p-8 w-full max-w-lg">
+                              <p className="animate-pulse text-elfy-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+                              
+                              {/* UPDATED BUTTON STYLE */}
                               <button 
                                 onClick={() => openModal('feed')} 
-                                className="px-6 py-2 border border-elfy-green text-elfy-green hover:bg-elfy-green hover:text-black transition-colors uppercase tracking-wider font-header font-black text-base md:text-lg whitespace-nowrap"
+                                onMouseEnter={() => AudioSystem.playHover()}
+                                className="group w-full py-3 border border-elfy-green-dim/50 text-elfy-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-elfy-yellow hover:text-elfy-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-elfy-yellow/5 relative overflow-hidden"
                               >
-                                [ ACCESS TERMINAL ]
+                                <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
+                                    [ ACCESS_TERMINAL ]
+                                </span>
                               </button>
                             </div>
                           </div>
