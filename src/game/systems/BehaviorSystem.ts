@@ -69,8 +69,8 @@ export class BehaviorSystem implements IGameSystem {
     const daemonContext: AIContext = {
       ...aiContext,
       spawnProjectile: (x, y, vx, vy) => {
-          // Heavy Friendly Shot: 10 Damage + Upgrade, 2.5 Width
-          const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 2.5);
+          // Heavy Friendly Shot: 10 Damage + Upgrade, 4.0 Width (Reduced from 5.0)
+          const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
           
           // FIX: Re-apply the Identity so DaemonBulletRenderer works
           bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));

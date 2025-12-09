@@ -7,7 +7,6 @@ import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
 import { TransformComponent } from '../data/TransformComponent';
 
-// Reuse shader but with Cyan color
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
   varying vec2 vUv; uniform vec3 uColor;
@@ -20,7 +19,8 @@ const fragmentShader = `
 `;
 
 export const DaemonChargeRenderer = () => {
-  const geometry = useMemo(() => new THREE.PlaneGeometry(2.0, 2.0), []);
+  // UPDATED: Scaled down by 20% (5.0 -> 4.0)
+  const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []);
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader,
     uniforms: { uColor: { value: new THREE.Color('#00F0FF') } }, // CYAN
@@ -29,7 +29,7 @@ export const DaemonChargeRenderer = () => {
 
   return (
     <InstancedActor
-      tag={Tag.PLAYER} // Friendly
+      tag={Tag.PLAYER}
       geometry={geometry}
       material={material}
       maxCount={10}
@@ -47,12 +47,10 @@ export const DaemonChargeRenderer = () => {
               obj.rotation.set(0,0,0);
 
               if (state.current === 'CHARGING') {
-                  // Grow 0 -> 1 over 2 seconds
                   const maxTime = 2.0;
                   const progress = 1.0 - (state.timers.action / maxTime);
                   obj.scale.setScalar(progress);
               } else if (state.current === 'READY') {
-                  // Pulse
                   const s = 1.0 + Math.sin(performance.now() * 0.01) * 0.1;
                   obj.scale.setScalar(s);
               }

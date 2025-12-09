@@ -114,7 +114,7 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
     if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth / 2;
+        this.playerHealth = this.maxPlayerHealth; // CHANGED: Restores 100% Health
         this.playerRebootProgress = 0;
     }
   }

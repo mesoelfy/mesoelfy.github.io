@@ -176,7 +176,7 @@ I think the drilling sound needs to be overhauled.
 Can we detect if a user is having a poor FPS experience, pause everything, then offer to switch to potato-quality graphics turning things like particles and animations off so they can navigate the site?
 
 
-
+For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
 
 
 

@@ -3,18 +3,30 @@ import { EnemyLogic, AIContext } from './types';
 import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
+import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
 const getTarget = (e: Entity) => e.requireComponent<TargetComponent>('Target');
+const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
 
 export const KamikazeLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
     const pos = getPos(e);
     const motion = getMotion(e);
     const target = getTarget(e);
+    const state = getState(e);
+
+    // Handle Spawn Animation State
+    if (state.current === 'SPAWN') {
+        state.timers.spawn -= ctx.delta;
+        if (state.timers.spawn <= 0) {
+            state.current = 'MOVING';
+        }
+        return; // Don't move while spawning
+    }
 
     const dx = target.x - pos.x;
     const dy = target.y - pos.y;
