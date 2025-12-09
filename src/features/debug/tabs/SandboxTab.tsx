@@ -2,6 +2,7 @@ import { Box } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface SandboxTabProps {
   closeDebug: () => void;
@@ -12,12 +13,21 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const { startGame } = useGameStore();
 
   const enterSandbox = () => {
+      // 1. Wake up Audio Engine (User Interaction)
+      AudioSystem.init();
+      AudioSystem.startMusic();
+
+      // 2. Set State
       setIntroDone(true);
       setBootState('sandbox');
+      
+      // 3. Clean Registry
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
+      
+      // 4. Start Loop
       startGame();
       closeDebug();
   };

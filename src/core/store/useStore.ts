@@ -12,7 +12,7 @@ interface AudioSettings {
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact';
 type BootState = 'standby' | 'active' | 'sandbox';
-type SandboxView = 'arena' | 'gallery';
+type SandboxView = 'arena' | 'gallery' | 'audio';
 
 interface DebugFlags {
   godMode: boolean;
@@ -78,7 +78,8 @@ export const useStore = create<AppState>((set, get) => ({
   activeModal: 'none',
   hoveredItem: null,
   
-  sandboxView: 'arena',
+  // UPDATED: Default is now 'audio'
+  sandboxView: 'audio',
   galleryTarget: EnemyTypes.DRILLER,
   galleryAction: 'IDLE',
   
@@ -88,7 +89,7 @@ export const useStore = create<AppState>((set, get) => ({
     sfx: true,
   },
   
-  screenShakeStrength: 1.0, // Default 100%
+  screenShakeStrength: 1.0, 
   
   isDebugOpen: false,
   isDebugMinimized: false,
@@ -135,7 +136,7 @@ export const useStore = create<AppState>((set, get) => ({
           activeModal: 'none',
           isDebugOpen: false,
           isDebugMinimized: false,
-          sandboxView: 'arena',
+          sandboxView: 'audio', // Reset to audio
           galleryTarget: EnemyTypes.DRILLER,
           galleryAction: 'IDLE'
       });

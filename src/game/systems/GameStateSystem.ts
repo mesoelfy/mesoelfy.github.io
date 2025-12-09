@@ -3,6 +3,8 @@ import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { useStore } from '@/core/store/useStore'; 
+import { AudioSystem } from '@/core/audio/AudioSystem'; // Direct audio access
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class GameStateSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -26,6 +28,9 @@ export class GameStateSystem implements IGameSystem {
   };
 
   public isGameOver: boolean = false;
+  
+  // Heartbeat Logic
+  private heartbeatTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
     this.reset();
@@ -35,7 +40,24 @@ export class GameStateSystem implements IGameSystem {
     });
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      if (this.isGameOver) return;
+
+      // --- LOW SYSTEM INTEGRITY HEARTBEAT (Variant F) ---
+      // Threshold: 30% Integrity
+      if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
+          this.heartbeatTimer -= delta;
+          if (this.heartbeatTimer <= 0) {
+              AudioSystem.playSound('warning_heartbeat');
+              // Pace increases as health gets lower
+              const urgency = Math.max(0.1, PanelRegistry.systemIntegrity / 100); 
+              this.heartbeatTimer = 1.0 + urgency; // 1.0s to 1.3s delay
+          }
+      } else {
+          this.heartbeatTimer = 0;
+      }
+  }
+
   teardown(): void {}
 
   public reset() {
@@ -66,10 +88,9 @@ export class GameStateSystem implements IGameSystem {
               return; 
           }
 
-          // Trigger Daemon Spawn
           if (option === 'DAEMON') {
               GameEventBus.emit(GameEvents.SPAWN_DAEMON, null);
-              return; // Daemons are entities, not just stats
+              return; 
           }
 
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
@@ -84,8 +105,14 @@ export class GameStateSystem implements IGameSystem {
     if (this.isGameOver) return;
     const { godMode } = useStore.getState().debugFlags;
     if (godMode) return;
+    
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
+        
+        // --- PLAYER DEATH SOUND (Variant K) ---
+        if (this.playerHealth <= 0) {
+            AudioSystem.playSound('player_down_glitch');
+        }
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -114,8 +141,9 @@ export class GameStateSystem implements IGameSystem {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
     if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth; // CHANGED: Restores 100% Health
+        this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
+        AudioSystem.playSound('powerup'); // Revival sound
     }
   }
 

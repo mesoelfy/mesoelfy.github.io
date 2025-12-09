@@ -34,7 +34,6 @@ class AudioSystemController {
 
     this.updateVolumes();
 
-    // Generate Sounds from Config
     await this.generateAllSounds();
     
     this.setupEventListeners();
@@ -61,7 +60,6 @@ class AudioSystemController {
       await Promise.all(promises);
   }
 
-  // --- HELPER: Create Distortion Curve ---
   private makeDistortionCurve(amount: number) {
     const k = typeof amount === 'number' ? amount : 50;
     const n_samples = 44100;
@@ -70,7 +68,6 @@ class AudioSystemController {
     
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
-      // Classic sigmoid distortion function
       curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
     }
     return curve;
@@ -83,8 +80,8 @@ class AudioSystemController {
       const length = sampleRate * recipe.duration;
       const offline = new OfflineAudioContext(1, length, sampleRate);
 
-      // --- OUTPUT CHAIN ---
-      // Source -> [Filter] -> [Distortion] -> Gain -> Dest
+      // --- SIGNAL CHAIN ---
+      // Source -> [Tremolo Gain] -> [Filter] -> [Distortion] -> Master Envelope -> Dest
       
       const mainGain = offline.createGain();
       mainGain.connect(offline.destination);
@@ -95,36 +92,55 @@ class AudioSystemController {
 
       let outputNode: AudioNode = mainGain;
 
-      // 1. Distortion Effect (Optional)
+      // 1. Distortion
       if (recipe.distortion) {
           const shaper = offline.createWaveShaper();
           shaper.curve = this.makeDistortionCurve(recipe.distortion);
           shaper.connect(outputNode);
-          outputNode = shaper; // The source connects to shaper, shaper connects to gain
+          outputNode = shaper; 
       }
 
-      // 2. Synthesis Source
+      // 2. Tremolo (Pulsing)
+      let tremoloNode: GainNode | null = null;
+      if (recipe.tremolo) {
+          tremoloNode = offline.createGain();
+          tremoloNode.connect(outputNode);
+          outputNode = tremoloNode;
+
+          const lfo = offline.createOscillator();
+          lfo.type = recipe.tremolo.wave || 'sine';
+          lfo.frequency.value = recipe.tremolo.rate;
+          
+          const lfoGain = offline.createGain();
+          lfoGain.gain.value = recipe.tremolo.depth; // Modulation depth
+          
+          // Connect LFO to the Gain of the Tremolo Node
+          // Base gain is 1 - depth (so it pulses down)
+          tremoloNode.gain.value = 1.0 - (recipe.tremolo.depth / 2);
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremoloNode.gain);
+          
+          lfo.start();
+      }
+
+      // 3. Synthesis Source
       if (recipe.type === 'oscillator') {
           const osc = offline.createOscillator();
           osc.type = recipe.wave || 'sine';
           
-          // Pitch Envelope
           osc.frequency.setValueAtTime(recipe.frequency[0], 0);
           if (recipe.frequency[1] !== recipe.frequency[0]) {
               osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
           }
 
-          // --- FM SYNTHESIS BLOCK ---
           if (recipe.fm) {
              const modOsc = offline.createOscillator();
              const modGain = offline.createGain();
-             
              modOsc.type = recipe.fm.modType;
              modOsc.frequency.value = recipe.fm.modFreq;
              modGain.gain.value = recipe.fm.modIndex;
-
              modOsc.connect(modGain);
-             modGain.connect(osc.frequency); // Modulate the Carrier Frequency
+             modGain.connect(osc.frequency); 
              modOsc.start();
           }
 
@@ -141,7 +157,6 @@ class AudioSystemController {
           const noise = offline.createBufferSource();
           noise.buffer = noiseBuffer;
 
-          // Filter Sweep
           if (recipe.filter) {
               const filter = offline.createBiquadFilter();
               filter.type = 'lowpass';
@@ -169,7 +184,6 @@ class AudioSystemController {
       const source = this.ctx.createBufferSource();
       source.buffer = buffer;
       
-      // Pitch Variance
       if (recipe.pitchVariance > 0) {
           const detune = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
           source.detune.value = detune;
@@ -181,31 +195,19 @@ class AudioSystemController {
 
   private setupEventListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser'));
-    
-    // Distinguish Explosions
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
         if (p.type === 'kamikaze') this.playSound('explosion_large');
         else this.playSound('explosion_small');
     });
-    
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
         this.playSound('explosion_large'); 
         this.duckMusic(0.7, 1.0);
     });
-    
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
         this.playSound('explosion_large');
         this.duckMusic(1.0, 3.0);
     });
-    
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {
-        // Only play if actively healing (handled in InteractionSystem logic)
-        // But for distinct "100%" chime, we'll need a new event or logic.
-        // For now, this is the "during" heal sound.
-        // Actually, let's keep it simple. InteractionSystem emits this rapidly.
-        // We might want to limit this or use a looping sound later.
-    });
-    
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {});
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.playSound('explosion_large'); 
@@ -228,7 +230,6 @@ class AudioSystemController {
       this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
 
-  // --- PUBLIC API ---
   public startMusic() {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     if (!this.musicElement) this.setupMusic();
@@ -247,7 +248,6 @@ class AudioSystemController {
   public playClick() { this.playSound('click'); }
   public playHover() { this.playSound('hover'); }
   public playBootSequence() { this.playSound('powerup'); } 
-  // Public accessor for the new sound
   public playDrillSound() { this.playSound('driller_drill'); }
   public playRebootZap() { this.playSound('reboot_tick'); }
   
