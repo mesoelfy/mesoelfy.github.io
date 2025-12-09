@@ -4,20 +4,28 @@ import { UpgradeOption } from '@/game/types/game.types';
 import identity from '@/data/identity.json';
 import { useStore } from '@/core/store/useStore'; 
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, AlertCircle, GitFork, Swords, Wifi, Zap as ZapIcon, LocateFixed, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot } from 'lucide-react';
+import { Unplug, Zap, GitFork, Swords, Wifi, Zap as ZapIcon, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot, ArrowUpCircle, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 
-const UPGRADE_MAP: Record<string, { label: string, icon: any }> = {
-  'OVERCLOCK': { label: 'Overclock', icon: ZapIcon },
-  'EXECUTE': { label: 'Execute', icon: Swords },
-  'BANDWIDTH': { label: 'Bandwidth', icon: Wifi },
-  'FORK': { label: 'Fork', icon: GitFork }, 
-  'SNIFFER': { label: 'Sniffer', icon: Gitlab }, 
-  'BACKDOOR': { label: 'Backdoor', icon: DoorOpen }, 
-  'DAEMON': { label: 'Daemon', icon: Bot }, // NEW
-  'PURGE': { label: 'Purge', icon: Biohazard },
-  'RESTORE': { label: 'Restore', icon: CircleDotDashed },
-  'REPAIR_NANITES': { label: 'Repair', icon: Unplug }
+const UPGRADE_MAP: Record<string, { label: string, desc: string, icon: any }> = {
+  // CORE UPGRADES
+  'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: ZapIcon },
+  'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
+  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
+  'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
+  'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
+  'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
+  'DAEMON': { label: 'Daemon', desc: 'Summon Ally', icon: Bot },
+  
+  // ACTIONS / OPS
+  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
+  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
+  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
 };
+
+const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
+const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
 
 export const IdentityHUD = () => {
   const { openModal } = useStore();
@@ -31,6 +39,7 @@ export const IdentityHUD = () => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
   const rebootProgress = useGameStore(s => s.playerRebootProgress);
+  const activeUpgrades = useGameStore(s => s.activeUpgrades);
   
   const panel = useGameStore(s => s.panels['identity']);
   const isPanelDead = panel ? panel.isDestroyed : false;
@@ -39,6 +48,7 @@ export const IdentityHUD = () => {
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
   const xpPercent = nextXp > 0 ? Math.min(100, (xp / nextXp) * 100) : 0;
 
+  // --- SVG CONFIG ---
   const size = 160; 
   const center = size / 2;
   const radiusHp = 60;
@@ -54,18 +64,6 @@ export const IdentityHUD = () => {
   const offsetHp = circHp - (displayHpPercent / 100 * circHp);
   const offsetXp = circXp - (xpPercent / 100 * circXp);
 
-  const availableOptions: UpgradeOption[] = [
-      'OVERCLOCK', 
-      'FORK', 
-      'BANDWIDTH', 
-      'EXECUTE',
-      'SNIFFER',
-      'BACKDOOR',
-      'DAEMON',
-      'PURGE',
-      'RESTORE'
-  ];
-
   const handleUpgrade = (u: UpgradeOption) => {
       if (isPanelDead || isPlayerDead) return; 
       AudioSystem.playClick();
@@ -73,118 +71,220 @@ export const IdentityHUD = () => {
   };
 
   return (
-    <div className={`flex flex-col items-center h-full w-full relative ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
+    <div className={`flex flex-col h-full w-full relative overflow-hidden ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
       
-      <div className="relative w-32 h-32 md:w-40 md:h-40 shrink-0 mt-2 group mb-6"> 
-        <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
-           <MiniCrystalCanvas />
-        </div>
-
-        {isPlayerDead && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                {rebootProgress > 0 ? (
-                    <span className="text-2xl font-header font-black text-elfy-yellow drop-shadow-md animate-pulse">
-                        {Math.floor(rebootProgress)}%
-                    </span>
-                ) : (
-                    <div className="animate-pulse">
-                        <Unplug className="text-white/50 w-8 h-8" />
-                    </div>
-                )}
-            </div>
-        )}
-
-        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
-          <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="4 4" />
-          
-          <circle 
-            cx={center} cy={center} r={radiusHp} 
-            stroke={displayHpColor} 
-            strokeWidth={stroke} fill="transparent"
-            strokeDasharray={circHp}
-            strokeDashoffset={offsetHp}
-            strokeLinecap="round"
-            className="transition-all duration-100 ease-linear"
-          />
-          <circle 
-            cx={center} cy={center} r={radiusXp} 
-            stroke="#9E4EA5" 
-            strokeWidth={stroke} fill="transparent"
-            strokeDasharray={circXp}
-            strokeDashoffset={offsetXp}
-            strokeLinecap="round"
-            className="transition-all duration-500 ease-out"
-          />
-        </svg>
-
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black border border-elfy-purple text-elfy-purple px-2 py-0.5 text-[9px] font-bold font-mono rounded-full shadow-[0_-2px_10px_rgba(158,78,165,0.4)] z-20">
-          LVL_{level}
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center items-center w-full gap-2 py-1 min-h-0">
+      {/* TOP SECTION: Avatar & Stats */}
+      <div className="flex-none flex flex-col items-center pt-4 relative z-10">
         
-        {isPlayerDead && !isPanelDead ? (
-            <div className="bg-black/80 border border-elfy-yellow/50 px-4 py-2 rounded animate-pulse text-center relative z-50">
-                <div className="flex items-center justify-center gap-2 text-elfy-yellow font-bold text-xs mb-1">
-                    <Zap size={14} />
-                    <span>SYSTEM CRITICAL</span>
-                </div>
-                <p className="text-[9px] text-white font-mono">HOLD TO REBOOT</p>
-                <p className="text-[8px] text-elfy-red mt-1 font-bold">TAKING DAMAGE DRAINS POWER</p>
-            </div>
-        ) : (
-            <div className="text-center">
-              <h2 className="text-2xl font-header font-black text-elfy-green tracking-wider">{identity.name}</h2>
-              <div className="text-[9px] text-elfy-purple-light uppercase tracking-widest opacity-80">{identity.class}</div>
-            </div>
-        )}
-
-        {upgradePoints > 0 && !isPlayerDead && (
-          <div className="w-full bg-elfy-purple-deep/40 border border-elfy-purple/50 p-1.5 rounded-sm pointer-events-auto z-50 animate-pulse">
-            <div className="flex items-center justify-center gap-2 mb-1">
-                <AlertCircle size={10} className="text-elfy-green" />
-                <div className="text-[9px] text-white text-center font-bold tracking-widest">
-                  UPGRADE AVAILABLE ({upgradePoints})
-                </div>
-            </div>
+        {/* AVATAR RING */}
+        <div className="relative w-40 h-40 shrink-0 group mb-1"> 
             
-            <div className="grid grid-cols-2 gap-1">
-              {availableOptions.map(u => {
-                const info = UPGRADE_MAP[u] || { label: u, icon: Zap };
-                const Icon = info.icon;
-                return (
-                  <button 
-                    key={u}
-                    className={`flex items-center justify-center gap-1 text-[8px] bg-elfy-purple/20 border border-elfy-purple/50 text-elfy-green font-mono py-1.5 transition-colors uppercase ${isPanelDead ? 'cursor-not-allowed text-gray-500' : 'hover:bg-elfy-purple hover:text-white'}`}
-                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                    onClick={() => handleUpgrade(u)}
-                  >
-                    <Icon size={8} />
-                    <span>{info.label}</span>
-                  </button>
-                );
-              })}
+            {/* 3D Canvas */}
+            <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
+               <MiniCrystalCanvas />
             </div>
-          </div>
-        )}
+
+            {/* Status Overlays */}
+            {isPlayerDead && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    {rebootProgress > 0 ? (
+                        <div className="flex flex-col items-center">
+                            <span className="text-2xl font-header font-black text-elfy-yellow drop-shadow-md animate-pulse">
+                                {Math.floor(rebootProgress)}%
+                            </span>
+                            <span className="text-[8px] text-elfy-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
+                        </div>
+                    ) : (
+                        <div className="animate-pulse flex flex-col items-center">
+                            <Unplug className="text-white/50 w-8 h-8 mb-1" />
+                            <span className="text-[8px] text-elfy-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* SVG RINGS */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
+              {/* Background Rings */}
+              <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
+              <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
+              
+              {/* HP Ring (-90deg start) */}
+              <circle 
+                cx={center} cy={center} r={radiusHp} 
+                stroke={displayHpColor} 
+                strokeWidth={stroke} fill="transparent"
+                strokeDasharray={circHp}
+                strokeDashoffset={offsetHp}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+                className="transition-all duration-100 ease-linear"
+              />
+              
+              {/* XP Ring (-90deg start) */}
+              <circle 
+                cx={center} cy={center} r={radiusXp} 
+                stroke="#9E4EA5" 
+                strokeWidth={stroke} fill="transparent"
+                strokeDasharray={circXp}
+                strokeDashoffset={offsetXp}
+                strokeLinecap="round"
+                transform={`rotate(-90 ${center} ${center})`}
+                className="transition-all duration-500 ease-out"
+              />
+
+              {/* CURVED LEVEL TEXT */}
+              {/* Modified path to hug the XP ring (Radius ~72) at the bottom */}
+              <defs>
+                  <path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /> 
+              </defs>
+              
+              <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
+                  <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
+                      LVL_{level.toString().padStart(2, '0')}
+                  </textPath>
+              </text>
+            </svg>
+        </div>
+
+        {/* Identity Info */}
+        <div className="text-center z-20 mb-2">
+            <h2 className="text-xl font-header font-black text-elfy-green tracking-wider drop-shadow-md">{identity.name}</h2>
+            <div className="text-[8px] text-elfy-purple-light uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border border-elfy-purple/20">
+                {identity.class}
+            </div>
+        </div>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-3 mt-auto pt-2 border-t border-elfy-green-dim/10">
+      {/* MIDDLE SECTION: Upgrade Terminal */}
+      <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative pb-4">
+         <AnimatePresence mode="wait">
+            {upgradePoints > 0 && !isPlayerDead ? (
+                <motion.div 
+                    key="upgrades"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex flex-col gap-4"
+                >
+                    {/* Header with Padding to prevent arrow clip */}
+                    <div className="flex items-center gap-2 pb-1 border-b border-elfy-green/20 pt-2">
+                        <ArrowUpCircle size={12} className="text-elfy-green animate-bounce" />
+                        <span className="text-[9px] font-bold text-elfy-green tracking-widest">
+                            SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
+                        </span>
+                    </div>
+
+                    {/* KERNEL UPGRADES */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-elfy-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
+                        {CORE_UPGRADES.map(u => {
+                            const info = UPGRADE_MAP[u];
+                            const Icon = info.icon;
+                            const currentLvl = activeUpgrades[u] || 0;
+
+                            return (
+                                <button
+                                    key={u}
+                                    onClick={() => handleUpgrade(u)}
+                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                                    className="group relative flex items-center justify-between p-2 border border-elfy-green-dim/30 bg-black/40 hover:border-elfy-green transition-all duration-200 overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-elfy-green opacity-20" />
+                                    
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="p-1.5 rounded-sm bg-elfy-green/10 text-elfy-green group-hover:bg-elfy-green group-hover:text-black">
+                                            <Icon size={14} />
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-elfy-green">
+                                                {info.label}
+                                            </span>
+                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                                {info.desc}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-[9px] font-mono text-elfy-green-dim border border-elfy-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-elfy-green group-hover:text-elfy-green relative z-10">
+                                        v{currentLvl}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* SYSTEM OPS */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-elfy-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
+                        {SYSTEM_OPS.map(u => {
+                            const info = UPGRADE_MAP[u];
+                            const Icon = info.icon;
+                            
+                            // Consumables don't show Version
+                            return (
+                                <button
+                                    key={u}
+                                    onClick={() => handleUpgrade(u)}
+                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                                    className="group relative flex items-center justify-between p-2 border border-elfy-yellow/30 bg-elfy-yellow/5 hover:border-elfy-yellow transition-all duration-200 overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-elfy-yellow opacity-20" />
+                                    
+                                    <div className="flex items-center gap-3 relative z-10">
+                                        <div className="p-1.5 rounded-sm bg-elfy-yellow/10 text-elfy-yellow group-hover:bg-elfy-yellow group-hover:text-black">
+                                            <Icon size={14} />
+                                        </div>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-elfy-yellow">
+                                                {info.label}
+                                            </span>
+                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                                {info.desc}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Warning Icon for actions */}
+                                    <AlertTriangle size={12} className="text-elfy-yellow/50 group-hover:text-elfy-yellow" />
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                </motion.div>
+            ) : (
+                <motion.div 
+                    key="status"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 border border-dashed border-white/10 p-4 rounded bg-black/20"
+                >
+                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
+                        <div className="w-1 h-1 bg-white/50 rounded-full" />
+                    </div>
+                    <span className="text-[9px] tracking-widest">SYSTEM_OPTIMIZED</span>
+                    <span className="text-[8px]">WAITING FOR DATA...</span>
+                </motion.div>
+            )}
+         </AnimatePresence>
+      </div>
+
+      {/* BOTTOM SECTION: Footer Links */}
+      <div className="flex-none grid grid-cols-2 gap-px bg-elfy-green-dim/20 border-t border-elfy-green-dim/30 mt-auto">
         <button 
           onClick={() => !isPanelDead && openModal('about')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-2 bg-elfy-purple-deep/20 border border-elfy-purple text-elfy-purple-light hover:bg-elfy-purple hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+          className="py-3 bg-black/80 hover:bg-elfy-green hover:text-black text-elfy-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
-          About
+          About_Me
         </button>
         <button 
           onClick={() => !isPanelDead && openModal('contact')} 
           onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-2 bg-elfy-yellow/5 border border-elfy-yellow text-elfy-yellow hover:bg-elfy-yellow hover:text-black transition-all font-bold text-xs font-header uppercase clip-corner-btn"
+          className="py-3 bg-black/80 hover:bg-elfy-yellow hover:text-black text-elfy-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
         >
-          Contact
+          Contact_Link
         </button>
       </div>
     </div>

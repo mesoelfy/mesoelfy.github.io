@@ -118,16 +118,21 @@ export default function Home() {
                         }
                       }}
                     >
+                      {/* IDENTITY COLUMN */}
                       <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                        
+                        {/* Shorter Identity Core (Flex-1 fills remaining space) */}
                         <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
                           <IdentityHUD />
                         </GlassPanel>
 
-                        <GlassPanel title="SOCIAL_UPLINK" className="h-auto shrink-0" gameId="social">
+                        {/* Taller Social Uplink (Fixed Height) */}
+                        <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
                            <SocialRow />
                         </GlassPanel>
                       </div>
 
+                      {/* CONTENT COLUMN */}
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
