@@ -70,20 +70,19 @@ export const Header = () => {
 
   const heartbeatControls = useHeartbeat();
 
-  // AUDIO SYNCED VARIANTS
-  // Duration: 0.8s (Matches audio duration)
-  // Attack: 10% (0.08s, matches audio attack)
+  // TIGHTENED VISUALS (Match 0.03s Audio Attack)
+  // Peak at 4% of 0.8s ~= 0.032s
   const textVariants = {
       heartbeat: {
           scale: [1, 1.05, 1],
           textShadow: [
               "0 0 0px #FF003C",
-              "0 0 25px #FF003C", // Peak at 0.08s
-              "0 0 0px #FF003C"   // Decay linearly
+              "0 0 25px #FF003C", 
+              "0 0 0px #FF003C"
           ],
           transition: { 
               duration: 0.8, 
-              times: [0, 0.1, 1], // Sharp attack, long decay
+              times: [0, 0.04, 1], // Very sharp attack
               ease: "easeOut" 
           }
       }
@@ -98,7 +97,7 @@ export const Header = () => {
           ],
           transition: { 
               duration: 0.8, 
-              times: [0, 0.1, 1],
+              times: [0, 0.04, 1],
               ease: "easeOut" 
           }
       }

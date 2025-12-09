@@ -35,14 +35,14 @@ const panelVariants = {
   })
 };
 
-// AUDIO SYNCED PULSE (0.8s)
+// TIGHTENED PULSE (4% Attack to match 0.03s Audio)
 const pulseVariants = {
     heartbeat: {
-        opacity: [0, 0.6, 0], // Flash up, fade out
+        opacity: [0, 0.6, 0],
         scale: [1, 1.005, 1], 
         transition: { 
             duration: 0.8, 
-            times: [0, 0.1, 1], // 10% attack to match audio
+            times: [0, 0.04, 1], 
             ease: "easeOut" 
         }
     }

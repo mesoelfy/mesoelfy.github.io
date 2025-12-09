@@ -33,18 +33,15 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
 
   // --- ENEMIES & COMBAT ---
   'enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
-  
-  // Driller: Modified Variant G (Punchy)
   'driller_drill': { 
     type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60 
   },
-
   'explosion_small': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
   'explosion_large': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
 
   // --- GAMEPLAY STATES ---
   
-  // FINALIZED: Low Health Heartbeat (Variant B Logic)
+  // TIGHTENED: Low Health Heartbeat (Attack 0.03s)
   'warning_heartbeat': { 
     type: 'oscillator', 
     wave: 'sine', 
@@ -52,29 +49,19 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
     duration: 0.8, 
     volume: 0.7, 
     pitchVariance: 0, 
-    attack: 0.08, // Smooth fade-in
-    fm: { modType: 'sine', modFreq: 10, modIndex: 25 } // Soft, deep wobble
+    attack: 0.03, // 30ms fade-in (Snappy but safe)
+    fm: { modType: 'sine', modFreq: 10, modIndex: 25 } 
   },
 
-  // Player Death (Variant K Logic)
   'player_down_glitch': { 
     type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, 
     tremolo: { rate: 12, depth: 1.0, wave: 'square' } 
   },
 
-  // --- PROTOTYPE: LOW HEALTH VARIANTS (Kept for Reference) ---
-  'proto_lowhp_a': { 
-    type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.8, volume: 0.7, pitchVariance: 0, 
-    attack: 0.15, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } 
-  },
-  'proto_lowhp_b': { 
-    type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, 
-    attack: 0.08, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } 
-  },
-  'proto_lowhp_c': { 
-    type: 'oscillator', wave: 'triangle', frequency: [50, 40], duration: 0.8, volume: 0.7, pitchVariance: 0,
-    attack: 0.08, filter: [150, 50] 
-  },
+  // --- PROTOTYPES (Kept for reference) ---
+  'proto_lowhp_a': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.15, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
+  'proto_lowhp_b': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },
+  'proto_lowhp_c': { type: 'oscillator', wave: 'triangle', frequency: [50, 40], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, filter: [150, 50] },
 
   // --- BENCH: REMAINING DRILLERS ---
   'drill_a': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
@@ -90,7 +77,7 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'drill_k': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' } },
   'drill_l': { type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' } },
 
-  // --- BENCH: PROTOTYPES ---
+  // --- PROTOTYPES ---
   'proto_charge_a': { type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0 },
   'proto_charge_b': { type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 } },
   'proto_charge_c': { type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 } },
@@ -99,7 +86,6 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'proto_wave_b': { type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 } },
   'proto_wave_c': { type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100 },
 
-  // --- MISC ---
   'misc_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
   'misc_denied': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50 },
   'misc_ui_open': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
