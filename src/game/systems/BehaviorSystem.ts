@@ -2,12 +2,10 @@ import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { Tag } from '../core/ecs/types';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-import { StateComponent } from '../components/data/StateComponent';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus'; 
 import { GameEvents } from '../events/GameEvents'; 
-import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 
 import { DrillerLogic } from '../logic/ai/DrillerLogic';
@@ -35,14 +33,12 @@ export class BehaviorSystem implements IGameSystem {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     
-    // LISTEN FOR DAEMON SPAWN
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
         
         const orbital = e.getComponent<OrbitalComponent>('Orbital');
         if (orbital) {
             orbital.radius = 4.0;
-            // Always Counter-Clockwise (Positive)
             orbital.speed = 1.5 + Math.random() * 1.0; 
             orbital.angle = Math.random() * Math.PI * 2;
         }
@@ -68,13 +64,11 @@ export class BehaviorSystem implements IGameSystem {
 
     const daemonContext: AIContext = {
       ...aiContext,
+      daemonMaxDamage: daemonDamage,
       spawnProjectile: (x, y, vx, vy) => {
-          // Heavy Friendly Shot: 10 Damage + Upgrade, 4.0 Width (Reduced from 5.0)
+          // Note: Logic will override this call to inject the specific shield HP damage
           const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
-          
-          // FIX: Re-apply the Identity so DaemonBulletRenderer works
           bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
-          
           GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x, y }); 
       }
     };

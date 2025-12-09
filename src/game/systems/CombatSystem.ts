@@ -6,6 +6,7 @@ import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
+import { StateComponent } from '../components/data/StateComponent';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents, FXVariant } from '../events/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
@@ -37,28 +38,85 @@ export class CombatSystem implements IGameSystem {
 
       // 1. PLAYER vs ENEMY (Crash)
       if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY) {
-          const id = b.getComponent<IdentityComponent>('Identity');
-          const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
-          this.damagePlayer(damage);
-          this.destroyEnemy(b, true); 
+          // Check if Player is Daemon (Shield Logic)
+          const idA = a.getComponent<IdentityComponent>('Identity');
+          
+          if (idA?.variant === EnemyTypes.DAEMON) {
+              this.resolveDaemonCollision(a, b);
+          } else {
+              // Standard Player Collision
+              const id = b.getComponent<IdentityComponent>('Identity');
+              const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
+              this.damagePlayer(damage);
+              this.destroyEnemy(b, true); 
+          }
       }
 
       // 2. PLAYER vs ENEMY_PROJECTILE (Hit)
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
-          this.damagePlayer(10);
-          this.destroyProjectile(b, 'IMPACT_RED'); 
+          const idA = a.getComponent<IdentityComponent>('Identity');
+          if (idA?.variant === EnemyTypes.DAEMON) {
+              // Daemons absorb bullets with shield too?
+              this.resolveDaemonCollision(a, b, 5); // 5 Dmg from bullet
+          } else {
+              this.damagePlayer(10);
+              this.destroyProjectile(b, 'IMPACT_RED'); 
+          }
       }
 
       // 3. ENEMY vs PLAYER_PROJECTILE (Damage)
       else if (layerA === CollisionLayers.ENEMY && layerB === CollisionLayers.PLAYER_PROJECTILE) {
-          // a=Enemy, b=Bullet
           this.handleMassExchange(a, b, 'IMPACT_WHITE');
       }
 
       // 4. PROJECTILE vs PROJECTILE (Clash)
       else if (layerA === CollisionLayers.PLAYER_PROJECTILE && layerB === CollisionLayers.ENEMY_PROJECTILE) {
-          // a=PlayerBullet, b=EnemyBullet
           this.handleMassExchange(a, b, 'CLASH_YELLOW');
+      }
+  }
+
+  private resolveDaemonCollision(daemon: Entity, enemyOrBullet: Entity, fixedDamage?: number) {
+      const state = daemon.getComponent<StateComponent>('State');
+      if (!state) return;
+
+      // Calculate Damage
+      let incomingDamage = fixedDamage || 10;
+      if (!fixedDamage) {
+          const enemyHp = enemyOrBullet.getComponent<HealthComponent>('Health');
+          // Kamikazes deal more
+          const eId = enemyOrBullet.getComponent<IdentityComponent>('Identity');
+          if (eId?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
+          else if (enemyHp) incomingDamage = enemyHp.current * 5; // Mass based ramming?
+      }
+
+      const shield = state.data.shieldHP || 0;
+
+      if (state.current === 'CHARGING' || state.current === 'READY') {
+          if (shield > 0) {
+              // SHIELD ABSORB
+              state.data.shieldHP = Math.max(0, shield - incomingDamage);
+              state.data.wasHit = true; // Flag for Logic to check breakage
+              
+              // Damage/Destroy the enemy
+              if (enemyOrBullet.hasTag('ENEMY')) {
+                  this.destroyEnemy(enemyOrBullet, true);
+                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'CLASH_YELLOW', x: 0, y: 0 }); // Pos handled in FX
+              } else {
+                  this.destroyProjectile(enemyOrBullet, 'IMPACT_WHITE');
+              }
+              return;
+          }
+      }
+
+      // If Shield broken or not active, Daemon takes body damage? 
+      // Prompt implies shield protects. 
+      // For now, let's say Daemons are invincible except for their shield mechanic?
+      // Or maybe they just block the enemy and lose shield. 
+      // We will destroy the enemy regardless (Ramming).
+      if (enemyOrBullet.hasTag('ENEMY')) {
+          this.destroyEnemy(enemyOrBullet, true);
+      } else {
+          this.destroyProjectile(enemyOrBullet, 'IMPACT_RED');
       }
   }
 
@@ -77,17 +135,12 @@ export class CombatSystem implements IGameSystem {
       const tA = entityA.getComponent<TransformComponent>('Transform');
       if (tA) GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: tA.x, y: tA.y });
 
-      // FIX: Use destroyEnemy / destroyProjectile helper methods to ensure Events are emitted!
       if (hpA && hpA.isDead) {
-          if (entityA.getComponent('Identity')) {
-              this.destroyEnemy(entityA, true); // It's an Enemy
-          } else {
-              this.destroyProjectile(entityA, 'IMPACT_WHITE'); // It's a projectile (unlikely for entityA here but safe)
-          }
+          if (entityA.getComponent('Identity')) this.destroyEnemy(entityA, true);
+          else this.destroyProjectile(entityA, 'IMPACT_WHITE');
       }
       
       if (hpB && hpB.isDead) {
-          // Entity B is usually the bullet in Enemy vs Bullet
           this.destroyProjectile(entityB, 'IMPACT_WHITE');
       }
   }
@@ -101,7 +154,6 @@ export class CombatSystem implements IGameSystem {
       const transform = entity.getComponent<TransformComponent>('Transform');
       const identity = entity.getComponent<IdentityComponent>('Identity');
       
-      // EMIT KILL EVENT (XP)
       if (transform && identity) {
           GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 
               id: entity.id as number, 
