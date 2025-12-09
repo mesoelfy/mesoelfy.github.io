@@ -1,12 +1,11 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PanelRegistry } from './PanelRegistrySystem'; 
-import { GameStateSystem } from './GameStateSystem'; 
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
-export class InteractionSystem implements IGameSystem {
+export class InteractionSystem implements IInteractionSystem {
   public repairState: RepairState = 'IDLE';
   public hoveringPanelId: string | null = null;
   
@@ -14,12 +13,12 @@ export class InteractionSystem implements IGameSystem {
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
   private spawner!: IEntitySpawner;
-  private gameSystem!: GameStateSystem; 
+  private gameSystem!: IGameStateSystem; 
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.spawner = locator.getSpawner();
-    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
   }
 
   update(delta: number, time: number): void {
@@ -66,7 +65,7 @@ export class InteractionSystem implements IGameSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(2.5); // Charge Speed
+            this.gameSystem.tickReboot(2.5); 
             this.lastRepairTime = time;
             if (Math.random() > 0.3) {
                 const angle = Math.random() * Math.PI * 2;

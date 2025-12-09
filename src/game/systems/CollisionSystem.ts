@@ -1,33 +1,29 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { PhysicsSystem } from './PhysicsSystem';
+import { IGameSystem, IServiceLocator, IPhysicsSystem, ICombatSystem } from '../core/interfaces';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
-import { CombatSystem } from './CombatSystem'; 
-import { Entity } from '../core/ecs/Entity';
 import { EntityID } from '../core/ecs/types';
 
 export class CollisionSystem implements IGameSystem {
-  private physicsSystem!: PhysicsSystem;
+  private physicsSystem!: IPhysicsSystem;
   private registry!: EntityRegistry;
-  private combatSystem!: CombatSystem;
+  private combatSystem!: ICombatSystem;
 
-  // OPTIMIZATION: Reusable buffers to avoid Garbage Collection stutter
   private resultBuffer = new Set<EntityID>();
   private handledPairs = new Set<string>();
 
   setup(locator: IServiceLocator): void {
-    this.physicsSystem = locator.getSystem<PhysicsSystem>('PhysicsSystem');
+    // DEPENDENCY INJECTION VIA INTERFACE
+    this.physicsSystem = locator.getSystem<IPhysicsSystem>('PhysicsSystem');
+    this.combatSystem = locator.getSystem<ICombatSystem>('CombatSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
-    this.combatSystem = locator.getSystem<CombatSystem>('CombatSystem');
   }
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     const allEntities = this.registry.getAll();
     
-    // Clear the pair cache once per frame
     this.handledPairs.clear();
 
     for (const entity of allEntities) {
@@ -41,7 +37,6 @@ export class CollisionSystem implements IGameSystem {
         const state = entity.getComponent<StateComponent>('State');
         if (state && state.current === 'SPAWN') continue;
 
-        // OPTIMIZED QUERY: Pass the buffer, don't create a new one
         spatial.query(transform.x, transform.y, collider.radius + 1.0, this.resultBuffer);
 
         for (const otherId of this.resultBuffer) {

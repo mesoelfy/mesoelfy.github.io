@@ -1,10 +1,10 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IPhysicsSystem, IServiceLocator } from '../core/interfaces';
 import { SpatialGrid } from '../core/SpatialGrid';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 
-export class PhysicsSystem implements IGameSystem {
+export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
   private registry!: EntityRegistry;
 
@@ -27,17 +27,14 @@ export class PhysicsSystem implements IGameSystem {
       const motion = entity.getComponent<MotionComponent>('Motion');
       
       if (transform && motion) {
-        // Apply Velocity
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
         
-        // Friction / Damping
         if (motion.friction > 0) {
             motion.vx *= (1 - motion.friction);
             motion.vy *= (1 - motion.friction);
         }
 
-        // Spatial Grid Insert
         this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
     }

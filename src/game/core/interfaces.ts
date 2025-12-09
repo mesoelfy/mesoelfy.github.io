@@ -1,5 +1,7 @@
 import { GameEvents, GameEventPayloads } from '../events/GameEvents';
 import { Entity } from './ecs/Entity';
+import { SpatialGrid } from './SpatialGrid';
+import { WorldRect } from '../utils/ViewportHelper';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -11,14 +13,14 @@ export interface IServiceLocator {
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
   
-  // Core Services
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
 }
 
-// Interface for the Registry (to decouple implementation)
+// --- CORE CONTRACTS ---
+
 export interface IEntityRegistry {
   createEntity(): Entity;
   destroyEntity(id: number): void;
@@ -29,11 +31,10 @@ export interface IEntityRegistry {
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
 
-// Interface for the Spawner (formerly Factory)
 export interface IEntitySpawner {
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
-  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, radius?: number): Entity;
+  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void;
 }
 
@@ -47,4 +48,47 @@ export interface IInputService {
   getCursor(): { x: number, y: number };
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
+  updateBounds(width: number, height: number): void; // Added for InputSystem sync
+}
+
+// --- SYSTEM CONTRACTS ---
+
+export interface IPhysicsSystem extends IGameSystem {
+  spatialGrid: SpatialGrid;
+}
+
+export interface ICombatSystem extends IGameSystem {
+  resolveCollision(e1: Entity, e2: Entity): void;
+}
+
+export interface IInteractionSystem extends IGameSystem {
+  repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
+  hoveringPanelId: string | null;
+}
+
+export interface IGameStateSystem extends IGameSystem {
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  score: number;
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  upgradePoints: number;
+  activeUpgrades: Record<string, number>;
+  isGameOver: boolean;
+  
+  damagePlayer(amount: number): void;
+  healPlayer(amount: number): void;
+  addScore(amount: number): void;
+  addXp(amount: number): void;
+  tickReboot(amount: number): void;
+  decayReboot(amount: number): void;
+}
+
+export interface IPanelSystem extends IGameSystem {
+  systemIntegrity: number;
+  damagePanel(id: string, amount: number): void;
+  healPanel(id: string, amount: number): void;
+  getPanelRect(id: string): WorldRect | undefined;
 }

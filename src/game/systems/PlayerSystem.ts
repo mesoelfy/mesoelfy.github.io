@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '../core/interfaces';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
@@ -7,19 +7,18 @@ import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
-import { InteractionSystem } from './InteractionSystem';
-import { GameStateSystem } from './GameStateSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
-  private gameSystem!: GameStateSystem;
+  private gameSystem!: IGameStateSystem;
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    // DEPENDENCY INJECTION VIA INTERFACE
+    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     this.setupListeners();
@@ -42,7 +41,7 @@ export class PlayerSystem implements IGameSystem {
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
         try {
-            const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
+            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
             if (interact && interact.repairState !== 'IDLE') {
                 stateComp.current = 'REBOOTING';
             } else {
@@ -81,13 +80,13 @@ export class PlayerSystem implements IGameSystem {
 
   private triggerPurge() {
       const cursor = this.locator.getInputService().getCursor();
-      const count = 360; // Full Circle Density (1 per degree)
-      const speed = 45;  // Extremely Fast
-      const damage = 100; // Instakill
-      const width = 3.0; // Thick Wall
+      const count = 360; 
+      const speed = 45;  
+      const damage = 100;
+      const width = 3.0; 
 
       GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: cursor.x, y: cursor.y });
-      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); // Max Shake
+      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -97,8 +96,8 @@ export class PlayerSystem implements IGameSystem {
           this.spawner.spawnBullet(
               cursor.x, cursor.y, 
               vx, vy, 
-              false, // Not Enemy
-              2.0,   // Life
+              false, 
+              2.0,   
               damage, 
               width
           );

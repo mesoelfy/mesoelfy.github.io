@@ -128,7 +128,8 @@ Entering and exiting system settings or debug should make a soft sound. (ask AI 
 - Need to add some kind of "begin" click prompt to enable sound in the intro. then we can add variable typing sounds, a ... sound in sync with how they appear, and sparkly shimmer sounds for the matrix rain.
 
   - Have Boot_Loader.sys be a pixel art folder of Elfy's face that does a cute animation after double clicking (coyote time or whatever with a larger grace window than MAC and PC open folder, but still a timing window that needs to be a double click, not clicked too far apart in time) - maybe each click moves forward an animation frame a total of three clicks without timing at all and she blows a kiss?
-
+  
+    - ambient sound begins playing with matrix rain
 
 
 - If you are in system settings and press ~, it should close the system settings when it opens the debug menu.
@@ -156,7 +157,7 @@ Entering and exiting system settings or debug should make a soft sound. (ask AI 
 
 
 
-
+- mouse is appearing in game dashboard state along with game cursor reticle
 
 
 

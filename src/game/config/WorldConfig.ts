@@ -9,7 +9,7 @@ export const WorldConfig = {
     maxVelocity: 20
   },
   time: {
-    fixedDelta: 1 / 60, // 60hz Logic Tick
-    maxDelta: 0.1 // Prevent spiral of death on lag
+    fixedDelta: 1 / 60, // Logic runs at 60hz (0.0166s per tick)
+    maxAccumulator: 0.1 // Prevent "Spiral of Death" if CPU lags hard
   }
 };
