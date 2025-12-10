@@ -21,11 +21,16 @@ const BOOT_KEYS: Record<string, string> = {
 export const MetaManager = () => {
   const { bootState, isSimulationPaused, setSimulationPaused } = useStore();
   
+  // REACTIVE STATE SUBSCRIPTIONS (Crucial for updates)
+  const integrity = useGameStore(s => s.systemIntegrity);
+  const isZenMode = useGameStore(s => s.isZenMode);
+  
   // --- REFS ---
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHashUpdate = useRef(0);
-  const lastFaviconUrl = useRef<string>('');
+  const linkRef = useRef<HTMLLinkElement | null>(null);
+  const metaThemeRef = useRef<HTMLMetaElement | null>(null);
   
   // --- STATE ---
   const [bootKey, setBootKey] = useState('INIT');
@@ -46,24 +51,18 @@ export const MetaManager = () => {
     const handlePause = () => setSimulationPaused(true);
     const handleResume = () => setSimulationPaused(false);
     
-    // Window Focus/Blur
     window.addEventListener('blur', handlePause);
     window.addEventListener('focus', handleResume);
+    document.addEventListener('visibilitychange', () => document.hidden ? handlePause() : handleResume());
     
-    // Visibility API (Tab Switch)
-    const handleVisibility = () => document.hidden ? handlePause() : handleResume();
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    // Mouse Leave/Enter (Cursor exits window)
-    document.addEventListener('mouseleave', handlePause);
-    document.addEventListener('mouseenter', handleResume);
+    document.documentElement.addEventListener('mouseleave', handlePause);
+    document.documentElement.addEventListener('mouseenter', handleResume);
 
     return () => {
         window.removeEventListener('blur', handlePause);
         window.removeEventListener('focus', handleResume);
-        document.removeEventListener('visibilitychange', handleVisibility);
-        document.removeEventListener('mouseleave', handlePause);
-        document.removeEventListener('mouseenter', handleResume);
+        document.documentElement.removeEventListener('mouseleave', handlePause);
+        document.documentElement.removeEventListener('mouseenter', handleResume);
     };
   }, [bootState, setSimulationPaused]);
 
@@ -82,12 +81,10 @@ export const MetaManager = () => {
       return unsub;
   }, []);
 
-  // 4. IDLE TIMER LOGIC
+  // 4. IDLE TIMER (Strict Reset)
   useEffect(() => {
-      const integrity = useGameStore.getState().systemIntegrity;
-      
-      // Immediate Reset conditions
-      if (bootState !== 'active' || isSimulationPaused || integrity < 99) {
+      // If we take ANY damage, pause, or reboot, force Dynamic Mode immediately.
+      if (bootState !== 'active' || isSimulationPaused || integrity < 99.9) {
           setIsIdle100(false);
           if (idleTimerRef.current) {
               clearTimeout(idleTimerRef.current);
@@ -96,61 +93,56 @@ export const MetaManager = () => {
           return;
       }
 
-      // Start timer if fully healed and active
+      // If stable at 100%, start countdown to Idle Mode
       if (!isIdle100 && !idleTimerRef.current) {
           idleTimerRef.current = setTimeout(() => {
               setIsIdle100(true);
           }, IDLE_TIMEOUT_MS);
       }
-  }, [bootState, isSimulationPaused, useGameStore.getState().systemIntegrity]); 
+  }, [bootState, isSimulationPaused, integrity]); // integrity is now a proper dependency
 
-  // 5. RENDER LOOP
+  // 5. INITIALIZE DOM
   useEffect(() => {
+      // Theme Meta
+      let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
+      if (!meta) {
+          meta = document.createElement('meta');
+          meta.name = 'theme-color';
+          document.head.appendChild(meta);
+      }
+      metaThemeRef.current = meta;
+
+      // Favicon Link (Find existing or create)
+      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+      if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          document.head.appendChild(link);
+      }
+      linkRef.current = link;
+
+      // Canvas
       if (!canvasRef.current) {
           canvasRef.current = document.createElement('canvas');
           canvasRef.current.width = CANVAS_SIZE;
           canvasRef.current.height = CANVAS_SIZE;
       }
+  }, []);
 
-      // --- AGGRESSIVE DOM UPDATE HELPERS ---
-      
+  // 6. RENDER LOOP
+  useEffect(() => {
       const updateFavicon = (url: string, type: string) => {
-          // Avoid DOM thrashing if URL hasn't changed
-          if (lastFaviconUrl.current === url) return;
-
-          // Find ANY existing icon link to overwrite
-          let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-          
-          if (!link) {
-              link = document.createElement('link');
-              link.rel = 'icon';
-              document.head.appendChild(link);
+          if (!linkRef.current) return;
+          if (linkRef.current.href !== url) {
+              linkRef.current.type = type;
+              linkRef.current.href = url;
           }
-
-          // Force update attributes
-          link.setAttribute('type', type);
-          link.setAttribute('href', url);
-          
-          // Cleanup duplicates if Next.js injected extra ones
-          const allLinks = document.querySelectorAll("link[rel*='icon']");
-          if (allLinks.length > 1) {
-              allLinks.forEach((el) => {
-                  if (el !== link) el.remove();
-              });
-          }
-
-          lastFaviconUrl.current = url;
       };
 
       const updateTheme = (hex: string) => {
-          let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
-          if (!meta) {
-              meta = document.createElement('meta');
-              meta.name = 'theme-color';
-              document.head.appendChild(meta);
-          }
-          if (meta.content !== hex) {
-              meta.content = hex;
+          if (!metaThemeRef.current) return;
+          if (metaThemeRef.current.content !== hex) {
+              metaThemeRef.current.content = hex;
           }
       };
 
@@ -158,17 +150,19 @@ export const MetaManager = () => {
           const ctx = canvasRef.current?.getContext('2d');
           if (!ctx) return;
 
-          const gameState = useGameStore.getState();
-          const integrity = gameState.systemIntegrity;
+          // Local state capture
           const isGameOver = integrity <= 0;
-          const isPaused = useStore.getState().isSimulationPaused;
-          const isBoot = useStore.getState().bootState === 'standby';
-          const isSandbox = useStore.getState().bootState === 'sandbox';
-          const isZen = gameState.isZenMode;
+          const isPaused = isSimulationPaused;
+          const isBoot = bootState === 'standby';
+          const isSandbox = bootState === 'sandbox';
+          const isZen = isZenMode;
 
           const now = Date.now();
-          const tick = Math.floor(now / 50);
-          const slowBlink = tick % 16 < 8; 
+          const tick = Math.floor(now / 50); // 20 FPS
+          
+          // Blink Rates
+          const slowBlink = tick % 16 < 8; // 800ms cycle
+          const fastBlink = tick % 10 < 5; // 500ms cycle (Standard Alert)
 
           // --- A. URL HUD ---
           if (!isBoot && now - lastHashUpdate.current > 500) {
@@ -207,7 +201,7 @@ export const MetaManager = () => {
               const activeIndex = Math.floor(integrity / 10);
               for(let i=0; i<10; i++) {
                   if (i < activeIndex) bar += "▮";
-                  else if (i === activeIndex && integrity > 0) bar += (tick % 10 < 5) ? "▮" : "▯";
+                  else if (i === activeIndex && integrity > 0) bar += fastBlink ? "▮" : "▯";
                   else bar += "▯";
               }
               title = `[ ${bar} INT: ${intVal}% ]`;
@@ -217,7 +211,10 @@ export const MetaManager = () => {
           // --- D. FAVICON ---
           
           // IDLE STATE Check
-          if (!isBoot && !isPaused && !isGameOver && isIdle100) {
+          const isStaticState = (isBoot && bootKey === 'INIT') || 
+                                (!isBoot && !isPaused && !isGameOver && isIdle100);
+
+          if (isStaticState) {
               updateFavicon('/favicon.ico', 'image/x-icon');
               return;
           }
@@ -235,15 +232,8 @@ export const MetaManager = () => {
               const cx = 32, cy = 32;
 
               if (bootKey === 'LINK') {
-                  ctx.strokeStyle = '#78F654';
-                  ctx.lineWidth = 8;
-                  ctx.lineCap = 'round';
-                  ctx.lineJoin = 'round';
-                  ctx.beginPath();
-                  ctx.moveTo(14, 34);
-                  ctx.lineTo(26, 46);
-                  ctx.lineTo(50, 18);
-                  ctx.stroke();
+                  ctx.strokeStyle = '#78F654'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                  ctx.beginPath(); ctx.moveTo(14, 34); ctx.lineTo(26, 46); ctx.lineTo(50, 18); ctx.stroke();
               } else if (bootKey === 'MOUNT') {
                   const offset = (tick % 12) * 2;
                   ctx.beginPath(); ctx.moveTo(32, 48 + offset); ctx.lineTo(16, 28 + offset); ctx.lineTo(48, 28 + offset); ctx.fill(); ctx.fillRect(26, 0, 12, 28 + offset);
@@ -276,6 +266,7 @@ export const MetaManager = () => {
               }
           }
           else {
+              // GAMEPLAY STATE
               let color = '#78F654';
               let isRed = false;
 
@@ -288,9 +279,8 @@ export const MetaManager = () => {
                   showIcon = false;
               }
               else if (isRed && !isGameOver) {
-                  const tier = Math.floor(integrity / 5); 
-                  const speed = (tier + 1) * 2; 
-                  if (tick % speed >= (speed / 2)) showIcon = false;
+                  // STEADY FAST BLINK (500ms) for critical
+                  if (!fastBlink) showIcon = false;
               }
 
               if (showIcon) {
@@ -301,7 +291,19 @@ export const MetaManager = () => {
                   ctx.fillStyle = color; ctx.fillRect(0, fillY, 64, fillH); ctx.restore();
                   ctx.strokeStyle = color; ctx.lineWidth = 4; roundRect(4, 4, 56, 56, 12); ctx.stroke();
               } else {
-                  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                  // BLINK OFF STATE: BLACK FILL
+                  ctx.fillStyle = '#000000';
+                  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                  
+                  // Optional: Keep border visible? 
+                  // User said "Black fill and edge for off blink". 
+                  // If we want Edge to persist:
+                  /*
+                  ctx.strokeStyle = '#330000'; // Dark red rim?
+                  ctx.lineWidth = 4;
+                  roundRect(4, 4, 56, 56, 12);
+                  ctx.stroke();
+                  */
               }
           }
 
@@ -310,7 +312,7 @@ export const MetaManager = () => {
 
       const interval = setInterval(updateAll, 50); 
       return () => clearInterval(interval);
-  }, [bootKey, isIdle100]); 
+  }, [bootKey, isIdle100, integrity, isZenMode]); // Added integrity to dependencies
 
   return null;
 };

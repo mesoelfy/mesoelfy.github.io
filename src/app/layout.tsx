@@ -19,9 +19,6 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'MESOELFY // LATENT SPACE BANDIT',
   description: 'The official digital HQ of Mesoelfy. Art, Lore, and Neural Network Injections.',
-  icons: {
-    icon: '/favicon.ico',
-  },
   openGraph: {
     title: 'MESOELFY_OS',
     description: 'Access the terminal. View the art. Breach the firewall.',
@@ -59,7 +56,7 @@ export default function RootLayout({
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
       <body 
         className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
-        style={{ backgroundColor: '#000000' }} // Hardcode black to prevent FOUC
+        style={{ backgroundColor: '#000000' }} 
       >
         <div className="relative w-full h-full">
           {children}
