@@ -262,3 +262,47 @@ I'd want it applied to player attacks, daemon, hunter (basically anything that h
 
 
 IMG_XX are all character squares that open that characters sub menu, which then shows lall the tiwtter hyperlinks. the twitter links can always be switched out to something like DeviantArt later. It's not that serious or big of a deal to delete the twitter posts later if they get infected with haters.
+
+
+Upgrade ELFY icon to 64x64
+ 
+
+
+
+### **// NEXT_OBJECTIVE: THE_SENTINEL_UPDATE**
+
+Now that the system is stable and "aware," we need a threat worthy of these defenses. You mentioned a **Boss Character**.
+
+I propose **Operation: DAEMON_PRIME**.
+
+#### **PHASE 1: THE ARCHETYPE**
+*   **Identity:** "The Sentinel" (or "Daemon Prime").
+*   **Logic:** A multi-stage boss that spawns at **Wave 10**.
+*   **Mechanics:**
+    *   **Phase 1 (Shield):** Orbits the center, immune to damage until its orbiting "Nodes" are destroyed.
+    *   **Phase 2 (Glitch):** Teleports randomly, spawning "Driller" minions.
+    *   **Phase 3 (Rage):** Chases the player while firing a spread shot.
+
+#### **PHASE 2: THE VISUALS**
+*   **Model:** A complex compound geometry (e.g., a central Icosahedron surrounded by floating Cubes).
+*   **Shader:** A "Corrupted" shader that shifts colors violently (Green -> Red -> Static).
+*   **Health Bar:** A dedicated, large health bar at the top of the screen (Boss HUD).
+
+#### **PHASE 3: THE META-ATTACK**
+*   **Re-integration:** We bring back the **URL Hex Flood** idea.
+*   **Behavior:** When the Boss enters "Rage Mode," it hijacks the URL bar (`#/0x99A...CRITICAL`) and shakes the browser window heavily.
+
+**Shall we begin designing the Boss Archetype?**
+
+
+Black Blink: The critical blinking state now renders a black rectangle instead of clearing the canvas (transparency), ensuring high contrast.
+Slower ASCII Blink: Adjusted the health bar blink rate to tick % 20 (1 second cycle) for a steadier pulse.
+Favicon Stability:
+Implemented a specific ID (id="dynamic-favicon") for the link element to prevent conflicts with Next.js auto-injected tags.
+Added logic to hide/remove other conflicting icons when dynamic mode is active.
+Refined the isStaticState logic to ensure strict adherence to the "INIT phase or 3s Idle" rule.
+
+
+Reboot needs to happen 2X faster
+
+ Is it possible the mismatch in size between the default and our custom ones causing any issues? I made a new 64x64 .ico to replace the 32x32 one but haven't replaced it yet.
