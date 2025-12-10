@@ -122,7 +122,7 @@ Your cursor could leave a psychedelic trail of colors behind it
 - For portfolio and social media items and youtube videos, instead of for example using all the iframe information copy pasted a bunch of times, can we use something like JSON to just keep all the code that is the same each time and then swap out the ID/different values? Even though I haven't done it yet for twitter feed links and IMG_XX links, I'd like it commented in the code that I should do the same idea if possible.
 
 
-Entering and exiting system settings or debug should make a soft sound. (ask AI to give a bunch of samples for sounds that are still needed)
+ (ask AI to give a bunch of samples for sounds that are still needed)
 
 
 - Need to add some kind of "begin" click prompt to enable sound in the intro. then we can add variable typing sounds, a ... sound in sync with how they appear, and sparkly shimmer sounds for the matrix rain.
@@ -132,9 +132,7 @@ Entering and exiting system settings or debug should make a soft sound. (ask AI 
     - ambient sound begins playing with matrix rain
 
 
-- If you are in system settings and press ~, it should close the system settings when it opens the debug menu.
 
-    - When you are in the debug menu, if you press ESC, it should close the debug menu and open the system settings.
 
         - next is "feel' for sliders with snapping and SFX in increments of 5 units.
 
@@ -152,16 +150,15 @@ Entering and exiting system settings or debug should make a soft sound. (ask AI 
 
 - Am I doing anything in a clunky way in the codebase?
 
-- ESC should bring up system settings in INTRO scene.
-    - Pressing ~ turns on god suite toggles when debug opened, but doesn't effect toggles when you press ~ in the debug menu to close the window. What I mean is, the user might have unchecked one more toggles. Pressing ~ shouldn't toggle them back on when the leave the debug menu.
 
 
 
-Clicking Skip_Boot will disable all god suite toggles
+- simple "ding" sound when green checkmark appears from healing a panel to 100%
+
 
 - enemies should be spawning in the coordinates where a broken panel is with their own sophisticateds spawn rate separate from the waves
 
-- Add a spinning gear in the top right of the intro scene.
+- Add a spinning gear in the top right of the intro scene. - also have the header bar settings cog spin
 
 
 Here is the phase-based action plan to execute the audit recommendations. We will move from **safe, isolated UI refactoring** to **deep engine architecture changes**.

@@ -47,7 +47,11 @@ export const LiveArtGrid = () => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 
-                onClick={() => !isDestroyed && openModal('gallery')}
+                onClick={() => {
+                    if (isDestroyed) return;
+                    AudioSystem.playClick();
+                    openModal('gallery');
+                }}
                 onMouseEnter={() => !isDestroyed && AudioSystem.playHover()}
                 
                 className={clsx(

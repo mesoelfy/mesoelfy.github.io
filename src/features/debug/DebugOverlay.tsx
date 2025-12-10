@@ -6,6 +6,7 @@ import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Databa
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';
@@ -21,7 +22,6 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
   { id: 'CONSOLE', label: 'KERNEL_LOG', icon: Terminal },
 ];
 
-// Events to IGNORE in the log (Noise Filter)
 const IGNORED_EVENTS = new Set([
     GameEvents.PLAYER_FIRED,
     GameEvents.PLAYER_HIT,
@@ -33,40 +33,63 @@ const IGNORED_EVENTS = new Set([
 ]);
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal } = useStore();
-  const [activeTab, setActiveTab] = useState<Tab>('CONSOLE');
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal, openModal } = useStore();
+  
+  // DEFAULT TAB = OVERRIDES
+  const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // --- TILDE (Debug Toggle) ---
       if (e.key === '`' || e.key === '~') {
-        if (isDebugMinimized) {
-             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
-        } else {
-             toggleDebugMenu();
-        }
-        const state = useStore.getState();
-        if (!state.debugFlags.godMode) {
+        const willBeOpen = !isDebugOpen && !isDebugMinimized;
+        
+        // 1. If opening, Force Enable Cheats
+        if (willBeOpen) {
             setDebugFlag('godMode', true);
             setDebugFlag('panelGodMode', true);
             setDebugFlag('peaceMode', true);
         }
+
+        if (activeModal === 'settings') {
+            closeModal();
+            useStore.setState({ isDebugOpen: true, isDebugMinimized: false });
+            AudioSystem.playSound('menu_open');
+        } 
+        else if (isDebugMinimized) {
+             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+             AudioSystem.playSound('menu_open');
+        } 
+        else {
+             toggleDebugMenu();
+             AudioSystem.playSound(!isDebugOpen ? 'menu_open' : 'menu_close');
+        }
       } 
+      
+      // --- ESCAPE (Menu Navigation) ---
       else if (e.key === 'Escape') {
-          if (isDebugOpen) toggleDebugMenu();
-          else if (activeModal !== 'none') closeModal();
-          else toggleSettings();
+          if (isDebugOpen) {
+              toggleDebugMenu(); // Close Debug
+              openModal('settings');
+              AudioSystem.playSound('menu_open'); 
+          } else if (activeModal !== 'none') {
+              closeModal();
+              AudioSystem.playSound('menu_close');
+          } else {
+              toggleSettings();
+              AudioSystem.playSound('menu_open');
+          }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal]);
+  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal, openModal]);
 
   useEffect(() => {
     const handlers = Object.values(GameEvents).map(evt => {
         return GameEventBus.subscribe(evt as any, (payload) => {
-            // FILTER NOISE
             if (IGNORED_EVENTS.has(evt as GameEvents)) return;
 
             const time = new Date().toLocaleTimeString().split(' ')[0];
@@ -128,7 +151,7 @@ export const DebugOverlay = () => {
 
   if (isDebugMinimized) {
       return (
-        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-none">
+        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-auto">
             <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
                 <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
@@ -149,18 +172,18 @@ export const DebugOverlay = () => {
           <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
              <button onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} className="hover:text-white transition-colors p-1"><MinusSquare size={16} /></button>
-             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1"><X size={16} /></button>
+             <button onClick={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} className="hover:text-white transition-colors p-1"><X size={16} /></button>
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
           <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); AudioSystem.playClick(); }} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
             ))}
           </div>
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={toggleDebugMenu} />}
-            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={toggleDebugMenu} />}
+            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
+            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>

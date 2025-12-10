@@ -11,13 +11,11 @@ interface AudioSettings {
   sfx: boolean;
   ambience: boolean;
   
-  // Levels (0.0 - 3.0)
   volumeMaster: number;
   volumeMusic: number;
   volumeSfx: number;
   volumeAmbience: number;
   
-  // Ambience Lab (0.0 - 4.0+)
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
@@ -136,15 +134,9 @@ export const useStore = create<AppState>()(
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
       
-      openModal: (modal) => {
-          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick(); 
-          set({ activeModal: modal });
-      },
-      
-      closeModal: () => {
-          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
-          set({ activeModal: 'none' });
-      },
+      // REMOVED AUDIO CALLS FROM HERE TO ALLOW UI CONTROL
+      openModal: (modal) => set({ activeModal: modal }),
+      closeModal: () => set({ activeModal: 'none' }),
 
       toggleSettings: () => {
           const current = get().activeModal;

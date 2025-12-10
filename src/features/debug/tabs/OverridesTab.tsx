@@ -12,15 +12,20 @@ interface OverridesTabProps {
 }
 
 export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
-  const { setIntroDone, setBootState, bootState, resetApplication, debugFlags, setDebugFlag } = useStore();
+  const { setIntroDone, setBootState, bootState, resetApplication, debugFlags, setDebugFlag, resetDebugFlags } = useStore();
   const { startGame, stopGame, activateZenMode } = useGameStore();
 
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
   const handleSkipBoot = () => {
+    // 1. Reset Cheats
+    resetDebugFlags();
+    
+    // 2. State Transition
     setIntroDone(true);
     setBootState('active');
-    // Ensure Audio System is ready if skipping boot
+    
+    // 3. Audio/Game Init
     AudioSystem.init();
     AudioSystem.startMusic();
     startGame();
@@ -28,25 +33,17 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   };
 
   const executeCrash = () => {
-    // 1. Kill integrity in Store (React UI updates immediately)
     useGameStore.setState({ systemIntegrity: 0 });
-    
-    // 2. Kill Registry Logic (Visuals/Game Logic updates)
     PanelRegistry.destroyAll();
-    
-    // 3. Emit Events
     GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
     stopGame();
   };
 
   const handleForceCrash = () => {
     if (bootState === 'standby') {
-        // Init Audio/Engine
         setIntroDone(true);
         setBootState('active');
         AudioSystem.init();
-        
-        // Wait for React to mount the GameOverlay and GameDirector to boot the engine (approx 1 frame)
         setTimeout(() => {
             executeCrash();
         }, 100);

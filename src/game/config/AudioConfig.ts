@@ -32,6 +32,10 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
   'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
 
+  // --- UI / MENUS (NEW) ---
+  'menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
+  'menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
+
   // --- ENEMIES & COMBAT ---
   'enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
   'driller_drill': { 
@@ -51,7 +55,6 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   },
 
   // --- AMBIENCE ---
-  // Variant B: Filter raised to 800Hz to allow dynamic filtering
   'ambience_b': { 
     type: 'noise', 
     frequency: [0,0], 

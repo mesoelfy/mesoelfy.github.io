@@ -14,7 +14,7 @@ import { AboutModal } from '@/features/identity/AboutModal';
 import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
-import { SettingsModal } from '@/features/settings/SettingsModal'; // NEW
+import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -87,7 +87,7 @@ export default function Home() {
                 <FeedModal />
                 <GalleryModal />
                 <ContactModal />
-                <SettingsModal /> {/* NEW */}
+                <SettingsModal />
                 <ZenBomb />
             </>
         )}
@@ -143,7 +143,7 @@ export default function Home() {
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
                               <button 
-                                onClick={() => openModal('feed')} 
+                                onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
                                 onMouseEnter={() => AudioSystem.playHover()}
                                 className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
                               >

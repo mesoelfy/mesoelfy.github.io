@@ -20,14 +20,14 @@ export const SettingsModal = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10">
           
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={closeModal}
-            className="absolute inset-0 bg-black/90 backdrop-blur-md cursor-pointer"
+            onClick={() => { closeModal(); AudioSystem.playSound('menu_close'); }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
           />
 
           <motion.div
@@ -45,7 +45,7 @@ export const SettingsModal = () => {
                 </span>
               </div>
               <button 
-                onClick={closeModal}
+                onClick={() => { closeModal(); AudioSystem.playSound('menu_close'); }}
                 onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-2 hover:bg-critical-red hover:text-black text-primary-green transition-colors border border-transparent hover:border-critical-red"
               >
