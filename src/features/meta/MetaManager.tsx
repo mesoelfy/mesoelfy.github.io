@@ -228,7 +228,6 @@ export const MetaManager = () => {
 
           // --- FAVICON STATE MACHINE ---
 
-          // 1. STATIC IDLE
           const isStaticState = (!isBoot && !isPaused && !isGameOver && isIdle100 && integrity >= 99.9);
 
           if (isStaticState) {
@@ -238,55 +237,38 @@ export const MetaManager = () => {
 
           // 2. BOOT SEQUENCE
           if (isBoot) {
-              // A. NEURAL LACE INIT
               if (bootKey === 'INIT') {
                   drawFrame(COL_GREEN, () => {
                       const cx = 32, cy = 32;
-                      const phase = (tick % 24) / 24; // 0 to 1
-                      const radius = 8 + (Math.sin(phase * Math.PI * 2) * 2);
+                      const phase = (tick % 24) / 24; 
                       
                       // Central Node
                       ctx.fillStyle = COL_GREEN;
                       ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
                       
-                      // Orbiting Nodes (3 points)
+                      // Orbiting Nodes
                       for(let i=0; i<3; i++) {
                           const angle = (phase * Math.PI * 2) + (i * (Math.PI * 2 / 3));
                           const ox = cx + Math.cos(angle) * 14;
                           const oy = cy + Math.sin(angle) * 14;
                           
-                          // Draw Node
                           ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
-                          
-                          // Draw Connection
                           ctx.strokeStyle = COL_GREEN;
                           ctx.lineWidth = 1;
                           ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ox, oy); ctx.stroke();
                       }
                   });
               }
-              // B. CHECKMARK LINK
               else if (bootKey === 'LINK') {
                   drawFrame(COL_GREEN, () => {
-                      ctx.strokeStyle = COL_GREEN; 
-                      ctx.lineWidth = 6; 
-                      ctx.lineCap = 'round'; 
-                      ctx.lineJoin = 'round';
-                      
-                      // Animation Cycle: 20 ticks (1s)
-                      // 0-5: Short leg
-                      // 5-12: Long leg
-                      // 12-20: Hold
+                      ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                       const t = tick % 20;
-                      
                       ctx.beginPath();
-                      // Start
                       const p1 = {x: 18, y: 34};
                       const p2 = {x: 28, y: 44};
                       const p3 = {x: 46, y: 22};
                       
                       ctx.moveTo(p1.x, p1.y);
-                      
                       if (t < 5) {
                           const progress = t / 5;
                           ctx.lineTo(p1.x + (p2.x-p1.x)*progress, p1.y + (p2.y-p1.y)*progress);
@@ -298,7 +280,6 @@ export const MetaManager = () => {
                       ctx.stroke();
                   });
               } 
-              // C. MOUNT ARROW
               else if (bootKey === 'MOUNT') {
                   drawFrame(COL_GREEN, () => {
                       ctx.fillStyle = COL_GREEN;
@@ -307,39 +288,84 @@ export const MetaManager = () => {
                       ctx.fillRect(28, 8, 8, 22 + offset);
                   });
               } 
-              // D. TWO-TONE WARNING
               else if (bootKey === 'UNSAFE' || bootKey === 'CAUTION') {
-                  const activeColor = slowBlink ? COL_YELLOW : COL_RED; // Blink Yellow <-> Red
+                  const activeColor = slowBlink ? COL_YELLOW : COL_RED; 
                   drawFrame(activeColor, () => {
                       ctx.fillStyle = activeColor;
-                      // Triangle
                       ctx.beginPath(); ctx.moveTo(32, 10); ctx.lineTo(52, 50); ctx.lineTo(12, 50); ctx.fill();
-                      // Exclamation Text
                       ctx.fillStyle = COL_BLACK; 
-                      ctx.font = 'bold 36px monospace'; 
-                      ctx.textAlign = 'center'; 
-                      ctx.fillText('!', 32, 46);
+                      ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('!', 32, 46);
                   });
               } 
-              // E. LOCKED
+              // --- NEW: BYPASS (Phantom Node) ---
               else if (bootKey === 'BYPASS') { 
                   drawFrame(COL_PURPLE, () => {
-                      ctx.strokeStyle = COL_PURPLE; ctx.lineWidth = 6; 
-                      ctx.beginPath(); ctx.arc(32, 28, 10, Math.PI, 0); ctx.stroke(); 
-                      ctx.fillStyle = COL_PURPLE; ctx.fillRect(16, 28, 32, 24); 
-                      ctx.fillStyle = COL_BLACK; ctx.fillRect(30, 38, 4, 6);
+                      const phase = (tick % 16) / 16; // Faster spin
+                      const cx = 32, cy = 32;
+                      
+                      // Split Effect: 4 "Ghost" diamonds moving out and in
+                      const expansion = 4 + (Math.sin(phase * Math.PI * 2) * 6);
+                      
+                      ctx.fillStyle = COL_PURPLE;
+                      for(let i=0; i<4; i++) {
+                          const angle = (i * Math.PI / 2) + (phase * Math.PI); // Rotate while expanding
+                          const x = cx + Math.cos(angle) * expansion;
+                          const y = cy + Math.sin(angle) * expansion;
+                          
+                          // Draw Diamond
+                          ctx.beginPath();
+                          ctx.moveTo(x, y - 4);
+                          ctx.lineTo(x + 4, y);
+                          ctx.lineTo(x, y + 4);
+                          ctx.lineTo(x - 4, y);
+                          ctx.fill();
+                      }
+                      
+                      // Central Static Core
+                      ctx.fillRect(cx - 2, cy - 2, 4, 4);
                   });
               } 
-              // F. UNLOCKED
+              // --- NEW: DECRYPTED (Unlock Animation) ---
               else if (bootKey === 'DECRYPTED') { 
                   drawFrame(COL_GREEN, () => {
-                      ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; 
-                      ctx.beginPath(); ctx.arc(32, 20, 10, Math.PI, 0.5); ctx.stroke(); 
-                      ctx.fillStyle = COL_GREEN; ctx.fillRect(16, 28, 32, 24);
+                      // Cycle: 30 ticks (1.5s)
+                      // 0-10: Locked
+                      // 10-15: Unlocking (Anim)
+                      // 15-30: Unlocked
+                      const t = tick % 30;
+                      const isLocked = t < 10;
+                      
+                      ctx.strokeStyle = COL_GREEN; 
+                      ctx.lineWidth = 6; 
+                      ctx.fillStyle = COL_GREEN;
+
+                      // Shackle Logic
+                      let shackleY = 28;
+                      let shackleOpen = 0;
+                      
+                      if (!isLocked) {
+                          // Pop up animation
+                          const anim = Math.min(1, (t - 10) / 5);
+                          shackleY = 28 - (anim * 8); // Move Up
+                          shackleOpen = anim * 0.5;   // Rotate Open
+                      }
+
+                      ctx.beginPath(); 
+                      ctx.arc(32, shackleY, 10, Math.PI, 0 + shackleOpen); 
+                      ctx.stroke(); 
+                      
+                      // Body
+                      ctx.fillRect(16, 28, 32, 24); 
+                      
+                      // Keyhole (Only if locked)
+                      if (isLocked) {
+                          ctx.fillStyle = COL_BLACK;
+                          ctx.beginPath(); ctx.arc(32, 40, 3, 0, Math.PI*2); ctx.fill();
+                          ctx.fillRect(31, 40, 2, 6);
+                      }
                   });
               } 
               else {
-                  // Fallback
                   drawFrame(COL_GREEN, () => {
                       ctx.fillStyle = COL_GREEN; ctx.fillRect(20, 20, 24, 24);
                   });
