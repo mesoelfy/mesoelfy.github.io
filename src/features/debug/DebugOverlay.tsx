@@ -40,7 +40,6 @@ export const DebugOverlay = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // --- TILDE (Debug Toggle) ---
       if (e.key === '`' || e.key === '~') {
         const willBeOpen = !isDebugOpen && !isDebugMinimized;
         
@@ -65,7 +64,6 @@ export const DebugOverlay = () => {
         }
       } 
       
-      // --- ESCAPE (Menu Navigation) ---
       else if (e.key === 'Escape') {
           if (isDebugOpen) {
               toggleDebugMenu();
@@ -153,7 +151,7 @@ export const DebugOverlay = () => {
                 <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
                     <button 
-                        onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} 
+                        onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
                         onMouseEnter={() => AudioSystem.playHover()}
                         className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
                     >
@@ -163,7 +161,7 @@ export const DebugOverlay = () => {
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
                 <button 
-                    onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} 
+                    onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
                     onMouseEnter={() => AudioSystem.playHover()}
                     className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
                 >
@@ -181,7 +179,7 @@ export const DebugOverlay = () => {
           <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
              <button 
-                onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} 
+                onClick={() => { useStore.setState({ isDebugMinimized: true, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
                 onMouseEnter={() => AudioSystem.playHover()}
                 className="hover:text-white transition-colors p-1"
              >

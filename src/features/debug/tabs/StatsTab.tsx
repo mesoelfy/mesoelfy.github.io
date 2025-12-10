@@ -1,5 +1,6 @@
 import { Cpu, Database, LayoutTemplate } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface StatsTabProps {
   stats: { active: number, pooled: number, total: number, fps: number };
@@ -37,7 +38,11 @@ export const StatsTab = ({ stats }: StatsTabProps) => {
       </div>
       
       <div className="mt-8 flex justify-center">
-          <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-primary-green hover:text-white transition-colors border border-primary-green/50 px-4 py-2 hover:bg-primary-green/10">
+          <button 
+            onClick={() => { toggleDebugMinimize(); AudioSystem.playSound('ui_menu_close'); }}
+            onMouseEnter={() => AudioSystem.playHover()}
+            className="flex items-center gap-2 text-xs text-primary-green hover:text-white transition-colors border border-primary-green/50 px-4 py-2 hover:bg-primary-green/10"
+          >
               <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
           </button>
       </div>

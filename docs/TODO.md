@@ -153,7 +153,10 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
+- mini mode causes the custom cursor to persist, but it shouldn't be visible when minimized like that because we are back to the game dashboard.
+  - disabling god suite toggles makes a sound, but enabling doesn't make a sound. for now use the same menu enter/leave sounds for activating toggle/deactivating toggle.
 
+- the way 0% panels flash is different from the heartbeat extra flash - what is the logic and how can we have the other method also tied to the heart beat?
 
 
 - enemies should be spawning in the coordinates where a broken panel is with their own sophisticateds spawn rate separate from the waves

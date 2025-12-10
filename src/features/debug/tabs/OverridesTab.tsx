@@ -72,6 +72,12 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const toggleGodSuite = () => {
       const newState = !areAllGodModesOn;
+      // Play sound before state change
+      if (newState) {
+          AudioSystem.playSound('powerup');
+      } else {
+          AudioSystem.playSound('ui_click');
+      }
       setDebugFlag('godMode', newState);
       setDebugFlag('panelGodMode', newState);
       setDebugFlag('peaceMode', newState);

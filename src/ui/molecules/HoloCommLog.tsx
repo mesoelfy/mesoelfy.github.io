@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ExternalLink, Radio, WifiOff } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
@@ -83,7 +84,10 @@ const VideoSlot = ({
   }, [videoId, isOffline, getNextVideo]);
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
+    <div 
+        className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
+        onMouseEnter={() => !isOffline && AudioSystem.playHover()}
+    >
       
       {isOffline ? (
           <OfflineStatic />
@@ -104,7 +108,6 @@ const VideoSlot = ({
 
           <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
           
-          {/* MASK / UPLINK OVERLAY */}
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
@@ -112,7 +115,6 @@ const VideoSlot = ({
                     <span className="text-[10px] font-mono text-primary-green animate-pulse">ESTABLISHING_UPLINK...</span>
                 </div>
              ) : (
-                 // HOVER STATE: Yellow Text & Border
                  <div className="flex items-center gap-2 text-alert-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-alert-yellow rounded-sm pointer-events-auto">
                     <span>OPEN_SOURCE</span>
                     <ExternalLink size={12} />
@@ -126,9 +128,9 @@ const VideoSlot = ({
             rel="noopener noreferrer"
             className="absolute inset-0 z-50 cursor-pointer"
             aria-label="Watch on YouTube"
+            onClick={() => AudioSystem.playClick()}
           />
 
-          {/* CAM TEXT: Green by default, stays visible */}
           <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
              CAM_0{slotIndex + 1}
           </div>
