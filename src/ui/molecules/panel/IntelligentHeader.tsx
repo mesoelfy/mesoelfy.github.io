@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/game/store/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const MAX_HEALTH = 1000;
 
@@ -18,7 +19,6 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  // SAFETY: Ensure healthPercent is a valid finite number
   let rawPercent = (health / MAX_HEALTH) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
@@ -32,6 +32,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
       setShowOptimal(true);
     }
     if (health >= MAX_HEALTH && showOptimal) {
+      AudioSystem.playSound('optimal_ding'); // NEW: Sound Trigger
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }

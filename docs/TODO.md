@@ -153,12 +153,12 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
-- simple "ding" sound when green checkmark appears from healing a panel to 100%
+
 
 
 - enemies should be spawning in the coordinates where a broken panel is with their own sophisticateds spawn rate separate from the waves
 
-- Add a spinning gear in the top right of the intro scene. - also have the header bar settings cog spin
+- Add a spinning gear in the top right of the intro scene. - also
 
 
 Here is the phase-based action plan to execute the audit recommendations. We will move from **safe, isolated UI refactoring** to **deep engine architecture changes**.

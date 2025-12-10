@@ -31,8 +31,11 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'powerup': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
   'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
   'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
+  
+  // NEW: Happy Ding
+  'optimal_ding': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01 },
 
-  // --- UI / MENUS (NEW) ---
+  // --- UI / MENUS ---
   'menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
   'menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
 

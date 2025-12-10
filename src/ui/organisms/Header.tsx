@@ -23,31 +23,18 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const SfxBtn = ({ active, onClick, color }: { active: boolean, onClick: () => void, color: string }) => (
+// Standardized Button Component for Uniformity
+const ToggleBtn = ({ active, onClick, children, color }: any) => (
   <button 
     onClick={onClick}
     className={clsx(
-      "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
+      "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
-        ? `hover:text-alert-yellow bg-white/5 border-white/10 ${color}`
-        : `${color} opacity-40 hover:text-critical-red hover:opacity-100 decoration-line-through`
+        ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color}`
+        : `${color} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
     )}
   >
-    SFX
-  </button>
-);
-
-const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any) => (
-  <button 
-    onClick={onClick}
-    className={clsx(
-      "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
-      active 
-        ? `hover:text-alert-yellow bg-white/5 ${color}`
-        : `${color} opacity-40 hover:text-critical-red hover:opacity-100`
-    )}
-  >
-    {active ? <Icon size={14} /> : <OffIcon size={14} />}
+    {children}
   </button>
 );
 
@@ -92,11 +79,11 @@ export const Header = () => {
           filter: [
               "brightness(1) drop-shadow(0 0 0px #FF003C)",
               "brightness(2) drop-shadow(0 0 10px #FF003C)",
-              "brightness(1) drop-shadow(0 0 0px #FF003C)"
+              "brightness(1) drop-shadow(0 0 0px #FF003C"
           ],
           transition: { 
               duration: 0.8, 
-              times: [0, 0.04, 1],
+              times: [0, 0.04, 1], 
               ease: "easeOut" 
           }
       }
@@ -135,24 +122,38 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            {/* Settings Button */}
+            {/* Audio Toggles */}
+            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor}>
+                <Wind size={14} />
+            </ToggleBtn>
+            
+            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor}>
+                <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span>
+            </ToggleBtn>
+            
+            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor}>
+                {audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}
+            </ToggleBtn>
+            
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            
+            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor}>
+                {audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            </ToggleBtn>
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+            {/* Settings Button (Right Most) */}
             <button 
-                onClick={() => { toggleSettings(); AudioSystem.playClick(); }}
+                onClick={() => { toggleSettings(); AudioSystem.playSound('menu_open'); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
                 )}
             >
-                <Settings size={14} />
+                <Settings size={14} className="animate-spin-slow" />
             </button>
 
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-            <AudioBtn active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} offIcon={Wind} color={statusColor} />
-            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
-            <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <AudioBtn active={audioSettings.master} onClick={toggleMaster} icon={Volume2} offIcon={VolumeX} color={statusColor} />
         </div>
       </div>
 
