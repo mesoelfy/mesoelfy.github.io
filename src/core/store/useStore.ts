@@ -132,7 +132,10 @@ export const useStore = create<AppState>()(
         timeScale: 1.0,
       },
 
-      setBootState: (bs) => set({ bootState: bs }),
+      setBootState: (bs) => set({ 
+          bootState: bs,
+          isBreaching: bs === 'active' ? false : get().isBreaching 
+      }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
       

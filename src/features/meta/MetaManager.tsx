@@ -8,7 +8,6 @@ import { GameEvents } from '@/game/events/GameEvents';
 const CANVAS_SIZE = 64;
 const IDLE_TIMEOUT_MS = 3000;
 
-// Visual Key Mapping
 const BOOT_KEYS: Record<string, string> = {
     "INITIALIZE NEURAL_LACE": "INIT",
     "CONNECTED TO LATENT_SPACE": "LINK",
@@ -25,26 +24,29 @@ const COL_YELLOW = '#F7D277';
 const COL_RED = '#FF003C';
 const COL_PURPLE = '#9E4EA5';
 const COL_BLACK = '#000000';
+const COL_WHITE = '#FFFFFF';
 
 export const MetaManager = () => {
-  const { bootState, isSimulationPaused, setSimulationPaused } = useStore();
+  const { bootState, isSimulationPaused, setSimulationPaused, isBreaching } = useStore();
   
   // REACTIVE STATE
   const integrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
-  // REFS FOR RENDERING (Decoupled from React Render Cycle)
+  // REFS
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHashUpdate = useRef(0);
   const linkRef = useRef<HTMLLinkElement | null>(null);
   const metaThemeRef = useRef<HTMLMetaElement | null>(null);
+  const prevFaviconUrl = useRef<string>(""); // Cache for diffing
   
-  // Mutable State Ref for the Interval Loop
+  // MUTABLE STATE REF
   const stateRef = useRef({
       integrity: 100,
       isIdle100: false,
       bootState: 'standby',
+      isBreaching: false,
       isPaused: false,
       isGameOver: false,
       isZen: false,
@@ -60,12 +62,13 @@ export const MetaManager = () => {
           integrity,
           isIdle100,
           bootState,
+          isBreaching,
           isPaused: isSimulationPaused,
           isGameOver: integrity <= 0,
           isZen: isZenMode,
           bootKey
       };
-  }, [integrity, isIdle100, bootState, isSimulationPaused, isZenMode, bootKey]);
+  }, [integrity, isIdle100, bootState, isBreaching, isSimulationPaused, isZenMode, bootKey]);
 
   // 1. CONSOLE IDENTITY
   useEffect(() => {
@@ -113,7 +116,10 @@ export const MetaManager = () => {
 
   // 4. IDLE TIMER
   useEffect(() => {
-      if (bootState !== 'active' || isSimulationPaused || integrity < 99.9) {
+      // Logic: Only allow Idle if active, not paused, not breaching, and healthy
+      const isSafe = bootState === 'active' && !isSimulationPaused && !isBreaching && integrity >= 99.9;
+
+      if (!isSafe) {
           setIsIdle100(false);
           if (idleTimerRef.current) {
               clearTimeout(idleTimerRef.current);
@@ -127,7 +133,7 @@ export const MetaManager = () => {
               setIsIdle100(true);
           }, IDLE_TIMEOUT_MS);
       }
-  }, [bootState, isSimulationPaused, integrity]); 
+  }, [bootState, isSimulationPaused, integrity, isBreaching]); 
 
   // 5. INITIALIZE DOM
   useEffect(() => {
@@ -154,13 +160,16 @@ export const MetaManager = () => {
       }
   }, []);
 
-  // 6. RENDER LOOP (Decoupled from State Updates)
+  // 6. RENDER LOOP
   useEffect(() => {
       const updateFavicon = (url: string, type: string) => {
-          if (!linkRef.current) return;
-          if (linkRef.current.href !== url) {
+          // PERFORMANCE: Only touch DOM if data changed
+          if (prevFaviconUrl.current === url) return;
+          
+          if (linkRef.current) {
               linkRef.current.type = type;
               linkRef.current.href = url;
+              prevFaviconUrl.current = url;
           }
       };
 
@@ -175,9 +184,9 @@ export const MetaManager = () => {
           const ctx = canvasRef.current?.getContext('2d');
           if (!ctx) return;
 
-          // READ LATEST STATE FROM REF
+          // READ LATEST STATE
           const { 
-              integrity, isIdle100, bootState, 
+              integrity, isIdle100, bootState, isBreaching,
               isPaused, isGameOver, isZen, bootKey 
           } = stateRef.current;
 
@@ -186,8 +195,9 @@ export const MetaManager = () => {
 
           const now = Date.now();
           const tick = Math.floor(now / 50); 
-          const slowBlink = tick % 16 < 8; 
-          const fastBlink = tick % 10 < 5; 
+          
+          const slowBlink = tick % 16 < 8; // 800ms
+          const fastBlink = tick % 10 < 5; // 500ms
 
           // --- URL HUD ---
           if (!isBoot && now - lastHashUpdate.current > 500) {
@@ -203,7 +213,6 @@ export const MetaManager = () => {
                   if (integrity < 60) status = 'CAUTION';
                   hash = `#/STATUS:${status}/SYS_INT:${int}%`;
               }
-              // Checking location.hash directly is safe here
               if (window.location.hash !== hash) window.history.replaceState(null, '', hash);
               lastHashUpdate.current = now;
           }
@@ -238,7 +247,7 @@ export const MetaManager = () => {
           // --- FAVICON RENDERING ---
           
           // IDLE STATE Check
-          const isStaticState = (!isBoot && !isPaused && !isGameOver && isIdle100 && integrity >= 99.9);
+          const isStaticState = (!isBoot && !isPaused && !isGameOver && !isBreaching && isIdle100 && integrity >= 99.9);
 
           if (isStaticState) {
               updateFavicon('/favicon.ico', 'image/x-icon');
@@ -263,8 +272,38 @@ export const MetaManager = () => {
               ctx.stroke();
           };
 
-          if (isBoot) {
-              // A. NEURAL LACE INIT
+          // 1. BREACHING (Initialized)
+          if (isBreaching) {
+              drawFrame(COL_WHITE, () => {
+                  const t = tick % 10;
+                  const alpha = t < 5 ? 1 : 0.6;
+                  
+                  ctx.fillStyle = alpha === 1 ? COL_WHITE : COL_GREEN;
+                  ctx.strokeStyle = alpha === 1 ? COL_WHITE : COL_GREEN;
+                  ctx.lineWidth = 6;
+                  ctx.lineCap = 'round';
+                  
+                  // Rotation
+                  const angle = (now / 100) % (Math.PI * 2); // Smooth spin
+                  ctx.save();
+                  ctx.translate(32, 32);
+                  ctx.rotate(angle);
+                  ctx.translate(-32, -32);
+                  
+                  // Power Symbol
+                  ctx.beginPath();
+                  ctx.arc(32, 32, 14, -Math.PI * 0.35, -Math.PI * 0.65, true);
+                  ctx.stroke();
+                  ctx.beginPath();
+                  ctx.moveTo(32, 14);
+                  ctx.lineTo(32, 32);
+                  ctx.stroke();
+                  
+                  ctx.restore();
+              });
+          }
+          // 2. BOOT SEQUENCE
+          else if (isBoot) {
               if (bootKey === 'INIT') {
                   drawFrame(COL_GREEN, () => {
                       const cx = 32, cy = 32;
@@ -281,7 +320,6 @@ export const MetaManager = () => {
                       }
                   });
               }
-              // B. CHECKMARK LINK
               else if (bootKey === 'LINK') {
                   drawFrame(COL_GREEN, () => {
                       ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -302,7 +340,6 @@ export const MetaManager = () => {
                       ctx.stroke();
                   });
               } 
-              // C. MOUNT ARROW
               else if (bootKey === 'MOUNT') {
                   drawFrame(COL_GREEN, () => {
                       ctx.fillStyle = COL_GREEN;
@@ -311,7 +348,6 @@ export const MetaManager = () => {
                       ctx.fillRect(28, 8, 8, 22 + offset);
                   });
               } 
-              // D. TWO-TONE WARNING
               else if (bootKey === 'UNSAFE' || bootKey === 'CAUTION') {
                   const activeColor = slowBlink ? COL_YELLOW : COL_RED; 
                   drawFrame(activeColor, () => {
@@ -321,11 +357,7 @@ export const MetaManager = () => {
                       ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('!', 32, 46);
                   });
               } 
-              // E. LOCKED
               else if (bootKey === 'BYPASS') { 
-                  // Purple "Phantom Node" Logic instead of lock, as requested in previous step
-                  // Wait, previous prompt asked for "Phantom Node" for BYPASS.
-                  // "Bypassing sentinel nodes... be a bespoke purple creative icon"
                   drawFrame(COL_PURPLE, () => {
                       const phase = (tick % 16) / 16; 
                       const cx = 32, cy = 32;
@@ -340,16 +372,12 @@ export const MetaManager = () => {
                       ctx.fillRect(cx - 2, cy - 2, 4, 4);
                   });
               } 
-              // F. UNLOCKED
               else if (bootKey === 'DECRYPTED') { 
                   drawFrame(COL_GREEN, () => {
-                      // Cycle: Locked -> Pop Open
                       const t = tick % 30;
                       const isLocked = t < 10;
-                      
                       ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; ctx.fillStyle = COL_GREEN;
                       let shackleY = 28; let shackleOpen = 0;
-                      
                       if (!isLocked) {
                           const anim = Math.min(1, (t - 10) / 5);
                           shackleY = 28 - (anim * 8); 
@@ -369,6 +397,7 @@ export const MetaManager = () => {
               }
           }
           
+          // 3. PAUSED
           else if (isPaused) {
               if (slowBlink) {
                   drawFrame(COL_YELLOW, () => {
@@ -381,6 +410,7 @@ export const MetaManager = () => {
               }
           }
           
+          // 4. GAME OVER
           else if (isGameOver) {
               if (slowBlink) {
                   drawFrame(COL_RED, () => {
@@ -393,7 +423,7 @@ export const MetaManager = () => {
               }
           }
 
-          // GAMEPLAY
+          // 5. GAMEPLAY (Health)
           else {
               let color = COL_GREEN;
               let isRed = false;
@@ -402,7 +432,10 @@ export const MetaManager = () => {
               if (integrity < 30) { color = COL_RED; isRed = true; }
               
               let showIcon = true;
-              if (isRed && !fastBlink) showIcon = false;
+              if (isRed) {
+                  // Steady 500ms Blink
+                  if (!fastBlink) showIcon = false;
+              }
 
               if (showIcon) {
                   drawFrame(color, () => {
@@ -424,7 +457,7 @@ export const MetaManager = () => {
 
       const interval = setInterval(updateAll, 50); 
       return () => clearInterval(interval);
-  }, []); // EMPTY DEPENDENCY ARRAY - LOOP NEVER RESTARTS
+  }, []); 
 
   return null;
 };
