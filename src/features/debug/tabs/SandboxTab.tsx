@@ -13,21 +13,14 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const { startGame } = useGameStore();
 
   const enterSandbox = () => {
-      // 1. Wake up Audio Engine (User Interaction)
       AudioSystem.init();
       AudioSystem.startMusic();
-
-      // 2. Set State
       setIntroDone(true);
       setBootState('sandbox');
-      
-      // 3. Clean Registry
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
-      
-      // 4. Start Loop
       startGame();
       closeDebug();
   };
@@ -43,6 +36,7 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
         </div>
         <button 
             onClick={enterSandbox}
+            onMouseEnter={() => AudioSystem.playHover()}
             className="px-8 py-3 bg-primary-green text-black font-bold tracking-widest hover:bg-white transition-colors"
         >
             [ ENTER_HOLO_DECK ]

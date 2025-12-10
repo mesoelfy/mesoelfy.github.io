@@ -3,7 +3,7 @@ import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem'; // Import Audio
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -55,7 +55,7 @@ class PanelRegistrySystemClass implements IPanelSystem {
       this.calculateIntegrity();
       if (restoredCount > 0) {
           GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
-          AudioSystem.playSound('reboot_success'); // RESTORE SUCCESS
+          AudioSystem.playSound('fx_reboot_success'); 
           GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Restored ${restoredCount} panels`, source: 'PanelSystem' });
       }
   }
@@ -84,7 +84,7 @@ class PanelRegistrySystemClass implements IPanelSystem {
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
     } else {
         if (Math.floor(oldHealth / 100) > Math.floor(state.health / 100)) {
-             // Debug log if needed
+             // Debug log
         }
         GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
     }
@@ -101,10 +101,9 @@ class PanelRegistrySystemClass implements IPanelSystem {
     
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = 500; // Reset to 50%
+        state.health = 500; 
         
-        // SUCCESS SOUND
-        AudioSystem.playSound('reboot_success');
+        AudioSystem.playSound('fx_reboot_success');
         
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Panel RESTORED: ${id}`, source: 'PanelSystem' });
     }

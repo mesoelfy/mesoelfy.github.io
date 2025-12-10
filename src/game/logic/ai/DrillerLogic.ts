@@ -8,6 +8,8 @@ import { PanelRegistry } from '../../systems/PanelRegistrySystem';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
 import { AI_CONFIG } from '../../config/AIConfig';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -41,7 +43,6 @@ export const DrillerLogic: EnemyLogic = {
     const dist = Math.sqrt(distSq);
     const angle = Math.atan2(dy, dx) - Math.PI/2;
     
-    // --- DRILLING STATE ---
     if (dist <= AI_CONFIG.DRILLER.TIP_OFFSET + AI_CONFIG.DRILLER.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
@@ -60,11 +61,10 @@ export const DrillerLogic: EnemyLogic = {
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
-            ctx.playSound('driller_drill');
+            ctx.playSound('loop_drill');
             state.data.audioTimer = AI_CONFIG.DRILLER.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 
-        // Deterministic Damage
         state.data.damageTimer -= ctx.delta;
         if (state.data.damageTimer <= 0) {
              if (target.type === 'PANEL' && target.id) {

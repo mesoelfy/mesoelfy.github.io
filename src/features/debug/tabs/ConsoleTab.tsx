@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface ConsoleTabProps {
   logs: { time: string, msg: string, type: string }[];
@@ -20,6 +21,7 @@ export const ConsoleTab = ({ logs }: ConsoleTabProps) => {
       navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      AudioSystem.playClick();
   };
 
   return (
@@ -39,6 +41,7 @@ export const ConsoleTab = ({ logs }: ConsoleTabProps) => {
         
         <button 
             onClick={handleCopy}
+            onMouseEnter={() => AudioSystem.playHover()}
             className="absolute bottom-0 right-0 flex items-center gap-2 bg-primary-green/10 hover:bg-primary-green/20 border border-primary-green/30 text-primary-green px-3 py-1.5 text-xs font-bold transition-all backdrop-blur-sm"
         >
             {copied ? <Check size={12} /> : <Copy size={12} />}

@@ -20,7 +20,6 @@ export const SettingsModal = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        // Z-200: Topmost (above Intro)
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 pointer-events-none">
           
           <motion.div
@@ -38,7 +37,7 @@ export const SettingsModal = () => {
                 </span>
               </div>
               <button 
-                onClick={() => { closeModal(); AudioSystem.playSound('menu_close'); }}
+                onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
                 onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-2 hover:bg-critical-red hover:text-black text-primary-green transition-colors border border-transparent hover:border-critical-red"
               >
@@ -55,6 +54,7 @@ export const SettingsModal = () => {
                                 setActiveTab(tab.id);
                                 AudioSystem.playClick();
                             }}
+                            onMouseEnter={() => AudioSystem.playHover()}
                             className={clsx(
                                 "flex items-center gap-3 px-6 py-4 text-sm font-bold tracking-wider transition-all border-l-4",
                                 activeTab === tab.id

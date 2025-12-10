@@ -41,7 +41,7 @@ export class GameStateSystem implements IGameStateSystem {
           
           if (this.heartbeatTimer <= 0) {
               const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
-              AudioSystem.playSound('warning_heartbeat');
+              AudioSystem.playSound('loop_warning');
               GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
               this.heartbeatTimer = 1.4 - (urgency * 1.05); 
           }
@@ -87,7 +87,7 @@ export class GameStateSystem implements IGameStateSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        if (this.playerHealth <= 0) AudioSystem.playSound('player_down_glitch');
+        if (this.playerHealth <= 0) AudioSystem.playSound('fx_player_death');
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -119,9 +119,7 @@ export class GameStateSystem implements IGameStateSystem {
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
-        
-        // SUCCESS SOUND
-        AudioSystem.playSound('reboot_success'); 
+        AudioSystem.playSound('fx_reboot_success'); 
     }
   }
 

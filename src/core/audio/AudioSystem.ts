@@ -80,7 +80,7 @@ class AudioSystemController {
     console.log('[AudioSystem] Synthesized and Ready.');
 
     if (this.isMusicStarted) {
-        this.playAmbience('ambience_b');
+        this.playAmbience('ambience_core');
     }
   }
 
@@ -92,7 +92,7 @@ class AudioSystemController {
               this.ctx.resume().catch(() => {});
           }
           if (!this.currentAmbienceKey) {
-              this.playAmbience('ambience_b');
+              this.playAmbience('ambience_core');
           }
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
@@ -113,12 +113,6 @@ class AudioSystemController {
           this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
       }
 
-      // AMBIENCE LAB: RECALIBRATED TO MATCH DEFAULT (0.5)
-      // Math.pow(10, (val - 0.5) * 2)
-      // If val = 0.5, pow = 1. (Exact Base)
-      // If val = 0.0, pow = 0.1. (1/10th Base)
-      // If val = 1.0, pow = 10. (10x Base)
-      
       if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
           const filter = s.ambFilter ?? 0.5;
           const speed = s.ambSpeed ?? 0.5;
@@ -126,25 +120,10 @@ class AudioSystemController {
           const modSpeed = s.ambModSpeed ?? 0.5;
           const modDepth = s.ambModDepth ?? 0.5;
 
-          // 1. DENSITY (Base 300Hz) -> Range 30Hz to 3000Hz
           this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
-
-          // 2. CIRCULATION (Base 0.05Hz) -> Range 0.005Hz to 0.5Hz
           this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
-
-          // 3. STEREO WIDTH (Base 0.1 Gain) -> Range 0.01 to 1.0
-          // Using slightly different curve for width to allow full 0
-          // But to keep 0.5 = 0.1, let's use the same power logic roughly?
-          // No, width feels better with simple scaling, but let's anchor it.
-          // Let's use: val^3 * 0.8. 
-          // 0.5^3 * 0.8 = 0.125 * 0.8 = 0.1. (Matches)
-          // 1.0^3 * 0.8 = 0.8 (Wide)
           this.ambiencePanConstraint.gain.value = Math.pow(width, 3) * 0.8;
-          
-          // 4. FLUCTUATION (Base 0.2Hz) -> Range 0.02Hz to 2.0Hz
           this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
-          
-          // 5. INSTABILITY (Base 10Hz) -> Range 1Hz to 100Hz
           this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
       }
   }
@@ -322,23 +301,23 @@ class AudioSystemController {
   }
 
   private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser'));
+    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('fx_player_fire'));
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') this.playSound('explosion_large');
-        else this.playSound('explosion_small');
+        if (p.type === 'kamikaze') this.playSound('fx_impact_heavy');
+        else this.playSound('fx_impact_light');
     });
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.playSound('explosion_large'); 
+        this.playSound('fx_impact_heavy'); 
         this.duckMusic(0.7, 1.0);
     });
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        this.playSound('explosion_large');
+        this.playSound('fx_impact_heavy');
         this.duckMusic(1.0, 3.0);
     });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('loop_heal'));
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('fx_level_up'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.playSound('explosion_large'); 
+        this.playSound('fx_impact_heavy'); 
         this.duckMusic(0.8, 1.5);
     });
   }
@@ -362,7 +341,7 @@ class AudioSystemController {
     this.isMusicStarted = true;
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     if (this.isReady) {
-        this.playAmbience('ambience_b');
+        this.playAmbience('ambience_core');
     }
     if (!this.musicElement) this.setupMusic();
     if (this.musicElement) this.musicElement.play().catch(() => {});
@@ -377,11 +356,11 @@ class AudioSystemController {
     source.connect(this.musicGain);
   }
 
-  public playClick() { this.playSound('click'); }
-  public playHover() { this.playSound('hover'); }
-  public playBootSequence() { this.playSound('powerup'); } 
-  public playDrillSound() { this.playSound('driller_drill'); }
-  public playRebootZap() { this.playSound('reboot_tick'); }
+  public playClick() { this.playSound('ui_click'); }
+  public playHover() { this.playSound('ui_hover'); }
+  public playBootSequence() { this.playSound('fx_boot_sequence'); } 
+  public playDrillSound() { this.playSound('loop_drill'); }
+  public playRebootZap() { this.playSound('loop_reboot'); }
   
   public setMasterMute(m: boolean) { 
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, master: !m } }));

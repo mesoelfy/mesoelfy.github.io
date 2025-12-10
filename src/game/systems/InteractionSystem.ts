@@ -2,7 +2,7 @@ import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem }
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PanelRegistry } from './PanelRegistrySystem'; 
-import { AudioSystem } from '@/core/audio/AudioSystem'; // Import Audio
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -70,7 +70,7 @@ export class InteractionSystem implements IInteractionSystem {
             this.lastRepairTime = time;
             
             // Loop Sound for Player Reboot
-            AudioSystem.playSound('reboot_loop'); 
+            AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
                 const angle = Math.random() * Math.PI * 2;
@@ -97,7 +97,7 @@ export class InteractionSystem implements IInteractionSystem {
             
             if (p.isDestroyed) {
                 // Low pitch loop for reboot
-                AudioSystem.playSound('reboot_loop');
+                AudioSystem.playSound('loop_reboot');
             } else {
                 // High pitch heal
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });

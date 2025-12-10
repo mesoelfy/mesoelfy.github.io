@@ -2,30 +2,17 @@ import { useStore } from '@/core/store/useStore';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { EnemyTypes } from '@/game/config/Identifiers';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause, Speaker, Activity, Waves, Zap, Heart, Database, Settings2, ShieldAlert, CheckCircle2, Wind } from 'lucide-react';
+import { Bug, Clock, Crosshair, Box, ScanEye, Play, Speaker, Settings2, Wind, Terminal, Zap, Shield, HelpCircle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 export const SimulationHUD = () => {
-  const { debugFlags, setDebugFlag, sandboxView, setSandboxView, galleryTarget, setGalleryTarget, galleryAction, toggleGalleryAction } = useStore();
+  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
   
-  const spawnEnemy = (type: string) => {
-      GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
-  };
-
-  const clearBoard = () => {
-      try {
-          const registry = ServiceLocator.getRegistry();
-          if (registry) registry.clear();
-      } catch (e) { console.warn("Registry not ready"); }
-  };
-
   const playSound = (key: string) => {
-      // Ambience requires special method
       if (key.includes('ambience')) {
           AudioSystem.playAmbience(key);
       } else {
@@ -35,39 +22,50 @@ export const SimulationHUD = () => {
       setTimeout(() => setLastPlayed(null), 200);
   };
 
-  const library = {
-      CORE: { 
-          keys: Object.keys(AUDIO_CONFIG).filter(k => !k.includes('proto_') && !k.includes('drill_') && !k.includes('misc_') && (k.includes('laser') || k.includes('click') || k.includes('hover') || k.includes('heal') || k.includes('powerup'))),
-          color: 'text-primary-green',
-          borderColor: 'border-primary-green',
-          icon: Zap
-      },
-      COMBAT: { 
-          keys: ['driller_drill', 'enemy_fire', 'explosion_small', 'explosion_large', 'player_down_glitch', 'warning_heartbeat'],
-          color: 'text-critical-red',
-          borderColor: 'border-critical-red',
-          icon: Bug
-      },
-      MISC_DRILLS: {
-          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('drill_') && k !== 'driller_drill'),
-          color: 'text-latent-purple',
-          borderColor: 'border-latent-purple',
-          icon: Database
-      },
-      MISC: {
-          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('misc_') || k.includes('proto_')),
-          color: 'text-alert-yellow',
-          borderColor: 'border-alert-yellow',
-          icon: Database
-      }
-  };
+  const library = useMemo(() => {
+      const allKeys = Object.keys(AUDIO_CONFIG);
+      const usedKeys = new Set<string>();
 
-  const prototypes = [
-      { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan', metas: ['CLASSIC', 'TURBINE', 'HUM'] },
-      { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red', metas: ['BASS', 'KLAXON', 'GLITCH'] },
-      // NEW: Ambience Row
-      { id: 'AMB', label: 'NOISE_FLOOR', icon: Wind, keys: ['ambience_a', 'ambience_b', 'ambience_c'], color: 'text-gray-400', metas: ['DEEP', 'AIRY', 'PULSE'] },
-  ];
+      const defineGroup = (keys: string[]) => {
+          keys.forEach(k => usedKeys.add(k));
+          return keys.filter(k => allKeys.includes(k));
+      };
+
+      // 1. UI & FEEDBACK
+      const uiKeys = defineGroup([
+          'ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 
+          'ui_optimal', 'ui_error', 'ui_chirp'
+      ]);
+
+      // 2. COMBAT & FX
+      const combatKeys = defineGroup([
+          'fx_player_fire', 'fx_enemy_fire', 'fx_boot_sequence',
+          'fx_impact_light', 'fx_impact_heavy', 'fx_player_death',
+          'fx_level_up', 'fx_reboot_success', 'fx_teleport'
+      ]);
+
+      // 3. LOOPS & AMBIENCE
+      const loopKeys = defineGroup([
+          'ambience_core', 
+          'loop_heal', 'loop_reboot', 'loop_warning', 'loop_drill'
+      ]);
+
+      // 4. SYNTHESIS LAB (Protos)
+      const synKeys = defineGroup(
+          allKeys.filter(k => k.startsWith('syn_'))
+      );
+
+      // 5. CATCH ALL
+      const unusedKeys = allKeys.filter(k => !usedKeys.has(k));
+
+      return {
+          UI: { keys: uiKeys, icon: Terminal, color: 'text-primary-green', border: 'border-primary-green' },
+          COMBAT: { keys: combatKeys, icon: Zap, color: 'text-critical-red', border: 'border-critical-red' },
+          LOOPS: { keys: loopKeys, icon: Wind, color: 'text-service-cyan', border: 'border-service-cyan' },
+          SYNTHS: { keys: synKeys, icon: Box, color: 'text-alert-yellow', border: 'border-alert-yellow' },
+          MISC_UNTESTED: { keys: unusedKeys, icon: HelpCircle, color: 'text-gray-400', border: 'border-gray-500' }
+      };
+  }, []);
 
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
@@ -122,84 +120,58 @@ export const SimulationHUD = () => {
               <div className="flex-1 bg-black/80 backdrop-blur-md border border-white/20 p-6 flex flex-col gap-6 overflow-y-auto">
                   <div className="flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
                       <Settings2 className="text-white" size={20} />
-                      <h3 className="font-header font-black text-xl text-white tracking-widest">PROTOTYPE_BENCH</h3>
+                      <h3 className="font-header font-black text-xl text-white tracking-widest">AUDIO_MATRIX</h3>
                   </div>
                   
-                  {/* SELECTED FINALISTS */}
-                  <div className="bg-primary-green/5 border border-primary-green/30 p-4 rounded-sm">
-                      <div className="flex items-center gap-2 mb-4">
-                          <CheckCircle2 className="text-primary-green" size={18} />
-                          <span className="font-mono font-bold tracking-wider text-sm text-primary-green">SELECTED_IMPLEMENTATIONS</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                          {[
-                              { label: 'DRILLER (MOD_G)', key: 'driller_drill', sub: 'IMPACT' },
-                              { label: 'LOW_INTEGRITY (VAR_F)', key: 'warning_heartbeat', sub: 'SUB-BASS' },
-                              { label: 'PLAYER_DEATH (VAR_K)', key: 'player_down_glitch', sub: 'CHOPPER' }
-                          ].map(item => {
-                              const isPlaying = lastPlayed === item.key;
-                              return (
-                                  <button 
-                                      key={item.key}
-                                      onClick={() => playSound(item.key)}
-                                      className={clsx(
-                                          "flex flex-col items-center justify-center py-6 border transition-all duration-100",
-                                          isPlaying 
-                                              ? "bg-primary-green text-black border-primary-green shadow-[0_0_20px_#78F654] scale-95" 
-                                              : "bg-black border-primary-green/30 hover:border-primary-green hover:bg-primary-green/10 text-primary-green"
-                                      )}
-                                  >
-                                      <span className="text-xs font-black mb-1">{item.label}</span>
-                                      <span className="text-[8px] opacity-70 font-mono tracking-tighter">{item.sub}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-primary-green border-b border-primary-green/30 pb-1">UI_FEEDBACK</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                              {library.UI.keys.map(key => (
+                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-primary-green/30 hover:bg-primary-green/10 text-[10px] text-primary-green text-left transition-colors truncate">
+                                      {key}
                                   </button>
-                              );
-                          })}
+                              ))}
+                          </div>
+                      </div>
+
+                      <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-critical-red border-b border-critical-red/30 pb-1">COMBAT_FX</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                              {library.COMBAT.keys.map(key => (
+                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-critical-red/30 hover:bg-critical-red/10 text-[10px] text-critical-red text-left transition-colors truncate">
+                                      {key}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div className="mt-4 p-4 border border-service-cyan/30 bg-service-cyan/5">
+                      <h4 className="text-xs font-bold text-service-cyan mb-2 flex items-center gap-2">
+                          <Wind size={14} /> AMBIENCE_LOOPS
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                          {library.LOOPS.keys.map(key => (
+                              <button key={key} onClick={() => playSound(key)} className="flex flex-col items-center justify-center p-3 border border-service-cyan/30 hover:bg-service-cyan/10 transition-colors">
+                                  <span className="text-[10px] text-service-cyan font-bold">{key}</span>
+                              </button>
+                          ))}
                       </div>
                   </div>
 
-                  {/* PROTOTYPE ROWS */}
-                  {prototypes.map(proto => (
-                      <div key={proto.id} className="bg-white/5 border border-white/10 p-4 rounded-sm">
-                          <div className="flex items-center gap-2 mb-4">
-                              <proto.icon className={proto.color} size={18} />
-                              <span className={clsx("font-mono font-bold tracking-wider text-sm", proto.color)}>{proto.label}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4">
-                              {proto.keys.map((key, idx) => {
-                                  const label = idx === 0 ? 'VARIANT_A' : idx === 1 ? 'VARIANT_B' : 'VARIANT_C';
-                                  const isPlaying = lastPlayed === key;
-                                  const meta = proto.metas ? proto.metas[idx] : AUDIO_CONFIG[key].type.toUpperCase();
-                                  return (
-                                      <button 
-                                          key={key}
-                                          onClick={() => playSound(key)}
-                                          className={clsx(
-                                              "flex flex-col items-center justify-center py-6 border transition-all duration-100",
-                                              isPlaying 
-                                                  ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-95" 
-                                                  : "bg-black border-white/20 hover:border-white/50 hover:bg-white/5"
-                                          )}
-                                      >
-                                          <span className="text-xs font-bold mb-1">{label}</span>
-                                          <span className="text-[9px] opacity-50 font-mono">{meta}</span>
-                                      </button>
-                                  );
-                              })}
-                          </div>
-                      </div>
-                  ))}
               </div>
 
-              {/* RIGHT: LIBRARY */}
-              <div className="w-80 bg-black/90 backdrop-blur-md border border-service-cyan/30 flex flex-col overflow-hidden">
-                  <div className="p-3 border-b border-service-cyan/30 bg-service-cyan/5">
-                      <span className="font-mono font-bold text-xs text-service-cyan tracking-widest">ACTIVE_LIBRARY</span>
+              {/* RIGHT: FULL LIBRARY (Categorized) */}
+              <div className="w-72 bg-black/90 backdrop-blur-md border border-gray-800 flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-gray-800 bg-gray-900/50">
+                      <span className="font-mono font-bold text-xs text-gray-400 tracking-widest">ASSET_BROWSER</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-service-cyan scrollbar-track-black">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-black">
                       {Object.entries(library).map(([name, group]) => (
-                          <div key={name}>
-                              <div className={clsx("flex items-center gap-2 text-[10px] font-bold mb-2 pb-1 border-b uppercase tracking-wider", group.color, group.borderColor)}>
-                                  <group.icon size={12} />
+                          <div key={name} className={group.keys.length === 0 ? 'hidden' : ''}>
+                              <div className={clsx("flex items-center gap-2 text-[9px] font-bold mb-2 pb-1 border-b uppercase tracking-wider opacity-80", group.color, group.border)}>
+                                  <group.icon size={10} />
                                   {name}
                               </div>
                               <div className="grid grid-cols-1 gap-1">
@@ -210,14 +182,14 @@ export const SimulationHUD = () => {
                                               key={key} 
                                               onClick={() => playSound(key)}
                                               className={clsx(
-                                                  "flex items-center justify-between px-2 py-1.5 border text-[10px] font-mono transition-all",
+                                                  "flex items-center justify-between px-2 py-1.5 border text-[9px] font-mono transition-all",
                                                   isPlaying 
-                                                      ? `${group.borderColor} bg-white text-black` 
-                                                      : `border-transparent hover:border-white/30 bg-white/5 text-gray-300 hover:bg-white/10`
+                                                      ? `${group.border} bg-white text-black` 
+                                                      : `border-transparent hover:border-white/10 bg-white/5 text-gray-400 hover:text-white`
                                               )}
                                           >
-                                              <span>{key}</span>
-                                              <Play size={10} className={isPlaying ? "fill-black" : ""} />
+                                              <span className="truncate w-full text-left">{key}</span>
+                                              <Play size={8} className={isPlaying ? "fill-black" : "opacity-0 group-hover:opacity-100"} />
                                           </button>
                                       );
                                   })}
@@ -228,8 +200,6 @@ export const SimulationHUD = () => {
               </div>
           </div>
       )}
-
-      {/* ... ARENA/GALLERY (UNCHANGED) ... */}
     </div>
   );
 };

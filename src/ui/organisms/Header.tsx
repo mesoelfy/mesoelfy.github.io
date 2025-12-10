@@ -23,7 +23,6 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-// Standardized Button Component for Uniformity
 const ToggleBtn = ({ active, onClick, children, color }: any) => (
   <button 
     onClick={onClick}
@@ -122,7 +121,6 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            {/* Audio Toggles */}
             <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor}>
                 <Wind size={14} />
             </ToggleBtn>
@@ -143,9 +141,8 @@ export const Header = () => {
 
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
-            {/* Settings Button (Right Most) */}
             <button 
-                onClick={() => { toggleSettings(); AudioSystem.playSound('menu_open'); }}
+                onClick={() => { toggleSettings(); AudioSystem.playSound('ui_menu_open'); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
@@ -157,7 +154,6 @@ export const Header = () => {
         </div>
       </div>
 
-      {/* BOTTOM BORDER / HEALTH BAR */}
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <motion.div 
@@ -171,7 +167,6 @@ export const Header = () => {
         </div>
       )}
       
-      {/* INTEGRITY TEXT */}
       <div className={clsx(
           "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
           isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"

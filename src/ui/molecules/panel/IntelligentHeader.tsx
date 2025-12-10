@@ -32,7 +32,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
       setShowOptimal(true);
     }
     if (health >= MAX_HEALTH && showOptimal) {
-      AudioSystem.playSound('optimal_ding'); // NEW: Sound Trigger
+      AudioSystem.playSound('ui_optimal'); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }

@@ -16,8 +16,6 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
   return (
     <AnimatePresence>
       {isOpen && (
-        // Z-Index 200: Above Global Backdrop (150)
-        // pointer-events-none: Allows clicks to pass through to backdrop for closing
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 pointer-events-none">
           
           <motion.div
@@ -25,7 +23,6 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-            // pointer-events-auto: Re-enable clicks for the modal content itself
             className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto"
           >
             <div className="flex items-center justify-between px-4 py-3 bg-primary-green/10 border-b border-primary-green/30">
@@ -36,7 +33,7 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
                 </span>
               </div>
               <button 
-                onClick={() => { closeModal(); AudioSystem.playSound('menu_close'); }}
+                onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
                 onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-1 hover:bg-critical-red hover:text-black text-primary-green transition-colors"
               >

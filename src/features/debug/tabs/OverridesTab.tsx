@@ -18,14 +18,9 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
   const handleSkipBoot = () => {
-    // 1. Reset Cheats
     resetDebugFlags();
-    
-    // 2. State Transition
     setIntroDone(true);
     setBootState('active');
-    
-    // 3. Audio/Game Init
     AudioSystem.init();
     AudioSystem.startMusic();
     startGame();
@@ -82,19 +77,25 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
       setDebugFlag('peaceMode', newState);
   };
 
+  const btnClass = "flex items-center justify-center gap-2 p-3 border transition-all text-xs font-bold";
+
   return (
     <div className="space-y-6">
       
-      {/* SCENE CONTROL */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-primary-green/50 hover:bg-primary-green hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleSkipBoot} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-primary-green/50 hover:bg-primary-green hover:text-black`}
+          >
             <Play size={14} /> SKIP_BOOT
           </button>
           
           <button 
             onClick={handleZenModeWrapper} 
+            onMouseEnter={() => AudioSystem.playHover()}
             className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"
           >
             <div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" />
@@ -102,31 +103,42 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
                 <Sparkles size={14} className="text-yellow-300" /> ZEN_MODE
             </div>
           </button>
-          <button onClick={handleSystemFormat} className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleSystemFormat} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold"
+          >
             <Trash2 size={14} /> SYSTEM_FORMAT
           </button>
         </div>
       </div>
 
-      {/* STATE OVERRIDES */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleForceCrash} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black`}
+          >
             <Skull size={14} /> FORCE_CRASH
           </button>
-          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleReboot} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black`}
+          >
             <RefreshCw size={14} /> REBOOT_CORE
           </button>
         </div>
       </div>
 
-      {/* CHEATS */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
         
         <button 
           onClick={toggleGodSuite}
+          onMouseEnter={() => AudioSystem.playHover()}
           className={clsx(
               "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
               areAllGodModesOn
@@ -140,6 +152,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
@@ -153,6 +166,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
@@ -166,6 +180,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>

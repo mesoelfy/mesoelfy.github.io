@@ -9,7 +9,7 @@ export const GlobalBackdrop = () => {
   const isVisible = (activeModal !== 'none') || (isDebugOpen && !isDebugMinimized);
 
   const handleDismiss = () => {
-    AudioSystem.playSound('menu_close');
+    AudioSystem.playSound('ui_menu_close');
     if (isDebugOpen) {
         toggleDebugMenu();
     } else {
