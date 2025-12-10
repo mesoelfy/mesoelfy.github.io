@@ -12,10 +12,10 @@ import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
+import { SafePanelContent } from './SafePanelContent';
 
 const MAX_HEALTH = 1000;
 
-// Panel Enter/Exit Animations
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
@@ -35,7 +35,6 @@ const panelVariants = {
   })
 };
 
-// TIGHTENED PULSE (4% Attack to match 0.03s Audio)
 const pulseVariants = {
     heartbeat: {
         opacity: [0, 0.6, 0],
@@ -65,17 +64,31 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
+  
   const health = panelState ? panelState.health : MAX_HEALTH;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
-  const healthPercent = (health / MAX_HEALTH) * 100; 
-  const isDamaged = health < MAX_HEALTH;
+  
+  let rawPercent = (health / MAX_HEALTH) * 100;
+  if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  const healthPercent = Math.max(0, Math.min(100, rawPercent));
+  
+  const isDamaged = !isDestroyed && health < MAX_HEALTH;
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
   
-  // Controls
   const shakeControls = useAnimation();
   const heartbeatControls = useHeartbeat(); 
+
+  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
+
+  useReactEffect(() => {
+      if (isGameOver) {
+          shakeControls.start("shattered");
+      } else {
+          shakeControls.start("visible");
+      }
+  }, [isGameOver, shakeControls]);
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -92,7 +105,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           if (p.id === gameId) {
               shakeControls.start({
                   x: [0, -5, 5, -5, 5, 0],
-                  transition: { duration: 0.2 }
+                  transition: { duration: 0.1 }
               });
           }
       });
@@ -108,7 +121,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
-  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
   return (
@@ -116,7 +128,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      animate={isGameOver ? "shattered" : ["visible", shakeControls as any]}
+      animate={shakeControls}
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
@@ -127,7 +139,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
-      {/* GLOBAL ALARM OVERLAY */}
       {isCriticalGlobal && (
           <motion.div 
             className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
@@ -151,17 +162,22 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
       <div className="relative z-10 p-4 h-full">
         {(isDestroyed || isGameOver) && (
-            <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+            <SafePanelContent fallbackId={`sparks-${gameId}`}>
+                <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+            </SafePanelContent>
         )}
 
         <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
-            {isDestroyed && (
-                <BreachOverlay 
-                    progress={healthPercent} 
-                    isVideo={gameId === 'video'} 
-                    showInteractive={true} 
-                />
+            
+            {isDestroyed && !isGameOver && (
+                <SafePanelContent fallbackId={`breach-${gameId}`}>
+                    <BreachOverlay 
+                        progress={healthPercent} 
+                        isVideo={gameId === 'video'} 
+                        showInteractive={true} 
+                    />
+                </SafePanelContent>
             )}
         </div>
 

@@ -157,8 +157,11 @@ Entering and exiting system settings or debug should make a soft sound. (ask AI 
 
 
 
-- mouse is appearing in game dashboard state along with game cursor reticle
+Clicking Skip_Boot will disable all god suite toggles
 
+- enemies should be spawning in the coordinates where a broken panel is with their own sophisticateds spawn rate separate from the waves
+
+- Add a spinning gear in the top right of the intro scene.
 
 
 Here is the phase-based action plan to execute the audit recommendations. We will move from **safe, isolated UI refactoring** to **deep engine architecture changes**.

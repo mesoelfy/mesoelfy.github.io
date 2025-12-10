@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
@@ -11,7 +11,7 @@ interface PanelState {
   isDestroyed: boolean;
 }
 
-class PanelRegistrySystemClass implements IGameSystem {
+class PanelRegistrySystemClass implements IPanelSystem {
   private panelRects = new Map<string, WorldRect>();
   private observedElements = new Map<string, HTMLElement>();
   private panelStates = new Map<string, PanelState>();
@@ -22,7 +22,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     this.resetLogic();
     this.refreshAll();
     
-    // LISTEN FOR RESTORE
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             this.triggerSystemRestore();
@@ -38,16 +37,14 @@ class PanelRegistrySystemClass implements IGameSystem {
       for (const [id, state] of this.panelStates) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
-              state.health = 500; // 50%
+              state.health = 500; 
               restoredCount++;
               
-              // Find center of panel for FX
               const rect = this.panelRects.get(id);
               if (rect) {
                   GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: rect.x, y: rect.y });
               }
           } else {
-              // Heal damaged panels fully
               if (state.health < MAX_PANEL_HEALTH) {
                   state.health = MAX_PANEL_HEALTH;
               }
@@ -56,7 +53,7 @@ class PanelRegistrySystemClass implements IGameSystem {
       
       this.calculateIntegrity();
       if (restoredCount > 0) {
-          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); // Satisfying thud
+          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
       }
   }
 
@@ -77,6 +74,7 @@ class PanelRegistrySystemClass implements IGameSystem {
     
     if (state.health <= 0 && !state.isDestroyed) {
         state.isDestroyed = true;
+        state.health = 0; 
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
     } else {
         GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });

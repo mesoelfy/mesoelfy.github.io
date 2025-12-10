@@ -21,23 +21,31 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
   { id: 'CONSOLE', label: 'KERNEL_LOG', icon: Terminal },
 ];
 
+// Events to IGNORE in the log (Noise Filter)
+const IGNORED_EVENTS = new Set([
+    GameEvents.PLAYER_FIRED,
+    GameEvents.PLAYER_HIT,
+    GameEvents.ENEMY_DAMAGED,
+    GameEvents.ENEMY_SPAWNED,
+    GameEvents.PANEL_DAMAGED,
+    GameEvents.PROJECTILE_CLASH,
+    GameEvents.SPAWN_FX,
+]);
+
 export const DebugOverlay = () => {
   const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal } = useStore();
-  const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
+  const [activeTab, setActiveTab] = useState<Tab>('CONSOLE');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
 
-  // KEYBOARD HANDLERS (Global)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Tilde: Debug Menu
       if (e.key === '`' || e.key === '~') {
         if (isDebugMinimized) {
              useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
         } else {
              toggleDebugMenu();
         }
-        // Force Enable Cheats if opening
         const state = useStore.getState();
         if (!state.debugFlags.godMode) {
             setDebugFlag('godMode', true);
@@ -45,15 +53,10 @@ export const DebugOverlay = () => {
             setDebugFlag('peaceMode', true);
         }
       } 
-      // ESC: Close Debug OR Toggle Settings
       else if (e.key === 'Escape') {
-          if (isDebugOpen) {
-              toggleDebugMenu();
-          } else if (activeModal !== 'none') {
-              closeModal();
-          } else {
-              toggleSettings();
-          }
+          if (isDebugOpen) toggleDebugMenu();
+          else if (activeModal !== 'none') closeModal();
+          else toggleSettings();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -61,18 +64,29 @@ export const DebugOverlay = () => {
   }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal]);
 
   useEffect(() => {
-    if (!isDebugOpen && !isDebugMinimized) return;
-    
     const handlers = Object.values(GameEvents).map(evt => {
         return GameEventBus.subscribe(evt as any, (payload) => {
+            // FILTER NOISE
+            if (IGNORED_EVENTS.has(evt as GameEvents)) return;
+
             const time = new Date().toLocaleTimeString().split(' ')[0];
             let msg = `${evt}`;
-            if (payload && (payload as any).type) msg += ` [${(payload as any).type}]`;
-            setLogs(prev => [...prev.slice(-49), { time, msg, type: evt }]);
+            
+            if (evt === GameEvents.LOG_DEBUG && payload && (payload as any).msg) {
+                const p = payload as any;
+                msg = p.source ? `[${p.source}] ${p.msg}` : p.msg;
+            } else if (payload && (payload as any).type) {
+                msg += ` [${(payload as any).type}]`;
+            } else if (payload && (payload as any).id) {
+                msg += ` [ID:${(payload as any).id}]`;
+            }
+            
+            setLogs(prev => [...prev.slice(-99), { time, msg, type: evt }]);
         });
     });
 
     const pollInterval = setInterval(() => {
+        if (!isDebugOpen && !isDebugMinimized) return;
         let fps = 0;
         let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
         try {
@@ -122,8 +136,6 @@ export const DebugOverlay = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Database size={10} /> POOL</span><span className="text-primary-green font-bold">{stats.pooled}</span></div>
-                <div className="h-[1px] bg-primary-green/20 my-1" />
                 <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center">CLOSE_DEBUG</button>
             </div>
         </div>
@@ -154,7 +166,7 @@ export const DebugOverlay = () => {
           </div>
         </div>
         <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
-          <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+          <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
         </div>
       </div>
     </div>

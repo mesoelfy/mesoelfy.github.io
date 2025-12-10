@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -9,23 +8,17 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen, bootState, activeModal } = useStore();
+  const { bootState, activeModal, isDebugOpen } = useStore();
   
-  const playerHealth = useGameStore(state => state.playerHealth);
-  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  // VISIBILITY LOGIC:
+  // 1. If we are in STANDBY (Intro) or SANDBOX -> SHOW.
+  // 2. If we are ACTIVE, only show if a Modal (Settings, etc) or Debug is open.
   
-  // Logic: 
-  // 1. Always show if in Standby (Intro), Sandbox, or Settings.
-  // 2. Always show if Debug is open.
-  // 3. If Game Active, show unless Dead.
-  const isDead = (playerHealth <= 0 || systemIntegrity <= 0);
+  const isGameActive = bootState === 'active';
+  const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  const isVisible = 
-    bootState === 'standby' || 
-    bootState === 'sandbox' || 
-    activeModal === 'settings' ||
-    isDebugOpen || 
-    (!isDead && introDone);
+  // If game is active, we rely on the 3D Reticle, unless a menu is overlaying it.
+  const isVisible = !isGameActive || isMenuOpen;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {

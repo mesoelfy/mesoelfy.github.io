@@ -20,87 +20,91 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
   
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !canvas.parentElement) return;
     
-    const ctx = canvas.getContext('2d');
+    // Safety check: Don't initialize if container is collapsed
+    const width = canvas.parentElement.clientWidth;
+    const height = canvas.parentElement.clientHeight;
+    
+    if (width === 0 || height === 0) return;
+
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    // Resize handling
-    if (canvas.parentElement) {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-    }
+    canvas.width = width;
+    canvas.height = height;
 
     let particles: Particle[] = [];
     let animationFrameId: number;
+    let isActive = true;
 
     const COLORS = ['#FF003C', '#CC0020', '#800010', '#FF4466'];
     
-    // UPDATED: 500 Particles (Catastrophic Failure)
+    // REVERTED: Back to 500 as requested
     const PARTICLE_COUNT = 500; 
     
-    // 1. INITIAL SPAWN (ONE SHOT)
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const edge = Math.floor(Math.random() * 3); // 0: Top, 1: Left, 2: Right
-        let x = 0, y = 0, vx = 0, vy = 0;
+    try {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const edge = Math.floor(Math.random() * 3); 
+            let x = 0, y = 0, vx = 0, vy = 0;
 
-        if (edge === 0) { // Top
-            x = Math.random() * canvas.width;
-            y = 0;
-            vx = (Math.random() - 0.5) * 8;
-            vy = (Math.random() * 5) + 2; // Down
-        } else if (edge === 1) { // Left
-            x = 0;
-            y = Math.random() * (canvas.height * 0.5); 
-            vx = (Math.random() * 5) + 2; // Right
-            vy = (Math.random() * 5) - 2;
-        } else { // Right
-            x = canvas.width;
-            y = Math.random() * (canvas.height * 0.5);
-            vx = -((Math.random() * 5) + 2); // Left
-            vy = (Math.random() * 5) - 2;
+            if (edge === 0) { 
+                x = Math.random() * width;
+                y = 0;
+                vx = (Math.random() - 0.5) * 8;
+                vy = (Math.random() * 5) + 2; 
+            } else if (edge === 1) { 
+                x = 0;
+                y = Math.random() * (height * 0.5); 
+                vx = (Math.random() * 5) + 2; 
+                vy = (Math.random() * 5) - 2;
+            } else { 
+                x = width;
+                y = Math.random() * (height * 0.5);
+                vx = -((Math.random() * 5) + 2); 
+                vy = (Math.random() * 5) - 2;
+            }
+
+            particles.push({
+                x, y, vx, vy,
+                life: 1.0,
+                maxLife: 1.0,
+                size: Math.random() * 3 + 1,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)]
+            });
         }
-
-        particles.push({
-            x, y, vx, vy,
-            life: 1.0,
-            maxLife: 1.0,
-            size: Math.random() * 3 + 1,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)]
-        });
+    } catch (e) {
+        console.error("Error creating particles", e);
+        return;
     }
 
-    // 2. ANIMATION LOOP
     const loop = () => {
+      if (!isActive) return;
+      if (!canvas || canvas.width === 0) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       let activeParticles = false;
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        
-        // Physics
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.15; // Gravity
+        p.vy += 0.15; 
         
-        // Floor Bounce
         if (p.y > canvas.height) {
           p.y = canvas.height;
           p.vy *= -0.5; 
           p.vx *= 0.7;  
         }
         
-        // Wall Bounce
         if (p.x < 0 || p.x > canvas.width) {
           p.vx *= -0.6;
           p.x = Math.max(0, Math.min(canvas.width, p.x));
         }
 
-        // Slow Decay
         p.life -= 0.005; 
 
-        // Render
         if (p.life > 0) {
             activeParticles = true;
             ctx.fillStyle = p.color;
@@ -123,6 +127,7 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     loop();
 
     return () => {
+      isActive = false;
       cancelAnimationFrame(animationFrameId);
     };
   }, [intensity]);

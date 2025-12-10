@@ -22,6 +22,7 @@ export const DrillerLogic: EnemyLogic = {
     const target = getTarget(e);
 
     if (typeof state.data.audioTimer === 'undefined') state.data.audioTimer = 0;
+    if (typeof state.data.damageTimer === 'undefined') state.data.damageTimer = 0;
 
     let destX = target.x;
     let destY = target.y;
@@ -44,7 +45,6 @@ export const DrillerLogic: EnemyLogic = {
     if (dist <= AI_CONFIG.DRILLER.TIP_OFFSET + AI_CONFIG.DRILLER.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Snap
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -58,22 +58,26 @@ export const DrillerLogic: EnemyLogic = {
 
         ctx.spawnDrillSparks(destX, destY, angle);
 
-        // --- AUDIO LOGIC ---
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
             ctx.playSound('driller_drill');
             state.data.audioTimer = AI_CONFIG.DRILLER.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 
-        if (Math.random() < ctx.delta * 2.0) { 
+        // Deterministic Damage
+        state.data.damageTimer -= ctx.delta;
+        if (state.data.damageTimer <= 0) {
              if (target.type === 'PANEL' && target.id) {
-                 ctx.damagePanel(target.id, ENEMY_CONFIG[EnemyTypes.DRILLER].damage);
+                 const dmg = ENEMY_CONFIG[EnemyTypes.DRILLER].damage; 
+                 ctx.damagePanel(target.id, dmg);
+                 state.data.damageTimer = 0.2; 
              }
         }
+
     } else {
-        // --- MOVING STATE ---
         state.current = 'MOVING';
         state.data.audioTimer = 0;
+        state.data.damageTimer = 0;
 
         const speed = ENEMY_CONFIG[EnemyTypes.DRILLER].baseSpeed;
         if (dist > 0.001) {

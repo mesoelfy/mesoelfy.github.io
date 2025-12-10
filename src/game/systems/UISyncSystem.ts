@@ -28,15 +28,12 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // 1. FAST PATH: Direct DOM Updates
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
     store.updateTransient('score-display', formattedScore);
     
-    // 2. REACT SYNC
-    // We check if values changed to avoid unnecessary re-renders
     const shouldSyncReact = 
-        store.playerHealth !== this.gameSystem.playerHealth || // <--- ADDED
-        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || // <--- ADDED
+        store.playerHealth !== this.gameSystem.playerHealth || 
+        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || 
         store.xp !== this.gameSystem.xp || 
         store.score !== this.gameSystem.score ||
         store.level !== this.gameSystem.level ||
@@ -46,8 +43,8 @@ export class UISyncSystem implements IGameSystem {
 
     if (shouldSyncReact) {
         store.syncGameState({
-            playerHealth: this.gameSystem.playerHealth, // <--- SYNCED
-            playerRebootProgress: this.gameSystem.playerRebootProgress, // <--- SYNCED
+            playerHealth: this.gameSystem.playerHealth, 
+            playerRebootProgress: this.gameSystem.playerRebootProgress, 
             level: this.gameSystem.level,
             xp: this.gameSystem.xp,
             score: this.gameSystem.score,
@@ -59,7 +56,6 @@ export class UISyncSystem implements IGameSystem {
         });
     }
 
-    // Sync Panels
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
     for(const p of panels) {

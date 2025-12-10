@@ -5,6 +5,8 @@ import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { InputSystem } from '../systems/InputSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
 
 export let ActiveEngine: GameEngineCore | null = null;
 
@@ -19,7 +21,6 @@ export const GameDirector = () => {
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // Sync Bounds to InputSystem for clamping
     try {
         const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
         input.updateBounds(viewport.width, viewport.height);
@@ -48,7 +49,6 @@ export const GameDirector = () => {
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.updateViewport(viewport.width, viewport.height, size.width, size.height);
-      // Sync Bounds on resize
       try {
         const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
         input.updateBounds(viewport.width, viewport.height);
@@ -58,24 +58,22 @@ export const GameDirector = () => {
 
   useFrame((state, delta) => {
     if (engineRef.current) {
-      // We only update cursor from mouse here. Joystick is handled by internal event listeners.
-      const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-      
-      // Only apply mouse if pointer is active/moving? 
-      // R3F pointer is always (0,0) initially. 
-      // Let InputSystem handle the priority (Mouse overrides Joystick if it moves).
-      // We check if the pointer has actually moved? 
-      // For now, let's just pass it. InputSystem separates "Joystick Mode".
-      const x = (state.pointer.x * viewport.width) / 2;
-      const y = (state.pointer.y * viewport.height) / 2;
-      
-      // Only push mouse updates if not using joystick to prevent fighting
-      // Or rely on InputSystem's internal flag?
-      // Let's call updateCursor. InputSystem will disable joystick mode if this is called.
-      // Ideally we only call this if mouse actually moved.
-      input.updateCursor(x, y);
+      try {
+          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
+          const x = (state.pointer.x * viewport.width) / 2;
+          const y = (state.pointer.y * viewport.height) / 2;
+          input.updateCursor(x, y);
 
-      engineRef.current.update(delta, state.clock.elapsedTime);
+          // Render Loop
+          engineRef.current.update(delta, state.clock.elapsedTime);
+          
+      } catch (e: any) {
+          console.error("Game Loop Critical Failure:", e);
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+              msg: `CRITICAL LOOP FAIL: ${e.message}`, 
+              source: 'GameDirector' 
+          });
+      }
     }
   });
 

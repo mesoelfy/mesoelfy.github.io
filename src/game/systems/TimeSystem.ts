@@ -2,12 +2,11 @@ import { IGameSystem, IServiceLocator } from '../core/interfaces';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;
-  public elapsedTime: number = 0;
+  public elapsedTime: number = 0; // Game World Time
   
-  // Hit Stop / Freeze logic
-  private freezeTimer: number = 0;
+  private freezeTimer: number = 0; // Real World Time duration
 
-  // FPS Counting (Visual only)
+  // FPS Counting
   public fps: number = 60;
   private frames: number = 0;
   private lastFpsTime: number = 0;
@@ -16,32 +15,28 @@ export class TimeSystem implements IGameSystem {
     this.reset();
   }
 
+  // Called by GameEngine every render frame (Variable Interval)
+  public tickRealTime(dt: number) {
+      // 1. Handle Freeze Timer (Real Time)
+      if (this.freezeTimer > 0) {
+          this.freezeTimer -= dt;
+          if (this.freezeTimer < 0) this.freezeTimer = 0;
+      }
+
+      // 2. FPS Calculation (Real Time)
+      const now = performance.now() / 1000;
+      this.frames++;
+      if (now >= this.lastFpsTime + 1.0) {
+          this.fps = this.frames;
+          this.frames = 0;
+          this.lastFpsTime = now;
+      }
+  }
+
+  // Called by GameEngine only during simulation steps (Fixed Interval)
   update(delta: number, time: number): void {
-    // This 'delta' is now the FIXED TIMESTEP (0.0166) coming from GameEngine
-    
-    // 1. Track Simulation Time
+    // This delta is always 0.0166 (Fixed Step)
     this.elapsedTime += delta;
-
-    // 2. Decrement Freeze Timer (Hit Stop)
-    if (this.freezeTimer > 0) {
-        this.freezeTimer -= delta;
-    }
-
-    // 3. FPS Calculation (Approximate based on calls per second)
-    // Actually, update() is called multiple times per frame now. 
-    // We should probably rely on the GameEngine's render loop for FPS, 
-    // but for simplicity, we'll increment a counter here.
-    // If the loop runs 60 times a second, this will show 60.
-    // If it spirals, it might show 120.
-    
-    // Better Approach: Use performance.now() to check real time for FPS
-    const now = performance.now() / 1000;
-    this.frames++;
-    if (now >= this.lastFpsTime + 1.0) {
-        this.fps = this.frames; // This will effectively show TPS (Ticks Per Second)
-        this.frames = 0;
-        this.lastFpsTime = now;
-    }
   }
 
   teardown(): void {

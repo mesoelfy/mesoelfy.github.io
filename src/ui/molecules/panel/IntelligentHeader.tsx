@@ -18,7 +18,11 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  const healthPercent = (health / MAX_HEALTH) * 100;
+  // SAFETY: Ensure healthPercent is a valid finite number
+  let rawPercent = (health / MAX_HEALTH) * 100;
+  if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  const healthPercent = Math.max(0, Math.min(100, rawPercent));
+
   const isDamaged = !isDestroyed && healthPercent < 100;
 
   const [showOptimal, setShowOptimal] = useState(false);

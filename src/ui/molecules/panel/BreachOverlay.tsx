@@ -27,11 +27,17 @@ interface BreachOverlayProps {
 }
 
 export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOverlayProps) => {
+  // Safety: Ensure progress is a valid number for CSS width
+  const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) 
+    ? Math.max(0, Math.min(100, progress)) 
+    : 0;
+
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
         isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
     )}>
+        {/* Background Scrolling Text */}
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
                className="flex flex-col gap-8"
@@ -52,6 +58,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
             </motion.div>
         </div>
 
+        {/* Interactive Reboot UI */}
         {showInteractive && (
           <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
               <div className="relative">
@@ -83,17 +90,18 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       HOLD TO REBOOT
                   </span>
                   
+                  {/* Progress Bar Container */}
                   <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
                       <motion.div 
                           className="h-full bg-latent-purple shadow-[0_0_10px_#9E4EA5]" 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
                       />
                   </div>
                   
                   <div className="text-[10px] font-mono text-latent-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
-                      INTEGRITY: {Math.floor(progress)}%
+                      INTEGRITY: {Math.floor(safeProgress)}%
                   </div>
               </div>
           </div>
