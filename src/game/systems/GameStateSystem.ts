@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IGameStateSystem } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
@@ -6,7 +6,7 @@ import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
 
-export class GameStateSystem implements IGameSystem {
+export class GameStateSystem implements IGameStateSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
@@ -36,21 +36,13 @@ export class GameStateSystem implements IGameSystem {
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
 
-      // Heartbeat Logic (< 30% Integrity)
       if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
           this.heartbeatTimer -= delta;
           
           if (this.heartbeatTimer <= 0) {
-              // 1. Calculate Urgency (0.0 at 30% -> 1.0 at 0%)
               const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
-              
-              // 2. Play Sound & Emit Event
               AudioSystem.playSound('warning_heartbeat');
               GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
-
-              // 3. Set Next Timer (Acceleration Curve)
-              // Low Urgency: ~1.4s delay (Slow thud)
-              // Max Urgency: ~0.35s delay (Fast panic)
               this.heartbeatTimer = 1.4 - (urgency * 1.05); 
           }
       } else {
@@ -123,10 +115,13 @@ export class GameStateSystem implements IGameSystem {
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+    
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
-        AudioSystem.playSound('powerup');
+        
+        // SUCCESS SOUND
+        AudioSystem.playSound('reboot_success'); 
     }
   }
 

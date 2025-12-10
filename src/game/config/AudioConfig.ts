@@ -32,8 +32,22 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
   'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
   
-  // NEW: Happy Ding
+  // OPTIMAL (100% Heal)
   'optimal_ding': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01 },
+
+  // REBOOT (Revival)
+  'reboot_loop': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
+  // "Rapid Three Note Success": Sine wave rising, chopped by square tremolo to create discrete notes
+  'reboot_success': { 
+      type: 'oscillator', 
+      wave: 'triangle', 
+      frequency: [440, 880], // Low to High
+      duration: 0.3, 
+      volume: 0.3, 
+      pitchVariance: 0, 
+      attack: 0.01,
+      tremolo: { rate: 10, depth: 1.0, wave: 'square' } // Chops the slide into "notes"
+  },
 
   // --- UI / MENUS ---
   'menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
