@@ -25,6 +25,7 @@ import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
+import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -67,6 +68,10 @@ export default function Home() {
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
+      
+      {/* GLOBAL BACKDROP HANDLES DIMMING FOR ALL MODALS */}
+      <GlobalBackdrop />
+      
       <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">

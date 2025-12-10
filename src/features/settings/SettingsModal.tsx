@@ -20,16 +20,9 @@ export const SettingsModal = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10">
+        // Z-200: Topmost (above Intro)
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 pointer-events-none">
           
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => { closeModal(); AudioSystem.playSound('menu_close'); }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
-          />
-
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}

@@ -34,8 +34,6 @@ const IGNORED_EVENTS = new Set([
 
 export const DebugOverlay = () => {
   const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal, openModal } = useStore();
-  
-  // DEFAULT TAB = OVERRIDES
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
@@ -46,7 +44,6 @@ export const DebugOverlay = () => {
       if (e.key === '`' || e.key === '~') {
         const willBeOpen = !isDebugOpen && !isDebugMinimized;
         
-        // 1. If opening, Force Enable Cheats
         if (willBeOpen) {
             setDebugFlag('godMode', true);
             setDebugFlag('panelGodMode', true);
@@ -71,7 +68,7 @@ export const DebugOverlay = () => {
       // --- ESCAPE (Menu Navigation) ---
       else if (e.key === 'Escape') {
           if (isDebugOpen) {
-              toggleDebugMenu(); // Close Debug
+              toggleDebugMenu();
               openModal('settings');
               AudioSystem.playSound('menu_open'); 
           } else if (activeModal !== 'none') {
@@ -135,24 +132,12 @@ export const DebugOverlay = () => {
 
   if (!isDebugOpen && !isDebugMinimized) return null;
 
-  if (bootState === 'sandbox') {
-      return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
-            <div className="bg-black border border-service-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
-                <h2 className="text-xl font-bold text-service-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
-                <div className="flex flex-col gap-4">
-                    <button onClick={toggleDebugMenu} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
-                    <button onClick={resetApplication} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
-                </div>
-            </div>
-        </div>
-      );
-  }
-
+  // Mini Mode has no backdrop
   if (isDebugMinimized) {
       return (
         <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-auto">
             <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
+                {/* ... (Mini Mode Content Same as before) ... */}
                 <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
                     <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"><Maximize2 size={12} /></button>
@@ -165,33 +150,49 @@ export const DebugOverlay = () => {
       );
   }
 
+  // Full Mode: Removed BG, added pointer-events-none to wrapper
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
-      <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
-          <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
-          <div className="absolute right-4 flex items-center gap-2">
-             <button onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} className="hover:text-white transition-colors p-1"><MinusSquare size={16} /></button>
-             <button onClick={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} className="hover:text-white transition-colors p-1"><X size={16} /></button>
-          </div>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 pointer-events-none">
+      {/* Simulation Pause Warning */}
+      {bootState === 'sandbox' && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+             <div className="bg-black border border-service-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center pointer-events-auto">
+                <h2 className="text-xl font-bold text-service-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
+                <div className="flex flex-col gap-4">
+                    <button onClick={toggleDebugMenu} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
+                    <button onClick={resetApplication} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
+                </div>
+            </div>
         </div>
-        <div className="flex flex-1 min-h-0">
-          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
-            {TABS.map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); AudioSystem.playClick(); }} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
-            ))}
+      )}
+
+      {bootState !== 'sandbox' && (
+          <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative pointer-events-auto">
+            <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
+              <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
+              <div className="absolute right-4 flex items-center gap-2">
+                 <button onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} className="hover:text-white transition-colors p-1"><MinusSquare size={16} /></button>
+                 <button onClick={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} className="hover:text-white transition-colors p-1"><X size={16} /></button>
+              </div>
+            </div>
+            <div className="flex flex-1 min-h-0">
+              <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
+                {TABS.map(tab => (
+                  <button key={tab.id} onClick={() => { setActiveTab(tab.id); AudioSystem.playClick(); }} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
+                ))}
+              </div>
+              <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+                {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
+                {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
+                {activeTab === 'STATS' && <StatsTab stats={stats} />}
+                {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
+              </div>
+            </div>
+            <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
+              <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
+            </div>
           </div>
-          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
-            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('menu_close'); }} />}
-            {activeTab === 'STATS' && <StatsTab stats={stats} />}
-            {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
-          </div>
-        </div>
-        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
-          <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
