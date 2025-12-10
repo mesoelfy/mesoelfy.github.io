@@ -58,6 +58,8 @@ interface AppState {
   activeModal: ModalType;
   hoveredItem: string | null;
   
+  isSimulationPaused: boolean;
+  
   sandboxView: SandboxView;
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK';
@@ -97,6 +99,8 @@ interface AppState {
   toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
   resetDebugFlags: () => void;
+  
+  setSimulationPaused: (paused: boolean) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -107,6 +111,8 @@ export const useStore = create<AppState>()(
       isBreaching: false,
       activeModal: 'none',
       hoveredItem: null,
+      
+      isSimulationPaused: false,
       
       sandboxView: 'audio',
       galleryTarget: EnemyTypes.DRILLER,
@@ -134,7 +140,6 @@ export const useStore = create<AppState>()(
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
       
-      // REMOVED AUDIO CALLS FROM HERE TO ALLOW UI CONTROL
       openModal: (modal) => set({ activeModal: modal }),
       closeModal: () => set({ activeModal: 'none' }),
 
@@ -158,7 +163,8 @@ export const useStore = create<AppState>()(
               isDebugMinimized: false,
               sandboxView: 'audio',
               galleryTarget: EnemyTypes.DRILLER,
-              galleryAction: 'IDLE'
+              galleryAction: 'IDLE',
+              isSimulationPaused: false
           });
       },
       
@@ -204,7 +210,9 @@ export const useStore = create<AppState>()(
       })),
       resetDebugFlags: () => set({
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
-      })
+      }),
+      
+      setSimulationPaused: (paused) => set({ isSimulationPaused: paused })
     }),
     {
       name: 'mesoelfy-ui-settings-v3',

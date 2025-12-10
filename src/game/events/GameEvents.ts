@@ -20,8 +20,6 @@ export enum GameEvents {
   SPAWN_DAEMON = 'SPAWN_DAEMON',
   HEARTBEAT = 'HEARTBEAT',
   LOG_DEBUG = 'LOG_DEBUG',
-  
-  // NEW: Syncs Intro Text with Meta Manager
   BOOT_LOG = 'BOOT_LOG'
 }
 
@@ -58,7 +56,5 @@ export interface GameEventPayloads {
   [GameEvents.SPAWN_DAEMON]: null;
   [GameEvents.HEARTBEAT]: { urgency: number };
   [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
-  
-  // NEW
   [GameEvents.BOOT_LOG]: { message: string };
 }

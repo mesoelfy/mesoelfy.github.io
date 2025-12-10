@@ -35,8 +35,12 @@ export class GameEngineCore implements IGameSystem {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
+    // --- 1. GLOBAL PAUSE CHECKS ---
     if (store.bootState === 'standby') return;
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
+    
+    // NEW: Auto-Pause Logic (Visuals run, Physics/Time stop)
+    if (store.isSimulationPaused) return;
 
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
@@ -51,16 +55,16 @@ export class GameEngineCore implements IGameSystem {
         gameSys.isGameOver = true;
     }
 
-    // --- TIME MANAGEMENT ---
+    // --- 2. TIME MANAGEMENT ---
     
     let timeScale = 1.0;
     try {
         const timeSys = this.locator.getSystem<TimeSystem>('TimeSystem');
         
-        // 1. Tick Real Time (Updates Freeze Timer)
+        // Tick Real Time (Updates Freeze Timer)
         timeSys.tickRealTime(renderDelta);
 
-        // 2. Determine if Frozen
+        // Determine if Frozen (Hit Stop)
         if (timeSys.isFrozen()) {
             timeScale = 0.0;
         } else {
@@ -70,7 +74,7 @@ export class GameEngineCore implements IGameSystem {
 
     const debugScale = store.debugFlags.timeScale;
     
-    // 3. Accumulate Game Time
+    // Accumulate Game Time
     const effectiveDelta = renderDelta * timeScale * debugScale;
     
     this.accumulator += effectiveDelta;
@@ -81,10 +85,7 @@ export class GameEngineCore implements IGameSystem {
 
     const fixedStep = WorldConfig.time.fixedDelta;
 
-    // 4. Run Physics Steps
-    // If frozen, effectiveDelta is 0, accumulator doesn't grow, loop doesn't run.
-    // But since tickRealTime ran above, freezeTimer decreases, and eventually
-    // isFrozen() becomes false, effectiveDelta becomes > 0, and the game resumes.
+    // --- 3. PHYSICS STEP ---
     while (this.accumulator >= fixedStep) {
         for (const sys of this.systems) {
             try {
