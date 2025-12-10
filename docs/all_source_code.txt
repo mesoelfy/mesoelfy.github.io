@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Tue Dec  9 15:43:17 CST 2025
+Generated on: Wed Dec 10 11:36:19 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -98,6 +98,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   └── TransformComponent.ts
 │   │   │   └── index.ts
 │   │   ├── config
+│   │   │   ├── AIConfig.ts
 │   │   │   ├── AudioConfig.ts
 │   │   │   ├── EnemyConfig.ts
 │   │   │   ├── Identifiers.ts
@@ -184,13 +185,18 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   ├── CustomCursor.tsx
 │       │   ├── GlassPanel.tsx
 │       │   ├── PanelSparks.tsx
+│       │   ├── SafePanelContent.tsx
 │       │   ├── VirtualJoystick.tsx
+│       │   ├── VitalsRing.tsx
 │       │   └── ZenBomb.tsx
 │       ├── molecules
 │       │   ├── HoloCommLog.tsx
+│       │   ├── IdentityFooter.tsx
 │       │   ├── IdentityHUD.tsx
 │       │   ├── LiveArtGrid.tsx
 │       │   ├── SocialRow.tsx
+│       │   ├── SystemOps.tsx
+│       │   ├── UpgradeTerminal.tsx
 │       │   └── panel
 │       │       ├── BreachOverlay.tsx
 │       │       ├── IntelligentHeader.tsx
@@ -200,11 +206,12 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   └── Header.tsx
 │       └── overlays
 │           ├── ErrorBoundary.tsx
+│           ├── GlobalBackdrop.tsx
 │           └── ModalContainer.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-53 directories, 143 files
+53 directories, 150 files
 
 =====================================
 FILE: ./next.config.js
@@ -672,11 +679,17 @@ interface BreachOverlayProps {
 }
 
 export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOverlayProps) => {
+  // Safety: Ensure progress is a valid number for CSS width
+  const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) 
+    ? Math.max(0, Math.min(100, progress)) 
+    : 0;
+
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
         isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
     )}>
+        {/* Background Scrolling Text */}
         <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
             <motion.div
                className="flex flex-col gap-8"
@@ -697,6 +710,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
             </motion.div>
         </div>
 
+        {/* Interactive Reboot UI */}
         {showInteractive && (
           <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
               <div className="relative">
@@ -728,17 +742,18 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOver
                       HOLD TO REBOOT
                   </span>
                   
+                  {/* Progress Bar Container */}
                   <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
                       <motion.div 
                           className="h-full bg-latent-purple shadow-[0_0_10px_#9E4EA5]" 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
                       />
                   </div>
                   
                   <div className="text-[10px] font-mono text-latent-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
-                      INTEGRITY: {Math.floor(progress)}%
+                      INTEGRITY: {Math.floor(safeProgress)}%
                   </div>
               </div>
           </div>
@@ -808,6 +823,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/game/store/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const MAX_HEALTH = 1000;
 
@@ -823,7 +839,10 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  const healthPercent = (health / MAX_HEALTH) * 100;
+  let rawPercent = (health / MAX_HEALTH) * 100;
+  if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  const healthPercent = Math.max(0, Math.min(100, rawPercent));
+
   const isDamaged = !isDestroyed && healthPercent < 100;
 
   const [showOptimal, setShowOptimal] = useState(false);
@@ -833,6 +852,7 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
       setShowOptimal(true);
     }
     if (health >= MAX_HEALTH && showOptimal) {
+      AudioSystem.playSound('ui_optimal'); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
@@ -981,6 +1001,7 @@ FILE: ./src/ui/molecules/HoloCommLog.tsx
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ExternalLink, Radio, WifiOff } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
@@ -1063,7 +1084,10 @@ const VideoSlot = ({
   }, [videoId, isOffline, getNextVideo]);
 
   return (
-    <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all">
+    <div 
+        className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
+        onMouseEnter={() => !isOffline && AudioSystem.playHover()}
+    >
       
       {isOffline ? (
           <OfflineStatic />
@@ -1084,7 +1108,6 @@ const VideoSlot = ({
 
           <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
           
-          {/* MASK / UPLINK OVERLAY */}
           <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
@@ -1092,7 +1115,6 @@ const VideoSlot = ({
                     <span className="text-[10px] font-mono text-primary-green animate-pulse">ESTABLISHING_UPLINK...</span>
                 </div>
              ) : (
-                 // HOVER STATE: Yellow Text & Border
                  <div className="flex items-center gap-2 text-alert-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-alert-yellow rounded-sm pointer-events-auto">
                     <span>OPEN_SOURCE</span>
                     <ExternalLink size={12} />
@@ -1106,9 +1128,9 @@ const VideoSlot = ({
             rel="noopener noreferrer"
             className="absolute inset-0 z-50 cursor-pointer"
             aria-label="Watch on YouTube"
+            onClick={() => AudioSystem.playClick()}
           />
 
-          {/* CAM TEXT: Green by default, stays visible */}
           <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
              CAM_0{slotIndex + 1}
           </div>
@@ -1166,6 +1188,188 @@ export const HoloCommLog = () => {
 
 
 =====================================
+FILE: ./src/ui/molecules/SystemOps.tsx
+=====================================
+import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
+import { UpgradeOption } from '@/game/types/game.types';
+
+const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
+
+const OP_INFO: Record<string, { label: string, desc: string, icon: any }> = {
+  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
+  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
+  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
+};
+
+interface SystemOpsProps {
+  isPanelDead: boolean;
+}
+
+export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
+  const upgradePoints = useGameStore(s => s.upgradePoints);
+  const selectUpgrade = useGameStore(s => s.selectUpgrade);
+
+  const handleUpgrade = (u: UpgradeOption) => {
+      if (isPanelDead || upgradePoints <= 0) return; 
+      AudioSystem.playClick();
+      selectUpgrade(u);
+  };
+
+  if (upgradePoints <= 0) return null;
+
+  return (
+    <div className="flex flex-col gap-1.5 mt-4">
+        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
+        {SYSTEM_OPS.map(u => {
+            const info = OP_INFO[u];
+            const Icon = info.icon;
+            
+            return (
+                <button
+                    key={u}
+                    onClick={() => handleUpgrade(u)}
+                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
+                >
+                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
+                    
+                    <div className="flex items-center gap-3 relative z-10">
+                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
+                            <Icon size={14} />
+                        </div>
+                        <div className="flex flex-col items-start">
+                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
+                                {info.label}
+                            </span>
+                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                {info.desc}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
+                </button>
+            );
+        })}
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/molecules/UpgradeTerminal.tsx
+=====================================
+import { useGameStore } from '@/game/store/useGameStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Zap, Swords, Wifi, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { UpgradeOption } from '@/game/types/game.types';
+
+const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
+
+const UPGRADE_INFO: Record<string, { label: string, desc: string, icon: any }> = {
+  'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: Zap },
+  'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
+  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
+  'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
+  'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
+  'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
+  'DAEMON': { label: 'Daemon', desc: 'Summon Ally', icon: Bot },
+};
+
+interface UpgradeTerminalProps {
+  isPanelDead: boolean;
+}
+
+export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
+  // Granular Selectors
+  const upgradePoints = useGameStore(s => s.upgradePoints);
+  const activeUpgrades = useGameStore(s => s.activeUpgrades);
+  const selectUpgrade = useGameStore(s => s.selectUpgrade);
+
+  const handleUpgrade = (u: UpgradeOption) => {
+      if (isPanelDead || upgradePoints <= 0) return; 
+      AudioSystem.playClick();
+      selectUpgrade(u);
+  };
+
+  return (
+    <AnimatePresence mode="wait">
+      {upgradePoints > 0 ? (
+        <motion.div 
+            key="upgrades"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex flex-col gap-4"
+        >
+            <div className="flex items-center gap-2 pb-1 border-b border-primary-green/20 pt-2">
+                <ArrowUpCircle size={12} className="text-primary-green animate-bounce" />
+                <span className="text-[9px] font-bold text-primary-green tracking-widest">
+                    SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
+                </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
+                {CORE_UPGRADES.map(u => {
+                    const info = UPGRADE_INFO[u];
+                    const Icon = info.icon;
+                    const currentLvl = activeUpgrades[u] || 0;
+
+                    return (
+                        <button
+                            key={u}
+                            onClick={() => handleUpgrade(u)}
+                            onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                            className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
+                        >
+                            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
+                            
+                            <div className="flex items-center gap-3 relative z-10">
+                                <div className="p-1.5 rounded-sm bg-primary-green/10 text-primary-green group-hover:bg-primary-green group-hover:text-black">
+                                    <Icon size={14} />
+                                </div>
+                                <div className="flex flex-col items-start">
+                                    <span className="text-[10px] font-bold font-header tracking-wider uppercase text-primary-green">
+                                        {info.label}
+                                    </span>
+                                    <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
+                                        {info.desc}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="text-[9px] font-mono text-primary-green-dim border border-primary-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-primary-green group-hover:text-primary-green relative z-10">
+                                v{currentLvl}
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </motion.div>
+      ) : (
+        <motion.div 
+            key="status"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 p-4 rounded bg-black/20 marching-ants [--ant-color:rgba(255,255,255,0.1)]"
+        >
+            <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
+                <div className="w-1 h-1 bg-white/50 rounded-full" />
+            </div>
+            <span className="text-[9px] tracking-widest">SYSTEM_OPTIMIZED</span>
+            <span className="text-[8px]">WAITING FOR DATA...</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/molecules/LiveArtGrid.tsx
 =====================================
 import { useEffect, useState } from 'react';
@@ -1217,7 +1421,11 @@ export const LiveArtGrid = () => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 
-                onClick={() => !isDestroyed && openModal('gallery')}
+                onClick={() => {
+                    if (isDestroyed) return;
+                    AudioSystem.playClick();
+                    openModal('gallery');
+                }}
                 onMouseEnter={() => !isDestroyed && AudioSystem.playHover()}
                 
                 className={clsx(
@@ -1252,155 +1460,98 @@ export const LiveArtGrid = () => {
 
 
 =====================================
-FILE: ./src/ui/molecules/IdentityHUD.tsx
+FILE: ./src/ui/molecules/IdentityFooter.tsx
 =====================================
-import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
-import { useGameStore } from '@/game/store/useGameStore';
-import { UpgradeOption } from '@/game/types/game.types';
-import identity from '@/data/identity.json';
-import { useStore } from '@/core/store/useStore'; 
+import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Unplug, Zap, GitFork, Swords, Wifi, Zap as ZapIcon, Gitlab, DoorOpen, Biohazard, CircleDotDashed, Bot, ArrowUpCircle, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
 
-const UPGRADE_MAP: Record<string, { label: string, desc: string, icon: any }> = {
-  // CORE UPGRADES
-  'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: ZapIcon },
-  'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
-  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
-  'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
-  'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
-  'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
-  'DAEMON': { label: 'Daemon', desc: 'Summon Ally', icon: Bot },
-  
-  // ACTIONS / OPS
-  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
-  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
-  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
+interface IdentityFooterProps {
+  isPanelDead: boolean;
+}
+
+export const IdentityFooter = ({ isPanelDead }: IdentityFooterProps) => {
+  const { openModal } = useStore();
+
+  const handleClick = (modal: 'about' | 'contact') => {
+      if (isPanelDead) return;
+      AudioSystem.playClick();
+      openModal(modal);
+  };
+
+  return (
+    <div className="flex-none grid grid-cols-2 gap-px bg-primary-green-dim/20 border-t border-primary-green-dim/30 mt-auto">
+      <button 
+        onClick={() => handleClick('about')} 
+        onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+        className="py-3 bg-black/80 hover:bg-primary-green hover:text-black text-primary-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
+      >
+        About_Me
+      </button>
+      <button 
+        onClick={() => handleClick('contact')} 
+        onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+        className="py-3 bg-black/80 hover:bg-alert-yellow hover:text-black text-alert-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
+      >
+        Contact_Link
+      </button>
+    </div>
+  );
 };
 
-const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
-const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
+
+=====================================
+FILE: ./src/ui/molecules/IdentityHUD.tsx
+=====================================
+import { useGameStore } from '@/game/store/useGameStore';
+import identity from '@/data/identity.json';
+import { clsx } from 'clsx';
+
+// Sub-components
+import { VitalsRing } from '../atoms/VitalsRing';
+import { UpgradeTerminal } from './UpgradeTerminal';
+import { SystemOps } from './SystemOps';
+import { IdentityFooter } from './IdentityFooter';
 
 export const IdentityHUD = () => {
-  const { openModal } = useStore();
   
+  // -- Vitals State (Heavy Updates) --
   const hp = useGameStore(s => s.playerHealth);
   const maxHp = useGameStore(s => s.maxPlayerHealth);
   const xp = useGameStore(s => s.xp);
   const nextXp = useGameStore(s => s.xpToNextLevel);
   const level = useGameStore(s => s.level);
-  
-  const upgradePoints = useGameStore(s => s.upgradePoints);
-  const selectUpgrade = useGameStore(s => s.selectUpgrade);
   const rebootProgress = useGameStore(s => s.playerRebootProgress);
-  const activeUpgrades = useGameStore(s => s.activeUpgrades);
   
+  // -- Panel State --
   const panel = useGameStore(s => s.panels['identity']);
   const isPanelDead = panel ? panel.isDestroyed : false;
   const isPlayerDead = hp <= 0;
 
-  const hpPercent = Math.max(0, (hp / maxHp) * 100);
-  const xpPercent = nextXp > 0 ? Math.min(100, (xp / nextXp) * 100) : 0;
-
-  // --- SVG CONFIG ---
-  const size = 160; 
-  const center = size / 2;
-  const radiusHp = 60;
-  const radiusXp = 70;
-  const stroke = 4;
-  
-  const circHp = 2 * Math.PI * radiusHp;
-  const circXp = 2 * Math.PI * radiusXp;
-
-  const displayHpPercent = isPlayerDead ? rebootProgress : hpPercent;
-  const displayHpColor = isPlayerDead ? "#eae747" : (hpPercent < 30 ? "#FF003C" : "#78F654"); 
-
-  const offsetHp = circHp - (displayHpPercent / 100 * circHp);
-  const offsetXp = circXp - (xpPercent / 100 * circXp);
-
-  const handleUpgrade = (u: UpgradeOption) => {
-      if (isPanelDead || isPlayerDead) return; 
-      AudioSystem.playClick();
-      selectUpgrade(u);
-  };
-
   return (
-    <div className={`flex flex-col h-full w-full relative overflow-hidden ${isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''}`}>
+    <div className={clsx(
+        "flex flex-col h-full w-full relative overflow-hidden", 
+        isPanelDead ? 'grayscale opacity-50 pointer-events-none' : ''
+    )}>
       
       {/* TOP SECTION: Avatar & Stats */}
       <div className="flex-none flex flex-col items-center pt-4 relative z-10">
         
-        {/* AVATAR RING */}
-        <div className="relative w-40 h-40 shrink-0 group mb-1"> 
-            
-            {/* 3D Canvas */}
-            <div className={`absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle ${isPlayerDead ? 'opacity-60 grayscale' : 'opacity-100'}`}>
-               <MiniCrystalCanvas />
-            </div>
-
-            {/* Status Overlays */}
-            {isPlayerDead && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                    {rebootProgress > 0 ? (
-                        <div className="flex flex-col items-center">
-                            <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">
-                                {Math.floor(rebootProgress)}%
-                            </span>
-                            <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
-                        </div>
-                    ) : (
-                        <div className="animate-pulse flex flex-col items-center">
-                            <Unplug className="text-white/50 w-8 h-8 mb-1" />
-                            <span className="text-[8px] text-critical-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* SVG RINGS */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
-              <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
-              <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
-              
-              <circle 
-                cx={center} cy={center} r={radiusHp} 
-                stroke={displayHpColor} 
-                strokeWidth={stroke} fill="transparent"
-                strokeDasharray={circHp}
-                strokeDashoffset={offsetHp}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-                className="transition-all duration-100 ease-linear"
-              />
-              
-              <circle 
-                cx={center} cy={center} r={radiusXp} 
-                stroke="#9E4EA5" 
-                strokeWidth={stroke} fill="transparent"
-                strokeDasharray={circXp}
-                strokeDashoffset={offsetXp}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${center} ${center})`}
-                className="transition-all duration-500 ease-out"
-              />
-
-              <defs>
-                  <path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /> 
-              </defs>
-              
-              <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
-                  <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
-                      LVL_{level.toString().padStart(2, '0')}
-                  </textPath>
-              </text>
-            </svg>
-        </div>
+        {/* Vitals Ring (Atomic Component) */}
+        <VitalsRing 
+            health={hp}
+            maxHealth={maxHp}
+            xp={xp}
+            xpToNext={nextXp}
+            level={level}
+            isDead={isPlayerDead}
+            rebootProgress={rebootProgress}
+        />
 
         {/* Identity Info */}
         <div className="text-center z-20 mb-2">
-            <h2 className="text-xl font-header font-black text-primary-green tracking-wider drop-shadow-md">{identity.name}</h2>
+            <h2 className="text-xl font-header font-black text-primary-green tracking-wider drop-shadow-md">
+                {identity.name}
+            </h2>
             <div className="text-[8px] text-latent-purple-light uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border border-latent-purple/20">
                 {identity.class}
             </div>
@@ -1409,136 +1560,69 @@ export const IdentityHUD = () => {
 
       {/* MIDDLE SECTION: Upgrade Terminal */}
       <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative pb-4">
-         <AnimatePresence mode="wait">
-            {upgradePoints > 0 && !isPlayerDead ? (
-                <motion.div 
-                    key="upgrades"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-col gap-4"
-                >
-                    <div className="flex items-center gap-2 pb-1 border-b border-primary-green/20 pt-2">
-                        <ArrowUpCircle size={12} className="text-primary-green animate-bounce" />
-                        <span className="text-[9px] font-bold text-primary-green tracking-widest">
-                            SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
-                        </span>
-                    </div>
-
-                    {/* KERNEL UPGRADES */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
-                        {CORE_UPGRADES.map(u => {
-                            const info = UPGRADE_MAP[u];
-                            const Icon = info.icon;
-                            const currentLvl = activeUpgrades[u] || 0;
-
-                            return (
-                                <button
-                                    key={u}
-                                    onClick={() => handleUpgrade(u)}
-                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                                    className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
-                                    
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <div className="p-1.5 rounded-sm bg-primary-green/10 text-primary-green group-hover:bg-primary-green group-hover:text-black">
-                                            <Icon size={14} />
-                                        </div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-primary-green">
-                                                {info.label}
-                                            </span>
-                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
-                                                {info.desc}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-[9px] font-mono text-primary-green-dim border border-primary-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-primary-green group-hover:text-primary-green relative z-10">
-                                        v{currentLvl}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* SYSTEM OPS */}
-                    <div className="flex flex-col gap-1.5">
-                        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
-                        {SYSTEM_OPS.map(u => {
-                            const info = UPGRADE_MAP[u];
-                            const Icon = info.icon;
-                            
-                            return (
-                                <button
-                                    key={u}
-                                    onClick={() => handleUpgrade(u)}
-                                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-                                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
-                                    
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
-                                            <Icon size={14} />
-                                        </div>
-                                        <div className="flex flex-col items-start">
-                                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
-                                                {info.label}
-                                            </span>
-                                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
-                                                {info.desc}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    
-                                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                </motion.div>
-            ) : (
-                <motion.div 
-                    key="status"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    // UPDATED: Marching ants container
-                    className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 p-4 rounded bg-black/20 marching-ants [--ant-color:rgba(255,255,255,0.1)]"
-                >
-                    <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
-                        <div className="w-1 h-1 bg-white/50 rounded-full" />
-                    </div>
-                    <span className="text-[9px] tracking-widest">SYSTEM_OPTIMIZED</span>
-                    <span className="text-[8px]">WAITING FOR DATA...</span>
-                </motion.div>
-            )}
-         </AnimatePresence>
+         {/* We pass isPanelDead/isPlayerDead to disable interaction inside */}
+         {/* UpgradeTerminal handles its own subscriptions to points/upgrades */}
+         <div className={isPlayerDead ? "opacity-50 pointer-events-none" : ""}>
+             <UpgradeTerminal isPanelDead={isPanelDead} />
+             <SystemOps isPanelDead={isPanelDead} />
+         </div>
       </div>
 
       {/* BOTTOM SECTION: Footer Links */}
-      <div className="flex-none grid grid-cols-2 gap-px bg-primary-green-dim/20 border-t border-primary-green-dim/30 mt-auto">
-        <button 
-          onClick={() => !isPanelDead && openModal('about')} 
-          onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-3 bg-black/80 hover:bg-primary-green hover:text-black text-primary-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
-        >
-          About_Me
-        </button>
-        <button 
-          onClick={() => !isPanelDead && openModal('contact')} 
-          onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
-          className="py-3 bg-black/80 hover:bg-alert-yellow hover:text-black text-alert-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
-        >
-          Contact_Link
-        </button>
-      </div>
+      <IdentityFooter isPanelDead={isPanelDead} />
     </div>
   );
 };
+
+
+=====================================
+FILE: ./src/ui/atoms/SafePanelContent.tsx
+=====================================
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
+
+interface Props {
+  children: ReactNode;
+  fallbackId?: string;
+}
+
+interface State {
+  hasError: boolean;
+  errorMsg: string;
+}
+
+export class SafePanelContent extends Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    errorMsg: ''
+  };
+
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, errorMsg: error.message };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(`[SafePanelContent] Crash in ${this.props.fallbackId}:`, error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-[100] p-2 text-center border border-critical-red/50">
+          <AlertTriangle className="text-critical-red mb-1 animate-pulse" size={24} />
+          <span className="text-[10px] text-critical-red font-mono font-bold tracking-widest">
+            VISUAL_CORE_ERR
+          </span>
+          <span className="text-[8px] text-critical-red/60 font-mono mt-1 max-w-[150px] truncate">
+            {this.state.errorMsg}
+          </span>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 
 =====================================
@@ -1630,7 +1714,6 @@ FILE: ./src/ui/atoms/CustomCursor.tsx
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -1638,23 +1721,17 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   
-  const { introDone, isDebugOpen, bootState, activeModal } = useStore();
+  const { bootState, activeModal, isDebugOpen } = useStore();
   
-  const playerHealth = useGameStore(state => state.playerHealth);
-  const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  // VISIBILITY LOGIC:
+  // 1. If we are in STANDBY (Intro) or SANDBOX -> SHOW.
+  // 2. If we are ACTIVE, only show if a Modal (Settings, etc) or Debug is open.
   
-  // Logic: 
-  // 1. Always show if in Standby (Intro), Sandbox, or Settings.
-  // 2. Always show if Debug is open.
-  // 3. If Game Active, show unless Dead.
-  const isDead = (playerHealth <= 0 || systemIntegrity <= 0);
+  const isGameActive = bootState === 'active';
+  const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  const isVisible = 
-    bootState === 'standby' || 
-    bootState === 'sandbox' || 
-    activeModal === 'settings' ||
-    isDebugOpen || 
-    (!isDead && introDone);
+  // If game is active, we rely on the 3D Reticle, unless a menu is overlaying it.
+  const isVisible = !isGameActive || isMenuOpen;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -1843,87 +1920,91 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
   
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !canvas.parentElement) return;
     
-    const ctx = canvas.getContext('2d');
+    // Safety check: Don't initialize if container is collapsed
+    const width = canvas.parentElement.clientWidth;
+    const height = canvas.parentElement.clientHeight;
+    
+    if (width === 0 || height === 0) return;
+
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    // Resize handling
-    if (canvas.parentElement) {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-    }
+    canvas.width = width;
+    canvas.height = height;
 
     let particles: Particle[] = [];
     let animationFrameId: number;
+    let isActive = true;
 
     const COLORS = ['#FF003C', '#CC0020', '#800010', '#FF4466'];
     
-    // UPDATED: 500 Particles (Catastrophic Failure)
+    // REVERTED: Back to 500 as requested
     const PARTICLE_COUNT = 500; 
     
-    // 1. INITIAL SPAWN (ONE SHOT)
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const edge = Math.floor(Math.random() * 3); // 0: Top, 1: Left, 2: Right
-        let x = 0, y = 0, vx = 0, vy = 0;
+    try {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const edge = Math.floor(Math.random() * 3); 
+            let x = 0, y = 0, vx = 0, vy = 0;
 
-        if (edge === 0) { // Top
-            x = Math.random() * canvas.width;
-            y = 0;
-            vx = (Math.random() - 0.5) * 8;
-            vy = (Math.random() * 5) + 2; // Down
-        } else if (edge === 1) { // Left
-            x = 0;
-            y = Math.random() * (canvas.height * 0.5); 
-            vx = (Math.random() * 5) + 2; // Right
-            vy = (Math.random() * 5) - 2;
-        } else { // Right
-            x = canvas.width;
-            y = Math.random() * (canvas.height * 0.5);
-            vx = -((Math.random() * 5) + 2); // Left
-            vy = (Math.random() * 5) - 2;
+            if (edge === 0) { 
+                x = Math.random() * width;
+                y = 0;
+                vx = (Math.random() - 0.5) * 8;
+                vy = (Math.random() * 5) + 2; 
+            } else if (edge === 1) { 
+                x = 0;
+                y = Math.random() * (height * 0.5); 
+                vx = (Math.random() * 5) + 2; 
+                vy = (Math.random() * 5) - 2;
+            } else { 
+                x = width;
+                y = Math.random() * (height * 0.5);
+                vx = -((Math.random() * 5) + 2); 
+                vy = (Math.random() * 5) - 2;
+            }
+
+            particles.push({
+                x, y, vx, vy,
+                life: 1.0,
+                maxLife: 1.0,
+                size: Math.random() * 3 + 1,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)]
+            });
         }
-
-        particles.push({
-            x, y, vx, vy,
-            life: 1.0,
-            maxLife: 1.0,
-            size: Math.random() * 3 + 1,
-            color: COLORS[Math.floor(Math.random() * COLORS.length)]
-        });
+    } catch (e) {
+        console.error("Error creating particles", e);
+        return;
     }
 
-    // 2. ANIMATION LOOP
     const loop = () => {
+      if (!isActive) return;
+      if (!canvas || canvas.width === 0) return;
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       let activeParticles = false;
 
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
-        
-        // Physics
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.15; // Gravity
+        p.vy += 0.15; 
         
-        // Floor Bounce
         if (p.y > canvas.height) {
           p.y = canvas.height;
           p.vy *= -0.5; 
           p.vx *= 0.7;  
         }
         
-        // Wall Bounce
         if (p.x < 0 || p.x > canvas.width) {
           p.vx *= -0.6;
           p.x = Math.max(0, Math.min(canvas.width, p.x));
         }
 
-        // Slow Decay
         p.life -= 0.005; 
 
-        // Render
         if (p.life > 0) {
             activeParticles = true;
             ctx.fillStyle = p.color;
@@ -1946,6 +2027,7 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     loop();
 
     return () => {
+      isActive = false;
       cancelAnimationFrame(animationFrameId);
     };
   }, [intensity]);
@@ -1976,10 +2058,10 @@ import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
+import { SafePanelContent } from './SafePanelContent';
 
 const MAX_HEALTH = 1000;
 
-// Panel Enter/Exit Animations
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
@@ -1999,7 +2081,6 @@ const panelVariants = {
   })
 };
 
-// TIGHTENED PULSE (4% Attack to match 0.03s Audio)
 const pulseVariants = {
     heartbeat: {
         opacity: [0, 0.6, 0],
@@ -2029,17 +2110,31 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
+  
   const health = panelState ? panelState.health : MAX_HEALTH;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
-  const healthPercent = (health / MAX_HEALTH) * 100; 
-  const isDamaged = health < MAX_HEALTH;
+  
+  let rawPercent = (health / MAX_HEALTH) * 100;
+  if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  const healthPercent = Math.max(0, Math.min(100, rawPercent));
+  
+  const isDamaged = !isDestroyed && health < MAX_HEALTH;
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
   
-  // Controls
   const shakeControls = useAnimation();
   const heartbeatControls = useHeartbeat(); 
+
+  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
+
+  useReactEffect(() => {
+      if (isGameOver) {
+          shakeControls.start("shattered");
+      } else {
+          shakeControls.start("visible");
+      }
+  }, [isGameOver, shakeControls]);
 
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
@@ -2056,7 +2151,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           if (p.id === gameId) {
               shakeControls.start({
                   x: [0, -5, 5, -5, 5, 0],
-                  transition: { duration: 0.2 }
+                  transition: { duration: 0.1 }
               });
           }
       });
@@ -2072,7 +2167,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
   else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
-  const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
   const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
   return (
@@ -2080,7 +2174,7 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
       ref={registryRef}
       variants={panelVariants}
       initial="hidden"
-      animate={isGameOver ? "shattered" : ["visible", shakeControls as any]}
+      animate={shakeControls}
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
@@ -2091,7 +2185,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
-      {/* GLOBAL ALARM OVERLAY */}
       {isCriticalGlobal && (
           <motion.div 
             className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
@@ -2115,17 +2208,22 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
       <div className="relative z-10 p-4 h-full">
         {(isDestroyed || isGameOver) && (
-            <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+            <SafePanelContent fallbackId={`sparks-${gameId}`}>
+                <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+            </SafePanelContent>
         )}
 
         <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
-            {isDestroyed && (
-                <BreachOverlay 
-                    progress={healthPercent} 
-                    isVideo={gameId === 'video'} 
-                    showInteractive={true} 
-                />
+            
+            {isDestroyed && !isGameOver && (
+                <SafePanelContent fallbackId={`breach-${gameId}`}>
+                    <BreachOverlay 
+                        progress={healthPercent} 
+                        isVideo={gameId === 'video'} 
+                        showInteractive={true} 
+                    />
+                </SafePanelContent>
             )}
         </div>
 
@@ -2141,6 +2239,164 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         )}
       </div>
     </motion.div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/atoms/VitalsRing.tsx
+=====================================
+import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
+import { Unplug } from 'lucide-react';
+import { clsx } from 'clsx';
+
+interface VitalsRingProps {
+  health: number;
+  maxHealth: number;
+  xp: number;
+  xpToNext: number;
+  level: number;
+  isDead: boolean;
+  rebootProgress: number;
+}
+
+export const VitalsRing = ({ 
+  health, 
+  maxHealth, 
+  xp, 
+  xpToNext, 
+  level, 
+  isDead, 
+  rebootProgress 
+}: VitalsRingProps) => {
+  
+  const hpPercent = Math.max(0, (health / maxHealth) * 100);
+  const xpPercent = xpToNext > 0 ? Math.min(100, (xp / xpToNext) * 100) : 0;
+
+  // --- SVG CONFIG ---
+  const size = 160; 
+  const center = size / 2;
+  const radiusHp = 60;
+  const radiusXp = 70;
+  const stroke = 4;
+  
+  const circHp = 2 * Math.PI * radiusHp;
+  const circXp = 2 * Math.PI * radiusXp;
+
+  const displayHpPercent = isDead ? rebootProgress : hpPercent;
+  const displayHpColor = isDead ? "#eae747" : (hpPercent < 30 ? "#FF003C" : "#78F654"); 
+
+  const offsetHp = circHp - (displayHpPercent / 100 * circHp);
+  const offsetXp = circXp - (xpPercent / 100 * circXp);
+
+  return (
+    <div className="relative w-40 h-40 shrink-0 group mb-1"> 
+        
+        {/* 3D Canvas */}
+        <div className={clsx(
+            "absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle",
+            isDead ? "opacity-60 grayscale" : "opacity-100"
+        )}>
+           <MiniCrystalCanvas />
+        </div>
+
+        {/* Status Overlays */}
+        {isDead && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                {rebootProgress > 0 ? (
+                    <div className="flex flex-col items-center">
+                        <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">
+                            {Math.floor(rebootProgress)}%
+                        </span>
+                        <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
+                    </div>
+                ) : (
+                    <div className="animate-pulse flex flex-col items-center">
+                        <Unplug className="text-white/50 w-8 h-8 mb-1" />
+                        <span className="text-[8px] text-critical-red font-mono bg-black/80 px-2">SIGNAL_LOST</span>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* SVG RINGS */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
+          <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
+          <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
+          
+          <circle 
+            cx={center} cy={center} r={radiusHp} 
+            stroke={displayHpColor} 
+            strokeWidth={stroke} fill="transparent"
+            strokeDasharray={circHp}
+            strokeDashoffset={offsetHp}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${center} ${center})`}
+            className="transition-all duration-100 ease-linear"
+          />
+          
+          <circle 
+            cx={center} cy={center} r={radiusXp} 
+            stroke="#9E4EA5" 
+            strokeWidth={stroke} fill="transparent"
+            strokeDasharray={circXp}
+            strokeDashoffset={offsetXp}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${center} ${center})`}
+            className="transition-all duration-500 ease-out"
+          />
+
+          <defs>
+              <path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /> 
+          </defs>
+          
+          <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
+              <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
+                  LVL_{level.toString().padStart(2, '0')}
+              </textPath>
+          </text>
+        </svg>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/overlays/GlobalBackdrop.tsx
+=====================================
+import { motion, AnimatePresence } from 'framer-motion';
+import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+
+export const GlobalBackdrop = () => {
+  const { activeModal, isDebugOpen, isDebugMinimized, closeModal, toggleDebugMenu } = useStore();
+
+  // Show if any modal is open OR debug is open (but not minimized)
+  const isVisible = (activeModal !== 'none') || (isDebugOpen && !isDebugMinimized);
+
+  const handleDismiss = () => {
+    AudioSystem.playSound('ui_menu_close');
+    if (isDebugOpen) {
+        toggleDebugMenu();
+    } else {
+        closeModal();
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          onClick={handleDismiss}
+          // Z-INDEX 150: Above Game (60) AND Intro (100). Below Modals/Settings (200).
+          className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm cursor-pointer"
+        />
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -2230,23 +2486,14 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
   return (
     <AnimatePresence>
       {isOpen && (
-        // FIX: Bumped z-index to 100 to stay above GameOverlay (z-60)
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 pointer-events-none">
           
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeModal}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm cursor-pointer"
-          />
-
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-            className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden"
+            className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto"
           >
             <div className="flex items-center justify-between px-4 py-3 bg-primary-green/10 border-b border-primary-green/30">
               <div className="flex items-center gap-2">
@@ -2256,7 +2503,7 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
                 </span>
               </div>
               <button 
-                onClick={closeModal}
+                onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
                 onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-1 hover:bg-critical-red hover:text-black text-primary-green transition-colors"
               >
@@ -2464,31 +2711,17 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const SfxBtn = ({ active, onClick, color }: { active: boolean, onClick: () => void, color: string }) => (
+const ToggleBtn = ({ active, onClick, children, color }: any) => (
   <button 
     onClick={onClick}
     className={clsx(
-      "flex items-center justify-center px-1.5 py-1 transition-all duration-200 border border-transparent rounded-sm font-mono text-[10px] font-bold tracking-tighter",
+      "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
-        ? `hover:text-alert-yellow bg-white/5 border-white/10 ${color}`
-        : `${color} opacity-40 hover:text-critical-red hover:opacity-100 decoration-line-through`
+        ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color}`
+        : `${color} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
     )}
   >
-    SFX
-  </button>
-);
-
-const AudioBtn = ({ active, onClick, icon: Icon, offIcon: OffIcon, color }: any) => (
-  <button 
-    onClick={onClick}
-    className={clsx(
-      "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
-      active 
-        ? `hover:text-alert-yellow bg-white/5 ${color}`
-        : `${color} opacity-40 hover:text-critical-red hover:opacity-100`
-    )}
-  >
-    {active ? <Icon size={14} /> : <OffIcon size={14} />}
+    {children}
   </button>
 );
 
@@ -2533,11 +2766,11 @@ export const Header = () => {
           filter: [
               "brightness(1) drop-shadow(0 0 0px #FF003C)",
               "brightness(2) drop-shadow(0 0 10px #FF003C)",
-              "brightness(1) drop-shadow(0 0 0px #FF003C)"
+              "brightness(1) drop-shadow(0 0 0px #FF003C"
           ],
           transition: { 
               duration: 0.8, 
-              times: [0, 0.04, 1],
+              times: [0, 0.04, 1], 
               ease: "easeOut" 
           }
       }
@@ -2576,28 +2809,39 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            {/* Settings Button */}
+            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor}>
+                <Wind size={14} />
+            </ToggleBtn>
+            
+            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor}>
+                <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span>
+            </ToggleBtn>
+            
+            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor}>
+                {audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}
+            </ToggleBtn>
+            
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            
+            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor}>
+                {audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}
+            </ToggleBtn>
+
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
             <button 
-                onClick={() => { toggleSettings(); AudioSystem.playClick(); }}
+                onClick={() => { toggleSettings(); AudioSystem.playSound('ui_menu_open'); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
                 )}
             >
-                <Settings size={14} />
+                <Settings size={14} className="animate-spin-slow" />
             </button>
 
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-
-            <AudioBtn active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} offIcon={Wind} color={statusColor} />
-            <SfxBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} />
-            <AudioBtn active={audioSettings.music} onClick={toggleMusic} icon={Music} offIcon={Music} color={statusColor} />
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <AudioBtn active={audioSettings.master} onClick={toggleMaster} icon={Volume2} offIcon={VolumeX} color={statusColor} />
         </div>
       </div>
 
-      {/* BOTTOM BORDER / HEALTH BAR */}
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <motion.div 
@@ -2611,7 +2855,6 @@ export const Header = () => {
         </div>
       )}
       
-      {/* INTEGRITY TEXT */}
       <div className={clsx(
           "absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300",
           isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"
@@ -2710,7 +2953,7 @@ class AudioSystemController {
     console.log('[AudioSystem] Synthesized and Ready.');
 
     if (this.isMusicStarted) {
-        this.playAmbience('ambience_b');
+        this.playAmbience('ambience_core');
     }
   }
 
@@ -2722,7 +2965,7 @@ class AudioSystemController {
               this.ctx.resume().catch(() => {});
           }
           if (!this.currentAmbienceKey) {
-              this.playAmbience('ambience_b');
+              this.playAmbience('ambience_core');
           }
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
@@ -2743,12 +2986,6 @@ class AudioSystemController {
           this.ambienceGain.gain.value = s.ambience ? s.volumeAmbience : 0.0;
       }
 
-      // AMBIENCE LAB: RECALIBRATED TO MATCH DEFAULT (0.5)
-      // Math.pow(10, (val - 0.5) * 2)
-      // If val = 0.5, pow = 1. (Exact Base)
-      // If val = 0.0, pow = 0.1. (1/10th Base)
-      // If val = 1.0, pow = 10. (10x Base)
-      
       if (this.ambienceFilter && this.ambienceLFO && this.ambiencePanConstraint && this.ambienceDepthLFO && this.ambienceDepthGain) {
           const filter = s.ambFilter ?? 0.5;
           const speed = s.ambSpeed ?? 0.5;
@@ -2756,25 +2993,10 @@ class AudioSystemController {
           const modSpeed = s.ambModSpeed ?? 0.5;
           const modDepth = s.ambModDepth ?? 0.5;
 
-          // 1. DENSITY (Base 300Hz) -> Range 30Hz to 3000Hz
           this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
-
-          // 2. CIRCULATION (Base 0.05Hz) -> Range 0.005Hz to 0.5Hz
           this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
-
-          // 3. STEREO WIDTH (Base 0.1 Gain) -> Range 0.01 to 1.0
-          // Using slightly different curve for width to allow full 0
-          // But to keep 0.5 = 0.1, let's use the same power logic roughly?
-          // No, width feels better with simple scaling, but let's anchor it.
-          // Let's use: val^3 * 0.8. 
-          // 0.5^3 * 0.8 = 0.125 * 0.8 = 0.1. (Matches)
-          // 1.0^3 * 0.8 = 0.8 (Wide)
           this.ambiencePanConstraint.gain.value = Math.pow(width, 3) * 0.8;
-          
-          // 4. FLUCTUATION (Base 0.2Hz) -> Range 0.02Hz to 2.0Hz
           this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
-          
-          // 5. INSTABILITY (Base 10Hz) -> Range 1Hz to 100Hz
           this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
       }
   }
@@ -2952,23 +3174,23 @@ class AudioSystemController {
   }
 
   private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('laser'));
+    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('fx_player_fire'));
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') this.playSound('explosion_large');
-        else this.playSound('explosion_small');
+        if (p.type === 'kamikaze') this.playSound('fx_impact_heavy');
+        else this.playSound('fx_impact_light');
     });
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.playSound('explosion_large'); 
+        this.playSound('fx_impact_heavy'); 
         this.duckMusic(0.7, 1.0);
     });
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        this.playSound('explosion_large');
+        this.playSound('fx_impact_heavy');
         this.duckMusic(1.0, 3.0);
     });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('heal'));
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('powerup'));
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('loop_heal'));
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('fx_level_up'));
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.playSound('explosion_large'); 
+        this.playSound('fx_impact_heavy'); 
         this.duckMusic(0.8, 1.5);
     });
   }
@@ -2992,7 +3214,7 @@ class AudioSystemController {
     this.isMusicStarted = true;
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     if (this.isReady) {
-        this.playAmbience('ambience_b');
+        this.playAmbience('ambience_core');
     }
     if (!this.musicElement) this.setupMusic();
     if (this.musicElement) this.musicElement.play().catch(() => {});
@@ -3007,11 +3229,11 @@ class AudioSystemController {
     source.connect(this.musicGain);
   }
 
-  public playClick() { this.playSound('click'); }
-  public playHover() { this.playSound('hover'); }
-  public playBootSequence() { this.playSound('powerup'); } 
-  public playDrillSound() { this.playSound('driller_drill'); }
-  public playRebootZap() { this.playSound('reboot_tick'); }
+  public playClick() { this.playSound('ui_click'); }
+  public playHover() { this.playSound('ui_hover'); }
+  public playBootSequence() { this.playSound('fx_boot_sequence'); } 
+  public playDrillSound() { this.playSound('loop_drill'); }
+  public playRebootZap() { this.playSound('loop_reboot'); }
   
   public setMasterMute(m: boolean) { 
       useStore.setState(s => ({ audioSettings: { ...s.audioSettings, master: !m } }));
@@ -3050,13 +3272,11 @@ interface AudioSettings {
   sfx: boolean;
   ambience: boolean;
   
-  // Levels (0.0 - 3.0)
   volumeMaster: number;
   volumeMusic: number;
   volumeSfx: number;
   volumeAmbience: number;
   
-  // Ambience Lab (0.0 - 4.0+)
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
@@ -3175,15 +3395,9 @@ export const useStore = create<AppState>()(
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
       
-      openModal: (modal) => {
-          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick(); 
-          set({ activeModal: modal });
-      },
-      
-      closeModal: () => {
-          if (get().audioSettings.master && get().audioSettings.sfx) AudioSystem.playClick();
-          set({ activeModal: 'none' });
-      },
+      // REMOVED AUDIO CALLS FROM HERE TO ALLOW UI CONTROL
+      openModal: (modal) => set({ activeModal: modal }),
+      closeModal: () => set({ activeModal: 'none' }),
 
       toggleSettings: () => {
           const current = get().activeModal;
@@ -3359,7 +3573,7 @@ import { AboutModal } from '@/features/identity/AboutModal';
 import { FeedModal } from '@/features/feed/FeedModal';
 import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
-import { SettingsModal } from '@/features/settings/SettingsModal'; // NEW
+import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
@@ -3370,6 +3584,7 @@ import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
+import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; // NEW
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -3412,6 +3627,10 @@ export default function Home() {
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <CustomCursor />
+      
+      {/* GLOBAL BACKDROP HANDLES DIMMING FOR ALL MODALS */}
+      <GlobalBackdrop />
+      
       <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
@@ -3432,7 +3651,7 @@ export default function Home() {
                 <FeedModal />
                 <GalleryModal />
                 <ContactModal />
-                <SettingsModal /> {/* NEW */}
+                <SettingsModal />
                 <ZenBomb />
             </>
         )}
@@ -3488,7 +3707,7 @@ export default function Home() {
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
                               <button 
-                                onClick={() => openModal('feed')} 
+                                onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
                                 onMouseEnter={() => AudioSystem.playHover()}
                                 className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
                               >
@@ -3683,15 +3902,16 @@ export const SoundTab = () => {
 FILE: ./src/features/settings/components/RangeSlider.tsx
 =====================================
 import { clsx } from 'clsx';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface RangeSliderProps {
   label: string;
   value: number; 
   onChange: (val: number) => void;
-  max?: number; // Logic Max (e.g. 3.0)
-  displayMax?: number; // UI Max (e.g. 300)
+  max?: number; 
+  displayMax?: number; 
   format?: (val: number) => string;
-  markerValue?: number; // Where the "Normal" line is (default 1.0)
+  markerValue?: number; 
 }
 
 export const RangeSlider = ({ 
@@ -3704,18 +3924,13 @@ export const RangeSlider = ({
   format
 }: RangeSliderProps) => {
   
-  // Logic: Map 0..max to 0..displayMax
   const currentPercent = (value / max) * 100;
   const uiValue = value * (displayMax / max);
-  
-  // Marker Position (e.g. 1.0 / 3.0 = 33.3%)
   const markerPercent = (markerValue / max) * 100;
 
-  // Dynamic Color Logic
   let trackColor = "bg-primary-green";
   let glowColor = "shadow-[0_0_10px_#78F654]";
   
-  // If overdrive (assuming 1.0 is base)
   if (value > 2.0) {
       trackColor = "bg-critical-red";
       glowColor = "shadow-[0_0_15px_#FF003C]";
@@ -3727,7 +3942,10 @@ export const RangeSlider = ({
   const displayString = format ? format(value) : `${Math.round(uiValue)}%`;
 
   return (
-    <div className="flex flex-col gap-1.5 w-full group">
+    <div 
+        className="flex flex-col gap-1.5 w-full group"
+        onMouseEnter={() => AudioSystem.playHover()}
+    >
       <div className="flex justify-between items-end">
         <span className="text-[10px] font-bold font-mono tracking-wider opacity-80 text-gray-400 group-hover:text-white transition-colors">{label}</span>
         <span className={clsx("text-xs font-mono font-bold transition-colors", 
@@ -3739,16 +3957,13 @@ export const RangeSlider = ({
       </div>
       
       <div className="relative h-6 flex items-center">
-        {/* Background Track (Dark) */}
         <div className="absolute inset-x-0 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/10">
-             {/* Filled Track (Dynamic Color) */}
              <div 
                 className={clsx("h-full transition-all duration-75 ease-out", trackColor, glowColor)} 
                 style={{ width: `${currentPercent}%` }}
              />
         </div>
 
-        {/* 100% Marker Line */}
         <div 
             className="absolute top-0 bottom-0 w-[2px] bg-white/20 z-0 pointer-events-none group-hover:bg-white/50 transition-colors" 
             style={{ left: `${markerPercent}%` }}
@@ -3756,7 +3971,6 @@ export const RangeSlider = ({
             <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white/50 rounded-full" />
         </div>
         
-        {/* Invisible Input for Interaction */}
         <input 
           type="range"
           min="0" 
@@ -3765,7 +3979,6 @@ export const RangeSlider = ({
           value={uiValue}
           onChange={(e) => {
               const raw = parseFloat(e.target.value);
-              // Convert back to logic value: (raw / displayMax) * max
               const logicVal = (raw / displayMax) * max;
               onChange(logicVal);
           }}
@@ -3773,7 +3986,6 @@ export const RangeSlider = ({
           data-interactive="true"
         />
         
-        {/* Thumb Visual (Optional, CSS-only track usually cleaner, but let's add a sliding block) */}
         <div 
             className="absolute h-3 w-1 bg-white z-10 pointer-events-none shadow-sm"
             style={{ left: `calc(${currentPercent}% - 2px)` }}
@@ -3809,16 +4021,8 @@ export const SettingsModal = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-10 pointer-events-none">
           
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={closeModal}
-            className="absolute inset-0 bg-black/90 backdrop-blur-md cursor-pointer"
-          />
-
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -3834,7 +4038,7 @@ export const SettingsModal = () => {
                 </span>
               </div>
               <button 
-                onClick={closeModal}
+                onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
                 onMouseEnter={() => AudioSystem.playHover()} 
                 className="p-2 hover:bg-critical-red hover:text-black text-primary-green transition-colors border border-transparent hover:border-critical-red"
               >
@@ -3851,6 +4055,7 @@ export const SettingsModal = () => {
                                 setActiveTab(tab.id);
                                 AudioSystem.playClick();
                             }}
+                            onMouseEnter={() => AudioSystem.playHover()}
                             className={clsx(
                                 "flex items-center gap-3 px-6 py-4 text-sm font-bold tracking-wider transition-all border-l-4",
                                 activeTab === tab.id
@@ -4595,30 +4800,17 @@ import { useStore } from '@/core/store/useStore';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { EnemyTypes } from '@/game/config/Identifiers';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
-import { Bug, Clock, Eraser, Crosshair, Box, ScanEye, RotateCw, Play, Pause, Speaker, Activity, Waves, Zap, Heart, Database, Settings2, ShieldAlert, CheckCircle2, Wind } from 'lucide-react';
+import { Bug, Clock, Crosshair, Box, ScanEye, Play, Speaker, Settings2, Wind, Terminal, Zap, Shield, HelpCircle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 export const SimulationHUD = () => {
-  const { debugFlags, setDebugFlag, sandboxView, setSandboxView, galleryTarget, setGalleryTarget, galleryAction, toggleGalleryAction } = useStore();
+  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
   const [lastPlayed, setLastPlayed] = useState<string | null>(null);
   
-  const spawnEnemy = (type: string) => {
-      GameEventBus.emit(GameEvents.DEBUG_SPAWN, { type, count: 1 });
-  };
-
-  const clearBoard = () => {
-      try {
-          const registry = ServiceLocator.getRegistry();
-          if (registry) registry.clear();
-      } catch (e) { console.warn("Registry not ready"); }
-  };
-
   const playSound = (key: string) => {
-      // Ambience requires special method
       if (key.includes('ambience')) {
           AudioSystem.playAmbience(key);
       } else {
@@ -4628,39 +4820,50 @@ export const SimulationHUD = () => {
       setTimeout(() => setLastPlayed(null), 200);
   };
 
-  const library = {
-      CORE: { 
-          keys: Object.keys(AUDIO_CONFIG).filter(k => !k.includes('proto_') && !k.includes('drill_') && !k.includes('misc_') && (k.includes('laser') || k.includes('click') || k.includes('hover') || k.includes('heal') || k.includes('powerup'))),
-          color: 'text-primary-green',
-          borderColor: 'border-primary-green',
-          icon: Zap
-      },
-      COMBAT: { 
-          keys: ['driller_drill', 'enemy_fire', 'explosion_small', 'explosion_large', 'player_down_glitch', 'warning_heartbeat'],
-          color: 'text-critical-red',
-          borderColor: 'border-critical-red',
-          icon: Bug
-      },
-      MISC_DRILLS: {
-          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('drill_') && k !== 'driller_drill'),
-          color: 'text-latent-purple',
-          borderColor: 'border-latent-purple',
-          icon: Database
-      },
-      MISC: {
-          keys: Object.keys(AUDIO_CONFIG).filter(k => k.includes('misc_') || k.includes('proto_')),
-          color: 'text-alert-yellow',
-          borderColor: 'border-alert-yellow',
-          icon: Database
-      }
-  };
+  const library = useMemo(() => {
+      const allKeys = Object.keys(AUDIO_CONFIG);
+      const usedKeys = new Set<string>();
 
-  const prototypes = [
-      { id: 'CHARGE', label: 'HUNTER_CHARGE', icon: Zap, keys: ['proto_charge_a', 'proto_charge_b', 'proto_charge_c'], color: 'text-service-cyan', metas: ['CLASSIC', 'TURBINE', 'HUM'] },
-      { id: 'WAVE', label: 'THREAT_LEVEL', icon: Waves, keys: ['proto_wave_a', 'proto_wave_b', 'proto_wave_c'], color: 'text-critical-red', metas: ['BASS', 'KLAXON', 'GLITCH'] },
-      // NEW: Ambience Row
-      { id: 'AMB', label: 'NOISE_FLOOR', icon: Wind, keys: ['ambience_a', 'ambience_b', 'ambience_c'], color: 'text-gray-400', metas: ['DEEP', 'AIRY', 'PULSE'] },
-  ];
+      const defineGroup = (keys: string[]) => {
+          keys.forEach(k => usedKeys.add(k));
+          return keys.filter(k => allKeys.includes(k));
+      };
+
+      // 1. UI & FEEDBACK
+      const uiKeys = defineGroup([
+          'ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 
+          'ui_optimal', 'ui_error', 'ui_chirp'
+      ]);
+
+      // 2. COMBAT & FX
+      const combatKeys = defineGroup([
+          'fx_player_fire', 'fx_enemy_fire', 'fx_boot_sequence',
+          'fx_impact_light', 'fx_impact_heavy', 'fx_player_death',
+          'fx_level_up', 'fx_reboot_success', 'fx_teleport'
+      ]);
+
+      // 3. LOOPS & AMBIENCE
+      const loopKeys = defineGroup([
+          'ambience_core', 
+          'loop_heal', 'loop_reboot', 'loop_warning', 'loop_drill'
+      ]);
+
+      // 4. SYNTHESIS LAB (Protos)
+      const synKeys = defineGroup(
+          allKeys.filter(k => k.startsWith('syn_'))
+      );
+
+      // 5. CATCH ALL
+      const unusedKeys = allKeys.filter(k => !usedKeys.has(k));
+
+      return {
+          UI: { keys: uiKeys, icon: Terminal, color: 'text-primary-green', border: 'border-primary-green' },
+          COMBAT: { keys: combatKeys, icon: Zap, color: 'text-critical-red', border: 'border-critical-red' },
+          LOOPS: { keys: loopKeys, icon: Wind, color: 'text-service-cyan', border: 'border-service-cyan' },
+          SYNTHS: { keys: synKeys, icon: Box, color: 'text-alert-yellow', border: 'border-alert-yellow' },
+          MISC_UNTESTED: { keys: unusedKeys, icon: HelpCircle, color: 'text-gray-400', border: 'border-gray-500' }
+      };
+  }, []);
 
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
@@ -4715,84 +4918,58 @@ export const SimulationHUD = () => {
               <div className="flex-1 bg-black/80 backdrop-blur-md border border-white/20 p-6 flex flex-col gap-6 overflow-y-auto">
                   <div className="flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
                       <Settings2 className="text-white" size={20} />
-                      <h3 className="font-header font-black text-xl text-white tracking-widest">PROTOTYPE_BENCH</h3>
+                      <h3 className="font-header font-black text-xl text-white tracking-widest">AUDIO_MATRIX</h3>
                   </div>
                   
-                  {/* SELECTED FINALISTS */}
-                  <div className="bg-primary-green/5 border border-primary-green/30 p-4 rounded-sm">
-                      <div className="flex items-center gap-2 mb-4">
-                          <CheckCircle2 className="text-primary-green" size={18} />
-                          <span className="font-mono font-bold tracking-wider text-sm text-primary-green">SELECTED_IMPLEMENTATIONS</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                          {[
-                              { label: 'DRILLER (MOD_G)', key: 'driller_drill', sub: 'IMPACT' },
-                              { label: 'LOW_INTEGRITY (VAR_F)', key: 'warning_heartbeat', sub: 'SUB-BASS' },
-                              { label: 'PLAYER_DEATH (VAR_K)', key: 'player_down_glitch', sub: 'CHOPPER' }
-                          ].map(item => {
-                              const isPlaying = lastPlayed === item.key;
-                              return (
-                                  <button 
-                                      key={item.key}
-                                      onClick={() => playSound(item.key)}
-                                      className={clsx(
-                                          "flex flex-col items-center justify-center py-6 border transition-all duration-100",
-                                          isPlaying 
-                                              ? "bg-primary-green text-black border-primary-green shadow-[0_0_20px_#78F654] scale-95" 
-                                              : "bg-black border-primary-green/30 hover:border-primary-green hover:bg-primary-green/10 text-primary-green"
-                                      )}
-                                  >
-                                      <span className="text-xs font-black mb-1">{item.label}</span>
-                                      <span className="text-[8px] opacity-70 font-mono tracking-tighter">{item.sub}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-primary-green border-b border-primary-green/30 pb-1">UI_FEEDBACK</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                              {library.UI.keys.map(key => (
+                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-primary-green/30 hover:bg-primary-green/10 text-[10px] text-primary-green text-left transition-colors truncate">
+                                      {key}
                                   </button>
-                              );
-                          })}
+                              ))}
+                          </div>
+                      </div>
+
+                      <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-critical-red border-b border-critical-red/30 pb-1">COMBAT_FX</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                              {library.COMBAT.keys.map(key => (
+                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-critical-red/30 hover:bg-critical-red/10 text-[10px] text-critical-red text-left transition-colors truncate">
+                                      {key}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div className="mt-4 p-4 border border-service-cyan/30 bg-service-cyan/5">
+                      <h4 className="text-xs font-bold text-service-cyan mb-2 flex items-center gap-2">
+                          <Wind size={14} /> AMBIENCE_LOOPS
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                          {library.LOOPS.keys.map(key => (
+                              <button key={key} onClick={() => playSound(key)} className="flex flex-col items-center justify-center p-3 border border-service-cyan/30 hover:bg-service-cyan/10 transition-colors">
+                                  <span className="text-[10px] text-service-cyan font-bold">{key}</span>
+                              </button>
+                          ))}
                       </div>
                   </div>
 
-                  {/* PROTOTYPE ROWS */}
-                  {prototypes.map(proto => (
-                      <div key={proto.id} className="bg-white/5 border border-white/10 p-4 rounded-sm">
-                          <div className="flex items-center gap-2 mb-4">
-                              <proto.icon className={proto.color} size={18} />
-                              <span className={clsx("font-mono font-bold tracking-wider text-sm", proto.color)}>{proto.label}</span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4">
-                              {proto.keys.map((key, idx) => {
-                                  const label = idx === 0 ? 'VARIANT_A' : idx === 1 ? 'VARIANT_B' : 'VARIANT_C';
-                                  const isPlaying = lastPlayed === key;
-                                  const meta = proto.metas ? proto.metas[idx] : AUDIO_CONFIG[key].type.toUpperCase();
-                                  return (
-                                      <button 
-                                          key={key}
-                                          onClick={() => playSound(key)}
-                                          className={clsx(
-                                              "flex flex-col items-center justify-center py-6 border transition-all duration-100",
-                                              isPlaying 
-                                                  ? "bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-95" 
-                                                  : "bg-black border-white/20 hover:border-white/50 hover:bg-white/5"
-                                          )}
-                                      >
-                                          <span className="text-xs font-bold mb-1">{label}</span>
-                                          <span className="text-[9px] opacity-50 font-mono">{meta}</span>
-                                      </button>
-                                  );
-                              })}
-                          </div>
-                      </div>
-                  ))}
               </div>
 
-              {/* RIGHT: LIBRARY */}
-              <div className="w-80 bg-black/90 backdrop-blur-md border border-service-cyan/30 flex flex-col overflow-hidden">
-                  <div className="p-3 border-b border-service-cyan/30 bg-service-cyan/5">
-                      <span className="font-mono font-bold text-xs text-service-cyan tracking-widest">ACTIVE_LIBRARY</span>
+              {/* RIGHT: FULL LIBRARY (Categorized) */}
+              <div className="w-72 bg-black/90 backdrop-blur-md border border-gray-800 flex flex-col overflow-hidden">
+                  <div className="p-3 border-b border-gray-800 bg-gray-900/50">
+                      <span className="font-mono font-bold text-xs text-gray-400 tracking-widest">ASSET_BROWSER</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin scrollbar-thumb-service-cyan scrollbar-track-black">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-black">
                       {Object.entries(library).map(([name, group]) => (
-                          <div key={name}>
-                              <div className={clsx("flex items-center gap-2 text-[10px] font-bold mb-2 pb-1 border-b uppercase tracking-wider", group.color, group.borderColor)}>
-                                  <group.icon size={12} />
+                          <div key={name} className={group.keys.length === 0 ? 'hidden' : ''}>
+                              <div className={clsx("flex items-center gap-2 text-[9px] font-bold mb-2 pb-1 border-b uppercase tracking-wider opacity-80", group.color, group.border)}>
+                                  <group.icon size={10} />
                                   {name}
                               </div>
                               <div className="grid grid-cols-1 gap-1">
@@ -4803,14 +4980,14 @@ export const SimulationHUD = () => {
                                               key={key} 
                                               onClick={() => playSound(key)}
                                               className={clsx(
-                                                  "flex items-center justify-between px-2 py-1.5 border text-[10px] font-mono transition-all",
+                                                  "flex items-center justify-between px-2 py-1.5 border text-[9px] font-mono transition-all",
                                                   isPlaying 
-                                                      ? `${group.borderColor} bg-white text-black` 
-                                                      : `border-transparent hover:border-white/30 bg-white/5 text-gray-300 hover:bg-white/10`
+                                                      ? `${group.border} bg-white text-black` 
+                                                      : `border-transparent hover:border-white/10 bg-white/5 text-gray-400 hover:text-white`
                                               )}
                                           >
-                                              <span>{key}</span>
-                                              <Play size={10} className={isPlaying ? "fill-black" : ""} />
+                                              <span className="truncate w-full text-left">{key}</span>
+                                              <Play size={8} className={isPlaying ? "fill-black" : "opacity-0 group-hover:opacity-100"} />
                                           </button>
                                       );
                                   })}
@@ -4821,8 +4998,6 @@ export const SimulationHUD = () => {
               </div>
           </div>
       )}
-
-      {/* ... ARENA/GALLERY (UNCHANGED) ... */}
     </div>
   );
 };
@@ -4893,15 +5068,15 @@ interface OverridesTabProps {
 }
 
 export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
-  const { setIntroDone, setBootState, bootState, resetApplication, debugFlags, setDebugFlag } = useStore();
+  const { setIntroDone, setBootState, bootState, resetApplication, debugFlags, setDebugFlag, resetDebugFlags } = useStore();
   const { startGame, stopGame, activateZenMode } = useGameStore();
 
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
   const handleSkipBoot = () => {
+    resetDebugFlags();
     setIntroDone(true);
     setBootState('active');
-    // Ensure Audio System is ready if skipping boot
     AudioSystem.init();
     AudioSystem.startMusic();
     startGame();
@@ -4909,25 +5084,17 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   };
 
   const executeCrash = () => {
-    // 1. Kill integrity in Store (React UI updates immediately)
     useGameStore.setState({ systemIntegrity: 0 });
-    
-    // 2. Kill Registry Logic (Visuals/Game Logic updates)
     PanelRegistry.destroyAll();
-    
-    // 3. Emit Events
     GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
     stopGame();
   };
 
   const handleForceCrash = () => {
     if (bootState === 'standby') {
-        // Init Audio/Engine
         setIntroDone(true);
         setBootState('active');
         AudioSystem.init();
-        
-        // Wait for React to mount the GameOverlay and GameDirector to boot the engine (approx 1 frame)
         setTimeout(() => {
             executeCrash();
         }, 100);
@@ -4961,24 +5128,36 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const toggleGodSuite = () => {
       const newState = !areAllGodModesOn;
+      // Play sound before state change
+      if (newState) {
+          AudioSystem.playSound('powerup');
+      } else {
+          AudioSystem.playSound('ui_click');
+      }
       setDebugFlag('godMode', newState);
       setDebugFlag('panelGodMode', newState);
       setDebugFlag('peaceMode', newState);
   };
 
+  const btnClass = "flex items-center justify-center gap-2 p-3 border transition-all text-xs font-bold";
+
   return (
     <div className="space-y-6">
       
-      {/* SCENE CONTROL */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleSkipBoot} className="flex items-center justify-center gap-2 p-3 border border-primary-green/50 hover:bg-primary-green hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleSkipBoot} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-primary-green/50 hover:bg-primary-green hover:text-black`}
+          >
             <Play size={14} /> SKIP_BOOT
           </button>
           
           <button 
             onClick={handleZenModeWrapper} 
+            onMouseEnter={() => AudioSystem.playHover()}
             className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"
           >
             <div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" />
@@ -4986,31 +5165,42 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
                 <Sparkles size={14} className="text-yellow-300" /> ZEN_MODE
             </div>
           </button>
-          <button onClick={handleSystemFormat} className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleSystemFormat} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold"
+          >
             <Trash2 size={14} /> SYSTEM_FORMAT
           </button>
         </div>
       </div>
 
-      {/* STATE OVERRIDES */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button onClick={handleForceCrash} className="flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleForceCrash} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black`}
+          >
             <Skull size={14} /> FORCE_CRASH
           </button>
-          <button onClick={handleReboot} className="flex items-center justify-center gap-2 p-3 border border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black transition-all text-xs font-bold">
+          <button 
+            onClick={handleReboot} 
+            onMouseEnter={() => AudioSystem.playHover()}
+            className={`${btnClass} border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black`}
+          >
             <RefreshCw size={14} /> REBOOT_CORE
           </button>
         </div>
       </div>
 
-      {/* CHEATS */}
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
         
         <button 
           onClick={toggleGodSuite}
+          onMouseEnter={() => AudioSystem.playHover()}
           className={clsx(
               "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
               areAllGodModesOn
@@ -5024,6 +5214,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
@@ -5037,6 +5228,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
@@ -5050,6 +5242,7 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
         <label 
           data-interactive="true"
+          onMouseEnter={() => AudioSystem.playHover()}
           className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
         >
           <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>
@@ -5070,7 +5263,9 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 =====================================
 FILE: ./src/features/debug/tabs/ConsoleTab.tsx
 =====================================
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Copy, Check } from 'lucide-react';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface ConsoleTabProps {
   logs: { time: string, msg: string, type: string }[];
@@ -5078,6 +5273,7 @@ interface ConsoleTabProps {
 
 export const ConsoleTab = ({ logs }: ConsoleTabProps) => {
   const logEndRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (logEndRef.current) {
@@ -5085,17 +5281,37 @@ export const ConsoleTab = ({ logs }: ConsoleTabProps) => {
     }
   }, [logs]);
 
+  const handleCopy = () => {
+      const text = logs.map(l => `[${l.time}] ${l.msg}`).join('\n');
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      AudioSystem.playClick();
+  };
+
   return (
-    <div className="h-full flex flex-col">
-        <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2">
+    <div className="h-full flex flex-col relative">
+        <div className="flex-1 overflow-y-auto font-mono text-[10px] space-y-1 pr-2 pb-8">
+            {logs.length === 0 && (
+                <div className="text-primary-green-dim opacity-50 italic mt-4">-- NO SIGNIFICANT EVENTS --</div>
+            )}
             {logs.map((l, i) => (
                 <div key={i} className="flex gap-2 opacity-80 hover:opacity-100 border-b border-white/5 py-0.5">
-                    <span className="text-primary-green-dim">[{l.time}]</span>
-                    <span className={l.type.includes('ERROR') ? 'text-critical-red' : 'text-primary-green'}>{l.msg}</span>
+                    <span className="text-primary-green-dim shrink-0">[{l.time}]</span>
+                    <span className={l.type.includes('ERROR') || l.type.includes('CRITICAL') ? 'text-critical-red font-bold' : 'text-primary-green break-all'}>{l.msg}</span>
                 </div>
             ))}
             <div ref={logEndRef} />
         </div>
+        
+        <button 
+            onClick={handleCopy}
+            onMouseEnter={() => AudioSystem.playHover()}
+            className="absolute bottom-0 right-0 flex items-center gap-2 bg-primary-green/10 hover:bg-primary-green/20 border border-primary-green/30 text-primary-green px-3 py-1.5 text-xs font-bold transition-all backdrop-blur-sm"
+        >
+            {copied ? <Check size={12} /> : <Copy size={12} />}
+            {copied ? "COPIED" : "COPY LOG"}
+        </button>
     </div>
   );
 };
@@ -5106,6 +5322,7 @@ FILE: ./src/features/debug/tabs/StatsTab.tsx
 =====================================
 import { Cpu, Database, LayoutTemplate } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface StatsTabProps {
   stats: { active: number, pooled: number, total: number, fps: number };
@@ -5143,7 +5360,11 @@ export const StatsTab = ({ stats }: StatsTabProps) => {
       </div>
       
       <div className="mt-8 flex justify-center">
-          <button onClick={toggleDebugMinimize} className="flex items-center gap-2 text-xs text-primary-green hover:text-white transition-colors border border-primary-green/50 px-4 py-2 hover:bg-primary-green/10">
+          <button 
+            onClick={() => { toggleDebugMinimize(); AudioSystem.playSound('ui_menu_close'); }}
+            onMouseEnter={() => AudioSystem.playHover()}
+            className="flex items-center gap-2 text-xs text-primary-green hover:text-white transition-colors border border-primary-green/50 px-4 py-2 hover:bg-primary-green/10"
+          >
               <LayoutTemplate size={14} /> SWITCH TO MINI_MODE
           </button>
       </div>
@@ -5170,21 +5391,14 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const { startGame } = useGameStore();
 
   const enterSandbox = () => {
-      // 1. Wake up Audio Engine (User Interaction)
       AudioSystem.init();
       AudioSystem.startMusic();
-
-      // 2. Set State
       setIntroDone(true);
       setBootState('sandbox');
-      
-      // 3. Clean Registry
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
-      
-      // 4. Start Loop
       startGame();
       closeDebug();
   };
@@ -5200,6 +5414,7 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
         </div>
         <button 
             onClick={enterSandbox}
+            onMouseEnter={() => AudioSystem.playHover()}
             className="px-8 py-3 bg-primary-green text-black font-bold tracking-widest hover:bg-white transition-colors"
         >
             [ ENTER_HOLO_DECK ]
@@ -5220,6 +5435,7 @@ import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Databa
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';
@@ -5235,58 +5451,89 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
   { id: 'CONSOLE', label: 'KERNEL_LOG', icon: Terminal },
 ];
 
+const IGNORED_EVENTS = new Set([
+    GameEvents.PLAYER_FIRED,
+    GameEvents.PLAYER_HIT,
+    GameEvents.ENEMY_DAMAGED,
+    GameEvents.ENEMY_SPAWNED,
+    GameEvents.PANEL_DAMAGED,
+    GameEvents.PROJECTILE_CLASH,
+    GameEvents.SPAWN_FX,
+]);
+
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal, openModal } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
 
-  // KEYBOARD HANDLERS (Global)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Tilde: Debug Menu
       if (e.key === '`' || e.key === '~') {
-        if (isDebugMinimized) {
-             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
-        } else {
-             toggleDebugMenu();
-        }
-        // Force Enable Cheats if opening
-        const state = useStore.getState();
-        if (!state.debugFlags.godMode) {
+        const willBeOpen = !isDebugOpen && !isDebugMinimized;
+        
+        if (willBeOpen) {
             setDebugFlag('godMode', true);
             setDebugFlag('panelGodMode', true);
             setDebugFlag('peaceMode', true);
         }
+
+        if (activeModal === 'settings') {
+            closeModal();
+            useStore.setState({ isDebugOpen: true, isDebugMinimized: false });
+            AudioSystem.playSound('ui_menu_open');
+        } 
+        else if (isDebugMinimized) {
+             useStore.setState({ isDebugMinimized: false, isDebugOpen: true });
+             AudioSystem.playSound('ui_menu_open');
+        } 
+        else {
+             toggleDebugMenu();
+             AudioSystem.playSound(!isDebugOpen ? 'ui_menu_open' : 'ui_menu_close');
+        }
       } 
-      // ESC: Close Debug OR Toggle Settings
+      
       else if (e.key === 'Escape') {
           if (isDebugOpen) {
               toggleDebugMenu();
+              openModal('settings');
+              AudioSystem.playSound('ui_menu_open'); 
           } else if (activeModal !== 'none') {
               closeModal();
+              AudioSystem.playSound('ui_menu_close');
           } else {
               toggleSettings();
+              AudioSystem.playSound('ui_menu_open');
           }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal]);
+  }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal, openModal]);
 
   useEffect(() => {
-    if (!isDebugOpen && !isDebugMinimized) return;
-    
     const handlers = Object.values(GameEvents).map(evt => {
         return GameEventBus.subscribe(evt as any, (payload) => {
+            if (IGNORED_EVENTS.has(evt as GameEvents)) return;
+
             const time = new Date().toLocaleTimeString().split(' ')[0];
             let msg = `${evt}`;
-            if (payload && (payload as any).type) msg += ` [${(payload as any).type}]`;
-            setLogs(prev => [...prev.slice(-49), { time, msg, type: evt }]);
+            
+            if (evt === GameEvents.LOG_DEBUG && payload && (payload as any).msg) {
+                const p = payload as any;
+                msg = p.source ? `[${p.source}] ${p.msg}` : p.msg;
+            } else if (payload && (payload as any).type) {
+                msg += ` [${(payload as any).type}]`;
+            } else if (payload && (payload as any).id) {
+                msg += ` [ID:${(payload as any).id}]`;
+            }
+            
+            setLogs(prev => [...prev.slice(-99), { time, msg, type: evt }]);
         });
     });
 
     const pollInterval = setInterval(() => {
+        if (!isDebugOpen && !isDebugMinimized) return;
         let fps = 0;
         let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
         try {
@@ -5318,8 +5565,8 @@ export const DebugOverlay = () => {
             <div className="bg-black border border-service-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
                 <h2 className="text-xl font-bold text-service-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
                 <div className="flex flex-col gap-4">
-                    <button onClick={toggleDebugMenu} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
-                    <button onClick={resetApplication} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
+                    <button onClick={toggleDebugMenu} onMouseEnter={() => AudioSystem.playHover()} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
+                    <button onClick={resetApplication} onMouseEnter={() => AudioSystem.playHover()} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
                 </div>
             </div>
         </div>
@@ -5328,17 +5575,27 @@ export const DebugOverlay = () => {
 
   if (isDebugMinimized) {
       return (
-        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-none">
+        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-auto">
             <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
                 <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
                     <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
-                    <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: true })} className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"><Maximize2 size={12} /></button>
+                    <button 
+                        onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
+                        onMouseEnter={() => AudioSystem.playHover()}
+                        className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
+                    >
+                        <Maximize2 size={12} />
+                    </button>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Database size={10} /> POOL</span><span className="text-primary-green font-bold">{stats.pooled}</span></div>
-                <div className="h-[1px] bg-primary-green/20 my-1" />
-                <button onClick={() => useStore.setState({ isDebugMinimized: false, isDebugOpen: false })} className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center">CLOSE_DEBUG</button>
+                <button 
+                    onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
+                    onMouseEnter={() => AudioSystem.playHover()}
+                    className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
+                >
+                    CLOSE_DEBUG
+                </button>
             </div>
         </div>
       );
@@ -5350,25 +5607,44 @@ export const DebugOverlay = () => {
         <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
           <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
-             <button onClick={() => useStore.setState({ isDebugMinimized: true, isDebugOpen: false })} className="hover:text-white transition-colors p-1"><MinusSquare size={16} /></button>
-             <button onClick={toggleDebugMenu} className="hover:text-white transition-colors p-1"><X size={16} /></button>
+             <button 
+                onClick={() => { useStore.setState({ isDebugMinimized: true, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
+                onMouseEnter={() => AudioSystem.playHover()}
+                className="hover:text-white transition-colors p-1"
+             >
+                <MinusSquare size={16} />
+             </button>
+             <button 
+                onClick={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} 
+                onMouseEnter={() => AudioSystem.playHover()}
+                className="hover:text-white transition-colors p-1"
+             >
+                <X size={16} />
+             </button>
           </div>
         </div>
         <div className="flex flex-1 min-h-0">
           <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
             {TABS.map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}><tab.icon size={14} />{tab.label}</button>
+              <button 
+                key={tab.id} 
+                onClick={() => { setActiveTab(tab.id); AudioSystem.playClick(); }} 
+                onMouseEnter={() => AudioSystem.playHover()}
+                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}
+              >
+                <tab.icon size={14} />{tab.label}
+              </button>
             ))}
           </div>
           <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={toggleDebugMenu} />}
-            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={toggleDebugMenu} />}
+            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
+            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
         <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
-          <span>ROOT_ACCESS_GRANTED // SESSION_ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
+          <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
         </div>
       </div>
     </div>
@@ -6093,6 +6369,8 @@ FILE: ./src/game/core/interfaces.ts
 =====================================
 import { GameEvents, GameEventPayloads } from '../events/GameEvents';
 import { Entity } from './ecs/Entity';
+import { SpatialGrid } from './SpatialGrid';
+import { WorldRect } from '../utils/ViewportHelper';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -6104,14 +6382,14 @@ export interface IServiceLocator {
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
   
-  // Core Services
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
 }
 
-// Interface for the Registry (to decouple implementation)
+// --- CORE CONTRACTS ---
+
 export interface IEntityRegistry {
   createEntity(): Entity;
   destroyEntity(id: number): void;
@@ -6122,11 +6400,10 @@ export interface IEntityRegistry {
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
 
-// Interface for the Spawner (formerly Factory)
 export interface IEntitySpawner {
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
-  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, radius?: number): Entity;
+  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void;
 }
 
@@ -6140,6 +6417,49 @@ export interface IInputService {
   getCursor(): { x: number, y: number };
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
+  updateBounds(width: number, height: number): void; // Added for InputSystem sync
+}
+
+// --- SYSTEM CONTRACTS ---
+
+export interface IPhysicsSystem extends IGameSystem {
+  spatialGrid: SpatialGrid;
+}
+
+export interface ICombatSystem extends IGameSystem {
+  resolveCollision(e1: Entity, e2: Entity): void;
+}
+
+export interface IInteractionSystem extends IGameSystem {
+  repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
+  hoveringPanelId: string | null;
+}
+
+export interface IGameStateSystem extends IGameSystem {
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  score: number;
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  upgradePoints: number;
+  activeUpgrades: Record<string, number>;
+  isGameOver: boolean;
+  
+  damagePlayer(amount: number): void;
+  healPlayer(amount: number): void;
+  addScore(amount: number): void;
+  addXp(amount: number): void;
+  tickReboot(amount: number): void;
+  decayReboot(amount: number): void;
+}
+
+export interface IPanelSystem extends IGameSystem {
+  systemIntegrity: number;
+  damagePanel(id: string, amount: number): void;
+  healPanel(id: string, amount: number): void;
+  getPanelRect(id: string): WorldRect | undefined;
 }
 
 
@@ -6153,11 +6473,18 @@ import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
 import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem';
+import { WorldConfig } from '../config/WorldConfig';
+import { TimeSystem } from '../systems/TimeSystem';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   private locator!: IServiceLocator;
   public registry: IEntityRegistry; 
+  
+  private accumulator: number = 0;
+  private simulationTime: number = 0;
 
   constructor(registry: IEntityRegistry) {
       this.registry = registry;
@@ -6172,19 +6499,15 @@ export class GameEngineCore implements IGameSystem {
     this.systems.push(system);
   }
 
-  update(delta: number, time: number): void {
+  update(renderDelta: number, renderTime: number): void {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
-    // 1. CHECK BOOT STATE
     if (store.bootState === 'standby') return;
-
-    // 2. CHECK PAUSE STATE (Settings or Debug)
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
 
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
-    // 3. GAME OVER CHECK
     if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
         gameStore.stopGame();
         FXManager.addTrauma(1.0);
@@ -6196,9 +6519,55 @@ export class GameEngineCore implements IGameSystem {
         gameSys.isGameOver = true;
     }
 
-    // 4. RUN SYSTEMS
-    for (const sys of this.systems) {
-      sys.update(delta, time);
+    // --- TIME MANAGEMENT ---
+    
+    let timeScale = 1.0;
+    try {
+        const timeSys = this.locator.getSystem<TimeSystem>('TimeSystem');
+        
+        // 1. Tick Real Time (Updates Freeze Timer)
+        timeSys.tickRealTime(renderDelta);
+
+        // 2. Determine if Frozen
+        if (timeSys.isFrozen()) {
+            timeScale = 0.0;
+        } else {
+            timeScale = timeSys.timeScale;
+        }
+    } catch {}
+
+    const debugScale = store.debugFlags.timeScale;
+    
+    // 3. Accumulate Game Time
+    const effectiveDelta = renderDelta * timeScale * debugScale;
+    
+    this.accumulator += effectiveDelta;
+
+    if (this.accumulator > WorldConfig.time.maxAccumulator) {
+        this.accumulator = WorldConfig.time.maxAccumulator;
+    }
+
+    const fixedStep = WorldConfig.time.fixedDelta;
+
+    // 4. Run Physics Steps
+    // If frozen, effectiveDelta is 0, accumulator doesn't grow, loop doesn't run.
+    // But since tickRealTime ran above, freezeTimer decreases, and eventually
+    // isFrozen() becomes false, effectiveDelta becomes > 0, and the game resumes.
+    while (this.accumulator >= fixedStep) {
+        for (const sys of this.systems) {
+            try {
+                sys.update(fixedStep, this.simulationTime);
+            } catch (e: any) {
+                console.error("System Update Error:", e);
+                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+                    msg: `CRASH IN SYSTEM: ${e.message}`, 
+                    source: 'GameEngine' 
+                });
+            }
+        }
+
+        this.simulationTime += fixedStep;
+        this.accumulator -= fixedStep;
     }
   }
 
@@ -6297,6 +6666,47 @@ export const GameOverlay = () => {
         {isTouch && !isGallery && <VirtualJoystick />}
     </>
   );
+};
+
+
+=====================================
+FILE: ./src/game/config/AIConfig.ts
+=====================================
+export const AI_CONFIG = {
+  HUNTER: {
+    ORBIT_SPEED: 0.5,
+    TARGET_RADIUS: 10.0,
+    AIM_LERP: 0.05,
+    CHARGE_LERP: 0.15,
+    SPIN_SPEED_IDLE: 2.0,
+    SPIN_SPEED_CHARGE: -8.0,
+    PROJECTILE_SPEED: 25,
+    OFFSET_DIST: 1.6,
+    RECOIL_FORCE: 2.0
+  },
+  KAMIKAZE: {
+    ROTATION_SPEED: 10.0,
+    ENGAGEMENT_DIST: 0.1
+  },
+  DRILLER: {
+    SNAP_THRESHOLD: 0.1,
+    TIP_OFFSET: 0.4, // Based on Model Height
+    AUDIO_INTERVAL: 0.25
+  },
+  DAEMON: {
+    SHIELD_CHARGE_TIME: 2.0,
+    COOLDOWN_TIME: 0.5,
+    RECOVERY_TIME: 2.0,
+    ORBIT_RADIUS: 4.0,
+    ORBIT_SPEED_MIN: 1.5,
+    ROTATION_SPEED: {
+      CHARGING: 15.0,
+      READY: 3.0,
+      FIRE: 20.0,
+      COOLDOWN: -5.0,
+      BROKEN: 30.0
+    }
+  }
 };
 
 
@@ -6403,75 +6813,64 @@ export interface SoundRecipe {
 }
 
 export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
-  // --- PLAYER & CORE ---
-  'laser': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.15, pitchVariance: 100 },
-  'click': { type: 'oscillator', wave: 'square', frequency: [400, 400], duration: 0.05, volume: 0.1, pitchVariance: 0 },
-  'hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50 },
-  'heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
-  'powerup': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
-  'reboot_tick': { type: 'oscillator', wave: 'sawtooth', frequency: [60, 40], duration: 0.1, volume: 0.3, pitchVariance: 20, distortion: 400 },
-  'initialize_impact': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
+  // ==========================================
+  // UI & INTERFACE
+  // ==========================================
+  'ui_click': { type: 'oscillator', wave: 'square', frequency: [400, 400], duration: 0.05, volume: 0.1, pitchVariance: 0 },
+  'ui_hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50 },
+  'ui_menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
+  'ui_menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02 },
+  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01 },
+  'ui_error': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50 },
+  'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
 
-  // --- ENEMIES & COMBAT ---
-  'enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
-  'driller_drill': { 
-    type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60 
-  },
-  'explosion_small': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
-  'explosion_large': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
+  // ==========================================
+  // GAMEPLAY FX (ONE SHOT)
+  // ==========================================
+  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.15, pitchVariance: 100 },
+  'fx_enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
+  'fx_impact_light': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
+  'fx_impact_heavy': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
+  'fx_boot_sequence': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30 },
+  'fx_player_death': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, tremolo: { rate: 12, depth: 1.0, wave: 'square' } },
+  'fx_level_up': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
+  'fx_reboot_success': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.3, volume: 0.3, pitchVariance: 0, attack: 0.01, tremolo: { rate: 10, depth: 1.0, wave: 'square' } },
+  'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
 
-  // --- GAMEPLAY STATES ---
-  'warning_heartbeat': { 
-    type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, 
-    attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } 
-  },
-  'player_down_glitch': { 
-    type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, 
-    tremolo: { rate: 12, depth: 1.0, wave: 'square' } 
-  },
+  // ==========================================
+  // LOOPS & STATES (CONTINUOUS)
+  // ==========================================
+  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
+  'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
+  'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },
+  'loop_drill': { type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60 },
 
-  // --- AMBIENCE ---
-  // Variant B: Filter raised to 800Hz to allow dynamic filtering
-  'ambience_b': { 
-    type: 'noise', 
-    frequency: [0,0], 
-    filter: [800, 800], 
-    duration: 40.0, 
-    volume: 0.05,   
-    pitchVariance: 0
-  },
+  // ==========================================
+  // AMBIENCE
+  // ==========================================
+  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.05, pitchVariance: 0 },
 
-  // --- BENCH ---
-  'ambience_a': { type: 'noise', frequency: [0,0], filter: [80, 80], duration: 5.0, volume: 0.25, pitchVariance: 0 },
-  'ambience_c': { type: 'noise', frequency: [0,0], filter: [100, 100], duration: 5.0, volume: 0.3, pitchVariance: 0, tremolo: { rate: 0.2, depth: 0.4, wave: 'sine' } },
-
-  // --- DRILLERS ---
-  'drill_a': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
-  'drill_b': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50 },
-  'drill_c': { type: 'oscillator', wave: 'triangle', frequency: [150, 100], duration: 0.6, volume: 0.3, pitchVariance: 20, fm: { modType: 'square', modFreq: 57, modIndex: 1000 } },
-  'drill_d': { type: 'oscillator', wave: 'sawtooth', frequency: [400, 50], duration: 0.3, volume: 0.3, pitchVariance: 50, distortion: 100 },
-  'drill_e': { type: 'noise', frequency: [0, 0], filter: [800, 2000], duration: 0.4, volume: 0.3, pitchVariance: 0, distortion: 400 },
-  'drill_f': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.5, volume: 0.6, pitchVariance: 0, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
-  'drill_g': { type: 'noise', frequency: [0,0], filter: [200, 100], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 50, tremolo: { rate: 2, depth: 0.8, wave: 'sine' } },
-  'drill_h': { type: 'noise', frequency: [0,0], filter: [1500, 800], duration: 3.0, volume: 0.3, pitchVariance: 0, distortion: 10, tremolo: { rate: 12, depth: 1.0, wave: 'sawtooth' } },
-  'drill_i': { type: 'noise', frequency: [0,0], filter: [800, 400], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 100, tremolo: { rate: 6, depth: 0.6, wave: 'square' } },
-  'drill_j': { type: 'noise', frequency: [0,0], filter: [100, 1000], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 20, tremolo: { rate: 15, depth: 0.5, wave: 'sine' } },
-  'drill_k': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' } },
-  'drill_l': { type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' } },
-
-  // --- MISC ---
-  'proto_charge_a': { type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0 },
-  'proto_charge_b': { type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 } },
-  'proto_charge_c': { type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 } },
-  'proto_wave_a': { type: 'oscillator', wave: 'sine', frequency: [60, 20], duration: 2.5, volume: 0.6, pitchVariance: 0, distortion: 20 },
-  'proto_wave_b': { type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 } },
-  'proto_wave_c': { type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100 },
-  'misc_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
-  'misc_denied': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50 },
-  'misc_ui_open': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
-  'proto_lowhp_a': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.15, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
-  'proto_lowhp_b': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },
-  'proto_lowhp_c': { type: 'oscillator', wave: 'triangle', frequency: [50, 40], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.08, filter: [150, 50] },
+  // ==========================================
+  // SYNTHESIS LAB (RENAMED PROTOS)
+  // ==========================================
+  'syn_fm_scream': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
+  'syn_data_burst': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50 },
+  'syn_bass_drop': { type: 'oscillator', wave: 'triangle', frequency: [150, 100], duration: 0.6, volume: 0.3, pitchVariance: 20, fm: { modType: 'square', modFreq: 57, modIndex: 1000 } },
+  'syn_alarm_chirp': { type: 'oscillator', wave: 'sawtooth', frequency: [400, 50], duration: 0.3, volume: 0.3, pitchVariance: 50, distortion: 100 },
+  'syn_static_burst': { type: 'noise', frequency: [0, 0], filter: [800, 2000], duration: 0.4, volume: 0.3, pitchVariance: 0, distortion: 400 },
+  'syn_wobble_bass': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.5, volume: 0.6, pitchVariance: 0, fm: { modType: 'sine', modFreq: 10, modIndex: 50 } },
+  'syn_grind_loop': { type: 'noise', frequency: [0,0], filter: [200, 100], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 50, tremolo: { rate: 2, depth: 0.8, wave: 'sine' } },
+  'syn_insect_swarm': { type: 'noise', frequency: [0,0], filter: [1500, 800], duration: 3.0, volume: 0.3, pitchVariance: 0, distortion: 10, tremolo: { rate: 12, depth: 1.0, wave: 'sawtooth' } },
+  'syn_interference': { type: 'noise', frequency: [0,0], filter: [800, 400], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 100, tremolo: { rate: 6, depth: 0.6, wave: 'square' } },
+  'syn_wind_howl': { type: 'noise', frequency: [0,0], filter: [100, 1000], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 20, tremolo: { rate: 15, depth: 0.5, wave: 'sine' } },
+  'syn_robot_chatter': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' } },
+  'syn_deep_hum': { type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' } },
+  'syn_sine_rise': { type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0 },
+  'syn_saw_rise': { type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 } },
+  'syn_sqr_rise': { type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 } },
+  'syn_siren_wail': { type: 'oscillator', wave: 'sine', frequency: [60, 20], duration: 2.5, volume: 0.6, pitchVariance: 0, distortion: 20 },
+  'syn_alert_pulse': { type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 } },
+  'syn_static_wash': { type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100 },
 };
 
 
@@ -6536,8 +6935,8 @@ export const WorldConfig = {
     maxVelocity: 20
   },
   time: {
-    fixedDelta: 1 / 60, // 60hz Logic Tick
-    maxDelta: 0.1 // Prevent spiral of death on lag
+    fixedDelta: 1 / 60, // Logic runs at 60hz (0.0166s per tick)
+    maxAccumulator: 0.1 // Prevent "Spiral of Death" if CPU lags hard
   }
 };
 
@@ -6553,6 +6952,7 @@ import { TargetComponent } from '../../components/data/TargetComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
+import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -6566,26 +6966,24 @@ export const KamikazeLogic: EnemyLogic = {
     const target = getTarget(e);
     const state = getState(e);
 
-    // Handle Spawn Animation State
     if (state.current === 'SPAWN') {
         state.timers.spawn -= ctx.delta;
         if (state.timers.spawn <= 0) {
             state.current = 'MOVING';
         }
-        return; // Don't move while spawning
+        return; 
     }
 
     const dx = target.x - pos.x;
     const dy = target.y - pos.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
 
-    if (dist > 0.1) {
+    if (dist > AI_CONFIG.KAMIKAZE.ENGAGEMENT_DIST) {
       const speed = ENEMY_CONFIG[EnemyTypes.KAMIKAZE].baseSpeed;
       motion.vx = (dx / dist) * speed;
       motion.vy = (dy / dist) * speed;
       
-      // Spin while moving
-      pos.rotation += 10.0 * ctx.delta; 
+      pos.rotation += AI_CONFIG.KAMIKAZE.ROTATION_SPEED * ctx.delta; 
     }
   }
 };
@@ -6602,7 +7000,7 @@ import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
-import { MODEL_CONFIG } from '../../config/ModelConfig';
+import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -6628,7 +7026,7 @@ export const HunterLogic: EnemyLogic = {
     const target = getTarget(e);
 
     if (state.data.spinVelocity === undefined) {
-        state.data.spinVelocity = 2.0;
+        state.data.spinVelocity = AI_CONFIG.HUNTER.SPIN_SPEED_IDLE;
         state.data.spinAngle = 0;
     }
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
@@ -6637,17 +7035,15 @@ export const HunterLogic: EnemyLogic = {
         state.data.offsetAngle = (e.id.valueOf() % 10) * 0.6; 
     }
 
-    let targetSpinSpeed = 2.0; 
+    let targetSpinSpeed = AI_CONFIG.HUNTER.SPIN_SPEED_IDLE; 
 
     // --- STATES ---
 
     if (state.current === 'HUNT') {
         // ... Orbit Logic ...
-        const orbitSpeed = 0.5;
-        const currentAngle = (ctx.time * orbitSpeed) + state.data.offsetAngle;
-        const targetRadius = 10.0;
-        const tx = target.x + Math.cos(currentAngle) * targetRadius;
-        const ty = target.y + Math.sin(currentAngle) * targetRadius;
+        const currentAngle = (ctx.time * AI_CONFIG.HUNTER.ORBIT_SPEED) + state.data.offsetAngle;
+        const tx = target.x + Math.cos(currentAngle) * AI_CONFIG.HUNTER.TARGET_RADIUS;
+        const ty = target.y + Math.sin(currentAngle) * AI_CONFIG.HUNTER.TARGET_RADIUS;
 
         const dx = tx - pos.x;
         const dy = ty - pos.y;
@@ -6665,7 +7061,7 @@ export const HunterLogic: EnemyLogic = {
         const aimDx = target.x - pos.x;
         const aimDy = target.y - pos.y;
         const aimAngle = Math.atan2(aimDy, aimDx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, aimAngle, 0.05);
+        pos.rotation = rotateTowards(pos.rotation, aimAngle, AI_CONFIG.HUNTER.AIM_LERP);
 
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
@@ -6677,7 +7073,7 @@ export const HunterLogic: EnemyLogic = {
     } 
     
     else if (state.current === 'CHARGE') {
-        // Charging... (Renderer handles the growing orb visual)
+        // Charging...
         state.timers.action -= ctx.delta;
         motion.vx *= 0.8;
         motion.vy *= 0.8;
@@ -6686,9 +7082,9 @@ export const HunterLogic: EnemyLogic = {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, targetAngle, 0.15);
+        pos.rotation = rotateTowards(pos.rotation, targetAngle, AI_CONFIG.HUNTER.CHARGE_LERP);
 
-        targetSpinSpeed = -8.0; 
+        targetSpinSpeed = AI_CONFIG.HUNTER.SPIN_SPEED_CHARGE; 
 
         if (state.timers.action <= 0) {
             state.current = 'FIRE';
@@ -6700,24 +7096,15 @@ export const HunterLogic: EnemyLogic = {
         const dy = target.y - pos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        // Calculate Launch Direction
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
-        // TIP CALCULATION:
-        // Hunter Scale = 2.0 (Config)
-        // Local Tip Y is approx 0.8 (Geometry)
-        // Global Offset = 1.6 units
-        const offset = 1.6;
+        const offset = AI_CONFIG.HUNTER.OFFSET_DIST;
         
         const spawnX = pos.x + (dirX * offset);
         const spawnY = pos.y + (dirY * offset);
-        const SPEED = 25; 
 
-        // 1. Spawn Projectile
-        ctx.spawnProjectile(spawnX, spawnY, dirX * SPEED, dirY * SPEED);
-        
-        // 2. Spawn Visual Recoil (Sparks)
+        ctx.spawnProjectile(spawnX, spawnY, dirX * AI_CONFIG.HUNTER.PROJECTILE_SPEED, dirY * AI_CONFIG.HUNTER.PROJECTILE_SPEED);
         ctx.spawnLaunchSparks(spawnX, spawnY, pos.rotation);
 
         state.current = 'HUNT';
@@ -6761,7 +7148,7 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
 import { OrbitalComponent } from '../../components/data/OrbitalComponent';
-import { IdentityComponent } from '../../components/data/IdentityComponent';
+import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getState = (e: Entity) => e.requireComponent<StateComponent>('State');
@@ -6777,32 +7164,29 @@ export const DaemonLogic: EnemyLogic = {
 
     const maxShield = ctx.daemonMaxDamage || 10;
 
-    // Initialize Shield Data
     if (typeof state.data.shieldHP !== 'number') {
         state.data.shieldHP = 0;
     }
-    state.data.maxShield = maxShield; // Store for renderer
+    state.data.maxShield = maxShield; 
 
     // --- STATE MACHINE ---
 
     if (state.current === 'SPAWN' || state.current === 'ORBIT') {
         state.current = 'CHARGING';
-        state.data.shieldHP = 0; // Start empty
+        state.data.shieldHP = 0; 
     }
 
     // 1. CHARGING (Accumulate Shield)
     if (state.current === 'CHARGING') {
         orbital.active = true;
         
-        // Check for Break
         if (state.data.shieldHP <= 0 && state.data.wasHit) {
              state.current = 'BROKEN';
-             state.timers.action = 2.0; // Recovery time
+             state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
 
-        // Charge Rate: 2.0 seconds to full
-        const chargeRate = maxShield / 2.0; 
+        const chargeRate = maxShield / AI_CONFIG.DAEMON.SHIELD_CHARGE_TIME; 
         state.data.shieldHP = Math.min(maxShield, state.data.shieldHP + (chargeRate * ctx.delta));
 
         if (state.data.shieldHP >= maxShield) {
@@ -6814,10 +7198,9 @@ export const DaemonLogic: EnemyLogic = {
     else if (state.current === 'READY') {
         orbital.active = true;
         
-        // Check for Break
         if (state.data.shieldHP <= 0) {
              state.current = 'BROKEN';
-             state.timers.action = 2.0;
+             state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
 
@@ -6834,39 +7217,11 @@ export const DaemonLogic: EnemyLogic = {
         
         pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
 
-        // Custom Spawn Logic: Use current Shield HP as Damage
-        const damage = Math.max(1, state.data.shieldHP);
-        const width = 4.0 * (damage / maxShield); // Scale width by health ratio
-
-        // Manually spawn to override default context behavior
-        // We can't access spawner directly here easily without refactor, 
-        // so we rely on context but we can't pass args dynamically to the closure.
-        // HACK: We will assume the context's spawnProjectile handles default,
-        // BUT we need custom damage. 
-        // Better: We emit the event directly here or update the Context type.
-        // For now, let's use the provided context which sets damage to Max. 
-        // To fix this accurately, we should have passed `shieldHP` to the Bullet.
-        // *Revisiting AIContext*: It captures `daemonDamage`.
-        
-        // FIX: Let's emit a specific event or assume full damage for now?
-        // No, the prompt says "appropriate amount of damage".
-        // Let's rely on the fact that if it fires, it usually has charge.
-        // If we want dynamic damage, we must refactor context.
-        // Or simpler: We just modify the Context in BehaviorSystem to read the Entity's state? No.
-        
-        // Let's just fire. The physics system collision logic will use the Bullet's Health as damage.
-        // The bullet spawned by `daemonContext` has `daemonDamage` (Max). 
-        // We need to set the bullet's health to `state.data.shieldHP`.
-        // Since we can't easily touch the bullet *after* spawn here (spawnProjectile is void),
-        // we will accept that fired bullets do Max Damage, but SHIELDING absorbs damage.
-        // Wait, prompt: "If charged ball reaches 0 health... return to charging."
-        // It implies the ball *is* the damage.
-        
         ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35);
 
-        state.data.shieldHP = 0; // Spent
+        state.data.shieldHP = 0; 
         state.current = 'COOLDOWN';
-        state.timers.action = 0.5;
+        state.timers.action = AI_CONFIG.DAEMON.COOLDOWN_TIME;
     }
     
     // 4. COOLDOWN
@@ -6875,7 +7230,7 @@ export const DaemonLogic: EnemyLogic = {
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGING';
-            state.data.wasHit = false; // Reset hit flag
+            state.data.wasHit = false;
         }
     }
 
@@ -6884,8 +7239,7 @@ export const DaemonLogic: EnemyLogic = {
         state.data.shieldHP = 0;
         state.timers.action -= ctx.delta;
         
-        // Spin out of control?
-        pos.rotation += ctx.delta * 20.0;
+        pos.rotation += ctx.delta * AI_CONFIG.DAEMON.ROTATION_SPEED.BROKEN;
 
         if (state.timers.action <= 0) {
             state.current = 'CHARGING';
@@ -6908,7 +7262,9 @@ import { TargetComponent } from '../../components/data/TargetComponent';
 import { PanelRegistry } from '../../systems/PanelRegistrySystem'; 
 import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
-import { MODEL_CONFIG } from '../../config/ModelConfig';
+import { AI_CONFIG } from '../../config/AIConfig';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -6922,8 +7278,8 @@ export const DrillerLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // Init audio timer if missing
     if (typeof state.data.audioTimer === 'undefined') state.data.audioTimer = 0;
+    if (typeof state.data.damageTimer === 'undefined') state.data.damageTimer = 0;
 
     let destX = target.x;
     let destY = target.y;
@@ -6941,19 +7297,15 @@ export const DrillerLogic: EnemyLogic = {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     const angle = Math.atan2(dy, dx) - Math.PI/2;
-    const TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2;
-    const SNAP_THRESHOLD = 0.1;
-
-    // --- DRILLING STATE ---
-    if (dist <= TIP_OFFSET + SNAP_THRESHOLD && target.id !== null) {
+    
+    if (dist <= AI_CONFIG.DRILLER.TIP_OFFSET + AI_CONFIG.DRILLER.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Snap
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
-            pos.x = destX - (normX * TIP_OFFSET);
-            pos.y = destY - (normY * TIP_OFFSET);
+            pos.x = destX - (normX * AI_CONFIG.DRILLER.TIP_OFFSET);
+            pos.y = destY - (normY * AI_CONFIG.DRILLER.TIP_OFFSET);
         }
 
         motion.vx = 0;
@@ -6962,26 +7314,25 @@ export const DrillerLogic: EnemyLogic = {
 
         ctx.spawnDrillSparks(destX, destY, angle);
 
-        // --- AUDIO LOGIC ---
-        // Play sound every 0.3 seconds while drilling
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
-            ctx.playSound('driller_drill');
-            // Randomize slightly to avoid machine-gun effect
-            state.data.audioTimer = 0.25 + Math.random() * 0.1; 
+            ctx.playSound('loop_drill');
+            state.data.audioTimer = AI_CONFIG.DRILLER.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 
-        if (Math.random() < ctx.delta * 2.0) { 
+        state.data.damageTimer -= ctx.delta;
+        if (state.data.damageTimer <= 0) {
              if (target.type === 'PANEL' && target.id) {
-                 ctx.damagePanel(target.id, ENEMY_CONFIG[EnemyTypes.DRILLER].damage);
+                 const dmg = ENEMY_CONFIG[EnemyTypes.DRILLER].damage; 
+                 ctx.damagePanel(target.id, dmg);
+                 state.data.damageTimer = 0.2; 
              }
         }
+
     } else {
-        // --- MOVING STATE ---
         state.current = 'MOVING';
-        
-        // Reset timer so it plays immediately upon contact
         state.data.audioTimer = 0;
+        state.data.damageTimer = 0;
 
         const speed = ENEMY_CONFIG[EnemyTypes.DRILLER].baseSpeed;
         if (dist > 0.001) {
@@ -8651,6 +9002,8 @@ import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { InputSystem } from '../systems/InputSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
 
 export let ActiveEngine: GameEngineCore | null = null;
 
@@ -8665,7 +9018,6 @@ export const GameDirector = () => {
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // Sync Bounds to InputSystem for clamping
     try {
         const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
         input.updateBounds(viewport.width, viewport.height);
@@ -8694,7 +9046,6 @@ export const GameDirector = () => {
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.updateViewport(viewport.width, viewport.height, size.width, size.height);
-      // Sync Bounds on resize
       try {
         const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
         input.updateBounds(viewport.width, viewport.height);
@@ -8704,24 +9055,22 @@ export const GameDirector = () => {
 
   useFrame((state, delta) => {
     if (engineRef.current) {
-      // We only update cursor from mouse here. Joystick is handled by internal event listeners.
-      const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-      
-      // Only apply mouse if pointer is active/moving? 
-      // R3F pointer is always (0,0) initially. 
-      // Let InputSystem handle the priority (Mouse overrides Joystick if it moves).
-      // We check if the pointer has actually moved? 
-      // For now, let's just pass it. InputSystem separates "Joystick Mode".
-      const x = (state.pointer.x * viewport.width) / 2;
-      const y = (state.pointer.y * viewport.height) / 2;
-      
-      // Only push mouse updates if not using joystick to prevent fighting
-      // Or rely on InputSystem's internal flag?
-      // Let's call updateCursor. InputSystem will disable joystick mode if this is called.
-      // Ideally we only call this if mouse actually moved.
-      input.updateCursor(x, y);
+      try {
+          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
+          const x = (state.pointer.x * viewport.width) / 2;
+          const y = (state.pointer.y * viewport.height) / 2;
+          input.updateCursor(x, y);
 
-      engineRef.current.update(delta, state.clock.elapsedTime);
+          // Render Loop
+          engineRef.current.update(delta, state.clock.elapsedTime);
+          
+      } catch (e: any) {
+          console.error("Game Loop Critical Failure:", e);
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+              msg: `CRITICAL LOOP FAIL: ${e.message}`, 
+              source: 'GameDirector' 
+          });
+      }
     }
   });
 
@@ -8790,19 +9139,6 @@ export class HealthComponent extends Component {
   ) {
     super();
     this.current = max;
-  }
-
-  public get isDead(): boolean {
-    return this.current <= 0;
-  }
-
-  public damage(amount: number) {
-    // Invincibility handling will happen in Systems, this is just data
-    this.current = Math.max(0, this.current - amount);
-  }
-  
-  public heal(amount: number) {
-      this.current = Math.min(this.max, this.current + amount);
   }
 }
 
@@ -9251,9 +9587,10 @@ export enum GameEvents {
   SCENE_READY = 'SCENE_READY',
   SPAWN_FX = 'SPAWN_FX',
   SPAWN_DAEMON = 'SPAWN_DAEMON',
+  HEARTBEAT = 'HEARTBEAT',
   
-  // NEW: UI SYNC
-  HEARTBEAT = 'HEARTBEAT' 
+  // NEW: Debug Logging Channel
+  LOG_DEBUG = 'LOG_DEBUG'
 }
 
 export type FXVariant = 
@@ -9287,7 +9624,10 @@ export interface GameEventPayloads {
   [GameEvents.SCENE_READY]: null;
   [GameEvents.SPAWN_FX]: { type: FXVariant; x: number; y: number; angle?: number; count?: number; };
   [GameEvents.SPAWN_DAEMON]: null;
-  [GameEvents.HEARTBEAT]: { urgency: number }; // 0.0 to 1.0 (Low to High stress)
+  [GameEvents.HEARTBEAT]: { urgency: number };
+  
+  // NEW
+  [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
 }
 
 
@@ -9344,36 +9684,32 @@ export const GameEventBus = new GameEventBusController();
 =====================================
 FILE: ./src/game/systems/CollisionSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { PhysicsSystem } from './PhysicsSystem';
+import { IGameSystem, IServiceLocator, IPhysicsSystem, ICombatSystem } from '../core/interfaces';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
-import { CombatSystem } from './CombatSystem'; 
-import { Entity } from '../core/ecs/Entity';
 import { EntityID } from '../core/ecs/types';
 
 export class CollisionSystem implements IGameSystem {
-  private physicsSystem!: PhysicsSystem;
+  private physicsSystem!: IPhysicsSystem;
   private registry!: EntityRegistry;
-  private combatSystem!: CombatSystem;
+  private combatSystem!: ICombatSystem;
 
-  // OPTIMIZATION: Reusable buffers to avoid Garbage Collection stutter
   private resultBuffer = new Set<EntityID>();
   private handledPairs = new Set<string>();
 
   setup(locator: IServiceLocator): void {
-    this.physicsSystem = locator.getSystem<PhysicsSystem>('PhysicsSystem');
+    // DEPENDENCY INJECTION VIA INTERFACE
+    this.physicsSystem = locator.getSystem<IPhysicsSystem>('PhysicsSystem');
+    this.combatSystem = locator.getSystem<ICombatSystem>('CombatSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
-    this.combatSystem = locator.getSystem<CombatSystem>('CombatSystem');
   }
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     const allEntities = this.registry.getAll();
     
-    // Clear the pair cache once per frame
     this.handledPairs.clear();
 
     for (const entity of allEntities) {
@@ -9387,7 +9723,6 @@ export class CollisionSystem implements IGameSystem {
         const state = entity.getComponent<StateComponent>('State');
         if (state && state.current === 'SPAWN') continue;
 
-        // OPTIMIZED QUERY: Pass the buffer, don't create a new one
         spatial.query(transform.x, transform.y, collider.radius + 1.0, this.resultBuffer);
 
         for (const otherId of this.resultBuffer) {
@@ -9461,15 +9796,12 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // 1. FAST PATH: Direct DOM Updates
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
     store.updateTransient('score-display', formattedScore);
     
-    // 2. REACT SYNC
-    // We check if values changed to avoid unnecessary re-renders
     const shouldSyncReact = 
-        store.playerHealth !== this.gameSystem.playerHealth || // <--- ADDED
-        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || // <--- ADDED
+        store.playerHealth !== this.gameSystem.playerHealth || 
+        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || 
         store.xp !== this.gameSystem.xp || 
         store.score !== this.gameSystem.score ||
         store.level !== this.gameSystem.level ||
@@ -9479,8 +9811,8 @@ export class UISyncSystem implements IGameSystem {
 
     if (shouldSyncReact) {
         store.syncGameState({
-            playerHealth: this.gameSystem.playerHealth, // <--- SYNCED
-            playerRebootProgress: this.gameSystem.playerRebootProgress, // <--- SYNCED
+            playerHealth: this.gameSystem.playerHealth, 
+            playerRebootProgress: this.gameSystem.playerRebootProgress, 
             level: this.gameSystem.level,
             xp: this.gameSystem.xp,
             score: this.gameSystem.score,
@@ -9492,7 +9824,6 @@ export class UISyncSystem implements IGameSystem {
         });
     }
 
-    // Sync Panels
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
     for(const p of panels) {
@@ -9510,15 +9841,15 @@ export class UISyncSystem implements IGameSystem {
 =====================================
 FILE: ./src/game/systems/InteractionSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { PanelRegistry } from './PanelRegistrySystem'; 
-import { GameStateSystem } from './GameStateSystem'; 
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
-export class InteractionSystem implements IGameSystem {
+export class InteractionSystem implements IInteractionSystem {
   public repairState: RepairState = 'IDLE';
   public hoveringPanelId: string | null = null;
   
@@ -9526,12 +9857,12 @@ export class InteractionSystem implements IGameSystem {
   private readonly REPAIR_RATE = 0.05;
   private locator!: IServiceLocator;
   private spawner!: IEntitySpawner;
-  private gameSystem!: GameStateSystem; 
+  private gameSystem!: IGameStateSystem; 
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.spawner = locator.getSpawner();
-    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
   }
 
   update(delta: number, time: number): void {
@@ -9578,8 +9909,12 @@ export class InteractionSystem implements IGameSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(2.5); // Charge Speed
+            this.gameSystem.tickReboot(2.5); 
             this.lastRepairTime = time;
+            
+            // Loop Sound for Player Reboot
+            AudioSystem.playSound('loop_reboot'); 
+
             if (Math.random() > 0.3) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = 2 + Math.random() * 2;
@@ -9602,7 +9937,15 @@ export class InteractionSystem implements IGameSystem {
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             PanelRegistry.healPanel(p.id, 10);
             this.lastRepairTime = time;
-            if (!p.isDestroyed) GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+            
+            if (p.isDestroyed) {
+                // Low pitch loop for reboot
+                AudioSystem.playSound('loop_reboot');
+            } else {
+                // High pitch heal
+                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+            }
+
             if (Math.random() > 0.3) {
                 const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
                 const angle = Math.random() * Math.PI * 2;
@@ -9620,7 +9963,7 @@ export class InteractionSystem implements IGameSystem {
 =====================================
 FILE: ./src/game/systems/PlayerSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '../core/interfaces';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
@@ -9629,19 +9972,18 @@ import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
-import { InteractionSystem } from './InteractionSystem';
-import { GameStateSystem } from './GameStateSystem';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
-  private gameSystem!: GameStateSystem;
+  private gameSystem!: IGameStateSystem;
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
+    // DEPENDENCY INJECTION VIA INTERFACE
+    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     this.setupListeners();
@@ -9664,7 +10006,7 @@ export class PlayerSystem implements IGameSystem {
     const stateComp = playerEntity.getComponent<StateComponent>('State');
     if (stateComp) {
         try {
-            const interact = this.locator.getSystem<InteractionSystem>('InteractionSystem');
+            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
             if (interact && interact.repairState !== 'IDLE') {
                 stateComp.current = 'REBOOTING';
             } else {
@@ -9703,13 +10045,13 @@ export class PlayerSystem implements IGameSystem {
 
   private triggerPurge() {
       const cursor = this.locator.getInputService().getCursor();
-      const count = 360; // Full Circle Density (1 per degree)
-      const speed = 45;  // Extremely Fast
-      const damage = 100; // Instakill
-      const width = 3.0; // Thick Wall
+      const count = 360; 
+      const speed = 45;  
+      const damage = 100;
+      const width = 3.0; 
 
       GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: cursor.x, y: cursor.y });
-      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); // Max Shake
+      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -9719,8 +10061,8 @@ export class PlayerSystem implements IGameSystem {
           this.spawner.spawnBullet(
               cursor.x, cursor.y, 
               vx, vy, 
-              false, // Not Enemy
-              2.0,   // Life
+              false, 
+              2.0,   
               damage, 
               width
           );
@@ -9862,55 +10204,44 @@ export class OrbitalSystem implements IGameSystem {
 FILE: ./src/game/systems/TimeSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { WorldConfig } from '../config/WorldConfig';
-import { useStore } from '@/core/store/useStore';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;
-  public elapsedTime: number = 0;
-  public delta: number = 0;
-  public isPaused: boolean = false;
+  public elapsedTime: number = 0; // Game World Time
   
+  private freezeTimer: number = 0; // Real World Time duration
+
   // FPS Counting
   public fps: number = 60;
   private frames: number = 0;
   private lastFpsTime: number = 0;
-  
-  private freezeTimer: number = 0;
 
   setup(locator: IServiceLocator): void {
     this.reset();
   }
 
-  update(rawDelta: number, rawTime: number): void {
-    // 1. Calculate FPS (Real-time)
-    this.frames++;
-    if (rawTime >= this.lastFpsTime + 1.0) {
-        this.fps = this.frames;
-        this.frames = 0;
-        this.lastFpsTime = rawTime;
-    }
+  // Called by GameEngine every render frame (Variable Interval)
+  public tickRealTime(dt: number) {
+      // 1. Handle Freeze Timer (Real Time)
+      if (this.freezeTimer > 0) {
+          this.freezeTimer -= dt;
+          if (this.freezeTimer < 0) this.freezeTimer = 0;
+      }
 
-    // 2. Handle Hit Stop (Freeze)
-    if (this.freezeTimer > 0) {
-        this.freezeTimer -= rawDelta;
-        this.delta = 0; 
-        return;
-    }
+      // 2. FPS Calculation (Real Time)
+      const now = performance.now() / 1000;
+      this.frames++;
+      if (now >= this.lastFpsTime + 1.0) {
+          this.fps = this.frames;
+          this.frames = 0;
+          this.lastFpsTime = now;
+      }
+  }
 
-    if (this.isPaused) {
-      this.delta = 0;
-      return;
-    }
-
-    // 3. Debug Time Dilation
-    // We multiply the raw delta by the debug timeScale
-    const debugScale = useStore.getState().debugFlags.timeScale;
-
-    // 4. Normal Time Processing
-    const safeDelta = Math.min(rawDelta, WorldConfig.time.maxDelta);
-    this.delta = safeDelta * this.timeScale * debugScale;
-    this.elapsedTime += this.delta;
+  // Called by GameEngine only during simulation steps (Fixed Interval)
+  update(delta: number, time: number): void {
+    // This delta is always 0.0166 (Fixed Step)
+    this.elapsedTime += delta;
   }
 
   teardown(): void {
@@ -9920,8 +10251,6 @@ export class TimeSystem implements IGameSystem {
   private reset() {
     this.timeScale = 1.0;
     this.elapsedTime = 0;
-    this.delta = 0;
-    this.isPaused = false;
     this.freezeTimer = 0;
     this.frames = 0;
     this.lastFpsTime = 0;
@@ -9939,6 +10268,10 @@ export class TimeSystem implements IGameSystem {
 
   public freeze(duration: number) {
       this.freezeTimer = duration;
+  }
+
+  public isFrozen(): boolean {
+      return this.freezeTimer > 0;
   }
 }
 
@@ -10272,13 +10605,11 @@ export class CombatSystem implements IGameSystem {
 
       // 1. PLAYER vs ENEMY (Crash)
       if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY) {
-          // Check if Player is Daemon (Shield Logic)
           const idA = a.getComponent<IdentityComponent>('Identity');
           
           if (idA?.variant === EnemyTypes.DAEMON) {
               this.resolveDaemonCollision(a, b);
           } else {
-              // Standard Player Collision
               const id = b.getComponent<IdentityComponent>('Identity');
               const damage = (id?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
               this.damagePlayer(damage);
@@ -10290,8 +10621,7 @@ export class CombatSystem implements IGameSystem {
       else if (layerA === CollisionLayers.PLAYER && layerB === CollisionLayers.ENEMY_PROJECTILE) {
           const idA = a.getComponent<IdentityComponent>('Identity');
           if (idA?.variant === EnemyTypes.DAEMON) {
-              // Daemons absorb bullets with shield too?
-              this.resolveDaemonCollision(a, b, 5); // 5 Dmg from bullet
+              this.resolveDaemonCollision(a, b, 5); 
           } else {
               this.damagePlayer(10);
               this.destroyProjectile(b, 'IMPACT_RED'); 
@@ -10313,28 +10643,24 @@ export class CombatSystem implements IGameSystem {
       const state = daemon.getComponent<StateComponent>('State');
       if (!state) return;
 
-      // Calculate Damage
       let incomingDamage = fixedDamage || 10;
       if (!fixedDamage) {
           const enemyHp = enemyOrBullet.getComponent<HealthComponent>('Health');
-          // Kamikazes deal more
           const eId = enemyOrBullet.getComponent<IdentityComponent>('Identity');
           if (eId?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
-          else if (enemyHp) incomingDamage = enemyHp.current * 5; // Mass based ramming?
+          else if (enemyHp) incomingDamage = enemyHp.current * 5; 
       }
 
       const shield = state.data.shieldHP || 0;
 
       if (state.current === 'CHARGING' || state.current === 'READY') {
           if (shield > 0) {
-              // SHIELD ABSORB
               state.data.shieldHP = Math.max(0, shield - incomingDamage);
-              state.data.wasHit = true; // Flag for Logic to check breakage
+              state.data.wasHit = true; 
               
-              // Damage/Destroy the enemy
               if (enemyOrBullet.hasTag('ENEMY')) {
                   this.destroyEnemy(enemyOrBullet, true);
-                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'CLASH_YELLOW', x: 0, y: 0 }); // Pos handled in FX
+                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'CLASH_YELLOW', x: 0, y: 0 });
               } else {
                   this.destroyProjectile(enemyOrBullet, 'IMPACT_WHITE');
               }
@@ -10342,11 +10668,6 @@ export class CombatSystem implements IGameSystem {
           }
       }
 
-      // If Shield broken or not active, Daemon takes body damage? 
-      // Prompt implies shield protects. 
-      // For now, let's say Daemons are invincible except for their shield mechanic?
-      // Or maybe they just block the enemy and lose shield. 
-      // We will destroy the enemy regardless (Ramming).
       if (enemyOrBullet.hasTag('ENEMY')) {
           this.destroyEnemy(enemyOrBullet, true);
       } else {
@@ -10363,18 +10684,20 @@ export class CombatSystem implements IGameSystem {
 
       const impact = Math.min(healthA, healthB);
 
-      if (hpA) hpA.damage(impact);
-      if (hpB) hpB.damage(impact);
+      // REFACTOR: Direct Data Manipulation (Pure ECS)
+      if (hpA) hpA.current = Math.max(0, hpA.current - impact);
+      if (hpB) hpB.current = Math.max(0, hpB.current - impact);
 
       const tA = entityA.getComponent<TransformComponent>('Transform');
       if (tA) GameEventBus.emit(GameEvents.SPAWN_FX, { type: fx, x: tA.x, y: tA.y });
 
-      if (hpA && hpA.isDead) {
+      // REFACTOR: Check property directly
+      if (hpA && hpA.current <= 0) {
           if (entityA.getComponent('Identity')) this.destroyEnemy(entityA, true);
           else this.destroyProjectile(entityA, 'IMPACT_WHITE');
       }
       
-      if (hpB && hpB.isDead) {
+      if (hpB && hpB.current <= 0) {
           this.destroyProjectile(entityB, 'IMPACT_WHITE');
       }
   }
@@ -10493,11 +10816,12 @@ export class InputSystem implements IGameSystem, IInputService {
 =====================================
 FILE: ./src/game/systems/PanelRegistrySystem.ts
 =====================================
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '../core/interfaces';
 import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const MAX_PANEL_HEALTH = 1000;
 
@@ -10506,7 +10830,7 @@ interface PanelState {
   isDestroyed: boolean;
 }
 
-class PanelRegistrySystemClass implements IGameSystem {
+class PanelRegistrySystemClass implements IPanelSystem {
   private panelRects = new Map<string, WorldRect>();
   private observedElements = new Map<string, HTMLElement>();
   private panelStates = new Map<string, PanelState>();
@@ -10517,7 +10841,6 @@ class PanelRegistrySystemClass implements IGameSystem {
     this.resetLogic();
     this.refreshAll();
     
-    // LISTEN FOR RESTORE
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             this.triggerSystemRestore();
@@ -10533,16 +10856,14 @@ class PanelRegistrySystemClass implements IGameSystem {
       for (const [id, state] of this.panelStates) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
-              state.health = 500; // 50%
+              state.health = 500; 
               restoredCount++;
               
-              // Find center of panel for FX
               const rect = this.panelRects.get(id);
               if (rect) {
                   GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: rect.x, y: rect.y });
               }
           } else {
-              // Heal damaged panels fully
               if (state.health < MAX_PANEL_HEALTH) {
                   state.health = MAX_PANEL_HEALTH;
               }
@@ -10551,7 +10872,9 @@ class PanelRegistrySystemClass implements IGameSystem {
       
       this.calculateIntegrity();
       if (restoredCount > 0) {
-          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); // Satisfying thud
+          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
+          AudioSystem.playSound('fx_reboot_success'); 
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Restored ${restoredCount} panels`, source: 'PanelSystem' });
       }
   }
 
@@ -10568,12 +10891,19 @@ class PanelRegistrySystemClass implements IGameSystem {
     const state = this.panelStates.get(id);
     if (!state || state.isDestroyed) return;
 
+    const oldHealth = state.health;
     state.health = Math.max(0, state.health - amount);
     
     if (state.health <= 0 && !state.isDestroyed) {
         state.isDestroyed = true;
+        state.health = 0; 
+        
+        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `PANEL DESTROYED: ${id}`, source: 'PanelSystem' });
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
     } else {
+        if (Math.floor(oldHealth / 100) > Math.floor(state.health / 100)) {
+             // Debug log
+        }
         GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
     }
     
@@ -10590,6 +10920,10 @@ class PanelRegistrySystemClass implements IGameSystem {
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
         state.health = 500; 
+        
+        AudioSystem.playSound('fx_reboot_success');
+        
+        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Panel RESTORED: ${id}`, source: 'PanelSystem' });
     }
     
     this.calculateIntegrity();
@@ -10690,7 +11024,7 @@ export * from './WaveSystem';
 =====================================
 FILE: ./src/game/systems/GameStateSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IGameStateSystem } from '../core/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
@@ -10698,7 +11032,7 @@ import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
 
-export class GameStateSystem implements IGameSystem {
+export class GameStateSystem implements IGameStateSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
@@ -10728,21 +11062,13 @@ export class GameStateSystem implements IGameSystem {
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
 
-      // Heartbeat Logic (< 30% Integrity)
       if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
           this.heartbeatTimer -= delta;
           
           if (this.heartbeatTimer <= 0) {
-              // 1. Calculate Urgency (0.0 at 30% -> 1.0 at 0%)
               const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
-              
-              // 2. Play Sound & Emit Event
-              AudioSystem.playSound('warning_heartbeat');
+              AudioSystem.playSound('loop_warning');
               GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
-
-              // 3. Set Next Timer (Acceleration Curve)
-              // Low Urgency: ~1.4s delay (Slow thud)
-              // Max Urgency: ~0.35s delay (Fast panic)
               this.heartbeatTimer = 1.4 - (urgency * 1.05); 
           }
       } else {
@@ -10787,7 +11113,7 @@ export class GameStateSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        if (this.playerHealth <= 0) AudioSystem.playSound('player_down_glitch');
+        if (this.playerHealth <= 0) AudioSystem.playSound('fx_player_death');
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -10815,10 +11141,11 @@ export class GameStateSystem implements IGameSystem {
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+    
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
-        AudioSystem.playSound('powerup');
+        AudioSystem.playSound('fx_reboot_success'); 
     }
   }
 
@@ -11261,7 +11588,6 @@ export class LifeCycleSystem implements IGameSystem {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     
-    // RESTORED: Listen for Zen Mode to wipe the board
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.registry.clear();
         this.spawnPurgeEffect();
@@ -11282,7 +11608,8 @@ export class LifeCycleSystem implements IGameSystem {
       }
 
       const health = entity.getComponent<HealthComponent>('Health');
-      if (health && health.isDead) {
+      // REFACTOR: Check property directly instead of .isDead getter
+      if (health && health.current <= 0) {
           const identity = entity.getComponent<IdentityComponent>('Identity');
           const transform = entity.getComponent<TransformComponent>('Transform');
           
@@ -11312,7 +11639,6 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   private spawnPurgeEffect() {
-      // Big white explosion from center to signify "Cleansing"
       for(let i=0; i<50; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 10 + Math.random() * 20;
@@ -11327,13 +11653,13 @@ export class LifeCycleSystem implements IGameSystem {
 =====================================
 FILE: ./src/game/systems/PhysicsSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IPhysicsSystem, IServiceLocator } from '../core/interfaces';
 import { SpatialGrid } from '../core/SpatialGrid';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 
-export class PhysicsSystem implements IGameSystem {
+export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
   private registry!: EntityRegistry;
 
@@ -11356,17 +11682,14 @@ export class PhysicsSystem implements IGameSystem {
       const motion = entity.getComponent<MotionComponent>('Motion');
       
       if (transform && motion) {
-        // Apply Velocity
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
         
-        // Friction / Damping
         if (motion.friction > 0) {
             motion.vx *= (1 - motion.friction);
             motion.vy *= (1 - motion.friction);
         }
 
-        // Spatial Grid Insert
         this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
     }

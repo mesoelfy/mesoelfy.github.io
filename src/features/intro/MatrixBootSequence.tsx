@@ -2,23 +2,14 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
+import { ASCII_TITLE } from '@/game/config/TextAssets';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 interface Props {
   onComplete: () => void;
   onBreachStart: () => void;
 }
-
-const ASCII_TITLE = `
- ███▄ ▄███▓▓█████  ██████  ▒█████  ▓█████  ██▓      █████▒▓██   ██▓
-▓██▒▀█▀ ██▒▓█   ▀▒██    ▒ ▒██▒  ██▒▓█   ▀ ▓██▒    ▒▓█   ▒  ▒██  ██▒
-▓██    ▓██░▒███  ░ ▓██▄   ▒██░  ██▒▒███   ▒██░    ▒▓███ ░   ▒██ ██░
-▒██    ▒██ ▒▓█  ▄  ▒   ██▒▒██   ██░▒▓█  ▄ ▒██░    ░▓█▒  ░   ░ ▐██░░
-▒██▒   ░██▒░▒████▒██████▒▒░ ████▓▒░░▒████▒░██████▒░▒█░      ░ ██▒░░
-░ ▒░   ░  ░░░ ▒░ ░ ▒░▒  ░ ░ ▒░▒░▒░ ░░ ▒░ ░░ ▒░▒  ░ ▒ ░       ██▒▒▒
-░  ░      ░ ░ ░  ░ ░ ▒  ░   ░ ▒ ▒░  ░ ░  ░░ ░ ▒  ░ ░       ▓██ ░▒░ 
-░      ░      ░    ░ ░    ░ ░ ░ ▒     ░     ░ ░    ░ ░     ▒ ▒ ░░  
-       ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
-`;
 
 // --- RESTORED ASCII RENDERER ---
 const AsciiRenderer = () => {
@@ -310,6 +301,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     stepRef.current = step;
+    
+    // NEW: Sync with MetaManager (URL Bar)
+    if (LOG_DATA[step]) {
+        GameEventBus.emit(GameEvents.BOOT_LOG, { message: LOG_DATA[step].text });
+    }
   }, [step]);
 
   useEffect(() => {
@@ -382,8 +378,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     const interval = setInterval(matrixEffect, 50);
     return () => clearInterval(interval);
   }, [showMatrix, isBreaching]); 
-
-  // NOTE: REMOVED KEYDOWN LISTENER HERE (It is now in DebugOverlay)
 
   const handleInitialize = () => {
     if (isBreaching) return;

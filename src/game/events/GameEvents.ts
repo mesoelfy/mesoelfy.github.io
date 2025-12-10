@@ -19,9 +19,10 @@ export enum GameEvents {
   SPAWN_FX = 'SPAWN_FX',
   SPAWN_DAEMON = 'SPAWN_DAEMON',
   HEARTBEAT = 'HEARTBEAT',
+  LOG_DEBUG = 'LOG_DEBUG',
   
-  // NEW: Debug Logging Channel
-  LOG_DEBUG = 'LOG_DEBUG'
+  // NEW: Syncs Intro Text with Meta Manager
+  BOOT_LOG = 'BOOT_LOG'
 }
 
 export type FXVariant = 
@@ -56,7 +57,8 @@ export interface GameEventPayloads {
   [GameEvents.SPAWN_FX]: { type: FXVariant; x: number; y: number; angle?: number; count?: number; };
   [GameEvents.SPAWN_DAEMON]: null;
   [GameEvents.HEARTBEAT]: { urgency: number };
+  [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
   
   // NEW
-  [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
+  [GameEvents.BOOT_LOG]: { message: string };
 }

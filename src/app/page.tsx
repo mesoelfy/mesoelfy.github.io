@@ -25,7 +25,8 @@ import { ZenBomb } from '@/ui/atoms/ZenBomb';
 import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
-import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; // NEW
+import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
+import { MetaManager } from '@/features/meta/MetaManager'; // NEW IMPORT
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -67,11 +68,11 @@ export default function Home() {
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
+      {/* META MANAGER: Handles Console, URL Bar, Favicon, etc. */}
+      <MetaManager />
+
       <CustomCursor />
-      
-      {/* GLOBAL BACKDROP HANDLES DIMMING FOR ALL MODALS */}
       <GlobalBackdrop />
-      
       <DebugOverlay />
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
