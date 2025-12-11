@@ -15,12 +15,14 @@ export const EnemyBulletRenderer = () => {
       maxCount={200}
       filter={(e) => e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-          // Scale based on Health (Mass)
           const hp = e.getComponent<HealthComponent>('Health');
           let scale = 1.0;
           
           if (hp) {
-              scale = 0.4 + (0.6 * (hp.current / hp.max));
+              const ratio = hp.current / hp.max;
+              // MATCHED: Max Scale is now 1.5 to match HunterChargeRenderer
+              // Range: 0.6 (Damaged) -> 1.5 (Full)
+              scale = 0.6 + (0.9 * ratio);
           }
 
           obj.rotation.set(0,0,0);

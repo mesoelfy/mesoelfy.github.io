@@ -4,9 +4,7 @@ import { TransformComponent } from '../../components/data/TransformComponent';
 import { MotionComponent } from '../../components/data/MotionComponent';
 import { StateComponent } from '../../components/data/StateComponent';
 import { TargetComponent } from '../../components/data/TargetComponent';
-import { ENEMY_CONFIG } from '../../config/EnemyConfig';
 import { EnemyTypes } from '../../config/Identifiers';
-import { AI_CONFIG } from '../../config/AIConfig';
 
 const getPos = (e: Entity) => e.requireComponent<TransformComponent>('Transform');
 const getMotion = (e: Entity) => e.requireComponent<MotionComponent>('Motion');
@@ -31,8 +29,12 @@ export const HunterLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
+    // USE INJECTED CONFIG
+    const hunterConfig = ctx.config.enemies[EnemyTypes.HUNTER];
+    const aiConfig = ctx.config.ai.HUNTER;
+
     if (state.data.spinVelocity === undefined) {
-        state.data.spinVelocity = AI_CONFIG.HUNTER.SPIN_SPEED_IDLE;
+        state.data.spinVelocity = aiConfig.SPIN_SPEED_IDLE;
         state.data.spinAngle = 0;
     }
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
@@ -41,20 +43,19 @@ export const HunterLogic: EnemyLogic = {
         state.data.offsetAngle = (e.id.valueOf() % 10) * 0.6; 
     }
 
-    let targetSpinSpeed = AI_CONFIG.HUNTER.SPIN_SPEED_IDLE; 
+    let targetSpinSpeed = aiConfig.SPIN_SPEED_IDLE; 
 
     // --- STATES ---
 
     if (state.current === 'HUNT') {
-        // ... Orbit Logic ...
-        const currentAngle = (ctx.time * AI_CONFIG.HUNTER.ORBIT_SPEED) + state.data.offsetAngle;
-        const tx = target.x + Math.cos(currentAngle) * AI_CONFIG.HUNTER.TARGET_RADIUS;
-        const ty = target.y + Math.sin(currentAngle) * AI_CONFIG.HUNTER.TARGET_RADIUS;
+        const currentAngle = (ctx.time * aiConfig.ORBIT_SPEED) + state.data.offsetAngle;
+        const tx = target.x + Math.cos(currentAngle) * aiConfig.TARGET_RADIUS;
+        const ty = target.y + Math.sin(currentAngle) * aiConfig.TARGET_RADIUS;
 
         const dx = tx - pos.x;
         const dy = ty - pos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        const speed = ENEMY_CONFIG[EnemyTypes.HUNTER].baseSpeed; 
+        const speed = hunterConfig.baseSpeed; 
         
         if (dist > 1.0) {
             motion.vx += (dx / dist) * speed * ctx.delta * 2.0;
@@ -67,30 +68,28 @@ export const HunterLogic: EnemyLogic = {
         const aimDx = target.x - pos.x;
         const aimDy = target.y - pos.y;
         const aimAngle = Math.atan2(aimDy, aimDx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, aimAngle, AI_CONFIG.HUNTER.AIM_LERP);
+        pos.rotation = rotateTowards(pos.rotation, aimAngle, aiConfig.AIM_LERP);
 
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGE';
-            state.timers.action = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
+            state.timers.action = hunterConfig.chargeDuration;
             motion.vx *= 0.1; 
             motion.vy *= 0.1;
         }
     } 
     
     else if (state.current === 'CHARGE') {
-        // Charging...
         state.timers.action -= ctx.delta;
         motion.vx *= 0.8;
         motion.vy *= 0.8;
 
-        // Hard Lock Aim
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, targetAngle, AI_CONFIG.HUNTER.CHARGE_LERP);
+        pos.rotation = rotateTowards(pos.rotation, targetAngle, aiConfig.CHARGE_LERP);
 
-        targetSpinSpeed = AI_CONFIG.HUNTER.SPIN_SPEED_CHARGE; 
+        targetSpinSpeed = aiConfig.SPIN_SPEED_CHARGE; 
 
         if (state.timers.action <= 0) {
             state.current = 'FIRE';
@@ -105,12 +104,12 @@ export const HunterLogic: EnemyLogic = {
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
-        const offset = AI_CONFIG.HUNTER.OFFSET_DIST;
+        const offset = aiConfig.OFFSET_DIST;
         
         const spawnX = pos.x + (dirX * offset);
         const spawnY = pos.y + (dirY * offset);
 
-        ctx.spawnProjectile(spawnX, spawnY, dirX * AI_CONFIG.HUNTER.PROJECTILE_SPEED, dirY * AI_CONFIG.HUNTER.PROJECTILE_SPEED);
+        ctx.spawnProjectile(spawnX, spawnY, dirX * aiConfig.PROJECTILE_SPEED, dirY * aiConfig.PROJECTILE_SPEED);
         ctx.spawnLaunchSparks(spawnX, spawnY, pos.rotation);
 
         state.current = 'HUNT';
