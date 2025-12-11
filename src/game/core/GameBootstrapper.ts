@@ -2,31 +2,13 @@ import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
 import { EntityRegistry } from './ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
-
-import { TimeSystem } from '../systems/TimeSystem';
-import { InputSystem } from '../systems/InputSystem';
-import { PhysicsSystem } from '../systems/PhysicsSystem';
-import { LifeCycleSystem } from '../systems/LifeCycleSystem';
-import { BehaviorSystem } from '../systems/BehaviorSystem';
-import { CollisionSystem } from '../systems/CollisionSystem';
-import { CombatSystem } from '../systems/CombatSystem';
-import { WaveSystem } from '../systems/WaveSystem';
-import { PlayerSystem } from '../systems/PlayerSystem';
-import { InteractionSystem } from '../systems/InteractionSystem';
-import { ShakeSystem } from '../systems/ShakeSystem'; 
-import { PanelRegistry } from '../systems/PanelRegistrySystem'; 
-import { GameStateSystem } from '../systems/GameStateSystem'; 
-import { UISyncSystem } from '../systems/UISyncSystem'; 
-import { TargetingSystem } from '../systems/TargetingSystem'; 
-import { GuidanceSystem } from '../systems/GuidanceSystem'; 
-import { OrbitalSystem } from '../systems/OrbitalSystem'; 
-import { VFXSystem } from '../systems/VFXSystem'; // NEW
-
 import { registerAllBehaviors } from '../logic/ai/BehaviorCatalog';
+import { SYSTEM_MANIFEST } from '../config/SystemManifest';
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
+  // 1. Initialize Low-Level Architecture
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
@@ -34,75 +16,32 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  // 2. Initialize Logic Catalogs
   registerAllBehaviors();
 
-  const timeSys = new TimeSystem();
-  const inputSys = new InputSystem();
-  const physicsSys = new PhysicsSystem();
-  const lifeSys = new LifeCycleSystem();
-  const behaviorSys = new BehaviorSystem();
-  const collisionSys = new CollisionSystem();
-  const combatSys = new CombatSystem();
-  const waveSys = new WaveSystem();
-  const playerSys = new PlayerSystem();
-  const interactionSys = new InteractionSystem();
-  const shakeSys = new ShakeSystem(); 
-  const gameSys = new GameStateSystem(); 
-  const syncSys = new UISyncSystem(); 
-  const panelSys = PanelRegistry; 
-  const targetingSys = new TargetingSystem(); 
-  const guidanceSys = new GuidanceSystem(); 
-  const orbitalSys = new OrbitalSystem(); 
-  const vfxSys = new VFXSystem(); // NEW
+  // 3. Boot Systems from Manifest
+  // This handles Instantiation, Registration, and Engine Injection in one pass.
+  
+  SYSTEM_MANIFEST.forEach(def => {
+      // A. Factory: Create or Retrieve Instance
+      const system = def.factory();
+      
+      // B. Locator: Allow other systems to find this one
+      ServiceLocator.registerSystem(def.id, system);
+      
+      // C. Engine: Add to the Update Loop
+      engine.registerSystem(system);
+  });
 
-  const systems = {
-      'TimeSystem': timeSys,
-      'InputSystem': inputSys,
-      'PhysicsSystem': physicsSys,
-      'LifeCycleSystem': lifeSys,
-      'BehaviorSystem': behaviorSys,
-      'CollisionSystem': collisionSys,
-      'CombatSystem': combatSys,
-      'WaveSystem': waveSys,
-      'PlayerSystem': playerSys,
-      'InteractionSystem': interactionSys,
-      'ShakeSystem': shakeSys, 
-      'GameStateSystem': gameSys,
-      'UISyncSystem': syncSys,
-      'PanelRegistrySystem': panelSys,
-      'TargetingSystem': targetingSys,
-      'GuidanceSystem': guidanceSys,
-      'OrbitalSystem': orbitalSys,
-      'VFXSystem': vfxSys // NEW
-  };
-
-  Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
+  // 4. Setup Phase (Dependency Injection)
+  // Now that all systems are registered, we let them resolve their dependencies.
+  SYSTEM_MANIFEST.forEach(def => {
+      const system = ServiceLocator.getSystem(def.id);
+      system.setup(ServiceLocator);
+  });
   
-  // Register Systems (Order Matters for Update)
-  engine.registerSystem(timeSys);
-  engine.registerSystem(inputSys);
-  engine.registerSystem(panelSys);
-  engine.registerSystem(gameSys);
-  engine.registerSystem(interactionSys); 
-  engine.registerSystem(waveSys); 
-  
-  engine.registerSystem(targetingSys); 
-  engine.registerSystem(orbitalSys); 
-  engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys); 
-  engine.registerSystem(guidanceSys); 
-
-  engine.registerSystem(physicsSys); 
-  engine.registerSystem(collisionSys); 
-  engine.registerSystem(lifeSys); // Kills entities
-  engine.registerSystem(vfxSys);  // Spawns death effects based on events
-  engine.registerSystem(shakeSys); 
-  engine.registerSystem(syncSys); 
-  
-  Object.values(systems).forEach(sys => sys.setup(ServiceLocator));
-  
+  // 5. Final Engine Prep
   engine.setup(ServiceLocator);
-
   spawner.spawnPlayer();
 
   return engine;
