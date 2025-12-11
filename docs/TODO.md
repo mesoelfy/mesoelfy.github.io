@@ -339,3 +339,6 @@ Add a wave form visualizor for all sound affects with some sliders to change the
 - Theme Color Injection. - - - doesn't seem to be working for me?
 
 - Blinking pause favicon color should correlate to the health status (green/yellow/red)
+
+
+- achievements - - - won't appear if you've used god mode stuff this session?

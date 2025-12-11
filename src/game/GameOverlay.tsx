@@ -1,19 +1,10 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { PlayerAvatar } from './components/PlayerAvatar';
 import { GameDirector } from './components/GameDirector';
-import { EnemyRenderer } from './components/EnemyRenderer';
-import { BulletRenderer } from './components/BulletRenderer';
-import { EnemyBulletRenderer } from './components/EnemyBulletRenderer';
-import { HunterChargeRenderer } from './components/HunterChargeRenderer';
-import { ParticleRenderer } from './components/ParticleRenderer';
 import { ScreenShaker } from './components/ScreenShaker';
-import { ProjectileTrails } from './components/ProjectileTrails'; 
 import { GalleryStage } from './components/GalleryStage';
-import { DaemonRenderer } from './components/DaemonRenderer'; 
-import { DaemonChargeRenderer } from './components/DaemonChargeRenderer';
-import { DaemonBulletRenderer } from './components/DaemonBulletRenderer'; // NEW
+import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { useStore } from '@/core/store/useStore';
 import { useEffect, useState } from 'react';
@@ -52,18 +43,12 @@ export const GameOverlay = () => {
                 <GalleryStage />
             ) : (
                 <>
+                    {/* Infrastructure & Logic */}
                     <GameDirector />
                     <ScreenShaker />
-                    <ProjectileTrails />
-                    <PlayerAvatar />
-                    <DaemonRenderer /> 
-                    <DaemonChargeRenderer />
-                    <DaemonBulletRenderer /> {/* NEW */}
-                    <BulletRenderer />
-                    <HunterChargeRenderer /> 
-                    <EnemyBulletRenderer />
-                    <EnemyRenderer />
-                    <ParticleRenderer /> 
+                    
+                    {/* Visual Entities */}
+                    <RenderDirector />
                 </>
             )}
           </Canvas>
