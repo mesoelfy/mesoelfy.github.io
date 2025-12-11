@@ -2,11 +2,11 @@ import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IIntera
 import { EntityRegistry } from '../core/ecs/EntityRegistry';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { Tag } from '../core/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
+import { ConfigService } from '../services/ConfigService';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -14,13 +14,15 @@ export class PlayerSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
+  private config!: typeof ConfigService;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    // DEPENDENCY INJECTION VIA INTERFACE
     this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
+    this.config = locator.getConfigService(); // INJECTED CONFIG
+    
     this.setupListeners();
   }
 
@@ -55,7 +57,9 @@ export class PlayerSystem implements IGameSystem {
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
-        const currentFireRate = PLAYER_CONFIG.fireRate / Math.pow(1.5, overclock);
+        
+        // USE INJECTED CONFIG
+        const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
             this.attemptAutoFire(time, playerEntity, upgrades);
@@ -146,21 +150,25 @@ export class PlayerSystem implements IGameSystem {
       const baseAngle = Math.atan2(dy, dx);
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
+      // Use Config for Bullet Speed/Life
+      const bSpeed = this.config.player.bulletSpeed;
+      const bLife = this.config.player.bulletLife;
+
       // 1. FORK (Main)
       for (let i = 0; i < projectileCount; i++) {
           const angle = startAngle + (i * spreadAngle);
-          const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
-          const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
+          const vx = Math.cos(angle) * bSpeed;
+          const vy = Math.sin(angle) * bSpeed;
 
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
       // 2. BACKDOOR
       if (backdoorLevel > 0) {
           const rearAngle = baseAngle + Math.PI; 
-          const vx = Math.cos(rearAngle) * PLAYER_CONFIG.bulletSpeed;
-          const vy = Math.sin(rearAngle) * PLAYER_CONFIG.bulletSpeed;
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
+          const vx = Math.cos(rearAngle) * bSpeed;
+          const vy = Math.sin(rearAngle) * bSpeed;
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
       // 3. SNIFFER
@@ -168,9 +176,9 @@ export class PlayerSystem implements IGameSystem {
           const angleStep = (Math.PI * 2) / snifferLevel;
           for(let i=0; i<snifferLevel; i++) {
               const angle = baseAngle + (i * angleStep);
-              const vx = Math.cos(angle) * PLAYER_CONFIG.bulletSpeed;
-              const vy = Math.sin(angle) * PLAYER_CONFIG.bulletSpeed;
-              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, PLAYER_CONFIG.bulletLife, damage, width);
+              const vx = Math.cos(angle) * bSpeed;
+              const vy = Math.sin(angle) * bSpeed;
+              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
               bullet.addComponent(new TargetComponent(null, 'ENEMY'));
           }
       }

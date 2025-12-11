@@ -8,6 +8,7 @@ import { GameEvents, FXVariant } from '../events/GameEvents';
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
+import { ConfigService } from '../services/ConfigService';
 
 import { AIRegistry } from '../logic/ai/AIRegistry';
 import { AIContext } from '../logic/ai/types';
@@ -15,10 +16,12 @@ import { AIContext } from '../logic/ai/types';
 export class BehaviorSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
+  private config!: typeof ConfigService;
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
+    this.config = locator.getConfigService();
     
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -45,14 +48,16 @@ export class BehaviorSystem implements IGameSystem {
               this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
           }
       },
-      // DELEGATE VISUALS TO EVENT BUS
       spawnDrillSparks: (x, y, angle) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'DRILL_SPARKS', x, y, angle }),
       spawnLaunchSparks: (x, y, angle) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'HUNTER_RECOIL', x, y, angle }),
       spawnFX: (type, x, y) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: type as FXVariant, x, y }),
       
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
       playSound: (key) => AudioSystem.playSound(key),
-      getUpgradeLevel: (key) => upgrades[key] || 0
+      getUpgradeLevel: (key) => upgrades[key] || 0,
+      
+      // INJECTED CONFIG
+      config: this.config
     };
 
     const entities = this.registry.getAll();

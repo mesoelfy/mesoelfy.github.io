@@ -2,6 +2,7 @@ import { GameEvents, GameEventPayloads } from '../events/GameEvents';
 import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './SpatialGrid';
 import { WorldRect } from '../utils/ViewportHelper';
+import { ConfigService } from '../services/ConfigService';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -17,6 +18,7 @@ export interface IServiceLocator {
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
+  getConfigService(): typeof ConfigService; // NEW
 }
 
 // --- CORE CONTRACTS ---
@@ -49,7 +51,6 @@ export interface IInputService {
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
   updateBounds(width: number, height: number): void; 
-  // REMOVED: setJoystickVector - now handled via Provider Pattern
 }
 
 // --- SYSTEM CONTRACTS ---

@@ -1,4 +1,5 @@
 import { Entity } from '../../core/ecs/Entity';
+import { ConfigService } from '@/game/services/ConfigService';
 
 export interface AIContext {
   delta: number;
@@ -16,6 +17,9 @@ export interface AIContext {
   
   // Data Access
   getUpgradeLevel: (key: string) => number;
+  
+  // Configuration (Injected)
+  config: typeof ConfigService;
 }
 
 export interface EnemyLogic {

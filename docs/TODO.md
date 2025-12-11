@@ -342,3 +342,6 @@ Add a wave form visualizor for all sound affects with some sliders to change the
 
 
 - achievements - - - won't appear if you've used god mode stuff this session?
+- are there more areas to implement a Flyweight Pattern: sharing common data (meshes, textures) to minimize memory usage and initialization cost.
+
+- upgrades such as execute/damage increase could be awarded after every boss battle and have some special kind of heraldry in its badge design

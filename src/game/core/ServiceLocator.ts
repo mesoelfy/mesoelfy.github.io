@@ -1,4 +1,5 @@
 import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner } from './interfaces';
+import { ConfigService } from '../services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {
   private systems = new Map<string, IGameSystem>();
@@ -44,6 +45,10 @@ class ServiceLocatorImpl implements IServiceLocator {
       if (!this.spawner) throw new Error("Spawner not registered");
       return this.spawner;
   }
+
+  public getConfigService() {
+      return ConfigService;
+  }
   
   public reset(): void {
     this.systems.clear();
@@ -51,6 +56,7 @@ class ServiceLocatorImpl implements IServiceLocator {
     this.inputService = undefined;
     this.registry = undefined;
     this.spawner = undefined;
+    ConfigService.reset(); // Reset configs on reboot
   }
 }
 
