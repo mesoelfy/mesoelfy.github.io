@@ -65,7 +65,6 @@ export const useFavicon = (bootKey: string) => {
 
     // 1. BOOT SEQUENCE (Highest Priority during Standby)
     if (bootState === 'standby') {
-        // Map Boot Keys to Generator Stages
         let stage = 'INIT';
         if (bootKey === 'LINK') stage = 'LINK';
         else if (bootKey === 'MOUNT') stage = 'MOUNT';
@@ -93,7 +92,6 @@ export const useFavicon = (bootKey: string) => {
             visualKey = 'DEFAULT_STATIC';
             nextHref = defaultIconDataRef.current;
         } else {
-            // Fallback if image load failed
             visualKey = 'HEALTH_100';
             nextHref = generateHealthIcon(100, COLORS.GREEN);
         }
@@ -101,20 +99,19 @@ export const useFavicon = (bootKey: string) => {
     // 5. DAMAGED / ACTIVE
     else {
         const safeInt = Math.max(0, integrity);
-        const quantized = Math.ceil(safeInt / 5) * 5; // Reduce updates
-        
-        let color = COLORS.GREEN;
-        if (safeInt < 30) color = COLORS.RED;
-        else if (safeInt < 60) color = COLORS.YELLOW;
+        // Use exact integer for smooth 1% granularity (No 5% snapping)
+        const displayInt = Math.floor(safeInt);
 
-        if (safeInt < 30 && !tick) {
-             visualKey = 'CRIT_BLINK_OFF';
-             // Show Empty Bar (Frame only)
-             nextHref = generateHealthIcon(0, COLORS.RED); 
-        } else {
-             visualKey = `HEALTH_${quantized}`;
-             nextHref = generateHealthIcon(safeInt, color);
-        }
+        let color = COLORS.GREEN;
+        if (displayInt < 30) color = COLORS.RED;
+        else if (displayInt < 60) color = COLORS.YELLOW;
+
+        // Key includes color to catch threshold transitions (e.g. 30->29)
+        visualKey = `HEALTH_${displayInt}_${color}`;
+        
+        // Render bar at exact height. 
+        // We removed the blinking logic (setting height to 0) to ensure visual continuity.
+        nextHref = generateHealthIcon(displayInt, color);
     }
 
     // --- COMMIT ---
