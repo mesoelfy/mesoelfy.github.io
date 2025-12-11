@@ -20,7 +20,6 @@ const BOOT_KEYS: Record<string, string> = {
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
   
-  // Hook handles visual updates based on state
   useFavicon(bootKey);
 
   const { bootState, isSimulationPaused, setSimulationPaused, isBreaching } = useStore();
@@ -30,7 +29,6 @@ export const MetaManager = () => {
   const lastHashUpdate = useRef(0);
   const metaThemeRef = useRef<HTMLMetaElement | null>(null);
 
-  // 1. CONSOLE IDENTITY
   useEffect(() => {
     if (window.hasLoggedIdentity) return;
     const cleanAscii = ASCII_CONSOLE.replace(/^\n/, '');
@@ -38,24 +36,19 @@ export const MetaManager = () => {
     (window as any).hasLoggedIdentity = true;
   }, []);
 
-  // 2. AUTO-PAUSE LISTENERS (Fixed)
   useEffect(() => {
     if (bootState !== 'active') return;
 
     const handlePause = () => setSimulationPaused(true);
     const handleResume = () => setSimulationPaused(false);
     
-    // Visibility API (Tabs switching)
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) handlePause();
         else handleResume();
     });
 
-    // Window Focus (Clicking outside)
     window.addEventListener('blur', handlePause);
     window.addEventListener('focus', handleResume);
-
-    // Mouse Leaving Viewport (Top/Bottom)
     document.addEventListener('mouseleave', handlePause);
     document.addEventListener('mouseenter', handleResume);
     
@@ -67,7 +60,6 @@ export const MetaManager = () => {
     };
   }, [bootState, setSimulationPaused]);
 
-  // 3. BOOT SEQUENCE SYNC
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
           let currentKey = 'INIT';
@@ -87,9 +79,7 @@ export const MetaManager = () => {
       return unsub;
   }, []);
 
-  // 4. METADATA LOOP
   useEffect(() => {
-      // Lazy init meta tag
       let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
       if (!meta) {
           meta = document.createElement('meta');
@@ -99,14 +89,13 @@ export const MetaManager = () => {
       metaThemeRef.current = meta;
 
       const updateMeta = () => {
-          // Calculate safe derived state
           const isBoot = bootState === 'standby';
           const isGameOver = integrity <= 0;
           const safeInt = Math.floor(Math.max(0, integrity));
-
-          // A. URL HASH
           const now = Date.now();
-          if (!isBoot && now - lastHashUpdate.current > 500) {
+
+          // A. URL HASH (10 FPS allowed)
+          if (!isBoot && now - lastHashUpdate.current > 80) {
               let hash = '';
               if (isSimulationPaused) hash = '#/SYSTEM_LOCKED/AWAITING_INPUT';
               else if (bootState === 'sandbox') hash = '#/SIMULATION/HOLO_DECK';
@@ -135,7 +124,7 @@ export const MetaManager = () => {
               metaThemeRef.current.content = themeHex;
           }
 
-          // C. TITLE (Boot handles its own title in the event listener)
+          // C. TITLE
           if (isBoot) return;
 
           let title = "";
@@ -145,7 +134,6 @@ export const MetaManager = () => {
           else if (isSimulationPaused) title = `[ :: SYSTEM PAUSED :: ]`;
           else if (safeInt >= 99 && !isBreaching) title = "[ :: // MESOELFY // :: ]";
           else {
-              // Ascii Bar
               let bar = "";
               const activeIndex = Math.floor(safeInt / 10);
               for(let i=0; i<10; i++) {
@@ -159,7 +147,8 @@ export const MetaManager = () => {
           if (document.title !== title) document.title = title;
       };
 
-      const interval = setInterval(updateMeta, 500); 
+      // UPDATED: 100ms (10 FPS)
+      const interval = setInterval(updateMeta, 100); 
       return () => clearInterval(interval);
 
   }, [bootState, isSimulationPaused, integrity, isBreaching, isZenMode]);

@@ -4,7 +4,8 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
 
-const UPDATE_INTERVAL = 500; // 2 FPS
+// UPDATED: 100ms (10 FPS)
+const UPDATE_INTERVAL = 100; 
 
 export const useFavicon = (bootKey: string) => {
   const linkRef = useRef<HTMLLinkElement | null>(null);
@@ -99,18 +100,13 @@ export const useFavicon = (bootKey: string) => {
     // 5. DAMAGED / ACTIVE
     else {
         const safeInt = Math.max(0, integrity);
-        // Use exact integer for smooth 1% granularity (No 5% snapping)
         const displayInt = Math.floor(safeInt);
 
         let color = COLORS.GREEN;
         if (displayInt < 30) color = COLORS.RED;
         else if (displayInt < 60) color = COLORS.YELLOW;
 
-        // Key includes color to catch threshold transitions (e.g. 30->29)
         visualKey = `HEALTH_${displayInt}_${color}`;
-        
-        // Render bar at exact height. 
-        // We removed the blinking logic (setting height to 0) to ensure visual continuity.
         nextHref = generateHealthIcon(displayInt, color);
     }
 

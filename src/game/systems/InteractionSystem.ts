@@ -66,10 +66,10 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(2.5); 
+            // DOUBLED SPEED: 2.5 -> 5.0
+            this.gameSystem.tickReboot(5.0); 
             this.lastRepairTime = time;
             
-            // Loop Sound for Player Reboot
             AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
@@ -92,15 +92,14 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(p.id, 10);
+            // DOUBLED SPEED: 10 -> 20
+            PanelRegistry.healPanel(p.id, 20);
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
-                // Low pitch loop for reboot
                 AudioSystem.playSound('loop_reboot');
             } else {
-                // High pitch heal
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 20 });
             }
 
             if (Math.random() > 0.3) {
