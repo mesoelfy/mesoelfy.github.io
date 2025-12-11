@@ -309,3 +309,5 @@ Add a wave form visualizor for all sound affects with some sliders to change the
 
 - Debug mini window leaves the game paused.
 - is the framerate capped at 60? Are there benefits to leaving it uncapped so people with higher freshrate screens can get the benefits? Would uncapping it cause wasted processing for people with 60fps monitors? WOuld it be a good idea to have an uncapped frame rate setting in the options? How would I go about implementing it?
+
+

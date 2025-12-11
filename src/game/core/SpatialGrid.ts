@@ -1,51 +1,64 @@
 import { EntityID } from './ecs/types';
 
+// Configuration for Integer Hashing
+// World is roughly -20 to +20. Offset ensures positive indices.
+const CELL_SIZE = 4;
+const OFFSET = 1000; 
+const Y_STRIDE = 10000; // Multiplier for Y to avoid X collisions
+
 export class SpatialGrid {
-  private cellSize: number;
-  private buckets = new Map<string, EntityID[]>(); // Changed Set to Array for faster iteration
-
-  constructor(cellSize: number = 4) {
-    this.cellSize = cellSize;
-  }
-
-  private getKey(x: number, y: number): string {
-    const cx = Math.floor(x / this.cellSize);
-    const cy = Math.floor(y / this.cellSize);
-    return `${cx}:${cy}`;
-  }
+  // Using Map<number, EntityID[]> avoids string conversion
+  private buckets = new Map<number, EntityID[]>(); 
 
   public clear() {
-    this.buckets.clear();
+    // Soft Clear: Reuse arrays to avoid Garbage Collection
+    for (const bucket of this.buckets.values()) {
+      bucket.length = 0;
+    }
+  }
+
+  private getKey(x: number, y: number): number {
+    // Floor and offset
+    const cx = Math.floor((x + OFFSET) / CELL_SIZE);
+    const cy = Math.floor((y + OFFSET) / CELL_SIZE);
+    
+    // Unique Integer Key: Y * Width + X
+    return (cy * Y_STRIDE) + cx;
   }
 
   public insert(id: EntityID, x: number, y: number) {
     const key = this.getKey(x, y);
+    
     let bucket = this.buckets.get(key);
     if (!bucket) {
-      bucket = []; // Simple array, cleaner than Set for iteration
+      bucket = []; 
       this.buckets.set(key, bucket);
     }
     bucket.push(id);
   }
 
   /**
-   * Zero-Allocation Query.
-   * Populates the provided 'outResults' Set with neighbors.
+   * Optimized Query.
+   * Populates the provided Set to avoid allocation.
    */
   public query(x: number, y: number, radius: number, outResults: Set<EntityID>) {
     outResults.clear();
     
-    // Calculate range of cells to check
-    const startX = Math.floor((x - radius) / this.cellSize);
-    const endX = Math.floor((x + radius) / this.cellSize);
-    const startY = Math.floor((y - radius) / this.cellSize);
-    const endY = Math.floor((y + radius) / this.cellSize);
+    const startX = Math.floor((x - radius + OFFSET) / CELL_SIZE);
+    const endX = Math.floor((x + radius + OFFSET) / CELL_SIZE);
+    const startY = Math.floor((y - radius + OFFSET) / CELL_SIZE);
+    const endY = Math.floor((y + radius + OFFSET) / CELL_SIZE);
 
-    for (let cx = startX; cx <= endX; cx++) {
-      for (let cy = startY; cy <= endY; cy++) {
-        const key = `${cx}:${cy}`;
+    for (let cy = startY; cy <= endY; cy++) {
+      // Pre-calculate Y offset for the inner loop
+      const yHash = cy * Y_STRIDE;
+      
+      for (let cx = startX; cx <= endX; cx++) {
+        const key = yHash + cx;
         const bucket = this.buckets.get(key);
+        
         if (bucket) {
+          // Classic loop is faster than for..of
           const len = bucket.length;
           for (let i = 0; i < len; i++) {
             outResults.add(bucket[i]);

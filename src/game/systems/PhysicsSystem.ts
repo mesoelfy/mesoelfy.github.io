@@ -9,7 +9,7 @@ export class PhysicsSystem implements IPhysicsSystem {
   private registry!: EntityRegistry;
 
   constructor() {
-    this.spatialGrid = new SpatialGrid(4);
+    this.spatialGrid = new SpatialGrid();
   }
 
   setup(locator: IServiceLocator): void {
@@ -18,9 +18,10 @@ export class PhysicsSystem implements IPhysicsSystem {
   }
 
   update(delta: number, time: number): void {
+    // 1. Clear the reusable grid buckets
     this.spatialGrid.clear();
     
-    // NEW: Query only entities that CAN move
+    // 2. Iterate only movables via Cache
     const movables = this.registry.query({ all: ['Transform', 'Motion'] });
     
     for (const entity of movables) {
@@ -29,7 +30,6 @@ export class PhysicsSystem implements IPhysicsSystem {
       const transform = entity.getComponent<TransformComponent>('Transform');
       const motion = entity.getComponent<MotionComponent>('Motion');
       
-      // We know these exist because of the query, but TS type narrowing...
       if (transform && motion) {
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
@@ -39,6 +39,7 @@ export class PhysicsSystem implements IPhysicsSystem {
             motion.vy *= (1 - motion.friction);
         }
 
+        // 3. Populate Grid for CollisionSystem to read later
         this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
     }
