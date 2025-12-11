@@ -1,10 +1,11 @@
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Volume2, Cpu, Monitor } from 'lucide-react';
+import { X, Settings, Volume2, Monitor, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { SoundTab } from './tabs/SoundTab';
+import { GraphicsToggle } from '@/ui/atoms/GraphicsToggle'; // NEW
 
 const TABS = [
   { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },
@@ -74,7 +75,19 @@ export const SettingsModal = () => {
                     <div className="relative z-10">
                         {activeTab === 'SOUND' && <SoundTab />}
                         
-                        {activeTab !== 'SOUND' && (
+                        {activeTab === 'GRAPHICS' && (
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <h3 className="text-sm font-header font-black text-primary-green border-b border-primary-green/30 pb-2 mb-4 tracking-widest">
+                                    RENDERING_PIPELINE
+                                </h3>
+                                <GraphicsToggle />
+                                <div className="p-4 border border-alert-yellow/30 bg-alert-yellow/5 text-[10px] text-alert-yellow/80 font-mono mt-4">
+                                    &gt; NOTE: 'POTATO_MODE' disables Post-Processing (Bloom), lowers Resolution scale, and reduces Particle counts. Use if experiencing FPS drops.
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'SYSTEM' && (
                             <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono">
                                 <span className="animate-pulse">[ MODULE_OFFLINE ]</span>
                             </div>

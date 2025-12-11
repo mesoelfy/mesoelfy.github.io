@@ -42,6 +42,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
 type BootState = 'standby' | 'active' | 'sandbox';
 type SandboxView = 'arena' | 'gallery' | 'audio';
+type GraphicsMode = 'HIGH' | 'POTATO';
 
 interface DebugFlags {
   godMode: boolean;
@@ -65,6 +66,7 @@ interface AppState {
   galleryAction: 'IDLE' | 'ATTACK';
   
   audioSettings: AudioSettings;
+  graphicsMode: GraphicsMode; // NEW
   screenShakeStrength: number; 
   
   isDebugOpen: boolean;
@@ -93,6 +95,8 @@ interface AppState {
   setVolume: (channel: keyof AudioSettings, value: number, max?: number) => void;
   resetAudioSettings: () => void;
   
+  setGraphicsMode: (mode: GraphicsMode) => void; // NEW
+  
   setScreenShake: (val: number) => void;
   
   toggleDebugMenu: () => void;
@@ -119,6 +123,7 @@ export const useStore = create<AppState>()(
       galleryAction: 'IDLE',
       
       audioSettings: { ...DEFAULT_AUDIO },
+      graphicsMode: 'HIGH', // Default to High
       
       screenShakeStrength: 1.0, 
       
@@ -204,6 +209,8 @@ export const useStore = create<AppState>()(
           AudioSystem.playClick();
       },
       
+      setGraphicsMode: (mode) => set({ graphicsMode: mode }),
+      
       setScreenShake: (val) => set({ screenShakeStrength: val }),
       
       toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
@@ -222,7 +229,8 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({ 
           audioSettings: state.audioSettings,
           screenShakeStrength: state.screenShakeStrength,
-          introDone: state.introDone
+          introDone: state.introDone,
+          graphicsMode: state.graphicsMode // Persist this
       }), 
     }
   )
