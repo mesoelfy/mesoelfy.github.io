@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
-import { addBarycentricCoordinates, createHunterSpear } from '../utils/GeometryUtils';
+import { addBarycentricCoordinates } from '../utils/GeometryUtils';
 import { MODEL_CONFIG } from '../config/ModelConfig';
 import { GAME_THEME } from '../theme';
 
@@ -38,7 +38,6 @@ const SHADER_LIB = {
       }
     `
   },
-  // Circular Glow (Enemies/Particles)
   GLOW_BILLBOARD: {
     vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`,
     fragment: `
@@ -51,16 +50,13 @@ const SHADER_LIB = {
       }
     `
   },
-  // Rectangular Beam (Player)
   BEAM_BILLBOARD: {
     vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`,
     fragment: `
       varying vec2 vUv; uniform vec3 uColor;
-      // Signed Distance Box
       float sdBox(vec2 p, vec2 b) { vec2 d = abs(p)-b; return length(max(d,0.0)) + min(max(d.x,d.y),0.0); }
       void main() {
         vec2 p = vUv - 0.5;
-        // Box shape (Thin width 0.2, Taller height 0.4 relative to UVs)
         float d = sdBox(p, vec2(0.2, 0.4)); 
         float core = 1.0 - smoothstep(0.0, 0.02, d);
         float glow = exp(-20.0 * max(0.0, d));
@@ -72,7 +68,13 @@ const SHADER_LIB = {
 };
 
 export const registerAllAssets = () => {
-  // --- GEOMETRIES ---
+  // --- ASYNC ASSETS ---
+  
+  // Create placeholder for Hunter
+  const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
+  AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
+
+  // --- SYNC GENERATORS ---
   
   AssetService.registerGenerator('GEO_DRILLER', () => {
       const { radius, height, segments } = MODEL_CONFIG.DRILLER;
@@ -81,10 +83,6 @@ export const registerAllAssets = () => {
 
   AssetService.registerGenerator('GEO_KAMIKAZE', () => {
       return addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0));
-  });
-
-  AssetService.registerGenerator('GEO_HUNTER', () => {
-      return createHunterSpear();
   });
 
   AssetService.registerGenerator('GEO_DAEMON', () => {
@@ -116,7 +114,6 @@ export const registerAllAssets = () => {
       });
   });
 
-  // RESTORED: Uses BEAM_BILLBOARD shader
   AssetService.registerGenerator('MAT_BULLET_PLAYER', () => {
       return new THREE.ShaderMaterial({
         vertexShader: SHADER_LIB.BEAM_BILLBOARD.vertex,
