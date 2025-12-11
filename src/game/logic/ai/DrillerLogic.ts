@@ -19,7 +19,6 @@ export const DrillerLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // USE CONFIG FROM CONTEXT
     const drillerConfig = ctx.config.enemies[EnemyTypes.DRILLER];
     const aiConfig = ctx.config.ai.DRILLER;
 
@@ -41,7 +40,12 @@ export const DrillerLogic: EnemyLogic = {
     const dy = destY - pos.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
-    const angle = Math.atan2(dy, dx) - Math.PI/2;
+    
+    // 1. Calculate True Travel Angle (Math 0 = Right)
+    const travelAngle = Math.atan2(dy, dx);
+    
+    // 2. Calculate Visual Rotation (Model 0 = Up, so subtract 90deg)
+    const visualRotation = travelAngle - Math.PI/2;
     
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
@@ -55,9 +59,11 @@ export const DrillerLogic: EnemyLogic = {
 
         motion.vx = 0;
         motion.vy = 0;
-        pos.rotation = angle;
+        pos.rotation = visualRotation;
 
-        ctx.spawnDrillSparks(destX, destY, angle);
+        // FIX: Pass 'travelAngle' so VFX knows the true impact vector
+        // VFXSystem adds PI to this, creating a spray directly backward
+        ctx.spawnDrillSparks(destX, destY, travelAngle);
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
@@ -83,7 +89,7 @@ export const DrillerLogic: EnemyLogic = {
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;
-            pos.rotation = angle;
+            pos.rotation = visualRotation;
         }
     }
   }

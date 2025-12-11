@@ -321,3 +321,31 @@ For Phases X-X, focus on the next logical steps considering the work we've done 
 
 
 For Phases X-X, focus on advanced optimizations.
+
+
+
+// ROADMAP REVISION: Phases 19-24 (Graphics & Settings)
+We will now pivot to the "Settings Menu" features you requested.
+PHASE 19: The Settings Store & Config Persistence
+Create useSettingsStore (separate from useGameStore).
+Manage GraphicsQuality ('LOW', 'MED', 'HIGH', 'POTATO').
+Manage TargetFPS ('60', '120', 'UNCAPPED').
+Implement LocalStorage persistence for these settings.
+PHASE 20: The Render Loop & Frame Limiter
+Refactor GameEngine's loop to respect a target delta time.
+Implement "Uncapped" logic (using requestAnimationFrame directly).
+Add FPSCounter to the Debug overlay that compares Render FPS vs Physics FPS.
+PHASE 21: Dynamic Quality Scaler
+Implement QualityManager.
+Potato Mode: Disables Post-Processing (Bloom), lowers particle counts (in VFXConfig), simplifies Geometry (AssetService returns Low-Poly placeholders permanently).
+Auto-Detect: Run a benchmark on first boot (render 1000 hidden meshes) to suggest a preset.
+PHASE 22: Dynamic Resolution Scaling (DRS)
+Implement logic in GameDirector to monitor GPU frame time.
+If dropping frames, lower gl.pixelRatio dynamically (e.g. from 2.0 -> 1.0 -> 0.75).
+Add UI Toggle for "Adaptive Resolution".
+PHASE 23: Input Re-binding
+Since we did Phase 6, we can now easily add a Settings Tab for "Controls".
+Allow mapping Keys to Actions.
+PHASE 24: Audio Channels & Accessibility
+Expand Audio Settings to include "Mono Mode", "Reduce High Frequencies" (Tinnitus mode), etc.
+Shall we proceed with Phase 19 (Settings Store)?

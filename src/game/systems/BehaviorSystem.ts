@@ -9,6 +9,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
 import { ConfigService } from '../services/ConfigService';
+import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
 
 import { AIRegistry } from '../logic/ai/AIRegistry';
 import { AIContext } from '../logic/ai/types';
@@ -48,15 +49,18 @@ export class BehaviorSystem implements IGameSystem {
               this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
           }
       },
-      spawnDrillSparks: (x, y, angle) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'DRILL_SPARKS', x, y, angle }),
-      spawnLaunchSparks: (x, y, angle) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'HUNTER_RECOIL', x, y, angle }),
-      spawnFX: (type, x, y) => GameEventBus.emit(GameEvents.SPAWN_FX, { type: type as FXVariant, x, y }),
+      // PASS ANGLE AS ARG 4
+      spawnDrillSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['DRILL_SPARKS'], x, y, angle),
+      spawnLaunchSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['HUNTER_RECOIL'], x, y, angle),
+      
+      spawnFX: (type, x, y) => {
+          const id = FX_IDS[type];
+          if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
+      },
       
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
       playSound: (key) => AudioSystem.playSound(key),
       getUpgradeLevel: (key) => upgrades[key] || 0,
-      
-      // INJECTED CONFIG
       config: this.config
     };
 

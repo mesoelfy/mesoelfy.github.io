@@ -1,9 +1,10 @@
 import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents, FXVariant } from '../events/GameEvents';
+import { GameEvents } from '../events/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_RECIPES } from '../config/VFXConfig';
+import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
 
 export class VFXSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
@@ -16,17 +17,22 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Passive system, driven by events
+    // Process High Frequency Events
+    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+        if (id === FastEvents.SPAWN_FX) {
+            // a1: TypeID, a2: X, a3: Y, a4: Angle
+            const key = FX_ID_MAP[a1];
+            if (key) this.executeRecipe(key, a2, a3, a4);
+        }
+        else if (id === FastEvents.TRAUMA) {
+            this.addTrauma(a1);
+        }
+    });
   }
 
   teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.SPAWN_FX, (p) => {
-        this.executeRecipe(p.type, p.x, p.y, p.angle);
-    });
-
-    // High Level Event Reactions
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const isBig = p.damage > 10;
         this.addTrauma(isBig ? 0.6 : 0.3);
@@ -43,7 +49,6 @@ export class VFXSystem implements IGameSystem {
         this.triggerHitStop(0.5);
     });
     
-    // Purge Effect (Zen Mode)
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.executeRecipe('PURGE_BLAST', 0, 0);
     });
@@ -69,7 +74,22 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           } 
           else if (recipe.pattern === 'DIRECTIONAL') {
-              const baseDir = angle - (Math.PI / 2);
+              // angle passed in is the Entity's Rotation (Facing Direction)
+              // We want sparks to fly BACKWARDS or SIDEWAYS depending on effect.
+              // For Drills/Recoil, we want mostly backwards (debris/kickback).
+              
+              // Angle + PI = Backwards
+              // - PI/2 = Model correction (since 0 rot is usually Right, but models point Up)
+              // Actually, in our system:
+              // Rotation 0 = Points Right (Math.atan2 style)
+              // Driller Logic: Math.atan2(dy, dx) - PI/2 (Points Up)
+              // If we pass raw Rotation, 0 is "Up" relative to the Driller Logic.
+              
+              // Let's assume 'angle' passed in is the correct Facing Angle in Radians (0 = Right).
+              
+              // Backwards = angle + PI.
+              const baseDir = angle + Math.PI; 
+              
               const spread = recipe.spread || 0.5;
               const a = baseDir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * speed;
