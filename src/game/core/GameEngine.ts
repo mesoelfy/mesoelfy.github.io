@@ -1,7 +1,6 @@
 import { IGameSystem, IServiceLocator, IEntityRegistry } from './interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
-import { FXManager } from '../systems/FXManager';
 import { ViewportHelper } from '../utils/ViewportHelper';
 import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem';
@@ -24,7 +23,7 @@ export class GameEngineCore implements IGameSystem {
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    FXManager.init();
+    // FXManager.init() removed. VFXSystem handles this now.
   }
 
   public registerSystem(system: IGameSystem) {
@@ -35,18 +34,15 @@ export class GameEngineCore implements IGameSystem {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
-    // --- 1. GLOBAL PAUSE CHECKS ---
     if (store.bootState === 'standby') return;
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
-    
-    // NEW: Auto-Pause Logic (Visuals run, Physics/Time stop)
     if (store.isSimulationPaused) return;
 
     const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
     
     if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
         gameStore.stopGame();
-        FXManager.addTrauma(1.0);
+        GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
         gameSys.isGameOver = true; 
         return;
     }
@@ -55,26 +51,15 @@ export class GameEngineCore implements IGameSystem {
         gameSys.isGameOver = true;
     }
 
-    // --- 2. TIME MANAGEMENT ---
-    
     let timeScale = 1.0;
     try {
         const timeSys = this.locator.getSystem<TimeSystem>('TimeSystem');
-        
-        // Tick Real Time (Updates Freeze Timer)
         timeSys.tickRealTime(renderDelta);
-
-        // Determine if Frozen (Hit Stop)
-        if (timeSys.isFrozen()) {
-            timeScale = 0.0;
-        } else {
-            timeScale = timeSys.timeScale;
-        }
+        if (timeSys.isFrozen()) timeScale = 0.0;
+        else timeScale = timeSys.timeScale;
     } catch {}
 
     const debugScale = store.debugFlags.timeScale;
-    
-    // Accumulate Game Time
     const effectiveDelta = renderDelta * timeScale * debugScale;
     
     this.accumulator += effectiveDelta;
@@ -85,7 +70,6 @@ export class GameEngineCore implements IGameSystem {
 
     const fixedStep = WorldConfig.time.fixedDelta;
 
-    // --- 3. PHYSICS STEP ---
     while (this.accumulator >= fixedStep) {
         for (const sys of this.systems) {
             try {
@@ -98,7 +82,6 @@ export class GameEngineCore implements IGameSystem {
                 });
             }
         }
-
         this.simulationTime += fixedStep;
         this.accumulator -= fixedStep;
     }

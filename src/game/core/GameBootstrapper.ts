@@ -20,14 +20,13 @@ import { UISyncSystem } from '../systems/UISyncSystem';
 import { TargetingSystem } from '../systems/TargetingSystem'; 
 import { GuidanceSystem } from '../systems/GuidanceSystem'; 
 import { OrbitalSystem } from '../systems/OrbitalSystem'; 
+import { VFXSystem } from '../systems/VFXSystem'; // NEW
 
-// AI Registration
 import { registerAllBehaviors } from '../logic/ai/BehaviorCatalog';
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
-  // 1. Initialize Core Services
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
@@ -35,10 +34,8 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  // 2. Register AI Behaviors
   registerAllBehaviors();
 
-  // 3. Instantiate Systems
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
   const physicsSys = new PhysicsSystem();
@@ -56,8 +53,8 @@ export const GameBootstrapper = () => {
   const targetingSys = new TargetingSystem(); 
   const guidanceSys = new GuidanceSystem(); 
   const orbitalSys = new OrbitalSystem(); 
+  const vfxSys = new VFXSystem(); // NEW
 
-  // 4. Register Systems
   const systems = {
       'TimeSystem': timeSys,
       'InputSystem': inputSys,
@@ -75,12 +72,13 @@ export const GameBootstrapper = () => {
       'PanelRegistrySystem': panelSys,
       'TargetingSystem': targetingSys,
       'GuidanceSystem': guidanceSys,
-      'OrbitalSystem': orbitalSys
+      'OrbitalSystem': orbitalSys,
+      'VFXSystem': vfxSys // NEW
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
   
-  // 5. Update Loop Order
+  // Register Systems (Order Matters for Update)
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(panelSys);
@@ -91,16 +89,16 @@ export const GameBootstrapper = () => {
   engine.registerSystem(targetingSys); 
   engine.registerSystem(orbitalSys); 
   engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys); // AI Logic
+  engine.registerSystem(behaviorSys); 
   engine.registerSystem(guidanceSys); 
 
   engine.registerSystem(physicsSys); 
   engine.registerSystem(collisionSys); 
-  engine.registerSystem(lifeSys); 
+  engine.registerSystem(lifeSys); // Kills entities
+  engine.registerSystem(vfxSys);  // Spawns death effects based on events
   engine.registerSystem(shakeSys); 
   engine.registerSystem(syncSys); 
   
-  // 6. Setup
   Object.values(systems).forEach(sys => sys.setup(ServiceLocator));
   
   engine.setup(ServiceLocator);
