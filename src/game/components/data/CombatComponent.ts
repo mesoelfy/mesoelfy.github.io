@@ -5,9 +5,16 @@ export class CombatComponent extends Component {
 
   constructor(
     public damage: number,
-    public cooldown: number = 0, // Time until next attack
+    public cooldown: number = 0,
     public range: number = 0
   ) {
     super();
+  }
+
+  public reset(damage: number, cooldown: number = 0, range: number = 0) {
+    this.damage = damage;
+    this.cooldown = cooldown;
+    this.range = range;
+    return this;
   }
 }

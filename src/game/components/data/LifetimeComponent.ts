@@ -1,13 +1,15 @@
 import { Component } from '../../core/ecs/Component';
 
-// Used for bullets and particles that die after N seconds
 export class LifetimeComponent extends Component {
   readonly _type = 'Lifetime';
 
-  constructor(
-    public remaining: number, // Seconds
-    public total: number
-  ) {
+  constructor(public remaining: number, public total: number) {
     super();
+  }
+
+  public reset(remaining: number, total: number) {
+    this.remaining = remaining;
+    this.total = total;
+    return this;
   }
 }

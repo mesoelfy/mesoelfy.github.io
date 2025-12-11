@@ -5,9 +5,11 @@ import { ActiveEngine } from '../GameDirector';
 import { TransformComponent } from '../data/TransformComponent';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { Entity } from '@/game/core/ecs/Entity';
+import { TransformStore } from '@/game/core/ecs/TransformStore';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
+const STRIDE = 4;
 
 interface InstancedActorProps {
   tag: string;
@@ -32,7 +34,6 @@ export const InstancedActor = ({
 }: InstancedActorProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  // FIX: Initialize the color buffer!
   useLayoutEffect(() => {
     if (meshRef.current) {
         meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
@@ -42,8 +43,12 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
+    // Use cached query from ActiveEngine if possible, or tag lookup
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
+    
+    // Direct Array Access for Speed
+    const transformData = TransformStore.data;
 
     for (const entity of entities) {
       if (count >= maxCount) break;
@@ -52,21 +57,28 @@ export const InstancedActor = ({
       const transform = entity.getComponent<TransformComponent>('Transform');
       if (!transform) continue;
 
+      // OPTIMIZED READ: Direct buffer access using component index
+      const idx = transform.index * STRIDE;
+      const x = transformData[idx];
+      const y = transformData[idx + 1];
+      const rot = transformData[idx + 2];
+      const scale = transformData[idx + 3];
+
       // 1. Base Transform
-      tempObj.position.set(transform.x, transform.y, 0);
-      tempObj.rotation.set(0, 0, transform.rotation);
-      tempObj.scale.set(transform.scale, transform.scale, 1);
+      tempObj.position.set(x, y, 0);
+      tempObj.rotation.set(0, 0, rot);
+      tempObj.scale.set(scale, scale, 1);
 
       // 2. Color Logic
-      const identity = entity.getComponent<IdentityComponent>('Identity');
-      
-      if (colorSource === 'identity' && identity) {
-          tempColor.set(identity.variant); 
+      if (colorSource === 'identity') {
+          const identity = entity.getComponent<IdentityComponent>('Identity');
+          if (identity) tempColor.set(identity.variant); 
+          else tempColor.set(baseColor);
       } else {
           tempColor.set(baseColor); 
       }
 
-      // 3. Custom Logic
+      // 3. Custom Logic (updateEntity might modify tempObj further)
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }
@@ -75,7 +87,6 @@ export const InstancedActor = ({
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       
-      // Safe to set color now because we initialized it in useLayoutEffect
       if (meshRef.current.instanceColor) {
         meshRef.current.setColorAt(count, tempColor);
       }

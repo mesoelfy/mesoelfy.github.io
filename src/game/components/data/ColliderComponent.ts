@@ -10,4 +10,11 @@ export class ColliderComponent extends Component {
   ) {
     super();
   }
+
+  public reset(radius: number, layer: number, mask: number) {
+    this.radius = radius;
+    this.layer = layer;
+    this.mask = mask;
+    return this;
+  }
 }

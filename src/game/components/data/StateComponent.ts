@@ -11,6 +11,13 @@ export class StateComponent extends Component {
     super();
   }
 
+  public reset(current: string = 'IDLE', timers: Record<string, number> = {}, data: Record<string, any> = {}) {
+    this.current = current;
+    this.timers = timers;
+    this.data = data;
+    return this;
+  }
+  
   public set(state: string) {
     this.current = state;
   }

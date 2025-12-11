@@ -1,32 +1,17 @@
-import { useMemo } from 'react';
-import * as THREE from 'three';
 import { Tag } from '../core/ecs/types';
-import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
 import { TransformComponent } from '../data/TransformComponent';
-import { ENEMY_CONFIG } from '../config/EnemyConfig';
-
-const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
-const fragmentShader = `
-  varying vec2 vUv; uniform vec3 uColor;
-  void main() {
-    float dist = distance(vUv, vec2(0.5));
-    float core = 1.0 - smoothstep(0.2, 0.25, dist);
-    float glow = pow(1.0 - smoothstep(0.25, 0.5, dist), 3.0);
-    gl_FragColor = vec4(mix(uColor, vec3(1.0), core), max(core, glow));
-  }
-`;
+import { AssetService } from '../assets/AssetService';
+import { ServiceLocator } from '../core/ServiceLocator';
+import * as THREE from 'three';
 
 export const HunterChargeRenderer = () => {
-  const geometry = useMemo(() => new THREE.PlaneGeometry(2.0, 2.0), []);
-  const material = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader, fragmentShader,
-    uniforms: { uColor: { value: new THREE.Color(GAME_THEME.bullet.hunter) } },
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
-  }), []);
+  // 1. Use Shared Assets (Flyweight)
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');
+  const material = AssetService.get<THREE.Material>('MAT_BULLET_ENEMY');
 
   return (
     <InstancedActor
@@ -44,22 +29,25 @@ export const HunterChargeRenderer = () => {
           const state = e.getComponent<StateComponent>('State');
           
           if (transform && state) {
-              const maxDuration = ENEMY_CONFIG[EnemyTypes.HUNTER].chargeDuration;
+              // 2. Use Injected Config for Source of Truth
+              const config = ServiceLocator.getConfigService().enemies[EnemyTypes.HUNTER];
+              const maxDuration = config.chargeDuration;
               const remaining = state.timers.action || 0;
               
-              // Progress: 0.0 (Start) -> 1.0 (Ready to Fire)
-              const progress = 1.0 - (remaining / maxDuration);
+              // 3. Logic: 0.0 (Start) -> 1.0 (Ready)
+              // Clamp to ensure no visual glitches if timer overshoots slightly
+              const progress = Math.max(0, Math.min(1, 1.0 - (remaining / maxDuration)));
               
-              // Exponential Growth for "Swell" effect
-              const scale = Math.pow(progress, 2) * 1.2;
+              // Exponential Swell: Starts small, grows fast at the end
+              const scale = Math.pow(progress, 2) * 1.5; // Increased max scale slightly for visibility
               
-              // Rumble: Jitter intensity increases with progress
+              // Jitter Effect (increases as it gets closer to firing)
               const rumble = progress > 0.8 ? (progress - 0.8) * 0.3 : 0;
               const jitterX = (Math.random() - 0.5) * rumble;
               const jitterY = (Math.random() - 0.5) * rumble;
 
               const offset = 1.6;
-              // +PI/2 because Rotation 0 is Right, but Model points Up.
+              // +PI/2 adjustment for model orientation
               const dirX = Math.cos(transform.rotation + Math.PI/2);
               const dirY = Math.sin(transform.rotation + Math.PI/2);
               
@@ -68,7 +56,7 @@ export const HunterChargeRenderer = () => {
               obj.position.z = 0.1; 
               
               obj.scale.setScalar(scale);
-              obj.rotation.set(0,0,0); // Billboarding
+              obj.rotation.set(0, 0, 0); // Billboarding
           }
       }}
     />

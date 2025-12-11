@@ -1,18 +1,9 @@
 import { IEntitySpawner, IEntityRegistry } from './interfaces';
 import { Entity } from './ecs/Entity';
 import { Tag } from './ecs/types';
-import { TransformComponent } from '../components/data/TransformComponent';
-import { MotionComponent } from '../components/data/MotionComponent';
-import { HealthComponent } from '../components/data/HealthComponent';
-import { LifetimeComponent } from '../components/data/LifetimeComponent';
-import { CombatComponent } from '../components/data/CombatComponent';
-import { StateComponent } from '../components/data/StateComponent';
-import { ColliderComponent } from '../components/data/ColliderComponent'; 
-import { IdentityComponent } from '../components/data/IdentityComponent';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
 import { EntityRegistry } from './ecs/EntityRegistry';
-import { EnemyTypes } from '../config/Identifiers';
 import { ARCHETYPES } from '../data/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 
@@ -26,11 +17,13 @@ export class EntitySpawner implements IEntitySpawner {
   public spawnPlayer(): Entity {
     const e = this.registry.createEntity();
     e.addTag(Tag.PLAYER);
-    e.addComponent(new TransformComponent(0, 0, 0, 1));
-    e.addComponent(new MotionComponent(0, 0, 0.9)); 
-    e.addComponent(new HealthComponent(PLAYER_CONFIG.maxHealth));
-    e.addComponent(new StateComponent('IDLE')); 
-    e.addComponent(new ColliderComponent(PhysicsConfig.HITBOX.PLAYER, CollisionLayers.PLAYER, PhysicsConfig.MASKS.PLAYER));
+    
+    e.addComponent(ComponentBuilder.Transform({ x: 0, y: 0, rotation: 0, scale: 1 }));
+    e.addComponent(ComponentBuilder.Motion({ friction: 0.9 }));
+    e.addComponent(ComponentBuilder.Health({ max: PLAYER_CONFIG.maxHealth }));
+    e.addComponent(ComponentBuilder.State({ current: 'IDLE' }));
+    e.addComponent(ComponentBuilder.Collider({ radius: PhysicsConfig.HITBOX.PLAYER, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER }));
+    
     this.registry.updateCache(e);
     return e;
   }
@@ -49,17 +42,17 @@ export class EntitySpawner implements IEntitySpawner {
         if (compDef.type === 'Transform') continue;
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            const freshData = JSON.parse(JSON.stringify(compDef.data || {}));
+            // Clone data to prevent mutation of Archetype definition
+            const freshData = { ...compDef.data }; 
             e.addComponent(builder(freshData));
         }
     }
 
-    e.addComponent(new TransformComponent(x, y, 0, 1));
+    e.addComponent(ComponentBuilder.Transform({ x, y, rotation: 0, scale: 1 }));
     this.registry.updateCache(e);
     return e;
   }
 
-  // UPDATED: Accepts Damage and Width Multiplier
   public spawnBullet(
       x: number, y: number, 
       vx: number, vy: number, 
@@ -72,31 +65,26 @@ export class EntitySpawner implements IEntitySpawner {
     e.addTag(Tag.BULLET);
     if (isEnemy) e.addTag(Tag.ENEMY); else e.addTag(Tag.PLAYER); 
     
-    // Transform with Width Scaling
-    const t = new TransformComponent(x, y, Math.atan2(vy, vx), 1);
-    
-    // NOTE: We don't have separate ScaleX/Y in TransformComponent yet (it uses uniform 'scale').
-    // BUT we can use the 'scale' property for width if we assume length is handled by the renderer geometry.
-    // Actually, BulletRenderer uses PlaneGeometry(1.2, 1.2).
-    // Let's overload 'scale' to mean Width Multiplier for Bullets.
-    t.scale = widthMult; 
-    
-    e.addComponent(t);
-    e.addComponent(new MotionComponent(vx, vy, 0));
-    e.addComponent(new LifetimeComponent(life, life));
-    
-    // Health = Damage (Mass)
-    e.addComponent(new HealthComponent(damage));
-    e.addComponent(new CombatComponent(damage)); 
+    e.addComponent(ComponentBuilder.Transform({ 
+        x, y, 
+        rotation: Math.atan2(vy, vx), 
+        scale: widthMult 
+    }));
+    e.addComponent(ComponentBuilder.Motion({ vx, vy }));
+    e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
+    e.addComponent(ComponentBuilder.Health({ max: damage }));
+    e.addComponent(ComponentBuilder.Combat({ damage }));
 
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-    
-    // Collider Radius scales with Width
     const baseRadius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
-    const radius = baseRadius * widthMult;
-
-    e.addComponent(new ColliderComponent(radius, layer, mask));
+    
+    e.addComponent(ComponentBuilder.Collider({ 
+        radius: baseRadius * widthMult, 
+        layer, 
+        mask 
+    }));
+    
     this.registry.updateCache(e);
     return e;
   }
@@ -104,10 +92,10 @@ export class EntitySpawner implements IEntitySpawner {
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
-    e.addComponent(new TransformComponent(x, y, 0, 1));
-    e.addComponent(new MotionComponent(vx, vy, 0.05));
-    e.addComponent(new LifetimeComponent(life, life));
-    e.addComponent(new IdentityComponent(color));
+    e.addComponent(ComponentBuilder.Transform({ x, y }));
+    e.addComponent(ComponentBuilder.Motion({ vx, vy, friction: 0.05 }));
+    e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
+    e.addComponent(ComponentBuilder.Identity({ variant: color }));
     this.registry.updateCache(e);
   }
 }

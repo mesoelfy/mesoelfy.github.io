@@ -1,12 +1,11 @@
 import { EntityID, Tag } from './types';
 import { Component } from './Component';
+import { ComponentPoolManager } from './ComponentPoolManager';
 
 export class Entity {
   public id: EntityID; 
   public readonly tags = new Set<Tag>();
   public active = true;
-  
-  // Flag to track if in pool or in use
   public pooled = false;
 
   public components = new Map<string, Component>();
@@ -48,15 +47,22 @@ export class Entity {
       this.id = newId;
       this.active = true;
       this.pooled = false;
-      this.tags.clear();
+      // Components are cleared in release(), but safety check:
       this.components.clear();
+      this.tags.clear();
   }
 
   // Called when pushed TO the pool
   public release() {
       this.active = false;
       this.pooled = true;
-      this.components.clear(); // Wipe refs to help GC
+      
+      // Return all components to their respective pools
+      for (const component of this.components.values()) {
+          ComponentPoolManager.release(component);
+      }
+      
+      this.components.clear(); 
       this.tags.clear();
   }
 }

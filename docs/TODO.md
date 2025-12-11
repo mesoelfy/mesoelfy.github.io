@@ -311,3 +311,13 @@ Add a wave form visualizor for all sound affects with some sliders to change the
 - is the framerate capped at 60? Are there benefits to leaving it uncapped so people with higher freshrate screens can get the benefits? Would uncapping it cause wasted processing for people with 60fps monitors? WOuld it be a good idea to have an uncapped frame rate setting in the options? How would I go about implementing it?
 
 
+- screen shake on player damage too extreme. needs fine tuning all around. feels like frame skips happen, but might just be programmed hit frame stops.
+
+
+For Phases X-X, focus on the next logical steps considering the work we've done so far.
+
+- clicking bomb should stay in red system failure state
+- daemon geometry not squishing after shooting ball (like a compressed spring)
+
+
+For Phases X-X, focus on advanced optimizations.

@@ -1,12 +1,14 @@
 import { Component } from '../../core/ecs/Component';
 
-// This holds specific game logic identifiers (MUNCHER, HUNTER)
 export class IdentityComponent extends Component {
   readonly _type = 'Identity';
 
-  constructor(
-    public variant: string // e.g. 'muncher', 'hunter', 'boss'
-  ) {
+  constructor(public variant: string) {
     super();
+  }
+
+  public reset(variant: string) {
+    this.variant = variant;
+    return this;
   }
 }
