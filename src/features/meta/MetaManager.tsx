@@ -4,9 +4,8 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/game/config/TextAssets';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
-
-const CANVAS_SIZE = 64;
-const IDLE_TIMEOUT_MS = 3000;
+import { useFavicon } from './useFavicon';
+import { COLORS } from './metaConstants';
 
 const BOOT_KEYS: Record<string, string> = {
     "INITIALIZE NEURAL_LACE": "INIT",
@@ -18,57 +17,18 @@ const BOOT_KEYS: Record<string, string> = {
     "PROCEED WITH CAUTION": "CAUTION",
 };
 
-// Colors
-const COL_GREEN = '#78F654';
-const COL_YELLOW = '#F7D277';
-const COL_RED = '#FF003C';
-const COL_PURPLE = '#9E4EA5';
-const COL_BLACK = '#000000';
-const COL_WHITE = '#FFFFFF';
-
 export const MetaManager = () => {
-  const { bootState, isSimulationPaused, setSimulationPaused, isBreaching } = useStore();
+  const [bootKey, setBootKey] = useState('INIT');
   
-  // REACTIVE STATE
+  // Hook handles visual updates based on state
+  useFavicon(bootKey);
+
+  const { bootState, isSimulationPaused, setSimulationPaused, isBreaching } = useStore();
   const integrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
-  // REFS
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastHashUpdate = useRef(0);
-  const linkRef = useRef<HTMLLinkElement | null>(null);
   const metaThemeRef = useRef<HTMLMetaElement | null>(null);
-  const prevFaviconUrl = useRef<string>(""); // Cache for diffing
-  
-  // MUTABLE STATE REF
-  const stateRef = useRef({
-      integrity: 100,
-      isIdle100: false,
-      bootState: 'standby',
-      isBreaching: false,
-      isPaused: false,
-      isGameOver: false,
-      isZen: false,
-      bootKey: 'INIT'
-  });
-
-  const [bootKey, setBootKey] = useState('INIT');
-  const [isIdle100, setIsIdle100] = useState(false); 
-
-  // Sync React State to Ref
-  useEffect(() => {
-      stateRef.current = {
-          integrity,
-          isIdle100,
-          bootState,
-          isBreaching,
-          isPaused: isSimulationPaused,
-          isGameOver: integrity <= 0,
-          isZen: isZenMode,
-          bootKey
-      };
-  }, [integrity, isIdle100, bootState, isBreaching, isSimulationPaused, isZenMode, bootKey]);
 
   // 1. CONSOLE IDENTITY
   useEffect(() => {
@@ -78,65 +38,58 @@ export const MetaManager = () => {
     (window as any).hasLoggedIdentity = true;
   }, []);
 
-  // 2. AUTO-PAUSE
+  // 2. AUTO-PAUSE LISTENERS (Fixed)
   useEffect(() => {
     if (bootState !== 'active') return;
 
     const handlePause = () => setSimulationPaused(true);
     const handleResume = () => setSimulationPaused(false);
     
+    // Visibility API (Tabs switching)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) handlePause();
+        else handleResume();
+    });
+
+    // Window Focus (Clicking outside)
     window.addEventListener('blur', handlePause);
     window.addEventListener('focus', handleResume);
-    document.addEventListener('visibilitychange', () => document.hidden ? handlePause() : handleResume());
-    document.documentElement.addEventListener('mouseleave', handlePause);
-    document.documentElement.addEventListener('mouseenter', handleResume);
 
+    // Mouse Leaving Viewport (Top/Bottom)
+    document.addEventListener('mouseleave', handlePause);
+    document.addEventListener('mouseenter', handleResume);
+    
     return () => {
         window.removeEventListener('blur', handlePause);
         window.removeEventListener('focus', handleResume);
-        document.documentElement.removeEventListener('mouseleave', handlePause);
-        document.documentElement.removeEventListener('mouseenter', handleResume);
+        document.removeEventListener('mouseleave', handlePause);
+        document.removeEventListener('mouseenter', handleResume);
     };
   }, [bootState, setSimulationPaused]);
 
-  // 3. BOOT EVENTS
+  // 3. BOOT SEQUENCE SYNC
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
+          let currentKey = 'INIT';
           for (const k in BOOT_KEYS) {
               if (p.message.includes(k)) {
-                  setBootKey(BOOT_KEYS[k]);
+                  currentKey = BOOT_KEYS[k];
                   break;
               }
           }
+          setBootKey(currentKey);
+
           const safeMsg = p.message.replace(/>/g, '').replace(/\./g, '').trim().replace(/ /g, '_');
           window.history.replaceState(null, '', `#/BOOT/${safeMsg}`);
+          
+          document.title = `[ :: // ${currentKey} // :: ]`;
       });
       return unsub;
   }, []);
 
-  // 4. IDLE TIMER
+  // 4. METADATA LOOP
   useEffect(() => {
-      // Logic: Only allow Idle if active, not paused, not breaching, and healthy
-      const isSafe = bootState === 'active' && !isSimulationPaused && !isBreaching && integrity >= 99.9;
-
-      if (!isSafe) {
-          setIsIdle100(false);
-          if (idleTimerRef.current) {
-              clearTimeout(idleTimerRef.current);
-              idleTimerRef.current = null;
-          }
-          return;
-      }
-
-      if (!isIdle100 && !idleTimerRef.current) {
-          idleTimerRef.current = setTimeout(() => {
-              setIsIdle100(true);
-          }, IDLE_TIMEOUT_MS);
-      }
-  }, [bootState, isSimulationPaused, integrity, isBreaching]); 
-
-  // 5. INITIALIZE DOM
-  useEffect(() => {
+      // Lazy init meta tag
       let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
       if (!meta) {
           meta = document.createElement('meta');
@@ -145,319 +98,71 @@ export const MetaManager = () => {
       }
       metaThemeRef.current = meta;
 
-      let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
-      if (!link) {
-          link = document.createElement('link');
-          link.rel = 'icon';
-          document.head.appendChild(link);
-      }
-      linkRef.current = link;
-
-      if (!canvasRef.current) {
-          canvasRef.current = document.createElement('canvas');
-          canvasRef.current.width = CANVAS_SIZE;
-          canvasRef.current.height = CANVAS_SIZE;
-      }
-  }, []);
-
-  // 6. RENDER LOOP
-  useEffect(() => {
-      const updateFavicon = (url: string, type: string) => {
-          // PERFORMANCE: Only touch DOM if data changed
-          if (prevFaviconUrl.current === url) return;
-          
-          if (linkRef.current) {
-              linkRef.current.type = type;
-              linkRef.current.href = url;
-              prevFaviconUrl.current = url;
-          }
-      };
-
-      const updateTheme = (hex: string) => {
-          if (!metaThemeRef.current) return;
-          if (metaThemeRef.current.content !== hex) {
-              metaThemeRef.current.content = hex;
-          }
-      };
-
-      const updateAll = () => {
-          const ctx = canvasRef.current?.getContext('2d');
-          if (!ctx) return;
-
-          // READ LATEST STATE
-          const { 
-              integrity, isIdle100, bootState, isBreaching,
-              isPaused, isGameOver, isZen, bootKey 
-          } = stateRef.current;
-
+      const updateMeta = () => {
+          // Calculate safe derived state
           const isBoot = bootState === 'standby';
-          const isSandbox = bootState === 'sandbox';
+          const isGameOver = integrity <= 0;
+          const safeInt = Math.floor(Math.max(0, integrity));
 
+          // A. URL HASH
           const now = Date.now();
-          const tick = Math.floor(now / 50); 
-          
-          const slowBlink = tick % 16 < 8; // 800ms
-          const fastBlink = tick % 10 < 5; // 500ms
-
-          // --- URL HUD ---
           if (!isBoot && now - lastHashUpdate.current > 500) {
               let hash = '';
-              if (isPaused) hash = '#/SYSTEM_LOCKED/AWAITING_INPUT';
-              else if (isSandbox) hash = '#/SIMULATION/HOLO_DECK';
-              else if (isZen) hash = '#/ZEN_GARDEN/PEACE_PROTOCOL';
+              if (isSimulationPaused) hash = '#/SYSTEM_LOCKED/AWAITING_INPUT';
+              else if (bootState === 'sandbox') hash = '#/SIMULATION/HOLO_DECK';
+              else if (isZenMode) hash = '#/ZEN_GARDEN/PEACE_PROTOCOL';
               else if (isGameOver) hash = '#/STATUS:CRITICAL/SYSTEM_FAILURE';
-              else if (integrity < 30) hash = `#/STATUS:CRITICAL/SYS_INT:${Math.floor(integrity)}%`;
+              else if (safeInt < 30) hash = `#/STATUS:CRITICAL/SYS_INT:${safeInt}%`;
               else {
-                  const int = Math.floor(integrity);
                   let status = 'STABLE';
-                  if (integrity < 60) status = 'CAUTION';
-                  hash = `#/STATUS:${status}/SYS_INT:${int}%`;
+                  if (safeInt < 60) status = 'CAUTION';
+                  hash = `#/STATUS:${status}/SYS_INT:${safeInt}%`;
               }
-              if (window.location.hash !== hash) window.history.replaceState(null, '', hash);
+              
+              if (window.location.hash !== hash) {
+                  window.history.replaceState(null, '', hash);
+              }
               lastHashUpdate.current = now;
           }
 
-          // --- THEME COLOR ---
-          let themeHex = COL_BLACK;
-          if (!isBoot && !isPaused && !isGameOver) {
-              if (integrity < 30) themeHex = COL_RED;      
-              else if (integrity < 60) themeHex = COL_YELLOW; 
+          // B. THEME COLOR
+          let themeHex = COLORS.BLACK;
+          if (!isBoot && !isSimulationPaused && !isGameOver) {
+              if (safeInt < 30) themeHex = COLORS.RED;      
+              else if (safeInt < 60) themeHex = COLORS.YELLOW; 
           }
-          updateTheme(themeHex);
+          if (metaThemeRef.current && metaThemeRef.current.content !== themeHex) {
+              metaThemeRef.current.content = themeHex;
+          }
 
-          // --- TITLE ---
+          // C. TITLE (Boot handles its own title in the event listener)
+          if (isBoot) return;
+
           let title = "";
-          if (isBoot) title = `[ :: // ${bootKey} // :: ]`;
-          else if (isGameOver) title = `[ :: SESSION FAILURE :: ]`;
-          else if (isPaused) title = `[ :: SYSTEM PAUSED :: ]`;
-          else if (isIdle100 && integrity >= 99.9) title = "[ :: // MESOELFY // :: ]";
+          const tick = Math.floor(Date.now() / 500) % 2 === 0;
+
+          if (isGameOver) title = `[ :: SESSION FAILURE :: ]`;
+          else if (isSimulationPaused) title = `[ :: SYSTEM PAUSED :: ]`;
+          else if (safeInt >= 99 && !isBreaching) title = "[ :: // MESOELFY // :: ]";
           else {
-              const intVal = Math.floor(integrity);
+              // Ascii Bar
               let bar = "";
-              const activeIndex = Math.floor(integrity / 10);
+              const activeIndex = Math.floor(safeInt / 10);
               for(let i=0; i<10; i++) {
                   if (i < activeIndex) bar += "▮";
-                  else if (i === activeIndex && integrity > 0) bar += fastBlink ? "▮" : "▯";
+                  else if (i === activeIndex && safeInt > 0) bar += tick ? "▮" : "▯";
                   else bar += "▯";
               }
-              title = `[ ${bar} INT: ${intVal}% ]`;
+              title = `[ ${bar} INT: ${safeInt}% ]`;
           }
+          
           if (document.title !== title) document.title = title;
-
-          // --- FAVICON RENDERING ---
-          
-          // IDLE STATE Check
-          const isStaticState = (!isBoot && !isPaused && !isGameOver && !isBreaching && isIdle100 && integrity >= 99.9);
-
-          if (isStaticState) {
-              updateFavicon('/favicon.ico', 'image/x-icon');
-              return;
-          }
-
-          // DYNAMIC DRAW PREP
-          ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-          const drawFrame = (borderColor: string, contentCallback: () => void) => {
-              ctx.beginPath();
-              ctx.roundRect(4, 4, 56, 56, 12);
-              ctx.fillStyle = COL_BLACK; 
-              ctx.fill();
-
-              contentCallback();
-
-              ctx.lineWidth = 4;
-              ctx.strokeStyle = borderColor;
-              ctx.beginPath();
-              ctx.roundRect(4, 4, 56, 56, 12);
-              ctx.stroke();
-          };
-
-          // 1. BREACHING (Initialized)
-          if (isBreaching) {
-              drawFrame(COL_WHITE, () => {
-                  const t = tick % 10;
-                  const alpha = t < 5 ? 1 : 0.6;
-                  
-                  ctx.fillStyle = alpha === 1 ? COL_WHITE : COL_GREEN;
-                  ctx.strokeStyle = alpha === 1 ? COL_WHITE : COL_GREEN;
-                  ctx.lineWidth = 6;
-                  ctx.lineCap = 'round';
-                  
-                  // Rotation
-                  const angle = (now / 100) % (Math.PI * 2); // Smooth spin
-                  ctx.save();
-                  ctx.translate(32, 32);
-                  ctx.rotate(angle);
-                  ctx.translate(-32, -32);
-                  
-                  // Power Symbol
-                  ctx.beginPath();
-                  ctx.arc(32, 32, 14, -Math.PI * 0.35, -Math.PI * 0.65, true);
-                  ctx.stroke();
-                  ctx.beginPath();
-                  ctx.moveTo(32, 14);
-                  ctx.lineTo(32, 32);
-                  ctx.stroke();
-                  
-                  ctx.restore();
-              });
-          }
-          // 2. BOOT SEQUENCE
-          else if (isBoot) {
-              if (bootKey === 'INIT') {
-                  drawFrame(COL_GREEN, () => {
-                      const cx = 32, cy = 32;
-                      const phase = (tick % 24) / 24; 
-                      ctx.fillStyle = COL_GREEN;
-                      ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI*2); ctx.fill();
-                      for(let i=0; i<3; i++) {
-                          const angle = (phase * Math.PI * 2) + (i * (Math.PI * 2 / 3));
-                          const ox = cx + Math.cos(angle) * 14;
-                          const oy = cy + Math.sin(angle) * 14;
-                          ctx.beginPath(); ctx.arc(ox, oy, 2, 0, Math.PI*2); ctx.fill();
-                          ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 1;
-                          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ox, oy); ctx.stroke();
-                      }
-                  });
-              }
-              else if (bootKey === 'LINK') {
-                  drawFrame(COL_GREEN, () => {
-                      ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-                      const t = tick % 20;
-                      ctx.beginPath();
-                      const p1 = {x: 18, y: 34};
-                      const p2 = {x: 28, y: 44};
-                      const p3 = {x: 46, y: 22};
-                      ctx.moveTo(p1.x, p1.y);
-                      if (t < 5) {
-                          const progress = t / 5;
-                          ctx.lineTo(p1.x + (p2.x-p1.x)*progress, p1.y + (p2.y-p1.y)*progress);
-                      } else {
-                          ctx.lineTo(p2.x, p2.y);
-                          const progress = Math.min(1, (t - 5) / 7);
-                          ctx.lineTo(p2.x + (p3.x-p2.x)*progress, p2.y + (p3.y-p2.y)*progress);
-                      }
-                      ctx.stroke();
-                  });
-              } 
-              else if (bootKey === 'MOUNT') {
-                  drawFrame(COL_GREEN, () => {
-                      ctx.fillStyle = COL_GREEN;
-                      const offset = (tick % 12) * 2;
-                      ctx.beginPath(); ctx.moveTo(32, 46 + offset); ctx.lineTo(20, 30 + offset); ctx.lineTo(44, 30 + offset); ctx.fill(); 
-                      ctx.fillRect(28, 8, 8, 22 + offset);
-                  });
-              } 
-              else if (bootKey === 'UNSAFE' || bootKey === 'CAUTION') {
-                  const activeColor = slowBlink ? COL_YELLOW : COL_RED; 
-                  drawFrame(activeColor, () => {
-                      ctx.fillStyle = activeColor;
-                      ctx.beginPath(); ctx.moveTo(32, 10); ctx.lineTo(52, 50); ctx.lineTo(12, 50); ctx.fill();
-                      ctx.fillStyle = COL_BLACK; 
-                      ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.fillText('!', 32, 46);
-                  });
-              } 
-              else if (bootKey === 'BYPASS') { 
-                  drawFrame(COL_PURPLE, () => {
-                      const phase = (tick % 16) / 16; 
-                      const cx = 32, cy = 32;
-                      const expansion = 4 + (Math.sin(phase * Math.PI * 2) * 6);
-                      ctx.fillStyle = COL_PURPLE;
-                      for(let i=0; i<4; i++) {
-                          const angle = (i * Math.PI / 2) + (phase * Math.PI);
-                          const x = cx + Math.cos(angle) * expansion;
-                          const y = cy + Math.sin(angle) * expansion;
-                          ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x + 4, y); ctx.lineTo(x, y + 4); ctx.lineTo(x - 4, y); ctx.fill();
-                      }
-                      ctx.fillRect(cx - 2, cy - 2, 4, 4);
-                  });
-              } 
-              else if (bootKey === 'DECRYPTED') { 
-                  drawFrame(COL_GREEN, () => {
-                      const t = tick % 30;
-                      const isLocked = t < 10;
-                      ctx.strokeStyle = COL_GREEN; ctx.lineWidth = 6; ctx.fillStyle = COL_GREEN;
-                      let shackleY = 28; let shackleOpen = 0;
-                      if (!isLocked) {
-                          const anim = Math.min(1, (t - 10) / 5);
-                          shackleY = 28 - (anim * 8); 
-                          shackleOpen = anim * 0.5;   
-                      }
-                      ctx.beginPath(); ctx.arc(32, shackleY, 10, Math.PI, 0 + shackleOpen); ctx.stroke(); 
-                      ctx.fillRect(16, 28, 32, 24); 
-                      if (isLocked) {
-                          ctx.fillStyle = COL_BLACK;
-                          ctx.beginPath(); ctx.arc(32, 40, 3, 0, Math.PI*2); ctx.fill();
-                          ctx.fillRect(31, 40, 2, 6);
-                      }
-                  });
-              } 
-              else {
-                  drawFrame(COL_GREEN, () => { ctx.fillStyle = COL_GREEN; ctx.fillRect(20, 20, 24, 24); });
-              }
-          }
-          
-          // 3. PAUSED
-          else if (isPaused) {
-              if (slowBlink) {
-                  drawFrame(COL_YELLOW, () => {
-                      ctx.fillStyle = COL_YELLOW;
-                      ctx.fillRect(22, 18, 6, 28);
-                      ctx.fillRect(36, 18, 6, 28);
-                  });
-              } else {
-                  drawFrame(COL_BLACK, () => {});
-              }
-          }
-          
-          // 4. GAME OVER
-          else if (isGameOver) {
-              if (slowBlink) {
-                  drawFrame(COL_RED, () => {
-                      ctx.fillStyle = COL_RED;
-                      ctx.font = 'bold 40px monospace'; ctx.textAlign = 'center';
-                      ctx.fillText('X', 32, 46);
-                  });
-              } else {
-                  drawFrame(COL_BLACK, () => {});
-              }
-          }
-
-          // 5. GAMEPLAY (Health)
-          else {
-              let color = COL_GREEN;
-              let isRed = false;
-
-              if (integrity < 60) color = COL_YELLOW;
-              if (integrity < 30) { color = COL_RED; isRed = true; }
-              
-              let showIcon = true;
-              if (isRed) {
-                  // Steady 500ms Blink
-                  if (!fastBlink) showIcon = false;
-              }
-
-              if (showIcon) {
-                  drawFrame(color, () => {
-                      const fillH = (integrity / 100) * 56;
-                      const fillY = 60 - fillH;
-                      ctx.save();
-                      ctx.beginPath(); ctx.roundRect(4, 4, 56, 56, 12); ctx.clip();
-                      ctx.fillStyle = color; 
-                      ctx.fillRect(0, fillY, 64, fillH);
-                      ctx.restore();
-                  });
-              } else {
-                  drawFrame(COL_BLACK, () => {});
-              }
-          }
-
-          updateFavicon(canvasRef.current!.toDataURL('image/png'), 'image/png');
       };
 
-      const interval = setInterval(updateAll, 50); 
+      const interval = setInterval(updateMeta, 500); 
       return () => clearInterval(interval);
-  }, []); 
+
+  }, [bootState, isSimulationPaused, integrity, isBreaching, isZenMode]);
 
   return null;
 };

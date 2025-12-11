@@ -305,4 +305,4 @@ Refined the isStaticState logic to ensure strict adherence to the "INIT phase or
 
 Reboot needs to happen 2X faster
 
- Is it possible the mismatch in size between the default and our custom ones causing any issues? I made a new 64x64 .ico to replace the 32x32 one but haven't replaced it yet.
+ Is it possible the mismatch in size between the default and our custom ones causing any issues? 
