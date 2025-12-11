@@ -17,7 +17,7 @@ export const useFavicon = (bootKey: string) => {
   
   const [tick, setTick] = useState(false);
 
-  // 1. PRE-BAKER
+  // 1. PRE-BAKER (Cache default favicon)
   useEffect(() => {
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
@@ -56,40 +56,28 @@ export const useFavicon = (bootKey: string) => {
   const updateFavicon = () => {
     if (!linkRef.current) return;
 
+    // Blink Logic (1Hz)
+    const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+    
     let nextHref = '';
     let visualKey = '';
 
-    // Steady 1Hz Blink (500ms ON / 500ms OFF) using Wall Clock
-    const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+    // --- STATE DETERMINATION ---
 
-    // --- STATE MACHINE ---
-
-    // 1. BOOT SEQUENCE
     if (bootState === 'standby') {
-        let stage = 'INIT';
-        if (bootKey === 'LINK') stage = 'LINK';
-        else if (bootKey === 'MOUNT') stage = 'MOUNT';
-        else if (bootKey === 'UNSAFE') stage = 'UNSAFE';
-        else if (bootKey === 'BYPASS') stage = 'BYPASS';
-        else if (bootKey === 'DECRYPTED') stage = 'DECRYPTED';
-        else if (bootKey === 'CAUTION') stage = 'CAUTION';
-        
-        visualKey = `BOOT_${stage}_${blinkOn}`;
-        nextHref = generateBootIcon(stage, blinkOn);
-    }
-    // 2. BREACHING
+        visualKey = `BOOT_${bootKey}_${blinkOn}`;
+        nextHref = generateBootIcon(bootKey, blinkOn);
+    } 
     else if (isBreaching) {
         visualKey = `BREACH_${blinkOn ? 'A' : 'B'}`;
         nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
-    }
-    // 3. PAUSED
+    } 
     else if (isSimulationPaused) {
         visualKey = `PAUSED_${blinkOn}`;
-        // Force blinkOn based on wall clock to ensure steady rhythm
         nextHref = generatePausedIcon(blinkOn);
-    }
-    // 4. IDLE / HEALTHY
+    } 
     else if (isZenMode || (integrity > 99)) {
+        // If healthy/zen, try to show the original high-res favicon
         if (defaultIconDataRef.current) {
             visualKey = 'DEFAULT_STATIC';
             nextHref = defaultIconDataRef.current;
@@ -97,9 +85,9 @@ export const useFavicon = (bootKey: string) => {
             visualKey = 'HEALTH_100';
             nextHref = generateHealthIcon(100, COLORS.GREEN);
         }
-    }
-    // 5. DAMAGED / ACTIVE
+    } 
     else {
+        // Dynamic Health Bar
         const safeInt = Math.max(0, integrity);
         const displayInt = Math.floor(safeInt);
 
@@ -111,7 +99,8 @@ export const useFavicon = (bootKey: string) => {
         nextHref = generateHealthIcon(displayInt, color);
     }
 
-    // --- COMMIT ---
+    // --- DOM COMMIT ---
+    // Only touch the DOM if the visual key actually changed
     if (visualKey !== lastVisualKey.current && nextHref) {
         linkRef.current.href = nextHref;
         lastVisualKey.current = visualKey;
