@@ -3,12 +3,13 @@ import { useGameStore } from '../store/useGameStore';
 import { GameStateSystem } from './GameStateSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { InteractionSystem } from './InteractionSystem';
+import { TransientDOMService } from '@/game/services/TransientDOMService';
 
 export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
   private interactionSystem!: InteractionSystem;
   
-  private readonly SYNC_INTERVAL = 0.1;
+  private readonly SYNC_INTERVAL = 0.1; // 10Hz UI updates are plenty
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
@@ -28,9 +29,13 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
+    // 1. FAST PATH: Direct DOM Updates (No React Render)
+    // We assume the DOM elements are registered via useTransientRef
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
-    store.updateTransient('score-display', formattedScore);
+    TransientDOMService.update('score-display', formattedScore);
     
+    // 2. SLOW PATH: React State Sync
+    // Only update Zustand if values actually changed to prevent Virtual DOM trashing
     const shouldSyncReact = 
         store.playerHealth !== this.gameSystem.playerHealth || 
         store.playerRebootProgress !== this.gameSystem.playerRebootProgress || 
@@ -56,6 +61,7 @@ export class UISyncSystem implements IGameSystem {
         });
     }
 
+    // 3. Panel Sync (Slow path)
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
     for(const p of panels) {

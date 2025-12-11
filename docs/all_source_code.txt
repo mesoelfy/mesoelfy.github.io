@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Dec 10 18:54:16 CST 2025
+Generated on: Thu Dec 11 10:03:53 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -992,7 +992,8 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}
-                    transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
+                    // UPDATED: 0.5 -> 0.3 for snappier decay
+                    transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
                 />
             </div>
         )}
@@ -2338,7 +2339,8 @@ export const VitalsRing = ({
             strokeDashoffset={offsetHp}
             strokeLinecap="round"
             transform={`rotate(-90 ${center} ${center})`}
-            className="transition-all duration-100 ease-linear"
+            // UPDATED: duration-300 for snappy decay
+            className="transition-all duration-300 ease-out"
           />
           
           <circle 
@@ -2850,14 +2852,21 @@ export const Header = () => {
 
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <motion.div 
-            animate={isCritical ? heartbeatControls : undefined}
-            variants={barVariants}
-            className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
-                isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
-            )} 
-            style={{ width: `${systemIntegrity}%` }}
-          />
+          <motion.div
+            className="h-full"
+            initial={{ width: "100%" }}
+            animate={{ width: `${systemIntegrity}%` }}
+            // UPDATED: 0.5 -> 0.3 for snappier decay
+            transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+          >
+              <motion.div 
+                animate={isCritical ? heartbeatControls : undefined}
+                variants={barVariants}
+                className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", 
+                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                )} 
+              />
+          </motion.div>
         </div>
       )}
       
@@ -5000,7 +5009,6 @@ const BOOT_KEYS: Record<string, string> = {
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
   
-  // Hook handles visual updates based on state
   useFavicon(bootKey);
 
   const { bootState, isSimulationPaused, setSimulationPaused, isBreaching } = useStore();
@@ -5010,7 +5018,6 @@ export const MetaManager = () => {
   const lastHashUpdate = useRef(0);
   const metaThemeRef = useRef<HTMLMetaElement | null>(null);
 
-  // 1. CONSOLE IDENTITY
   useEffect(() => {
     if (window.hasLoggedIdentity) return;
     const cleanAscii = ASCII_CONSOLE.replace(/^\n/, '');
@@ -5018,24 +5025,19 @@ export const MetaManager = () => {
     (window as any).hasLoggedIdentity = true;
   }, []);
 
-  // 2. AUTO-PAUSE LISTENERS (Fixed)
   useEffect(() => {
     if (bootState !== 'active') return;
 
     const handlePause = () => setSimulationPaused(true);
     const handleResume = () => setSimulationPaused(false);
     
-    // Visibility API (Tabs switching)
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) handlePause();
         else handleResume();
     });
 
-    // Window Focus (Clicking outside)
     window.addEventListener('blur', handlePause);
     window.addEventListener('focus', handleResume);
-
-    // Mouse Leaving Viewport (Top/Bottom)
     document.addEventListener('mouseleave', handlePause);
     document.addEventListener('mouseenter', handleResume);
     
@@ -5047,7 +5049,6 @@ export const MetaManager = () => {
     };
   }, [bootState, setSimulationPaused]);
 
-  // 3. BOOT SEQUENCE SYNC
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
           let currentKey = 'INIT';
@@ -5067,9 +5068,7 @@ export const MetaManager = () => {
       return unsub;
   }, []);
 
-  // 4. METADATA LOOP
   useEffect(() => {
-      // Lazy init meta tag
       let meta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
       if (!meta) {
           meta = document.createElement('meta');
@@ -5079,14 +5078,13 @@ export const MetaManager = () => {
       metaThemeRef.current = meta;
 
       const updateMeta = () => {
-          // Calculate safe derived state
           const isBoot = bootState === 'standby';
           const isGameOver = integrity <= 0;
           const safeInt = Math.floor(Math.max(0, integrity));
-
-          // A. URL HASH
           const now = Date.now();
-          if (!isBoot && now - lastHashUpdate.current > 500) {
+
+          // A. URL HASH (10 FPS allowed)
+          if (!isBoot && now - lastHashUpdate.current > 80) {
               let hash = '';
               if (isSimulationPaused) hash = '#/SYSTEM_LOCKED/AWAITING_INPUT';
               else if (bootState === 'sandbox') hash = '#/SIMULATION/HOLO_DECK';
@@ -5115,7 +5113,7 @@ export const MetaManager = () => {
               metaThemeRef.current.content = themeHex;
           }
 
-          // C. TITLE (Boot handles its own title in the event listener)
+          // C. TITLE
           if (isBoot) return;
 
           let title = "";
@@ -5125,7 +5123,6 @@ export const MetaManager = () => {
           else if (isSimulationPaused) title = `[ :: SYSTEM PAUSED :: ]`;
           else if (safeInt >= 99 && !isBreaching) title = "[ :: // MESOELFY // :: ]";
           else {
-              // Ascii Bar
               let bar = "";
               const activeIndex = Math.floor(safeInt / 10);
               for(let i=0; i<10; i++) {
@@ -5139,7 +5136,8 @@ export const MetaManager = () => {
           if (document.title !== title) document.title = title;
       };
 
-      const interval = setInterval(updateMeta, 500); 
+      // UPDATED: 100ms (10 FPS)
+      const interval = setInterval(updateMeta, 100); 
       return () => clearInterval(interval);
 
   }, [bootState, isSimulationPaused, integrity, isBreaching, isZenMode]);
@@ -5163,7 +5161,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
 
-const UPDATE_INTERVAL = 500; // 2 FPS
+const UPDATE_INTERVAL = 100; // 10 FPS
 
 export const useFavicon = (bootKey: string) => {
   const linkRef = useRef<HTMLLinkElement | null>(null);
@@ -5178,7 +5176,6 @@ export const useFavicon = (bootKey: string) => {
 
   // 1. PRE-BAKER
   useEffect(() => {
-    // Ensure link exists
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
       link = document.createElement('link');
@@ -5208,7 +5205,6 @@ export const useFavicon = (bootKey: string) => {
       updateFavicon();
     }, UPDATE_INTERVAL);
     
-    // Immediate check on key state changes
     updateFavicon();
 
     return () => clearInterval(interval);
@@ -5220,11 +5216,13 @@ export const useFavicon = (bootKey: string) => {
     let nextHref = '';
     let visualKey = '';
 
+    // Steady 1Hz Blink (500ms ON / 500ms OFF) using Wall Clock
+    const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+
     // --- STATE MACHINE ---
 
-    // 1. BOOT SEQUENCE (Highest Priority during Standby)
+    // 1. BOOT SEQUENCE
     if (bootState === 'standby') {
-        // Map Boot Keys to Generator Stages
         let stage = 'INIT';
         if (bootKey === 'LINK') stage = 'LINK';
         else if (bootKey === 'MOUNT') stage = 'MOUNT';
@@ -5233,26 +5231,26 @@ export const useFavicon = (bootKey: string) => {
         else if (bootKey === 'DECRYPTED') stage = 'DECRYPTED';
         else if (bootKey === 'CAUTION') stage = 'CAUTION';
         
-        visualKey = `BOOT_${stage}_${tick}`;
-        nextHref = generateBootIcon(stage, tick);
+        visualKey = `BOOT_${stage}_${blinkOn}`;
+        nextHref = generateBootIcon(stage, blinkOn);
     }
-    // 2. BREACHING (During active game)
+    // 2. BREACHING
     else if (isBreaching) {
-        visualKey = `BREACH_${tick ? 'A' : 'B'}`;
-        nextHref = generateBreachIcon(tick ? 'A' : 'B');
+        visualKey = `BREACH_${blinkOn ? 'A' : 'B'}`;
+        nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     }
     // 3. PAUSED
     else if (isSimulationPaused) {
-        visualKey = `PAUSED_${tick}`;
-        nextHref = generatePausedIcon(tick);
+        visualKey = `PAUSED_${blinkOn}`;
+        // Force blinkOn based on wall clock to ensure steady rhythm
+        nextHref = generatePausedIcon(blinkOn);
     }
-    // 4. IDLE / HEALTHY (Use Custom Art)
+    // 4. IDLE / HEALTHY
     else if (isZenMode || (integrity > 99)) {
         if (defaultIconDataRef.current) {
             visualKey = 'DEFAULT_STATIC';
             nextHref = defaultIconDataRef.current;
         } else {
-            // Fallback if image load failed
             visualKey = 'HEALTH_100';
             nextHref = generateHealthIcon(100, COLORS.GREEN);
         }
@@ -5260,20 +5258,14 @@ export const useFavicon = (bootKey: string) => {
     // 5. DAMAGED / ACTIVE
     else {
         const safeInt = Math.max(0, integrity);
-        const quantized = Math.ceil(safeInt / 5) * 5; // Reduce updates
-        
-        let color = COLORS.GREEN;
-        if (safeInt < 30) color = COLORS.RED;
-        else if (safeInt < 60) color = COLORS.YELLOW;
+        const displayInt = Math.floor(safeInt);
 
-        if (safeInt < 30 && !tick) {
-             visualKey = 'CRIT_BLINK_OFF';
-             // Show Empty Bar (Frame only)
-             nextHref = generateHealthIcon(0, COLORS.RED); 
-        } else {
-             visualKey = `HEALTH_${quantized}`;
-             nextHref = generateHealthIcon(safeInt, color);
-        }
+        let color = COLORS.GREEN;
+        if (displayInt < 30) color = COLORS.RED;
+        else if (displayInt < 60) color = COLORS.YELLOW;
+
+        visualKey = `HEALTH_${displayInt}_${color}`;
+        nextHref = generateHealthIcon(displayInt, color);
     }
 
     // --- COMMIT ---
@@ -10437,10 +10429,10 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(2.5); 
+            // DOUBLED SPEED: 2.5 -> 5.0
+            this.gameSystem.tickReboot(5.0); 
             this.lastRepairTime = time;
             
-            // Loop Sound for Player Reboot
             AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
@@ -10463,15 +10455,14 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(p.id, 10);
+            // DOUBLED SPEED: 10 -> 20
+            PanelRegistry.healPanel(p.id, 20);
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
-                // Low pitch loop for reboot
                 AudioSystem.playSound('loop_reboot');
             } else {
-                // High pitch heal
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 10 });
+                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 20 });
             }
 
             if (Math.random() > 0.3) {

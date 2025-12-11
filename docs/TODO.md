@@ -303,6 +303,37 @@ Added logic to hide/remove other conflicting icons when dynamic mode is active.
 Refined the isStaticState logic to ensure strict adherence to the "INIT phase or 3s Idle" rule.
 
 
-Reboot needs to happen 2X faster
 
- Is it possible the mismatch in size between the default and our custom ones causing any issues? 
+
+
+
+
+
+After 3 seconds of 100% health, the ASCII health bar cycles through a blink of each individual bar, and then they all blink in unison with a green check mark, THEN the default favicon appears.
+
+
+
+
+This decouples the visual update frequency (20fps) from React's render cycle, preventing the interval from thrashing when state changes rapidly. This stability should eliminate the visual glitches and flickering default icon.
+
+
+
+
+But in the game dashboard, the default and new icon still flicker into view instead of only the
+
+The default favicon keeps appearing after every new icon transition, and then after clicking initialize, the new initialize icon gets stuck as the only one showing.
+
+Instead of 
+
+
+
+
+
+
+
+Also, red favicon health should blink in perfect unison with the ASCII health bar in the browser tab title.
+
+Add a wave form visualizor for all sound affects with some sliders to change them and show how they work. Include an export button? Is that a lot of code? What if it just gave code to paste into terminal or give to AI to instuct how to
+
+
+- Theme Color Injection. - - - doesn't seem to be working for me?
