@@ -18,7 +18,6 @@ export const DaemonLogic: EnemyLogic = {
     const target = getTarget(e);
     const orbital = getOrbital(e);
 
-    // Calculate dynamic stats from Context
     const executeLevel = ctx.getUpgradeLevel('EXECUTE');
     const maxShield = 10 + executeLevel;
 
@@ -34,38 +33,33 @@ export const DaemonLogic: EnemyLogic = {
         state.data.shieldHP = 0; 
     }
 
-    // 1. CHARGING (Accumulate Shield)
+    // 1. CHARGING
     if (state.current === 'CHARGING') {
         orbital.active = true;
-        
         if (state.data.shieldHP <= 0 && state.data.wasHit) {
              state.current = 'BROKEN';
              state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
-
         const chargeRate = maxShield / AI_CONFIG.DAEMON.SHIELD_CHARGE_TIME; 
         state.data.shieldHP = Math.min(maxShield, state.data.shieldHP + (chargeRate * ctx.delta));
-
         if (state.data.shieldHP >= maxShield) {
             state.current = 'READY';
         }
     } 
     
-    // 2. READY (Holding Charge)
+    // 2. READY
     else if (state.current === 'READY') {
         orbital.active = true;
-        
         if (state.data.shieldHP <= 0) {
              state.current = 'BROKEN';
              state.timers.action = AI_CONFIG.DAEMON.RECOVERY_TIME;
              return;
         }
-
         if (target.id === 'ENEMY_LOCKED') state.current = 'FIRE';
     }
     
-    // 3. FIRE (Launch Shield as Bullet)
+    // 3. FIRE
     else if (state.current === 'FIRE') {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
@@ -73,9 +67,10 @@ export const DaemonLogic: EnemyLogic = {
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
-        pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
+        // FIX: Use Standard Math (0 = Right)
+        // Previous: Math.atan2(dy, dx) - Math.PI/2
+        pos.rotation = Math.atan2(dy, dx);
 
-        // Spawn using generic context, passing specific damage
         ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35, maxShield);
         ctx.spawnFX('IMPACT_WHITE', pos.x, pos.y);
 
@@ -94,11 +89,12 @@ export const DaemonLogic: EnemyLogic = {
         }
     }
 
-    // 5. BROKEN (Shield Destroyed)
+    // 5. BROKEN
     else if (state.current === 'BROKEN') {
         state.data.shieldHP = 0;
         state.timers.action -= ctx.delta;
         
+        // Spin Logic
         pos.rotation += ctx.delta * AI_CONFIG.DAEMON.ROTATION_SPEED.BROKEN;
 
         if (state.timers.action <= 0) {
