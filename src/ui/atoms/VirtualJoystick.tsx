@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { InputSystem } from '@/game/systems/InputSystem';
+import { useState, useRef } from 'react';
+import { VirtualJoystickService } from '@/game/inputs/VirtualJoystickService';
 
 export const VirtualJoystick = () => {
   const [active, setActive] = useState(false);
@@ -17,11 +16,6 @@ export const VirtualJoystick = () => {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!active) return;
-    
-    // Calculate delta from center
-    // We assume the stick is centered in the 100x100 container
-    // The event coords are relative to the button (the puck) if captured? 
-    // Easier strategy: Use clientX/Y relative to the container center.
     
     const rect = stickRef.current?.parentElement?.getBoundingClientRect();
     if (!rect) return;
@@ -41,27 +35,19 @@ export const VirtualJoystick = () => {
     
     setPos({ x, y });
 
-    // Send normalized vector to InputSystem
-    // Note: Y is inverted in 3D world (Up is Positive), but Screen Y is Down Positive.
-    // However, InputSystem logic in `update` adds to cursor. 
-    // If I pull stick DOWN (Positive Y on Screen), I want cursor to go DOWN (Negative Y in World).
-    // So we invert Y here.
+    // Normalize and Invert Y for World Space
     const normX = x / MAX_RADIUS;
     const normY = -(y / MAX_RADIUS); 
     
-    try {
-        const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-        input.setJoystickVector(normX, normY);
-    } catch {}
+    // Write to Service
+    VirtualJoystickService.setVector(normX, normY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     setActive(false);
     setPos({ x: 0, y: 0 });
-    try {
-        const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-        input.setJoystickVector(0, 0);
-    } catch {}
+    // Reset Service
+    VirtualJoystickService.setVector(0, 0);
   };
 
   return (

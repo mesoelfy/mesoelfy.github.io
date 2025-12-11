@@ -48,7 +48,8 @@ export interface IInputService {
   getCursor(): { x: number, y: number };
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
-  updateBounds(width: number, height: number): void; // Added for InputSystem sync
+  updateBounds(width: number, height: number): void; 
+  // REMOVED: setJoystickVector - now handled via Provider Pattern
 }
 
 // --- SYSTEM CONTRACTS ---

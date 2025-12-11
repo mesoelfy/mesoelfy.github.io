@@ -1,9 +1,8 @@
 import { IGameSystem, IServiceLocator, IInputService } from '../core/interfaces';
+import { VirtualJoystickService } from '../inputs/VirtualJoystickService';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
-  private _virtualVector = { x: 0, y: 0 };
-  private _usingJoystick = false;
   
   // Bounds for clamping (updated by GameEngine/ViewportHelper)
   private _bounds = { width: 30, height: 20 }; 
@@ -13,14 +12,15 @@ export class InputSystem implements IGameSystem, IInputService {
   }
 
   update(delta: number, time: number): void {
-    // If using joystick, move the cursor based on the vector
-    if (this._usingJoystick) {
+    // Poll Providers
+    if (VirtualJoystickService.isActive) {
+        const joyVector = VirtualJoystickService.getVector();
         const speed = 30.0; // Virtual cursor speed
         
-        this._cursor.x += this._virtualVector.x * speed * delta;
-        this._cursor.y += this._virtualVector.y * speed * delta;
+        this._cursor.x += joyVector.x * speed * delta;
+        this._cursor.y += joyVector.y * speed * delta;
 
-        // Clamp to logical world bounds (approximate, refined by viewport)
+        // Clamp to logical world bounds
         const halfW = this._bounds.width / 2;
         const halfH = this._bounds.height / 2;
         
@@ -34,20 +34,15 @@ export class InputSystem implements IGameSystem, IInputService {
   // --- IInputService Implementation ---
   
   public updateCursor(x: number, y: number) {
-    // Mouse movement overrides joystick
-    this._usingJoystick = false;
-    this._cursor.x = x;
-    this._cursor.y = y;
-  }
-
-  public setJoystickVector(x: number, y: number) {
-      if (x === 0 && y === 0) {
-          this._usingJoystick = false;
-      } else {
-          this._usingJoystick = true;
-      }
-      this._virtualVector.x = x;
-      this._virtualVector.y = y;
+    // Mouse movement takes precedence over joystick relative motion
+    // if the user moves the mouse, we snap to it.
+    // If joystick is active, it adds relative motion in the update() loop.
+    
+    // Simple conflict resolution: If joystick is NOT active, trust mouse.
+    if (!VirtualJoystickService.isActive) {
+        this._cursor.x = x;
+        this._cursor.y = y;
+    }
   }
   
   public updateBounds(width: number, height: number) {
@@ -60,7 +55,7 @@ export class InputSystem implements IGameSystem, IInputService {
   }
 
   public isPressed(action: string): boolean {
-    // Placeholder for future button mapping
+    // Placeholder for button mapping
     return false;
   }
 }
