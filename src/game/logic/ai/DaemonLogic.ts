@@ -18,7 +18,9 @@ export const DaemonLogic: EnemyLogic = {
     const target = getTarget(e);
     const orbital = getOrbital(e);
 
-    const maxShield = ctx.daemonMaxDamage || 10;
+    // Calculate dynamic stats from Context
+    const executeLevel = ctx.getUpgradeLevel('EXECUTE');
+    const maxShield = 10 + executeLevel;
 
     if (typeof state.data.shieldHP !== 'number') {
         state.data.shieldHP = 0;
@@ -73,7 +75,9 @@ export const DaemonLogic: EnemyLogic = {
         
         pos.rotation = Math.atan2(dy, dx) - Math.PI/2;
 
-        ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35);
+        // Spawn using generic context, passing specific damage
+        ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35, maxShield);
+        ctx.spawnFX('IMPACT_WHITE', pos.x, pos.y);
 
         state.data.shieldHP = 0; 
         state.current = 'COOLDOWN';

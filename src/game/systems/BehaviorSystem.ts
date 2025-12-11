@@ -7,25 +7,15 @@ import { EnemyTypes } from '../config/Identifiers';
 import { GameEventBus } from '../events/GameEventBus'; 
 import { GameEvents } from '../events/GameEvents'; 
 import { useGameStore } from '@/game/store/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem'; // Import AudioSystem
-
-import { DrillerLogic } from '../logic/ai/DrillerLogic';
-import { KamikazeLogic } from '../logic/ai/KamikazeLogic';
-import { HunterLogic } from '../logic/ai/HunterLogic';
-import { DaemonLogic } from '../logic/ai/DaemonLogic'; 
-import { AIContext, EnemyLogic } from '../logic/ai/types';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
+
+import { AIRegistry } from '../logic/ai/AIRegistry';
+import { AIContext } from '../logic/ai/types';
 
 export class BehaviorSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
-
-  private behaviors: Record<string, EnemyLogic> = {
-      [EnemyTypes.DRILLER]: DrillerLogic,
-      [EnemyTypes.KAMIKAZE]: KamikazeLogic,
-      [EnemyTypes.HUNTER]: HunterLogic,
-      [EnemyTypes.DAEMON]: DaemonLogic 
-  };
 
   private readonly PURPLE_PALETTE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
   private readonly YELLOW_PALETTE = ['#F7D277', '#FFE5A0', '#FFA500', '#FFFFFF'];
@@ -34,9 +24,9 @@ export class BehaviorSystem implements IGameSystem {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     
+    // Subscribe to Daemon Spawning (Upgrades)
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
-        
         const orbital = e.getComponent<OrbitalComponent>('Orbital');
         if (orbital) {
             orbital.radius = 4.0;
@@ -47,48 +37,42 @@ export class BehaviorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    const upgrades = useGameStore.getState().activeUpgrades;
+
     const aiContext: AIContext = {
       delta,
       time,
-      spawnProjectile: (x, y, vx, vy) => {
-          this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
+      spawnProjectile: (x, y, vx, vy, damage) => {
+          // If damage is provided, it's a Daemon/Friendly shot
+          if (damage) {
+              const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, 4.0);
+              bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
+          } else {
+              // Enemy shot
+              this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
+          }
       },
       spawnDrillSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.PURPLE_PALETTE, 5, 8),
       spawnLaunchSparks: (x, y, angle) => this.spawnDirectionalSparks(x, y, angle, this.YELLOW_PALETTE, 12, 15),
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
-      // --- NEW: Audio Hook ---
-      playSound: (key) => AudioSystem.playSound(key)
+      spawnFX: (type: any, x: number, y: number) => GameEventBus.emit(GameEvents.SPAWN_FX, { type, x, y }),
+      playSound: (key) => AudioSystem.playSound(key),
+      getUpgradeLevel: (key) => upgrades[key] || 0
     };
 
-    const upgrades = useGameStore.getState().activeUpgrades;
-    const executeLevel = upgrades['EXECUTE'] || 0;
-    const daemonDamage = 10 + executeLevel;
-
-    const daemonContext: AIContext = {
-      ...aiContext,
-      daemonMaxDamage: daemonDamage,
-      spawnProjectile: (x, y, vx, vy) => {
-          const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, daemonDamage, 4.0);
-          bullet.addComponent(new IdentityComponent('DAEMON_SHOT'));
-          GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x, y }); 
-      }
-    };
-
-    const enemies = this.registry.getByTag(Tag.ENEMY);
-    for (const entity of enemies) {
+    // Iterate all entities with Identity (Enemies + Daemons)
+    const entities = this.registry.getAll();
+    
+    for (const entity of entities) {
         if (!entity.active) continue;
+        
         const identity = entity.getComponent<IdentityComponent>('Identity');
-        if (identity && this.behaviors[identity.variant]) {
-             this.behaviors[identity.variant].update(entity, aiContext);
-        }
-    }
+        if (!identity) continue;
 
-    const daemons = this.registry.getAll(); 
-    for (const entity of daemons) {
-        if (!entity.active) continue;
-        const identity = entity.getComponent<IdentityComponent>('Identity');
-        if (identity && identity.variant === EnemyTypes.DAEMON) {
-             this.behaviors[identity.variant].update(entity, daemonContext);
+        // Look up behavior in Registry
+        const behavior = AIRegistry.get(identity.variant);
+        if (behavior) {
+            behavior.update(entity, aiContext);
         }
     }
   }

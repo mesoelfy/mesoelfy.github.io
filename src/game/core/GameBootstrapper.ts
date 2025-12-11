@@ -19,11 +19,15 @@ import { GameStateSystem } from '../systems/GameStateSystem';
 import { UISyncSystem } from '../systems/UISyncSystem'; 
 import { TargetingSystem } from '../systems/TargetingSystem'; 
 import { GuidanceSystem } from '../systems/GuidanceSystem'; 
-import { OrbitalSystem } from '../systems/OrbitalSystem'; // NEW
+import { OrbitalSystem } from '../systems/OrbitalSystem'; 
+
+// AI Registration
+import { registerAllBehaviors } from '../logic/ai/BehaviorCatalog';
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
 
+  // 1. Initialize Core Services
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
@@ -31,7 +35,10 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  // Instantiate
+  // 2. Register AI Behaviors
+  registerAllBehaviors();
+
+  // 3. Instantiate Systems
   const timeSys = new TimeSystem();
   const inputSys = new InputSystem();
   const physicsSys = new PhysicsSystem();
@@ -48,9 +55,9 @@ export const GameBootstrapper = () => {
   const panelSys = PanelRegistry; 
   const targetingSys = new TargetingSystem(); 
   const guidanceSys = new GuidanceSystem(); 
-  const orbitalSys = new OrbitalSystem(); // NEW
+  const orbitalSys = new OrbitalSystem(); 
 
-  // Register
+  // 4. Register Systems
   const systems = {
       'TimeSystem': timeSys,
       'InputSystem': inputSys,
@@ -68,12 +75,12 @@ export const GameBootstrapper = () => {
       'PanelRegistrySystem': panelSys,
       'TargetingSystem': targetingSys,
       'GuidanceSystem': guidanceSys,
-      'OrbitalSystem': orbitalSys // NEW
+      'OrbitalSystem': orbitalSys
   };
 
   Object.entries(systems).forEach(([key, sys]) => ServiceLocator.registerSystem(key, sys));
   
-  // Update Loop
+  // 5. Update Loop Order
   engine.registerSystem(timeSys);
   engine.registerSystem(inputSys);
   engine.registerSystem(panelSys);
@@ -82,10 +89,9 @@ export const GameBootstrapper = () => {
   engine.registerSystem(waveSys); 
   
   engine.registerSystem(targetingSys); 
-  
-  engine.registerSystem(orbitalSys); // Update orbital positions before logic
+  engine.registerSystem(orbitalSys); 
   engine.registerSystem(playerSys); 
-  engine.registerSystem(behaviorSys); 
+  engine.registerSystem(behaviorSys); // AI Logic
   engine.registerSystem(guidanceSys); 
 
   engine.registerSystem(physicsSys); 
@@ -94,7 +100,7 @@ export const GameBootstrapper = () => {
   engine.registerSystem(shakeSys); 
   engine.registerSystem(syncSys); 
   
-  // Setup
+  // 6. Setup
   Object.values(systems).forEach(sys => sys.setup(ServiceLocator));
   
   engine.setup(ServiceLocator);
