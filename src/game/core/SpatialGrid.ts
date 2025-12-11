@@ -1,68 +1,76 @@
 import { EntityID } from './ecs/types';
+import { MAX_ENTITIES, SPATIAL_GRID_SIZE, SPATIAL_CELL_SIZE } from './Constants';
 
-// Configuration for Integer Hashing
-// World is roughly -20 to +20. Offset ensures positive indices.
-const CELL_SIZE = 4;
-const OFFSET = 1000; 
-const Y_STRIDE = 10000; // Multiplier for Y to avoid X collisions
+// Primes for Hashing
+const HASH_X = 73856093;
+const HASH_Y = 19349663;
 
 export class SpatialGrid {
-  // Using Map<number, EntityID[]> avoids string conversion
-  private buckets = new Map<number, EntityID[]>(); 
+  // Head of the linked list for each cell
+  // cellHead[cellHash] = firstEntityId (or -1 if empty)
+  private cellHead = new Int32Array(SPATIAL_GRID_SIZE);
+
+  // Next pointer for each entity
+  // entityNext[entityId] = nextEntityId (or -1 if end of list)
+  private entityNext = new Int32Array(MAX_ENTITIES);
+
+  constructor() {
+    this.cellHead.fill(-1);
+    this.entityNext.fill(-1);
+  }
 
   public clear() {
-    // Soft Clear: Reuse arrays to avoid Garbage Collection
-    for (const bucket of this.buckets.values()) {
-      bucket.length = 0;
-    }
-  }
-
-  private getKey(x: number, y: number): number {
-    // Floor and offset
-    const cx = Math.floor((x + OFFSET) / CELL_SIZE);
-    const cy = Math.floor((y + OFFSET) / CELL_SIZE);
-    
-    // Unique Integer Key: Y * Width + X
-    return (cy * Y_STRIDE) + cx;
-  }
-
-  public insert(id: EntityID, x: number, y: number) {
-    const key = this.getKey(x, y);
-    
-    let bucket = this.buckets.get(key);
-    if (!bucket) {
-      bucket = []; 
-      this.buckets.set(key, bucket);
-    }
-    bucket.push(id);
+    // We only need to reset the heads to "Empty"
+    // The 'entityNext' values will be overwritten on insert, so no need to loop 10k items.
+    this.cellHead.fill(-1);
   }
 
   /**
-   * Optimized Query.
-   * Populates the provided Set to avoid allocation.
+   * Spatial Hash Function (2D -> 1D Index)
    */
+  private getHash(x: number, y: number): number {
+    const cx = Math.floor(x / SPATIAL_CELL_SIZE);
+    const cy = Math.floor(y / SPATIAL_CELL_SIZE);
+    
+    // XOR Hash mapped to Grid Size (Power of 2 for bitwise AND)
+    const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
+    return hash;
+  }
+
+  public insert(id: EntityID, x: number, y: number) {
+    const eid = id as number;
+    if (eid >= MAX_ENTITIES) return; // Safety check
+
+    const hash = this.getHash(x, y);
+
+    // Linked List Insertion (Prepend)
+    // 1. Point current entity to whatever was previously first
+    this.entityNext[eid] = this.cellHead[hash];
+    
+    // 2. Make current entity the new first
+    this.cellHead[hash] = eid;
+  }
+
   public query(x: number, y: number, radius: number, outResults: Set<EntityID>) {
     outResults.clear();
     
-    const startX = Math.floor((x - radius + OFFSET) / CELL_SIZE);
-    const endX = Math.floor((x + radius + OFFSET) / CELL_SIZE);
-    const startY = Math.floor((y - radius + OFFSET) / CELL_SIZE);
-    const endY = Math.floor((y + radius + OFFSET) / CELL_SIZE);
+    const startX = Math.floor((x - radius) / SPATIAL_CELL_SIZE);
+    const endX = Math.floor((x + radius) / SPATIAL_CELL_SIZE);
+    const startY = Math.floor((y - radius) / SPATIAL_CELL_SIZE);
+    const endY = Math.floor((y + radius) / SPATIAL_CELL_SIZE);
 
     for (let cy = startY; cy <= endY; cy++) {
-      // Pre-calculate Y offset for the inner loop
-      const yHash = cy * Y_STRIDE;
-      
       for (let cx = startX; cx <= endX; cx++) {
-        const key = yHash + cx;
-        const bucket = this.buckets.get(key);
+        // Recompute hash for neighbor cells
+        // Note: We duplicate the hash logic here to avoid function call overhead in hot loop
+        const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
         
-        if (bucket) {
-          // Classic loop is faster than for..of
-          const len = bucket.length;
-          for (let i = 0; i < len; i++) {
-            outResults.add(bucket[i]);
-          }
+        // Traverse Linked List
+        let id = this.cellHead[hash];
+        
+        while (id !== -1) {
+          outResults.add(id as EntityID);
+          id = this.entityNext[id];
         }
       }
     }
