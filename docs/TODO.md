@@ -47,7 +47,7 @@ Lucide icons: gitlab(a fox head) and shovel and puzzle and pickaxe and bow-arrow
 
 - the system breach scrolling text needs to be indepentent for each panel, not a master animation that overlaps for multiple panels.
 
-- even if the identity panel is destoryed or everything is game over state, the player should still be able to lose its health and become the small triangle state.
+- game over state should kill player's reticle to dead 0% health state.
 
 - Music should get distorted, glitchy, and reverbed when Game Over state for a moment before returning to normal
 
@@ -68,7 +68,6 @@ Maybe we can have the motion grid affected by the music like a music player visu
 
 Your cursor could leave a psychedelic trail of colors behind it
 
-- a quick simple chime blip to indicate panel healed 100%.
 
 
 - DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
@@ -90,7 +89,7 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
-- Audio ducking / side-chaining needs to be fine tuned and architecture assessed.
+
 
 
 - mobile - chrome devtools - device toolbar - confirm compatibility with different devices - right now the touch joystick isn't working because touching anywhere on skin moves character. also, everything isn't being resized properly for mobile and needs an overhaul.
@@ -264,46 +263,6 @@ I'd want it applied to player attacks, daemon, hunter (basically anything that h
 IMG_XX are all character squares that open that characters sub menu, which then shows lall the tiwtter hyperlinks. the twitter links can always be switched out to something like DeviantArt later. It's not that serious or big of a deal to delete the twitter posts later if they get infected with haters.
 
 
-Upgrade ELFY icon to 64x64
- 
-
-
-
-### **// NEXT_OBJECTIVE: THE_SENTINEL_UPDATE**
-
-Now that the system is stable and "aware," we need a threat worthy of these defenses. You mentioned a **Boss Character**.
-
-I propose **Operation: DAEMON_PRIME**.
-
-#### **PHASE 1: THE ARCHETYPE**
-*   **Identity:** "The Sentinel" (or "Daemon Prime").
-*   **Logic:** A multi-stage boss that spawns at **Wave 10**.
-*   **Mechanics:**
-    *   **Phase 1 (Shield):** Orbits the center, immune to damage until its orbiting "Nodes" are destroyed.
-    *   **Phase 2 (Glitch):** Teleports randomly, spawning "Driller" minions.
-    *   **Phase 3 (Rage):** Chases the player while firing a spread shot.
-
-#### **PHASE 2: THE VISUALS**
-*   **Model:** A complex compound geometry (e.g., a central Icosahedron surrounded by floating Cubes).
-*   **Shader:** A "Corrupted" shader that shifts colors violently (Green -> Red -> Static).
-*   **Health Bar:** A dedicated, large health bar at the top of the screen (Boss HUD).
-
-#### **PHASE 3: THE META-ATTACK**
-*   **Re-integration:** We bring back the **URL Hex Flood** idea.
-*   **Behavior:** When the Boss enters "Rage Mode," it hijacks the URL bar (`#/0x99A...CRITICAL`) and shakes the browser window heavily.
-
-**Shall we begin designing the Boss Archetype?**
-
-
-Black Blink: The critical blinking state now renders a black rectangle instead of clearing the canvas (transparency), ensuring high contrast.
-Slower ASCII Blink: Adjusted the health bar blink rate to tick % 20 (1 second cycle) for a steadier pulse.
-Favicon Stability:
-Implemented a specific ID (id="dynamic-favicon") for the link element to prevent conflicts with Next.js auto-injected tags.
-Added logic to hide/remove other conflicting icons when dynamic mode is active.
-Refined the isStaticState logic to ensure strict adherence to the "INIT phase or 3s Idle" rule.
-
-
-
 
 
 
@@ -342,6 +301,11 @@ Add a wave form visualizor for all sound affects with some sliders to change the
 
 
 - achievements - - - won't appear if you've used god mode stuff this session?
-- are there more areas to implement a Flyweight Pattern: sharing common data (meshes, textures) to minimize memory usage and initialization cost.
+
 
 - upgrades such as execute/damage increase could be awarded after every boss battle and have some special kind of heraldry in its badge design
+
+
+
+- Debug mini window leaves the game paused.
+- is the framerate capped at 60? Are there benefits to leaving it uncapped so people with higher freshrate screens can get the benefits? Would uncapping it cause wasted processing for people with 60fps monitors? WOuld it be a good idea to have an uncapped frame rate setting in the options? How would I go about implementing it?

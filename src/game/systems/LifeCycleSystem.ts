@@ -14,16 +14,19 @@ export class LifeCycleSystem implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     
-    // Zen Mode Purge is now handled by VFXSystem (Visuals) and here (Entity Cleanup)
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.registry.clear();
     });
   }
 
   update(delta: number, time: number): void {
-    for (const entity of this.registry.getAll()) {
+    // NEW: Query any entity that CAN die (has Lifetime OR Health)
+    const mortals = this.registry.query({ any: ['Lifetime', 'Health'] });
+
+    for (const entity of mortals) {
       if (!entity.active) continue;
 
+      // 1. Time-based Death
       const lifetime = entity.getComponent<LifetimeComponent>('Lifetime');
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -33,6 +36,7 @@ export class LifeCycleSystem implements IGameSystem {
         }
       }
 
+      // 2. Health-based Death
       const health = entity.getComponent<HealthComponent>('Health');
       if (health && health.current <= 0) {
           const identity = entity.getComponent<IdentityComponent>('Identity');
@@ -46,7 +50,6 @@ export class LifeCycleSystem implements IGameSystem {
                 y: transform.y 
              });
              
-             // Map Identity -> FX
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';

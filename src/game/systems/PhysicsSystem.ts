@@ -20,12 +20,16 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    for (const entity of this.registry.getAll()) {
+    // NEW: Query only entities that CAN move
+    const movables = this.registry.query({ all: ['Transform', 'Motion'] });
+    
+    for (const entity of movables) {
       if (!entity.active) continue;
 
       const transform = entity.getComponent<TransformComponent>('Transform');
       const motion = entity.getComponent<MotionComponent>('Motion');
       
+      // We know these exist because of the query, but TS type narrowing...
       if (transform && motion) {
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;

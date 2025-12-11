@@ -3,6 +3,7 @@ import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './SpatialGrid';
 import { WorldRect } from '../utils/ViewportHelper';
 import { ConfigService } from '../services/ConfigService';
+import { QueryDef } from './ecs/Query';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -18,7 +19,7 @@ export interface IServiceLocator {
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
-  getConfigService(): typeof ConfigService; // NEW
+  getConfigService(): typeof ConfigService;
 }
 
 // --- CORE CONTRACTS ---
@@ -29,6 +30,7 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Entity[];
+  query(def: QueryDef): Entity[]; // NEW
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
