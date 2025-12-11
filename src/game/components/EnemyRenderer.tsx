@@ -1,65 +1,20 @@
-import { useMemo } from 'react';
-import * as THREE from 'three';
 import { Tag } from '../core/ecs/types';
 import { GAME_THEME } from '../theme';
 import { EnemyTypes } from '../config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
-import { addBarycentricCoordinates, createHunterSpear } from '../utils/GeometryUtils';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { StateComponent } from '../data/StateComponent';
-import { MODEL_CONFIG } from '../config/ModelConfig';
-
-const vertexShader = `
-  #ifndef USE_INSTANCING_COLOR
-  attribute vec3 instanceColor;
-  #endif
-  attribute vec3 barycentric;
-  varying vec3 vColor;
-  varying vec3 vBarycentric;
-  void main() {
-    vColor = instanceColor;
-    vBarycentric = barycentric;
-    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragmentShader = `
-  varying vec3 vColor;
-  varying vec3 vBarycentric;
-  float edgeFactor(vec3 bary, float width) {
-    vec3 d = fwidth(bary);
-    vec3 a3 = smoothstep(vec3(0.0), d * width, bary);
-    return min(min(a3.x, a3.y), a3.z);
-  }
-  void main() {
-    float width = 1.5; 
-    float edge = edgeFactor(vBarycentric, width);
-    float glow = pow(1.0 - edge, 0.4); 
-    vec3 coreColor = vColor;
-    vec3 edgeColor = mix(vColor, vec3(1.0), 0.8);
-    gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);
-  }
-`;
+import { AssetService } from '../assets/AssetService';
+import * as THREE from 'three';
 
 export const EnemyRenderer = () => {
-  const drillerGeo = useMemo(() => {
-      const { radius, height, segments } = MODEL_CONFIG.DRILLER;
-      return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
-  }, []);
+  // Use Assets from Service (Singleton Cache)
+  const drillerGeo = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
+  const kamikazeGeo = AssetService.get<THREE.BufferGeometry>('GEO_KAMIKAZE');
+  const hunterGeo = AssetService.get<THREE.BufferGeometry>('GEO_HUNTER');
+  const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
 
-  // RESTORED: IcosahedronGeometry (Detail 0)
-  const kamikazeGeo = useMemo(() => {
-      return addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0));
-  }, []);
-
-  const hunterGeo = useMemo(() => createHunterSpear(), []);
-
-  const material = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader, fragmentShader, uniforms: {}, vertexColors: true,
-    extensions: { derivatives: true }, side: THREE.DoubleSide,
-  }), []);
-
-  const chargeColor = useMemo(() => new THREE.Color(GAME_THEME.enemy.charge), []);
+  const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
 
   const applySpawnEffect = (obj: THREE.Object3D, state?: StateComponent) => {
       if (state && state.current === 'SPAWN') {
@@ -85,8 +40,6 @@ export const EnemyRenderer = () => {
             const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
             obj.position.z = 5.0;
             obj.rotateY(performance.now() * 0.001 * speed); 
-            
-            // FIX: Ensure base scale is 1.0 before applying spawn effect
             obj.scale.setScalar(1.0); 
             applySpawnEffect(obj, state);
         }}
@@ -105,8 +58,6 @@ export const EnemyRenderer = () => {
             const time = performance.now() * 0.001;
             obj.position.z = 5.0;
             obj.rotation.set(time * 2, time, 0); 
-            
-            // FIX: Ensure base scale is 1.0
             obj.scale.setScalar(1.0);
             applySpawnEffect(obj, state);
         }}
@@ -130,8 +81,6 @@ export const EnemyRenderer = () => {
             const spin = state?.data?.spinAngle || 0;
             obj.position.z = 5.0;
             obj.rotation.set(0, spin, 0);
-            
-            // FIX: Ensure base scale is 1.0
             obj.scale.setScalar(1.0);
             applySpawnEffect(obj, state);
         }}
