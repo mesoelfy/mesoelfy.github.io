@@ -4,8 +4,7 @@ import { useGameStore } from '@/game/store/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
 
-// UPDATED: 100ms (10 FPS)
-const UPDATE_INTERVAL = 100; 
+const UPDATE_INTERVAL = 100; // 10 FPS
 
 export const useFavicon = (bootKey: string) => {
   const linkRef = useRef<HTMLLinkElement | null>(null);
@@ -20,7 +19,6 @@ export const useFavicon = (bootKey: string) => {
 
   // 1. PRE-BAKER
   useEffect(() => {
-    // Ensure link exists
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
       link = document.createElement('link');
@@ -50,7 +48,6 @@ export const useFavicon = (bootKey: string) => {
       updateFavicon();
     }, UPDATE_INTERVAL);
     
-    // Immediate check on key state changes
     updateFavicon();
 
     return () => clearInterval(interval);
@@ -62,9 +59,12 @@ export const useFavicon = (bootKey: string) => {
     let nextHref = '';
     let visualKey = '';
 
+    // Steady 1Hz Blink (500ms ON / 500ms OFF) using Wall Clock
+    const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+
     // --- STATE MACHINE ---
 
-    // 1. BOOT SEQUENCE (Highest Priority during Standby)
+    // 1. BOOT SEQUENCE
     if (bootState === 'standby') {
         let stage = 'INIT';
         if (bootKey === 'LINK') stage = 'LINK';
@@ -74,20 +74,21 @@ export const useFavicon = (bootKey: string) => {
         else if (bootKey === 'DECRYPTED') stage = 'DECRYPTED';
         else if (bootKey === 'CAUTION') stage = 'CAUTION';
         
-        visualKey = `BOOT_${stage}_${tick}`;
-        nextHref = generateBootIcon(stage, tick);
+        visualKey = `BOOT_${stage}_${blinkOn}`;
+        nextHref = generateBootIcon(stage, blinkOn);
     }
-    // 2. BREACHING (During active game)
+    // 2. BREACHING
     else if (isBreaching) {
-        visualKey = `BREACH_${tick ? 'A' : 'B'}`;
-        nextHref = generateBreachIcon(tick ? 'A' : 'B');
+        visualKey = `BREACH_${blinkOn ? 'A' : 'B'}`;
+        nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     }
     // 3. PAUSED
     else if (isSimulationPaused) {
-        visualKey = `PAUSED_${tick}`;
-        nextHref = generatePausedIcon(tick);
+        visualKey = `PAUSED_${blinkOn}`;
+        // Force blinkOn based on wall clock to ensure steady rhythm
+        nextHref = generatePausedIcon(blinkOn);
     }
-    // 4. IDLE / HEALTHY (Use Custom Art)
+    // 4. IDLE / HEALTHY
     else if (isZenMode || (integrity > 99)) {
         if (defaultIconDataRef.current) {
             visualKey = 'DEFAULT_STATIC';

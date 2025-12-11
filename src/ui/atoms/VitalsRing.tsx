@@ -84,7 +84,8 @@ export const VitalsRing = ({
             strokeDashoffset={offsetHp}
             strokeLinecap="round"
             transform={`rotate(-90 ${center} ${center})`}
-            className="transition-all duration-100 ease-linear"
+            // UPDATED: duration-300 for snappy decay
+            className="transition-all duration-300 ease-out"
           />
           
           <circle 

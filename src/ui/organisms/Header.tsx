@@ -156,14 +156,21 @@ export const Header = () => {
 
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <motion.div 
-            animate={isCritical ? heartbeatControls : undefined}
-            variants={barVariants}
-            className={clsx("h-full transition-all duration-500 ease-out shadow-[0_0_10px_currentColor]", 
-                isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
-            )} 
-            style={{ width: `${systemIntegrity}%` }}
-          />
+          <motion.div
+            className="h-full"
+            initial={{ width: "100%" }}
+            animate={{ width: `${systemIntegrity}%` }}
+            // UPDATED: 0.5 -> 0.3 for snappier decay
+            transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+          >
+              <motion.div 
+                animate={isCritical ? heartbeatControls : undefined}
+                variants={barVariants}
+                className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", 
+                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                )} 
+              />
+          </motion.div>
         </div>
       )}
       

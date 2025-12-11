@@ -166,7 +166,8 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}
-                    transition={{ type: "tween", ease: "easeOut", duration: 0.1 }}
+                    // UPDATED: 0.5 -> 0.3 for snappier decay
+                    transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
                 />
             </div>
         )}
