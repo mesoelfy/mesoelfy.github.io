@@ -16,6 +16,10 @@ export class AudioMixer {
   private ambienceDepthGain!: GainNode;
 
   private ctxManager: AudioContextManager;
+  
+  // State for Ducking
+  private _targetMusicVol: number = 0;
+  private _isMusicMuted: boolean = true;
 
   constructor(manager: AudioContextManager) {
     this.ctxManager = manager;
@@ -71,8 +75,18 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
 
+    // Calculate Music State
+    this._isMusicMuted = !settings.music;
+    this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
+
+    // Apply
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
-    this.musicGain.gain.value = settings.music ? (settings.volumeMusic * 0.4) : 0;
+    
+    // Ensure we don't snap volume if currently ducking? 
+    // Actually, snapping on setting change is expected behavior.
+    this.musicGain.gain.cancelScheduledValues(this.ctxManager.ctx!.currentTime);
+    this.musicGain.gain.value = this._targetMusicVol;
+    
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
 
@@ -91,17 +105,30 @@ export class AudioMixer {
   }
 
   public duckMusic(intensity: number, duration: number) {
-    if (!this.musicGain) return;
+    // 1. If muted, do nothing.
+    if (!this.musicGain || this._isMusicMuted) return;
+    
     const ctx = this.ctxManager.ctx;
     if (!ctx) return;
 
+    // 2. Use the stored target volume, not a hardcoded value.
+    const baseVol = this._targetMusicVol;
+    
+    // Safety check: if volume is practically zero, don't duck.
+    if (baseVol < 0.001) return;
+
     const now = ctx.currentTime;
-    const baseVol = 0.4;
-    const targetVol = baseVol * (1.0 - intensity);
+    const targetVol = Math.max(0, baseVol * (1.0 - intensity));
     
     this.musicGain.gain.cancelScheduledValues(now);
+    
+    // Start from current value to prevent clicks
     this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
+    
+    // Ramp down
     this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
+    
+    // Ramp back up to the user's setting
     this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
 }
