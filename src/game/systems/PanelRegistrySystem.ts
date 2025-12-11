@@ -1,183 +1,103 @@
 import { IGameSystem, IServiceLocator, IPanelSystem } from '../core/interfaces';
-import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { WorldRect } from '../utils/ViewportHelper';
 
-const MAX_PANEL_HEALTH = 1000;
-
-interface PanelState {
-  health: number;
-  isDestroyed: boolean;
-}
+// Services
+import { DOMSpatialService } from '../services/DOMSpatialService';
+import { StructureHealthService } from '../services/StructureHealthService';
 
 class PanelRegistrySystemClass implements IPanelSystem {
-  private panelRects = new Map<string, WorldRect>();
-  private observedElements = new Map<string, HTMLElement>();
-  private panelStates = new Map<string, PanelState>();
-
-  public systemIntegrity: number = 100;
+  
+  // Expose integrity via getter to match Interface
+  public get systemIntegrity() {
+      return StructureHealthService.systemIntegrity;
+  }
 
   setup(locator: IServiceLocator): void {
-    this.resetLogic();
-    this.refreshAll();
+    StructureHealthService.reset();
+    DOMSpatialService.refreshAll();
     
+    // Wire up Upgrade Event -> Service Logic
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
-            this.triggerSystemRestore();
+            const restoredCount = StructureHealthService.restoreAll();
+            
+            if (restoredCount > 0) {
+                GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
+                AudioSystem.playSound('fx_reboot_success'); 
+                
+                // Spawn FX on newly restored panels
+                // We iterate checking who was destroyed? No, simplest is just center screen FX or
+                // we can iterate the rects.
+                // For now, keep it simple.
+            }
         }
     });
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      // Logic moved to Services or specific systems (like InteractionSystem)
+  }
+
   teardown(): void {}
 
-  private triggerSystemRestore() {
-      let restoredCount = 0;
-      for (const [id, state] of this.panelStates) {
-          if (state.isDestroyed) {
-              state.isDestroyed = false;
-              state.health = 500; 
-              restoredCount++;
-              
-              const rect = this.panelRects.get(id);
-              if (rect) {
-                  GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: rect.x, y: rect.y });
-              }
-          } else {
-              if (state.health < MAX_PANEL_HEALTH) {
-                  state.health = MAX_PANEL_HEALTH;
-              }
-          }
-      }
-      
-      this.calculateIntegrity();
-      if (restoredCount > 0) {
-          GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
-          AudioSystem.playSound('fx_reboot_success'); 
-          GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Restored ${restoredCount} panels`, source: 'PanelSystem' });
-      }
-  }
-
-  public resetLogic() {
-    for (const id of this.observedElements.keys()) {
-        this.panelStates.set(id, { health: MAX_PANEL_HEALTH, isDestroyed: false });
-    }
-    this.calculateIntegrity();
-  }
-
-  public damagePanel(id: string, amount: number) {
-    if (useStore.getState().debugFlags.panelGodMode) return;
-
-    const state = this.panelStates.get(id);
-    if (!state || state.isDestroyed) return;
-
-    const oldHealth = state.health;
-    state.health = Math.max(0, state.health - amount);
-    
-    if (state.health <= 0 && !state.isDestroyed) {
-        state.isDestroyed = true;
-        state.health = 0; 
-        
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `PANEL DESTROYED: ${id}`, source: 'PanelSystem' });
-        GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
-    } else {
-        if (Math.floor(oldHealth / 100) > Math.floor(state.health / 100)) {
-             // Debug log
-        }
-        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
-    }
-    
-    this.calculateIntegrity();
-  }
-
-  public healPanel(id: string, amount: number) {
-    const state = this.panelStates.get(id);
-    if (!state) return;
-
-    const wasDestroyed = state.isDestroyed;
-    state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
-    
-    if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
-        state.isDestroyed = false;
-        state.health = 500; 
-        
-        AudioSystem.playSound('fx_reboot_success');
-        
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `Panel RESTORED: ${id}`, source: 'PanelSystem' });
-    }
-    
-    this.calculateIntegrity();
-  }
-
-  public decayPanel(id: string, amount: number) {
-     const state = this.panelStates.get(id);
-     if (!state || !state.isDestroyed) return;
-     state.health = Math.max(0, state.health - amount);
-  }
-
-  public destroyAll() {
-      for (const [id, state] of this.panelStates) {
-          state.health = 0;
-          state.isDestroyed = true;
-          GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
-      }
-      this.calculateIntegrity();
-  }
-
-  private calculateIntegrity() {
-    let current = 0;
-    let max = 0;
-    for (const state of this.panelStates.values()) {
-        max += MAX_PANEL_HEALTH;
-        if (!state.isDestroyed) current += state.health;
-    }
-    this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
-  }
+  // --- IPanelSystem Implementation (Delegation) ---
 
   public register(id: string, element: HTMLElement) {
-    this.observedElements.set(id, element);
-    if (!this.panelStates.has(id)) {
-        this.panelStates.set(id, { health: MAX_PANEL_HEALTH, isDestroyed: false });
-    }
-    this.refreshSingle(id);
+      DOMSpatialService.register(id, element);
+      StructureHealthService.register(id);
   }
 
   public unregister(id: string) {
-    this.observedElements.delete(id);
-    this.panelRects.delete(id);
-    this.panelStates.delete(id);
+      DOMSpatialService.unregister(id);
+      StructureHealthService.unregister(id);
   }
 
   public refreshSingle(id: string) {
-    const el = this.observedElements.get(id);
-    if (!el || !el.isConnected) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) return;
-    this.panelRects.set(id, ViewportHelper.domToWorld(id, rect));
+      DOMSpatialService.refreshSingle(id);
   }
 
   public refreshAll() {
-    const ids = Array.from(this.observedElements.keys());
-    for (const id of ids) this.refreshSingle(id);
+      DOMSpatialService.refreshAll();
+  }
+
+  public damagePanel(id: string, amount: number) {
+      StructureHealthService.damage(id, amount);
+  }
+
+  public healPanel(id: string, amount: number) {
+      StructureHealthService.heal(id, amount);
+  }
+  
+  public decayPanel(id: string, amount: number) {
+      StructureHealthService.decay(id, amount);
+  }
+
+  public destroyAll() {
+      StructureHealthService.destroyAll();
   }
 
   public getPanelRect(id: string): WorldRect | undefined {
-    return this.panelRects.get(id);
+      return DOMSpatialService.getRect(id);
   }
 
-  public getPanelState(id: string): PanelState | undefined {
-    return this.panelStates.get(id);
+  public getPanelState(id: string) {
+      return StructureHealthService.getState(id);
   }
   
+  // Composite Data Getter (Used by UI Sync)
   public getAllPanels() {
-      const result = [];
-      for(const [id, rect] of this.panelRects) {
-          const state = this.panelStates.get(id) || { health: 0, isDestroyed: true };
-          result.push({ ...rect, ...state });
+      const results = [];
+      const rects = DOMSpatialService.getAllRects();
+      const states = StructureHealthService.getAllStates();
+      
+      for(const [id, rect] of rects) {
+          const state = states.get(id) || { health: 0, isDestroyed: true };
+          results.push({ ...rect, ...state });
       }
-      return result;
+      return results;
   }
 }
 
