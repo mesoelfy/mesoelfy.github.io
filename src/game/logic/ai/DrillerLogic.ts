@@ -41,15 +41,13 @@ export const DrillerLogic: EnemyLogic = {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     
-    // 1. Calculate True Travel Angle (Math 0 = Right)
-    const travelAngle = Math.atan2(dy, dx);
-    
-    // 2. Calculate Visual Rotation (Model 0 = Up, so subtract 90deg)
-    const visualRotation = travelAngle - Math.PI/2;
+    // PURE MATH ANGLE (0 = Right)
+    const angle = Math.atan2(dy, dx);
     
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
+        // Snap logic
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -59,11 +57,10 @@ export const DrillerLogic: EnemyLogic = {
 
         motion.vx = 0;
         motion.vy = 0;
-        pos.rotation = visualRotation;
+        pos.rotation = angle; // Store True Angle
 
-        // FIX: Pass 'travelAngle' so VFX knows the true impact vector
-        // VFXSystem adds PI to this, creating a spray directly backward
-        ctx.spawnDrillSparks(destX, destY, travelAngle);
+        // Spawn Sparks
+        ctx.spawnDrillSparks(destX, destY, angle);
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
@@ -89,7 +86,7 @@ export const DrillerLogic: EnemyLogic = {
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;
-            pos.rotation = visualRotation;
+            pos.rotation = angle; // Store True Angle
         }
     }
   }

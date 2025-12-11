@@ -29,14 +29,15 @@ export const HunterLogic: EnemyLogic = {
     const state = getState(e);
     const target = getTarget(e);
 
-    // USE INJECTED CONFIG
     const hunterConfig = ctx.config.enemies[EnemyTypes.HUNTER];
     const aiConfig = ctx.config.ai.HUNTER;
 
+    // --- INITIALIZATION ---
     if (state.data.spinVelocity === undefined) {
         state.data.spinVelocity = aiConfig.SPIN_SPEED_IDLE;
         state.data.spinAngle = 0;
     }
+    
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
         state.current = 'HUNT';
         state.timers.action = 3.0; 
@@ -44,9 +45,16 @@ export const HunterLogic: EnemyLogic = {
     }
 
     let targetSpinSpeed = aiConfig.SPIN_SPEED_IDLE; 
+    let spinLerpRate = ctx.delta * 2.0;
 
-    // --- STATES ---
+    // --- AIMING LOGIC ---
+    const aimDx = target.x - pos.x;
+    const aimDy = target.y - pos.y;
+    const trueAngle = Math.atan2(aimDy, aimDx); // Standard Math Angle (0 = Right)
 
+    // --- STATE MACHINE ---
+
+    // 1. HUNT: Orbit and Idle Spin
     if (state.current === 'HUNT') {
         const currentAngle = (ctx.time * aiConfig.ORBIT_SPEED) + state.data.offsetAngle;
         const tx = target.x + Math.cos(currentAngle) * aiConfig.TARGET_RADIUS;
@@ -57,50 +65,53 @@ export const HunterLogic: EnemyLogic = {
         const dist = Math.sqrt(dx*dx + dy*dy);
         const speed = hunterConfig.baseSpeed; 
         
+        // Move towards orbit point
         if (dist > 1.0) {
             motion.vx += (dx / dist) * speed * ctx.delta * 2.0;
             motion.vy += (dy / dist) * speed * ctx.delta * 2.0;
         }
-        
         motion.vx *= 0.92;
         motion.vy *= 0.92;
 
-        const aimDx = target.x - pos.x;
-        const aimDy = target.y - pos.y;
-        const aimAngle = Math.atan2(aimDy, aimDx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, aimAngle, aiConfig.AIM_LERP);
+        // Lazy Aim
+        pos.rotation = rotateTowards(pos.rotation, trueAngle, aiConfig.AIM_LERP);
 
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'CHARGE';
             state.timers.action = hunterConfig.chargeDuration;
+            // Stop moving to charge
             motion.vx *= 0.1; 
             motion.vy *= 0.1;
         }
     } 
     
+    // 2. CHARGE: Rev up drill (Opposite Direction)
     else if (state.current === 'CHARGE') {
         state.timers.action -= ctx.delta;
-        motion.vx *= 0.8;
-        motion.vy *= 0.8;
+        
+        // Hard Aim
+        pos.rotation = rotateTowards(pos.rotation, trueAngle, aiConfig.CHARGE_LERP);
 
-        const dx = target.x - pos.x;
-        const dy = target.y - pos.y;
-        const targetAngle = Math.atan2(dy, dx) - Math.PI/2;
-        pos.rotation = rotateTowards(pos.rotation, targetAngle, aiConfig.CHARGE_LERP);
-
-        targetSpinSpeed = aiConfig.SPIN_SPEED_CHARGE; 
+        // Spin Ramp: Start slow, end fast (Negative direction)
+        const progress = 1.0 - (state.timers.action / hunterConfig.chargeDuration);
+        
+        // Ramp function: 2.0 (Idle) -> -30.0 (Full Charge)
+        // We use a curve to make it "rev up" at the end
+        const revCurve = Math.pow(progress, 3); 
+        targetSpinSpeed = aiConfig.SPIN_SPEED_IDLE - (revCurve * 35.0); 
+        spinLerpRate = ctx.delta * 10.0; // Responsive
 
         if (state.timers.action <= 0) {
             state.current = 'FIRE';
         }
     }
     
+    // 3. FIRE: Launch and Recoil
     else if (state.current === 'FIRE') {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
@@ -109,14 +120,21 @@ export const HunterLogic: EnemyLogic = {
         const spawnX = pos.x + (dirX * offset);
         const spawnY = pos.y + (dirY * offset);
 
+        // Calculate Damage from Config/Upgrade Context? For now standard.
         ctx.spawnProjectile(spawnX, spawnY, dirX * aiConfig.PROJECTILE_SPEED, dirY * aiConfig.PROJECTILE_SPEED);
+        
+        // Sparks: Pass True Angle (Visual Recoil handled by VFXSystem)
         ctx.spawnLaunchSparks(spawnX, spawnY, pos.rotation);
 
         state.current = 'HUNT';
         state.timers.action = 2.0 + Math.random() * 2.0;
+        
+        // SPRING OVERSHOOT: Kick spin to positive extreme (50) to "unwind" from the negative charge
+        state.data.spinVelocity = 50.0; 
     }
 
-    state.data.spinVelocity = lerp(state.data.spinVelocity, targetSpinSpeed, ctx.delta * 2.0);
+    // --- APPLY SPIN PHYSICS ---
+    state.data.spinVelocity = lerp(state.data.spinVelocity, targetSpinSpeed, spinLerpRate);
     state.data.spinAngle += state.data.spinVelocity * ctx.delta;
   }
 };

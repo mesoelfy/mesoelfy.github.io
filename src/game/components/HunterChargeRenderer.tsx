@@ -29,25 +29,29 @@ export const HunterChargeRenderer = () => {
           
           if (transform && state) {
               const config = ServiceLocator.getConfigService().enemies[EnemyTypes.HUNTER];
-              const maxDuration = config.chargeDuration;
-              const remaining = state.timers.action || 0;
+              const maxDuration = config ? config.chargeDuration : 1.0; 
               
+              // Safe access to timer
+              const currentTimer = state.timers.action;
+              const remaining = typeof currentTimer === 'number' ? currentTimer : maxDuration;
+              
+              // Calculate Progress (0.0 -> 1.0)
               const progress = Math.max(0, Math.min(1, 1.0 - (remaining / maxDuration)));
-              const scale = Math.pow(progress, 2) * 1.5;
+              
+              // Curve: Start at 0.2, Grow to 1.5 (Full Bullet Size)
+              const scale = 0.2 + (Math.pow(progress, 2) * 1.3); 
               
               const rumble = progress > 0.8 ? (progress - 0.8) * 0.3 : 0;
               const jitterX = (Math.random() - 0.5) * rumble;
               const jitterY = (Math.random() - 0.5) * rumble;
 
               const offset = 1.6;
-              const dirX = Math.cos(transform.rotation + Math.PI/2);
-              const dirY = Math.sin(transform.rotation + Math.PI/2);
+              const dirX = Math.cos(transform.rotation);
+              const dirY = Math.sin(transform.rotation);
               
               obj.position.x = transform.x + (dirX * offset) + jitterX;
               obj.position.y = transform.y + (dirY * offset) + jitterY;
-              
-              // FIX: Z-Index must be > 5.0 (Enemy Body) to be visible
-              obj.position.z = 5.2; 
+              obj.position.z = 5.2; // In front of enemy body
               
               obj.scale.setScalar(scale);
               obj.rotation.set(0, 0, 0); 
