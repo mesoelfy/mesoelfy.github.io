@@ -7,14 +7,20 @@ import { InputSystem } from '../systems/InputSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
+import { VirtualJoystickService } from '../inputs/VirtualJoystickService';
 
 export let ActiveEngine: GameEngineCore | null = null;
 
 export const GameDirector = () => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
+  
+  // Track if device supports touch (simple heuristic)
+  const isTouchDevice = useRef(false);
 
   useEffect(() => {
+    isTouchDevice.current = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     const engine = GameBootstrapper();
     engineRef.current = engine;
     ActiveEngine = engine;
@@ -60,9 +66,20 @@ export const GameDirector = () => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          const x = (state.pointer.x * viewport.width) / 2;
-          const y = (state.pointer.y * viewport.height) / 2;
-          input.updateCursor(x, y);
+          
+          // INPUT LOGIC UPDATE:
+          // If on a touch device, we IGNORE the pointer mapping for cursor movement
+          // unless the Virtual Joystick is completely idle AND we might want to support
+          // legacy tap-to-move (optional). 
+          // 
+          // Current Decision: On Touch Devices, pointer mapping is DISABLED for movement.
+          // Only Joystick moves the ship.
+          
+          if (!isTouchDevice.current) {
+              const x = (state.pointer.x * viewport.width) / 2;
+              const y = (state.pointer.y * viewport.height) / 2;
+              input.updateCursor(x, y);
+          }
 
           // Render Loop
           engineRef.current.update(delta, state.clock.elapsedTime);

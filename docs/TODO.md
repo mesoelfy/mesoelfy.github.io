@@ -380,7 +380,6 @@ What if mobile view forced landscape view and just shrunk everything?
 
 
 
-
 ### **// PHASE MAP**
 
 ### **PHASE A: Visual Design & State Definition**
@@ -467,3 +466,30 @@ Well done. Please provide the commit then tell me what else in the project has b
     https://help.ko-fi.com/hc/en-us/articles/360018381678-Ko-fi-tip-widget#ko-fi-tip-widget-0-0
     https://medium.com/@prof_moto/adding-a-ko-fi-widget-to-your-react-app-23020f628be8
     
+
+
+can we implement a "zoomed" magnifying glass view under the action button?
+
+launched bullet should have some squash and stretch to it instead of perfect circle chape.
+
+
+
+- mobile joystick sensitivity adjustment settings
+- keyboard and gamepad support (with sensitity settings) - extract logic from godot custom key inputs to get the point across faster
+
+HOW TO VIBE CODE (make it a taller tab in settings) [mac and pc]
+    - github install and instructions for how to use AI Studio and command to get all source code and work on your own project
+        tips
+            no god components
+            after you add a bunch of features, spend a full day having AI refactor the code using better SOLID practices. "please audit my codebase and outline in a step by step fashion what needs to be refactored to follow SOLID best practices"
+
+
+- the scroll bar should match the health status color of the OS (GREEN/YELLOW/RED)
+
+
+If window height is greater than 800px, but panels are still extending into an area of the screen that would cause scroll bars to appear, it should scale down.
+
+
+can we implement a "zoomed" magnifying glass view under the action button?
+
+launched bullet should have some squash and stretch to it instead of perfect circle chape.
