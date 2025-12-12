@@ -369,6 +369,11 @@ These are rendered using CSS repeating-linear-gradient.
 
         Repeat: The browser loops this 12px pattern to fill the div.
 
+Reverse the scroll left/right direction for the intro scene horizontal scroll bar.
+
+
+What if mobile view forced landscape view and just shrunk everything?
+
 
 
 

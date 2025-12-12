@@ -112,9 +112,10 @@ export default function Home() {
                   {!isZenMode && (
                     <motion.div 
                       className={clsx(
-                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black pb-8",
-                          // LAYOUT FIX: Always allow vertical scrolling (h-full + overflow-y-auto).
-                          // This ensures that if panels grow (zoom/content), we can scroll to reach them.
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8",
+                          // LAYOUT FIX: Re-enabled scrolling. 
+                          // 'h-full' + 'overflow-y-auto' allows the grid to exceed viewport height
+                          // which is necessary when aspect-ratio panels grow tall on narrow screens.
                           "h-full overflow-y-auto"
                       )}
                       initial="hidden"
@@ -131,12 +132,8 @@ export default function Home() {
                         }
                       }}
                     >
-                      {/* 
-                         LAYOUT FIX: Reverted to h-auto.
-                         Panels now stack naturally based on content size.
-                      */}
+                      {/* IDENTITY COLUMN */}
                       <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                        {/* Removed flex-1 to prevent stretching. Added min-h for sanity. */}
                         <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
                           <IdentityHUD />
                         </GlassPanel>
@@ -146,8 +143,9 @@ export default function Home() {
                         </GlassPanel>
                       </div>
 
+                      {/* CONTENT COLUMN */}
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                        <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
+                        <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
                               <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
@@ -164,12 +162,17 @@ export default function Home() {
                           </div>
                         </GlassPanel>
 
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                          <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                        {/* 
+                           VISUAL FIX: 
+                           Removed flex-1 and max-h constraints.
+                           Panels will now hug their content height (Grid/Videos) exactly.
+                        */}
+                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
+                          <GlassPanel title="ART_DB" className="flex-1" gameId="art">
                              <LiveArtGrid />
                           </GlassPanel>
 
-                          <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                          <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0" gameId="video">
                              <HoloCommLog />
                           </GlassPanel>
                         </div>

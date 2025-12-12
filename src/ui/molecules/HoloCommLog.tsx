@@ -22,7 +22,6 @@ const OfflineStatic = () => (
 
 const PowerSaveStatic = () => (
   <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-alert-yellow/20 overflow-hidden w-full h-full">
-    {/* Simple scanline, no gif */}
     <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
     
     <div className="relative z-10 flex flex-col items-center gap-2 text-alert-yellow opacity-80">
@@ -48,7 +47,6 @@ const VideoSlot = ({
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
-  // PERFORMANCE MODE CHECK
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isPotato = graphicsMode === 'POTATO';
   
@@ -79,8 +77,6 @@ const VideoSlot = ({
 
   useEffect(() => {
     if (isOffline) return; 
-
-    // Don't run rotate timer if in potato mode (save logic cycles)
     if (isPotato) return;
 
     const duration = 30000 + (Math.random() * 15000);
@@ -195,8 +191,9 @@ export const HoloCommLog = () => {
 
   if (!initialVideos) return <div className="h-full bg-black" />;
 
+  // UPDATED: Removed h-full, p-1 spacing only.
   return (
-    <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
+    <div className="flex flex-col gap-2 p-1">
       {initialVideos.map((vid, i) => (
         <VideoSlot 
           key={i} 

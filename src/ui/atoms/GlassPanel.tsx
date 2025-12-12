@@ -140,11 +140,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
-      {/* 
-         DOT GRID FIX:
-         Added 'top-8' (2rem/32px) to offset the pattern below the IntelligentHeader.
-         This prevents dots from bleeding into the menu bar.
-      */}
       <DotGridBackground className="top-8" />
 
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
@@ -168,14 +163,20 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           />
       )}
 
-      <div className="relative z-10 p-4 h-full">
+      {/* 
+         LAYOUT FIX: 
+         Changed 'h-full' to 'flex-1 min-h-0'.
+         This ensures the content area takes ONLY the remaining space after the header,
+         preventing overflow that eats the bottom 'p-4' padding.
+      */}
+      <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
         {(isDestroyed || isGameOver) && (
             <SafePanelContent fallbackId={`sparks-${gameId}`}>
                 <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
             </SafePanelContent>
         )}
 
-        <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
+        <div className={clsx("flex-1 min-h-0 flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
             
             {isDestroyed && !isGameOver && (
