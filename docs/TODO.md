@@ -430,9 +430,18 @@ https://x.com/MegaMan/status/1999326723611996349?s=20
     -  Dynamic Resolution (DPR) - - - 
 
 
-    - pause blinker favicon should match game status color
+  
 
 - in dashboard, the way panels resize with browser dimension change is perfect. I'd like the same property to happen when zooming the browser.
 
 
 Well done. Please provide the commit then tell me what else in the project has become a God Component.
+
+
+  - pause blinker favicon should match game status color and "SESSION FAILURE" in tab should by "SYSTEM FAILURE"
+
+  Patron panel. Cycles between top all time patron, top month patron, latest patron, leader board. Links to https://ko-fi.com/mesoelfy. Donors are manually added.
+    https://help.ko-fi.com/hc/en-us/articles/360004162298-Does-Ko-fi-have-an-API-or-webhook#does-ko-fi-have-an-api-or-webhook--0-0
+    https://help.ko-fi.com/hc/en-us/articles/360018381678-Ko-fi-tip-widget#ko-fi-tip-widget-0-0
+    https://medium.com/@prof_moto/adding-a-ko-fi-widget-to-your-react-app-23020f628be8
+    
