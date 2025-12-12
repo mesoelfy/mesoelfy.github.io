@@ -5,7 +5,7 @@ import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_RECIPES } from '../config/VFXConfig';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
-import { useStore } from '@/core/store/useStore'; // NEW IMPORT
+import { useStore } from '@/core/store/useStore';
 
 export class VFXSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
@@ -18,10 +18,8 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Process High Frequency Events
     FastEventBus.processEvents((id, a1, a2, a3, a4) => {
         if (id === FastEvents.SPAWN_FX) {
-            // a1: TypeID, a2: X, a3: Y, a4: Angle
             const key = FX_ID_MAP[a1];
             if (key) this.executeRecipe(key, a2, a3, a4);
         }
@@ -36,18 +34,22 @@ export class VFXSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const isBig = p.damage > 10;
-        this.addTrauma(isBig ? 0.6 : 0.3);
-        if (isBig) this.triggerHitStop(0.1);
+        // Standard bullet hits add lighter trauma.
+        // Direct collisions add THEIR OWN trauma in CombatHandlers, 
+        // effectively stacking with this for a huge impact.
+        if (isBig) this.triggerHitStop(0.05);
     });
 
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.addTrauma(0.7);
-        this.triggerHitStop(0.15);
+        // AAA POLISH: Increased structural failure feel
+        this.addTrauma(0.75); 
+        this.triggerHitStop(0.1); 
     });
 
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        // AAA POLISH: Maximum impact on death
         this.addTrauma(1.0);
-        this.triggerHitStop(0.5);
+        this.triggerHitStop(0.5); 
     });
     
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
@@ -59,17 +61,13 @@ export class VFXSystem implements IGameSystem {
       const recipe = VFX_RECIPES[key];
       if (!recipe) return;
 
-      // PERFORMANCE CHECK: Access store directly (imperative)
       const graphicsMode = useStore.getState().graphicsMode;
       const isPotato = graphicsMode === 'POTATO';
-      
-      // Reduce particles by 70% in Potato Mode
       const multiplier = isPotato ? 0.3 : 1.0;
 
       const rawCount = this.randomRange(recipe.count[0], recipe.count[1]);
       let count = Math.floor(rawCount * multiplier);
       
-      // Ensure at least 1 particle unless it was 0 to begin with
       if (rawCount > 0 && count === 0) count = 1;
 
       for (let i = 0; i < count; i++) {
@@ -86,9 +84,7 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           } 
           else if (recipe.pattern === 'DIRECTIONAL') {
-              // Backwards = angle + PI.
               const baseDir = angle + Math.PI; 
-              
               const spread = recipe.spread || 0.5;
               const a = baseDir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * speed;

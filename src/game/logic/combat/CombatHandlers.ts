@@ -16,12 +16,11 @@ const getPos = (e: Entity) => e.getComponent<TransformComponent>('Transform');
 
 /**
  * PLAYER vs ENEMY
- * Handles crashes. Checks for Daemon (Friendly) ramming vs Player taking damage.
  */
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // 1. DAEMON RAMMING (Friendly Player-Layer Entity)
+  // 1. DAEMON RAMMING
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
@@ -29,33 +28,37 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
 
   // 2. STANDARD PLAYER CRASH
   const eId = getId(enemy);
-  const damage = (eId?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
   
-  ctx.damagePlayer(damage);
-  ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+  // AAA POLISH: Specific Shake Tuning
+  if (eId?.variant === EnemyTypes.KAMIKAZE) {
+      ctx.damagePlayer(25);
+      ctx.addTrauma(0.9); // VIOLENT SHAKE
+      ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+  } else {
+      ctx.damagePlayer(10);
+      ctx.addTrauma(0.5); // HEAVY IMPACT (Driller/Hunter)
+      ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+  }
 };
 
 /**
  * PLAYER vs ENEMY_BULLET
- * Handles getting shot.
  */
 export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatContext) => {
   const pId = getId(player);
 
-  // 1. DAEMON SHIELD HIT
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, bullet, ctx, 5);
       return;
   }
 
-  // 2. STANDARD HIT
   ctx.damagePlayer(10);
   ctx.destroyEntity(bullet, 'IMPACT_RED');
+  // Note: VFXSystem adds standard trauma (0.2 - 0.45) for damage events automatically
 };
 
 /**
  * ENEMY vs PLAYER_BULLET
- * Standard damage exchange.
  */
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx);
@@ -63,7 +66,6 @@ export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext
 
 /**
  * BULLET vs BULLET
- * Projectiles cancelling each other out.
  */
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
   handleMassExchange(bulletA, bulletB, 'CLASH_YELLOW', ctx);
@@ -78,7 +80,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   let incomingDamage = fixedDamage || 10;
   
   if (!fixedDamage) {
-      // Calculate damage based on attacker mass/type
       const hp = getHp(attacker);
       const id = getId(attacker);
       if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
@@ -102,7 +103,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       }
   }
 
-  // Shield Down / Direct Hull Hit
   if (attacker.hasTag('ENEMY')) {
       ctx.destroyEntity(attacker, 'EXPLOSION_RED');
   } else {

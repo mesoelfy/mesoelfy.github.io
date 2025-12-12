@@ -8,16 +8,23 @@ export class ShakeSystem implements IGameSystem {
   private trauma = 0;
   private time = 0;
   
-  // Public read-only state for Renderers
   public currentOffset = { x: 0, y: 0, r: 0 };
 
-  // Configuration
-  private readonly DECAY_RATE = 1.5; // Trauma drains fast
-  private readonly MAX_OFFSET_X = 1.0; // World Units
-  private readonly MAX_OFFSET_Y = 1.0;
-  private readonly MAX_ROTATION = 0.05; // Radians (~3 degrees)
-  private readonly NOISE_SPEED = 20.0; 
-  private readonly PIXELS_PER_UNIT = 40; // Approx zoom scale for DOM sync
+  // --- CONFIGURATION ---
+  // Decay: How fast it settles. 2.0 is snappy but allows a brief "fade out".
+  private readonly DECAY_RATE = 2.0; 
+  
+  // Amplitude: Maximum distance in World Units at 100% Trauma
+  // BIASED X-AXIS: 0.5 vs 0.3 creates more horizontal "jitter"
+  private readonly MAX_OFFSET_X = 0.5; 
+  private readonly MAX_OFFSET_Y = 0.3; 
+  private readonly MAX_ROTATION = 0.04; 
+
+  // Frequency: The speed of the noise sampling
+  private readonly BASE_SPEED = 15.0;  // Slow wobble for small hits
+  private readonly TRAUMA_SPEED_BOOST = 65.0; // Adds violence to big hits
+
+  private readonly PIXELS_PER_UNIT = 40; 
 
   setup(locator: IServiceLocator): void {
     this.setupListeners();
@@ -31,36 +38,36 @@ export class ShakeSystem implements IGameSystem {
       this.trauma = Math.max(0, this.trauma - (delta * this.DECAY_RATE));
     }
 
-    // 2. Calculate Shake (Trauma^2 or Trauma^3 for "Juice")
+    // 2. Calculate "Shake Juice" (Trauma^2)
     const shake = (this.trauma * this.trauma) * strength;
     
     if (shake > 0.001) {
-        this.time += delta * this.NOISE_SPEED;
+        // 3. DYNAMIC FREQUENCY
+        // As trauma increases, the noise sample steps faster (Higher Hz)
+        // At 0.0 Trauma: Speed is 15.0 (Gentle)
+        // At 1.0 Trauma: Speed is 80.0 (Violent Buzz)
+        const currentSpeed = this.BASE_SPEED + (this.trauma * this.TRAUMA_SPEED_BOOST);
         
-        // 3D Noise Sampling (Seed offsets: 0, 100, 200)
+        this.time += delta * currentSpeed;
+        
+        // 4. Sample Noise (Seed offsets: 0, 100, 200)
+        // Multiplied by 'shake' amplitude
         const x = this.MAX_OFFSET_X * shake * noise(this.time);
         const y = this.MAX_OFFSET_Y * shake * noise(this.time + 100);
         const r = this.MAX_ROTATION * shake * noise(this.time + 200);
         
         this.currentOffset = { x, y, r };
 
-        // 3. Sync to DOM (Global CSS Vars)
-        // We invert X/Y because if Camera moves Right (+), World moves Left (-).
-        // But if we translate DOM Right (+), UI moves Right (+).
-        // To match "World Shake", if Cam moves +X, World moves -X. 
-        // So DOM should also move -X (translate negative).
-        // Scale by 40 to match Viewport zoom.
+        // 5. DOM Sync
         const domX = -x * this.PIXELS_PER_UNIT;
-        const domY = -y * this.PIXELS_PER_UNIT; // +Y is Up in 3D, Down in DOM. Invert again? 
-        // 3D +Y moves Camera Up -> World moves Down.
-        // DOM +Y translates Down. So they match direction naturally if we invert.
+        const domY = -y * this.PIXELS_PER_UNIT; 
         
         const root = document.documentElement;
         root.style.setProperty('--shake-x', `${domX.toFixed(2)}px`);
-        root.style.setProperty('--shake-y', `${-domY.toFixed(2)}px`); // Y is inverted in DOM vs 3D
+        root.style.setProperty('--shake-y', `${-domY.toFixed(2)}px`);
         root.style.setProperty('--shake-r', `${r.toFixed(4)}rad`);
     } else {
-        // Reset to exact zero to stop micro-jitters
+        // Reset
         if (this.currentOffset.x !== 0) {
             this.currentOffset = { x: 0, y: 0, r: 0 };
             const root = document.documentElement;
@@ -74,9 +81,9 @@ export class ShakeSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
     
-    // Fallbacks just in case (though FXManager usually calls TRAUMA_ADDED now)
+    // Fallbacks
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const amount = p.damage > 10 ? 0.6 : 0.3;
+        const amount = p.damage > 10 ? 0.45 : 0.2;
         this.addTrauma(amount);
     });
   }

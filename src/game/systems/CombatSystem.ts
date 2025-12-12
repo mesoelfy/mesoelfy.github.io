@@ -42,13 +42,17 @@ export class CombatSystem implements IGameSystem {
           },
           destroyEntity: (entity, fx) => this.destroyEntity(entity, fx),
           
-          // USE FAST BUS
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y);
           },
           
-          playAudio: (key) => AudioSystem.playSound(key)
+          playAudio: (key) => AudioSystem.playSound(key),
+          
+          // IMPL: Direct Trauma Injection
+          addTrauma: (amount) => {
+              GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount });
+          }
       };
 
       handler(a, b, context);
@@ -77,7 +81,6 @@ export class CombatSystem implements IGameSystem {
           if (identity?.variant === EnemyTypes.HUNTER) finalFX = 'EXPLOSION_YELLOW';
           if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
           
-          // FAST BUS
           const id = FX_IDS[finalFX];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y);
       }
