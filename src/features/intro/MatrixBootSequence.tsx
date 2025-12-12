@@ -5,6 +5,7 @@ import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
 import { ASCII_TITLE } from '@/game/config/TextAssets';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
+import { GpuConfigPanel } from '../settings/components/GpuConfigPanel';
 
 interface Props {
   onComplete: () => void;
@@ -292,6 +293,8 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const [step, setStep] = useState(0); 
   const stepRef = useRef(0);
   const [isBreaching, setIsBreaching] = useState(false);
+  const [showGpuPanel, setShowGpuPanel] = useState(false); 
+
   const logsToShow = LOG_DATA.slice(0, step + 1);
   
   const showMatrix = step >= 1;       
@@ -301,12 +304,19 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     stepRef.current = step;
-    
-    // NEW: Sync with MetaManager (URL Bar)
     if (LOG_DATA[step]) {
         GameEventBus.emit(GameEvents.BOOT_LOG, { message: LOG_DATA[step].text });
     }
-  }, [step]);
+    
+    // Trigger GPU Panel Delay when step 6 (Button Phase) is reached
+    if (step >= 6 && !showGpuPanel) {
+        const timer = setTimeout(() => {
+            setShowGpuPanel(true);
+            AudioSystem.playSound('ui_menu_open');
+        }, 1000); 
+        return () => clearTimeout(timer);
+    }
+  }, [step, showGpuPanel]);
 
   useEffect(() => {
     const sequence = [
@@ -398,69 +408,98 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-start pt-[20vh] md:pt-[25vh] font-mono overflow-hidden outline-none cursor-none"
+      className="fixed inset-0 z-[100] flex items-center justify-center font-mono overflow-hidden outline-none cursor-none p-4"
     >
       <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
+      {/* 
+         LAYOUT STRATEGY:
+         - Mobile: Flex Column (Vertical Stack)
+         - Desktop: Center Absolute (The GPU panel hangs off the side) 
+      */}
       <motion.div 
-        className="relative z-10 flex flex-col gap-4 items-center w-full max-w-2xl px-4"
+        className="relative z-10 w-full max-w-2xl flex flex-col gap-4"
         animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
         transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
       >
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0">
-          <BootHeader step={step} />
-          <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
-            {logsToShow.map((line, i) => (
-              <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-            ))}
-          </div>
+        
+        {/* TERMINAL TOP (LOGS) */}
+        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
+            <BootHeader step={step} />
+            <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                {logsToShow.map((line, i) => (
+                <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
+                ))}
+            </div>
         </motion.div>
 
+        {/* TERMINAL BOTTOM (CORE) */}
         <AnimatePresence>
-          {showPayloadWindow && (
+        {showPayloadWindow && (
             <motion.div 
-              initial={{ y: 50, opacity: 0, height: 0 }}
-              animate={{ y: 0, opacity: 1, height: "auto" }}
-              transition={{ type: "spring", stiffness: 120, damping: 20 }}
-              className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0"
+            initial={{ y: 50, opacity: 0, height: 0 }}
+            animate={{ y: 0, opacity: 1, height: "auto" }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
             >
-              <CoreHeader step={step} />
-              
-              <div className="p-6 flex flex-col items-center gap-4">
+            <CoreHeader step={step} />
+            
+            <div className="p-6 flex flex-col items-center gap-4">
                 <AsciiRenderer />
                 {showWarningBox && (
-                  <motion.div 
+                <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ 
-                      opacity: 1, scale: 1,
-                      boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
+                    opacity: 1, scale: 1,
+                    boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                     }}
                     transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
                     className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
-                  >
+                >
                     <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
                     <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
                     <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                  </motion.div>
+                </motion.div>
                 )}
                 {showButton && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
                     <button 
-                      onClick={handleInitialize}
-                      onMouseEnter={() => AudioSystem.playHover()}
-                      className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                    onClick={handleInitialize}
+                    onMouseEnter={() => AudioSystem.playHover()}
+                    className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                     >
-                      <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                      <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
+                    <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                    <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
                         [ INITIALIZE_SYSTEM.EXE ]
-                      </span>
+                    </span>
                     </button>
-                  </motion.div>
+                </motion.div>
                 )}
-              </div>
+            </div>
             </motion.div>
-          )}
+        )}
         </AnimatePresence>
+
+        {/* GPU PANEL - ABSOLUTE POSITIONED RELATIVE TO THIS CONTAINER */}
+        <AnimatePresence>
+            {showGpuPanel && !isBreaching && (
+                <motion.div 
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                    // MOBILE: Order-first (appears on top via flex-col-reverse logic if needed, or just top of stack)
+                    // DESKTOP: Absolute left of container, bottom aligned
+                    className="w-full md:w-72 md:absolute md:right-[102%] md:bottom-0 md:mr-0 mb-4 md:mb-0 z-10 order-first md:order-none"
+                >
+                    <GpuConfigPanel />
+                    <div className="mt-2 text-[8px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left">
+                        &gt;&gt; CAN BE CHANGED LATER.
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+
       </motion.div>
     </motion.div>
   );

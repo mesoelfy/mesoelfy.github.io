@@ -1,14 +1,15 @@
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Settings, Volume2, Cpu, Monitor } from 'lucide-react';
+import { X, Settings, Volume2, Monitor, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { SoundTab } from './tabs/SoundTab';
+import { GpuConfigPanel } from './components/GpuConfigPanel';
 
 const TABS = [
   { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },
-  { id: 'GRAPHICS', label: 'DISPLAY', icon: Monitor }, 
+  { id: 'GRAPHICS', label: 'GPU_CONFIG', icon: Monitor }, 
   { id: 'SYSTEM', label: 'SYSTEM', icon: Cpu },       
 ];
 
@@ -71,10 +72,23 @@ export const SettingsModal = () => {
                 <div className="flex-1 overflow-y-auto p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
                     <div className="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-green/20 via-black to-black" />
                     
-                    <div className="relative z-10">
+                    <div className="relative z-10 w-full h-full">
                         {activeTab === 'SOUND' && <SoundTab />}
                         
-                        {activeTab !== 'SOUND' && (
+                        {activeTab === 'GRAPHICS' && (
+                            <div className="max-w-xl mx-auto pt-8">
+                                <GpuConfigPanel />
+                                <div className="mt-6 p-4 border border-primary-green/30 bg-primary-green/5 text-xs font-mono text-primary-green-dim">
+                                    <p className="mb-2 font-bold text-primary-green">&gt; PROFILE_DETAILS:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li><span className="text-white">HIGH_VOLTAGE:</span> Full resolution (Retina), Post-Processing (Bloom, Vignette), Full Particles.</li>
+                                        <li><span className="text-alert-yellow">POTATO_MODE:</span> Half resolution (Retro Style), No Post-Processing, Reduced Particles, Static Video Feeds.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'SYSTEM' && (
                             <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono">
                                 <span className="animate-pulse">[ MODULE_OFFLINE ]</span>
                             </div>
@@ -88,10 +102,6 @@ export const SettingsModal = () => {
                   <span className="flex items-center gap-2">
                       <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">ESC</span> 
                       CLOSE_MENU
-                  </span>
-                  <span className="flex items-center gap-2">
-                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">~</span> 
-                      DEBUG_CONSOLE
                   </span>
               </div>
               <div className="opacity-50">FIRMWARE v2.0.4</div>
