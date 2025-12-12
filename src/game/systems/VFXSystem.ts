@@ -5,6 +5,7 @@ import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_RECIPES } from '../config/VFXConfig';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
+import { useStore } from '@/core/store/useStore'; // NEW IMPORT
 
 export class VFXSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
@@ -58,7 +59,18 @@ export class VFXSystem implements IGameSystem {
       const recipe = VFX_RECIPES[key];
       if (!recipe) return;
 
-      const count = this.randomRange(recipe.count[0], recipe.count[1]);
+      // PERFORMANCE CHECK: Access store directly (imperative)
+      const graphicsMode = useStore.getState().graphicsMode;
+      const isPotato = graphicsMode === 'POTATO';
+      
+      // Reduce particles by 70% in Potato Mode
+      const multiplier = isPotato ? 0.3 : 1.0;
+
+      const rawCount = this.randomRange(recipe.count[0], recipe.count[1]);
+      let count = Math.floor(rawCount * multiplier);
+      
+      // Ensure at least 1 particle unless it was 0 to begin with
+      if (rawCount > 0 && count === 0) count = 1;
 
       for (let i = 0; i < count; i++) {
           const color = recipe.colors[Math.floor(Math.random() * recipe.colors.length)];
@@ -74,19 +86,6 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           } 
           else if (recipe.pattern === 'DIRECTIONAL') {
-              // angle passed in is the Entity's Rotation (Facing Direction)
-              // We want sparks to fly BACKWARDS or SIDEWAYS depending on effect.
-              // For Drills/Recoil, we want mostly backwards (debris/kickback).
-              
-              // Angle + PI = Backwards
-              // - PI/2 = Model correction (since 0 rot is usually Right, but models point Up)
-              // Actually, in our system:
-              // Rotation 0 = Points Right (Math.atan2 style)
-              // Driller Logic: Math.atan2(dy, dx) - PI/2 (Points Up)
-              // If we pass raw Rotation, 0 is "Up" relative to the Driller Logic.
-              
-              // Let's assume 'angle' passed in is the correct Facing Angle in Radians (0 = Right).
-              
               // Backwards = angle + PI.
               const baseDir = angle + Math.PI; 
               

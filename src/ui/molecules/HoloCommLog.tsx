@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { ExternalLink, Radio, WifiOff } from 'lucide-react';
+import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 
 const VIDEO_POOL = [
@@ -19,6 +20,19 @@ const OfflineStatic = () => (
   </div>
 );
 
+const PowerSaveStatic = () => (
+  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-alert-yellow/20 overflow-hidden w-full h-full">
+    {/* Simple scanline, no gif */}
+    <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
+    
+    <div className="relative z-10 flex flex-col items-center gap-2 text-alert-yellow opacity-80">
+        <BatteryWarning size={24} />
+        <span className="font-header font-bold text-xs tracking-widest">POWER_SAVE_MODE</span>
+        <span className="font-mono text-[9px] opacity-60">VIDEO_FEED_DISABLED</span>
+    </div>
+  </div>
+);
+
 const VideoSlot = ({ 
   slotIndex, 
   initialVideo, 
@@ -33,6 +47,10 @@ const VideoSlot = ({
 
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
+  
+  // PERFORMANCE MODE CHECK
+  const graphicsMode = useStore((state) => state.graphicsMode);
+  const isPotato = graphicsMode === 'POTATO';
   
   const prevOffline = useRef(isOffline);
 
@@ -62,6 +80,9 @@ const VideoSlot = ({
   useEffect(() => {
     if (isOffline) return; 
 
+    // Don't run rotate timer if in potato mode (save logic cycles)
+    if (isPotato) return;
+
     const duration = 30000 + (Math.random() * 15000);
     
     const rotateTimer = setTimeout(() => {
@@ -81,7 +102,7 @@ const VideoSlot = ({
     }, duration);
 
     return () => clearTimeout(rotateTimer);
-  }, [videoId, isOffline, getNextVideo]);
+  }, [videoId, isOffline, getNextVideo, isPotato]);
 
   return (
     <div 
@@ -91,6 +112,8 @@ const VideoSlot = ({
       
       {isOffline ? (
           <OfflineStatic />
+      ) : isPotato ? (
+          <PowerSaveStatic />
       ) : (
         <>
           <div className="absolute inset-0 z-10">
