@@ -426,11 +426,12 @@ https://x.com/MegaMan/status/1999326723611996349?s=20
 
 
 
-   1 1 1 1 1 1 1  **MatrixBootSequence.tsx is too big.** 1 1 1 1
-
-
     - bloom/vignette with potato mode ??? I'm using vignette? 
     -  Dynamic Resolution (DPR) - - - 
 
 
     - pause blinker favicon should match game status color
+
+- in dashboard, the way panels resize with browser dimension change is perfect. I'd like the same property to happen when zooming the browser.
+
+
