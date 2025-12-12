@@ -13,14 +13,21 @@ import { useEffect, useState } from 'react';
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
-  const [isTouch, setIsTouch] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
       setMounted(true);
-      // Check for touch capability
-      const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-      setIsTouch(hasTouch);
+      // Robust Mobile/Touch Detection
+      const checkMobile = () => {
+        const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        setIsMobile(isCoarse || isTouch);
+      };
+      
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   if (!mounted) return null;
@@ -56,7 +63,7 @@ export const GameOverlay = () => {
         </div>
         
         {/* Mobile Controls Layer */}
-        {isTouch && !isGallery && (
+        {isMobile && !isGallery && (
             <>
                 <VirtualJoystick />
                 <ActionButton />

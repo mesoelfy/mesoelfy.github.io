@@ -14,12 +14,19 @@ export const GameDirector = () => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   
-  // Track if device supports touch to disable tap-to-move
-  const isTouchDevice = useRef(false);
+  // Track mobile state via ref for loop access
+  const isMobileRef = useRef(false);
 
   useEffect(() => {
-    // Robust touch detection
-    isTouchDevice.current = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+    const checkMobile = () => {
+        // Same robust check as GameOverlay
+        isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
+                              ('ontouchstart' in window) || 
+                              (navigator.maxTouchPoints > 0);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
 
     const engine = GameBootstrapper();
     engineRef.current = engine;
@@ -44,6 +51,7 @@ export const GameDirector = () => {
     }, 100);
 
     return () => {
+      window.removeEventListener('resize', checkMobile);
       clearInterval(refreshInterval);
       clearInterval(fastPoll);
       engine.teardown();
@@ -67,13 +75,10 @@ export const GameDirector = () => {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
           
-          // INPUT LOGIC:
-          // If on a touch device, we IGNORE the mouse/touch position for cursor movement.
-          // This allows the user to tap UI elements (like upgrades) without the ship 
-          // flying to that location. Movement is handled solely by InputSystem reading
-          // the VirtualJoystick service.
-          
-          if (!isTouchDevice.current) {
+          // INPUT LOGIC FIX:
+          // If on Mobile (pointer: coarse), IGNORE state.pointer.
+          // This forces the game to rely solely on the Joystick (which updates InputSystem directly).
+          if (!isMobileRef.current) {
               const x = (state.pointer.x * viewport.width) / 2;
               const y = (state.pointer.y * viewport.height) / 2;
               input.updateCursor(x, y);
