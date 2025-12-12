@@ -36,7 +36,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     if (showGpuPanel && mainStackRef.current) {
-        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'auto' });
+        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'smooth' });
     }
   }, [showGpuPanel]);
 
@@ -45,24 +45,28 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className={clsx(
-        "fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-        isBreaching ? "overflow-hidden" : "overflow-auto"
-      )}
+      // UPDATE: overflow-x-hidden ensures no horizontal scroll even if content is 1px too wide
+      className="fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-hide overflow-y-auto overflow-x-hidden bg-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      <div className="min-h-full w-full flex p-8 lg:px-32 relative z-10">
+      <div className="min-h-full w-full flex items-center justify-center p-2 md:p-8 relative z-10">
         
         <motion.div 
             className={clsx(
-                "w-fit m-auto flex flex-col gap-4",
+                "flex flex-col gap-4 transition-all duration-500 ease-out",
+                "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
                 showGpuPanel && !isBreaching 
                     ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
-                    : "max-w-2xl"
+                    : ""
             )}
-            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
-            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { opacity: 1, filter: "blur(0px)" }}
+            initial={{ opacity: 0 }}
+            transition={{ 
+                scale: { duration: 0.8, ease: "easeIn" }, 
+                opacity: { duration: 0.2, ease: "easeIn" }, 
+                filter: { duration: 0.2 } 
+            }}
         >
             
             {/* 1. GPU PANEL */}
@@ -76,7 +80,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         className="w-full lg:w-72 lg:col-start-1 lg:row-start-1 relative z-10 lg:justify-self-end order-2 lg:order-1"
                     >
                         <GpuConfigPanel />
-                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full">
+                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full hidden md:block">
                             &gt;&gt; CAN BE CHANGED LATER.
                         </div>
                     </motion.div>
@@ -84,12 +88,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             </AnimatePresence>
 
             {/* 2. MAIN TERMINAL */}
-            <div ref={mainStackRef} className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+            <div ref={mainStackRef} className="w-full lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
                 
                 {/* LOGS */}
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
-                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
                     <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
                         <DotGridBackground /> 
                         {logsToShow.map((line, i) => (
@@ -116,8 +119,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
                     >
                     <CoreHeader step={step} />
-                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
-                    <div className="p-6 flex flex-col items-center gap-4 relative z-10">
+                    <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
                         <DotGridBackground />
                         <AsciiRenderer />
                         
@@ -129,24 +131,31 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                 boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                             }}
                             transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                            className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                            // UPDATE: Tighter padding (px-3), auto width, center alignment to fix cut-off on 360px
+                            className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
                         >
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                            <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                            {/* Icons scale down on mobile */}
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
+                            
+                            {/* Text scales down (text-[9px]) and allows tight fit */}
+                            <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">
+                                UNSAFE CONNECTION DETECTED
+                            </span>
+                            
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
                         </motion.div>
                         )}
 
                         {showButton && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
                             <button 
                             onClick={handleInitialize}
                             onMouseEnter={() => AudioSystem.playHover()}
-                            className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                            className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                             >
                             <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                            <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
-                                [ INITIALIZE_SYSTEM.EXE ]
+                            <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">
+                                [ INITIALIZE_SYSTEM ]
                             </span>
                             </button>
                         </motion.div>

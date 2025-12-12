@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 12 10:19:23 CST 2025
+Generated on: Fri Dec 12 14:51:28 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -62,7 +62,18 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── identity
 │   │   │   └── AboutModal.tsx
 │   │   ├── intro
-│   │   │   └── MatrixBootSequence.tsx
+│   │   │   ├── MatrixBootSequence.tsx
+│   │   │   ├── atoms
+│   │   │   │   ├── AsciiRenderer.tsx
+│   │   │   │   ├── BootHeader.tsx
+│   │   │   │   ├── CoreHeader.tsx
+│   │   │   │   └── TypedLog.tsx
+│   │   │   ├── data
+│   │   │   │   └── bootLogs.ts
+│   │   │   └── hooks
+│   │   │       ├── useBootSequence.ts
+│   │   │       ├── useMatrixRain.ts
+│   │   │       └── useSmartScroll.ts
 │   │   ├── meta
 │   │   │   ├── MetaManager.tsx
 │   │   │   ├── faviconGenerator.ts
@@ -93,7 +104,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── DaemonRenderer.tsx
 │   │   │   ├── EffectsLayer.tsx
 │   │   │   ├── EnemyBulletRenderer.tsx
-│   │   │   ├── EnemyRenderer.tsx
 │   │   │   ├── GalleryStage.tsx
 │   │   │   ├── GameDirector.tsx
 │   │   │   ├── HunterChargeRenderer.tsx
@@ -115,6 +125,10 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   ├── StateComponent.ts
 │   │   │   │   ├── TargetComponent.ts
 │   │   │   │   └── TransformComponent.ts
+│   │   │   ├── enemies
+│   │   │   │   ├── DrillerRenderer.tsx
+│   │   │   │   ├── HunterRenderer.tsx
+│   │   │   │   └── KamikazeRenderer.tsx
 │   │   │   └── index.ts
 │   │   ├── config
 │   │   │   ├── AIConfig.ts
@@ -182,8 +196,13 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── StructureHealthService.ts
 │   │   │   └── TransientDOMService.ts
 │   │   ├── store
+│   │   │   ├── slices
+│   │   │   │   ├── createCombatSlice.ts
+│   │   │   │   ├── createProgressionSlice.ts
+│   │   │   │   └── createUISlice.ts
 │   │   │   └── useGameStore.ts
 │   │   ├── systems
+│   │   │   ├── AudioDirectorSystem.ts
 │   │   │   ├── BehaviorSystem.ts
 │   │   │   ├── CollisionSystem.ts
 │   │   │   ├── CombatSystem.ts
@@ -197,6 +216,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── PhysicsSystem.ts
 │   │   │   ├── PlayerSystem.ts
 │   │   │   ├── ShakeSystem.ts
+│   │   │   ├── StructureSystem.ts
 │   │   │   ├── TargetingSystem.ts
 │   │   │   ├── TimeSystem.ts
 │   │   │   ├── UISyncSystem.ts
@@ -209,6 +229,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── utils
 │   │   │   ├── GeometryUtils.ts
 │   │   │   ├── Noise.ts
+│   │   │   ├── RenderUtils.ts
 │   │   │   ├── TextureGen.ts
 │   │   │   ├── ViewportHelper.ts
 │   │   │   ├── ai
@@ -229,6 +250,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   └── ui
 │       ├── atoms
 │       │   ├── CustomCursor.tsx
+│       │   ├── DotGridBackground.tsx
 │       │   ├── GlassPanel.tsx
 │       │   ├── GraphicsToggle.tsx
 │       │   ├── PanelSparks.tsx
@@ -258,7 +280,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-62 directories, 188 files
+67 directories, 205 files
 
 =====================================
 FILE: ./next.config.js
@@ -312,7 +334,7 @@ I have attached "all_source_code.txt" which contains the full project tree and c
 ***CORE IDENTITY & AESTHETIC***
 *   **Persona:** You are assisting "Elfy," a Latent Space Bandit. The vibe is Y2K Hacker, Matrix, Geometry Wars, and High-Tech Demoscene.
 *   **Palette:** Electric Green (#78F654) is dominant. Deep Purple (#9E4EA5) is secondary. Red/Yellow for alerts. Black backgrounds.
-*   **Current Status:** The site is live at `mesoelfy.github.io`. The "Intro Boot Sequence" and "Main Dashboard" game area are built and polished.
+*   **Current Status:** The site is live at `mesoelfy.github.io`. The "Intro Boot Sequence" and "Main MESOELFY_OS Dashboard" game area are built and stable, but suggestions for improvements for AAA levels of polish in code architecture, game design, animation, motion graphics, sound design, and graphic design are always appreciated.
 
 ***TECHNICAL STACK***
 *   **Framework:** Next.js 14 (App Router) + TypeScript.
@@ -324,9 +346,14 @@ I have attached "all_source_code.txt" which contains the full project tree and c
 1.  **Terminal Only:** Do not ask me to manually create files. Provide full terminal commands using `cat << 'EOF' > path/to/file` to create or overwrite files.
 2.  **No Placeholders:** Unless specified, write complete, functional code.
 3.  **STEP BY STEP PHASE-BASED WORKFLOW:** After an outline of steps has been articulated, give the code in structured steps instead of all at once.
-3.  **// VERIFICATION CHECKLIST:**  Let the user know what to look for to confirm the changes have succeeded and the build is stable
-3.  **Atomic Commits:** After the user a successful feature implementation, provide the specific `git add .`, `git commit -m "..."`, and `git push` commands with a detailed commit description after the title. Don't provide the commit until the user asks for it.
-4.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
+4.  **// VERIFICATION CHECKLIST:**  Let the user know what to look for to confirm the changes have succeeded and the build is stable
+5.  **Atomic Commits:** After the user a successful feature implementation, provide the specific `git add .`, `git commit -m "..."`, and `git push` commands with a detailed commit description after the title. Don't provide the commit until the user asks for it. For git add, always use the period ".". And make sure you include the long description. It should be provided as a single copy-paste for the user.
+using git add . to capture all the relevant modified files and following the prescribed format: git add . -> git commit -m "title" -m "description" -> git push.
+
+Don't repeat information from previous commits. Each new commit is for the new progress that has been made.
+
+6.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
+7. **WAIT** Don't provide code until user asks for it. You should articulate with text what you'd like to do so the user can confirm what needs to be done.
 
 Working directory:
 stevencasteel@Stevens-Mac-mini mesoelfy-site % 
@@ -1072,7 +1099,6 @@ const OfflineStatic = () => (
 
 const PowerSaveStatic = () => (
   <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-alert-yellow/20 overflow-hidden w-full h-full">
-    {/* Simple scanline, no gif */}
     <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
     
     <div className="relative z-10 flex flex-col items-center gap-2 text-alert-yellow opacity-80">
@@ -1098,7 +1124,6 @@ const VideoSlot = ({
   const panelState = useGameStore((state) => state.panels['video']);
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
-  // PERFORMANCE MODE CHECK
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isPotato = graphicsMode === 'POTATO';
   
@@ -1129,8 +1154,6 @@ const VideoSlot = ({
 
   useEffect(() => {
     if (isOffline) return; 
-
-    // Don't run rotate timer if in potato mode (save logic cycles)
     if (isPotato) return;
 
     const duration = 30000 + (Math.random() * 15000);
@@ -1245,8 +1268,9 @@ export const HoloCommLog = () => {
 
   if (!initialVideos) return <div className="h-full bg-black" />;
 
+  // UPDATED: Removed h-full, p-1 spacing only.
   return (
-    <div className="flex flex-col h-full gap-2 overflow-hidden p-1 justify-center">
+    <div className="flex flex-col gap-2 p-1">
       {initialVideos.map((vid, i) => (
         <VideoSlot 
           key={i} 
@@ -1793,26 +1817,49 @@ export const CustomCursor = () => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
+  const [isOnScrollbar, setIsOnScrollbar] = useState(false);
   
   const { bootState, activeModal, isDebugOpen } = useStore();
-  
-  // VISIBILITY LOGIC:
-  // 1. If we are in STANDBY (Intro) or SANDBOX -> SHOW.
-  // 2. If we are ACTIVE, only show if a Modal (Settings, etc) or Debug is open.
   
   const isGameActive = bootState === 'active';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  // If game is active, we rely on the 3D Reticle, unless a menu is overlaying it.
-  const isVisible = !isGameActive || isMenuOpen;
+  // LOGIC: Show custom cursor unless we are on the scrollbar
+  // If game is active (and no menu), we usually hide it (crosshair logic), 
+  // but if we are on scrollbar, we always want system cursor.
+  const showCustomCursor = (!isGameActive || isMenuOpen) && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
+      
+      // 1. Interactive Element Check
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
+
+      // 2. Scrollbar Detection (Right Edge & Bottom Edge)
+      // We give a 14px buffer (Scrollbar is 8px, but hitboxes can vary)
+      const isRightEdge = e.clientX >= window.innerWidth - 14;
+      const isBottomEdge = e.clientY >= window.innerHeight - 14;
+      
+      const onScroll = isRightEdge || isBottomEdge;
+      setIsOnScrollbar(onScroll);
+
+      // 3. System Cursor Toggle
+      // If we are on the scrollbar, we MUST let the browser show the default arrow
+      if (onScroll) {
+          document.body.style.setProperty('cursor', 'auto', 'important');
+      } else {
+          // Otherwise, hide it if we are showing our custom one, or if game is active
+          if ((!isGameActive || isMenuOpen)) {
+              document.body.style.setProperty('cursor', 'none', 'important');
+          } else {
+              // Game active, no menu = Crosshair (Canvas handles cursor usually, or none)
+              document.body.style.setProperty('cursor', 'none', 'important');
+          }
+      }
     };
 
     const down = () => setIsClicking(true);
@@ -1826,25 +1873,25 @@ export const CustomCursor = () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mousedown', down);
       window.removeEventListener('mouseup', up);
+      document.body.style.cursor = 'auto'; // Cleanup
     };
-  }, []);
+  }, [isGameActive, isMenuOpen]);
 
   return (
     <>
-      <style jsx global>{`
-        body, a, button, input, label, select, textarea { cursor: none !important; }
-      `}</style>
-
       <motion.div
         className={clsx(
             "fixed top-0 left-0 pointer-events-none z-[20000]", 
-            (isHovering && isVisible) ? "mix-blend-difference" : "" 
+            (isHovering && showCustomCursor) ? "mix-blend-difference" : "" 
         )}
-        animate={{ x: pos.x, y: pos.y }}
+        // ALIGNMENT FIX:
+        // The SVG path 'M5.5 3.21' starts ~5.5px right and ~3.2px down.
+        // We offset the container by negative that amount to make the visual tip match the actual mouse X/Y.
+        animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
         <AnimatePresence mode="wait">
-          {isVisible && (
+          {showCustomCursor && (
             <motion.div
               key="custom-cursor"
               initial={{ opacity: 0 }}
@@ -1952,6 +1999,27 @@ export const VirtualJoystick = () => {
     </div>
   );
 };
+
+
+=====================================
+FILE: ./src/ui/atoms/DotGridBackground.tsx
+=====================================
+import { clsx } from 'clsx';
+
+interface Props {
+  className?: string;
+  color?: string; // Optional override
+}
+
+export const DotGridBackground = ({ className, color = '#15530A' }: Props) => (
+  <div 
+    className={clsx("absolute inset-0 pointer-events-none opacity-20 z-0", className)} 
+    style={{ 
+      backgroundImage: `radial-gradient(${color} 1px, transparent 1px)`, 
+      backgroundSize: '8px 8px' 
+    }} 
+  />
+);
 
 
 =====================================
@@ -2197,6 +2265,7 @@ import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
+import { DotGridBackground } from './DotGridBackground';
 
 const MAX_HEALTH = 1000;
 
@@ -2323,6 +2392,10 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
+      <DotGridBackground className="top-8" />
+
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+      
       {isCriticalGlobal && (
           <motion.div 
             className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
@@ -2332,8 +2405,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           />
       )}
 
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
-      
       {title && (
           <IntelligentHeader 
             title={title} 
@@ -2344,14 +2415,20 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           />
       )}
 
-      <div className="relative z-10 p-4 h-full">
+      {/* 
+         LAYOUT FIX: 
+         Changed 'h-full' to 'flex-1 min-h-0'.
+         This ensures the content area takes ONLY the remaining space after the header,
+         preventing overflow that eats the bottom 'p-4' padding.
+      */}
+      <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
         {(isDestroyed || isGameOver) && (
             <SafePanelContent fallbackId={`sparks-${gameId}`}>
                 <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
             </SafePanelContent>
         )}
 
-        <div className={clsx("h-full flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
+        <div className={clsx("flex-1 min-h-0 flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
             
             {isDestroyed && !isGameOver && (
@@ -3017,8 +3094,6 @@ export const Header = () => {
 =====================================
 FILE: ./src/core/audio/AudioSystem.ts
 =====================================
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
 import { useStore } from '@/core/store/useStore';
 import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
 
@@ -3059,7 +3134,6 @@ class AudioSystemController {
     // Synthesis
     await this.generateAllSounds();
     
-    this.setupEventListeners();
     this.setupGlobalInteraction();
 
     this.isReady = true;
@@ -3170,29 +3244,9 @@ class AudioSystemController {
     const source = ctx.createMediaElementSource(this.musicElement);
     source.connect(this.mixer.musicGain);
   }
-
-  // --- EVENTS ---
-
-  private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('fx_player_fire'));
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') this.playSound('fx_impact_heavy');
-        else this.playSound('fx_impact_light');
-    });
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.playSound('fx_impact_heavy'); 
-        this.mixer.duckMusic(0.7, 1.0);
-    });
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        this.playSound('fx_impact_heavy');
-        this.mixer.duckMusic(1.0, 3.0);
-    });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('loop_heal'));
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('fx_level_up'));
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.playSound('fx_impact_heavy'); 
-        this.mixer.duckMusic(0.8, 1.5);
-    });
+  
+  public duckMusic(intensity: number, duration: number) {
+      this.mixer.duckMusic(intensity, duration);
   }
 
   // --- ALIASES (Backward Compatibility) ---
@@ -3874,7 +3928,7 @@ import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
-import { MetaManager } from '@/features/meta/MetaManager'; // NEW IMPORT
+import { MetaManager } from '@/features/meta/MetaManager'; 
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -3916,9 +3970,7 @@ export default function Home() {
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
-      {/* META MANAGER: Handles Console, URL Bar, Favicon, etc. */}
       <MetaManager />
-
       <CustomCursor />
       <GlobalBackdrop />
       <DebugOverlay />
@@ -3957,71 +4009,79 @@ export default function Home() {
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />
 
-              <div className="flex-1 min-h-0 relative w-full max-w-[1600px] mx-auto p-4 md:p-6">
-                <AnimatePresence>
-                  {!isZenMode && (
-                    <motion.div 
-                      className={clsx(
-                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-                          isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
-                      )}
-                      initial="hidden"
-                      animate="visible"
-                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
-                      variants={{
-                        hidden: { opacity: 0 },
-                        visible: { 
-                          opacity: 1, 
-                          transition: { 
-                            staggerChildren: 0.3,
-                            delayChildren: 0.2 
-                          } 
-                        }
-                      }}
-                    >
-                      {/* IDENTITY COLUMN */}
-                      <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                        <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
-                          <IdentityHUD />
-                        </GlassPanel>
-
-                        <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
-                           <SocialRow />
-                        </GlassPanel>
-                      </div>
-
-                      {/* CONTENT COLUMN */}
-                      <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                        <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
-                          <div className="w-full h-full flex items-center justify-center p-4">
-                            <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
-                              <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                              <button 
-                                onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
-                                onMouseEnter={() => AudioSystem.playHover()}
-                                className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
-                              >
-                                <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
-                                    [ ACCESS_TERMINAL ]
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </GlassPanel>
-
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start h-auto">
-                          <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                             <LiveArtGrid />
+              {/* 
+                 LAYOUT FIX: FULL WIDTH SCROLL CONTAINER 
+                 Logic: If Game Over, lock scrolling (overflow-y-hidden). Otherwise allow auto.
+                 This prevents scrollbars from appearing when panels shatter and fall off-screen.
+              */}
+              <div className={clsx(
+                  "flex-1 min-h-0 relative w-full overflow-x-hidden scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+                  isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
+              )}>
+                
+                <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 min-h-full">
+                  <AnimatePresence>
+                    {!isZenMode && (
+                      <motion.div 
+                        className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
+                        initial="hidden"
+                        animate="visible"
+                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                        variants={{
+                          hidden: { opacity: 0 },
+                          visible: { 
+                            opacity: 1, 
+                            transition: { 
+                              staggerChildren: 0.3,
+                              delayChildren: 0.2 
+                            } 
+                          }
+                        }}
+                      >
+                        {/* IDENTITY COLUMN */}
+                        <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                          <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
+                            <IdentityHUD />
                           </GlassPanel>
 
-                          <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                             <HoloCommLog />
+                          <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
+                             <SocialRow />
                           </GlassPanel>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+
+                        {/* CONTENT COLUMN */}
+                        <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                          <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
+                            <div className="w-full h-full flex items-center justify-center p-4">
+                              <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
+                                <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+                                <button 
+                                  onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
+                                  onMouseEnter={() => AudioSystem.playHover()}
+                                  className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
+                                >
+                                  <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
+                                      [ ACCESS_TERMINAL ]
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          </GlassPanel>
+
+                          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
+                            <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                               <LiveArtGrid />
+                            </GlassPanel>
+
+                            <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                               <HoloCommLog />
+                            </GlassPanel>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
               
               <Footer />
@@ -4670,140 +4730,17 @@ export const AboutModal = () => {
 
 
 =====================================
-FILE: ./src/features/intro/MatrixBootSequence.tsx
+FILE: ./src/features/intro/atoms/CoreHeader.tsx
 =====================================
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AudioSystem } from '@/core/audio/AudioSystem';
 import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
-import { ASCII_TITLE } from '@/game/config/TextAssets';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
-import { GpuConfigPanel } from '../settings/components/GpuConfigPanel';
-import { useStore } from '@/core/store/useStore';
-import { clsx } from 'clsx';
 
-interface Props {
-  onComplete: () => void;
-  onBreachStart: () => void;
+interface CoreHeaderProps {
+  step: number;
 }
 
-// --- RESTORED ASCII RENDERER ---
-const AsciiRenderer = () => {
-  // Subscribe to graphics mode for real-time toggling
-  const graphicsMode = useStore((state) => state.graphicsMode);
-  const isHigh = graphicsMode === 'HIGH';
-
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-
-      // Base classes
-      let baseClass = 'transition-colors duration-300 ';
-      let animClass = '';
-      
-      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        baseClass += 'text-primary-green-dark';
-        animClass = 'animate-matrix-green';
-      } else if (['░', '▒', '▓'].includes(char)) {
-        baseClass += 'text-latent-purple';
-        animClass = 'animate-matrix-purple';
-      } else {
-        baseClass += 'text-primary-green-dark';
-      }
-
-      // Conditional Animation
-      const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;
-      
-      // Delay only applied if High Res (optimization)
-      const style = isHigh ? { animationDelay: Math.random() * 2 + 's' } : {};
-
-      return (
-        <span 
-          key={i} 
-          className={finalClass} 
-          style={style}
-        >
-          {char}
-        </span>
-      );
-    });
-  }, [isHigh]); // Re-memoize when mode changes
-
-  return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
-      {renderedChars}
-    </div>
-  );
-};
-
-const BootHeader = ({ step }: { step: number }) => {
-  const isUnsafe = step === 3;
-  const isBypass = step === 4;
-  const isSecure = step >= 5;
-
-  let color = "text-primary-green-dim";
-  let statusText = "ESTABLISHING...";
-  let bgClass = "bg-primary-green/5";
-  
-  if (isUnsafe) {
-      color = "text-critical-red";
-      statusText = "SIGNAL_CORRUPTED";
-      bgClass = "bg-critical-red/10 border-critical-red/30";
-  } else if (isBypass) {
-      color = "text-latent-purple-light";
-      statusText = "INJECTING_PAYLOAD";
-      bgClass = "bg-latent-purple/10 border-latent-purple/30";
-  } else if (isSecure) {
-      color = "text-primary-green";
-      statusText = "UPLINK_STABLE";
-      bgClass = "bg-primary-green/10 border-primary-green/30";
-  } else if (step >= 1) {
-      statusText = "HANDSHAKING...";
-  }
-
-  return (
-    <div className={`flex shrink-0 items-center justify-between border-b border-white/10 ${bgClass} px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300`}>
-      <div className="flex flex-col leading-none gap-1.5 mt-0.5">
-          <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
-            BOOT_LOADER.SYS
-          </span>
-          <span className="text-[8px] text-gray-500 font-mono tracking-wider opacity-80">{statusText}</span>
-      </div>
-      
-      <div className="flex gap-1 items-end h-3">
-        {[1, 2, 3, 4].map(i => {
-           let heightClass = "h-1";
-           let animClass = "";
-           let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
-           
-           if (isUnsafe) {
-               heightClass = i % 2 === 0 ? "h-3" : "h-1";
-               animClass = "animate-pulse";
-           } else if (isBypass) {
-               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
-           } else if (isSecure) {
-               heightClass = "h-3"; 
-           } else {
-               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
-               animClass = step >= (i-1) ? "animate-pulse" : "";
-           }
-
-           return (
-               <div 
-                 key={i} 
-                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
-                 style={{ opacity: isSecure ? 1 : 0.7 }} 
-               />
-           );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const CoreHeader = ({ step }: { step: number }) => {
+export const CoreHeader = ({ step }: CoreHeaderProps) => {
   const isUnsafe = step === 3;
   const isBypass = step === 4;
   const isDecrypted = step === 5;
@@ -4932,7 +4869,143 @@ const CoreHeader = ({ step }: { step: number }) => {
   );
 };
 
-const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: any) => {
+
+=====================================
+FILE: ./src/features/intro/atoms/BootHeader.tsx
+=====================================
+interface BootHeaderProps {
+  step: number;
+}
+
+export const BootHeader = ({ step }: BootHeaderProps) => {
+  const isUnsafe = step === 3;
+  const isBypass = step === 4;
+  const isSecure = step >= 5;
+
+  let color = "text-primary-green-dim";
+  let statusText = "ESTABLISHING...";
+  let bgClass = "bg-primary-green/5";
+  
+  if (isUnsafe) {
+      color = "text-critical-red";
+      statusText = "SIGNAL_CORRUPTED";
+      bgClass = "bg-critical-red/10 border-critical-red/30";
+  } else if (isBypass) {
+      color = "text-latent-purple-light";
+      statusText = "INJECTING_PAYLOAD";
+      bgClass = "bg-latent-purple/10 border-latent-purple/30";
+  } else if (isSecure) {
+      color = "text-primary-green";
+      statusText = "UPLINK_STABLE";
+      bgClass = "bg-primary-green/10 border-primary-green/30";
+  } else if (step >= 1) {
+      statusText = "HANDSHAKING...";
+  }
+
+  return (
+    <div className={`flex shrink-0 items-center justify-between border-b border-white/10 ${bgClass} px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300`}>
+      <div className="flex flex-col leading-none gap-1.5 mt-0.5">
+          <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
+            BOOT_LOADER.SYS
+          </span>
+          <span className="text-[8px] text-gray-500 font-mono tracking-wider opacity-80">{statusText}</span>
+      </div>
+      
+      <div className="flex gap-1 items-end h-3">
+        {[1, 2, 3, 4].map(i => {
+           let heightClass = "h-1";
+           let animClass = "";
+           let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
+           
+           if (isUnsafe) {
+               heightClass = i % 2 === 0 ? "h-3" : "h-1";
+               animClass = "animate-pulse";
+           } else if (isBypass) {
+               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
+           } else if (isSecure) {
+               heightClass = "h-3"; 
+           } else {
+               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
+               animClass = step >= (i-1) ? "animate-pulse" : "";
+           }
+
+           return (
+               <div 
+                 key={i} 
+                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
+                 style={{ opacity: isSecure ? 1 : 0.7 }} 
+               />
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/intro/atoms/AsciiRenderer.tsx
+=====================================
+import { useMemo } from 'react';
+import { useStore } from '@/core/store/useStore';
+import { ASCII_TITLE } from '@/game/config/TextAssets';
+
+export const AsciiRenderer = () => {
+  const graphicsMode = useStore((state) => state.graphicsMode);
+  const isHigh = graphicsMode === 'HIGH';
+
+  const renderedChars = useMemo(() => {
+    return ASCII_TITLE.split('').map((char, i) => {
+      if (char === '\n') return <br key={i} />;
+      if (char === ' ') return <span key={i}> </span>;
+
+      let baseClass = 'transition-colors duration-300 ';
+      let animClass = '';
+      
+      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+        baseClass += 'text-primary-green-dark';
+        animClass = 'animate-matrix-green';
+      } else if (['░', '▒', '▓'].includes(char)) {
+        baseClass += 'text-latent-purple';
+        animClass = 'animate-matrix-purple';
+      } else {
+        baseClass += 'text-primary-green-dark';
+      }
+
+      const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;
+      const style = isHigh ? { animationDelay: Math.random() * 2 + 's' } : {};
+
+      return (
+        <span key={i} className={finalClass} style={style}>
+          {char}
+        </span>
+      );
+    });
+  }, [isHigh]); 
+
+  return (
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
+      {renderedChars}
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/intro/atoms/TypedLog.tsx
+=====================================
+import { useState, useEffect } from 'react';
+
+interface TypedLogProps {
+  text: string;
+  color: string;
+  speed: number;
+  showDots: boolean;
+  isActive: boolean;
+  isPast: boolean;
+}
+
+export const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: TypedLogProps) => {
   const [displayed, setDisplayed] = useState("");
   const [isDoneTyping, setIsDoneTyping] = useState(false);
   
@@ -4965,38 +5038,207 @@ const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false,
   );
 };
 
-const LOG_DATA = [
-  { text: "> INITIALIZE NEURAL_LACE", color: "text-primary-green-dim", speed: 40, hasDots: true },
-  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-primary-green", speed: 20, hasDots: false },
-  { text: "> MOUNT MESOELFY_CORE", color: "text-primary-green-dim", speed: 40, hasDots: true },
-  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-critical-red", speed: 20, hasDots: false },
-  { text: "> BYPASSING SENTINEL_NODES", color: "text-latent-purple-light", speed: 40, hasDots: true },
-  { text: "> DECRYPTED.", color: "text-primary-green", speed: 20, hasDots: false },
-  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-alert-yellow", speed: 20, hasDots: false },
-];
+
+=====================================
+FILE: ./src/features/intro/MatrixBootSequence.tsx
+=====================================
+import { useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { GpuConfigPanel } from '../settings/components/GpuConfigPanel';
+import { clsx } from 'clsx';
+
+// Atoms
+import { BootHeader } from './atoms/BootHeader';
+import { CoreHeader } from './atoms/CoreHeader';
+import { AsciiRenderer } from './atoms/AsciiRenderer';
+import { TypedLog } from './atoms/TypedLog';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+
+// Hooks
+import { useBootSequence } from './hooks/useBootSequence';
+import { useMatrixRain } from './hooks/useMatrixRain';
+import { useSmartScroll } from './hooks/useSmartScroll';
+
+interface Props {
+  onComplete: () => void;
+  onBreachStart: () => void;
+}
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mainStackRef = useRef<HTMLDivElement>(null);
+
+  const { 
+    step, isBreaching, showGpuPanel, handleInitialize, logsToShow,
+    showMatrix, showPayloadWindow, showWarningBox, showButton
+  } = useBootSequence({ onComplete, onBreachStart });
+
+  useMatrixRain(canvasRef, showMatrix, isBreaching, step);
+  useSmartScroll(containerRef);
+
+  useEffect(() => {
+    if (showGpuPanel && mainStackRef.current) {
+        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'auto' });
+    }
+  }, [showGpuPanel]);
+
+  return (
+    <motion.div 
+      ref={containerRef}
+      animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+      className={clsx(
+        "fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+        isBreaching ? "overflow-hidden" : "overflow-auto"
+      )}
+    >
+      <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
+
+      <div className="min-h-full w-full flex p-8 lg:px-32 relative z-10">
+        
+        <motion.div 
+            className={clsx(
+                "w-fit m-auto flex flex-col gap-4",
+                showGpuPanel && !isBreaching 
+                    ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
+                    : "max-w-2xl"
+            )}
+            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
+            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+        >
+            
+            {/* 1. GPU PANEL */}
+            <AnimatePresence>
+                {showGpuPanel && !isBreaching && (
+                    <motion.div 
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                        className="w-full lg:w-72 lg:col-start-1 lg:row-start-1 relative z-10 lg:justify-self-end order-2 lg:order-1"
+                    >
+                        <GpuConfigPanel />
+                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full">
+                            &gt;&gt; CAN BE CHANGED LATER.
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* 2. MAIN TERMINAL */}
+            <div ref={mainStackRef} className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+                
+                {/* LOGS */}
+                <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
+                    <BootHeader step={step} />
+                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
+                    <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                        <DotGridBackground /> 
+                        {logsToShow.map((line, i) => (
+                            <TypedLog 
+                                key={i} 
+                                text={line.text} 
+                                color={line.color} 
+                                speed={line.speed} 
+                                showDots={line.hasDots} 
+                                isActive={i === step && !isBreaching} 
+                                isPast={i < step} 
+                            />
+                        ))}
+                    </div>
+                </motion.div>
+
+                {/* CORE PAYLOAD */}
+                <AnimatePresence>
+                {showPayloadWindow && (
+                    <motion.div 
+                    initial={{ y: 50, opacity: 0, height: 0 }}
+                    animate={{ y: 0, opacity: 1, height: "auto" }}
+                    transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                    className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
+                    >
+                    <CoreHeader step={step} />
+                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
+                    <div className="p-6 flex flex-col items-center gap-4 relative z-10">
+                        <DotGridBackground />
+                        <AsciiRenderer />
+                        
+                        {showWarningBox && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ 
+                                opacity: 1, scale: 1,
+                                boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
+                            }}
+                            transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
+                            className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                        >
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                            <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                        </motion.div>
+                        )}
+
+                        {showButton && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
+                            <button 
+                            onClick={handleInitialize}
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                            >
+                            <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                            <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
+                                [ INITIALIZE_SYSTEM.EXE ]
+                            </span>
+                            </button>
+                        </motion.div>
+                        )}
+                    </div>
+                    </motion.div>
+                )}
+                </AnimatePresence>
+            </div>
+
+            {/* 3. SPACER */}
+            {showGpuPanel && !isBreaching && (
+                <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />
+            )}
+
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/intro/hooks/useBootSequence.ts
+=====================================
+import { useState, useEffect, useRef } from 'react';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { LOG_DATA } from '../data/bootLogs';
+
+interface UseBootSequenceProps {
+  onComplete: () => void;
+  onBreachStart: () => void;
+}
+
+export const useBootSequence = ({ onComplete, onBreachStart }: UseBootSequenceProps) => {
   const [step, setStep] = useState(0); 
-  const stepRef = useRef(0);
   const [isBreaching, setIsBreaching] = useState(false);
   const [showGpuPanel, setShowGpuPanel] = useState(false); 
 
-  const logsToShow = LOG_DATA.slice(0, step + 1);
-  
-  const showMatrix = step >= 1;       
-  const showPayloadWindow = step >= 2; 
-  const showWarningBox = step >= 3;    
-  const showButton = step >= 6;        
-
+  // Emit Logs to Global Event Bus (for MetaManager)
   useEffect(() => {
-    stepRef.current = step;
     if (LOG_DATA[step]) {
         GameEventBus.emit(GameEvents.BOOT_LOG, { message: LOG_DATA[step].text });
     }
     
-    // Trigger GPU Panel Delay when step 6 (Button Phase) is reached
+    // Trigger GPU Panel Delay at step 6
     if (step >= 6 && !showGpuPanel) {
         const timer = setTimeout(() => {
             setShowGpuPanel(true);
@@ -5006,6 +5248,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [step, showGpuPanel]);
 
+  // Main Timeline
   useEffect(() => {
     const sequence = [
       { t: 3000, step: 1 }, 
@@ -5021,8 +5264,50 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     return () => timeouts.forEach(clearTimeout);
   }, [isBreaching]);
 
+  const handleInitialize = () => {
+    if (isBreaching) return;
+    setIsBreaching(true);
+    onBreachStart();
+    
+    AudioSystem.init();
+    AudioSystem.playBootSequence();
+    AudioSystem.startMusic();
+    
+    setStep(6);
+    setTimeout(onComplete, 800); 
+  };
+
+  return {
+    step,
+    isBreaching,
+    showGpuPanel,
+    handleInitialize,
+    logsToShow: LOG_DATA.slice(0, step + 1),
+    
+    // Derived State Flags
+    showMatrix: step >= 1,
+    showPayloadWindow: step >= 2,
+    showWarningBox: step >= 3,
+    showButton: step >= 6
+  };
+};
+
+
+=====================================
+FILE: ./src/features/intro/hooks/useMatrixRain.ts
+=====================================
+import { useEffect, useRef } from 'react';
+import { useStore } from '@/core/store/useStore';
+
+export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isVisible: boolean, isBreaching: boolean, step: number) => {
+  const stepRef = useRef(step);
+
   useEffect(() => {
-    if (!showMatrix && !isBreaching) return;
+    stepRef.current = step;
+  }, [step]);
+
+  useEffect(() => {
+    if (!isVisible && !isBreaching) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -5034,10 +5319,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
 
     const matrixEffect = () => {
-      // 1. CHECK GRAPHICS MODE
       const mode = useStore.getState().graphicsMode;
-      
-      // 2. DISABLE IF POTATO
       if (mode === 'POTATO') {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           return;
@@ -5045,7 +5327,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
       ctx.font = '14px "Courier New"';
 
       const currentStep = stepRef.current;
@@ -5058,7 +5339,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
         const isPurple = Math.random() > 0.6;
         const isRed = isUnsafePhase && Math.random() > 0.6; 
-        
         let color = '#0F0';
         let blur = 0;
 
@@ -5073,7 +5353,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         ctx.fillStyle = color;
         ctx.shadowBlur = blur;
         ctx.shadowColor = color;
-
         ctx.fillText(text, x, y);
         ctx.shadowBlur = 0;
 
@@ -5084,123 +5363,61 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     };
     const interval = setInterval(matrixEffect, 50);
     return () => clearInterval(interval);
-  }, [showMatrix, isBreaching]); 
-
-  const handleInitialize = () => {
-    if (isBreaching) return;
-    setIsBreaching(true);
-    
-    onBreachStart();
-
-    AudioSystem.init();
-    AudioSystem.playBootSequence();
-    AudioSystem.startMusic();
-    
-    setStep(6);
-    setTimeout(onComplete, 800); 
-  };
-
-  return (
-    <motion.div 
-      ref={containerRef}
-      animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex items-center justify-center font-mono overflow-hidden outline-none cursor-none p-4"
-    >
-      <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
-
-      {/* 
-         LAYOUT STRATEGY:
-         - Mobile: Flex Column (Vertical Stack)
-         - Desktop: Center Absolute (The GPU panel hangs off the side) 
-      */}
-      <motion.div 
-        className="relative z-10 w-full max-w-2xl flex flex-col gap-4"
-        animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
-        transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
-      >
-        
-        {/* TERMINAL TOP (LOGS) */}
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
-            <BootHeader step={step} />
-            <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
-                {logsToShow.map((line, i) => (
-                <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-                ))}
-            </div>
-        </motion.div>
-
-        {/* TERMINAL BOTTOM (CORE) */}
-        <AnimatePresence>
-        {showPayloadWindow && (
-            <motion.div 
-            initial={{ y: 50, opacity: 0, height: 0 }}
-            animate={{ y: 0, opacity: 1, height: "auto" }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
-            >
-            <CoreHeader step={step} />
-            
-            <div className="p-6 flex flex-col items-center gap-4">
-                <AsciiRenderer />
-                {showWarningBox && (
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ 
-                    opacity: 1, scale: 1,
-                    boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
-                    }}
-                    transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                    className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
-                >
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                    <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                </motion.div>
-                )}
-                {showButton && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
-                    <button 
-                    onClick={handleInitialize}
-                    onMouseEnter={() => AudioSystem.playHover()}
-                    className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
-                    >
-                    <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                    <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
-                        [ INITIALIZE_SYSTEM.EXE ]
-                    </span>
-                    </button>
-                </motion.div>
-                )}
-            </div>
-            </motion.div>
-        )}
-        </AnimatePresence>
-
-        {/* GPU PANEL - ABSOLUTE POSITIONED RELATIVE TO THIS CONTAINER */}
-        <AnimatePresence>
-            {showGpuPanel && !isBreaching && (
-                <motion.div 
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                    // MOBILE: Order-first (appears on top via flex-col-reverse logic if needed, or just top of stack)
-                    // DESKTOP: Absolute left of container, bottom aligned
-                    className="w-full md:w-72 md:absolute md:right-[102%] md:bottom-0 md:mr-0 mb-4 md:mb-0 z-10 order-first md:order-none"
-                >
-                    <GpuConfigPanel />
-                    <div className="mt-2 text-[8px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left">
-                        &gt;&gt; CAN BE CHANGED LATER.
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
-
-      </motion.div>
-    </motion.div>
-  );
+  }, [isVisible, isBreaching, canvasRef]);
 };
+
+
+=====================================
+FILE: ./src/features/intro/hooks/useSmartScroll.ts
+=====================================
+import { useEffect } from 'react';
+
+export const useSmartScroll = (containerRef: React.RefObject<HTMLDivElement>) => {
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Check if horizontal scroll is active (content > viewport)
+      const hasHorizontalOverflow = el.scrollWidth > el.clientWidth;
+      
+      // If no horizontal overflow, do nothing (default vertical scroll behavior)
+      if (!hasHorizontalOverflow) return;
+
+      // Map vertical delta to horizontal scroll
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          const oldScroll = el.scrollLeft;
+          el.scrollLeft += e.deltaY;
+          const newScroll = el.scrollLeft;
+
+          // Smart Logic:
+          // If the scroll position changed, it means we successfully scrolled horizontally.
+          // In that case, prevent default vertical scroll.
+          // If we hit the edge (old == new), allow default vertical scroll to happen.
+          if (oldScroll !== newScroll) {
+              e.preventDefault();
+          }
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [containerRef]);
+};
+
+
+=====================================
+FILE: ./src/features/intro/data/bootLogs.ts
+=====================================
+export const LOG_DATA = [
+  { text: "> INITIALIZE NEURAL_LACE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> CONNECTED TO LATENT_SPACE.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> MOUNT MESOELFY_CORE", color: "text-primary-green-dim", speed: 40, hasDots: true },
+  { text: "> ⚠ UNSAFE CONNECTION DETECTED ⚠", color: "text-critical-red", speed: 20, hasDots: false },
+  { text: "> BYPASSING SENTINEL_NODES", color: "text-latent-purple-light", speed: 40, hasDots: true },
+  { text: "> DECRYPTED.", color: "text-primary-green", speed: 20, hasDots: false },
+  { text: "> ⚠ PROCEED WITH CAUTION ⚠", color: "text-alert-yellow", speed: 20, hasDots: false },
+];
 
 
 =====================================
@@ -5313,29 +5530,22 @@ const toURI = (svgBody: string) => {
 
 const BG = `<rect x="0" y="0" width="64" height="64" rx="16" fill="#050505" />`;
 
-// --- HEALTH BAR (Matches Pause Style) ---
+// --- HEALTH BAR ---
 export const generateHealthIcon = (integrity: number, colorHex: string) => {
   const safeInt = Math.max(0, Math.min(100, integrity));
-  
-  // Frame logic: 4px stroke, rounded corners
-  // Fill logic: Fits exactly inside the frame with 4px padding
   const maxFillHeight = 40; 
   const h = Math.max(0, Math.floor((safeInt / 100) * maxFillHeight));
-  const y = 52 - h; // Anchor bottom
+  const y = 52 - h; 
   
   return toURI(`
     ${BG}
-    <!-- Strong Outer Frame -->
     <rect x="4" y="4" width="56" height="56" rx="12" stroke="${colorHex}" stroke-width="4" fill="none" />
-    
-    <!-- Solid Inner Fill -->
     <rect x="12" y="${y}" width="40" height="${h}" rx="2" fill="${colorHex}" />
   `);
 };
 
-// --- INITIALIZE / BREACH (New Creative Animation) ---
+// --- BREACH ---
 export const generateBreachIcon = (state: 'A' | 'B') => {
-  // A "Power Core" that spins and strobes
   const color = state === 'A' ? COLORS.GREEN : '#FFFFFF';
   const rotation = state === 'A' ? 0 : 45;
   const coreSize = state === 'A' ? 16 : 24;
@@ -5343,29 +5553,23 @@ export const generateBreachIcon = (state: 'A' | 'B') => {
   return toURI(`
     ${BG}
     <g transform="rotate(${rotation} 32 32)">
-        <!-- Outer Brackets -->
         <path d="M16 10 H10 V16" stroke="${color}" stroke-width="4" fill="none" />
         <path d="M48 10 H54 V16" stroke="${color}" stroke-width="4" fill="none" />
         <path d="M16 54 H10 V48" stroke="${color}" stroke-width="4" fill="none" />
         <path d="M48 54 H54 V48" stroke="${color}" stroke-width="4" fill="none" />
-        
-        <!-- Spinning Ring -->
         <circle cx="32" cy="32" r="20" stroke="${color}" stroke-width="2" stroke-dasharray="10 10" />
-        
-        <!-- Pulsing Core -->
         <circle cx="32" cy="32" r="${coreSize}" fill="${color}" />
     </g>
   `);
 };
 
-// --- BOOT SEQUENCES (Reverted to Geometric Designs) ---
+// --- BOOT ---
 export const generateBootIcon = (stage: string, tick: boolean) => {
   let inner = '';
   let color = COLORS.GREEN;
 
   switch (stage) {
     case 'INIT':
-      // Center circle + 3 satellites
       const offset = tick ? 14 : -14; 
       inner = `
         <circle cx="32" cy="32" r="4" fill="${color}" />
@@ -5375,39 +5579,31 @@ export const generateBootIcon = (stage: string, tick: boolean) => {
         <circle cx="32" cy="32" r="18" stroke="${color}" stroke-width="1" fill="none" opacity="0.5" />
       `;
       break;
-
     case 'LINK':
-      // Zigzag network line
       inner = `
         <polyline points="18,34 28,44 46,22" stroke="${color}" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
         <circle cx="18" cy="34" r="3" fill="${color}" />
         <circle cx="46" cy="22" r="3" fill="${color}" />
       `;
       break;
-
     case 'MOUNT':
-      // Chip insertion
       const yOff = tick ? 8 : 0;
       inner = `
         <path d="M32 ${46 + yOff} L20 ${30 + yOff} L44 ${30 + yOff} Z" fill="${color}" />
         <rect x="28" y="${8 + yOff}" width="8" height="22" fill="${color}" />
       `;
       break;
-
     case 'UNSAFE':
     case 'CAUTION':
       color = tick ? COLORS.YELLOW : COLORS.RED;
-      // Hazard Triangle
       inner = `
         <polygon points="32,10 54,50 10,50" fill="${color}" />
         <rect x="30" y="25" width="4" height="12" fill="#000" />
         <circle cx="32" cy="42" r="2.5" fill="#000" />
       `;
       break;
-
     case 'BYPASS':
       color = COLORS.PURPLE;
-      // Expanding squares
       const s = tick ? 28 : 14; 
       const xy = 32 - (s/2);
       inner = `
@@ -5415,9 +5611,7 @@ export const generateBootIcon = (stage: string, tick: boolean) => {
         <rect x="30" y="30" width="4" height="4" fill="${color}" />
       `;
       break;
-
     case 'DECRYPTED':
-      // Open Shackle Lock
       const sy = tick ? 18 : 28; 
       inner = `
         <path d="M22 ${sy} A10 10 0 0 1 42 ${sy}" stroke="${color}" stroke-width="6" fill="none" />
@@ -5426,9 +5620,7 @@ export const generateBootIcon = (stage: string, tick: boolean) => {
         <rect x="30" y="40" width="4" height="8" fill="#000" />
       `;
       break;
-
     default: 
-      // Spinner
       inner = `<rect x="28" y="28" width="8" height="8" fill="${color}" />`;
   }
 
@@ -5439,24 +5631,22 @@ export const generateBootIcon = (stage: string, tick: boolean) => {
   `);
 };
 
-// --- PAUSED (Reverted to Original Style) ---
-export const generatePausedIcon = (tick: boolean) => {
-  const color = COLORS.YELLOW;
-  
+// --- PAUSED ---
+export const generatePausedIcon = (tick: boolean, colorHex: string) => { // UPDATED: Accepts color
   if (!tick) {
       // Blink Off: Show Outline only
       return toURI(`
         ${BG}
-        <rect x="4" y="4" width="56" height="56" rx="12" stroke="${color}" stroke-width="2" fill="none" opacity="0.5" />
+        <rect x="4" y="4" width="56" height="56" rx="12" stroke="${colorHex}" stroke-width="2" fill="none" opacity="0.5" />
       `);
   }
   
   // Blink On: Solid Bars
   return toURI(`
     ${BG}
-    <rect x="4" y="4" width="56" height="56" rx="12" stroke="${color}" stroke-width="4" fill="none" />
-    <rect x="20" y="18" width="8" height="28" fill="${color}" />
-    <rect x="36" y="18" width="8" height="28" fill="${color}" />
+    <rect x="4" y="4" width="56" height="56" rx="12" stroke="${colorHex}" stroke-width="4" fill="none" />
+    <rect x="20" y="18" width="8" height="28" fill="${colorHex}" />
+    <rect x="36" y="18" width="8" height="28" fill="${colorHex}" />
   `);
 };
 
@@ -5548,7 +5738,7 @@ export const useFavicon = (bootKey: string) => {
   
   const [tick, setTick] = useState(false);
 
-  // 1. PRE-BAKER (Cache default favicon)
+  // 1. PRE-BAKER
   useEffect(() => {
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
@@ -5590,6 +5780,14 @@ export const useFavicon = (bootKey: string) => {
     // Blink Logic (1Hz)
     const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
     
+    // Determine Semantic Color based on Health
+    const safeInt = Math.max(0, integrity);
+    const displayInt = Math.floor(safeInt);
+    let statusColor = COLORS.GREEN;
+    
+    if (displayInt < 30) statusColor = COLORS.RED;
+    else if (displayInt < 60) statusColor = COLORS.YELLOW;
+
     let nextHref = '';
     let visualKey = '';
 
@@ -5604,11 +5802,11 @@ export const useFavicon = (bootKey: string) => {
         nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     } 
     else if (isSimulationPaused) {
-        visualKey = `PAUSED_${blinkOn}`;
-        nextHref = generatePausedIcon(blinkOn);
+        // UPDATED: Now uses statusColor instead of hardcoded yellow
+        visualKey = `PAUSED_${blinkOn}_${statusColor}`;
+        nextHref = generatePausedIcon(blinkOn, statusColor);
     } 
     else if (isZenMode || (integrity > 99)) {
-        // If healthy/zen, try to show the original high-res favicon
         if (defaultIconDataRef.current) {
             visualKey = 'DEFAULT_STATIC';
             nextHref = defaultIconDataRef.current;
@@ -5618,20 +5816,11 @@ export const useFavicon = (bootKey: string) => {
         }
     } 
     else {
-        // Dynamic Health Bar
-        const safeInt = Math.max(0, integrity);
-        const displayInt = Math.floor(safeInt);
-
-        let color = COLORS.GREEN;
-        if (displayInt < 30) color = COLORS.RED;
-        else if (displayInt < 60) color = COLORS.YELLOW;
-
-        visualKey = `HEALTH_${displayInt}_${color}`;
-        nextHref = generateHealthIcon(displayInt, color);
+        visualKey = `HEALTH_${displayInt}_${statusColor}`;
+        nextHref = generateHealthIcon(displayInt, statusColor);
     }
 
     // --- DOM COMMIT ---
-    // Only touch the DOM if the visual key actually changed
     if (visualKey !== lastVisualKey.current && nextHref) {
         linkRef.current.href = nextHref;
         lastVisualKey.current = visualKey;
@@ -5669,7 +5858,8 @@ export const useMetaTitle = (bootKey: string) => {
         const safeInt = Math.floor(Math.max(0, integrity));
         
         if (safeInt <= 0) {
-            title = `[ :: SESSION FAILURE :: ]`;
+            // UPDATED: SESSION -> SYSTEM
+            title = `[ :: SYSTEM FAILURE :: ]`;
         } else if (safeInt >= 99 && !isBreaching) {
             title = "[ :: // MESOELFY // :: ]";
         } else {
@@ -5731,11 +5921,13 @@ export const useMetaUrl = (bootLogMessage: string | null) => {
         } else if (isGameOver) {
             hash = '#/STATUS:CRITICAL/SYSTEM_FAILURE';
         } else if (safeInt < 30) {
-            hash = `#/STATUS:CRITICAL/SYS_INT:${safeInt}%`;
+            // UPDATED: SYS_INT -> OS_INT
+            hash = `#/STATUS:CRITICAL/OS_INT:${safeInt}%`;
         } else {
             let status = 'STABLE';
             if (safeInt < 60) status = 'CAUTION';
-            hash = `#/STATUS:${status}/SYS_INT:${safeInt}%`;
+            // UPDATED: SYS_INT -> OS_INT
+            hash = `#/STATUS:${status}/OS_INT:${safeInt}%`;
         }
 
         if (window.location.hash !== hash) {
@@ -7268,11 +7460,10 @@ FILE: ./src/game/core/EntitySpawner.ts
 import { IEntitySpawner, IEntityRegistry } from './interfaces';
 import { Entity } from './ecs/Entity';
 import { Tag } from './ecs/types';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
 import { EntityRegistry } from './ecs/EntityRegistry';
 import { ARCHETYPES } from '../data/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
+import { ArchetypeIDs } from '../config/Identifiers';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -7281,43 +7472,51 @@ export class EntitySpawner implements IEntitySpawner {
     this.registry = registry as EntityRegistry;
   }
 
-  public spawnPlayer(): Entity {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.PLAYER);
-    
-    e.addComponent(ComponentBuilder.Transform({ x: 0, y: 0, rotation: 0, scale: 1 }));
-    e.addComponent(ComponentBuilder.Motion({ friction: 0.9 }));
-    e.addComponent(ComponentBuilder.Health({ max: PLAYER_CONFIG.maxHealth }));
-    e.addComponent(ComponentBuilder.State({ current: 'IDLE' }));
-    e.addComponent(ComponentBuilder.Collider({ radius: PhysicsConfig.HITBOX.PLAYER, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER }));
-    
-    this.registry.updateCache(e);
-    return e;
-  }
-
-  public spawnEnemy(type: string, x: number, y: number): Entity {
-    const archetype = ARCHETYPES[type];
-    if (!archetype) {
-        console.warn(`[EntitySpawner] Unknown archetype: ${type}`);
+  /**
+   * The Core Assembler.
+   * Creates an entity from a data blueprint, merging in runtime overrides.
+   */
+  public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
+    const blueprint = ARCHETYPES[archetypeId];
+    if (!blueprint) {
+        console.warn(`[EntitySpawner] Unknown archetype: ${archetypeId}`);
         return this.registry.createEntity();
     }
 
     const e = this.registry.createEntity();
-    archetype.tags.forEach(tag => e.addTag(tag));
+    
+    // 1. Tags
+    blueprint.tags.forEach(tag => e.addTag(tag));
+    extraTags.forEach(tag => e.addTag(tag));
 
-    for (const compDef of archetype.components) {
-        if (compDef.type === 'Transform') continue;
+    // 2. Components
+    for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            // Clone data to prevent mutation of Archetype definition
-            const freshData = { ...compDef.data }; 
-            e.addComponent(builder(freshData));
+            // Merge Blueprint Data with Runtime Overrides
+            // Example: Blueprint { damage: 10 } + Override { damage: 20 } = { damage: 20 }
+            const runtimeData = overrides[compDef.type] || {};
+            const mergedData = { ...compDef.data, ...runtimeData };
+            
+            e.addComponent(builder(mergedData));
         }
     }
 
-    e.addComponent(ComponentBuilder.Transform({ x, y, rotation: 0, scale: 1 }));
+    // 3. Register
     this.registry.updateCache(e);
     return e;
+  }
+
+  // --- LEGACY WRAPPERS (Preserves Interface) ---
+
+  public spawnPlayer(): Entity {
+    return this.spawn(ArchetypeIDs.PLAYER);
+  }
+
+  public spawnEnemy(type: string, x: number, y: number): Entity {
+    return this.spawn(type, {
+        Transform: { x, y }
+    });
   }
 
   public spawnBullet(
@@ -7328,41 +7527,41 @@ export class EntitySpawner implements IEntitySpawner {
       damage: number = 1,
       widthMult: number = 1.0
   ): Entity {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.BULLET);
-    if (isEnemy) e.addTag(Tag.ENEMY); else e.addTag(Tag.PLAYER); 
+    const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     
-    e.addComponent(ComponentBuilder.Transform({ 
-        x, y, 
-        rotation: Math.atan2(vy, vx), 
-        scale: widthMult 
-    }));
-    e.addComponent(ComponentBuilder.Motion({ vx, vy }));
-    e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
-    e.addComponent(ComponentBuilder.Health({ max: damage }));
-    e.addComponent(ComponentBuilder.Combat({ damage }));
+    // Rotation is derived from velocity
+    const rotation = Math.atan2(vy, vx);
 
-    const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
-    const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-    const baseRadius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
-    
-    e.addComponent(ComponentBuilder.Collider({ 
-        radius: baseRadius * widthMult, 
-        layer, 
-        mask 
-    }));
-    
-    this.registry.updateCache(e);
-    return e;
+    return this.spawn(id, {
+        Transform: { x, y, rotation, scale: widthMult },
+        Motion: { vx, vy },
+        Lifetime: { remaining: life, total: life },
+        Combat: { damage },
+        Health: { max: damage },
+        // If width changes, we need to scale the collider radius relative to the base blueprint radius
+        // The ComponentBuilder handles the explicit reset, but we pass the final radius here.
+        // We assume the blueprint has the 'base' radius.
+        Collider: { 
+            radius: (ARCHETYPES[id].components.find(c => c.type === 'Collider')?.data.radius || 0.2) * widthMult 
+        }
+    });
   }
 
+  /**
+   * FAST PATH: Particles
+   * Particles are spawned in such high volume (1000s) that we bypass the 
+   * generic "Merge/Lookup" overhead and construct them directly.
+   */
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
+    
+    // Direct Builder calls (No Blueprint Lookup)
     e.addComponent(ComponentBuilder.Transform({ x, y }));
     e.addComponent(ComponentBuilder.Motion({ vx, vy, friction: 0.05 }));
     e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
     e.addComponent(ComponentBuilder.Identity({ variant: color }));
+    
     this.registry.updateCache(e);
   }
 }
@@ -7611,6 +7810,7 @@ import { SpatialGrid } from './SpatialGrid';
 import { WorldRect } from '../utils/ViewportHelper';
 import { ConfigService } from '../services/ConfigService';
 import { QueryDef } from './ecs/Query';
+import { Tag } from './ecs/types';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -7637,12 +7837,16 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Entity[];
-  query(def: QueryDef): Entity[]; // NEW
+  query(def: QueryDef): Entity[];
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
 
 export interface IEntitySpawner {
+  // Generic Assembler
+  spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
+
+  // Convenience / Legacy Wrappers
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
@@ -8233,10 +8437,18 @@ export const EnemyTypes = {
   DRILLER: 'driller',
   KAMIKAZE: 'kamikaze',
   HUNTER: 'hunter',
-  DAEMON: 'daemon', // NEW
+  DAEMON: 'daemon',
+} as const;
+
+export const ArchetypeIDs = {
+  PLAYER: 'PLAYER',
+  BULLET_PLAYER: 'BULLET_PLAYER',
+  BULLET_ENEMY: 'BULLET_ENEMY',
+  ...EnemyTypes
 } as const;
 
 export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
+export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs] | string;
 export const GameEvents = NewGameEvents;
 
 
@@ -8303,6 +8515,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { GameStateSystem } from '../systems/GameStateSystem';
 import { UISyncSystem } from '../systems/UISyncSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { AudioDirectorSystem } from '../systems/AudioDirectorSystem';
 
 // Gameplay Systems
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
@@ -8312,6 +8525,7 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
+import { StructureSystem } from '../systems/StructureSystem'; // NEW
 import { TargetingSystem } from '../systems/TargetingSystem';
 import { GuidanceSystem } from '../systems/GuidanceSystem';
 import { OrbitalSystem } from '../systems/OrbitalSystem';
@@ -8335,7 +8549,6 @@ const useInstance = (instance: IGameSystem): SystemFactory => () => instance;
 
 /**
  * THE SYSTEM PIPELINE
- * Order matters! This defines the execution sequence of the game loop.
  */
 export const SYSTEM_MANIFEST: SystemDef[] = [
   // --- 1. CORE & INPUT (Prepare the frame) ---
@@ -8344,6 +8557,7 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) }, // Singleton
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
+  { id: 'StructureSystem',  factory: useClass(StructureSystem) }, // NEW: World Logic
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
   // --- 2. AI & DECISION MAKING (Think) ---
@@ -8359,8 +8573,9 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   
   // --- 4. OUTCOMES (Die & Explode) ---
   { id: 'CombatSystem',     factory: useClass(CombatSystem) }, // Resolves damage logic
-  { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, // Kills entities with <= 0 HP
-  { id: 'VFXSystem',        factory: useClass(VFXSystem) },       // Spawns visuals for deaths
+  { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
+  { id: 'VFXSystem',        factory: useClass(VFXSystem) },
+  { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) },
   
   // --- 5. RENDER PREP (Sync to View) ---
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
@@ -8389,12 +8604,11 @@ const getPos = (e: Entity) => e.getComponent<TransformComponent>('Transform');
 
 /**
  * PLAYER vs ENEMY
- * Handles crashes. Checks for Daemon (Friendly) ramming vs Player taking damage.
  */
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // 1. DAEMON RAMMING (Friendly Player-Layer Entity)
+  // 1. DAEMON RAMMING
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
@@ -8402,33 +8616,37 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
 
   // 2. STANDARD PLAYER CRASH
   const eId = getId(enemy);
-  const damage = (eId?.variant === EnemyTypes.KAMIKAZE) ? 25 : 10;
   
-  ctx.damagePlayer(damage);
-  ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+  // AAA POLISH: Specific Shake Tuning
+  if (eId?.variant === EnemyTypes.KAMIKAZE) {
+      ctx.damagePlayer(25);
+      ctx.addTrauma(0.9); // VIOLENT SHAKE
+      ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+  } else {
+      ctx.damagePlayer(10);
+      ctx.addTrauma(0.5); // HEAVY IMPACT (Driller/Hunter)
+      ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+  }
 };
 
 /**
  * PLAYER vs ENEMY_BULLET
- * Handles getting shot.
  */
 export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatContext) => {
   const pId = getId(player);
 
-  // 1. DAEMON SHIELD HIT
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, bullet, ctx, 5);
       return;
   }
 
-  // 2. STANDARD HIT
   ctx.damagePlayer(10);
   ctx.destroyEntity(bullet, 'IMPACT_RED');
+  // Note: VFXSystem adds standard trauma (0.2 - 0.45) for damage events automatically
 };
 
 /**
  * ENEMY vs PLAYER_BULLET
- * Standard damage exchange.
  */
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx);
@@ -8436,7 +8654,6 @@ export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext
 
 /**
  * BULLET vs BULLET
- * Projectiles cancelling each other out.
  */
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
   handleMassExchange(bulletA, bulletB, 'CLASH_YELLOW', ctx);
@@ -8451,7 +8668,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   let incomingDamage = fixedDamage || 10;
   
   if (!fixedDamage) {
-      // Calculate damage based on attacker mass/type
       const hp = getHp(attacker);
       const id = getId(attacker);
       if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
@@ -8475,7 +8691,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       }
   }
 
-  // Shield Down / Direct Hull Hit
   if (attacker.hasTag('ENEMY')) {
       ctx.destroyEntity(attacker, 'EXPLOSION_RED');
   } else {
@@ -8544,8 +8759,9 @@ import { Entity } from '../../core/ecs/Entity';
 export interface CombatContext {
   damagePlayer: (amount: number) => void;
   destroyEntity: (entity: Entity, fx?: string) => void;
-  spawnFX: (type: string, x: number, y: number) => void; // Implemented via FastBus
+  spawnFX: (type: string, x: number, y: number) => void;
   playAudio: (key: string) => void;
+  addTrauma: (amount: number) => void; // NEW: Direct shake control
 }
 
 export type CollisionHandler = (entityA: Entity, entityB: Entity, ctx: CombatContext) => void;
@@ -9038,7 +9254,6 @@ import { RenderRegistry } from './RenderRegistry';
 // Renderers
 import { PlayerAvatar } from '../components/PlayerAvatar';
 import { BulletRenderer } from '../components/BulletRenderer';
-import { EnemyRenderer } from '../components/EnemyRenderer';
 import { EnemyBulletRenderer } from '../components/EnemyBulletRenderer';
 import { HunterChargeRenderer } from '../components/HunterChargeRenderer';
 import { ParticleRenderer } from '../components/ParticleRenderer';
@@ -9046,6 +9261,11 @@ import { ProjectileTrails } from '../components/ProjectileTrails';
 import { DaemonRenderer } from '../components/DaemonRenderer';
 import { DaemonChargeRenderer } from '../components/DaemonChargeRenderer';
 import { DaemonBulletRenderer } from '../components/DaemonBulletRenderer';
+
+// New Atomic Renderers
+import { DrillerRenderer } from '../components/enemies/DrillerRenderer';
+import { KamikazeRenderer } from '../components/enemies/KamikazeRenderer';
+import { HunterRenderer } from '../components/enemies/HunterRenderer';
 
 export const registerAllRenderers = () => {
   // Core
@@ -9057,8 +9277,12 @@ export const registerAllRenderers = () => {
   RenderRegistry.register(EnemyBulletRenderer);
   RenderRegistry.register(DaemonBulletRenderer);
   
-  // Enemies & Friendlies
-  RenderRegistry.register(EnemyRenderer);
+  // Enemies (Decoupled)
+  RenderRegistry.register(DrillerRenderer);
+  RenderRegistry.register(KamikazeRenderer);
+  RenderRegistry.register(HunterRenderer);
+  
+  // Friendlies
   RenderRegistry.register(DaemonRenderer);
   
   // FX / States
@@ -9090,6 +9314,35 @@ class RenderRegistryController {
 }
 
 export const RenderRegistry = new RenderRegistryController();
+
+
+=====================================
+FILE: ./src/game/utils/RenderUtils.ts
+=====================================
+import * as THREE from 'three';
+
+// Zero-allocation reusable objects for the render loop
+export const axisY = new THREE.Vector3(0, 1, 0); // Model Axis (Up)
+export const axisZ = new THREE.Vector3(0, 0, 1); // World Axis (Forward/Screen)
+export const qSpin = new THREE.Quaternion();
+export const qAim = new THREE.Quaternion();
+
+/**
+ * Applies a local Y-axis spin and a global Z-axis aim to an object.
+ */
+export const applyRotation = (obj: THREE.Object3D, spin: number, aim: number) => {
+  // 1. Spin around Local Y (Model Axis)
+  qSpin.setFromAxisAngle(axisY, spin);
+  
+  // 2. Aim around World Z
+  // Offset by -PI/2 because model points Up, but 0 radians is Right.
+  qAim.setFromAxisAngle(axisZ, aim - Math.PI/2);
+  
+  // 3. Combine: Aim * Spin
+  qAim.multiply(qSpin);
+  
+  obj.quaternion.copy(qAim);
+};
 
 
 =====================================
@@ -10550,140 +10803,6 @@ export const InstancedActor = ({
 
 
 =====================================
-FILE: ./src/game/components/EnemyRenderer.tsx
-=====================================
-import { Tag } from '../core/ecs/types';
-import { GAME_THEME } from '../theme';
-import { EnemyTypes } from '../config/Identifiers';
-import { InstancedActor } from './common/InstancedActor';
-import { IdentityComponent } from '../data/IdentityComponent';
-import { StateComponent } from '../data/StateComponent';
-import { TransformComponent } from '../data/TransformComponent'; 
-import { AssetService } from '../assets/AssetService';
-import * as THREE from 'three';
-
-// --- REUSABLE MATH OBJECTS (Zero-Allocation) ---
-const axisY = new THREE.Vector3(0, 1, 0); // Model Axis (Up)
-const axisZ = new THREE.Vector3(0, 0, 1); // World Axis (Forward/Screen)
-const qSpin = new THREE.Quaternion();
-const qAim = new THREE.Quaternion();
-
-export const EnemyRenderer = () => {
-  const drillerGeo = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
-  const kamikazeGeo = AssetService.get<THREE.BufferGeometry>('GEO_KAMIKAZE');
-  const hunterGeo = AssetService.get<THREE.BufferGeometry>('GEO_HUNTER');
-  const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
-
-  const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
-
-  const applySpawnEffect = (obj: THREE.Object3D, state?: StateComponent) => {
-      if (state && state.current === 'SPAWN') {
-          const progress = 1.0 - (state.timers.spawn / 1.5);
-          const eased = Math.pow(progress, 2); 
-          obj.scale.setScalar(eased);
-          obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
-      }
-  };
-
-  const applyRotation = (obj: THREE.Object3D, spin: number, aim: number) => {
-      // 1. Spin around Local Y (Model Axis)
-      qSpin.setFromAxisAngle(axisY, spin);
-      
-      // 2. Aim around World Z
-      // Offset by -PI/2 because model points Up, but 0 radians is Right.
-      qAim.setFromAxisAngle(axisZ, aim - Math.PI/2);
-      
-      // 3. Combine: Aim * Spin
-      // This applies spin first (locally), then tilts the whole object to aim.
-      qAim.multiply(qSpin);
-      
-      obj.quaternion.copy(qAim);
-  };
-
-  return (
-    <>
-      {/* DRILLER */}
-      <InstancedActor 
-        tag={Tag.ENEMY}
-        geometry={drillerGeo}
-        material={material}
-        maxCount={500}
-        baseColor={GAME_THEME.enemy.muncher}
-        colorSource="base" 
-        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
-        updateEntity={(e, obj, color, delta) => {
-            const state = e.getComponent<StateComponent>('State');
-            const transform = e.getComponent<TransformComponent>('Transform');
-            
-            const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
-            const spin = performance.now() * 0.001 * speed;
-            const aim = transform ? transform.rotation : 0;
-            
-            obj.position.z = 5.0;
-            applyRotation(obj, spin, aim);
-            
-            obj.scale.setScalar(1.0); 
-            applySpawnEffect(obj, state);
-        }}
-      />
-
-      {/* KAMIKAZE */}
-      <InstancedActor 
-        tag={Tag.ENEMY}
-        geometry={kamikazeGeo}
-        material={material}
-        maxCount={200}
-        baseColor={GAME_THEME.enemy.kamikaze}
-        colorSource="base"
-        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.KAMIKAZE}
-        updateEntity={(e, obj, color, delta) => {
-            const state = e.getComponent<StateComponent>('State');
-            const time = performance.now() * 0.001;
-            obj.position.z = 5.0;
-            
-            // Kamikaze just tumbles chaotically
-            obj.rotation.set(time * 2, time, 0); 
-            
-            obj.scale.setScalar(1.0);
-            applySpawnEffect(obj, state);
-        }}
-      />
-
-      {/* HUNTER */}
-      <InstancedActor 
-        tag={Tag.ENEMY}
-        geometry={hunterGeo}
-        material={material}
-        maxCount={100}
-        baseColor={GAME_THEME.enemy.hunter}
-        colorSource="base"
-        filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.HUNTER}
-        updateEntity={(e, obj, color, delta) => {
-            const state = e.getComponent<StateComponent>('State');
-            const transform = e.getComponent<TransformComponent>('Transform');
-            const time = performance.now() * 0.001;
-
-            if (state && state.current === 'CHARGE') {
-                const alpha = (Math.sin(time * 20) + 1) / 2;
-                color.lerp(chargeColor, alpha);
-            }
-            
-            const spin = state?.data?.spinAngle || 0;
-            const aim = transform ? transform.rotation : 0;
-
-            obj.position.z = 5.0;
-            applyRotation(obj, spin, aim);
-            
-            obj.scale.setScalar(1.0);
-            applySpawnEffect(obj, state);
-        }}
-      />
-    </>
-  );
-};
-
-
-=====================================
 FILE: ./src/game/components/GameDirector.tsx
 =====================================
 import { useFrame, useThree } from '@react-three/fiber';
@@ -10774,7 +10893,6 @@ FILE: ./src/game/components/index.ts
 =====================================
 export * from './BulletRenderer';
 export * from './EnemyBulletRenderer';
-export * from './EnemyRenderer';
 export * from './GameDirector';
 export * from './HunterChargeRenderer';
 export * from './ParticleRenderer';
@@ -10782,6 +10900,13 @@ export * from './PlayerAvatar';
 export * from './ProjectileTrails';
 export * from './ScreenShaker';
 export * from './GalleryStage';
+export * from './DaemonRenderer';
+export * from './DaemonChargeRenderer';
+export * from './DaemonBulletRenderer';
+// Enemy Renderers are now internal to RenderCatalog or can be exported if needed
+export * from './enemies/DrillerRenderer';
+export * from './enemies/KamikazeRenderer';
+export * from './enemies/HunterRenderer';
 
 
 =====================================
@@ -11217,6 +11342,164 @@ export const ProjectileTrails = () => {
 
   return (
     <instancedMesh ref={meshRef} args={[geometry, shaderMaterial, MAX_TRAILS]} renderOrder={-1} />
+  );
+};
+
+
+=====================================
+FILE: ./src/game/components/enemies/HunterRenderer.tsx
+=====================================
+import { Tag } from '@/game/core/ecs/types';
+import { GAME_THEME } from '@/game/theme';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { InstancedActor } from '../common/InstancedActor';
+import { IdentityComponent } from '@/game/components/data/IdentityComponent';
+import { StateComponent } from '@/game/components/data/StateComponent';
+import { TransformComponent } from '@/game/components/data/TransformComponent'; 
+import { AssetService } from '@/game/assets/AssetService';
+import { applyRotation } from '@/game/utils/RenderUtils';
+import * as THREE from 'three';
+
+const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
+
+export const HunterRenderer = () => {
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_HUNTER');
+  const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
+
+  return (
+    <InstancedActor 
+      tag={Tag.ENEMY}
+      geometry={geometry}
+      material={material}
+      maxCount={100}
+      baseColor={GAME_THEME.enemy.hunter}
+      colorSource="base"
+      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.HUNTER}
+      updateEntity={(e, obj, color, delta) => {
+          const state = e.getComponent<StateComponent>('State');
+          const transform = e.getComponent<TransformComponent>('Transform');
+          const time = performance.now() * 0.001;
+
+          if (state && state.current === 'CHARGE') {
+              const alpha = (Math.sin(time * 20) + 1) / 2;
+              color.lerp(chargeColor, alpha);
+          }
+          
+          const spin = state?.data?.spinAngle || 0;
+          const aim = transform ? transform.rotation : 0;
+
+          obj.position.z = 5.0;
+          applyRotation(obj, spin, aim);
+          
+          if (state && state.current === 'SPAWN') {
+              const progress = 1.0 - (state.timers.spawn / 1.5);
+              const eased = Math.pow(progress, 2); 
+              obj.scale.setScalar(eased);
+              obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
+          } else {
+              obj.scale.setScalar(1.0);
+          }
+      }}
+    />
+  );
+};
+
+
+=====================================
+FILE: ./src/game/components/enemies/DrillerRenderer.tsx
+=====================================
+import { Tag } from '@/game/core/ecs/types';
+import { GAME_THEME } from '@/game/theme';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { InstancedActor } from '../common/InstancedActor';
+import { IdentityComponent } from '@/game/components/data/IdentityComponent';
+import { StateComponent } from '@/game/components/data/StateComponent';
+import { TransformComponent } from '@/game/components/data/TransformComponent'; 
+import { AssetService } from '@/game/assets/AssetService';
+import { applyRotation } from '@/game/utils/RenderUtils';
+import * as THREE from 'three';
+
+export const DrillerRenderer = () => {
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
+  const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
+
+  return (
+    <InstancedActor 
+      tag={Tag.ENEMY}
+      geometry={geometry}
+      material={material}
+      maxCount={500}
+      baseColor={GAME_THEME.enemy.muncher}
+      colorSource="base" 
+      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
+      updateEntity={(e, obj, color, delta) => {
+          const state = e.getComponent<StateComponent>('State');
+          const transform = e.getComponent<TransformComponent>('Transform');
+          
+          const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
+          const spin = performance.now() * 0.001 * speed;
+          const aim = transform ? transform.rotation : 0;
+          
+          obj.position.z = 5.0;
+          applyRotation(obj, spin, aim);
+          
+          // Spawn Effect
+          if (state && state.current === 'SPAWN') {
+              const progress = 1.0 - (state.timers.spawn / 1.5);
+              const eased = Math.pow(progress, 2); 
+              obj.scale.setScalar(eased);
+              obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
+          } else {
+              obj.scale.setScalar(1.0); 
+          }
+      }}
+    />
+  );
+};
+
+
+=====================================
+FILE: ./src/game/components/enemies/KamikazeRenderer.tsx
+=====================================
+import { Tag } from '@/game/core/ecs/types';
+import { GAME_THEME } from '@/game/theme';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { InstancedActor } from '../common/InstancedActor';
+import { IdentityComponent } from '@/game/components/data/IdentityComponent';
+import { StateComponent } from '@/game/components/data/StateComponent';
+import { AssetService } from '@/game/assets/AssetService';
+
+export const KamikazeRenderer = () => {
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_KAMIKAZE');
+  const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
+
+  return (
+    <InstancedActor 
+      tag={Tag.ENEMY}
+      geometry={geometry}
+      material={material}
+      maxCount={200}
+      baseColor={GAME_THEME.enemy.kamikaze}
+      colorSource="base"
+      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.KAMIKAZE}
+      updateEntity={(e, obj, color, delta) => {
+          const state = e.getComponent<StateComponent>('State');
+          const time = performance.now() * 0.001;
+          obj.position.z = 5.0;
+          
+          // Kamikaze just tumbles chaotically
+          obj.rotation.set(time * 2, time, 0); 
+          
+          if (state && state.current === 'SPAWN') {
+              const progress = 1.0 - (state.timers.spawn / 1.5);
+              const eased = Math.pow(progress, 2); 
+              obj.scale.setScalar(eased);
+              obj.position.x += (Math.random() - 0.5) * 0.1 * (1-progress);
+          } else {
+              obj.scale.setScalar(1.0);
+          }
+      }}
+    />
   );
 };
 
@@ -11684,6 +11967,82 @@ export class CollisionSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/game/systems/AudioDirectorSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
+
+export class AudioDirectorSystem implements IGameSystem {
+  
+  setup(locator: IServiceLocator): void {
+    this.setupEventListeners();
+  }
+
+  update(delta: number, time: number): void {
+    // Process High Frequency Audio Events (from FastEventBus)
+    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+        if (id === FastEvents.PLAY_SOUND) {
+            // Note: We need a mapping for ID -> Key if we use FastBus for audio.
+            // Currently mostly used for VFX, but ready for expansion.
+        }
+    });
+  }
+
+  private setupEventListeners() {
+    // 1. Player Actions
+    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => {
+        AudioSystem.playSound('fx_player_fire');
+    });
+
+    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        AudioSystem.playSound('fx_impact_heavy'); 
+        // Duck music on heavy impact
+        AudioSystem.duckMusic(0.7, 1.0);
+    });
+
+    // 2. Enemy Interactions
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
+        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy');
+        else AudioSystem.playSound('fx_impact_light');
+    });
+
+    // 3. UI / System State
+    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        AudioSystem.playSound('fx_impact_heavy');
+        AudioSystem.duckMusic(1.0, 3.0);
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {
+        AudioSystem.playSound('loop_heal');
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
+        AudioSystem.playSound('fx_impact_heavy'); 
+        AudioSystem.duckMusic(0.8, 1.5);
+    });
+
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+        AudioSystem.playSound('fx_level_up');
+    });
+    
+    // 4. Ambient / Music Control
+    GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        // Switch to calmer ambience? 
+        // For now, standard behavior.
+    });
+  }
+
+  teardown(): void {
+    // No explicit cleanup needed as EventBus clears on reload, 
+    // but in a strict engine we would unsubscribe here.
+  }
+}
+
+
+=====================================
 FILE: ./src/game/systems/UISyncSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
@@ -11799,24 +12158,19 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.locator.getInputService().getCursor();
     
+    // Priority 1: Self-Revival (If Dead)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
+        
+        // Decay revival progress if not actively repairing
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
             this.gameSystem.decayReboot(delta * 15);
         }
         return; 
     }
 
+    // Priority 2: World Repair (If Alive)
     this.handlePanelRepair(cursor, time);
-    
-    if (time > this.lastRepairTime + this.REPAIR_RATE) {
-        const panels = PanelRegistry.getAllPanels();
-        for (const p of panels) {
-            if (p.isDestroyed && p.health > 0) {
-                 PanelRegistry.decayPanel(p.id, 5);
-            }
-        }
-    }
   }
 
   teardown(): void {}
@@ -11835,7 +12189,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DOUBLED SPEED: 2.5 -> 5.0
             this.gameSystem.tickReboot(5.0); 
             this.lastRepairTime = time;
             
@@ -11861,7 +12214,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DOUBLED SPEED: 10 -> 20
             PanelRegistry.healPanel(p.id, 20);
             this.lastRepairTime = time;
             
@@ -11895,7 +12247,7 @@ import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_RECIPES } from '../config/VFXConfig';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
-import { useStore } from '@/core/store/useStore'; // NEW IMPORT
+import { useStore } from '@/core/store/useStore';
 
 export class VFXSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
@@ -11908,10 +12260,8 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Process High Frequency Events
     FastEventBus.processEvents((id, a1, a2, a3, a4) => {
         if (id === FastEvents.SPAWN_FX) {
-            // a1: TypeID, a2: X, a3: Y, a4: Angle
             const key = FX_ID_MAP[a1];
             if (key) this.executeRecipe(key, a2, a3, a4);
         }
@@ -11926,18 +12276,22 @@ export class VFXSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const isBig = p.damage > 10;
-        this.addTrauma(isBig ? 0.6 : 0.3);
-        if (isBig) this.triggerHitStop(0.1);
+        // Standard bullet hits add lighter trauma.
+        // Direct collisions add THEIR OWN trauma in CombatHandlers, 
+        // effectively stacking with this for a huge impact.
+        if (isBig) this.triggerHitStop(0.05);
     });
 
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.addTrauma(0.7);
-        this.triggerHitStop(0.15);
+        // AAA POLISH: Increased structural failure feel
+        this.addTrauma(0.75); 
+        this.triggerHitStop(0.1); 
     });
 
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
+        // AAA POLISH: Maximum impact on death
         this.addTrauma(1.0);
-        this.triggerHitStop(0.5);
+        this.triggerHitStop(0.5); 
     });
     
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
@@ -11949,17 +12303,13 @@ export class VFXSystem implements IGameSystem {
       const recipe = VFX_RECIPES[key];
       if (!recipe) return;
 
-      // PERFORMANCE CHECK: Access store directly (imperative)
       const graphicsMode = useStore.getState().graphicsMode;
       const isPotato = graphicsMode === 'POTATO';
-      
-      // Reduce particles by 70% in Potato Mode
       const multiplier = isPotato ? 0.3 : 1.0;
 
       const rawCount = this.randomRange(recipe.count[0], recipe.count[1]);
       let count = Math.floor(rawCount * multiplier);
       
-      // Ensure at least 1 particle unless it was 0 to begin with
       if (rawCount > 0 && count === 0) count = 1;
 
       for (let i = 0; i < count; i++) {
@@ -11976,9 +12326,7 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           } 
           else if (recipe.pattern === 'DIRECTIONAL') {
-              // Backwards = angle + PI.
               const baseDir = angle + Math.PI; 
-              
               const spread = recipe.spread || 0.5;
               const a = baseDir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * speed;
@@ -12006,6 +12354,46 @@ export class VFXSystem implements IGameSystem {
           time.freeze(duration);
       } catch {}
   }
+}
+
+
+=====================================
+FILE: ./src/game/systems/StructureSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { PanelRegistry } from './PanelRegistrySystem';
+
+export class StructureSystem implements IGameSystem {
+  private decayTimer = 0;
+  // Decay logic runs at 10hz (every 0.1s)
+  private readonly DECAY_INTERVAL = 0.1; 
+  private readonly DECAY_AMOUNT = 5;
+
+  setup(locator: IServiceLocator): void {
+    // No dependencies needed yet
+  }
+
+  update(delta: number, time: number): void {
+    this.decayTimer += delta;
+    
+    if (this.decayTimer >= this.DECAY_INTERVAL) {
+        this.processDecay();
+        this.decayTimer = 0;
+    }
+  }
+
+  private processDecay() {
+      // Passive Rule: Destroyed panels lose residual charge (Health) over time
+      // This prevents them from staying at "1% / Offline" forever.
+      const panels = PanelRegistry.getAllPanels();
+      for (const p of panels) {
+          if (p.isDestroyed && p.health > 0) {
+               PanelRegistry.decayPanel(p.id, this.DECAY_AMOUNT);
+          }
+      }
+  }
+
+  teardown(): void {}
 }
 
 
@@ -12346,16 +12734,23 @@ export class ShakeSystem implements IGameSystem {
   private trauma = 0;
   private time = 0;
   
-  // Public read-only state for Renderers
   public currentOffset = { x: 0, y: 0, r: 0 };
 
-  // Configuration
-  private readonly DECAY_RATE = 1.5; // Trauma drains fast
-  private readonly MAX_OFFSET_X = 1.0; // World Units
-  private readonly MAX_OFFSET_Y = 1.0;
-  private readonly MAX_ROTATION = 0.05; // Radians (~3 degrees)
-  private readonly NOISE_SPEED = 20.0; 
-  private readonly PIXELS_PER_UNIT = 40; // Approx zoom scale for DOM sync
+  // --- CONFIGURATION ---
+  // Decay: How fast it settles. 2.0 is snappy but allows a brief "fade out".
+  private readonly DECAY_RATE = 2.0; 
+  
+  // Amplitude: Maximum distance in World Units at 100% Trauma
+  // BIASED X-AXIS: 0.5 vs 0.3 creates more horizontal "jitter"
+  private readonly MAX_OFFSET_X = 0.5; 
+  private readonly MAX_OFFSET_Y = 0.3; 
+  private readonly MAX_ROTATION = 0.04; 
+
+  // Frequency: The speed of the noise sampling
+  private readonly BASE_SPEED = 15.0;  // Slow wobble for small hits
+  private readonly TRAUMA_SPEED_BOOST = 65.0; // Adds violence to big hits
+
+  private readonly PIXELS_PER_UNIT = 40; 
 
   setup(locator: IServiceLocator): void {
     this.setupListeners();
@@ -12369,36 +12764,36 @@ export class ShakeSystem implements IGameSystem {
       this.trauma = Math.max(0, this.trauma - (delta * this.DECAY_RATE));
     }
 
-    // 2. Calculate Shake (Trauma^2 or Trauma^3 for "Juice")
+    // 2. Calculate "Shake Juice" (Trauma^2)
     const shake = (this.trauma * this.trauma) * strength;
     
     if (shake > 0.001) {
-        this.time += delta * this.NOISE_SPEED;
+        // 3. DYNAMIC FREQUENCY
+        // As trauma increases, the noise sample steps faster (Higher Hz)
+        // At 0.0 Trauma: Speed is 15.0 (Gentle)
+        // At 1.0 Trauma: Speed is 80.0 (Violent Buzz)
+        const currentSpeed = this.BASE_SPEED + (this.trauma * this.TRAUMA_SPEED_BOOST);
         
-        // 3D Noise Sampling (Seed offsets: 0, 100, 200)
+        this.time += delta * currentSpeed;
+        
+        // 4. Sample Noise (Seed offsets: 0, 100, 200)
+        // Multiplied by 'shake' amplitude
         const x = this.MAX_OFFSET_X * shake * noise(this.time);
         const y = this.MAX_OFFSET_Y * shake * noise(this.time + 100);
         const r = this.MAX_ROTATION * shake * noise(this.time + 200);
         
         this.currentOffset = { x, y, r };
 
-        // 3. Sync to DOM (Global CSS Vars)
-        // We invert X/Y because if Camera moves Right (+), World moves Left (-).
-        // But if we translate DOM Right (+), UI moves Right (+).
-        // To match "World Shake", if Cam moves +X, World moves -X. 
-        // So DOM should also move -X (translate negative).
-        // Scale by 40 to match Viewport zoom.
+        // 5. DOM Sync
         const domX = -x * this.PIXELS_PER_UNIT;
-        const domY = -y * this.PIXELS_PER_UNIT; // +Y is Up in 3D, Down in DOM. Invert again? 
-        // 3D +Y moves Camera Up -> World moves Down.
-        // DOM +Y translates Down. So they match direction naturally if we invert.
+        const domY = -y * this.PIXELS_PER_UNIT; 
         
         const root = document.documentElement;
         root.style.setProperty('--shake-x', `${domX.toFixed(2)}px`);
-        root.style.setProperty('--shake-y', `${-domY.toFixed(2)}px`); // Y is inverted in DOM vs 3D
+        root.style.setProperty('--shake-y', `${-domY.toFixed(2)}px`);
         root.style.setProperty('--shake-r', `${r.toFixed(4)}rad`);
     } else {
-        // Reset to exact zero to stop micro-jitters
+        // Reset
         if (this.currentOffset.x !== 0) {
             this.currentOffset = { x: 0, y: 0, r: 0 };
             const root = document.documentElement;
@@ -12412,9 +12807,9 @@ export class ShakeSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
     
-    // Fallbacks just in case (though FXManager usually calls TRAUMA_ADDED now)
+    // Fallbacks
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const amount = p.damage > 10 ? 0.6 : 0.3;
+        const amount = p.damage > 10 ? 0.45 : 0.2;
         this.addTrauma(amount);
     });
   }
@@ -12548,13 +12943,17 @@ export class CombatSystem implements IGameSystem {
           },
           destroyEntity: (entity, fx) => this.destroyEntity(entity, fx),
           
-          // USE FAST BUS
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y);
           },
           
-          playAudio: (key) => AudioSystem.playSound(key)
+          playAudio: (key) => AudioSystem.playSound(key),
+          
+          // IMPL: Direct Trauma Injection
+          addTrauma: (amount) => {
+              GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount });
+          }
       };
 
       handler(a, b, context);
@@ -12583,7 +12982,6 @@ export class CombatSystem implements IGameSystem {
           if (identity?.variant === EnemyTypes.HUNTER) finalFX = 'EXPLOSION_YELLOW';
           if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
           
-          // FAST BUS
           const id = FX_IDS[finalFX];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y);
       }
@@ -13434,8 +13832,9 @@ export class PhysicsSystem implements IPhysicsSystem {
 FILE: ./src/game/data/Archetypes.ts
 =====================================
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
-import { EnemyTypes } from '../config/Identifiers';
+import { ArchetypeIDs } from '../config/Identifiers';
 import { Tag } from '../core/ecs/types';
 
 export interface EntityBlueprint {
@@ -13444,10 +13843,60 @@ export interface EntityBlueprint {
 }
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
-  [EnemyTypes.DRILLER]: {
+  // --- PLAYER ---
+  [ArchetypeIDs.PLAYER]: {
+    tags: [Tag.PLAYER],
+    components: [
+      { type: 'Transform', data: { x: 0, y: 0, rotation: 0, scale: 1 } },
+      { type: 'Motion', data: { friction: 0.9 } },
+      { type: 'Health', data: { max: PLAYER_CONFIG.maxHealth } },
+      { type: 'State', data: { current: 'IDLE' } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.PLAYER, 
+          layer: CollisionLayers.PLAYER, 
+          mask: PhysicsConfig.MASKS.PLAYER 
+      }}
+    ]
+  },
+
+  // --- PROJECTILES ---
+  [ArchetypeIDs.BULLET_PLAYER]: {
+    tags: [Tag.BULLET, Tag.PLAYER],
+    components: [
+      { type: 'Transform', data: { scale: 1.0 } },
+      { type: 'Motion', data: { friction: 0 } },
+      { type: 'Lifetime', data: { remaining: 1.5, total: 1.5 } },
+      { type: 'Combat', data: { damage: 1 } },
+      { type: 'Health', data: { max: 1 } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.BULLET, 
+          layer: CollisionLayers.PLAYER_PROJECTILE, 
+          mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
+      }}
+    ]
+  },
+  [ArchetypeIDs.BULLET_ENEMY]: {
+    tags: [Tag.BULLET, Tag.ENEMY],
+    components: [
+      { type: 'Transform', data: { scale: 1.0 } },
+      { type: 'Motion', data: { friction: 0 } },
+      { type: 'Lifetime', data: { remaining: 3.0, total: 3.0 } },
+      { type: 'Combat', data: { damage: 10 } },
+      { type: 'Health', data: { max: 1 } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.HUNTER_BULLET, 
+          layer: CollisionLayers.ENEMY_PROJECTILE, 
+          mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
+      }}
+    ]
+  },
+
+  // --- ENEMIES ---
+  [ArchetypeIDs.DRILLER]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.DRILLER } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.DRILLER } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.driller.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.driller.damage } },
@@ -13456,10 +13905,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PANEL' } }
     ]
   },
-  [EnemyTypes.KAMIKAZE]: {
+  [ArchetypeIDs.KAMIKAZE]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.KAMIKAZE } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.KAMIKAZE } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.kamikaze.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.kamikaze.damage } },
@@ -13468,10 +13918,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PLAYER' } }
     ]
   },
-  [EnemyTypes.HUNTER]: {
+  [ArchetypeIDs.HUNTER]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.HUNTER } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.HUNTER } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.hunter.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: 10 } }, 
@@ -13480,16 +13931,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PLAYER' } }
     ]
   },
-  // NEW: DAEMON
-  [EnemyTypes.DAEMON]: {
-    tags: [Tag.PLAYER], // Friendly
+  [ArchetypeIDs.DAEMON]: {
+    tags: [Tag.PLAYER],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.DAEMON } },
-      { type: 'Health', data: { max: 100 } }, // High HP Shield
-      { type: 'Orbital', data: { radius: 4.0, speed: 1.5, angle: 0 } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.DAEMON } },
       { type: 'Transform', data: { scale: 1.0 } },
-      { type: 'Target', data: { type: 'ENEMY' } }, // Seeks Enemies
-      // Physics: Layer PLAYER means Enemies hit it and take damage/die (Ramming)
+      { type: 'Health', data: { max: 100 } }, 
+      { type: 'Orbital', data: { radius: 4.0, speed: 1.5, angle: 0 } },
+      { type: 'Target', data: { type: 'ENEMY' } }, 
       { type: 'Collider', data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: 'State', data: { current: 'ORBIT' } }
     ]
@@ -14058,150 +14507,260 @@ export const VirtualJoystickService = new VirtualJoystickServiceController();
 
 
 =====================================
-FILE: ./src/game/store/useGameStore.ts
+FILE: ./src/game/store/slices/createProgressionSlice.ts
 =====================================
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { UpgradeOption } from '../types/game.types';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
+import { StateCreator } from 'zustand';
+import { GameState } from '../useGameStore';
+import { PLAYER_CONFIG } from '../../config/PlayerConfig';
+import { UpgradeOption } from '../../types/game.types';
+import { GameEventBus } from '../../events/GameEventBus';
+import { GameEvents } from '../../events/GameEvents';
 
-const MAX_PANEL_HEALTH = 1000;
-
-interface GameStateUI {
-  isPlaying: boolean;
-  isZenMode: boolean;
-  playerHealth: number;
-  maxPlayerHealth: number;
-  playerRebootProgress: number;
+export interface ProgressionSlice {
   score: number;
   highScore: number;
   xp: number;
   level: number;
   xpToNextLevel: number;
   upgradePoints: number;
-  systemIntegrity: number;
-  
-  interactionTarget: string | null;
-
-  availableUpgrades: UpgradeOption[];
   activeUpgrades: Record<string, number>;
-  panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
-  
-  // --- ACTIONS ---
-  startGame: () => void;
-  stopGame: () => void;
-  activateZenMode: () => void;
-  
-  registerPanel: (id: string, element: HTMLElement) => void;
-  unregisterPanel: (id: string) => void;
-  syncGameState: (data: Partial<GameStateUI>) => void;
-  syncPanels: (panelsData: Record<string, any>) => void;
-  selectUpgrade: (option: UpgradeOption) => void;
+
   addScore: (amount: number) => void;
   addXp: (amount: number) => void;
-  damagePlayer: (amount: number) => void;
-  healPlayer: (amount: number) => void;
-  tickPlayerReboot: (amount: number) => void;
-  healPanel: (id: string, amount: number) => void;
-  decayReboot: (id: string, amount: number) => void;
-  damagePanel: (id: string, amount: number) => void;
-  resetGame: () => void;
-  recalculateIntegrity: () => void;
+  selectUpgrade: (option: UpgradeOption) => void;
+  
+  resetProgressionState: () => void;
 }
 
-export const useGameStore = create<GameStateUI>()(
-  persist(
-    (set, get) => ({
-      isPlaying: false,
-      isZenMode: false,
-      playerHealth: PLAYER_CONFIG.maxHealth,
-      maxPlayerHealth: PLAYER_CONFIG.maxHealth,
-      playerRebootProgress: 0,
+export const createProgressionSlice: StateCreator<GameState, [], [], ProgressionSlice> = (set) => ({
+  score: 0,
+  highScore: 0,
+  xp: 0,
+  level: 1,
+  xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
+  upgradePoints: 0,
+  activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
+
+  addScore: (amount) => set((state) => ({ score: state.score + amount })),
+  
+  addXp: (amount) => set((state) => ({ xp: state.xp + amount })),
+
+  selectUpgrade: (option) => {
+    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
+    // Logic for applying the upgrade to state happens via sync from ECS or direct here?
+    // In current arch, ECS handles logic, but UI needs to know points spent.
+    // The GameStateSystem in ECS actually manages the 'truth', so we emit the event 
+    // and rely on UISyncSystem to update us back.
+  },
+
+  resetProgressionState: () => set({
       score: 0,
-      highScore: 0,
       xp: 0,
       level: 1,
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
-      systemIntegrity: 100,
-      interactionTarget: null,
-      
-      availableUpgrades: [],
-      activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
-      panels: {},
+      activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 }
+  })
+});
 
-      // --- GAME ACTIONS ---
 
-      startGame: () => {
-        if (get().isPlaying) return;
-        set({ 
-            isPlaying: true, 
-            isZenMode: false,
-            score: 0, 
-            playerHealth: PLAYER_CONFIG.maxHealth,
-            playerRebootProgress: 0,
-            xp: 0,
-            level: 1,
-            xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
-            availableUpgrades: [],
-            activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
-            panels: Object.fromEntries(
-                Object.entries(get().panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
-            )
-        });
-      },
-      
-      stopGame: () => {
-          const { score, highScore } = get();
-          set({ isPlaying: false, highScore: Math.max(score, highScore) });
-      },
+=====================================
+FILE: ./src/game/store/slices/createCombatSlice.ts
+=====================================
+import { StateCreator } from 'zustand';
+import { GameState } from '../useGameStore';
+import { PLAYER_CONFIG } from '../../config/PlayerConfig';
+import { GameEventBus } from '../../events/GameEventBus';
+import { GameEvents } from '../../events/GameEvents';
 
-      activateZenMode: () => {
-          set({ isZenMode: true });
-          GameEventBus.emit(GameEvents.ZEN_MODE_ENABLED, null);
-      },
+export interface CombatSlice {
+  isPlaying: boolean;
+  isZenMode: boolean;
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  systemIntegrity: number;
 
+  startGame: () => void;
+  stopGame: () => void;
+  activateZenMode: () => void;
+  
+  damagePlayer: (amount: number) => void;
+  healPlayer: (amount: number) => void;
+  tickPlayerReboot: (amount: number) => void;
+  decayReboot: (amount: number) => void;
+  
+  resetCombatState: () => void;
+}
+
+export const createCombatSlice: StateCreator<GameState, [], [], CombatSlice> = (set, get) => ({
+  isPlaying: false,
+  isZenMode: false,
+  playerHealth: PLAYER_CONFIG.maxHealth,
+  maxPlayerHealth: PLAYER_CONFIG.maxHealth,
+  playerRebootProgress: 0,
+  systemIntegrity: 100,
+
+  startGame: () => {
+    if (get().isPlaying) return;
+    // When game starts, we also reset progression/combat state to baseline
+    // But we trigger the other slices via the composed reset in the main store or here.
+    // For now, we set local flags.
+    get().resetGame(); // Calls the composed reset
+    set({ isPlaying: true });
+  },
+
+  stopGame: () => {
+    const { score, highScore } = get(); // Access Progression Slice
+    set({ 
+        isPlaying: false, 
+        highScore: Math.max(score, highScore) 
+    });
+  },
+
+  activateZenMode: () => {
+    set({ isZenMode: true });
+    GameEventBus.emit(GameEvents.ZEN_MODE_ENABLED, null);
+  },
+
+  damagePlayer: (amount) => set((state) => ({ 
+      playerHealth: Math.max(0, state.playerHealth - amount) 
+  })),
+
+  healPlayer: (amount) => set((state) => ({ 
+      playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) 
+  })),
+
+  tickPlayerReboot: (amount) => set((state) => ({ 
+      playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) 
+  })),
+
+  decayReboot: (amount) => set((state) => ({ 
+      playerRebootProgress: Math.max(0, state.playerRebootProgress - amount) 
+  })),
+
+  resetCombatState: () => set({
+      isPlaying: false,
+      isZenMode: false,
+      playerHealth: PLAYER_CONFIG.maxHealth,
+      playerRebootProgress: 0,
+      systemIntegrity: 100
+  })
+});
+
+
+=====================================
+FILE: ./src/game/store/slices/createUISlice.ts
+=====================================
+import { StateCreator } from 'zustand';
+import { GameState } from '../useGameStore';
+import { UpgradeOption } from '../../types/game.types';
+
+const MAX_PANEL_HEALTH = 1000;
+
+export interface UISlice {
+  panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
+  interactionTarget: string | null;
+  availableUpgrades: UpgradeOption[];
+
+  registerPanel: (id: string, element: HTMLElement) => void;
+  unregisterPanel: (id: string) => void;
+  
+  syncPanels: (panelsData: Record<string, any>) => void;
+  
+  // These were placeholders in original, kept for interface compatibility
+  healPanel: (id: string, amount: number) => void;
+  damagePanel: (id: string, amount: number) => void;
+  
+  resetUIState: () => void;
+}
+
+export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get) => ({
+  panels: {},
+  interactionTarget: null,
+  availableUpgrades: [],
+
+  registerPanel: (id, element) => set((state) => ({
+      panels: { ...state.panels, [id]: { id, element, health: MAX_PANEL_HEALTH, isDestroyed: false } }
+  })),
+  
+  unregisterPanel: (id) => set((state) => {
+      const next = { ...state.panels };
+      delete next[id];
+      return { panels: next };
+  }),
+
+  syncPanels: (incomingPanels) => set((state) => {
+      const merged = { ...state.panels };
+      for (const key in incomingPanels) {
+          const prev = merged[key];
+          merged[key] = { ...(prev || {}), ...incomingPanels[key] };
+      }
+      return { panels: merged };
+  }),
+
+  // UI-only placeholders (Logic is in ECS)
+  healPanel: () => {}, 
+  damagePanel: () => {}, 
+
+  resetUIState: () => {
+      const { panels } = get();
+      const resetPanels = Object.fromEntries(
+          Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+      );
+      set({ 
+          panels: resetPanels,
+          interactionTarget: null,
+          availableUpgrades: []
+      });
+  }
+});
+
+
+=====================================
+FILE: ./src/game/store/useGameStore.ts
+=====================================
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+// Slices
+import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
+import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
+import { createUISlice, UISlice } from './slices/createUISlice';
+
+// Combined State Type
+export type GameState = CombatSlice & ProgressionSlice & UISlice & {
+  // Global Actions that touch multiple slices
+  syncGameState: (data: Partial<GameState>) => void;
+  resetGame: () => void;
+  recalculateIntegrity: () => void; // Legacy hook
+};
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get, api) => ({
+      ...createCombatSlice(set, get, api),
+      ...createProgressionSlice(set, get, api),
+      ...createUISlice(set, get, api),
+
+      // --- BRIDGE ACTIONS ---
+
+      // Called by UISyncSystem (ECS) to update React State
       syncGameState: (data) => set((state) => ({ ...state, ...data })),
-      
-      syncPanels: (incomingPanels) => set((state) => {
-          const merged = { ...state.panels };
-          for (const key in incomingPanels) {
-              const prev = merged[key];
-              merged[key] = { ...(prev || {}), ...incomingPanels[key] };
-          }
-          return { panels: merged };
-      }),
 
-      registerPanel: (id, element) => set((state) => ({
-          panels: { ...state.panels, [id]: { id, element, health: 1000, isDestroyed: false } }
-      })),
-      
-      unregisterPanel: (id) => set((state) => {
-          const next = { ...state.panels };
-          delete next[id];
-          return { panels: next };
-      }),
-
-      selectUpgrade: (option) => {
-        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
+      // Master Reset
+      resetGame: () => {
+          get().resetCombatState();
+          get().resetProgressionState();
+          get().resetUIState();
       },
 
-      addScore: (amount) => set(state => ({ score: state.score + amount })),
-      addXp: (amount) => set(state => ({ xp: state.xp + amount })),
-      damagePlayer: (amount) => set(state => ({ playerHealth: Math.max(0, state.playerHealth - amount) })),
-      healPlayer: (amount) => set(state => ({ playerHealth: Math.min(state.maxPlayerHealth, state.playerHealth + amount) })),
-      tickPlayerReboot: (amount) => set(state => ({ playerRebootProgress: Math.min(100, Math.max(0, state.playerRebootProgress + amount)) })),
-      healPanel: (id, amount) => {}, 
-      decayReboot: (id, amount) => {}, 
-      damagePanel: (id, amount) => {}, 
-      resetGame: () => {},
+      // Legacy/Placeholder
       recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage-v2',
-      partialize: (state) => ({ highScore: state.highScore }),
+      name: 'mesoelfy-os-storage-v3', // Bump version for clean state
+      partialize: (state) => ({ highScore: state.highScore }), // Only persist High Score
     }
   )
 );

@@ -36,7 +36,8 @@ export const AsciiRenderer = () => {
   }, [isHigh]); 
 
   return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
+    // UPDATE: text-[4px] ensures fit on 360px screens (Galaxy S8+)
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
       {renderedChars}
     </div>
   );
