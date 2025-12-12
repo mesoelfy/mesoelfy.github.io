@@ -7,7 +7,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { GameStateSystem } from '../systems/GameStateSystem';
 import { UISyncSystem } from '../systems/UISyncSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
-import { AudioDirectorSystem } from '../systems/AudioDirectorSystem'; // NEW
+import { AudioDirectorSystem } from '../systems/AudioDirectorSystem';
 
 // Gameplay Systems
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
@@ -17,6 +17,7 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
+import { StructureSystem } from '../systems/StructureSystem'; // NEW
 import { TargetingSystem } from '../systems/TargetingSystem';
 import { GuidanceSystem } from '../systems/GuidanceSystem';
 import { OrbitalSystem } from '../systems/OrbitalSystem';
@@ -48,6 +49,7 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) }, // Singleton
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
+  { id: 'StructureSystem',  factory: useClass(StructureSystem) }, // NEW: World Logic
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
   // --- 2. AI & DECISION MAKING (Think) ---
@@ -65,7 +67,7 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'CombatSystem',     factory: useClass(CombatSystem) }, // Resolves damage logic
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
-  { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) }, // NEW
+  { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) },
   
   // --- 5. RENDER PREP (Sync to View) ---
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
