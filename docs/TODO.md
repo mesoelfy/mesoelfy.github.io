@@ -350,7 +350,7 @@ PHASE 24: Audio Channels & Accessibility
 Expand Audio Settings to include "Mono Mode", "Reduce High Frequencies" (Tinnitus mode), etc.
 Shall we proceed with Phase 19 (Settings Store)?
 
-- URL text SYS_INT: should be OS_INT:
+- 
 
 
 

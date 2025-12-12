@@ -36,11 +36,13 @@ export const useMetaUrl = (bootLogMessage: string | null) => {
         } else if (isGameOver) {
             hash = '#/STATUS:CRITICAL/SYSTEM_FAILURE';
         } else if (safeInt < 30) {
-            hash = `#/STATUS:CRITICAL/SYS_INT:${safeInt}%`;
+            // UPDATED: SYS_INT -> OS_INT
+            hash = `#/STATUS:CRITICAL/OS_INT:${safeInt}%`;
         } else {
             let status = 'STABLE';
             if (safeInt < 60) status = 'CAUTION';
-            hash = `#/STATUS:${status}/SYS_INT:${safeInt}%`;
+            // UPDATED: SYS_INT -> OS_INT
+            hash = `#/STATUS:${status}/OS_INT:${safeInt}%`;
         }
 
         if (window.location.hash !== hash) {
