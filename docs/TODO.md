@@ -435,3 +435,4 @@ https://x.com/MegaMan/status/1999326723611996349?s=20
 - in dashboard, the way panels resize with browser dimension change is perfect. I'd like the same property to happen when zooming the browser.
 
 
+Well done. Please provide the commit then tell me what else in the project has become a God Component.
