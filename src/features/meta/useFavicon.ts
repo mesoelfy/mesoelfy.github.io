@@ -17,7 +17,7 @@ export const useFavicon = (bootKey: string) => {
   
   const [tick, setTick] = useState(false);
 
-  // 1. PRE-BAKER (Cache default favicon)
+  // 1. PRE-BAKER
   useEffect(() => {
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
@@ -59,6 +59,14 @@ export const useFavicon = (bootKey: string) => {
     // Blink Logic (1Hz)
     const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
     
+    // Determine Semantic Color based on Health
+    const safeInt = Math.max(0, integrity);
+    const displayInt = Math.floor(safeInt);
+    let statusColor = COLORS.GREEN;
+    
+    if (displayInt < 30) statusColor = COLORS.RED;
+    else if (displayInt < 60) statusColor = COLORS.YELLOW;
+
     let nextHref = '';
     let visualKey = '';
 
@@ -73,11 +81,11 @@ export const useFavicon = (bootKey: string) => {
         nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     } 
     else if (isSimulationPaused) {
-        visualKey = `PAUSED_${blinkOn}`;
-        nextHref = generatePausedIcon(blinkOn);
+        // UPDATED: Now uses statusColor instead of hardcoded yellow
+        visualKey = `PAUSED_${blinkOn}_${statusColor}`;
+        nextHref = generatePausedIcon(blinkOn, statusColor);
     } 
     else if (isZenMode || (integrity > 99)) {
-        // If healthy/zen, try to show the original high-res favicon
         if (defaultIconDataRef.current) {
             visualKey = 'DEFAULT_STATIC';
             nextHref = defaultIconDataRef.current;
@@ -87,20 +95,11 @@ export const useFavicon = (bootKey: string) => {
         }
     } 
     else {
-        // Dynamic Health Bar
-        const safeInt = Math.max(0, integrity);
-        const displayInt = Math.floor(safeInt);
-
-        let color = COLORS.GREEN;
-        if (displayInt < 30) color = COLORS.RED;
-        else if (displayInt < 60) color = COLORS.YELLOW;
-
-        visualKey = `HEALTH_${displayInt}_${color}`;
-        nextHref = generateHealthIcon(displayInt, color);
+        visualKey = `HEALTH_${displayInt}_${statusColor}`;
+        nextHref = generateHealthIcon(displayInt, statusColor);
     }
 
     // --- DOM COMMIT ---
-    // Only touch the DOM if the visual key actually changed
     if (visualKey !== lastVisualKey.current && nextHref) {
         linkRef.current.href = nextHref;
         lastVisualKey.current = visualKey;

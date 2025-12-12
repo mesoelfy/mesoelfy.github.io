@@ -24,7 +24,8 @@ export const useMetaTitle = (bootKey: string) => {
         const safeInt = Math.floor(Math.max(0, integrity));
         
         if (safeInt <= 0) {
-            title = `[ :: SESSION FAILURE :: ]`;
+            // UPDATED: SESSION -> SYSTEM
+            title = `[ :: SYSTEM FAILURE :: ]`;
         } else if (safeInt >= 99 && !isBreaching) {
             title = "[ :: // MESOELFY // :: ]";
         } else {
