@@ -16,7 +16,6 @@ interface Props {
 
 // --- RESTORED ASCII RENDERER ---
 const AsciiRenderer = () => {
-  // Subscribe to graphics mode for real-time toggling
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isHigh = graphicsMode === 'HIGH';
 
@@ -25,7 +24,6 @@ const AsciiRenderer = () => {
       if (char === '\n') return <br key={i} />;
       if (char === ' ') return <span key={i}> </span>;
 
-      // Base classes
       let baseClass = 'transition-colors duration-300 ';
       let animClass = '';
       
@@ -39,10 +37,7 @@ const AsciiRenderer = () => {
         baseClass += 'text-primary-green-dark';
       }
 
-      // Conditional Animation
       const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;
-      
-      // Delay only applied if High Res (optimization)
       const style = isHigh ? { animationDelay: Math.random() * 2 + 's' } : {};
 
       return (
@@ -55,7 +50,7 @@ const AsciiRenderer = () => {
         </span>
       );
     });
-  }, [isHigh]); // Re-memoize when mode changes
+  }, [isHigh]); 
 
   return (
     <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
@@ -322,7 +317,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         GameEventBus.emit(GameEvents.BOOT_LOG, { message: LOG_DATA[step].text });
     }
     
-    // Trigger GPU Panel Delay when step 6 (Button Phase) is reached
+    // Trigger GPU Panel Delay
     if (step >= 6 && !showGpuPanel) {
         const timer = setTimeout(() => {
             setShowGpuPanel(true);
@@ -360,10 +355,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
 
     const matrixEffect = () => {
-      // 1. CHECK GRAPHICS MODE
       const mode = useStore.getState().graphicsMode;
-      
-      // 2. DISABLE IF POTATO
       if (mode === 'POTATO') {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           return;
@@ -371,7 +363,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
       ctx.font = '14px "Courier New"';
 
       const currentStep = stepRef.current;
@@ -384,7 +375,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
         const isPurple = Math.random() > 0.6;
         const isRed = isUnsafePhase && Math.random() > 0.6; 
-        
         let color = '#0F0';
         let blur = 0;
 
@@ -399,7 +389,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         ctx.fillStyle = color;
         ctx.shadowBlur = blur;
         ctx.shadowColor = color;
-
         ctx.fillText(text, x, y);
         ctx.shadowBlur = 0;
 
@@ -415,13 +404,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const handleInitialize = () => {
     if (isBreaching) return;
     setIsBreaching(true);
-    
     onBreachStart();
-
     AudioSystem.init();
     AudioSystem.playBootSequence();
     AudioSystem.startMusic();
-    
     setStep(6);
     setTimeout(onComplete, 800); 
   };
@@ -435,11 +421,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     >
       <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      {/* 
-         LAYOUT STRATEGY:
-         - Mobile: Flex Column (Vertical Stack)
-         - Desktop: Center Absolute (The GPU panel hangs off the side) 
-      */}
       <motion.div 
         className="relative z-10 w-full max-w-2xl flex flex-col gap-4"
         animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
@@ -466,7 +447,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
             >
             <CoreHeader step={step} />
-            
             <div className="p-6 flex flex-col items-center gap-4">
                 <AsciiRenderer />
                 {showWarningBox && (
@@ -503,7 +483,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         )}
         </AnimatePresence>
 
-        {/* GPU PANEL - ABSOLUTE POSITIONED RELATIVE TO THIS CONTAINER */}
+        {/* GPU PANEL */}
         <AnimatePresence>
             {showGpuPanel && !isBreaching && (
                 <motion.div 
@@ -511,12 +491,14 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     animate={{ x: 0, opacity: 1 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                    // MOBILE: Order-first (appears on top via flex-col-reverse logic if needed, or just top of stack)
-                    // DESKTOP: Absolute left of container, bottom aligned
-                    className="w-full md:w-72 md:absolute md:right-[102%] md:bottom-0 md:mr-0 mb-4 md:mb-0 z-10 order-first md:order-none"
+                    // DESKTOP: Right 102% moves it left of the stack. 
+                    // Bottom-0 aligns the bottom of the container (The Panel) with the Main Stack bottom.
+                    // The text is then absolute positioned below (overshoot).
+                    className="w-full md:w-72 md:absolute md:right-[102%] md:bottom-0 md:mr-0 mb-4 md:mb-0 z-10 order-first md:order-none relative"
                 >
                     <GpuConfigPanel />
-                    <div className="mt-2 text-[8px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left">
+                    {/* Text is taken out of flow on desktop to allow Panel alignment */}
+                    <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left md:absolute md:top-full md:w-full">
                         &gt;&gt; CAN BE CHANGED LATER.
                     </div>
                 </motion.div>
