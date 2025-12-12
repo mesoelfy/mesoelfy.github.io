@@ -351,3 +351,78 @@ Expand Audio Settings to include "Mono Mode", "Reduce High Frequencies" (Tinnitu
 Shall we proceed with Phase 19 (Settings Store)?
 
 - URL text SYS_INT: should be OS_INT:
+
+
+
+
+
+
+
+
+### **// PHASE MAP**
+
+### **PHASE A: Visual Design & State Definition**
+**Goal:** Build the UI components and data store without touching the game engine yet.
+1.  **State Slice:** Update `useStore` to hold `graphicsMode: 'HIGH' | 'POTATO'`.
+2.  **Intro Sequence UI:**
+    *   Modify `MatrixBootSequence.tsx`.
+    *   Add a panel to the left of MESOELFY_OS
+    *   **Toggle:** A satisfying, chunky switch component.
+        *   **ON:** "ENABLED (HIGH_VOLTAGE)" (Green)
+        *   **OFF:** "DISABLED (POTATO_MODE)" (Yellow)
+    *   **Footer Note:** ">> CAN BE CHANGED LATER IN SETTINGS."
+panel header --> GPU_CONFIG - in right corner is [animating CPU icon]
+
+body --> "SELECT PERFORMANCE PROFILE:"
+
+ENABLED - HIGH_VOLTAGE (lighting bolt icon)
+DISABLED - POTATO_MODE (lighting bolt icon with line through it)
+
+
+
+3.  **Settings Menu UI:**
+    *   Update `SettingsModal.tsx` to include a **GRAPHICS** tab.
+    *   Re-use the switch design to ensure the user sees the same control inside the game.
+
+### **PHASE B: Intro Feedback Wiring**
+**Goal:** Make the Intro UI responsive to the switch immediately (The "Test Drive").
+1.  **Matrix Rain:**
+    *   Wire the `MatrixBootSequence` canvas to the store.
+    *   If switched to **POTATO_MODE**, the Matrix Rain canvas pauses rendering or fades opacity to 0 instantly.
+2.  **ASCII Effects:**
+    *   Disable the shimmering/glow animations on the text logs and MESOELFY ASCII with green and purple shimmer in the intro when in Potato Mode.
+3.  **Result:** The user clicks the switch and immediately sees the "load" drop, confirming the button works before they even enter the game.
+
+
+
+### **PHASE C: Content Throttling**
+**Goal:** Reduce CPU and Network usage for specific features.
+1.  **Video Uplink:**
+    *   Update `HoloCommLog.tsx`.
+    *   If **POTATO**: Do not load YouTube iframes. Render a static "OFFLINE / POWER_SAVE" texture in the slots.
+2.  **Particle Budget:**
+    *   Update `VFXSystem.ts`.
+    *   Inject the `ConfigService` or `useStore`.
+    *   If **POTATO**: Apply a `0.3x` multiplier to particle counts in all recipes.
+
+---
+
+### **PHASE D: Engine Wiring (Resolution & Post-Process)**
+**Goal:** Connect the settings to the heavy 3D rendering pipeline.
+1.  **Dynamic Resolution (DPR):**
+    *   Update `SceneCanvas.tsx`.
+    *   Bind the `<Canvas>` `dpr` prop to the store.
+    *   **HIGH:** `[1, 2]` (Native/Retina).
+    *   **POTATO:** `0.5` (Half-Res Retro).
+2.  **Effect Composer:**
+    *   Conditionally render `<EffectsLayer />` (Bloom/Vignette).
+    *   If **POTATO**, unmount it entirely.
+
+
+
+
+
+
+    MatrixBootSequence.tsx is too big.
+
+    Make bottom text  a little bit larger and fix alignment

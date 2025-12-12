@@ -66,7 +66,7 @@ interface AppState {
   galleryAction: 'IDLE' | 'ATTACK';
   
   audioSettings: AudioSettings;
-  graphicsMode: GraphicsMode; // NEW
+  graphicsMode: GraphicsMode;
   screenShakeStrength: number; 
   
   isDebugOpen: boolean;
@@ -95,8 +95,7 @@ interface AppState {
   setVolume: (channel: keyof AudioSettings, value: number, max?: number) => void;
   resetAudioSettings: () => void;
   
-  setGraphicsMode: (mode: GraphicsMode) => void; // NEW
-  
+  setGraphicsMode: (mode: GraphicsMode) => void;
   setScreenShake: (val: number) => void;
   
   toggleDebugMenu: () => void;
@@ -123,7 +122,7 @@ export const useStore = create<AppState>()(
       galleryAction: 'IDLE',
       
       audioSettings: { ...DEFAULT_AUDIO },
-      graphicsMode: 'HIGH', // Default to High
+      graphicsMode: 'HIGH',
       
       screenShakeStrength: 1.0, 
       
@@ -210,7 +209,6 @@ export const useStore = create<AppState>()(
       },
       
       setGraphicsMode: (mode) => set({ graphicsMode: mode }),
-      
       setScreenShake: (val) => set({ screenShakeStrength: val }),
       
       toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
@@ -229,8 +227,8 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({ 
           audioSettings: state.audioSettings,
           screenShakeStrength: state.screenShakeStrength,
-          introDone: state.introDone,
-          graphicsMode: state.graphicsMode // Persist this
+          graphicsMode: state.graphicsMode,
+          introDone: state.introDone
       }), 
     }
   )
