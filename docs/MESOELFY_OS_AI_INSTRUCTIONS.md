@@ -19,6 +19,10 @@ I have attached "all_source_code.txt" which contains the full project tree and c
 3.  **STEP BY STEP PHASE-BASED WORKFLOW:** After an outline of steps has been articulated, give the code in structured steps instead of all at once.
 4.  **// VERIFICATION CHECKLIST:**  Let the user know what to look for to confirm the changes have succeeded and the build is stable
 5.  **Atomic Commits:** After the user a successful feature implementation, provide the specific `git add .`, `git commit -m "..."`, and `git push` commands with a detailed commit description after the title. Don't provide the commit until the user asks for it. For git add, always use the period ".". And make sure you include the long description. It should be provided as a single copy-paste for the user.
+using git add . to capture all the relevant modified files and following the prescribed format: git add . -> git commit -m "title" -m "description" -> git push.
+
+Don't repeat information from previous commits. Each new commit is for the new progress that has been made.
+
 6.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
 7. **WAIT** Don't provide code until user asks for it. You should articulate with text what you'd like to do so the user can confirm what needs to be done.
 

@@ -417,95 +417,105 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] flex items-center justify-center font-mono overflow-hidden outline-none cursor-none p-4"
+      className="fixed inset-0 z-[100] font-mono overflow-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black outline-none cursor-none"
     >
-      <canvas ref={canvasRef} className={`absolute inset-0 z-0 transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
+      <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      <motion.div 
-        className="relative z-10 w-full max-w-2xl flex flex-col gap-4"
-        animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
-        transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
-      >
+      {/* 
+         LAYOUT FIX: SCROLL CLIPPING
+         - Removed 'justify-center items-center' from Wrapper.
+         - Wrapper is now a standard flex column.
+         - The inner Content div uses 'm-auto'. 
+         - Result: Centers if small, Top-Left aligned if overflowing, allowing scroll.
+      */}
+      <div className="min-h-full w-full flex p-8 relative z-10">
         
-        {/* TERMINAL TOP (LOGS) */}
-        <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
-            <BootHeader step={step} />
-            <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
-                {logsToShow.map((line, i) => (
-                <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-                ))}
-            </div>
-        </motion.div>
-
-        {/* TERMINAL BOTTOM (CORE) */}
-        <AnimatePresence>
-        {showPayloadWindow && (
-            <motion.div 
-            initial={{ y: 50, opacity: 0, height: 0 }}
-            animate={{ y: 0, opacity: 1, height: "auto" }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
-            >
-            <CoreHeader step={step} />
-            <div className="p-6 flex flex-col items-center gap-4">
-                <AsciiRenderer />
-                {showWarningBox && (
-                <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ 
-                    opacity: 1, scale: 1,
-                    boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
-                    }}
-                    transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                    className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
-                >
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                    <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                </motion.div>
-                )}
-                {showButton && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
-                    <button 
-                    onClick={handleInitialize}
-                    onMouseEnter={() => AudioSystem.playHover()}
-                    className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+        <motion.div 
+            className="w-fit m-auto flex flex-col gap-4 lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end"
+            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
+            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+        >
+            
+            {/* 1. GPU PANEL (Desktop: Col 1) */}
+            <AnimatePresence>
+                {showGpuPanel && !isBreaching && (
+                    <motion.div 
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                        className="w-full lg:w-72 lg:col-start-1 lg:row-start-1 relative z-10 lg:justify-self-end order-2 lg:order-1"
                     >
-                    <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                    <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
-                        [ INITIALIZE_SYSTEM.EXE ]
-                    </span>
-                    </button>
-                </motion.div>
+                        <GpuConfigPanel />
+                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full">
+                            &gt;&gt; CAN BE CHANGED LATER.
+                        </div>
+                    </motion.div>
                 )}
-            </div>
-            </motion.div>
-        )}
-        </AnimatePresence>
+            </AnimatePresence>
 
-        {/* GPU PANEL */}
-        <AnimatePresence>
-            {showGpuPanel && !isBreaching && (
-                <motion.div 
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                    // DESKTOP: Right 102% moves it left of the stack. 
-                    // Bottom-0 aligns the bottom of the container (The Panel) with the Main Stack bottom.
-                    // The text is then absolute positioned below (overshoot).
-                    className="w-full md:w-72 md:absolute md:right-[102%] md:bottom-0 md:mr-0 mb-4 md:mb-0 z-10 order-first md:order-none relative"
-                >
-                    <GpuConfigPanel />
-                    {/* Text is taken out of flow on desktop to allow Panel alignment */}
-                    <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left md:absolute md:top-full md:w-full">
-                        &gt;&gt; CAN BE CHANGED LATER.
+            {/* 2. MAIN TERMINAL (Desktop: Col 2) */}
+            <div className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+                <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
+                    <BootHeader step={step} />
+                    <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                        {logsToShow.map((line, i) => (
+                        <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
+                        ))}
                     </div>
                 </motion.div>
-            )}
-        </AnimatePresence>
 
-      </motion.div>
+                <AnimatePresence>
+                {showPayloadWindow && (
+                    <motion.div 
+                    initial={{ y: 50, opacity: 0, height: 0 }}
+                    animate={{ y: 0, opacity: 1, height: "auto" }}
+                    transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                    className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
+                    >
+                    <CoreHeader step={step} />
+                    <div className="p-6 flex flex-col items-center gap-4">
+                        <AsciiRenderer />
+                        {showWarningBox && (
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ 
+                            opacity: 1, scale: 1,
+                            boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
+                            }}
+                            transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
+                            className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                        >
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                            <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                        </motion.div>
+                        )}
+                        {showButton && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
+                            <button 
+                            onClick={handleInitialize}
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                            >
+                            <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                            <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
+                                [ INITIALIZE_SYSTEM.EXE ]
+                            </span>
+                            </button>
+                        </motion.div>
+                        )}
+                    </div>
+                    </motion.div>
+                )}
+                </AnimatePresence>
+            </div>
+
+            {/* 3. SPACER (Desktop: Col 3) */}
+            <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />
+
+        </motion.div>
+      </div>
     </motion.div>
   );
 };
