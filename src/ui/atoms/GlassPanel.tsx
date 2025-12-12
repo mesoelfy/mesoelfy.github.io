@@ -13,6 +13,7 @@ import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
+import { DotGridBackground } from './DotGridBackground';
 
 const MAX_HEALTH = 1000;
 
@@ -139,6 +140,15 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
         className
       )}
     >
+      {/* 
+         DOT GRID FIX:
+         Added 'top-8' (2rem/32px) to offset the pattern below the IntelligentHeader.
+         This prevents dots from bleeding into the menu bar.
+      */}
+      <DotGridBackground className="top-8" />
+
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+      
       {isCriticalGlobal && (
           <motion.div 
             className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
@@ -148,8 +158,6 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           />
       )}
 
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
-      
       {title && (
           <IntelligentHeader 
             title={title} 

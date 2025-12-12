@@ -350,7 +350,24 @@ PHASE 24: Audio Channels & Accessibility
 Expand Audio Settings to include "Mono Mode", "Reduce High Frequencies" (Tinnitus mode), etc.
 Shall we proceed with Phase 19 (Settings Store)?
 
-- 
+
+
+
+. The Highlight Lines (Stripes)
+
+These are rendered using CSS repeating-linear-gradient.
+
+    Code: bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]
+
+    Logic:
+
+        Angle: 45deg (Diagonal).
+
+        Gap: transparent from 0px to 10px.
+
+        Line: Green (#78F654) from 10px to 12px (Creating a 2px thick line).
+
+        Repeat: The browser loops this 12px pattern to fill the div.
 
 
 

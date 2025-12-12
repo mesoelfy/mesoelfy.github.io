@@ -9,6 +9,7 @@ import { BootHeader } from './atoms/BootHeader';
 import { CoreHeader } from './atoms/CoreHeader';
 import { AsciiRenderer } from './atoms/AsciiRenderer';
 import { TypedLog } from './atoms/TypedLog';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 // Hooks
 import { useBootSequence } from './hooks/useBootSequence';
@@ -21,12 +22,10 @@ interface Props {
 }
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
-  // DOM Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mainStackRef = useRef<HTMLDivElement>(null);
 
-  // Logic Hooks
   const { 
     step, isBreaching, showGpuPanel, handleInitialize, logsToShow,
     showMatrix, showPayloadWindow, showWarningBox, showButton
@@ -35,7 +34,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
   useSmartScroll(containerRef);
 
-  // Scroll Anchoring: Keep main stack centered when layout changes
   useEffect(() => {
     if (showGpuPanel && mainStackRef.current) {
         mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'auto' });
@@ -89,9 +87,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             <div ref={mainStackRef} className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
                 
                 {/* LOGS */}
-                <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
+                <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
+                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
                     <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                        <DotGridBackground /> 
                         {logsToShow.map((line, i) => (
                             <TypedLog 
                                 key={i} 
@@ -116,7 +116,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
                     >
                     <CoreHeader step={step} />
-                    <div className="p-6 flex flex-col items-center gap-4">
+                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
+                    <div className="p-6 flex flex-col items-center gap-4 relative z-10">
+                        <DotGridBackground />
                         <AsciiRenderer />
                         
                         {showWarningBox && (

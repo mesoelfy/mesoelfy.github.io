@@ -26,7 +26,7 @@ import { DebugOverlay } from '@/features/debug/DebugOverlay';
 import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
-import { MetaManager } from '@/features/meta/MetaManager'; // NEW IMPORT
+import { MetaManager } from '@/features/meta/MetaManager'; 
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -68,9 +68,7 @@ export default function Home() {
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
-      {/* META MANAGER: Handles Console, URL Bar, Favicon, etc. */}
       <MetaManager />
-
       <CustomCursor />
       <GlobalBackdrop />
       <DebugOverlay />
@@ -114,8 +112,10 @@ export default function Home() {
                   {!isZenMode && (
                     <motion.div 
                       className={clsx(
-                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 h-full w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-                          isGameOver ? "overflow-visible" : "overflow-y-auto md:overflow-hidden"
+                          "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black pb-8",
+                          // LAYOUT FIX: Always allow vertical scrolling (h-full + overflow-y-auto).
+                          // This ensures that if panels grow (zoom/content), we can scroll to reach them.
+                          "h-full overflow-y-auto"
                       )}
                       initial="hidden"
                       animate="visible"
@@ -131,9 +131,13 @@ export default function Home() {
                         }
                       }}
                     >
-                      {/* IDENTITY COLUMN */}
+                      {/* 
+                         LAYOUT FIX: Reverted to h-auto.
+                         Panels now stack naturally based on content size.
+                      */}
                       <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                        <GlassPanel title="IDENTITY_CORE" className="flex-1 min-h-0" gameId="identity">
+                        {/* Removed flex-1 to prevent stretching. Added min-h for sanity. */}
+                        <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
                           <IdentityHUD />
                         </GlassPanel>
 
@@ -142,7 +146,6 @@ export default function Home() {
                         </GlassPanel>
                       </div>
 
-                      {/* CONTENT COLUMN */}
                       <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                         <GlassPanel title="LATEST_LOGS" className="h-48 md:h-64 shrink-0" gameId="feed">
                           <div className="w-full h-full flex items-center justify-center p-4">
