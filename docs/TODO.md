@@ -426,9 +426,11 @@ https://x.com/MegaMan/status/1999326723611996349?s=20
 
 
 
-    MatrixBootSequence.tsx is too big.
+   1 1 1 1 1 1 1  **MatrixBootSequence.tsx is too big.** 1 1 1 1
 
-    Make bottom text  a little bit larger and fix alignment
 
     - bloom/vignette with potato mode ??? I'm using vignette? 
     -  Dynamic Resolution (DPR) - - - 
+
+
+    - pause blinker favicon should match game status color

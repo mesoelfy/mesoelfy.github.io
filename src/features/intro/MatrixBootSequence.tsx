@@ -299,6 +299,8 @@ const LOG_DATA = [
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mainStackRef = useRef<HTMLDivElement>(null);
+  
   const [step, setStep] = useState(0); 
   const stepRef = useRef(0);
   const [isBreaching, setIsBreaching] = useState(false);
@@ -326,6 +328,13 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
         return () => clearTimeout(timer);
     }
   }, [step, showGpuPanel]);
+
+  // SCROLL FIX: When GPU Panel appears, keep the Main Stack centered visually.
+  useEffect(() => {
+    if (showGpuPanel && mainStackRef.current) {
+        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'auto' });
+    }
+  }, [showGpuPanel]);
 
   useEffect(() => {
     const sequence = [
@@ -422,16 +431,19 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
       {/* 
-         LAYOUT FIX: SCROLL CLIPPING
-         - Removed 'justify-center items-center' from Wrapper.
-         - Wrapper is now a standard flex column.
-         - The inner Content div uses 'm-auto'. 
-         - Result: Centers if small, Top-Left aligned if overflowing, allowing scroll.
+         LAYOUT FIX: INCREASED PADDING FOR SCROLL DISTANCE
+         - 'px-8' -> 'lg:px-32' provides massive horizontal breathing room on large screens.
+         - This ensures that if the user scrolls to the left/right edges, the content isn't flush against the bezel.
       */}
-      <div className="min-h-full w-full flex p-8 relative z-10">
+      <div className="min-h-full w-full flex p-8 lg:px-32 relative z-10">
         
         <motion.div 
-            className="w-fit m-auto flex flex-col gap-4 lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end"
+            className={clsx(
+                "w-fit m-auto flex flex-col gap-4",
+                showGpuPanel && !isBreaching 
+                    ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
+                    : "max-w-2xl"
+            )}
             animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
             transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
         >
@@ -455,7 +467,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             </AnimatePresence>
 
             {/* 2. MAIN TERMINAL (Desktop: Col 2) */}
-            <div className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+            <div ref={mainStackRef} className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20">
                     <BootHeader step={step} />
                     <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
@@ -511,8 +523,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                 </AnimatePresence>
             </div>
 
-            {/* 3. SPACER (Desktop: Col 3) */}
-            <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />
+            {/* 3. SPACER (Desktop: Col 3) - Only if GPU Panel exists to balance */}
+            {showGpuPanel && !isBreaching && (
+                <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />
+            )}
 
         </motion.div>
       </div>
