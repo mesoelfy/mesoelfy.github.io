@@ -4,6 +4,7 @@ import { SpatialGrid } from './SpatialGrid';
 import { WorldRect } from '../utils/ViewportHelper';
 import { ConfigService } from '../services/ConfigService';
 import { QueryDef } from './ecs/Query';
+import { Tag } from './ecs/types';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -30,12 +31,16 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Entity[];
-  query(def: QueryDef): Entity[]; // NEW
+  query(def: QueryDef): Entity[];
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
 
 export interface IEntitySpawner {
+  // Generic Assembler
+  spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
+
+  // Convenience / Legacy Wrappers
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;

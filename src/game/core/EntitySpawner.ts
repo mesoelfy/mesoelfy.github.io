@@ -1,11 +1,10 @@
 import { IEntitySpawner, IEntityRegistry } from './interfaces';
 import { Entity } from './ecs/Entity';
 import { Tag } from './ecs/types';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
 import { EntityRegistry } from './ecs/EntityRegistry';
 import { ARCHETYPES } from '../data/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
+import { ArchetypeIDs } from '../config/Identifiers';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -14,43 +13,51 @@ export class EntitySpawner implements IEntitySpawner {
     this.registry = registry as EntityRegistry;
   }
 
-  public spawnPlayer(): Entity {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.PLAYER);
-    
-    e.addComponent(ComponentBuilder.Transform({ x: 0, y: 0, rotation: 0, scale: 1 }));
-    e.addComponent(ComponentBuilder.Motion({ friction: 0.9 }));
-    e.addComponent(ComponentBuilder.Health({ max: PLAYER_CONFIG.maxHealth }));
-    e.addComponent(ComponentBuilder.State({ current: 'IDLE' }));
-    e.addComponent(ComponentBuilder.Collider({ radius: PhysicsConfig.HITBOX.PLAYER, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER }));
-    
-    this.registry.updateCache(e);
-    return e;
-  }
-
-  public spawnEnemy(type: string, x: number, y: number): Entity {
-    const archetype = ARCHETYPES[type];
-    if (!archetype) {
-        console.warn(`[EntitySpawner] Unknown archetype: ${type}`);
+  /**
+   * The Core Assembler.
+   * Creates an entity from a data blueprint, merging in runtime overrides.
+   */
+  public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
+    const blueprint = ARCHETYPES[archetypeId];
+    if (!blueprint) {
+        console.warn(`[EntitySpawner] Unknown archetype: ${archetypeId}`);
         return this.registry.createEntity();
     }
 
     const e = this.registry.createEntity();
-    archetype.tags.forEach(tag => e.addTag(tag));
+    
+    // 1. Tags
+    blueprint.tags.forEach(tag => e.addTag(tag));
+    extraTags.forEach(tag => e.addTag(tag));
 
-    for (const compDef of archetype.components) {
-        if (compDef.type === 'Transform') continue;
+    // 2. Components
+    for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            // Clone data to prevent mutation of Archetype definition
-            const freshData = { ...compDef.data }; 
-            e.addComponent(builder(freshData));
+            // Merge Blueprint Data with Runtime Overrides
+            // Example: Blueprint { damage: 10 } + Override { damage: 20 } = { damage: 20 }
+            const runtimeData = overrides[compDef.type] || {};
+            const mergedData = { ...compDef.data, ...runtimeData };
+            
+            e.addComponent(builder(mergedData));
         }
     }
 
-    e.addComponent(ComponentBuilder.Transform({ x, y, rotation: 0, scale: 1 }));
+    // 3. Register
     this.registry.updateCache(e);
     return e;
+  }
+
+  // --- LEGACY WRAPPERS (Preserves Interface) ---
+
+  public spawnPlayer(): Entity {
+    return this.spawn(ArchetypeIDs.PLAYER);
+  }
+
+  public spawnEnemy(type: string, x: number, y: number): Entity {
+    return this.spawn(type, {
+        Transform: { x, y }
+    });
   }
 
   public spawnBullet(
@@ -61,41 +68,41 @@ export class EntitySpawner implements IEntitySpawner {
       damage: number = 1,
       widthMult: number = 1.0
   ): Entity {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.BULLET);
-    if (isEnemy) e.addTag(Tag.ENEMY); else e.addTag(Tag.PLAYER); 
+    const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     
-    e.addComponent(ComponentBuilder.Transform({ 
-        x, y, 
-        rotation: Math.atan2(vy, vx), 
-        scale: widthMult 
-    }));
-    e.addComponent(ComponentBuilder.Motion({ vx, vy }));
-    e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
-    e.addComponent(ComponentBuilder.Health({ max: damage }));
-    e.addComponent(ComponentBuilder.Combat({ damage }));
+    // Rotation is derived from velocity
+    const rotation = Math.atan2(vy, vx);
 
-    const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
-    const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-    const baseRadius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
-    
-    e.addComponent(ComponentBuilder.Collider({ 
-        radius: baseRadius * widthMult, 
-        layer, 
-        mask 
-    }));
-    
-    this.registry.updateCache(e);
-    return e;
+    return this.spawn(id, {
+        Transform: { x, y, rotation, scale: widthMult },
+        Motion: { vx, vy },
+        Lifetime: { remaining: life, total: life },
+        Combat: { damage },
+        Health: { max: damage },
+        // If width changes, we need to scale the collider radius relative to the base blueprint radius
+        // The ComponentBuilder handles the explicit reset, but we pass the final radius here.
+        // We assume the blueprint has the 'base' radius.
+        Collider: { 
+            radius: (ARCHETYPES[id].components.find(c => c.type === 'Collider')?.data.radius || 0.2) * widthMult 
+        }
+    });
   }
 
+  /**
+   * FAST PATH: Particles
+   * Particles are spawned in such high volume (1000s) that we bypass the 
+   * generic "Merge/Lookup" overhead and construct them directly.
+   */
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
+    
+    // Direct Builder calls (No Blueprint Lookup)
     e.addComponent(ComponentBuilder.Transform({ x, y }));
     e.addComponent(ComponentBuilder.Motion({ vx, vy, friction: 0.05 }));
     e.addComponent(ComponentBuilder.Lifetime({ remaining: life, total: life }));
     e.addComponent(ComponentBuilder.Identity({ variant: color }));
+    
     this.registry.updateCache(e);
   }
 }

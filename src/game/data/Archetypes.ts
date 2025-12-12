@@ -1,6 +1,7 @@
 import { ENEMY_CONFIG } from '../config/EnemyConfig';
+import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
-import { EnemyTypes } from '../config/Identifiers';
+import { ArchetypeIDs } from '../config/Identifiers';
 import { Tag } from '../core/ecs/types';
 
 export interface EntityBlueprint {
@@ -9,10 +10,60 @@ export interface EntityBlueprint {
 }
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
-  [EnemyTypes.DRILLER]: {
+  // --- PLAYER ---
+  [ArchetypeIDs.PLAYER]: {
+    tags: [Tag.PLAYER],
+    components: [
+      { type: 'Transform', data: { x: 0, y: 0, rotation: 0, scale: 1 } },
+      { type: 'Motion', data: { friction: 0.9 } },
+      { type: 'Health', data: { max: PLAYER_CONFIG.maxHealth } },
+      { type: 'State', data: { current: 'IDLE' } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.PLAYER, 
+          layer: CollisionLayers.PLAYER, 
+          mask: PhysicsConfig.MASKS.PLAYER 
+      }}
+    ]
+  },
+
+  // --- PROJECTILES ---
+  [ArchetypeIDs.BULLET_PLAYER]: {
+    tags: [Tag.BULLET, Tag.PLAYER],
+    components: [
+      { type: 'Transform', data: { scale: 1.0 } },
+      { type: 'Motion', data: { friction: 0 } },
+      { type: 'Lifetime', data: { remaining: 1.5, total: 1.5 } },
+      { type: 'Combat', data: { damage: 1 } },
+      { type: 'Health', data: { max: 1 } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.BULLET, 
+          layer: CollisionLayers.PLAYER_PROJECTILE, 
+          mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
+      }}
+    ]
+  },
+  [ArchetypeIDs.BULLET_ENEMY]: {
+    tags: [Tag.BULLET, Tag.ENEMY],
+    components: [
+      { type: 'Transform', data: { scale: 1.0 } },
+      { type: 'Motion', data: { friction: 0 } },
+      { type: 'Lifetime', data: { remaining: 3.0, total: 3.0 } },
+      { type: 'Combat', data: { damage: 10 } },
+      { type: 'Health', data: { max: 1 } },
+      { type: 'Collider', data: { 
+          radius: PhysicsConfig.HITBOX.HUNTER_BULLET, 
+          layer: CollisionLayers.ENEMY_PROJECTILE, 
+          mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
+      }}
+    ]
+  },
+
+  // --- ENEMIES ---
+  [ArchetypeIDs.DRILLER]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.DRILLER } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.DRILLER } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.driller.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.driller.damage } },
@@ -21,10 +72,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PANEL' } }
     ]
   },
-  [EnemyTypes.KAMIKAZE]: {
+  [ArchetypeIDs.KAMIKAZE]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.KAMIKAZE } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.KAMIKAZE } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.kamikaze.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.kamikaze.damage } },
@@ -33,10 +85,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PLAYER' } }
     ]
   },
-  [EnemyTypes.HUNTER]: {
+  [ArchetypeIDs.HUNTER]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.HUNTER } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.HUNTER } },
+      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
       { type: 'Health', data: { max: ENEMY_CONFIG.hunter.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: 10 } }, 
@@ -45,16 +98,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: 'Target', data: { type: 'PLAYER' } }
     ]
   },
-  // NEW: DAEMON
-  [EnemyTypes.DAEMON]: {
-    tags: [Tag.PLAYER], // Friendly
+  [ArchetypeIDs.DAEMON]: {
+    tags: [Tag.PLAYER],
     components: [
-      { type: 'Identity', data: { variant: EnemyTypes.DAEMON } },
-      { type: 'Health', data: { max: 100 } }, // High HP Shield
-      { type: 'Orbital', data: { radius: 4.0, speed: 1.5, angle: 0 } },
+      { type: 'Identity', data: { variant: ArchetypeIDs.DAEMON } },
       { type: 'Transform', data: { scale: 1.0 } },
-      { type: 'Target', data: { type: 'ENEMY' } }, // Seeks Enemies
-      // Physics: Layer PLAYER means Enemies hit it and take damage/die (Ramming)
+      { type: 'Health', data: { max: 100 } }, 
+      { type: 'Orbital', data: { radius: 4.0, speed: 1.5, angle: 0 } },
+      { type: 'Target', data: { type: 'ENEMY' } }, 
       { type: 'Collider', data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: 'State', data: { current: 'ORBIT' } }
     ]
