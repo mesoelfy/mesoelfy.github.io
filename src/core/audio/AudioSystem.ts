@@ -1,5 +1,3 @@
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
 import { useStore } from '@/core/store/useStore';
 import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
 
@@ -40,7 +38,6 @@ class AudioSystemController {
     // Synthesis
     await this.generateAllSounds();
     
-    this.setupEventListeners();
     this.setupGlobalInteraction();
 
     this.isReady = true;
@@ -151,29 +148,9 @@ class AudioSystemController {
     const source = ctx.createMediaElementSource(this.musicElement);
     source.connect(this.mixer.musicGain);
   }
-
-  // --- EVENTS ---
-
-  private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => this.playSound('fx_player_fire'));
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') this.playSound('fx_impact_heavy');
-        else this.playSound('fx_impact_light');
-    });
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-        this.playSound('fx_impact_heavy'); 
-        this.mixer.duckMusic(0.7, 1.0);
-    });
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        this.playSound('fx_impact_heavy');
-        this.mixer.duckMusic(1.0, 3.0);
-    });
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => this.playSound('loop_heal'));
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => this.playSound('fx_level_up'));
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.playSound('fx_impact_heavy'); 
-        this.mixer.duckMusic(0.8, 1.5);
-    });
+  
+  public duckMusic(intensity: number, duration: number) {
+      this.mixer.duckMusic(intensity, duration);
   }
 
   // --- ALIASES (Backward Compatibility) ---

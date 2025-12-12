@@ -7,6 +7,7 @@ import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { GameStateSystem } from '../systems/GameStateSystem';
 import { UISyncSystem } from '../systems/UISyncSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { AudioDirectorSystem } from '../systems/AudioDirectorSystem'; // NEW
 
 // Gameplay Systems
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
@@ -39,7 +40,6 @@ const useInstance = (instance: IGameSystem): SystemFactory => () => instance;
 
 /**
  * THE SYSTEM PIPELINE
- * Order matters! This defines the execution sequence of the game loop.
  */
 export const SYSTEM_MANIFEST: SystemDef[] = [
   // --- 1. CORE & INPUT (Prepare the frame) ---
@@ -63,8 +63,9 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   
   // --- 4. OUTCOMES (Die & Explode) ---
   { id: 'CombatSystem',     factory: useClass(CombatSystem) }, // Resolves damage logic
-  { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, // Kills entities with <= 0 HP
-  { id: 'VFXSystem',        factory: useClass(VFXSystem) },       // Spawns visuals for deaths
+  { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
+  { id: 'VFXSystem',        factory: useClass(VFXSystem) },
+  { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) }, // NEW
   
   // --- 5. RENDER PREP (Sync to View) ---
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
