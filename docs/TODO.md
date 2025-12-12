@@ -493,3 +493,5 @@ If window height is greater than 800px, but panels are still extending into an a
 can we implement a "zoomed" magnifying glass view under the action button?
 
 launched bullet should have some squash and stretch to it instead of perfect circle chape.
+
+scroll bar should disappear after leaving intro - - - have modal pop up asking user to  - -- - if user is zoomed more than 100%, briefly pause with an arrow pointing where the Chrome magnifying glass is saying game works best at 100% or less defualt zoom)

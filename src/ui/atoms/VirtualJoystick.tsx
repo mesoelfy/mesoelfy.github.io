@@ -51,7 +51,8 @@ export const VirtualJoystick = () => {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 w-32 h-32 z-[90] touch-none select-none">
+    // UPDATE: Moved to bottom-left (left-8)
+    <div className="fixed bottom-8 left-8 w-32 h-32 z-[90] touch-none select-none">
       {/* Base */}
       <div 
         className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"

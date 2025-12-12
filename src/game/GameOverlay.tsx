@@ -6,6 +6,7 @@ import { ScreenShaker } from './components/ScreenShaker';
 import { GalleryStage } from './components/GalleryStage';
 import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
+import { ActionButton } from '@/ui/atoms/ActionButton';
 import { useStore } from '@/core/store/useStore';
 import { useEffect, useState } from 'react';
 
@@ -17,9 +18,9 @@ export const GameOverlay = () => {
 
   useEffect(() => {
       setMounted(true);
-      const onTouch = () => setIsTouch(true);
-      window.addEventListener('touchstart', onTouch, { once: true });
-      return () => window.removeEventListener('touchstart', onTouch);
+      // Check for touch capability
+      const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      setIsTouch(hasTouch);
   }, []);
 
   if (!mounted) return null;
@@ -54,7 +55,13 @@ export const GameOverlay = () => {
           </Canvas>
         </div>
         
-        {isTouch && !isGallery && <VirtualJoystick />}
+        {/* Mobile Controls Layer */}
+        {isTouch && !isGallery && (
+            <>
+                <VirtualJoystick />
+                <ActionButton />
+            </>
+        )}
     </>
   );
 };
