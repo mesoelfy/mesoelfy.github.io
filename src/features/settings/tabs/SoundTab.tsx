@@ -1,7 +1,8 @@
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Activity, Volume2, Waves } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, Waves, Power, Music, Zap, Speaker } from 'lucide-react';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { clsx } from 'clsx';
 import { 
   getAmbienceFilterHz, 
   getAmbiencePanFreq, 
@@ -10,10 +11,37 @@ import {
   getAmbienceStereoGain 
 } from '@/core/audio/AudioMath';
 
-export const SoundTab = () => {
-  const { audioSettings, setVolume, resetAudioSettings } = useStore();
+// Helper Component for Channel Toggles
+const ChannelToggle = ({ label, isActive, onClick, icon: Icon }: any) => (
+  <button
+    onClick={() => { onClick(); AudioSystem.playClick(); }}
+    onMouseEnter={() => AudioSystem.playHover()}
+    className={clsx(
+      "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
+      isActive 
+        ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
+        : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
+    )}
+  >
+    {isActive && (
+       <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
+    )}
+    <Icon size={16} className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} />
+    <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
+  </button>
+);
 
-  // Baseline Source Volume from AudioConfig ('ambience_core')
+export const SoundTab = () => {
+  const { 
+    audioSettings, 
+    setVolume, 
+    resetAudioSettings,
+    toggleMaster,
+    toggleMusic,
+    toggleSfx,
+    toggleAmbience
+  } = useStore();
+
   const BASE_VOL = 0.24;
 
   return (
@@ -35,37 +63,48 @@ export const SoundTab = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* LEFT: MASTER MIXER */}
+          {/* LEFT: GLOBAL MIXER */}
           <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
                   <Volume2 size={14} className="text-white/70" />
                   <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
               </div>
               
-              <div className="space-y-6 bg-black/40 p-4 border border-white/5 relative overflow-hidden">
+              <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
                   <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ffffff_10px,#ffffff_11px)] pointer-events-none" />
                   
-                  <RangeSlider 
-                    label="MASTER_OUT" 
-                    value={audioSettings.volumeMaster} 
-                    max={2.0}
-                    onChange={(v) => setVolume('volumeMaster', v, 2.0)} 
-                    format={(v) => `${(v * 100).toFixed(0)}%`}
-                  />
-                  <RangeSlider 
-                    label="MUSIC_BUS" 
-                    value={audioSettings.volumeMusic} 
-                    max={2.0}
-                    onChange={(v) => setVolume('volumeMusic', v, 2.0)} 
-                    format={(v) => `${(v * 100).toFixed(0)}%`}
-                  />
-                  <RangeSlider 
-                    label="SFX_BUS" 
-                    value={audioSettings.volumeSfx} 
-                    max={2.0}
-                    onChange={(v) => setVolume('volumeSfx', v, 2.0)} 
-                    format={(v) => `${(v * 100).toFixed(0)}%`}
-                  />
+                  {/* Channel Toggles Grid */}
+                  <div className="grid grid-cols-4 gap-2 relative z-10">
+                      <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} icon={Power} />
+                      <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} icon={Music} />
+                      <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} icon={Zap} />
+                      <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} icon={Speaker} />
+                  </div>
+
+                  {/* Sliders */}
+                  <div className="space-y-5 relative z-10">
+                    <RangeSlider 
+                      label="MASTER_OUT" 
+                      value={audioSettings.volumeMaster} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeMaster', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                    <RangeSlider 
+                      label="MUSIC_BUS" 
+                      value={audioSettings.volumeMusic} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeMusic', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                    <RangeSlider 
+                      label="SFX_BUS" 
+                      value={audioSettings.volumeSfx} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeSfx', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                  </div>
               </div>
           </div>
 
@@ -73,7 +112,9 @@ export const SoundTab = () => {
           <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 border-b border-alert-yellow/30 pb-2 mb-2">
                   <Waves size={14} className="text-alert-yellow" />
-                  <h3 className="text-xs font-bold text-alert-yellow tracking-wider">AMBIENCE_SYNTH</h3>
+                  <h3 className="text-xs font-bold text-alert-yellow tracking-wider">
+                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE FLOOR)</span>
+                  </h3>
               </div>
 
               <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative">
