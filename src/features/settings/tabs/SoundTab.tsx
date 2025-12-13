@@ -1,6 +1,6 @@
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Activity, Volume2, Waves, Power, Music, Zap, Speaker } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind } from 'lucide-react';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { clsx } from 'clsx';
 import { 
@@ -11,25 +11,29 @@ import {
   getAmbienceStereoGain 
 } from '@/core/audio/AudioMath';
 
-// Helper Component for Channel Toggles
-const ChannelToggle = ({ label, isActive, onClick, icon: Icon }: any) => (
-  <button
-    onClick={() => { onClick(); AudioSystem.playClick(); }}
-    onMouseEnter={() => AudioSystem.playHover()}
-    className={clsx(
-      "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
-      isActive 
-        ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
-        : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
-    )}
-  >
-    {isActive && (
-       <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
-    )}
-    <Icon size={16} className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} />
-    <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
-  </button>
-);
+// Dynamic Toggle Component
+const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
+  const Icon = isActive ? IconOn : (IconOff || IconOn);
+  
+  return (
+    <button
+      onClick={() => { onClick(); AudioSystem.playClick(); }}
+      onMouseEnter={() => AudioSystem.playHover()}
+      className={clsx(
+        "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
+        isActive 
+          ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
+          : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
+      )}
+    >
+      {isActive && (
+         <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
+      )}
+      <Icon size={16} className={clsx("mb-1 transition-transform", isActive ? "scale-110 fill-current" : "opacity-50")} />
+      <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
+    </button>
+  );
+};
 
 export const SoundTab = () => {
   const { 
@@ -75,10 +79,34 @@ export const SoundTab = () => {
                   
                   {/* Channel Toggles Grid */}
                   <div className="grid grid-cols-4 gap-2 relative z-10">
-                      <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} icon={Power} />
-                      <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} icon={Music} />
-                      <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} icon={Zap} />
-                      <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} icon={Speaker} />
+                      <ChannelToggle 
+                        label="MAIN" 
+                        isActive={audioSettings.master} 
+                        onClick={toggleMaster} 
+                        iconOn={Volume2} 
+                        iconOff={VolumeX} 
+                      />
+                      <ChannelToggle 
+                        label="MUSIC" 
+                        isActive={audioSettings.music} 
+                        onClick={toggleMusic} 
+                        iconOn={Music} 
+                        // Music icon stays same, just dimmed (Header style)
+                      />
+                      <ChannelToggle 
+                        label="SFX" 
+                        isActive={audioSettings.sfx} 
+                        onClick={toggleSfx} 
+                        iconOn={Zap} 
+                        iconOff={ZapOff}
+                      />
+                      <ChannelToggle 
+                        label="AMB" 
+                        isActive={audioSettings.ambience} 
+                        onClick={toggleAmbience} 
+                        iconOn={Wind} 
+                        // Wind icon stays same, dimmed
+                      />
                   </div>
 
                   {/* Sliders */}
