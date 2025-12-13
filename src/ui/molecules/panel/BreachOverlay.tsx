@@ -122,9 +122,9 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
                   
                   <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
-                      {/* Gradient: Heavily weighted towards purple. Red only at the very start (0-10%) */}
+                      {/* Gradient: Deepest Purple -> Standard -> Bright Lavender (NO RED) */}
                       <motion.div 
-                          className="h-full bg-gradient-to-r from-critical-red from-5% via-latent-purple via-30% to-[#E0B0FF]" 
+                          className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
                           initial={{ width: "0%" }}
                           animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
@@ -132,7 +132,6 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
                   
                   <div className="flex justify-between w-full text-[9px] font-mono font-bold">
-                      {/* INTEGRITY Text: Switches color when Active */}
                       <span className={clsx(
                           "transition-colors duration-200", 
                           isActive ? "text-[#E0B0FF]" : "text-critical-red"
@@ -140,8 +139,13 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                           INTEGRITY: {Math.floor(safeProgress)}%
                       </span>
                       
-                      <span className={clsx("transition-opacity", safeProgress > 0 ? "opacity-100 text-[#E0B0FF]" : "opacity-0")}>
-                          RECOVERING...
+                      {/* Text is now ACTIVE... instead of RECOVERING... */}
+                      {/* FIX: Explicit color set for inactive state to prevent green flash */}
+                      <span className={clsx(
+                          "transition-all duration-300", 
+                          isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
+                      )}>
+                          ACTIVE...
                       </span>
                   </div>
               </div>

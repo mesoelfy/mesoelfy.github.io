@@ -53,14 +53,12 @@ export const IntelligentHeader = ({
       mainColor = "text-critical-red";
       statusText = "SYSTEM_FAILURE";
   } else if (isDestroyed) {
-      // Determine color based on reboot status
+      // LOGIC UPDATE:
+      // If interacting: Purple.
+      // If NOT interacting (even if decaying): Red (Standard Offline State).
       if (isInteracting) {
           mainColor = "text-latent-purple";
           statusText = "REBOOTING...";
-      } else if (healthPercent > 0) {
-          // Decaying state
-          mainColor = "text-critical-red/70"; 
-          statusText = "CHARGE_DECAY";
       } else {
           mainColor = "text-critical-red";
           statusText = "OFFLINE";
@@ -82,8 +80,8 @@ export const IntelligentHeader = ({
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
         isDestroyed ? (
             isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : 
-            healthPercent > 0 ? "bg-critical-red/5 border-critical-red/20" : // Decay BG
-            "bg-critical-red/10 border-critical-red/50" // Dead BG
+            // If decaying but not interacting, we want the Red Border (Offline state)
+            "bg-critical-red/10 border-critical-red/50" 
         ) :
         (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
@@ -181,7 +179,8 @@ export const IntelligentHeader = ({
                     className={clsx(
                         "h-full transition-colors duration-200",
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
-                        (isDestroyed && healthPercent > 0) ? "bg-critical-red opacity-60" : // Decaying Bar Color
+                        // LOGIC UPDATE: Bar remains PURPLE while draining, even if panel frame is Red
+                        (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
                         (isInteracting && isDamaged) ? "bg-service-cyan" :
                         isDamaged ? "bg-alert-yellow" : 
