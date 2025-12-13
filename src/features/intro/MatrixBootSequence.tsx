@@ -61,7 +61,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] font-mono outline-none cursor-auto overflow-y-auto overflow-x-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black"
+      className={clsx(
+          "fixed inset-0 z-[100] font-mono outline-none cursor-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+          // UPDATED: Force hidden overflow when breaching starts to prevent scrollbar flash
+          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
+      )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 

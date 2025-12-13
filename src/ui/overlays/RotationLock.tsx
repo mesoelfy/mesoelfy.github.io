@@ -1,39 +1,18 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, RotateCcw } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 
 export const RotationLock = () => {
-  const { setSimulationPaused, bootState } = useStore();
-
-  // We rely on CSS to show/hide this, but we need JS to pause the game.
-  useEffect(() => {
-    const checkOrientation = () => {
-      // If we are in the intro (standby), we never pause via this lock
-      if (bootState === 'standby') {
-        setSimulationPaused(false);
-        return;
-      }
-
-      const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-      // Only care if it's a mobile-sized device
-      if (isPortrait && window.innerWidth < 768) {
-        setSimulationPaused(true);
-      } else {
-        setSimulationPaused(false);
-      }
-    };
-
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, [setSimulationPaused, bootState]);
+  const { bootState } = useStore();
 
   // Don't render anything if we are still in the intro sequence
   if (bootState === 'standby') return null;
 
+  // VISUAL ONLY:
+  // The actual pausing logic is now handled centrally in page.tsx 
+  // to prevent conflicts with menus/modals.
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden">
+    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden pointer-events-auto">
       
       {/* ANIMATION CONTAINER */}
       <div className="relative w-32 h-32 flex items-center justify-center">

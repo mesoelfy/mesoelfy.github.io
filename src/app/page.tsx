@@ -19,7 +19,7 @@ import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { MobileExperience } from '@/features/mobile/MobileExperience'; 
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
@@ -32,7 +32,19 @@ import { RotationLock } from '@/ui/overlays/RotationLock';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone, bootState, setBootState, isBreaching, startBreach } = useStore(); 
+  const { 
+    openModal, 
+    setIntroDone, 
+    bootState, 
+    setBootState, 
+    isBreaching, 
+    startBreach, 
+    activeModal, 
+    isDebugOpen, 
+    isDebugMinimized,
+    setSimulationPaused 
+  } = useStore(); 
+  
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
@@ -44,25 +56,71 @@ export default function Home() {
 
   // --- SCALING LOGIC ---
   const [dashboardScale, setDashboardScale] = useState(1);
-  // SAFE_HEIGHT: Ideal height where layout fits without scrolling.
-  const SAFE_HEIGHT = 1050; 
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const handleResize = () => {
-        // Only scale on desktop/landscape
+        if (!contentRef.current) return;
         if (window.innerWidth >= 1024) {
-            const h = window.innerHeight;
-            const ratio = Math.min(1, h / SAFE_HEIGHT);
-            setDashboardScale(ratio);
+            const HEADER_H = 48;
+            const FOOTER_H = 32;
+            const PADDING_Y = 48; 
+            const availableHeight = window.innerHeight - HEADER_H - FOOTER_H;
+            const naturalHeight = contentRef.current.scrollHeight + PADDING_Y;
+            const ratio = Math.min(1, availableHeight / naturalHeight);
+            setDashboardScale(Math.floor(ratio * 1000) / 1000);
         } else {
             setDashboardScale(1);
         }
     };
 
+    const debouncedResize = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(handleResize, 100);
+    };
+
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const observer = new ResizeObserver(debouncedResize);
+    if (contentRef.current) observer.observe(contentRef.current);
+    window.addEventListener('resize', debouncedResize);
+    
+    return () => {
+        window.removeEventListener('resize', debouncedResize);
+        observer.disconnect();
+        clearTimeout(timeoutId);
+    };
+  }, [bootState]); 
+
+  // --- MASTER PAUSE LOGIC ---
+  useEffect(() => {
+    // Only active during the game
+    if (bootState !== 'active') return;
+
+    const checkPauseState = () => {
+        const isMenuOpen = activeModal !== 'none';
+        const isDebugActive = isDebugOpen && !isDebugMinimized;
+        
+        // Portrait check (Mobile only)
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        const isSmallScreen = window.innerWidth < 768;
+        const isRotationLocked = isPortrait && isSmallScreen;
+
+        if (isMenuOpen || isDebugActive || isRotationLocked) {
+            setSimulationPaused(true);
+        } else {
+            setSimulationPaused(false);
+        }
+    };
+
+    // Run immediately
+    checkPauseState();
+
+    // Listen for resize (orientation changes)
+    window.addEventListener('resize', checkPauseState);
+    return () => window.removeEventListener('resize', checkPauseState);
+  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused]);
 
   useEffect(() => {
       AudioSystem.init();
@@ -138,20 +196,20 @@ export default function Home() {
               <Header />
 
               <div className={clsx(
-                  "flex-1 min-h-0 relative w-full overflow-x-hidden scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-                  isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
+                  "flex-1 min-h-0 relative w-full overflow-hidden", // SCROLLBAR FIX: FORCE HIDDEN
+                  // We rely on the scaler to fit content. If content is too big, it scales down. 
+                  // No scrolling allowed in dashboard mode.
               )}>
                 
                 {/* SCALING WRAPPER */}
                 <div 
-                    className="w-full origin-top transition-transform duration-100 ease-linear"
+                    className="w-full origin-top transition-transform duration-300 ease-out"
                     style={{ 
                         transform: `scale(${dashboardScale})`,
-                        width: `${100 / dashboardScale}%`,
-                        marginLeft: `${(100 - (100 / dashboardScale)) / 2}%`
+                        marginBottom: `-${(1 - dashboardScale) * 100}%` 
                     }}
                 >
-                    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
+                    <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                     <AnimatePresence>
                         {!isZenMode && (
                         <motion.div 
