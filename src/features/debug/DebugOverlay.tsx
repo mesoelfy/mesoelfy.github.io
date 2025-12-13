@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -145,34 +145,71 @@ export const DebugOverlay = () => {
       );
   }
 
+  // --- MINI MODE HUD ---
   if (isDebugMinimized) {
       return (
-        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-auto">
-            <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
-                <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
-                    <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
-                    <button 
-                        onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
-                        onMouseEnter={() => AudioSystem.playHover()}
-                        className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
-                    >
-                        <Maximize2 size={12} />
-                    </button>
+        <div className="fixed top-20 left-4 z-[10000] pointer-events-none">
+            <div className="bg-black/90 backdrop-blur-md border border-primary-green/30 p-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col gap-3 min-w-[200px] pointer-events-auto transition-all duration-300 hover:border-primary-green/60 hover:shadow-[0_0_30px_rgba(0,255,65,0.15)] group">
+                
+                {/* Header Row */}
+                <div className="flex items-center justify-between border-b border-primary-green/20 pb-2">
+                    <div className="flex items-center gap-2">
+                        <Activity size={12} className="text-primary-green animate-pulse" />
+                        <span className="text-[10px] font-bold text-primary-green tracking-widest">TELEMETRY_LIVE</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                        <button 
+                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="text-primary-green-dim hover:text-white bg-white/5 p-1 rounded hover:bg-white/10 transition-colors"
+                            title="Maximize"
+                        >
+                            <Maximize2 size={12} />
+                        </button>
+                        <button 
+                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="text-critical-red hover:text-white bg-critical-red/10 p-1 rounded hover:bg-critical-red transition-colors"
+                            title="Close"
+                        >
+                            <X size={12} />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
-                <button 
-                    onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
-                    onMouseEnter={() => AudioSystem.playHover()}
-                    className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
-                >
-                    CLOSE_DEBUG
-                </button>
+
+                {/* Big Stats Row */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">FrameRate</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-header font-black text-primary-green leading-none">{stats.fps}</span>
+                            <span className="text-[9px] font-bold text-primary-green/50">FPS</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col border-l border-white/10 pl-4">
+                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">Entities</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-header font-black text-service-cyan leading-none">{stats.active}</span>
+                            <span className="text-[9px] font-bold text-service-cyan/50">OBJ</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Status Footer */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] font-mono text-primary-green-dim/60">
+                    <span className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-primary-green rounded-full shadow-[0_0_5px_#78F654] animate-pulse" />
+                        RUNNING
+                    </span>
+                    <span>POOL: {stats.pooled}</span>
+                </div>
             </div>
         </div>
       );
   }
 
+  // --- FULL DEBUG MENU ---
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
