@@ -107,7 +107,12 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
 
               {/* Status & Bar */}
               <div className="flex flex-col items-center text-center gap-2">
-                  <div className="bg-critical-red/10 border border-critical-red/50 px-4 py-1 backdrop-blur-md">
+                  <div className={clsx(
+                      "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
+                      isActive 
+                          ? "bg-latent-purple/10 border-latent-purple/50" 
+                          : "bg-critical-red/10 border-critical-red/50"
+                  )}>
                       <span className={clsx(
                           "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
                           isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
@@ -117,9 +122,9 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
                   
                   <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
-                      {/* Gradient: Red -> Bright Purple */}
+                      {/* Gradient: Heavily weighted towards purple. Red only at the very start (0-10%) */}
                       <motion.div 
-                          className="h-full bg-gradient-to-r from-critical-red via-[#9E4EA5] to-[#E0B0FF]" 
+                          className="h-full bg-gradient-to-r from-critical-red from-5% via-latent-purple via-30% to-[#E0B0FF]" 
                           initial={{ width: "0%" }}
                           animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
@@ -127,7 +132,14 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
                   
                   <div className="flex justify-between w-full text-[9px] font-mono font-bold">
-                      <span className="text-critical-red">INTEGRITY: {Math.floor(safeProgress)}%</span>
+                      {/* INTEGRITY Text: Switches color when Active */}
+                      <span className={clsx(
+                          "transition-colors duration-200", 
+                          isActive ? "text-[#E0B0FF]" : "text-critical-red"
+                      )}>
+                          INTEGRITY: {Math.floor(safeProgress)}%
+                      </span>
+                      
                       <span className={clsx("transition-opacity", safeProgress > 0 ? "opacity-100 text-[#E0B0FF]" : "opacity-0")}>
                           RECOVERING...
                       </span>

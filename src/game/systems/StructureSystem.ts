@@ -5,8 +5,9 @@ export class StructureSystem implements IGameSystem {
   private decayTimer = 0;
   // Decay logic runs at 10hz (every 0.1s)
   private readonly DECAY_INTERVAL = 0.1; 
-  // FIXED: 1 HP per 0.1s = 10 DPS decay (10s to lose full bar)
-  private readonly DECAY_AMOUNT = 1; 
+  
+  // UPDATED: 2 HP per 0.1s = 20 DPS decay (Twice as fast as before)
+  private readonly DECAY_AMOUNT = 2; 
 
   setup(locator: IServiceLocator): void {
     // No dependencies needed yet

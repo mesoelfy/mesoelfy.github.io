@@ -8,7 +8,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 interface IntelligentHeaderProps {
   title: string;
   health: number;
-  maxHealth?: number; // NEW PROP
+  maxHealth?: number; 
   isDestroyed: boolean;
   isGameOver: boolean;
   gameId?: string;
@@ -17,7 +17,7 @@ interface IntelligentHeaderProps {
 export const IntelligentHeader = ({ 
   title, 
   health, 
-  maxHealth = 1000, // Default for desktop panels
+  maxHealth = 1000,
   isDestroyed, 
   isGameOver, 
   gameId 
@@ -25,11 +25,9 @@ export const IntelligentHeader = ({
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  // Calculate percentage dynamically based on the passed maxHealth
+  // Calculate percentage
   let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
-  
-  // Clamp: Don't show > 100% visual overflow if overhealed
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
 
   const isDamaged = !isDestroyed && healthPercent < 100;
@@ -55,8 +53,18 @@ export const IntelligentHeader = ({
       mainColor = "text-critical-red";
       statusText = "SYSTEM_FAILURE";
   } else if (isDestroyed) {
-      mainColor = isInteracting ? "text-latent-purple" : "text-critical-red";
-      statusText = isInteracting ? "REBOOTING..." : "OFFLINE";
+      // Determine color based on reboot status
+      if (isInteracting) {
+          mainColor = "text-latent-purple";
+          statusText = "REBOOTING...";
+      } else if (healthPercent > 0) {
+          // Decaying state
+          mainColor = "text-critical-red/70"; 
+          statusText = "CHARGE_DECAY";
+      } else {
+          mainColor = "text-critical-red";
+          statusText = "OFFLINE";
+      }
   } else if (isInteracting && isDamaged) {
       mainColor = "text-service-cyan";
       statusText = "HEALING...";
@@ -72,7 +80,11 @@ export const IntelligentHeader = ({
     <div className={clsx(
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
-        isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
+        isDestroyed ? (
+            isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : 
+            healthPercent > 0 ? "bg-critical-red/5 border-critical-red/20" : // Decay BG
+            "bg-critical-red/10 border-critical-red/50" // Dead BG
+        ) :
         (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
@@ -169,6 +181,7 @@ export const IntelligentHeader = ({
                     className={clsx(
                         "h-full transition-colors duration-200",
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
+                        (isDestroyed && healthPercent > 0) ? "bg-critical-red opacity-60" : // Decaying Bar Color
                         isDestroyed ? "bg-transparent" : 
                         (isInteracting && isDamaged) ? "bg-service-cyan" :
                         isDamaged ? "bg-alert-yellow" : 

@@ -82,7 +82,8 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(p.id, 4); 
+            // UPDATED: Reduced from 4 to 2.8 (30% slower)
+            PanelRegistry.healPanel(p.id, 2.8); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
