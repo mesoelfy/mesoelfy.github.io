@@ -31,11 +31,9 @@ export const SettingsModal = () => {
             transition={{ type: "spring", bounce: 0, duration: 0.2 }}
             className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black/95 backdrop-blur-md border border-primary-green shadow-[0_0_80px_rgba(0,255,65,0.15)] flex flex-col overflow-hidden pointer-events-auto"
           >
-            {/* Background Texture */}
-            <DotGridBackground />
             
-            {/* HEADER */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0 relative z-10">
+            {/* HEADER (No Dots Here) */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0 relative z-20">
               <div className="flex items-center gap-4">
                 <div className="p-2 border border-primary-green bg-black/50">
                     <Settings className="text-primary-green animate-spin-slow" size={20} />
@@ -61,8 +59,11 @@ export const SettingsModal = () => {
             {/* MAIN LAYOUT */}
             <div className="flex-1 flex overflow-hidden relative z-10">
                 
+                {/* Background Dots (Scoped to Body) */}
+                <DotGridBackground className="opacity-10" />
+
                 {/* SIDEBAR */}
-                <div className="w-16 md:w-64 border-r border-primary-green/30 flex flex-col bg-black/40">
+                <div className="w-16 md:w-64 border-r border-primary-green/30 flex flex-col bg-black/40 relative z-10">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
@@ -88,7 +89,7 @@ export const SettingsModal = () => {
                 </div>
 
                 {/* CONTENT AREA */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black z-10">
                     <div className="relative z-10 w-full h-full max-w-3xl mx-auto">
                         {activeTab === 'SOUND' && <SoundTab />}
                         
@@ -118,10 +119,14 @@ export const SettingsModal = () => {
 
             {/* FOOTER */}
             <div className="px-6 py-2 bg-black/80 border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0 relative z-20">
-              <div className="flex gap-4">
+              <div className="flex gap-6">
                   <span className="flex items-center gap-2">
                       <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green bg-primary-green/5">ESC</span> 
                       CLOSE_MENU
+                  </span>
+                  <span className="hidden md:flex items-center gap-2">
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green bg-primary-green/5">~</span> 
+                      DEBUG_CONSOLE
                   </span>
               </div>
               <div className="flex items-center gap-2 opacity-50">

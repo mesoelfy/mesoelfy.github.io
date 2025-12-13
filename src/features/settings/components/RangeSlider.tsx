@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 interface RangeSliderProps {
   label: string;
@@ -11,7 +11,7 @@ interface RangeSliderProps {
   displayMax?: number; 
   format?: (val: number) => string;
   markerValue?: number; 
-  color?: string; // Optional accent color override class
+  color?: string;
 }
 
 export const RangeSlider = ({ 
@@ -25,42 +25,94 @@ export const RangeSlider = ({
   color
 }: RangeSliderProps) => {
   
-  // Safety: Ensure value is a number (fixes uncontrolled input error)
-  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const lastTickRef = useRef(value);
 
-  // Calculate percentage 0..100
+  // Safety
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
   const percent = Math.min(100, Math.max(0, (safeValue / max) * 100));
-  
-  // Determine semantic color
+
+  // Audio Tick Logic (5% increments)
+  useEffect(() => {
+    const threshold = max * 0.05;
+    if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
+        // Debounce slightly to prevent zipper noise on instant jumps
+        // Only play if dragging to avoid spam on load
+        if (isDragging) {
+            AudioSystem.playSound('ui_click');
+        }
+        lastTickRef.current = safeValue;
+    }
+  }, [safeValue, max, isDragging]);
+
+  // Sync ref on external updates when not dragging
+  useEffect(() => {
+      if (!isDragging) lastTickRef.current = safeValue;
+  }, [safeValue, isDragging]);
+
+  // Semantic Coloring
   let activeColor = "bg-primary-green";
   let activeText = "text-primary-green";
   let glowClass = "shadow-[0_0_10px_#78F654]";
 
-  // Heuristic: If > 80%, it's "Hot"
   if (percent > 80) {
       activeColor = "bg-alert-yellow";
       activeText = "text-alert-yellow";
       glowClass = "shadow-[0_0_10px_#eae747]";
   }
-  // If > 95%, it's "Critical"
   if (percent > 95) {
       activeColor = "bg-critical-red";
       activeText = "text-critical-red";
       glowClass = "shadow-[0_0_15px_#FF003C]";
   }
-
-  // Allow manual override
   if (color) activeText = color.replace('bg-', 'text-').replace('border-', 'text-');
 
-  // Value Display
   const displayString = format ? format(safeValue) : `${Math.round(percent)}%`;
-
-  // Segment generation
   const segments = 20;
+
+  // --- DRAG LOGIC ---
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateValue(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    updateValue(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const updateValue = (e: React.PointerEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      // Calculate normalized position (0..1)
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const ratio = x / rect.width;
+      
+      // Map to Value & Step
+      let rawValue = ratio * max;
+      if (step > 0) {
+          rawValue = Math.round(rawValue / step) * step;
+      }
+      
+      // Clamp
+      const finalValue = Math.max(0, Math.min(max, rawValue));
+      
+      if (finalValue !== safeValue) {
+          onChange(finalValue);
+      }
+  };
 
   return (
     <div 
-        className="flex flex-col gap-1 w-full group select-none"
+        className="flex flex-col gap-1 w-full select-none touch-none"
         onMouseEnter={() => AudioSystem.playHover()}
     >
       {/* Header */}
@@ -68,43 +120,52 @@ export const RangeSlider = ({
         <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">
             {label}
         </span>
-        <span className={clsx("text-[10px] font-mono font-bold transition-colors bg-black/50 px-1.5 rounded-sm border border-white/10", activeText)}>
+        <span className={clsx("text-[10px] font-mono font-bold transition-colors bg-black/50 px-1.5 rounded-sm border border-white/10 min-w-[3rem] text-center", activeText)}>
             {displayString}
         </span>
       </div>
       
-      {/* Slider Area */}
-      <div className="relative h-5 w-full flex items-center">
-        
-        {/* Track Background (Segments) */}
-        <div className="absolute inset-0 flex justify-between items-center px-[2px] pointer-events-none z-0 opacity-30">
+      {/* Interactive Track */}
+      <div 
+        ref={containerRef}
+        className="relative h-6 w-full flex items-center cursor-pointer group/slider py-1"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      >
+        {/* Background Track (Segments) */}
+        <div className="absolute inset-x-0 h-2 flex justify-between items-center px-[1px] pointer-events-none z-0 opacity-30 bg-black/50 border border-white/10 rounded-sm">
             {Array.from({ length: segments }).map((_, i) => (
-                <div key={i} className="w-[2px] h-2 bg-gray-600 rounded-sm" />
+                <div key={i} className="w-[1px] h-1.5 bg-gray-500" />
             ))}
         </div>
 
         {/* Active Fill */}
-        <div className="absolute left-0 h-full flex items-center z-10 pointer-events-none transition-all duration-75 ease-out" style={{ width: `${percent}%` }}>
-            <div className={clsx("h-2 w-full opacity-80", activeColor, glowClass)} />
-            <div className={clsx("h-4 w-1 -ml-1 z-20", activeColor === "bg-primary-green" ? "bg-white" : activeColor)} />
+        <div 
+            className="absolute left-0 h-2 top-2 z-10 pointer-events-none transition-none rounded-sm overflow-hidden" 
+            style={{ width: `${percent}%` }}
+        >
+            <div className={clsx("w-full h-full opacity-80", activeColor, glowClass)} />
         </div>
 
-        {/* Input */}
-        <input 
-          type="range"
-          min="0" 
-          max={max} 
-          step={step}
-          value={safeValue}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
-          data-interactive="true"
+        {/* The "Thumb" Indicator */}
+        <div 
+            className={clsx(
+                "absolute h-4 w-1 top-1 z-20 pointer-events-none shadow-sm transition-transform duration-100",
+                activeColor === "bg-primary-green" ? "bg-white" : activeColor,
+                isDragging ? "scale-y-125 scale-x-110 brightness-150" : "group-hover/slider:scale-y-110"
+            )}
+            style={{ 
+                left: `${percent}%`, 
+                transform: `translateX(-50%) ${isDragging ? 'scale(1.2)' : ''}` 
+            }} 
         />
         
         {/* Marker (Default) */}
         {markerValue !== undefined && (
             <div 
-                className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/30 pointer-events-none z-0" 
+                className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/50 pointer-events-none z-0" 
                 style={{ left: `${(markerValue / max) * 100}%` }} 
             />
         )}

@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';
@@ -173,10 +174,9 @@ export const DebugOverlay = () => {
   }
 
   return (
-    // UPDATED: Matched blur strength to GlobalBackdrop (bg-black/60 + backdrop-blur-sm)
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
+        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0 z-20">
           <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
              <button 
@@ -195,8 +195,12 @@ export const DebugOverlay = () => {
              </button>
           </div>
         </div>
-        <div className="flex flex-1 min-h-0">
-          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
+        
+        <div className="flex flex-1 min-h-0 relative z-10">
+          {/* Dots restricted to Body */}
+          <DotGridBackground className="opacity-10" />
+
+          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col relative z-20">
             {TABS.map(tab => (
               <button 
                 key={tab.id} 
@@ -208,14 +212,14 @@ export const DebugOverlay = () => {
               </button>
             ))}
           </div>
-          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black relative z-20">
             {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
-        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
+        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim z-20">
           <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
         </div>
       </div>
