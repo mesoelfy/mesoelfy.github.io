@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
+import { ShieldAlert, Unlock, Lock, Skull } from 'lucide-react';
 
 interface CoreHeaderProps {
   step: number;
@@ -11,19 +10,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
   const isBypass = step === 4;
   const isDecrypted = step === 5;
   const isCaution = step >= 6;
-
-  const [showCpu, setShowCpu] = useState(false);
-
-  useEffect(() => {
-    if (step === 5) {
-      setShowCpu(false);
-      // Hold the "Unlocked" green state for a moment before showing CPU
-      const timer = setTimeout(() => {
-        setShowCpu(true);
-      }, 1200); 
-      return () => clearTimeout(timer);
-    }
-  }, [step]);
 
   let borderColor = "border-primary-green/30";
   let bgColor = "bg-primary-green/10";
@@ -96,7 +82,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
             )}
 
             {/* STEP 5: DECRYPTED (GREEN OPEN LOCK) */}
-            {isDecrypted && !showCpu && (
+            {isDecrypted && (
                 <motion.div 
                     key="unlocked"
                     initial={{ scale: 0.5, opacity: 0, rotate: -15 }} 
@@ -113,19 +99,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                     }}
                 >
                      <Unlock size={18} className="text-primary-green" strokeWidth={3} />
-                </motion.div>
-            )}
-
-            {/* STEP 5.5: CPU (SYSTEM READY) */}
-            {isDecrypted && showCpu && (
-                <motion.div 
-                    key="cpu"
-                    initial={{ scale: 0, rotate: -90 }} 
-                    animate={{ scale: 1, rotate: 0 }} 
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ duration: 0.4, ease: "backOut" }}
-                >
-                     <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
                 </motion.div>
             )}
 
