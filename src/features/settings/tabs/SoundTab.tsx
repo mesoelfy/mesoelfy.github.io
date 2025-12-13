@@ -29,7 +29,12 @@ const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: Icon
       {isActive && (
          <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
       )}
-      <Icon size={16} className={clsx("mb-1 transition-transform", isActive ? "scale-110 fill-current" : "opacity-50")} />
+      {/* UPDATED: Removed fill-current, decreased strokeWidth to 1.5 */}
+      <Icon 
+        size={16} 
+        strokeWidth={1.5}
+        className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} 
+      />
       <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
     </button>
   );
