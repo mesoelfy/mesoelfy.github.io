@@ -38,7 +38,7 @@ interface BreachOverlayProps {
   progress: number;
   isVideo: boolean;
   showInteractive: boolean;
-  isRepairing?: boolean; // NEW PROP
+  isRepairing?: boolean; 
 }
 
 export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false }: BreachOverlayProps) => {
@@ -46,7 +46,8 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
     ? Math.max(0, Math.min(100, progress)) 
     : 0;
 
-  // Visual state depends on active repair interaction
+  // Active if repairing OR hovering (UI Feedback)
+  // We use CSS group-hover for the hover state detection to keep it snappy
   const isActive = isRepairing;
 
   return (
@@ -75,10 +76,10 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
               <div className="relative h-24 flex items-center justify-center">
                   
                   {/* IDLE: Red Alert Triangle */}
-                  {/* Fades out on Hover OR when Reparing */}
-                  <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-100 group-hover:opacity-0">
+                  {/* Floats up/down. Fades out on interaction. */}
+                  <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-300", isActive ? "opacity-0" : "group-hover:opacity-0")}>
                       <motion.div 
-                          animate={{ y: [0, -5, 0] }}
+                          animate={{ y: [0, -10, 0] }} // RESTORED: Classic float distance
                           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                           className="text-critical-red drop-shadow-[0_0_15px_#FF003C]"
                       >
@@ -87,17 +88,14 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
 
                   {/* ACTIVE/HOVER: Purple Uplink Chevron */}
-                  <div className="absolute inset-0 flex items-center justify-center -translate-y-2 transition-opacity duration-200 opacity-0 group-hover:opacity-100">
+                  {/* RESTORED: Positioned higher (-8), Rapid Scale Pulse */}
+                  <div className={clsx("absolute inset-0 flex items-center justify-center -translate-y-8 transition-opacity duration-200", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                       <motion.div 
-                          initial={{ y: -5, scale: 1 }}
-                          animate={isActive 
-                              ? { y: [-5, -25, -5], scale: 1.2, filter: "brightness(2)" } // FAST PUMP (Rebooting)
-                              : { y: -5, scale: 1, filter: "brightness(1)" } // STATIC (Hover only)
-                          }
-                          transition={isActive 
-                              ? { duration: 0.2, repeat: Infinity, ease: "circOut" } // Fast cycle
-                              : { duration: 0 } // No animation on hover
-                          }
+                          animate={{ 
+                              scale: [1, 1.2, 1], 
+                              filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] 
+                          }}
+                          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
                           className="text-latent-purple drop-shadow-[0_0_25px_#E0B0FF]"
                       >
                           <ChevronUp size={80} strokeWidth={4} />
@@ -117,8 +115,9 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
                   
                   <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
+                      {/* Gradient: Red -> Bright Purple */}
                       <motion.div 
-                          className="h-full bg-gradient-to-r from-critical-red/50 via-latent-purple to-[#E0B0FF]" 
+                          className="h-full bg-gradient-to-r from-critical-red via-[#9E4EA5] to-[#E0B0FF]" 
                           initial={{ width: "0%" }}
                           animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
@@ -128,7 +127,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   <div className="flex justify-between w-full text-[9px] font-mono font-bold">
                       <span className="text-critical-red">INTEGRITY: {Math.floor(safeProgress)}%</span>
                       <span className={clsx("transition-opacity", safeProgress > 0 ? "opacity-100 text-[#E0B0FF]" : "opacity-0")}>
-                          {isActive ? "REBOOTING..." : "DECAYING..."}
+                          RECOVERING...
                       </span>
                   </div>
               </div>
