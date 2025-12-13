@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { useState } from 'react';
 import { SoundTab } from './tabs/SoundTab';
 import { GpuConfigPanel } from './components/GpuConfigPanel';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 const TABS = [
   { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },
@@ -28,14 +29,25 @@ export const SettingsModal = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", bounce: 0, duration: 0.2 }}
-            className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto"
+            className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black/95 backdrop-blur-md border border-primary-green shadow-[0_0_80px_rgba(0,255,65,0.15)] flex flex-col overflow-hidden pointer-events-auto"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0">
-              <div className="flex items-center gap-3">
-                <Settings className="text-primary-green animate-spin-slow" size={24} />
-                <span className="font-header font-black text-2xl text-primary-green tracking-widest">
-                  SYSTEM_SETTINGS
-                </span>
+            {/* Background Texture */}
+            <DotGridBackground />
+            
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="p-2 border border-primary-green bg-black/50">
+                    <Settings className="text-primary-green animate-spin-slow" size={20} />
+                </div>
+                <div className="flex flex-col leading-none">
+                    <span className="font-header font-black text-xl text-primary-green tracking-widest">
+                    SYSTEM_SETTINGS
+                    </span>
+                    <span className="text-[9px] font-mono text-primary-green-dim tracking-[0.3em] opacity-70">
+                        ACCESS_LEVEL: ADMIN
+                    </span>
+                </div>
               </div>
               <button 
                 onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
@@ -46,8 +58,11 @@ export const SettingsModal = () => {
               </button>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                <div className="w-64 border-r border-primary-green/30 flex flex-col bg-black/50">
+            {/* MAIN LAYOUT */}
+            <div className="flex-1 flex overflow-hidden relative z-10">
+                
+                {/* SIDEBAR */}
+                <div className="w-16 md:w-64 border-r border-primary-green/30 flex flex-col bg-black/40">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
@@ -57,26 +72,28 @@ export const SettingsModal = () => {
                             }}
                             onMouseEnter={() => AudioSystem.playHover()}
                             className={clsx(
-                                "flex items-center gap-3 px-6 py-4 text-sm font-bold tracking-wider transition-all border-l-4",
+                                "group flex items-center gap-4 px-4 md:px-6 py-5 text-sm font-bold tracking-wider transition-all relative overflow-hidden",
                                 activeTab === tab.id
-                                    ? "bg-primary-green/10 text-primary-green border-primary-green"
-                                    : "border-transparent text-primary-green-dim hover:text-primary-green hover:bg-primary-green/5"
+                                    ? "bg-primary-green/10 text-primary-green"
+                                    : "text-primary-green-dim hover:text-primary-green hover:bg-primary-green/5"
                             )}
                         >
-                            <tab.icon size={18} />
-                            {tab.label}
+                            {activeTab === tab.id && (
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-green shadow-[0_0_10px_#78F654]" />
+                            )}
+                            <tab.icon size={20} className={activeTab === tab.id ? "drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]" : ""} />
+                            <span className="hidden md:block group-hover:translate-x-1 transition-transform">{tab.label}</span>
                         </button>
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-                    <div className="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-green/20 via-black to-black" />
-                    
-                    <div className="relative z-10 w-full h-full">
+                {/* CONTENT AREA */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+                    <div className="relative z-10 w-full h-full max-w-3xl mx-auto">
                         {activeTab === 'SOUND' && <SoundTab />}
                         
                         {activeTab === 'GRAPHICS' && (
-                            <div className="max-w-xl mx-auto pt-8">
+                            <div className="max-w-xl mx-auto pt-8 animate-in fade-in slide-in-from-bottom-4">
                                 <GpuConfigPanel />
                                 <div className="mt-6 p-4 border border-primary-green/30 bg-primary-green/5 text-xs font-mono text-primary-green-dim">
                                     <p className="mb-2 font-bold text-primary-green">&gt; PROFILE_DETAILS:</p>
@@ -89,22 +106,28 @@ export const SettingsModal = () => {
                         )}
 
                         {activeTab === 'SYSTEM' && (
-                            <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono">
+                            <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono animate-in fade-in zoom-in-95">
+                                <Cpu size={48} className="mb-4 opacity-50" />
                                 <span className="animate-pulse">[ MODULE_OFFLINE ]</span>
+                                <span className="text-[10px] mt-2 opacity-50">WAITING FOR KERNEL UPDATE...</span>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="px-6 py-2 bg-black border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0">
+            {/* FOOTER */}
+            <div className="px-6 py-2 bg-black/80 border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0 relative z-20">
               <div className="flex gap-4">
                   <span className="flex items-center gap-2">
-                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">ESC</span> 
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green bg-primary-green/5">ESC</span> 
                       CLOSE_MENU
                   </span>
               </div>
-              <div className="opacity-50">FIRMWARE v2.0.4</div>
+              <div className="flex items-center gap-2 opacity-50">
+                  <div className="w-2 h-2 rounded-full bg-primary-green animate-pulse" />
+                  ONLINE
+              </div>
             </div>
           </motion.div>
         </div>

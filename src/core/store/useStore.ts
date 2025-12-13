@@ -16,11 +16,13 @@ interface AudioSettings {
   volumeSfx: number;
   volumeAmbience: number;
   
+  // Ambience Lab
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
+  ambGrit: number; // NEW: Distortion/Bitcrush feel
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
@@ -32,11 +34,14 @@ const DEFAULT_AUDIO: AudioSettings = {
   volumeMusic: 1.0,
   volumeSfx: 1.0,
   volumeAmbience: 1.0,
+  
+  // Lab Defaults
   ambFilter: 0.5,
   ambSpeed: 0.5,
   ambWidth: 0.5,
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
+  ambGrit: 0.0, 
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
@@ -197,7 +202,9 @@ export const useStore = create<AppState>()(
       },
       
       setVolume: (channel, value, max = 2.0) => {
-          const clamped = Math.max(0, Math.min(max, value));
+          // Allow override max for lab settings
+          const limit = max || 2.0;
+          const clamped = Math.max(0, Math.min(limit, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
           AudioSystem.updateVolumes();
       },
