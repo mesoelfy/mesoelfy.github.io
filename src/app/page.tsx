@@ -19,7 +19,7 @@ import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { MobileExperience } from '@/features/mobile/MobileExperience'; 
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
@@ -41,6 +41,28 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
+
+  // --- SCALING LOGIC ---
+  const [dashboardScale, setDashboardScale] = useState(1);
+  // SAFE_HEIGHT: Ideal height where layout fits without scrolling.
+  const SAFE_HEIGHT = 1050; 
+
+  useLayoutEffect(() => {
+    const handleResize = () => {
+        // Only scale on desktop/landscape
+        if (window.innerWidth >= 1024) {
+            const h = window.innerHeight;
+            const ratio = Math.min(1, h / SAFE_HEIGHT);
+            setDashboardScale(ratio);
+        } else {
+            setDashboardScale(1);
+        }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
       AudioSystem.init();
@@ -120,8 +142,15 @@ export default function Home() {
                   isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
               )}>
                 
-                {/* FIXED: Removed min-h-full from inner container to prevent unnecessary scrolling */}
-                <div className="w-full origin-top-left landscape:scale-[0.5] landscape:w-[200%] landscape:h-[200%] lg:landscape:scale-100 lg:landscape:w-full lg:landscape:h-full">
+                {/* SCALING WRAPPER */}
+                <div 
+                    className="w-full origin-top transition-transform duration-100 ease-linear"
+                    style={{ 
+                        transform: `scale(${dashboardScale})`,
+                        width: `${100 / dashboardScale}%`,
+                        marginLeft: `${(100 - (100 / dashboardScale)) / 2}%`
+                    }}
+                >
                     <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                     <AnimatePresence>
                         {!isZenMode && (

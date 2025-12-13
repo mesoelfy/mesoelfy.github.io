@@ -30,18 +30,14 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.locator.getInputService().getCursor();
     
-    // Priority 1: Self-Revival (If Dead)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
-        
-        // Decay revival progress if not actively repairing
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
             this.gameSystem.decayReboot(delta * 15);
         }
         return; 
     }
 
-    // Priority 2: World Repair (If Alive)
     this.handlePanelRepair(cursor, time);
   }
 
@@ -61,7 +57,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DOUBLED: 4.0 per tick (was 2.0) = ~0.5s to revive
             this.gameSystem.tickReboot(4.0); 
             this.lastRepairTime = time;
             
@@ -87,7 +82,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DOUBLED: 4 HP per tick (was 2) = ~1.25s to restore a dead panel
             PanelRegistry.healPanel(p.id, 4); 
             this.lastRepairTime = time;
             

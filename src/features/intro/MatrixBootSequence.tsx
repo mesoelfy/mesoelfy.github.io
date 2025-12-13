@@ -41,7 +41,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     if (showGpuPanel && mainStackRef.current) {
-        // Only scroll if we aren't already user-scrolling
         mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'smooth' });
     }
   }, [showGpuPanel]);
@@ -62,17 +61,15 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      // FIXED: Removed scrollbar-hide, changed to overflow-x-auto, changed cursor to default
       className="fixed inset-0 z-[100] font-mono outline-none cursor-auto overflow-y-auto overflow-x-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      {/* FIXED: Changed justify-center to m-auto logic via flex-col/row adjustments to allow left-side scrolling */}
       <div className="min-h-full min-w-min w-full flex items-center p-2 md:p-8 relative z-10">
         
         <motion.div 
             className={clsx(
-                "flex flex-col gap-4 transition-all duration-500 ease-out m-auto", // FIXED: m-auto centers it but respects overflow start
+                "flex flex-col gap-4 transition-all duration-500 ease-out m-auto", 
                 "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
                 showGpuPanel && !isBreaching 
                     ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
@@ -108,7 +105,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             {/* 2. MAIN TERMINAL */}
             <div ref={mainStackRef} className="w-full lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
                 
-                {/* LOGS */}
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
                     <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
@@ -127,7 +123,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     </div>
                 </motion.div>
 
-                {/* CORE PAYLOAD */}
                 <AnimatePresence>
                 {showPayloadWindow && (
                     <motion.div 
@@ -181,7 +176,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                 </AnimatePresence>
             </div>
 
-            {/* 3. SPACER */}
             {showGpuPanel && !isBreaching && (
                 <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />
             )}
