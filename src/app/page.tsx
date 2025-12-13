@@ -29,6 +29,7 @@ import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/features/meta/MetaManager'; 
 import { RotationLock } from '@/ui/overlays/RotationLock';
+import { FeedAccessTerminal } from '@/ui/molecules/FeedAccessTerminal'; // NEW IMPORT
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -242,20 +243,7 @@ export default function Home() {
                             {/* CONTENT COLUMN */}
                             <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                             <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
-                                <div className="w-full h-full flex items-center justify-center p-4">
-                                <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
-                                    <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                                    <button 
-                                    onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
-                                    onMouseEnter={() => AudioSystem.playHover()}
-                                    className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
-                                    >
-                                    <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
-                                        [ ACCESS_TERMINAL ]
-                                    </span>
-                                    </button>
-                                </div>
-                                </div>
+                                <FeedAccessTerminal />
                             </GlassPanel>
 
                             <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
