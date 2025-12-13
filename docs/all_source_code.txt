@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 13 13:47:57 CST 2025
+Generated on: Sat Dec 13 14:16:36 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -88,7 +88,14 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── MobileExperience.tsx
 │   │   │   └── MobileRejectionModal.tsx
 │   │   ├── sandbox
-│   │   │   └── SimulationHUD.tsx
+│   │   │   ├── ArenaLab.tsx
+│   │   │   ├── AudioMatrix.tsx
+│   │   │   ├── ModelInspector.tsx
+│   │   │   ├── SimulationHUD.tsx
+│   │   │   └── layout
+│   │   │       ├── HoloHeader.tsx
+│   │   │       ├── HoloLayout.tsx
+│   │   │       └── HoloNav.tsx
 │   │   └── settings
 │   │       ├── SettingsModal.tsx
 │   │       ├── components
@@ -143,6 +150,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── ModelConfig.ts
 │   │   │   ├── PhysicsConfig.ts
 │   │   │   ├── PlayerConfig.ts
+│   │   │   ├── SoundMetadata.ts
 │   │   │   ├── SystemManifest.ts
 │   │   │   ├── TextAssets.ts
 │   │   │   ├── VFXConfig.ts
@@ -290,7 +298,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-68 directories, 214 files
+69 directories, 221 files
 
 =====================================
 FILE: ./next.config.js
@@ -3853,7 +3861,6 @@ const DEFAULT_AUDIO: AudioSettings = {
   volumeSfx: 1.0,
   volumeAmbience: 1.0,
   
-  // Lab Defaults
   ambFilter: 0.5,
   ambSpeed: 0.5,
   ambWidth: 0.5,
@@ -3884,8 +3891,10 @@ interface AppState {
   isSimulationPaused: boolean;
   
   sandboxView: SandboxView;
+  
+  // Gallery State
   galleryTarget: string;
-  galleryAction: 'IDLE' | 'ATTACK';
+  galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   
   audioSettings: AudioSettings;
   graphicsMode: GraphicsMode;
@@ -3901,7 +3910,7 @@ interface AppState {
   
   setSandboxView: (view: SandboxView) => void;
   setGalleryTarget: (target: string) => void;
-  toggleGalleryAction: () => void;
+  setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
@@ -3967,7 +3976,7 @@ export const useStore = create<AppState>()(
       
       setSandboxView: (view) => set({ sandboxView: view }),
       setGalleryTarget: (target) => set({ galleryTarget: target }),
-      toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
+      setGalleryAction: (action) => set({ galleryAction: action }),
       
       openModal: (modal) => set({ activeModal: modal }),
       closeModal: () => set({ activeModal: 'none' }),
@@ -4019,7 +4028,6 @@ export const useStore = create<AppState>()(
       },
       
       setVolume: (channel, value, max = 2.0) => {
-          // Allow override max for lab settings
           const limit = max || 2.0;
           const clamped = Math.max(0, Math.min(limit, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
@@ -6601,210 +6609,570 @@ export const useMetaTheme = () => {
 
 
 =====================================
+FILE: ./src/features/sandbox/layout/HoloHeader.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { Clock, Cpu } from 'lucide-react';
+
+export const HoloHeader = () => {
+  const { debugFlags, setDebugFlag } = useStore();
+
+  return (
+    <div className="h-8 flex items-center justify-between px-4 bg-black border-b border-service-cyan/20 text-[10px] font-mono text-service-cyan/60 select-none">
+      <div className="flex items-center gap-6">
+        <span className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-service-cyan rounded-full animate-pulse shadow-[0_0_5px_#00F0FF]" />
+            SIMULATION_ACTIVE
+        </span>
+        <span className="opacity-50">build_ver: DEV_SANDBOX</span>
+      </div>
+
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 group">
+            <Clock size={12} className="group-hover:text-service-cyan transition-colors" />
+            <input 
+                type="range" 
+                min="0.0" max="2.0" step="0.1"
+                value={debugFlags.timeScale}
+                onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
+                className="w-20 h-1 bg-service-cyan/20 rounded-full appearance-none cursor-pointer accent-service-cyan"
+            />
+            <span className="w-8 text-right font-bold text-service-cyan">{debugFlags.timeScale.toFixed(1)}x</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+            <Cpu size={12} />
+            <span>MEM: UNLIMITED</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/sandbox/layout/HoloLayout.tsx
+=====================================
+import { ReactNode } from 'react';
+import { HoloNav } from './HoloNav';
+import { HoloHeader } from './HoloHeader';
+import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { LogOut, Hexagon } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+interface HoloLayoutProps {
+  children: ReactNode;
+}
+
+export const HoloLayout = ({ children }: HoloLayoutProps) => {
+  const { resetApplication } = useStore();
+
+  const handleExit = () => {
+      AudioSystem.playSound('ui_menu_close');
+      resetApplication();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/90 text-service-cyan font-mono flex flex-col overflow-hidden">
+        
+        {/* --- BACKGROUND LAYER --- */}
+        <div className="absolute inset-0 pointer-events-none z-0">
+            {/* Hex Grid */}
+            <div 
+                className="absolute inset-0 opacity-10"
+                style={{ 
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0' stroke='%2300F0FF' stroke-width='1'/%3E%3C/svg%3E")`,
+                    backgroundSize: '60px 60px'
+                }}
+            />
+            {/* Radial Vignette */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" />
+            
+            {/* Animated Scanline */}
+            <motion.div 
+                className="absolute inset-0 bg-gradient-to-b from-transparent via-service-cyan/5 to-transparent h-[20%]"
+                animate={{ top: ['-20%', '120%'] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            />
+        </div>
+
+        {/* --- UI LAYER --- */}
+        <div className="relative z-50 flex-none flex flex-col backdrop-blur-sm border-b border-service-cyan/20">
+            <HoloHeader />
+            <div className="flex justify-between items-end bg-black/40">
+                <HoloNav />
+                <button 
+                    onClick={handleExit}
+                    onMouseEnter={() => AudioSystem.playHover()}
+                    className="group flex items-center gap-2 px-6 py-3 text-xs font-bold text-critical-red hover:bg-critical-red hover:text-black transition-all border-l border-service-cyan/20 relative overflow-hidden"
+                >
+                    <div className="absolute inset-0 bg-critical-red/10 translate-y-full group-hover:translate-y-0 transition-transform" />
+                    <LogOut size={14} /> 
+                    <span className="relative z-10">TERMINATE_SIM</span>
+                </button>
+            </div>
+        </div>
+
+        {/* --- MAIN CONTENT --- */}
+        <div className="relative z-10 flex-1 overflow-hidden p-4 md:p-8">
+            <div className="w-full h-full border border-service-cyan/30 bg-black/40 backdrop-blur-md relative overflow-hidden flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.05)]">
+                
+                {/* Decorative UI Corners */}
+                <div className="absolute top-0 left-0 p-2">
+                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
+                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
+                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
+                </div>
+                <div className="absolute top-0 right-0 p-2 rotate-90">
+                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
+                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
+                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
+                </div>
+                <div className="absolute bottom-0 left-0 p-2 -rotate-90">
+                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
+                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
+                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
+                </div>
+                <div className="absolute bottom-0 right-0 p-2 rotate-180">
+                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
+                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
+                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
+                </div>
+
+                {/* Content Container */}
+                <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-service-cyan/50 scrollbar-track-black p-6 relative z-10">
+                    {children}
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/sandbox/layout/HoloNav.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Speaker, Crosshair, ScanEye, Box, Cpu } from 'lucide-react';
+import { clsx } from 'clsx';
+import { motion } from 'framer-motion';
+
+type View = 'audio' | 'arena' | 'gallery';
+
+export const HoloNav = () => {
+  const { sandboxView, setSandboxView } = useStore();
+
+  const handleNav = (view: View) => {
+    if (sandboxView === view) return;
+    setSandboxView(view);
+    AudioSystem.playSound('ui_click');
+  };
+
+  const NavItem = ({ id, label, icon: Icon }: { id: View, label: string, icon: any }) => {
+    const isActive = sandboxView === id;
+    return (
+      <button
+        onClick={() => handleNav(id)}
+        onMouseEnter={() => !isActive && AudioSystem.playHover()}
+        className={clsx(
+          "relative flex items-center gap-3 px-6 py-3 transition-all duration-200 group overflow-hidden border-r border-service-cyan/10",
+          isActive ? "text-black" : "text-service-cyan hover:text-white"
+        )}
+      >
+        {/* Background Slide */}
+        {isActive && (
+            <motion.div 
+                layoutId="nav-bg"
+                className="absolute inset-0 bg-service-cyan"
+                initial={false}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+            />
+        )}
+        
+        {/* Hover Highlight (Inactive) */}
+        {!isActive && (
+            <div className="absolute inset-0 bg-service-cyan/10 translate-y-full group-hover:translate-y-0 transition-transform duration-200" />
+        )}
+
+        <Icon size={16} className="relative z-10" />
+        <span className="font-header font-bold text-xs tracking-[0.15em] relative z-10">{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="flex items-center h-full">
+      <div className="px-6 py-3 bg-service-cyan/5 border-r border-service-cyan/20 flex items-center gap-3 text-service-cyan">
+        <Box className="animate-spin-slow" size={18} />
+        <div className="flex flex-col leading-none">
+            <span className="font-header font-black tracking-widest text-sm">HOLO_DECK</span>
+            <span className="text-[8px] font-mono opacity-60">SIMULATION_CORE</span>
+        </div>
+      </div>
+      
+      <div className="flex h-full">
+        <NavItem id="audio" label="AUDIO_MATRIX" icon={Speaker} />
+        <NavItem id="arena" label="COMBAT_SIM" icon={Crosshair} />
+        <NavItem id="gallery" label="MODEL_INSPECTOR" icon={ScanEye} />
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/features/sandbox/SimulationHUD.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
-import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
-import { Bug, Clock, Crosshair, Box, ScanEye, Play, Speaker, Settings2, Wind, Terminal, Zap, Shield, HelpCircle } from 'lucide-react';
-import { clsx } from 'clsx';
-import { useState, useMemo } from 'react';
+import { HoloLayout } from './layout/HoloLayout';
+import { AudioMatrix } from './AudioMatrix';
+import { ArenaLab } from './ArenaLab';
+import { ModelInspector } from './ModelInspector';
 
 export const SimulationHUD = () => {
-  const { debugFlags, setDebugFlag, sandboxView, setSandboxView } = useStore();
-  const [lastPlayed, setLastPlayed] = useState<string | null>(null);
-  
-  const playSound = (key: string) => {
-      if (key.includes('ambience')) {
-          AudioSystem.playAmbience(key);
-      } else {
-          AudioSystem.playSound(key);
-      }
-      setLastPlayed(key);
-      setTimeout(() => setLastPlayed(null), 200);
-  };
-
-  const library = useMemo(() => {
-      const allKeys = Object.keys(AUDIO_CONFIG);
-      const usedKeys = new Set<string>();
-
-      const defineGroup = (keys: string[]) => {
-          keys.forEach(k => usedKeys.add(k));
-          return keys.filter(k => allKeys.includes(k));
-      };
-
-      // 1. UI & FEEDBACK
-      const uiKeys = defineGroup([
-          'ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 
-          'ui_optimal', 'ui_error', 'ui_chirp'
-      ]);
-
-      // 2. COMBAT & FX
-      const combatKeys = defineGroup([
-          'fx_player_fire', 'fx_enemy_fire', 'fx_boot_sequence',
-          'fx_impact_light', 'fx_impact_heavy', 'fx_player_death',
-          'fx_level_up', 'fx_reboot_success', 'fx_teleport'
-      ]);
-
-      // 3. LOOPS & AMBIENCE
-      const loopKeys = defineGroup([
-          'ambience_core', 
-          'loop_heal', 'loop_reboot', 'loop_warning', 'loop_drill'
-      ]);
-
-      // 4. SYNTHESIS LAB (Protos)
-      const synKeys = defineGroup(
-          allKeys.filter(k => k.startsWith('syn_'))
-      );
-
-      // 5. CATCH ALL
-      const unusedKeys = allKeys.filter(k => !usedKeys.has(k));
-
-      return {
-          UI: { keys: uiKeys, icon: Terminal, color: 'text-primary-green', border: 'border-primary-green' },
-          COMBAT: { keys: combatKeys, icon: Zap, color: 'text-critical-red', border: 'border-critical-red' },
-          LOOPS: { keys: loopKeys, icon: Wind, color: 'text-service-cyan', border: 'border-service-cyan' },
-          SYNTHS: { keys: synKeys, icon: Box, color: 'text-alert-yellow', border: 'border-alert-yellow' },
-          MISC_UNTESTED: { keys: unusedKeys, icon: HelpCircle, color: 'text-gray-400', border: 'border-gray-500' }
-      };
-  }, []);
+  const { sandboxView } = useStore();
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-50">
-      {/* HEADER */}
-      <div className="absolute top-0 left-0 right-0 h-12 bg-black/80 backdrop-blur-md border-b border-service-cyan/30 flex items-center justify-between px-6 pointer-events-auto">
-        <div className="flex items-center gap-3 text-service-cyan">
-            <Box size={20} />
-            <span className="font-header font-black tracking-widest text-lg">HOLO_DECK // SIMULATION</span>
-        </div>
+    <HoloLayout>
+        {sandboxView === 'audio' && <AudioMatrix />}
+        
+        {/* Arena is an Overlay on top of the canvas, so we render it transparently */}
         {sandboxView === 'arena' && (
-            <div className="flex items-center gap-4 bg-service-cyan/5 px-4 py-1 rounded border border-service-cyan/20">
-                <Clock size={16} className="text-service-cyan" />
-                <input 
-                    type="range" 
-                    min="0.0" max="2.0" step="0.1"
-                    value={debugFlags.timeScale}
-                    onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
-                    className="w-32 accent-service-cyan h-1.5 bg-gray-800 rounded-lg cursor-pointer"
-                />
-                <span className="w-12 text-right font-mono font-bold text-service-cyan text-xs">{debugFlags.timeScale.toFixed(1)}x</span>
+            <div className="h-full flex items-start justify-end pointer-events-none">
+                <ArenaLab />
             </div>
         )}
-      </div>
 
-      {/* LEFT SIDEBAR (NAVIGATION) */}
-      <div className="absolute left-6 top-24 flex flex-col gap-2 pointer-events-auto w-40">
-         <button 
-            onClick={() => setSandboxView('audio')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'audio' ? "bg-service-cyan text-black border-service-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)]" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
-         >
-            <Speaker size={16} /> SOUND_TEST
-         </button>
-         <button 
-            onClick={() => setSandboxView('arena')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'arena' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
-         >
-            <Crosshair size={16} /> ARENA_MODE
-         </button>
-         <button 
-            onClick={() => setSandboxView('gallery')}
-            className={clsx("flex items-center gap-3 px-4 py-3 border transition-all font-mono text-xs font-bold", sandboxView === 'gallery' ? "bg-service-cyan text-black border-service-cyan" : "bg-black/50 text-service-cyan border-service-cyan/30 hover:bg-service-cyan/10")}
-         >
-            <ScanEye size={16} /> GALLERY_VIEW
-         </button>
-      </div>
+        {/* Gallery is also an overlay controlling the separate stage */}
+        {sandboxView === 'gallery' && <ModelInspector />}
+    </HoloLayout>
+  );
+};
 
-      {/* AUDIO WORKBENCH */}
-      {sandboxView === 'audio' && (
-          <div className="absolute left-52 top-24 bottom-6 right-6 flex gap-6 pointer-events-auto">
-              
-              {/* CENTER: WORKBENCH */}
-              <div className="flex-1 bg-black/80 backdrop-blur-md border border-white/20 p-6 flex flex-col gap-6 overflow-y-auto">
-                  <div className="flex items-center gap-2 border-b border-white/20 pb-2 mb-2">
-                      <Settings2 className="text-white" size={20} />
-                      <h3 className="font-header font-black text-xl text-white tracking-widest">AUDIO_MATRIX</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                          <h4 className="text-xs font-bold text-primary-green border-b border-primary-green/30 pb-1">UI_FEEDBACK</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                              {library.UI.keys.map(key => (
-                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-primary-green/30 hover:bg-primary-green/10 text-[10px] text-primary-green text-left transition-colors truncate">
-                                      {key}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
 
-                      <div className="space-y-2">
-                          <h4 className="text-xs font-bold text-critical-red border-b border-critical-red/30 pb-1">COMBAT_FX</h4>
-                          <div className="grid grid-cols-2 gap-2">
-                              {library.COMBAT.keys.map(key => (
-                                  <button key={key} onClick={() => playSound(key)} className="px-3 py-2 border border-critical-red/30 hover:bg-critical-red/10 text-[10px] text-critical-red text-left transition-colors truncate">
-                                      {key}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-                  </div>
-                  
-                  <div className="mt-4 p-4 border border-service-cyan/30 bg-service-cyan/5">
-                      <h4 className="text-xs font-bold text-service-cyan mb-2 flex items-center gap-2">
-                          <Wind size={14} /> AMBIENCE_LOOPS
-                      </h4>
-                      <div className="grid grid-cols-3 gap-3">
-                          {library.LOOPS.keys.map(key => (
-                              <button key={key} onClick={() => playSound(key)} className="flex flex-col items-center justify-center p-3 border border-service-cyan/30 hover:bg-service-cyan/10 transition-colors">
-                                  <span className="text-[10px] text-service-cyan font-bold">{key}</span>
-                              </button>
-                          ))}
-                      </div>
-                  </div>
+=====================================
+FILE: ./src/features/sandbox/ArenaLab.tsx
+=====================================
+import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { Bug, Trash2, Shield, Plus, Play, Info } from 'lucide-react';
+import { useStore } from '@/core/store/useStore';
+import { clsx } from 'clsx';
 
-              </div>
+export const ArenaLab = () => {
+  const { debugFlags, setDebugFlag } = useStore();
 
-              {/* RIGHT: FULL LIBRARY (Categorized) */}
-              <div className="w-72 bg-black/90 backdrop-blur-md border border-gray-800 flex flex-col overflow-hidden">
-                  <div className="p-3 border-b border-gray-800 bg-gray-900/50">
-                      <span className="font-mono font-bold text-xs text-gray-400 tracking-widest">ASSET_BROWSER</span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-black">
-                      {Object.entries(library).map(([name, group]) => (
-                          <div key={name} className={group.keys.length === 0 ? 'hidden' : ''}>
-                              <div className={clsx("flex items-center gap-2 text-[9px] font-bold mb-2 pb-1 border-b uppercase tracking-wider opacity-80", group.color, group.border)}>
-                                  <group.icon size={10} />
-                                  {name}
-                              </div>
-                              <div className="grid grid-cols-1 gap-1">
-                                  {group.keys.map(key => {
-                                      const isPlaying = lastPlayed === key;
-                                      return (
-                                          <button 
-                                              key={key} 
-                                              onClick={() => playSound(key)}
-                                              className={clsx(
-                                                  "flex items-center justify-between px-2 py-1.5 border text-[9px] font-mono transition-all",
-                                                  isPlaying 
-                                                      ? `${group.border} bg-white text-black` 
-                                                      : `border-transparent hover:border-white/10 bg-white/5 text-gray-400 hover:text-white`
-                                              )}
-                                          >
-                                              <span className="truncate w-full text-left">{key}</span>
-                                              <Play size={8} className={isPlaying ? "fill-black" : "opacity-0 group-hover:opacity-100"} />
-                                          </button>
-                                      );
-                                  })}
-                              </div>
-                          </div>
-                      ))}
-                  </div>
-              </div>
+  const spawn = (type: string, count: number = 1) => {
+      try {
+          const spawner = ServiceLocator.getSpawner();
+          const radius = 10;
+          
+          for(let i=0; i<count; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const r = 5 + Math.random() * radius;
+              const x = Math.cos(angle) * r;
+              const y = Math.sin(angle) * r;
+              spawner.spawnEnemy(type, x, y);
+          }
+          AudioSystem.playSound('ui_click');
+      } catch (e) {
+          console.warn("Spawn failed:", e);
+      }
+  };
+
+  const clearEnemies = () => {
+      try {
+          const registry = ServiceLocator.getRegistry();
+          const enemies = registry.getByTag('ENEMY');
+          enemies.forEach(e => registry.destroyEntity(e.id as number));
+          AudioSystem.playSound('ui_error');
+      } catch (e) { console.warn("Clear failed:", e); }
+  };
+
+  const SpawnBtn = ({ label, type, count, color = "border-service-cyan text-service-cyan" }: any) => (
+      <button 
+        onClick={() => spawn(type, count)}
+        onMouseEnter={() => AudioSystem.playHover()}
+        className={`group relative flex items-center justify-between p-2 border bg-black/60 hover:bg-white/10 transition-all ${color}`}
+      >
+          <div className="flex flex-col items-start">
+              <span className="text-[9px] font-bold font-header tracking-wider">{label}</span>
+              <span className="text-[8px] opacity-60">QTY: {count}</span>
           </div>
-      )}
+          <Plus size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+      </button>
+  );
+
+  return (
+    <div className="flex flex-col gap-px w-72 pointer-events-auto h-full bg-black/80 backdrop-blur-md border-l border-service-cyan/20">
+        
+        {/* HEADER */}
+        <div className="p-3 border-b border-service-cyan/20 bg-service-cyan/5">
+            <h3 className="text-xs font-black font-header tracking-widest text-service-cyan flex items-center gap-2">
+                <Bug size={14} /> INJECTION_CONTROLS
+            </h3>
+        </div>
+
+        {/* SPAWNERS */}
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+            
+            <div className="space-y-2">
+                <span className="text-[9px] font-mono text-service-cyan/50 uppercase tracking-widest">Hostiles</span>
+                <div className="grid grid-cols-2 gap-2">
+                    <SpawnBtn label="DRILLER" type={EnemyTypes.DRILLER} count={1} />
+                    <SpawnBtn label="SWARM" type={EnemyTypes.DRILLER} count={5} />
+                    <SpawnBtn label="KAMIKAZE" type={EnemyTypes.KAMIKAZE} count={1} />
+                    <SpawnBtn label="HUNTER" type={EnemyTypes.HUNTER} count={1} />
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <span className="text-[9px] font-mono text-latent-purple/50 uppercase tracking-widest">Allies</span>
+                <SpawnBtn 
+                    label="DAEMON_CORE" 
+                    type={EnemyTypes.DAEMON} 
+                    count={1} 
+                    color="border-latent-purple text-latent-purple" 
+                />
+            </div>
+
+            <div className="h-px bg-service-cyan/20 w-full my-4" />
+
+            {/* TOGGLES */}
+            <div className="space-y-2">
+                <button 
+                    onClick={() => setDebugFlag('godMode', !debugFlags.godMode)}
+                    className={clsx(
+                        "w-full flex items-center justify-between p-3 border text-xs font-bold transition-all",
+                        debugFlags.godMode 
+                            ? "bg-service-cyan text-black border-service-cyan shadow-[0_0_10px_rgba(0,240,255,0.3)]" 
+                            : "bg-black border-service-cyan/30 text-service-cyan hover:bg-service-cyan/10"
+                    )}
+                >
+                    <span>PLAYER_INVULNERABLE</span>
+                    <Shield size={12} />
+                </button>
+
+                <button 
+                    onClick={clearEnemies}
+                    onMouseEnter={() => AudioSystem.playHover()}
+                    className="w-full flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold"
+                >
+                    <Trash2 size={14} /> PURGE_ENTITIES
+                </button>
+            </div>
+        </div>
+
+        {/* FOOTER INFO */}
+        <div className="p-3 border-t border-service-cyan/20 bg-black text-[9px] text-gray-500 font-mono flex gap-2">
+            <Info size={12} className="shrink-0" />
+            <p className="leading-tight">
+                Use WSAD/Arrow Keys to move. Mouse to Aim. Click to Fire.
+            </p>
+        </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/sandbox/ModelInspector.tsx
+=====================================
+import { useStore } from '@/core/store/useStore';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { clsx } from 'clsx';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Box, PlayCircle, Crosshair, ChevronRight } from 'lucide-react';
+
+const MODELS = [
+  { id: EnemyTypes.DRILLER, label: 'DRILLER_DRONE', desc: 'Standard melee unit. Swarms targets.' },
+  { id: EnemyTypes.KAMIKAZE, label: 'KAMIKAZE_UNIT', desc: 'Explosive payload. High damage.' },
+  { id: EnemyTypes.HUNTER, label: 'HUNTER_MK1', desc: 'Ranged attacker. Orbits target.' },
+  { id: EnemyTypes.DAEMON, label: 'DAEMON_CORE', desc: 'Player ally. Defensive shield.' },
+  { id: 'PLAYER', label: 'PLAYER_SHIP', desc: 'Mesos Class Interceptor.' },
+];
+
+const STATES = ['IDLE', 'ATTACK', 'SPAWN', 'DIE'] as const;
+
+export const ModelInspector = () => {
+  const { galleryTarget, setGalleryTarget, galleryAction, setGalleryAction } = useStore();
+  const currentModel = MODELS.find(m => m.id === galleryTarget) || MODELS[0];
+
+  return (
+    <div className="flex flex-col h-full pointer-events-auto">
+        <div className="flex-1" /> 
+        
+        {/* --- LEFT: MODEL SELECTOR --- */}
+        <div className="absolute top-0 bottom-0 left-0 w-64 bg-black/80 backdrop-blur-md border-r border-service-cyan/20 flex flex-col">
+            <div className="p-4 border-b border-service-cyan/20">
+                <h3 className="text-service-cyan text-xs font-black font-header tracking-widest flex items-center gap-2">
+                    <Box size={14} /> DATABASE_INDEX
+                </h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+                {MODELS.map(model => {
+                    const isActive = galleryTarget === model.id;
+                    return (
+                        <button
+                            key={model.id}
+                            onClick={() => { setGalleryTarget(model.id); AudioSystem.playClick(); }}
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className={clsx(
+                                "w-full text-left p-4 border-b border-service-cyan/10 transition-all group relative overflow-hidden",
+                                isActive ? "bg-service-cyan/10 text-service-cyan" : "text-gray-500 hover:text-white"
+                            )}
+                        >
+                            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />}
+                            
+                            <div className="flex justify-between items-center mb-1">
+                                <span className={clsx("font-mono font-bold text-xs tracking-wider", isActive ? "" : "group-hover:translate-x-1 transition-transform")}>
+                                    {model.label}
+                                </span>
+                                {isActive && <ChevronRight size={12} />}
+                            </div>
+                            <div className="text-[9px] font-mono opacity-50 truncate">
+                                {model.desc}
+                            </div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+
+        {/* --- RIGHT: STATE CONTROLS --- */}
+        <div className="absolute bottom-8 right-8 w-64 bg-black/90 backdrop-blur-md border border-service-cyan/30 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+            <div className="p-3 border-b border-service-cyan/20 bg-service-cyan/5 flex justify-between items-center">
+                <span className="text-service-cyan text-[10px] font-bold font-header tracking-widest">ANIMATION_STATE</span>
+                <PlayCircle size={14} className="text-service-cyan" />
+            </div>
+            <div className="p-3 grid grid-cols-2 gap-2">
+                {STATES.map(state => (
+                    <button
+                        key={state}
+                        onClick={() => { setGalleryAction(state); AudioSystem.playClick(); }}
+                        className={clsx(
+                            "text-[9px] font-mono text-center py-2 border transition-all",
+                            galleryAction === state
+                                ? "border-service-cyan bg-service-cyan text-black font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]"
+                                : "border-service-cyan/30 text-service-cyan/60 hover:text-service-cyan hover:border-service-cyan"
+                        )}
+                    >
+                        {state}
+                    </button>
+                ))}
+            </div>
+        </div>
+
+        {/* --- TOP RIGHT: METADATA --- */}
+        <div className="absolute top-8 right-8">
+             <div className="flex flex-col items-end gap-1">
+                 <h1 className="text-4xl font-header font-black text-white/10 select-none pointer-events-none tracking-tighter">
+                     {currentModel.label}
+                 </h1>
+                 <div className="flex items-center gap-2 text-service-cyan/50 text-xs font-mono bg-black/60 px-2 py-1 border border-service-cyan/20">
+                     <Crosshair size={12} />
+                     <span>ID: {currentModel.id}</span>
+                 </div>
+             </div>
+        </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/sandbox/AudioMatrix.tsx
+=====================================
+import { SOUND_METADATA, SoundCategory } from '@/game/config/SoundMetadata';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Volume2, Play } from 'lucide-react';
+import { clsx } from 'clsx';
+import { useState } from 'react';
+
+const SECTIONS: { id: SoundCategory, label: string }[] = [
+  { id: 'UI', label: 'USER_INTERFACE' },
+  { id: 'COMBAT', label: 'COMBAT_FEEDBACK' },
+  { id: 'AMBIENCE', label: 'LOOPS_&_ENV' },
+  { id: 'UNUSED', label: 'ARCHIVED_ASSETS' },
+];
+
+export const AudioMatrix = () => {
+  const [playing, setPlaying] = useState<string | null>(null);
+
+  const handlePlay = (key: string) => {
+    if (key.includes('ambience')) {
+        AudioSystem.playAmbience(key);
+    } else {
+        AudioSystem.playSound(key);
+    }
+    setPlaying(key);
+    setTimeout(() => setPlaying(null), 200);
+  };
+
+  return (
+    <div className="space-y-8 pb-12">
+        {SECTIONS.map((section) => {
+            const sounds = Object.values(SOUND_METADATA).filter(s => s.category === section.id);
+            if (sounds.length === 0) return null;
+
+            return (
+                <div key={section.id} className="space-y-4">
+                    <div className="flex items-center gap-3 border-b border-service-cyan/30 pb-2">
+                        <Volume2 size={16} className={section.id === 'UNUSED' ? "text-gray-500" : "text-service-cyan"} />
+                        <h3 className={clsx(
+                            "font-header font-black tracking-widest text-sm",
+                            section.id === 'UNUSED' ? "text-gray-500" : "text-service-cyan"
+                        )}>
+                            {section.label}
+                        </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {sounds.map((sound) => {
+                            const isPlaying = playing === sound.key;
+                            return (
+                                <button
+                                    key={sound.key}
+                                    onClick={() => handlePlay(sound.key)}
+                                    className={clsx(
+                                        "group relative flex flex-col items-start p-3 border transition-all duration-200 text-left overflow-hidden",
+                                        isPlaying 
+                                            ? "bg-service-cyan text-black border-service-cyan"
+                                            : section.id === 'UNUSED' 
+                                                ? "bg-white/5 border-white/5 text-gray-500 hover:border-gray-400 hover:text-gray-300"
+                                                : "bg-black/40 border-service-cyan/20 text-service-cyan hover:bg-service-cyan/10 hover:border-service-cyan/50"
+                                    )}
+                                >
+                                    {/* Play Icon Overlay */}
+                                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Play size={14} className="fill-current" />
+                                    </div>
+
+                                    <span className="font-bold text-xs tracking-wider mb-1">{sound.label}</span>
+                                    <span className={clsx("text-[10px] font-mono", isPlaying ? "opacity-100" : "opacity-60")}>
+                                        {sound.key}
+                                    </span>
+                                    
+                                    <div className={clsx(
+                                        "w-full h-px mt-2 mb-2",
+                                        isPlaying ? "bg-black/30" : "bg-current opacity-20"
+                                    )} />
+                                    
+                                    <span className={clsx("text-[9px] leading-tight", isPlaying ? "opacity-90" : "opacity-50")}>
+                                        USAGE: {sound.usage}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        })}
     </div>
   );
 };
@@ -7654,18 +8022,25 @@ interface SandboxTabProps {
 }
 
 export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
-  const { setIntroDone, setBootState } = useStore();
+  const { setIntroDone, setBootState, setSimulationPaused } = useStore();
   const { startGame } = useGameStore();
 
   const enterSandbox = () => {
       AudioSystem.init();
       AudioSystem.startMusic();
+      
+      // 1. State Transition
       setIntroDone(true);
       setBootState('sandbox');
+      setSimulationPaused(false); // FORCE UNPAUSE
+      
+      // 2. Cleanup Legacy
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
+      
+      // 3. Init
       startGame();
       closeDebug();
   };
@@ -7698,7 +8073,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database, Zap } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -7830,99 +8205,37 @@ export const DebugOverlay = () => {
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
-            <div className="bg-black border border-service-cyan p-8 w-96 shadow-[0_0_50px_rgba(0,240,255,0.2)] text-center">
-                <h2 className="text-xl font-bold text-service-cyan mb-6 tracking-widest">SIMULATION_PAUSED</h2>
-                <div className="flex flex-col gap-4">
-                    <button onClick={toggleDebugMenu} onMouseEnter={() => AudioSystem.playHover()} className="p-3 border border-primary-green text-primary-green hover:bg-primary-green hover:text-black font-bold tracking-wider transition-colors">RESUME</button>
-                    <button onClick={resetApplication} onMouseEnter={() => AudioSystem.playHover()} className="p-3 border border-critical-red text-critical-red hover:bg-critical-red hover:text-black font-bold tracking-wider transition-colors">EXIT_TO_BOOT</button>
-                </div>
-            </div>
-        </div>
-      );
-  }
-
-  // --- MINI MODE HUD ---
-  if (isDebugMinimized) {
-      return (
-        <div className="fixed top-20 left-4 z-[10000] pointer-events-none">
-            <div className="bg-black/90 backdrop-blur-md border border-primary-green/30 p-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col gap-3 min-w-[200px] pointer-events-auto transition-all duration-300 hover:border-primary-green/60 hover:shadow-[0_0_30px_rgba(0,255,65,0.15)] group">
-                
-                {/* Header Row */}
-                <div className="flex items-center justify-between border-b border-primary-green/20 pb-2">
-                    <div className="flex items-center gap-2">
-                        <Activity size={12} className="text-primary-green animate-pulse" />
-                        <span className="text-[10px] font-bold text-primary-green tracking-widest">TELEMETRY_LIVE</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                        <button 
-                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
-                            onMouseEnter={() => AudioSystem.playHover()}
-                            className="text-primary-green-dim hover:text-white bg-white/5 p-1 rounded hover:bg-white/10 transition-colors"
-                            title="Maximize"
-                        >
-                            <Maximize2 size={12} />
-                        </button>
-                        <button 
-                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
-                            onMouseEnter={() => AudioSystem.playHover()}
-                            className="text-critical-red hover:text-white bg-critical-red/10 p-1 rounded hover:bg-critical-red transition-colors"
-                            title="Close"
-                        >
-                            <X size={12} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Big Stats Row */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col">
-                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">FrameRate</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-header font-black text-primary-green leading-none">{stats.fps}</span>
-                            <span className="text-[9px] font-bold text-primary-green/50">FPS</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col border-l border-white/10 pl-4">
-                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">Entities</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-header font-black text-service-cyan leading-none">{stats.active}</span>
-                            <span className="text-[9px] font-bold text-service-cyan/50">OBJ</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Status Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] font-mono text-primary-green-dim/60">
-                    <span className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 bg-primary-green rounded-full shadow-[0_0_5px_#78F654] animate-pulse" />
-                        RUNNING
-                    </span>
-                    <span>POOL: {stats.pooled}</span>
-                </div>
-            </div>
+            {/* Minimal floating pause menu */}
         </div>
       );
   }
 
   // --- FULL DEBUG MENU ---
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono text-primary-green p-4 pointer-events-auto">
-      <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0 z-20">
-          <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
-          <div className="absolute right-4 flex items-center gap-2">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
+      <div className="w-full max-w-4xl bg-[#050a05] border border-primary-green/50 shadow-[0_0_100px_rgba(0,255,65,0.1)] flex flex-col h-[650px] overflow-hidden relative rounded-sm">
+        
+        {/* Header */}
+        <div className="h-12 border-b border-primary-green/30 bg-primary-green/5 flex items-center justify-between px-6 shrink-0 relative z-20">
+          <div className="flex items-center gap-3">
+              <Terminal size={18} className="text-primary-green animate-pulse" />
+              <div className="flex flex-col leading-none">
+                  <span className="font-header font-black tracking-widest text-sm">KERNEL_DEBUG</span>
+                  <span className="text-[9px] opacity-60 font-mono">ROOT_ACCESS_GRANTED</span>
+              </div>
+          </div>
+          <div className="flex items-center gap-2">
              <button 
                 onClick={() => { useStore.setState({ isDebugMinimized: true, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
                 onMouseEnter={() => AudioSystem.playHover()}
-                className="hover:text-white transition-colors p-1"
+                className="hover:text-white transition-colors p-2 hover:bg-white/10 rounded"
              >
                 <MinusSquare size={16} />
              </button>
              <button 
                 onClick={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} 
                 onMouseEnter={() => AudioSystem.playHover()}
-                className="hover:text-white transition-colors p-1"
+                className="hover:text-critical-red transition-colors p-2 hover:bg-critical-red/10 rounded"
              >
                 <X size={16} />
              </button>
@@ -7930,30 +8243,45 @@ export const DebugOverlay = () => {
         </div>
         
         <div className="flex flex-1 min-h-0 relative z-10">
-          {/* Dots restricted to Body */}
-          <DotGridBackground className="opacity-10" />
+          <DotGridBackground className="opacity-5" />
 
-          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col relative z-20">
+          {/* Sidebar */}
+          <div className="w-56 border-r border-primary-green/20 bg-black/40 flex flex-col relative z-20 py-4">
             {TABS.map(tab => (
               <button 
                 key={tab.id} 
                 onClick={() => { setActiveTab(tab.id); AudioSystem.playClick(); }} 
                 onMouseEnter={() => AudioSystem.playHover()}
-                className={clsx("p-3 text-left text-xs font-bold tracking-wider border-b border-primary-green/10 flex items-center gap-2 transition-all hover:bg-primary-green/20", activeTab === tab.id ? "bg-primary-green text-black" : "text-primary-green-dim")}
+                className={clsx(
+                    "px-6 py-3 text-left text-xs font-bold tracking-widest flex items-center gap-3 transition-all relative overflow-hidden",
+                    activeTab === tab.id 
+                        ? "text-primary-green bg-primary-green/10" 
+                        : "text-primary-green-dim hover:text-white hover:bg-white/5"
+                )}
               >
-                <tab.icon size={14} />{tab.label}
+                {activeTab === tab.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-green shadow-[0_0_10px_#78F654]" />}
+                <tab.icon size={16} />
+                {tab.label}
               </button>
             ))}
           </div>
-          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black relative z-20">
+
+          {/* Content */}
+          <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/50 scrollbar-track-black relative z-20">
             {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
-        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim z-20">
-          <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
+
+        {/* Footer */}
+        <div className="h-8 bg-black/80 border-t border-primary-green/20 flex justify-between items-center px-6 text-[9px] text-primary-green-dim font-mono z-20">
+          <span>MESOELFY_OS // DEBUG_BUILD</span>
+          <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary-green animate-pulse" />
+              <span>SYSTEM_ACTIVE</span>
+          </div>
         </div>
       </div>
     </div>
@@ -9261,17 +9589,24 @@ import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { ActionButton } from '@/ui/atoms/ActionButton';
 import { useStore } from '@/core/store/useStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
+import { registerAllAssets } from './assets/AssetCatalog';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [assetsReady, setAssetsReady] = useState(false);
+
+  // 1. Initialize Assets IMMEDIATELY before Canvas can mount
+  useLayoutEffect(() => {
+      registerAllAssets();
+      setAssetsReady(true);
+  }, []);
 
   useEffect(() => {
       setMounted(true);
-      // Robust Mobile/Touch Detection
       const checkMobile = () => {
         const isCoarse = window.matchMedia('(pointer: coarse)').matches;
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -9283,7 +9618,7 @@ export const GameOverlay = () => {
       return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || !assetsReady) return null;
 
   return (
     <>
@@ -9304,11 +9639,11 @@ export const GameOverlay = () => {
                 <GalleryStage />
             ) : (
                 <>
-                    {/* Infrastructure & Logic */}
+                    {/* Logic Core */}
                     <GameDirector />
-                    <ScreenShaker />
                     
-                    {/* Visual Entities */}
+                    {/* Visuals */}
+                    <ScreenShaker />
                     <RenderDirector />
                 </>
             )}
@@ -9580,6 +9915,78 @@ export const CONSOLE_STYLE = `
   padding-top: 10px;
   padding-bottom: 10px;
 `;
+
+
+=====================================
+FILE: ./src/game/config/SoundMetadata.ts
+=====================================
+import { AUDIO_CONFIG } from './AudioConfig';
+
+export type SoundCategory = 'UI' | 'COMBAT' | 'AMBIENCE' | 'UNUSED';
+
+export interface SoundMeta {
+  key: string;
+  label: string;
+  description: string;
+  category: SoundCategory;
+  usage: string; // "Wired to..." description
+}
+
+export const SOUND_METADATA: Record<string, SoundMeta> = {
+  // --- UI ---
+  'ui_click': { key: 'ui_click', label: 'Click', description: 'Standard interaction', category: 'UI', usage: 'Buttons, Toggles' },
+  'ui_hover': { key: 'ui_hover', label: 'Hover', description: 'High frequency blip', category: 'UI', usage: 'Pointer over interactive elements' },
+  'ui_menu_open': { key: 'ui_menu_open', label: 'Menu Open', description: 'Ascending slide', category: 'UI', usage: 'Modal/Debug open' },
+  'ui_menu_close': { key: 'ui_menu_close', label: 'Menu Close', description: 'Descending slide', category: 'UI', usage: 'Modal/Debug close' },
+  'ui_optimal': { key: 'ui_optimal', label: 'Optimal', description: 'Positive chime', category: 'UI', usage: 'Settings: High Quality, Health Full' },
+  'ui_error': { key: 'ui_error', label: 'Error', description: 'Negative buzz', category: 'UI', usage: 'Settings: Potato, Mobile Rejection' },
+  'ui_chirp': { key: 'ui_chirp', label: 'Chirp', description: 'Data process sound', category: 'UI', usage: 'Mobile Scan Step' },
+
+  // --- COMBAT ---
+  'fx_player_fire': { key: 'fx_player_fire', label: 'Plasma Shot', description: 'Player primary fire', category: 'COMBAT', usage: 'PlayerSystem: Auto-fire' },
+  'fx_enemy_fire': { key: 'fx_enemy_fire', label: 'Enemy Shot', description: 'Enemy return fire', category: 'COMBAT', usage: 'Unused (Enemies currently silent on fire)' },
+  'fx_impact_light': { key: 'fx_impact_light', label: 'Light Hit', description: 'Small explosion', category: 'COMBAT', usage: 'Enemy death (Small), Mobile Tap Kill' },
+  'fx_impact_heavy': { key: 'fx_impact_heavy', label: 'Heavy Hit', description: 'Large explosion', category: 'COMBAT', usage: 'Player Hit, Panel Destroyed, Kamikaze Death' },
+  'fx_boot_sequence': { key: 'fx_boot_sequence', label: 'Boot Up', description: 'Heavy startup thrum', category: 'AMBIENCE', usage: 'Intro Sequence Start' },
+  'fx_player_death': { key: 'fx_player_death', label: 'Flatline', description: 'System failure noise', category: 'COMBAT', usage: 'GameState: Player Health <= 0' },
+  'fx_level_up': { key: 'fx_level_up', label: 'Level Up', description: 'Ascending chord', category: 'COMBAT', usage: 'Upgrade Menu Open' },
+  'fx_reboot_success': { key: 'fx_reboot_success', label: 'Reboot', description: 'System restore chime', category: 'COMBAT', usage: 'Player/Panel Revival' },
+  'fx_teleport': { key: 'fx_teleport', label: 'Teleport', description: 'Phase shift', category: 'COMBAT', usage: 'Unused' },
+
+  // --- LOOPS ---
+  'loop_heal': { key: 'loop_heal', label: 'Repair Loop', description: 'Healing hum', category: 'AMBIENCE', usage: 'InteractionSystem: Healing Panel' },
+  'loop_reboot': { key: 'loop_reboot', label: 'Reboot Loop', description: 'Power build-up', category: 'AMBIENCE', usage: 'InteractionSystem: Rebooting Panel' },
+  'loop_warning': { key: 'loop_warning', label: 'Low Health', description: 'Heartbeat alarm', category: 'AMBIENCE', usage: 'GameState: Health < 30%' },
+  'loop_drill': { key: 'loop_drill', label: 'Drill Grind', description: 'Mechanical grinding', category: 'COMBAT', usage: 'DrillerLogic: Contact with Panel' },
+  'ambience_core': { key: 'ambience_core', label: 'Core Hum', description: 'Background Brown Noise', category: 'AMBIENCE', usage: 'Global Background Track' },
+
+  // --- UNUSED / PROTOTYPES (The "Synth Lab") ---
+  'syn_fm_scream': { key: 'syn_fm_scream', label: 'FM Scream', description: 'Aggressive mod', category: 'UNUSED', usage: 'Prototype' },
+  'syn_data_burst': { key: 'syn_data_burst', label: 'Data Burst', description: 'Square wave packet', category: 'UNUSED', usage: 'Prototype' },
+  'syn_bass_drop': { key: 'syn_bass_drop', label: 'Bass Drop', description: 'Sub frequency dive', category: 'UNUSED', usage: 'Prototype' },
+  'syn_alarm_chirp': { key: 'syn_alarm_chirp', label: 'Alarm Chirp', description: 'High pitch alert', category: 'UNUSED', usage: 'Prototype' },
+  'syn_static_burst': { key: 'syn_static_burst', label: 'Static', description: 'White noise burst', category: 'UNUSED', usage: 'Prototype' },
+  'syn_wobble_bass': { key: 'syn_wobble_bass', label: 'Wobble', description: 'LFO Bass', category: 'UNUSED', usage: 'Prototype' },
+  'syn_grind_loop': { key: 'syn_grind_loop', label: 'Grind Loop', description: 'Industrial texture', category: 'UNUSED', usage: 'Prototype' },
+  'syn_insect_swarm': { key: 'syn_insect_swarm', label: 'Swarm', description: 'High freq jitter', category: 'UNUSED', usage: 'Prototype' },
+  'syn_interference': { key: 'syn_interference', label: 'Interference', description: 'Radio static', category: 'UNUSED', usage: 'Prototype' },
+  'syn_wind_howl': { key: 'syn_wind_howl', label: 'Wind', description: 'Filtered noise', category: 'UNUSED', usage: 'Prototype' },
+  'syn_robot_chatter': { key: 'syn_robot_chatter', label: 'Bot Chatter', description: 'S&H Randomness', category: 'UNUSED', usage: 'Prototype' },
+  'syn_deep_hum': { key: 'syn_deep_hum', label: 'Deep Hum', description: 'Low rumble', category: 'UNUSED', usage: 'Prototype' },
+  'syn_sine_rise': { key: 'syn_sine_rise', label: 'Sine Rise', description: 'Pitch up', category: 'UNUSED', usage: 'Prototype' },
+  'syn_saw_rise': { key: 'syn_saw_rise', label: 'Saw Rise', description: 'Aggressive pitch up', category: 'UNUSED', usage: 'Prototype' },
+  'syn_sqr_rise': { key: 'syn_sqr_rise', label: 'Square Rise', description: '8-bit pitch up', category: 'UNUSED', usage: 'Prototype' },
+  'syn_siren_wail': { key: 'syn_siren_wail', label: 'Siren', description: 'Slow LFO', category: 'UNUSED', usage: 'Prototype' },
+  'syn_alert_pulse': { key: 'syn_alert_pulse', label: 'Alert Pulse', description: 'Fast LFO', category: 'UNUSED', usage: 'Prototype' },
+  'syn_static_wash': { key: 'syn_static_wash', label: 'Wash', description: 'Ocean-like noise', category: 'UNUSED', usage: 'Prototype' },
+};
+
+// Validation Helper: Ensure no keys in AUDIO_CONFIG are missing from Metadata
+export const getUnlistedSounds = () => {
+    const configKeys = Object.keys(AUDIO_CONFIG);
+    const metaKeys = Object.keys(SOUND_METADATA);
+    return configKeys.filter(k => !metaKeys.includes(k));
+};
 
 
 =====================================
@@ -11437,16 +11844,16 @@ export const HunterChargeRenderer = () => {
 =====================================
 FILE: ./src/game/components/GalleryStage.tsx
 =====================================
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/core/store/useStore';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { GAME_THEME } from '@/game/theme';
-import { addBarycentricCoordinates, createHunterSpear } from '@/game/utils/GeometryUtils';
+import { AssetService } from '@/game/assets/AssetService';
 
-// --- SHADERS (Enemy Body - Wireframe Glow) ---
+// --- SHADERS ---
 const bodyVertexShader = `
   attribute vec3 barycentric;
   varying vec3 vBarycentric;
@@ -11459,6 +11866,7 @@ const bodyVertexShader = `
 const bodyFragmentShader = `
   uniform vec3 uColor;
   uniform float uGlow;
+  uniform float uDissolve;
   varying vec3 vBarycentric;
   
   float edgeFactor(vec3 bary, float width) {
@@ -11468,323 +11876,128 @@ const bodyFragmentShader = `
   }
 
   void main() {
-    float width = 1.5; 
+    if (uDissolve > 0.0) {
+        float stripes = sin(gl_FragCoord.y * 0.1 + gl_FragCoord.x * 0.1);
+        if (stripes < (uDissolve * 2.0 - 1.0)) discard;
+    }
+
+    float width = 1.0; 
     float edge = edgeFactor(vBarycentric, width);
     float glow = 1.0 - edge;
     glow = pow(glow, 0.4) + uGlow; 
     
     vec3 coreColor = uColor;
-    vec3 edgeColor = vec3(1.0); // Always white edges
+    vec3 edgeColor = vec3(1.0);
     vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
-    
-    // Add inner glow
     finalColor += coreColor * uGlow * 0.5;
 
     gl_FragColor = vec4(finalColor, 1.0);
   }
 `;
 
-// --- SHADERS (Projectile/VFX - Billboard Glow) ---
-const vfxVertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const vfxFragmentShader = `
-  varying vec2 vUv;
-  uniform vec3 uColor;
-  
-  void main() {
-    float dist = distance(vUv, vec2(0.5));
-    // Soft glow ball
-    float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-    alpha = pow(alpha, 2.0);
-    
-    // Bright core
-    float core = 1.0 - smoothstep(0.0, 0.15, dist);
-    
-    vec3 color = mix(uColor, vec3(1.0), core);
-    
-    if (alpha < 0.05) discard;
-    gl_FragColor = vec4(color, alpha);
-  }
-`;
-
-// --- LOCAL VFX COMPONENT ---
-const GalleryVFX = ({ type, isAttacking }: { type: string, isAttacking: boolean }) => {
-  const particlesRef = useRef<THREE.InstancedMesh>(null);
-  const projectileRef = useRef<THREE.Mesh>(null);
-  const orbRef = useRef<THREE.Mesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const { camera } = useThree();
-
-  const projectileMat = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: vfxVertexShader,
-      fragmentShader: vfxFragmentShader,
-      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.bullet.hunter) } },
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
-  }), []);
-
-  useFrame((state) => {
-    const time = state.clock.elapsedTime;
-    
-    // Billboard Logic: Make VFX face camera
-    if (orbRef.current) orbRef.current.lookAt(camera.position);
-    if (projectileRef.current) projectileRef.current.lookAt(camera.position);
-
-    // --- PARTICLE SYSTEM ---
-    if (particlesRef.current) {
-        let count = 0;
-        
-        if (type === EnemyTypes.DRILLER && isAttacking) {
-            // DRILLER SPARKS (From Tip Down)
-            for(let i=0; i<8; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * 0.8;
-                const x = Math.cos(angle) * radius;
-                const z = Math.sin(angle) * radius;
-                const speed = (time * 10 + i) % 1.0;
-                
-                // Tip is at Y=2.0 (approx)
-                dummy.position.set(x, 2.0 - (speed * 2.0), z);
-                dummy.scale.setScalar(0.2 * (1.0 - speed));
-                dummy.rotation.set(Math.random(), Math.random(), Math.random());
-                dummy.updateMatrix();
-                particlesRef.current.setMatrixAt(i, dummy.matrix);
-                count++;
-            }
-        } 
-        else if (type === EnemyTypes.KAMIKAZE && isAttacking) {
-            // EXPLOSION (Pulse)
-            const cycle = time % 2.0; 
-            if (cycle > 1.5) { // Boom phase
-                const progress = (cycle - 1.5) * 2.0; // 0..1
-                const expansion = progress * 6.0;
-                
-                for(let i=0; i<30; i++) {
-                    const angle = (i / 30) * Math.PI * 2 + (Math.random() * 0.5);
-                    const yDir = (Math.random() - 0.5) * 2.0;
-                    
-                    dummy.position.set(
-                        Math.cos(angle) * expansion, 
-                        yDir * expansion, 
-                        Math.sin(angle) * expansion
-                    );
-                    dummy.scale.setScalar(0.5 * (1.0 - progress));
-                    dummy.updateMatrix();
-                    particlesRef.current.setMatrixAt(i, dummy.matrix);
-                    count++;
-                }
-            }
-        }
-        
-        particlesRef.current.count = count;
-        particlesRef.current.instanceMatrix.needsUpdate = true;
-    }
-
-    // --- HUNTER PROJECTILES ---
-    if (type === EnemyTypes.HUNTER) {
-        // Timeline: 2s Cycle. 0-1s Charge, 1-1.2s Fire, 1.2-2s Cooldown
-        const cycle = time % 2.0; 
-        
-        // CHARGE ORB (Tip at Y=1.5 approx)
-        if (orbRef.current) {
-            if (isAttacking && cycle < 1.0) {
-                const scale = cycle * 1.5; // Grow
-                orbRef.current.visible = true;
-                orbRef.current.scale.setScalar(scale);
-                orbRef.current.position.set(0, 1.8, 0); // At tip
-            } else {
-                orbRef.current.visible = false;
-            }
-        }
-
-        // BULLET (Fires Upward Y+)
-        if (projectileRef.current) {
-            if (isAttacking && cycle > 1.0 && cycle < 1.5) {
-                projectileRef.current.visible = true;
-                const travel = (cycle - 1.0) * 15.0; // Fast
-                projectileRef.current.position.set(0, 1.8 + travel, 0);
-                projectileRef.current.scale.set(1.5, 1.5, 1.5);
-            } else {
-                projectileRef.current.visible = false;
-            }
-        }
-    }
-  });
-
-  return (
-    <>
-      <instancedMesh ref={particlesRef} args={[new THREE.PlaneGeometry(0.5, 0.5), undefined, 50]}>
-        <meshBasicMaterial color="#FFF" transparent opacity={0.8} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
-      </instancedMesh>
-      
-      {type === EnemyTypes.HUNTER && (
-          <>
-            <mesh ref={orbRef}>
-                <planeGeometry args={[1.5, 1.5]} />
-                <primitive object={projectileMat} attach="material" />
-            </mesh>
-            <mesh ref={projectileRef}>
-                <planeGeometry args={[1.0, 2.0]} />
-                <primitive object={projectileMat} attach="material" />
-            </mesh>
-          </>
-      )}
-    </>
-  );
-};
-
 export const GalleryStage = () => {
   const { galleryTarget, galleryAction } = useStore();
   const meshRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<THREE.ShaderMaterial>(null);
+  
+  // Force re-render when target changes to ensure geometry swap
+  const activeGeo = useMemo(() => {
+      try {
+          if (galleryTarget === 'PLAYER') return new THREE.ConeGeometry(0.5, 1.5, 3);
+          
+          let key = 'GEO_DRILLER';
+          if (galleryTarget === EnemyTypes.KAMIKAZE) key = 'GEO_KAMIKAZE';
+          else if (galleryTarget === EnemyTypes.HUNTER) key = 'GEO_HUNTER';
+          else if (galleryTarget === EnemyTypes.DAEMON) key = 'GEO_DAEMON';
+          
+          return AssetService.get<THREE.BufferGeometry>(key);
+      } catch (e) {
+          console.warn("Asset Missing in Gallery:", galleryTarget);
+          return new THREE.BoxGeometry(1,1,1);
+      }
+  }, [galleryTarget]);
 
-  // --- GEOMETRY ---
-  const drillerGeo = useMemo(() => addBarycentricCoordinates(new THREE.ConeGeometry(1.5, 4.0, 4)), []);
-  const kamikazeGeo = useMemo(() => addBarycentricCoordinates(new THREE.IcosahedronGeometry(2.5, 1)), []); // Detail 1 for better wireframe
-  const hunterGeo = useMemo(() => createHunterSpear().scale(2, 2, 2), []); 
-
-  // --- SHADER MAT ---
   const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: bodyVertexShader,
     fragmentShader: bodyFragmentShader,
     uniforms: {
-        uColor: { value: new THREE.Color('#FFFFFF') }, // Default white to ensure visibility if prop fails
-        uGlow: { value: 0.0 }
+        uColor: { value: new THREE.Color('#FFFFFF') },
+        uGlow: { value: 0.0 },
+        uDissolve: { value: 0.0 }
     },
     side: THREE.DoubleSide,
-    extensions: { derivatives: true },
     transparent: true,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false, // Helps with "Hologram" feel
+    depthWrite: true,
   }), []);
 
+  // Update geometry manually on ref when it changes (Mesh re-use safety)
+  useEffect(() => {
+      if (meshRef.current) {
+          meshRef.current.geometry = activeGeo;
+      }
+  }, [activeGeo]);
+
   useFrame((state, delta) => {
-    if (!meshRef.current || !materialRef.current) return;
+    if (!meshRef.current) return;
 
     const time = state.clock.elapsedTime;
-    const isAttack = galleryAction === 'ATTACK';
-
-    // 1. BEHAVIOR ANIMATIONS
-    if (galleryTarget === EnemyTypes.DRILLER) {
-        // Idle: Slow Float | Attack: Fast Spin + Shake
-        const speed = isAttack ? 20.0 : 1.0;
-        meshRef.current.rotation.y += speed * delta;
-        
-        if (isAttack) {
-            meshRef.current.position.x = (Math.random() - 0.5) * 0.1;
-            meshRef.current.position.z = (Math.random() - 0.5) * 0.1;
-        } else {
-            meshRef.current.position.set(0, 0, 0);
-            // Bobbing
-            meshRef.current.position.y = Math.sin(time) * 0.2;
-        }
-    } 
-    else if (galleryTarget === EnemyTypes.KAMIKAZE) {
-        // Idle: Tumble | Attack: Violent Shake + Expansion Pulse
-        const tumbleSpeed = isAttack ? 5.0 : 0.5;
-        meshRef.current.rotation.x += tumbleSpeed * delta;
-        meshRef.current.rotation.z += tumbleSpeed * delta;
-
-        if (isAttack) {
-            const cycle = time % 2.0; // 2s cycle
-            // Shake (0 - 1.5s)
-            if (cycle < 1.5) {
-                const shake = (cycle / 1.5) * 0.5; // Shake gets harder
-                meshRef.current.position.x = (Math.random() - 0.5) * shake;
-                meshRef.current.position.y = (Math.random() - 0.5) * shake;
-                meshRef.current.scale.setScalar(1.0 + (shake * 0.5)); // Swell
-            } 
-            // Boom (1.5 - 2.0s) -> Shrink/Hide
-            else {
-                meshRef.current.scale.setScalar(0.01);
-            }
-        } else {
-            meshRef.current.position.set(0,0,0);
-            meshRef.current.scale.setScalar(1.0);
-        }
-    } 
-    else if (galleryTarget === EnemyTypes.HUNTER) {
-        // Idle: Spin Y | Attack: Face Front, Charge, Recoil
-        if (isAttack) {
-            meshRef.current.rotation.set(0,0,0); // Reset
-            const cycle = time % 2.0;
-            
-            // Recoil Effect at 1.0s (Fire)
-            if (cycle > 1.0 && cycle < 1.3) {
-                meshRef.current.position.y = -1.0; // Kick down (since firing up)
-            } else {
-                meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, delta * 5);
-            }
-        } else {
-            meshRef.current.rotation.y += delta;
-            meshRef.current.position.y = Math.sin(time) * 0.3;
-        }
-    }
-
-    // 2. COLOR UPDATES
-    let baseColor = new THREE.Color();
+    let baseColor = new THREE.Color('#FFFFFF');
     let glow = 0.2;
+    let dissolve = 0;
 
-    if (galleryTarget === EnemyTypes.DRILLER) {
-        baseColor.set(GAME_THEME.enemy.muncher);
-        if (isAttack) glow = 0.8;
+    // Color Logic
+    if (galleryTarget === EnemyTypes.DRILLER) baseColor.set(GAME_THEME.enemy.muncher);
+    else if (galleryTarget === EnemyTypes.KAMIKAZE) baseColor.set(GAME_THEME.enemy.kamikaze);
+    else if (galleryTarget === EnemyTypes.HUNTER) baseColor.set(GAME_THEME.enemy.hunter);
+    else if (galleryTarget === EnemyTypes.DAEMON) baseColor.set('#00F0FF');
+    else if (galleryTarget === 'PLAYER') baseColor.set(GAME_THEME.turret.base);
+
+    // Animation Logic
+    meshRef.current.position.set(0, 0, 0);
+    meshRef.current.scale.setScalar(1.0);
+
+    if (galleryAction === 'SPAWN') {
+        const cycle = (time % 2.0) / 2.0; 
+        dissolve = 1.0 - cycle;
+        meshRef.current.position.y = -2.0 + (cycle * 2.0);
     } 
-    else if (galleryTarget === EnemyTypes.KAMIKAZE) {
-        baseColor.set(GAME_THEME.enemy.kamikaze);
-        if (isAttack) {
-            const flash = Math.sin(time * 30) > 0;
-            if (flash) baseColor.set('#FFFFFF'); // Strobe
-            glow = 1.0;
-        }
+    else if (galleryAction === 'DIE') {
+        const cycle = (time % 1.5) / 1.5;
+        dissolve = cycle;
+        meshRef.current.rotation.x += delta * 5;
+        meshRef.current.rotation.z += delta * 2;
+    }
+    else if (galleryAction === 'ATTACK') {
+        meshRef.current.rotation.y += delta * 10.0;
+        glow = 0.8;
     } 
-    else if (galleryTarget === EnemyTypes.HUNTER) {
-        baseColor.set(GAME_THEME.enemy.hunter);
-        if (isAttack) {
-            // Charge up color
-            const cycle = time % 2.0;
-            if (cycle < 1.0) glow = cycle; 
-        }
+    else {
+        // IDLE
+        meshRef.current.rotation.y += delta * 0.5;
+        meshRef.current.position.y = Math.sin(time) * 0.2;
     }
 
-    materialRef.current.uniforms.uColor.value.copy(baseColor);
-    materialRef.current.uniforms.uGlow.value = glow;
+    shaderMaterial.uniforms.uColor.value.copy(baseColor);
+    shaderMaterial.uniforms.uGlow.value = glow;
+    shaderMaterial.uniforms.uDissolve.value = dissolve;
   });
-
-  const activeGeo = useMemo(() => {
-      switch(galleryTarget) {
-          case EnemyTypes.DRILLER: return drillerGeo;
-          case EnemyTypes.KAMIKAZE: return kamikazeGeo;
-          case EnemyTypes.HUNTER: return hunterGeo;
-          default: return drillerGeo;
-      }
-  }, [galleryTarget, drillerGeo, kamikazeGeo, hunterGeo]);
 
   return (
     <>
-        <OrbitControls makeDefault minDistance={5} maxDistance={20} />
+        <OrbitControls makeDefault minDistance={3} maxDistance={20} />
         
-        {/* FLOOR GRID */}
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} intensity={1.0} color="#00F0FF" />
+        <pointLight position={[-10, -10, -5]} intensity={0.5} color="#9E4EA5" />
+
         <Grid 
-            position={[0, -4, 0]} 
+            position={[0, -2, 0]} 
             args={[20, 20]} 
             sectionColor="#00F0FF" 
             cellColor="#001a33" 
-            fadeDistance={20}
+            fadeDistance={15}
         />
 
-        {/* ENEMY MODEL */}
-        <mesh ref={meshRef} geometry={activeGeo} material={shaderMaterial} />
-        
-        {/* VFX LAYER */}
-        <GalleryVFX type={galleryTarget} isAttacking={galleryAction === 'ATTACK'} />
+        <mesh ref={meshRef} material={shaderMaterial} />
     </>
   );
 };
@@ -15011,14 +15224,13 @@ import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '../config/Identifiers';
 
-// UPDATED TIMELINE: Early Hunters
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
-  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   // <--- Early Hunter
+  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   
   { at: 5,     type: 'driller', count: 5, interval: 0.5 }, 
   { at: 8,     type: 'kamikaze', count: 2, interval: 1.0 },
   { at: 12,    type: 'driller', count: 8, interval: 0.2 }, 
-  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, // <--- More Hunters
+  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, 
   { at: 20,    type: 'kamikaze', count: 5, interval: 0.5 },
   { at: 25,    type: 'hunter',  count: 3, interval: 1.0 }, 
 ];
@@ -15044,6 +15256,10 @@ export class WaveSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
+    
+    // STOP WAVES IN SANDBOX (Arena Mode)
+    // But do NOT stop the System update loop entirely if we had logic here needed for other things.
+    // Since this system is purely for waves, returning is fine.
     if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
