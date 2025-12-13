@@ -1,15 +1,14 @@
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Zap, Swords, Wifi, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
+import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeOption } from '@/game/types/game.types';
 
-const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
+const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
 
-const UPGRADE_INFO: Record<string, { label: string, desc: string, icon: any }> = {
+const UPGRADE_INFO: Partial<Record<UpgradeOption, { label: string, desc: string, icon: any }>> = {
   'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: Zap },
   'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
-  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
   'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
   'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
   'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
@@ -21,7 +20,6 @@ interface UpgradeTerminalProps {
 }
 
 export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
-  // Granular Selectors
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
@@ -53,6 +51,8 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
                 <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
                 {CORE_UPGRADES.map(u => {
                     const info = UPGRADE_INFO[u];
+                    if (!info) return null;
+                    
                     const Icon = info.icon;
                     const currentLvl = activeUpgrades[u] || 0;
 

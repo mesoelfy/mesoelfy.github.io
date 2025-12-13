@@ -21,7 +21,7 @@ export class PlayerSystem implements IGameSystem {
     this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
-    this.config = locator.getConfigService(); // INJECTED CONFIG
+    this.config = locator.getConfigService();
     
     this.setupListeners();
   }
@@ -58,7 +58,6 @@ export class PlayerSystem implements IGameSystem {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
         
-        // USE INJECTED CONFIG
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
@@ -118,7 +117,6 @@ export class PlayerSystem implements IGameSystem {
     for (const e of enemies) {
       if (!e.active) continue;
       
-      // UPDATED: Ignore Bullets (Hunter Orbs, etc.)
       if (e.hasTag(Tag.BULLET)) continue;
 
       const state = e.getComponent<StateComponent>('State');
@@ -140,13 +138,12 @@ export class PlayerSystem implements IGameSystem {
       const projectileCount = 1 + (forkLevel * 2);
       const dmgLevel = upgrades['EXECUTE'] || 0;
       const damage = 1 + dmgLevel;
-      const widthLevel = upgrades['BANDWIDTH'] || 0;
-      const width = 1.0 + (widthLevel * 0.5);
       const snifferLevel = upgrades['SNIFFER'] || 0;
       const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
+      const width = 1.0;
       const baseSpread = 0.15;
-      const spreadAngle = baseSpread * width; 
+      const spreadAngle = baseSpread; // Fixed spread now that width scaling is gone
       
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;
@@ -154,7 +151,6 @@ export class PlayerSystem implements IGameSystem {
       const baseAngle = Math.atan2(dy, dx);
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-      // Use Config for Bullet Speed/Life
       const bSpeed = this.config.player.bulletSpeed;
       const bLife = this.config.player.bulletLife;
 

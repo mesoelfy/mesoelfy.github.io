@@ -7,12 +7,14 @@ export interface RegisteredPanel {
 
 export type UpgradeOption = 
   | 'OVERCLOCK'      // Attack Speed
-  | 'EXECUTE'        // Damage (Renamed from ROOT)
-  | 'BANDWIDTH'      // Width
+  | 'EXECUTE'        // Damage
   | 'FORK'           // Multishot
-  | 'SNIFFER'        // Homing Independent
-  | 'BACKDOOR'       // Rear Gun
-  | 'REPAIR_NANITES'; // Heal
+  | 'SNIFFER'        // Homing
+  | 'BACKDOOR'       // Rear Guard
+  | 'DAEMON'         // Summon Ally
+  | 'REPAIR_NANITES' // Heal
+  | 'RESTORE'        // System Op
+  | 'PURGE';         // System Op
 
 export interface GameState {
   isPlaying: boolean;

@@ -18,7 +18,7 @@ export class GameStateSystem implements IGameStateSystem {
   public upgradePoints: number = 0;
 
   public activeUpgrades: Record<string, number> = {
-    'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+    'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
@@ -62,7 +62,7 @@ export class GameStateSystem implements IGameStateSystem {
     this.upgradePoints = 0;
     this.isGameOver = false;
     this.activeUpgrades = { 
-        'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
     };
   }
