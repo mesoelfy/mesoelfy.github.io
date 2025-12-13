@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+
 interface BootHeaderProps {
   step: number;
 }
@@ -37,28 +39,38 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       </div>
       
       <div className="flex gap-1 items-end h-3">
-        {[1, 2, 3, 4].map(i => {
-           let heightClass = "h-1";
-           let animClass = "";
+        {[0, 1, 2, 3].map(i => {
            let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
            
-           if (isUnsafe) {
-               heightClass = i % 2 === 0 ? "h-3" : "h-1";
-               animClass = "animate-pulse";
-           } else if (isBypass) {
-               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
-           } else if (isSecure) {
-               heightClass = "h-3"; 
-           } else {
-               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
-               animClass = step >= (i-1) ? "animate-pulse" : "";
-           }
+           // Default (Static) Height Logic
+           let initialHeight = "0.25rem"; // h-1
+           if (isUnsafe) initialHeight = i % 2 === 0 ? "0.75rem" : "0.25rem";
+           else if (isBypass) initialHeight = (step + i) % 2 === 0 ? "0.75rem" : "0.5rem";
+           else if (isSecure) initialHeight = "0.5rem"; // Base height for pulse
+           else initialHeight = step >= i ? "0.5rem" : "0.125rem";
 
            return (
-               <div 
+               <motion.div 
                  key={i} 
-                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
-                 style={{ opacity: isSecure ? 1 : 0.7 }} 
+                 className={`w-1 rounded-sm ${barColor}`}
+                 initial={{ height: initialHeight, opacity: 0.7 }}
+                 animate={isSecure ? {
+                     height: ["0.25rem", "0.75rem", "0.25rem"],
+                     opacity: [0.5, 1.0, 0.5],
+                     backgroundColor: "#78F654", // Ensure nice green
+                     boxShadow: ["0 0 0px #78F654", "0 0 4px #78F654", "0 0 0px #78F654"]
+                 } : {
+                     height: initialHeight,
+                     opacity: isUnsafe ? [0.5, 1, 0.5] : 0.7
+                 }}
+                 transition={isSecure ? {
+                     duration: 1.2,
+                     repeat: Infinity,
+                     ease: "easeInOut",
+                     delay: i * 0.15 // The satisfying sequential delay
+                 } : {
+                     duration: 0.2
+                 }}
                />
            );
         })}

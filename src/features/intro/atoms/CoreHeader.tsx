@@ -17,9 +17,10 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
   useEffect(() => {
     if (step === 5) {
       setShowCpu(false);
+      // Hold the "Unlocked" green state for a moment before showing CPU
       const timer = setTimeout(() => {
         setShowCpu(true);
-      }, 700); 
+      }, 1200); 
       return () => clearTimeout(timer);
     }
   }, [step]);
@@ -59,7 +60,9 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            {isUnsafe ? (
+            
+            {/* STEP 3: UNSAFE (RED SHIELD) */}
+            {isUnsafe && (
                 <motion.div 
                     key="unsafe"
                     initial={{ scale: 0 }} 
@@ -69,21 +72,69 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 >
                     <ShieldAlert size={18} className="text-critical-red" />
                 </motion.div>
-            ) : isBypass ? (
+            )}
+
+            {/* STEP 4: BYPASSING (PURPLE CLOSED LOCK) */}
+            {isBypass && (
                 <motion.div 
                     key="bypass"
-                    initial={{ opacity: 0, scale: 0.8 }} 
-                    animate={{ opacity: 1, scale: 1.1 }} 
-                    exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
-                    transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
+                    initial={{ scale: 0.8, opacity: 0 }} 
+                    animate={{ 
+                        scale: [1, 1.1, 1], 
+                        opacity: 1,
+                        x: [-1, 1, -1, 1, 0], // Shake
+                        filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
+                    }} 
+                    exit={{ scale: 0, transition: { duration: 0.1 } }}
+                    transition={{ 
+                        scale: { repeat: Infinity, duration: 0.5 },
+                        x: { repeat: Infinity, duration: 0.1 } // Fast shake
+                    }}
                 >
-                     <Unlock size={18} className="text-latent-purple-light" />
+                     <Lock size={18} className="text-latent-purple-light" />
                 </motion.div>
-            ) : isCaution ? (
+            )}
+
+            {/* STEP 5: DECRYPTED (GREEN OPEN LOCK) */}
+            {isDecrypted && !showCpu && (
+                <motion.div 
+                    key="unlocked"
+                    initial={{ scale: 0.5, opacity: 0, rotate: -15 }} 
+                    animate={{ 
+                        scale: [1.5, 1], 
+                        opacity: 1, 
+                        rotate: 0,
+                        filter: ["drop-shadow(0 0 0px #78F654)", "drop-shadow(0 0 10px #78F654)", "drop-shadow(0 0 0px #78F654)"]
+                    }} 
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ 
+                        default: { type: "spring", bounce: 0.5, duration: 0.4 },
+                        filter: { type: "tween", duration: 0.4, ease: "easeInOut" }
+                    }}
+                >
+                     <Unlock size={18} className="text-primary-green" strokeWidth={3} />
+                </motion.div>
+            )}
+
+            {/* STEP 5.5: CPU (SYSTEM READY) */}
+            {isDecrypted && showCpu && (
+                <motion.div 
+                    key="cpu"
+                    initial={{ scale: 0, rotate: -90 }} 
+                    animate={{ scale: 1, rotate: 0 }} 
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "backOut" }}
+                >
+                     <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
+                </motion.div>
+            )}
+
+            {/* STEP 6: CAUTION (SKULL) */}
+            {isCaution && (
                 <motion.div 
                     key="caution"
-                    initial={{ scale: 0, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }}
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1 }}
                 >
                     <motion.div
                        animate={{
@@ -96,29 +147,10 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                          <Skull size={18} />
                     </motion.div>
                 </motion.div>
-            ) : isDecrypted ? (
-                !showCpu ? (
-                    <motion.div 
-                        key="locked"
-                        initial={{ scale: 1.5, opacity: 0 }} 
-                        animate={{ scale: 1, opacity: 1 }} 
-                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                         <Lock size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                ) : (
-                    <motion.div 
-                        key="cpu"
-                        initial={{ scale: 0, rotate: -45 }} 
-                        animate={{ scale: 1, rotate: 0 }} 
-                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
-                        transition={{ duration: 0.4, ease: "backOut" }}
-                    >
-                         <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                )
-            ) : (
+            )}
+
+            {/* LOADING SPINNER (STEPS 0-2) */}
+            {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"
                     initial={{ opacity: 0 }} 
