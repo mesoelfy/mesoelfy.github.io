@@ -117,6 +117,10 @@ export class PlayerSystem implements IGameSystem {
 
     for (const e of enemies) {
       if (!e.active) continue;
+      
+      // UPDATED: Ignore Bullets (Hunter Orbs, etc.)
+      if (e.hasTag(Tag.BULLET)) continue;
+
       const state = e.getComponent<StateComponent>('State');
       if (state && state.current === 'SPAWN') continue;
 

@@ -139,6 +139,10 @@ export class TargetingSystem implements IGameSystem {
 
       for (const e of enemies) {
           if (!e.active) continue;
+          
+          // UPDATED: Ignore Enemy Projectiles
+          if (e.hasTag(Tag.BULLET)) continue;
+
           const t = e.getComponent<TransformComponent>('Transform');
           if (!t) continue;
           
