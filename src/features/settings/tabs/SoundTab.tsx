@@ -1,10 +1,20 @@
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Activity, Volume2, Sliders, Waves } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, Waves } from 'lucide-react';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { 
+  getAmbienceFilterHz, 
+  getAmbiencePanFreq, 
+  getAmbienceModFreq, 
+  getAmbienceModDepth, 
+  getAmbienceStereoGain 
+} from '@/core/audio/AudioMath';
 
 export const SoundTab = () => {
   const { audioSettings, setVolume, resetAudioSettings } = useStore();
+
+  // Baseline Source Volume from AudioConfig ('ambience_core')
+  const BASE_VOL = 0.24;
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pr-2">
@@ -17,8 +27,8 @@ export const SoundTab = () => {
                   AUDIO_ENGINE_V2 ONLINE
               </span>
               <p className="text-[9px] font-mono text-primary-green-dim leading-relaxed">
-                  Proceed with caution. Ambience gain has been uncapped (300%). 
-                  Signal degradation modules active.
+                  Output Gain calibrated to Source (Vol: {BASE_VOL}).
+                  DSP Matrix Active.
               </p>
           </div>
       </div>
@@ -71,12 +81,13 @@ export const SoundTab = () => {
                   <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-alert-yellow/30" />
 
                   <RangeSlider 
-                    label="OUTPUT_GAIN (300%)" 
+                    label="OUTPUT_GAIN" 
                     value={audioSettings.volumeAmbience} 
-                    max={2.0}
-                    onChange={(v) => setVolume('volumeAmbience', v, 2.0)} 
+                    max={5.0} 
+                    markerValue={1.0} 
+                    onChange={(v) => setVolume('volumeAmbience', v, 5.0)} 
                     color="text-alert-yellow"
-                    format={(v) => `${(v * 150).toFixed(0)}%`} // Display 1.0 as 150% (visual hack, actual is 300% via boost)
+                    format={(v) => `VOL: ${(v * BASE_VOL).toFixed(2)}`} 
                   />
 
                   <div className="h-px bg-alert-yellow/10 w-full" />
@@ -88,20 +99,7 @@ export const SoundTab = () => {
                         max={1.0} 
                         markerValue={0.5}
                         onChange={(v) => setVolume('ambFilter', v, 1.0)} 
-                        format={(v) => {
-                            // 300 * 10^((v-0.5)*2)
-                            const hz = 300 * Math.pow(10, (v - 0.5) * 2);
-                            return `${hz.toFixed(0)}Hz`;
-                        }}
-                      />
-                      <RangeSlider 
-                        label="SIGNAL_DEGRADATION (GRIT)" 
-                        value={audioSettings.ambGrit} 
-                        max={1.0} 
-                        markerValue={0.0}
-                        onChange={(v) => setVolume('ambGrit', v, 1.0)} 
-                        format={(v) => `${(v * 100).toFixed(0)}%`}
-                        color="text-critical-red"
+                        format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
                       />
                   </div>
                   
@@ -112,11 +110,7 @@ export const SoundTab = () => {
                         max={1.0} 
                         markerValue={0.5}
                         onChange={(v) => setVolume('ambSpeed', v, 1.0)} 
-                        format={(v) => {
-                            // 0.05 * 10^((v-0.5)*2)
-                            const val = 0.05 * Math.pow(10, (v - 0.5) * 2);
-                            return `${val.toFixed(2)}Hz`;
-                        }}
+                        format={(v) => `${getAmbiencePanFreq(v).toFixed(2)} Hz`}
                       />
                       <RangeSlider 
                         label="STEREO_IMG" 
@@ -125,8 +119,8 @@ export const SoundTab = () => {
                         markerValue={0.5}
                         onChange={(v) => setVolume('ambWidth', v, 1.0)} 
                         format={(v) => {
-                            // v^3 * 80
-                            return `${(Math.pow(v, 3) * 80).toFixed(0)}%`;
+                            const gain = getAmbienceStereoGain(v);
+                            return `${((gain / 0.8) * 100).toFixed(0)}%`;
                         }}
                       />
                   </div>
@@ -138,11 +132,7 @@ export const SoundTab = () => {
                         max={1.0} 
                         markerValue={0.5}
                         onChange={(v) => setVolume('ambModSpeed', v, 1.0)} 
-                        format={(v) => {
-                            // 0.2 * 10^((v-0.5)*2)
-                            const val = 0.2 * Math.pow(10, (v - 0.5) * 2);
-                            return `${val.toFixed(2)}Hz`;
-                        }}
+                        format={(v) => `${getAmbienceModFreq(v).toFixed(1)} Hz`}
                       />
                       <RangeSlider 
                         label="LFO_DEPTH" 
@@ -150,11 +140,7 @@ export const SoundTab = () => {
                         max={1.0} 
                         markerValue={0.5}
                         onChange={(v) => setVolume('ambModDepth', v, 1.0)} 
-                        format={(v) => {
-                            // 10 * 10^((v-0.5)*2)
-                            const val = 10 * Math.pow(10, (v - 0.5) * 2);
-                            return `+/- ${val.toFixed(0)}Hz`;
-                        }}
+                        format={(v) => `+/- ${getAmbienceModDepth(v).toFixed(0)} Hz`}
                       />
                   </div>
               </div>

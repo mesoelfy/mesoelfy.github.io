@@ -58,7 +58,8 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   // ==========================================
   // AMBIENCE
   // ==========================================
-  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.05, pitchVariance: 0 },
+  // UPDATED: Volume increased from 0.05 to 0.24 (Natural Source Level)
+  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0 },
 
   // ==========================================
   // SYNTHESIS LAB (RENAMED PROTOS)

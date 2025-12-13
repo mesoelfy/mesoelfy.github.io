@@ -40,7 +40,7 @@ export const RangeSlider = ({
         // Debounce slightly to prevent zipper noise on instant jumps
         // Only play if dragging to avoid spam on load
         if (isDragging) {
-            AudioSystem.playSound('ui_click');
+            AudioSystem.playSound('ui_hover'); // UPDATED: Changed to ui_hover
         }
         lastTickRef.current = safeValue;
     }

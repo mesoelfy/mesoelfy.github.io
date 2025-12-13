@@ -22,7 +22,6 @@ interface AudioSettings {
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
-  ambGrit: number; // NEW: Distortion/Bitcrush feel
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
@@ -41,7 +40,6 @@ const DEFAULT_AUDIO: AudioSettings = {
   ambWidth: 0.5,
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
-  ambGrit: 0.0, 
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
