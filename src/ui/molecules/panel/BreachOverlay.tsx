@@ -8,22 +8,26 @@ const REPEAT_COUNT = 8;
 const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
 
 // --- SUB-COMPONENT: HAZARD STRIP ---
-const HazardStrip = ({ direction, outlined }: { direction: 1 | -1, outlined: boolean }) => {
+const HazardStrip = ({ direction, isSecondary, isActive }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean }) => {
   return (
-    <div className="flex relative overflow-visible w-full select-none opacity-40">
+    <div className={clsx(
+        "flex relative overflow-visible w-full select-none transition-opacity duration-500",
+        // Lowered overall opacity, with secondary rows much fainter
+        isSecondary ? "opacity-10" : "opacity-30" 
+    )}>
       <motion.div
         className={clsx(
-          "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase",
-          outlined ? "text-transparent" : "text-critical-red"
+          "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
+          // Color: Deeper Purple instead of bright lavender
+          // Speed: 300ms transition for snappy feedback
+          isActive ? "text-latent-purple" : "text-critical-red"
         )}
-        style={{ 
-            WebkitTextStroke: outlined ? '2px #FF003C' : '0px',
-        }}
         animate={{ 
             x: direction === 1 ? ["-25%", "0%"] : ["0%", "-25%"] 
         }}
         transition={{ 
-            duration: 25, 
+            // Secondary (Left) rows move slower (80s) than Primary (Right) rows (50s)
+            duration: isSecondary ? 80 : 50, 
             ease: "linear", 
             repeat: Infinity 
         }}
@@ -47,13 +51,12 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
     : 0;
 
   // Active if repairing OR hovering (UI Feedback)
-  // We use CSS group-hover for the hover state detection to keep it snappy
   const isActive = isRepairing;
 
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
-        isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/90 backdrop-blur-md"
+        isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md"
     )}>
         
         {/* 1. BACKGROUND LAYERS */}
@@ -62,7 +65,8 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                 <HazardStrip 
                     key={i} 
                     direction={i % 2 === 0 ? 1 : -1} 
-                    outlined={i % 2 !== 0} 
+                    isSecondary={i % 2 !== 0} 
+                    isActive={isActive}
                 />
             ))}
         </div>
@@ -76,10 +80,9 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
               <div className="relative h-24 flex items-center justify-center">
                   
                   {/* IDLE: Red Alert Triangle */}
-                  {/* Floats up/down. Fades out on interaction. */}
                   <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-300", isActive ? "opacity-0" : "group-hover:opacity-0")}>
                       <motion.div 
-                          animate={{ y: [0, -10, 0] }} // RESTORED: Classic float distance
+                          animate={{ y: [0, -10, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                           className="text-critical-red drop-shadow-[0_0_15px_#FF003C]"
                       >
@@ -88,7 +91,6 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                   </div>
 
                   {/* ACTIVE/HOVER: Purple Uplink Chevron */}
-                  {/* RESTORED: Positioned higher (-8), Rapid Scale Pulse */}
                   <div className={clsx("absolute inset-0 flex items-center justify-center -translate-y-8 transition-opacity duration-200", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                       <motion.div 
                           animate={{ 
