@@ -15,7 +15,7 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 
-const MAX_HEALTH = 1000;
+const DEFAULT_MAX_HEALTH = 1000;
 
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -53,9 +53,16 @@ interface GlassPanelProps {
   className?: string;
   title?: string;
   gameId?: string;
+  maxHealth?: number; // NEW PROP
 }
 
-export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
+export const GlassPanel = ({ 
+  children, 
+  className, 
+  title, 
+  gameId, 
+  maxHealth = DEFAULT_MAX_HEALTH 
+}: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
@@ -66,14 +73,15 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
   
-  const health = panelState ? panelState.health : MAX_HEALTH;
+  const health = panelState ? panelState.health : maxHealth;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   
-  let rawPercent = (health / MAX_HEALTH) * 100;
+  // Calculate percent using the dynamic maxHealth
+  let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
   
-  const isDamaged = !isDestroyed && health < MAX_HEALTH;
+  const isDamaged = !isDestroyed && health < maxHealth;
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
@@ -157,18 +165,13 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           <IntelligentHeader 
             title={title} 
             health={health} 
+            maxHealth={maxHealth} // PASS DOWN
             isDestroyed={isDestroyed} 
             isGameOver={isGameOver}
             gameId={gameId}
           />
       )}
 
-      {/* 
-         LAYOUT FIX: 
-         Changed 'h-full' to 'flex-1 min-h-0'.
-         This ensures the content area takes ONLY the remaining space after the header,
-         preventing overflow that eats the bottom 'p-4' padding.
-      */}
       <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
         {(isDestroyed || isGameOver) && (
             <SafePanelContent fallbackId={`sparks-${gameId}`}>

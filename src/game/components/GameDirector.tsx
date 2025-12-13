@@ -8,29 +8,31 @@ import { PanelRegistry } from '../systems/PanelRegistrySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 
+// Mutable Global for Renderers to access Registry (Performance optimization)
 export let ActiveEngine: GameEngineCore | null = null;
+
+// Allow external override (for MobileDirector)
+export const setActiveEngine = (engine: GameEngineCore | null) => {
+    ActiveEngine = engine;
+};
 
 export const GameDirector = () => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
-  
-  // Track mobile state via ref for loop access
   const isMobileRef = useRef(false);
 
   useEffect(() => {
     const checkMobile = () => {
-        // Same robust check as GameOverlay
         isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
                               ('ontouchstart' in window) || 
                               (navigator.maxTouchPoints > 0);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
     const engine = GameBootstrapper();
     engineRef.current = engine;
-    ActiveEngine = engine;
+    setActiveEngine(engine);
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
@@ -56,7 +58,7 @@ export const GameDirector = () => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      ActiveEngine = null;
+      setActiveEngine(null);
     };
   }, []); 
 
@@ -74,19 +76,12 @@ export const GameDirector = () => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          
-          // INPUT LOGIC FIX:
-          // If on Mobile (pointer: coarse), IGNORE state.pointer.
-          // This forces the game to rely solely on the Joystick (which updates InputSystem directly).
           if (!isMobileRef.current) {
               const x = (state.pointer.x * viewport.width) / 2;
               const y = (state.pointer.y * viewport.height) / 2;
               input.updateCursor(x, y);
           }
-
-          // Render Loop
           engineRef.current.update(delta, state.clock.elapsedTime);
-          
       } catch (e: any) {
           console.error("Game Loop Critical Failure:", e);
           GameEventBus.emit(GameEvents.LOG_DEBUG, { 

@@ -1,11 +1,13 @@
-import { useRef, useLayoutEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useRef, useLayoutEffect, useMemo } from 'react';
+import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ActiveEngine } from '../GameDirector';
 import { TransformComponent } from '../data/TransformComponent';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { Entity } from '@/game/core/ecs/Entity';
 import { TransformStore } from '@/game/core/ecs/TransformStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -20,6 +22,7 @@ interface InstancedActorProps {
   filter?: (entity: Entity) => boolean;
   baseColor?: string;
   colorSource?: 'identity' | 'base'; 
+  interactive?: boolean; 
 }
 
 export const InstancedActor = ({ 
@@ -30,9 +33,11 @@ export const InstancedActor = ({
   updateEntity, 
   filter, 
   baseColor = '#FFFFFF',
-  colorSource = 'identity' 
+  colorSource = 'identity',
+  interactive = false
 }: InstancedActorProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const instanceMap = useMemo(() => new Int32Array(maxCount).fill(-1), [maxCount]);
 
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -43,11 +48,8 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
-    // Use cached query from ActiveEngine if possible, or tag lookup
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
-    
-    // Direct Array Access for Speed
     const transformData = TransformStore.data;
 
     for (const entity of entities) {
@@ -57,19 +59,20 @@ export const InstancedActor = ({
       const transform = entity.getComponent<TransformComponent>('Transform');
       if (!transform) continue;
 
-      // OPTIMIZED READ: Direct buffer access using component index
+      if (interactive) {
+          instanceMap[count] = entity.id as number;
+      }
+
       const idx = transform.index * STRIDE;
       const x = transformData[idx];
       const y = transformData[idx + 1];
       const rot = transformData[idx + 2];
       const scale = transformData[idx + 3];
 
-      // 1. Base Transform
       tempObj.position.set(x, y, 0);
       tempObj.rotation.set(0, 0, rot);
       tempObj.scale.set(scale, scale, 1);
 
-      // 2. Color Logic
       if (colorSource === 'identity') {
           const identity = entity.getComponent<IdentityComponent>('Identity');
           if (identity) tempColor.set(identity.variant); 
@@ -78,12 +81,10 @@ export const InstancedActor = ({
           tempColor.set(baseColor); 
       }
 
-      // 3. Custom Logic (updateEntity might modify tempObj further)
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }
 
-      // 4. Apply
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       
@@ -99,11 +100,27 @@ export const InstancedActor = ({
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
+  // UPDATED: Use onPointerDown for instant reaction
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+      if (!interactive || e.instanceId === undefined) return;
+      e.stopPropagation();
+      
+      const entityId = instanceMap[e.instanceId];
+      if (entityId !== -1) {
+          GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { 
+              id: entityId, 
+              damage: 9999, 
+              type: 'TAP' 
+          });
+      }
+  };
+
   return (
     <instancedMesh 
       ref={meshRef} 
       args={[geometry, material, maxCount]} 
       frustumCulled={false}
+      onPointerDown={interactive ? handlePointerDown : undefined}
     />
   );
 };

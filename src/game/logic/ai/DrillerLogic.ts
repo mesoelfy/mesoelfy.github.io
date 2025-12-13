@@ -28,11 +28,19 @@ export const DrillerLogic: EnemyLogic = {
     let destX = target.x;
     let destY = target.y;
     
+    // Improved Targeting Logic:
+    // If target is a Panel, clamp destination to the panel's bounding box edge
     if (target.type === 'PANEL' && target.id) {
         const rect = PanelRegistry.getPanelRect(target.id);
         if (rect) {
-            destX = Math.max(rect.left, Math.min(pos.x, rect.right));
-            destY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
+            // Find the closest point on the rectangle perimeter to the enemy
+            // Clamp X
+            const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
+            // Clamp Y
+            const clampY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
+            
+            destX = clampX;
+            destY = clampY;
         }
     }
 
@@ -41,13 +49,12 @@ export const DrillerLogic: EnemyLogic = {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     
-    // PURE MATH ANGLE (0 = Right)
     const angle = Math.atan2(dy, dx);
     
+    // Check if we are close enough to the TARGET POINT (which is now the edge)
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Snap logic
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -57,9 +64,8 @@ export const DrillerLogic: EnemyLogic = {
 
         motion.vx = 0;
         motion.vy = 0;
-        pos.rotation = angle; // Store True Angle
+        pos.rotation = angle;
 
-        // Spawn Sparks
         ctx.spawnDrillSparks(destX, destY, angle);
 
         state.data.audioTimer -= ctx.delta;
@@ -86,7 +92,7 @@ export const DrillerLogic: EnemyLogic = {
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;
-            pos.rotation = angle; // Store True Angle
+            pos.rotation = angle; 
         }
     }
   }

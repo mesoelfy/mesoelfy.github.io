@@ -7,11 +7,15 @@ import { StateComponent } from '@/game/components/data/StateComponent';
 import { TransformComponent } from '@/game/components/data/TransformComponent'; 
 import { AssetService } from '@/game/assets/AssetService';
 import { applyRotation } from '@/game/utils/RenderUtils';
+import { useStore } from '@/core/store/useStore';
 import * as THREE from 'three';
 
 export const DrillerRenderer = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
   const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
+  
+  // Enable interaction if in mobile lockdown mode
+  const isMobile = useStore(s => s.bootState === 'mobile_lockdown');
 
   return (
     <InstancedActor 
@@ -21,6 +25,7 @@ export const DrillerRenderer = () => {
       maxCount={500}
       baseColor={GAME_THEME.enemy.muncher}
       colorSource="base" 
+      interactive={isMobile} // NEW: Pass the flag
       filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
       updateEntity={(e, obj, color, delta) => {
           const state = e.getComponent<StateComponent>('State');
@@ -33,7 +38,6 @@ export const DrillerRenderer = () => {
           obj.position.z = 5.0;
           applyRotation(obj, spin, aim);
           
-          // Spawn Effect
           if (state && state.current === 'SPAWN') {
               const progress = 1.0 - (state.timers.spawn / 1.5);
               const eased = Math.pow(progress, 2); 

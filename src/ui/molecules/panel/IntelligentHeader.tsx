@@ -5,22 +5,31 @@ import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 
-const MAX_HEALTH = 1000;
-
 interface IntelligentHeaderProps {
   title: string;
   health: number;
+  maxHealth?: number; // NEW PROP
   isDestroyed: boolean;
   isGameOver: boolean;
   gameId?: string;
 }
 
-export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
+export const IntelligentHeader = ({ 
+  title, 
+  health, 
+  maxHealth = 1000, // Default for desktop panels
+  isDestroyed, 
+  isGameOver, 
+  gameId 
+}: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  let rawPercent = (health / MAX_HEALTH) * 100;
+  // Calculate percentage dynamically based on the passed maxHealth
+  let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  
+  // Clamp: Don't show > 100% visual overflow if overhealed
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
 
   const isDamaged = !isDestroyed && healthPercent < 100;
@@ -28,15 +37,16 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
   const [showOptimal, setShowOptimal] = useState(false);
 
   useEffect(() => {
-    if (health < MAX_HEALTH) {
+    if (health < maxHealth) {
       setShowOptimal(true);
     }
-    if (health >= MAX_HEALTH && showOptimal) {
+    // Only play sound if we just healed to full
+    if (health >= maxHealth && showOptimal) {
       AudioSystem.playSound('ui_optimal'); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
-  }, [health, showOptimal]);
+  }, [health, showOptimal, maxHealth]);
 
   let mainColor = "text-primary-green";
   let statusText = "SECURE";
@@ -166,7 +176,6 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}
-                    // UPDATED: 0.5 -> 0.3 for snappier decay
                     transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
                 />
             </div>

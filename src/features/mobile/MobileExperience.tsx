@@ -1,35 +1,172 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MobileRejectionModal } from './MobileRejectionModal';
+import { Canvas } from '@react-three/fiber';
+import { MobileGameDirector } from '@/game/components/MobileGameDirector';
+import { RenderDirector } from '@/game/components/RenderDirector';
+import { ScreenShaker } from '@/game/components/ScreenShaker';
+import { SocialRow } from '@/ui/molecules/SocialRow';
+import { useGameStore } from '@/game/store/useGameStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Skull, Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
+import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
+import { GlassPanel } from '@/ui/atoms/GlassPanel';
+import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
+// Constants
+const MOBILE_PANEL_HP = 5000;
+
+const SocialPanelWrapper = () => {
+    useEffect(() => {
+        // Boost health: Default is 1000. Add 4000 to reach 5000.
+        PanelRegistry.healPanel('social', 4000); 
+    }, []);
+
+    return (
+        <div className="w-full max-w-sm pointer-events-auto">
+            {/* UPDATED: Pass maxHealth so the bar isn't stuck at 100% */}
+            <GlassPanel title="SOCIAL_UPLINK" gameId="social" className="bg-black/90" maxHealth={MOBILE_PANEL_HP}>
+                <SocialRow layout="column" />
+            </GlassPanel>
+        </div>
+    );
+};
+
 export const MobileExperience = () => {
-  const [view, setView] = useState<'rejection' | 'game'>('rejection');
+  const [phase, setPhase] = useState<'intro' | 'game'>('intro');
+  const [showFailureModal, setShowFailureModal] = useState(false);
+  const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
+
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+          if (p.id === 'social') {
+              AudioSystem.playSound('fx_player_death');
+              
+              // 1. Trigger Global Game Over (Turns Grid Red, Shatters Panel)
+              setIntegrity(0);
+
+              // 2. Wait 4 seconds (Longer fall) before showing modal
+              setTimeout(() => {
+                  setShowFailureModal(true);
+                  AudioSystem.playSound('fx_impact_heavy');
+              }, 4000);
+          }
+      });
+      return unsub;
+  }, [setIntegrity]);
 
   return (
-    // UPDATED: Removed bg-black to show 3D Scene. Added pointer-events handling.
     <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green pointer-events-none">
         
-        {/* PHASE 2: Rejection Cutscene */}
-        {view === 'rejection' && (
-            <div className="pointer-events-auto w-full h-full">
-                <MobileRejectionModal onComplete={() => setView('game')} />
+        {/* PHASE 1: Rejection Cutscene */}
+        {phase === 'intro' && (
+            <div className="pointer-events-auto w-full h-full relative z-50">
+                <MobileRejectionModal onComplete={() => setPhase('game')} />
             </div>
         )}
 
-        {/* PHASE 3: Gameplay Placeholder */}
-        {view === 'game' && (
-            <div className="flex flex-col items-center justify-center h-full animate-in fade-in duration-1000 pointer-events-auto bg-black/80 backdrop-blur-sm">
-                <div className="text-center p-8 border border-primary-green/30 bg-primary-green/5 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" />
-                    <h1 className="text-2xl font-black text-primary-green mb-4 relative z-10">DOOMSCROLL_PROTOCOL</h1>
-                    <p className="font-mono text-xs opacity-70 mb-4 relative z-10">
-                        SURVIVE THE FEED. TAP TO DESTROY.
-                    </p>
-                    <div className="w-16 h-16 border-2 border-dashed border-primary-green rounded-full flex items-center justify-center mx-auto animate-spin-slow relative z-10">
-                        <span className="text-[10px]">LOADING</span>
-                    </div>
+        {/* PHASE 2: Gameplay */}
+        {phase === 'game' && (
+            <>
+                <div className="absolute inset-0 z-0 pointer-events-auto">
+                    <Canvas
+                        orthographic
+                        camera={{ zoom: 40, position: [0, 0, 100] }}
+                        gl={{ alpha: true, antialias: true }}
+                    >
+                        <MobileGameDirector />
+                        <ScreenShaker />
+                        <RenderDirector />
+                    </Canvas>
                 </div>
-            </div>
+
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                    <SocialPanelWrapper />
+                </div>
+                
+                {/* Instructions */}
+                {!showFailureModal && (
+                    <div className="absolute bottom-10 w-full text-center animate-pulse z-20">
+                        <span className="bg-black/80 px-4 py-1 text-xs font-mono border border-primary-green/30">
+                            TAP TARGETS TO DESTROY
+                        </span>
+                    </div>
+                )}
+
+                {/* PHASE 3: SYSTEM FAILURE OVERLAY */}
+                <AnimatePresence>
+                    {showFailureModal && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            transition={{ duration: 0.5 }}
+                            className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto"
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.8, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                transition={{ type: "spring", bounce: 0.4 }}
+                                className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_50px_rgba(255,0,60,0.4)] overflow-hidden flex flex-col"
+                            >
+                                <div className="bg-critical-red px-4 py-2 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-black font-black tracking-widest">
+                                        <AlertTriangle size={18} />
+                                        <span>CRITICAL_ERROR</span>
+                                    </div>
+                                    <Skull size={18} className="text-black" />
+                                </div>
+
+                                <div className="p-8 flex flex-col items-center text-center relative">
+                                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#FF003C_10px,#FF003C_12px)] pointer-events-none" />
+                                    
+                                    <motion.div 
+                                        initial={{ scale: 0 }} animate={{ scale: 1 }} 
+                                        transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+                                        className="mb-6 relative"
+                                    >
+                                        <Skull size={80} className="text-critical-red mx-auto drop-shadow-[0_0_15px_#FF003C]" />
+                                    </motion.div>
+
+                                    <h1 className="text-4xl font-black text-critical-red tracking-widest mb-2 glitch-text">
+                                        SYSTEM<br/>FAILURE
+                                    </h1>
+                                    
+                                    <p className="text-xs font-mono text-critical-red/70 mb-8 uppercase tracking-widest">
+                                        0x0000DEAD // CORE_DUMPED
+                                    </p>
+
+                                    <div className="w-full space-y-3 relative z-10">
+                                        <div className="bg-critical-red/10 border border-critical-red/30 p-3">
+                                            <p className="text-[10px] text-critical-red font-mono leading-relaxed">
+                                                MOBILE_TERMINAL_DESTROYED.<br/>
+                                                PLEASE MIGRATE TO WORKSTATION.
+                                            </p>
+                                        </div>
+
+                                        <a 
+                                            href="https://mesoelfy.github.io" 
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group block w-full py-3 bg-critical-red text-black font-bold font-header tracking-widest hover:bg-white hover:text-critical-red transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Monitor size={16} />
+                                            <span>mesoelfy.github.io</span>
+                                            <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-gray-900 px-4 py-1 flex justify-between text-[8px] font-mono text-gray-500">
+                                    <span>ERR_CODE: ID_10_T</span>
+                                    <span>REBOOT_REQUIRED</span>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </>
         )}
     </div>
   );

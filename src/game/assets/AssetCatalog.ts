@@ -69,15 +69,15 @@ const SHADER_LIB = {
 
 export const registerAllAssets = () => {
   // --- ASYNC ASSETS ---
-  
-  // Create placeholder for Hunter
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
   AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
 
   // --- SYNC GENERATORS ---
   
   AssetService.registerGenerator('GEO_DRILLER', () => {
-      const { radius, height, segments } = MODEL_CONFIG.DRILLER;
+      // UPDATED: Increased radius 0.3 -> 0.5 for better touch target
+      const { height, segments } = MODEL_CONFIG.DRILLER;
+      const radius = 0.5; 
       return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
   });
 

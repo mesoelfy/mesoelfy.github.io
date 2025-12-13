@@ -510,3 +510,7 @@ it's a different game? What if you could collapse panels so it is just the heade
 
 VIBE CODE
     have the AI generate sound and visual assets for you. It will run better, help you mock up better, and you can always replace with human made assets later if you want. (show diamond/and SVG animation examples)
+
+
+
+    - Health Bar: With maxHealth={5000} passed, the panel should start at 100% (5000 HP). As Drillers hit it (15 dmg each), it should visually decrease slowly. - - - we need to get our DMG stuff re calibrated

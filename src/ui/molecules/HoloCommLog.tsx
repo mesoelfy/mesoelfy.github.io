@@ -48,8 +48,12 @@ const VideoSlot = ({
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
   const graphicsMode = useStore((state) => state.graphicsMode);
+  const bootState = useStore((state) => state.bootState); // CHECK BOOT STATE
   const isPotato = graphicsMode === 'POTATO';
   
+  // Disable video if not active game or potato mode
+  const showVideo = bootState === 'active' && !isPotato;
+
   const prevOffline = useRef(isOffline);
 
   useEffect(() => {
@@ -77,7 +81,7 @@ const VideoSlot = ({
 
   useEffect(() => {
     if (isOffline) return; 
-    if (isPotato) return;
+    if (!showVideo) return;
 
     const duration = 30000 + (Math.random() * 15000);
     
@@ -98,7 +102,7 @@ const VideoSlot = ({
     }, duration);
 
     return () => clearTimeout(rotateTimer);
-  }, [videoId, isOffline, getNextVideo, isPotato]);
+  }, [videoId, isOffline, getNextVideo, showVideo]);
 
   return (
     <div 
@@ -108,7 +112,7 @@ const VideoSlot = ({
       
       {isOffline ? (
           <OfflineStatic />
-      ) : isPotato ? (
+      ) : !showVideo ? (
           <PowerSaveStatic />
       ) : (
         <>
@@ -191,7 +195,6 @@ export const HoloCommLog = () => {
 
   if (!initialVideos) return <div className="h-full bg-black" />;
 
-  // UPDATED: Removed h-full, p-1 spacing only.
   return (
     <div className="flex flex-col gap-2 p-1">
       {initialVideos.map((vid, i) => (
