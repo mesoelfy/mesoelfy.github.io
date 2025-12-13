@@ -3,7 +3,8 @@ import { GameEvents } from '../events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useStore } from '@/core/store/useStore';
 
-const MAX_PANEL_HEALTH = 1000;
+// GLOBAL CONSTANT: RESET TO 100
+const MAX_PANEL_HEALTH = 100;
 
 export interface StructureState {
   health: number;
@@ -62,7 +63,7 @@ class StructureHealthServiceController {
 
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = 500; // Reboot penalty logic
+        state.health = MAX_PANEL_HEALTH * 0.5; // Reboot to 50%
         AudioSystem.playSound('fx_reboot_success');
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
@@ -80,7 +81,7 @@ class StructureHealthServiceController {
       for (const state of this.states.values()) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
-              state.health = 500;
+              state.health = MAX_PANEL_HEALTH * 0.5;
               restored++;
           } else if (state.health < MAX_PANEL_HEALTH) {
               state.health = MAX_PANEL_HEALTH;

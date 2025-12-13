@@ -2,7 +2,8 @@ import { StateCreator } from 'zustand';
 import { GameState } from '../useGameStore';
 import { UpgradeOption } from '../../types/game.types';
 
-const MAX_PANEL_HEALTH = 1000;
+// SYNCED CONSTANT: 100
+const MAX_PANEL_HEALTH = 100;
 
 export interface UISlice {
   panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
@@ -13,8 +14,6 @@ export interface UISlice {
   unregisterPanel: (id: string) => void;
   
   syncPanels: (panelsData: Record<string, any>) => void;
-  
-  // These were placeholders in original, kept for interface compatibility
   healPanel: (id: string, amount: number) => void;
   damagePanel: (id: string, amount: number) => void;
   
@@ -45,7 +44,6 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       return { panels: merged };
   }),
 
-  // UI-only placeholders (Logic is in ECS)
   healPanel: () => {}, 
   damagePanel: () => {}, 
 

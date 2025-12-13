@@ -10,23 +10,17 @@ import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { Skull, Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
-import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
 // Constants
-const MOBILE_PANEL_HP = 5000;
+const MOBILE_PANEL_HP = 100;
 
 const SocialPanelWrapper = () => {
-    useEffect(() => {
-        // Boost health: Default is 1000. Add 4000 to reach 5000.
-        PanelRegistry.healPanel('social', 4000); 
-    }, []);
-
+    // Note: No more 5000HP hack. We rely on the standard 100HP config.
     return (
         <div className="w-full max-w-sm pointer-events-auto">
-            {/* UPDATED: Pass maxHealth so the bar isn't stuck at 100% */}
             <GlassPanel title="SOCIAL_UPLINK" gameId="social" className="bg-black/90" maxHealth={MOBILE_PANEL_HP}>
                 <SocialRow layout="column" />
             </GlassPanel>
@@ -43,11 +37,7 @@ export const MobileExperience = () => {
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
           if (p.id === 'social') {
               AudioSystem.playSound('fx_player_death');
-              
-              // 1. Trigger Global Game Over (Turns Grid Red, Shatters Panel)
               setIntegrity(0);
-
-              // 2. Wait 4 seconds (Longer fall) before showing modal
               setTimeout(() => {
                   setShowFailureModal(true);
                   AudioSystem.playSound('fx_impact_heavy');
@@ -82,13 +72,14 @@ export const MobileExperience = () => {
                     </Canvas>
                 </div>
 
-                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                {/* UI LAYER: Added pointer-events-none to container to allow click-through to Canvas */}
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
                     <SocialPanelWrapper />
                 </div>
                 
                 {/* Instructions */}
                 {!showFailureModal && (
-                    <div className="absolute bottom-10 w-full text-center animate-pulse z-20">
+                    <div className="absolute bottom-10 w-full text-center animate-pulse z-20 pointer-events-none">
                         <span className="bg-black/80 px-4 py-1 text-xs font-mono border border-primary-green/30">
                             TAP TARGETS TO DESTROY
                         </span>

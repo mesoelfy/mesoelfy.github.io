@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 12 21:04:15 CST 2025
+Generated on: Sat Dec 13 09:05:16 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -83,6 +83,9 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   └── useMetaUrl.ts
 │   │   │   ├── metaConstants.ts
 │   │   │   └── useFavicon.ts
+│   │   ├── mobile
+│   │   │   ├── MobileExperience.tsx
+│   │   │   └── MobileRejectionModal.tsx
 │   │   ├── sandbox
 │   │   │   └── SimulationHUD.tsx
 │   │   └── settings
@@ -107,6 +110,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GalleryStage.tsx
 │   │   │   ├── GameDirector.tsx
 │   │   │   ├── HunterChargeRenderer.tsx
+│   │   │   ├── MobileGameDirector.tsx
 │   │   │   ├── ParticleRenderer.tsx
 │   │   │   ├── PlayerAvatar.tsx
 │   │   │   ├── ProjectileTrails.tsx
@@ -149,6 +153,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── FastEventBus.ts
 │   │   │   ├── GameBootstrapper.ts
 │   │   │   ├── GameEngine.ts
+│   │   │   ├── MobileBootstrapper.ts
 │   │   │   ├── ObjectPool.ts
 │   │   │   ├── ServiceLocator.ts
 │   │   │   ├── SpatialGrid.ts
@@ -168,6 +173,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GameEventBus.ts
 │   │   │   └── GameEvents.ts
 │   │   ├── hooks
+│   │   │   ├── useDeviceType.ts
 │   │   │   ├── useHeartbeat.ts
 │   │   │   ├── usePanelRegistry.ts
 │   │   │   ├── useTransientRef.ts
@@ -211,6 +217,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
 │   │   │   ├── LifeCycleSystem.ts
+│   │   │   ├── MobileWaveSystem.ts
 │   │   │   ├── OrbitalSystem.ts
 │   │   │   ├── PanelRegistrySystem.ts
 │   │   │   ├── PhysicsSystem.ts
@@ -282,7 +289,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-67 directories, 207 files
+68 directories, 213 files
 
 =====================================
 FILE: ./next.config.js
@@ -675,13 +682,18 @@ const IconMap: Record<string, any> = {
   image: ImageIcon,
 };
 
-export const SocialRow = () => {
+interface SocialRowProps {
+  layout?: 'grid' | 'column';
+}
+
+export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
   const panelState = useGameStore((state) => state.panels['social']);
   const isDestroyed = panelState ? panelState.isDestroyed : false;
 
   return (
     <div className={clsx(
-        "grid grid-cols-3 gap-2 h-full content-center py-2 relative px-2",
+        "gap-2 h-full content-center py-2 relative px-2",
+        layout === 'grid' ? "grid grid-cols-3" : "flex flex-col",
         isDestroyed ? "pointer-events-none" : "" 
     )}>
       {socials.map((social, idx) => {
@@ -697,7 +709,8 @@ export const SocialRow = () => {
             onMouseEnter={() => !isDestroyed && AudioSystem.playHover()} 
             onClick={() => !isDestroyed && AudioSystem.playClick()}
             className={clsx(
-                "group flex flex-col items-center justify-center p-2 border transition-all duration-200",
+                "group flex items-center p-2 border transition-all duration-200",
+                layout === 'grid' ? "flex-col justify-center" : "flex-row gap-4 justify-start px-4 h-12",
                 isDestroyed 
                     ? "border-critical-red/20 bg-critical-red/5 grayscale" 
                     : "border-primary-green-dim/30 bg-black/40 hover:bg-alert-yellow/5 hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.15)]"
@@ -705,17 +718,19 @@ export const SocialRow = () => {
           >
             <Icon 
               className={clsx(
-                  "w-5 h-5 mb-1 transition-transform duration-200",
+                  "transition-transform duration-200",
+                  layout === 'grid' ? "w-5 h-5 mb-1" : "w-6 h-6",
                   isDestroyed ? "text-critical-red animate-pulse" : "text-primary-green-dim group-hover:text-alert-yellow group-hover:scale-110",
                   isGlitch ? "translate-x-1" : ""
               )}
               style={!isDestroyed ? { filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' } : {}}
             />
             <span className={clsx(
-                "text-[9px] uppercase tracking-wider font-mono transition-colors duration-200",
+                "uppercase tracking-wider font-mono transition-colors duration-200",
+                layout === 'grid' ? "text-[9px]" : "text-xs font-bold",
                 isDestroyed ? "text-critical-red/60" : "text-primary-green-dim/60 group-hover:text-alert-yellow"
             )}>
-              {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name.split(' ')[0]}
+              {isDestroyed ? (isGlitch ? "ERR_404" : "NULL") : social.name}
             </span>
           </a>
         );
@@ -903,22 +918,31 @@ import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 
-const MAX_HEALTH = 1000;
-
 interface IntelligentHeaderProps {
   title: string;
   health: number;
+  maxHealth?: number; // NEW PROP
   isDestroyed: boolean;
   isGameOver: boolean;
   gameId?: string;
 }
 
-export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
+export const IntelligentHeader = ({ 
+  title, 
+  health, 
+  maxHealth = 1000, // Default for desktop panels
+  isDestroyed, 
+  isGameOver, 
+  gameId 
+}: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  let rawPercent = (health / MAX_HEALTH) * 100;
+  // Calculate percentage dynamically based on the passed maxHealth
+  let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
+  
+  // Clamp: Don't show > 100% visual overflow if overhealed
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
 
   const isDamaged = !isDestroyed && healthPercent < 100;
@@ -926,15 +950,16 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
   const [showOptimal, setShowOptimal] = useState(false);
 
   useEffect(() => {
-    if (health < MAX_HEALTH) {
+    if (health < maxHealth) {
       setShowOptimal(true);
     }
-    if (health >= MAX_HEALTH && showOptimal) {
+    // Only play sound if we just healed to full
+    if (health >= maxHealth && showOptimal) {
       AudioSystem.playSound('ui_optimal'); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
-  }, [health, showOptimal]);
+  }, [health, showOptimal, maxHealth]);
 
   let mainColor = "text-primary-green";
   let statusText = "SECURE";
@@ -1064,7 +1089,6 @@ export const IntelligentHeader = ({ title, health, isDestroyed, isGameOver, game
                     )}
                     initial={{ width: "100%" }}
                     animate={{ width: `${healthPercent}%` }}
-                    // UPDATED: 0.5 -> 0.3 for snappier decay
                     transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
                 />
             </div>
@@ -1127,8 +1151,12 @@ const VideoSlot = ({
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
   const graphicsMode = useStore((state) => state.graphicsMode);
+  const bootState = useStore((state) => state.bootState); // CHECK BOOT STATE
   const isPotato = graphicsMode === 'POTATO';
   
+  // Disable video if not active game or potato mode
+  const showVideo = bootState === 'active' && !isPotato;
+
   const prevOffline = useRef(isOffline);
 
   useEffect(() => {
@@ -1156,7 +1184,7 @@ const VideoSlot = ({
 
   useEffect(() => {
     if (isOffline) return; 
-    if (isPotato) return;
+    if (!showVideo) return;
 
     const duration = 30000 + (Math.random() * 15000);
     
@@ -1177,7 +1205,7 @@ const VideoSlot = ({
     }, duration);
 
     return () => clearTimeout(rotateTimer);
-  }, [videoId, isOffline, getNextVideo, isPotato]);
+  }, [videoId, isOffline, getNextVideo, showVideo]);
 
   return (
     <div 
@@ -1187,7 +1215,7 @@ const VideoSlot = ({
       
       {isOffline ? (
           <OfflineStatic />
-      ) : isPotato ? (
+      ) : !showVideo ? (
           <PowerSaveStatic />
       ) : (
         <>
@@ -1270,7 +1298,6 @@ export const HoloCommLog = () => {
 
   if (!initialVideos) return <div className="h-full bg-black" />;
 
-  // UPDATED: Removed h-full, p-1 spacing only.
   return (
     <div className="flex flex-col gap-2 p-1">
       {initialVideos.map((vid, i) => (
@@ -1823,44 +1850,31 @@ export const CustomCursor = () => {
   
   const { bootState, activeModal, isDebugOpen } = useStore();
   
-  const isGameActive = bootState === 'active';
+  // UPDATED: Treat mobile_lockdown as an active game state for cursor purposes
+  const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  // LOGIC: Show custom cursor unless we are on the scrollbar
-  // If game is active (and no menu), we usually hide it (crosshair logic), 
-  // but if we are on scrollbar, we always want system cursor.
-  const showCustomCursor = (!isGameActive || isMenuOpen) && !isOnScrollbar;
+  const showCustomCursor = (!isGameActive || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
       
       const target = e.target as HTMLElement;
-      
-      // 1. Interactive Element Check
       const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
       setIsHovering(!!isInteractive);
 
-      // 2. Scrollbar Detection (Right Edge & Bottom Edge)
-      // We give a 14px buffer (Scrollbar is 8px, but hitboxes can vary)
       const isRightEdge = e.clientX >= window.innerWidth - 14;
       const isBottomEdge = e.clientY >= window.innerHeight - 14;
-      
       const onScroll = isRightEdge || isBottomEdge;
       setIsOnScrollbar(onScroll);
 
-      // 3. System Cursor Toggle
-      // If we are on the scrollbar, we MUST let the browser show the default arrow
       if (onScroll) {
           document.body.style.setProperty('cursor', 'auto', 'important');
       } else {
-          // Otherwise, hide it if we are showing our custom one, or if game is active
-          if ((!isGameActive || isMenuOpen)) {
-              document.body.style.setProperty('cursor', 'none', 'important');
-          } else {
-              // Game active, no menu = Crosshair (Canvas handles cursor usually, or none)
-              document.body.style.setProperty('cursor', 'none', 'important');
-          }
+          // Hide system cursor if we are showing custom one
+          // For mobile lockdown, we ALWAYS want to hide system cursor and show ours
+          document.body.style.setProperty('cursor', 'none', 'important');
       }
     };
 
@@ -1875,7 +1889,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mousedown', down);
       window.removeEventListener('mouseup', up);
-      document.body.style.cursor = 'auto'; // Cleanup
+      document.body.style.cursor = 'auto'; 
     };
   }, [isGameActive, isMenuOpen]);
 
@@ -1886,9 +1900,6 @@ export const CustomCursor = () => {
             "fixed top-0 left-0 pointer-events-none z-[20000]", 
             (isHovering && showCustomCursor) ? "mix-blend-difference" : "" 
         )}
-        // ALIGNMENT FIX:
-        // The SVG path 'M5.5 3.21' starts ~5.5px right and ~3.2px down.
-        // We offset the container by negative that amount to make the visual tip match the actual mouse X/Y.
         animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
       >
@@ -2357,7 +2368,7 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 
-const MAX_HEALTH = 1000;
+const DEFAULT_MAX_HEALTH = 1000;
 
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -2395,9 +2406,16 @@ interface GlassPanelProps {
   className?: string;
   title?: string;
   gameId?: string;
+  maxHealth?: number; // NEW PROP
 }
 
-export const GlassPanel = ({ children, className, title, gameId }: GlassPanelProps) => {
+export const GlassPanel = ({ 
+  children, 
+  className, 
+  title, 
+  gameId, 
+  maxHealth = DEFAULT_MAX_HEALTH 
+}: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
@@ -2408,14 +2426,15 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
 
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
   
-  const health = panelState ? panelState.health : MAX_HEALTH;
+  const health = panelState ? panelState.health : maxHealth;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   
-  let rawPercent = (health / MAX_HEALTH) * 100;
+  // Calculate percent using the dynamic maxHealth
+  let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
   
-  const isDamaged = !isDestroyed && health < MAX_HEALTH;
+  const isDamaged = !isDestroyed && health < maxHealth;
 
   const [showReboot, setShowReboot] = useReactState(false);
   const prevDestroyed = useReactRef(isDestroyed);
@@ -2499,18 +2518,13 @@ export const GlassPanel = ({ children, className, title, gameId }: GlassPanelPro
           <IntelligentHeader 
             title={title} 
             health={health} 
+            maxHealth={maxHealth} // PASS DOWN
             isDestroyed={isDestroyed} 
             isGameOver={isGameOver}
             gameId={gameId}
           />
       )}
 
-      {/* 
-         LAYOUT FIX: 
-         Changed 'h-full' to 'flex-1 min-h-0'.
-         This ensures the content area takes ONLY the remaining space after the header,
-         preventing overflow that eats the bottom 'p-4' padding.
-      */}
       <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
         {(isDestroyed || isGameOver) && (
             <SafePanelContent fallbackId={`sparks-${gameId}`}>
@@ -3812,7 +3826,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
-type BootState = 'standby' | 'active' | 'sandbox';
+type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
 type SandboxView = 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
 
@@ -3910,7 +3924,7 @@ export const useStore = create<AppState>()(
 
       setBootState: (bs) => set({ 
           bootState: bs,
-          isBreaching: bs === 'active' ? false : get().isBreaching 
+          isBreaching: bs === 'active' || bs === 'mobile_lockdown' ? false : get().isBreaching 
       }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
@@ -4100,6 +4114,7 @@ import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
 import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
+import { MobileExperience } from '@/features/mobile/MobileExperience'; // NEW
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
@@ -4123,6 +4138,7 @@ export default function Home() {
   
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
+  const isMobileLockdown = bootState === 'mobile_lockdown'; // NEW FLAG
 
   useEffect(() => {
       AudioSystem.init();
@@ -4148,13 +4164,14 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [bootState, recalcIntegrity]);
 
+  // Scene visible in Active, Breach, OR Mobile Lockdown
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <MetaManager />
-      <RotationLock />
+      {!isMobileLockdown && <RotationLock />}
       <CustomCursor />
       <GlobalBackdrop />
       <DebugOverlay />
@@ -4164,14 +4181,17 @@ export default function Home() {
         <WebGLErrorBoundary>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
-            <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
-                <GameOverlay />
-            </div>
+            {/* Game Overlay (Canvas) - Hidden in Mobile Lockdown for now, will re-enable in Phase 3 with different props */}
+            {!isMobileLockdown && (
+                <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
+                    <GameOverlay />
+                </div>
+            )}
         </WebGLErrorBoundary>
 
         {isSandbox && <SimulationHUD />}
 
-        {!isSandbox && (
+        {!isSandbox && !isMobileLockdown && (
             <>
                 <AboutModal />
                 <FeedModal />
@@ -4182,6 +4202,7 @@ export default function Home() {
             </>
         )}
 
+        {/* Boot Sequence (Standard) */}
         {bootState === 'standby' && (
           <MatrixBootSequence 
              onComplete={handleBootComplete} 
@@ -4189,7 +4210,11 @@ export default function Home() {
           />
         )}
 
-        {!isSandbox && (
+        {/* NEW: Mobile Lockdown Experience */}
+        {isMobileLockdown && <MobileExperience />}
+
+        {/* Standard Desktop/Tablet Dashboard */}
+        {!isSandbox && !isMobileLockdown && (
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />
 
@@ -4198,12 +4223,6 @@ export default function Home() {
                   isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
               )}>
                 
-                {/* 
-                    SCALING WRAPPER FOR MOBILE LANDSCAPE:
-                    - Only applies when in landscape mode on small screens.
-                    - Uses CSS zoom or scale to fit the desktop layout (1200px approx) into ~600-800px width.
-                    - This effectively "forces" the Desktop Grid Layout.
-                */}
                 <div className="w-full h-full origin-top-left landscape:scale-[0.5] landscape:w-[200%] landscape:h-[200%] lg:landscape:scale-100 lg:landscape:w-full lg:landscape:h-full">
                     <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 min-h-full">
                     <AnimatePresence>
@@ -5247,6 +5266,8 @@ import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
+import { useDeviceType } from '@/game/hooks/useDeviceType';
+import { useStore } from '@/core/store/useStore';
 
 interface Props {
   onComplete: () => void;
@@ -5257,9 +5278,12 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mainStackRef = useRef<HTMLDivElement>(null);
+  
+  const device = useDeviceType();
+  const { setBootState, setIntroDone } = useStore();
 
   const { 
-    step, isBreaching, showGpuPanel, handleInitialize, logsToShow,
+    step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
     showMatrix, showPayloadWindow, showWarningBox, showButton
   } = useBootSequence({ onComplete, onBreachStart });
 
@@ -5272,12 +5296,25 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [showGpuPanel]);
 
+  // Wrapper to intercept initialization
+  const handleWrapperClick = () => {
+      // IF MOBILE PHONE (Not Tablet), trigger Lockdown
+      if (device === 'mobile') {
+          AudioSystem.init();
+          AudioSystem.playSound('ui_error'); // Rejection sound
+          setIntroDone(true);
+          setBootState('mobile_lockdown');
+      } else {
+          // Standard Desktop Flow
+          coreInitialize();
+      }
+  };
+
   return (
     <motion.div 
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      // UPDATE: overflow-x-hidden ensures no horizontal scroll even if content is 1px too wide
       className="fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-hide overflow-y-auto overflow-x-hidden bg-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
@@ -5363,13 +5400,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                 boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                             }}
                             transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                            // UPDATE: Tighter padding (px-3), auto width, center alignment to fix cut-off on 360px
                             className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
                         >
-                            {/* Icons scale down on mobile */}
                             <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
                             
-                            {/* Text scales down (text-[9px]) and allows tight fit */}
                             <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">
                                 UNSAFE CONNECTION DETECTED
                             </span>
@@ -5381,7 +5415,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         {showButton && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
                             <button 
-                            onClick={handleInitialize}
+                            onClick={handleWrapperClick}
                             onMouseEnter={() => AudioSystem.playHover()}
                             className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                             >
@@ -6392,6 +6426,475 @@ export const SimulationHUD = () => {
 
 
 =====================================
+FILE: ./src/features/mobile/MobileRejectionModal.tsx
+=====================================
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Smartphone, Cpu, Scan, Biohazard, Waves, Ban, Skull, AlertTriangle, Terminal } from 'lucide-react';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { clsx } from 'clsx';
+
+interface Props {
+  onComplete: () => void;
+}
+
+const STEPS = [
+  { id: 'SCAN', duration: 2000, color: 'text-primary-green', border: 'border-primary-green' },
+  { id: 'HARDWARE', duration: 2500, color: 'text-alert-yellow', border: 'border-alert-yellow' },
+  { id: 'GPU', duration: 2500, color: 'text-critical-red', border: 'border-critical-red' },
+  { id: 'ENV', duration: 3500, color: 'text-latent-purple', border: 'border-latent-purple' },
+  { id: 'DENIED', duration: 3000, color: 'text-critical-red', border: 'border-critical-red' },
+];
+
+export const MobileRejectionModal = ({ onComplete }: Props) => {
+  const [stepIndex, setStepIndex] = useState(0);
+  const currentStep = STEPS[stepIndex];
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    const advance = () => {
+      if (stepIndex < STEPS.length - 1) {
+        setStepIndex(prev => prev + 1);
+        
+        // Audio Logic per step
+        const nextId = STEPS[stepIndex + 1].id;
+        if (nextId === 'DENIED') AudioSystem.playSound('ui_error');
+        else if (nextId === 'ENV') AudioSystem.playSound('ui_chirp');
+        else AudioSystem.playClick();
+        
+      } else {
+        AudioSystem.playSound('fx_boot_sequence'); 
+        onComplete();
+      }
+    };
+
+    timer = setTimeout(advance, currentStep.duration);
+    return () => clearTimeout(timer);
+  }, [stepIndex, onComplete, currentStep]);
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center p-4 md:p-0">
+      
+      {/* Main Container Frame */}
+      <motion.div 
+        initial={{ scaleY: 0, opacity: 0 }}
+        animate={{ scaleY: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className={clsx(
+            "relative w-full max-w-sm bg-black/90 backdrop-blur-md border-y-2 overflow-hidden transition-colors duration-500 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)]",
+            currentStep.border
+        )}
+      >
+        {/* Background Texture Layers */}
+        <DotGridBackground color={currentStep.id === 'DENIED' ? '#FF003C' : '#15530A'} />
+        
+        {/* Animated Stripes Background */}
+        <div className={clsx(
+            "absolute inset-0 opacity-10 pointer-events-none transition-colors duration-500",
+            stepIndex >= 2 ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,currentColor_10px,currentColor_12px)]" : ""
+        )} style={{ color: stepIndex >= 4 ? '#FF003C' : '#9E4EA5' }} />
+
+        {/* HEADER */}
+        <div className={clsx("flex items-center justify-between px-4 py-2 border-b bg-black/50 transition-colors duration-500", currentStep.border)}>
+            <div className="flex items-center gap-2">
+                <Terminal size={14} className={currentStep.color} />
+                <span className={clsx("text-[10px] font-header font-black tracking-widest uppercase", currentStep.color)}>
+                    SYS_ANALYSIS_TOOL
+                </span>
+            </div>
+            <div className="text-[9px] font-mono opacity-50">v.MOBILE.0.1</div>
+        </div>
+
+        {/* CONTENT AREA */}
+        <div className="relative z-10 py-12 px-6 min-h-[320px] flex flex-col items-center justify-center">
+            <AnimatePresence mode="wait">
+            
+            {/* STEP 1: SCANNING */}
+            {currentStep.id === 'SCAN' && (
+                <motion.div 
+                key="scan"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+                className="flex flex-col items-center gap-6 w-full"
+                >
+                <div className="relative w-24 h-24 border border-primary-green/30 bg-primary-green/5 flex items-center justify-center">
+                    <Scan size={48} className="text-primary-green animate-pulse" />
+                    <motion.div 
+                        className="absolute inset-0 border-b-2 border-primary-green shadow-[0_0_15px_#78F654]"
+                        animate={{ top: ['0%', '100%', '0%'] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                    {/* Corner Accents */}
+                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary-green" />
+                    <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-primary-green" />
+                    <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-primary-green" />
+                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary-green" />
+                </div>
+                
+                <div className="flex flex-col items-center gap-1">
+                    <span className="text-primary-green font-bold tracking-widest animate-pulse text-sm">
+                        SCANNING_FINGERPRINT...
+                    </span>
+                    <span className="text-[10px] text-primary-green-dim font-mono">
+                        [ USER_AGENT_PARSING ]
+                    </span>
+                </div>
+                </motion.div>
+            )}
+
+            {/* STEP 2: HARDWARE */}
+            {currentStep.id === 'HARDWARE' && (
+                <motion.div 
+                key="hw"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                className="flex flex-col items-center gap-6 text-center w-full"
+                >
+                <div className="w-24 h-24 rounded-full border border-alert-yellow/30 bg-alert-yellow/5 flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-0 animate-spin-slow border-t border-alert-yellow opacity-50 rounded-full" />
+                    <Smartphone size={40} className="text-alert-yellow drop-shadow-[0_0_10px_rgba(247,210,119,0.5)]" />
+                </div>
+
+                <div className="flex flex-col w-full border-l-2 border-alert-yellow pl-4 text-left bg-gradient-to-r from-alert-yellow/10 to-transparent py-2">
+                    <span className="text-[9px] text-alert-yellow opacity-70 uppercase tracking-widest mb-1">HARDWARE_ID_FOUND</span>
+                    <span className="text-xl text-alert-yellow font-black tracking-wider leading-none">
+                    POCKET_DEVICE
+                    </span>
+                    <span className="text-[10px] text-white/60 font-mono mt-1">
+                    CLASS: CONSUMER_GRADE
+                    </span>
+                </div>
+                </motion.div>
+            )}
+
+            {/* STEP 3: GPU */}
+            {currentStep.id === 'GPU' && (
+                <motion.div 
+                key="gpu"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.5 }}
+                className="flex flex-col items-center gap-6 text-center w-full"
+                >
+                <div className="relative">
+                    <Cpu size={64} className="text-critical-red animate-pulse" />
+                    <AlertTriangle size={24} className="absolute -top-2 -right-2 text-critical-red bg-black rounded-full" />
+                </div>
+
+                <div className="flex flex-col items-center w-full px-4">
+                    <span className="text-[10px] text-critical-red/70 uppercase tracking-widest mb-2">COMPUTE_POWER_ANALYSIS</span>
+                    <span className="text-3xl text-critical-red font-black tracking-widest glitch-text drop-shadow-[0_0_10px_#FF003C]">
+                    LAUGHABLE
+                    </span>
+                    
+                    {/* Tech Bar */}
+                    <div className="w-full bg-gray-900 h-3 mt-4 skew-x-[-12deg] overflow-hidden border border-critical-red/30 p-0.5">
+                        <div className="h-full bg-critical-red w-[2%] shadow-[0_0_10px_#FF003C] animate-pulse" />
+                    </div>
+                    <span className="text-[9px] text-critical-red mt-1 font-mono w-full text-right">CAPACITY: 1.2%</span>
+                </div>
+                </motion.div>
+            )}
+
+            {/* STEP 4: THE TOILET BIT */}
+            {currentStep.id === 'ENV' && (
+                <motion.div 
+                key="env"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="flex flex-col items-center gap-8 text-center w-full"
+                >
+                {/* Composite Icon Animation */}
+                <div className="relative w-32 h-32 flex items-center justify-center bg-black/50 border border-latent-purple/30 rounded-full">
+                    <motion.div 
+                        animate={{ y: [0, -5, 0] }} 
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        className="z-10"
+                    >
+                        <Smartphone size={48} className="text-latent-purple" />
+                    </motion.div>
+                    
+                    <motion.div 
+                        className="absolute bottom-4 text-service-cyan opacity-50"
+                        animate={{ scaleX: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} 
+                        transition={{ duration: 3, repeat: Infinity }}
+                    >
+                        <Waves size={64} />
+                    </motion.div>
+
+                    <motion.div 
+                        className="absolute top-0 right-0 text-alert-yellow bg-black rounded-full p-1 border border-alert-yellow"
+                        animate={{ scale: [1, 1.2, 1] }} 
+                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}
+                    >
+                        <Biohazard size={20} />
+                    </motion.div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-latent-purple-light uppercase tracking-widest">GPS_TRIANGULATION_COMPLETE</span>
+                    <span className="text-xs font-bold text-gray-400">ENVIRONMENT DETECTED:</span>
+                    <div className="relative mt-1">
+                        <div className="absolute inset-0 bg-latent-purple blur-lg opacity-20" />
+                        <span className="relative z-10 text-2xl font-black text-latent-purple tracking-widest uppercase">
+                        CERAMIC_THRONE
+                        </span>
+                    </div>
+                </div>
+                </motion.div>
+            )}
+
+            {/* STEP 5: DENIED */}
+            {currentStep.id === 'DENIED' && (
+                <motion.div 
+                key="denied"
+                initial={{ opacity: 0, scale: 1.2 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, filter: "blur(20px)" }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                className="flex flex-col items-center gap-6 text-center w-full"
+                >
+                <div className="relative p-6 border-2 border-critical-red bg-critical-red/5">
+                    <Ban size={64} className="text-critical-red animate-pulse" />
+                    <Skull size={32} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    
+                    {/* Glitch Overlay */}
+                    <div className="absolute inset-0 bg-critical-red/10 mix-blend-overlay animate-pulse" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 10%, 0 10%)' }} />
+                </div>
+                
+                <div className="flex flex-col gap-3 w-full">
+                    <h1 className="text-3xl font-black text-critical-red tracking-widest bg-black border-y border-critical-red py-2">
+                    ACCESS DENIED
+                    </h1>
+                    <p className="text-xs text-gray-400 font-mono max-w-[240px] mx-auto leading-relaxed border-l-2 border-critical-red pl-3 text-left">
+                    You cannot hack the mainframe from the bathroom.
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-white/10 w-full">
+                        <div className="flex items-center justify-between text-[10px] font-mono text-primary-green">
+                            <span className="animate-pulse">LOADING: DOOMSCROLL_PROTOCOL</span>
+                            <span>[ 99% ]</span>
+                        </div>
+                        <div className="h-1 w-full bg-gray-800 mt-1">
+                            <motion.div 
+                                className="h-full bg-primary-green" 
+                                initial={{ width: 0 }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 2.0, ease: "circOut" }}
+                            />
+                        </div>
+                    </div>
+                </div>
+                </motion.div>
+            )}
+
+            </AnimatePresence>
+        </div>
+
+        {/* FOOTER */}
+        <div className={clsx("px-4 py-2 border-t bg-black/80 flex justify-between items-center text-[9px] font-mono transition-colors duration-500", currentStep.border)}>
+            <span className={currentStep.color}>{currentStep.id}_MODULE_ACTIVE</span>
+            <span className="opacity-50">SECURE_CHANNEL: FALSE</span>
+        </div>
+
+        {/* Progress Bar (Global) */}
+        <div className="absolute bottom-0 left-0 h-0.5 bg-gray-900 w-full z-20">
+            <motion.div 
+                className={clsx("h-full transition-colors duration-500", currentStep.id === 'DENIED' ? "bg-critical-red" : "bg-primary-green")}
+                initial={{ width: "0%" }}
+                animate={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
+                transition={{ duration: 0.5 }}
+            />
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/features/mobile/MobileExperience.tsx
+=====================================
+import { useState, useEffect } from 'react';
+import { MobileRejectionModal } from './MobileRejectionModal';
+import { Canvas } from '@react-three/fiber';
+import { MobileGameDirector } from '@/game/components/MobileGameDirector';
+import { RenderDirector } from '@/game/components/RenderDirector';
+import { ScreenShaker } from '@/game/components/ScreenShaker';
+import { SocialRow } from '@/ui/molecules/SocialRow';
+import { useGameStore } from '@/game/store/useGameStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Skull, Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
+import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
+import { GlassPanel } from '@/ui/atoms/GlassPanel';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
+
+// Constants
+const MOBILE_PANEL_HP = 5000;
+
+const SocialPanelWrapper = () => {
+    useEffect(() => {
+        // Boost health: Default is 1000. Add 4000 to reach 5000.
+        PanelRegistry.healPanel('social', 4000); 
+    }, []);
+
+    return (
+        <div className="w-full max-w-sm pointer-events-auto">
+            {/* UPDATED: Pass maxHealth so the bar isn't stuck at 100% */}
+            <GlassPanel title="SOCIAL_UPLINK" gameId="social" className="bg-black/90" maxHealth={MOBILE_PANEL_HP}>
+                <SocialRow layout="column" />
+            </GlassPanel>
+        </div>
+    );
+};
+
+export const MobileExperience = () => {
+  const [phase, setPhase] = useState<'intro' | 'game'>('intro');
+  const [showFailureModal, setShowFailureModal] = useState(false);
+  const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
+
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+          if (p.id === 'social') {
+              AudioSystem.playSound('fx_player_death');
+              
+              // 1. Trigger Global Game Over (Turns Grid Red, Shatters Panel)
+              setIntegrity(0);
+
+              // 2. Wait 4 seconds (Longer fall) before showing modal
+              setTimeout(() => {
+                  setShowFailureModal(true);
+                  AudioSystem.playSound('fx_impact_heavy');
+              }, 4000);
+          }
+      });
+      return unsub;
+  }, [setIntegrity]);
+
+  return (
+    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green pointer-events-none">
+        
+        {/* PHASE 1: Rejection Cutscene */}
+        {phase === 'intro' && (
+            <div className="pointer-events-auto w-full h-full relative z-50">
+                <MobileRejectionModal onComplete={() => setPhase('game')} />
+            </div>
+        )}
+
+        {/* PHASE 2: Gameplay */}
+        {phase === 'game' && (
+            <>
+                <div className="absolute inset-0 z-0 pointer-events-auto">
+                    <Canvas
+                        orthographic
+                        camera={{ zoom: 40, position: [0, 0, 100] }}
+                        gl={{ alpha: true, antialias: true }}
+                    >
+                        <MobileGameDirector />
+                        <ScreenShaker />
+                        <RenderDirector />
+                    </Canvas>
+                </div>
+
+                <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+                    <SocialPanelWrapper />
+                </div>
+                
+                {/* Instructions */}
+                {!showFailureModal && (
+                    <div className="absolute bottom-10 w-full text-center animate-pulse z-20">
+                        <span className="bg-black/80 px-4 py-1 text-xs font-mono border border-primary-green/30">
+                            TAP TARGETS TO DESTROY
+                        </span>
+                    </div>
+                )}
+
+                {/* PHASE 3: SYSTEM FAILURE OVERLAY */}
+                <AnimatePresence>
+                    {showFailureModal && (
+                        <motion.div 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }} 
+                            transition={{ duration: 0.5 }}
+                            className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto"
+                        >
+                            <motion.div 
+                                initial={{ scale: 0.8, y: 20 }}
+                                animate={{ scale: 1, y: 0 }}
+                                transition={{ type: "spring", bounce: 0.4 }}
+                                className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_50px_rgba(255,0,60,0.4)] overflow-hidden flex flex-col"
+                            >
+                                <div className="bg-critical-red px-4 py-2 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-black font-black tracking-widest">
+                                        <AlertTriangle size={18} />
+                                        <span>CRITICAL_ERROR</span>
+                                    </div>
+                                    <Skull size={18} className="text-black" />
+                                </div>
+
+                                <div className="p-8 flex flex-col items-center text-center relative">
+                                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#FF003C_10px,#FF003C_12px)] pointer-events-none" />
+                                    
+                                    <motion.div 
+                                        initial={{ scale: 0 }} animate={{ scale: 1 }} 
+                                        transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+                                        className="mb-6 relative"
+                                    >
+                                        <Skull size={80} className="text-critical-red mx-auto drop-shadow-[0_0_15px_#FF003C]" />
+                                    </motion.div>
+
+                                    <h1 className="text-4xl font-black text-critical-red tracking-widest mb-2 glitch-text">
+                                        SYSTEM<br/>FAILURE
+                                    </h1>
+                                    
+                                    <p className="text-xs font-mono text-critical-red/70 mb-8 uppercase tracking-widest">
+                                        0x0000DEAD // CORE_DUMPED
+                                    </p>
+
+                                    <div className="w-full space-y-3 relative z-10">
+                                        <div className="bg-critical-red/10 border border-critical-red/30 p-3">
+                                            <p className="text-[10px] text-critical-red font-mono leading-relaxed">
+                                                MOBILE_TERMINAL_DESTROYED.<br/>
+                                                PLEASE MIGRATE TO WORKSTATION.
+                                            </p>
+                                        </div>
+
+                                        <a 
+                                            href="https://mesoelfy.github.io" 
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group block w-full py-3 bg-critical-red text-black font-bold font-header tracking-widest hover:bg-white hover:text-critical-red transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Monitor size={16} />
+                                            <span>mesoelfy.github.io</span>
+                                            <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
+                                        </a>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-gray-900 px-4 py-1 flex justify-between text-[8px] font-mono text-gray-500">
+                                    <span>ERR_CODE: ID_10_T</span>
+                                    <span>REBOOT_REQUIRED</span>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </>
+        )}
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/features/feed/FeedModal.tsx
 =====================================
 import { ModalContainer } from '@/ui/overlays/ModalContainer';
@@ -7081,6 +7584,117 @@ export interface Entity {
   active: boolean;
   spawnTime: number; 
 }
+
+
+=====================================
+FILE: ./src/game/core/MobileBootstrapper.ts
+=====================================
+import { ServiceLocator } from './ServiceLocator';
+import { GameEngineCore } from './GameEngine';
+import { EntityRegistry } from './ecs/EntityRegistry';
+import { EntitySpawner } from './EntitySpawner';
+import { registerAllBehaviors } from '../logic/ai/BehaviorCatalog';
+import { registerAllAssets } from '../assets/AssetCatalog';
+
+// Systems
+import { TimeSystem } from '../systems/TimeSystem';
+import { PhysicsSystem } from '../systems/PhysicsSystem';
+import { LifeCycleSystem } from '../systems/LifeCycleSystem';
+import { VFXSystem } from '../systems/VFXSystem';
+import { AudioDirectorSystem } from '../systems/AudioDirectorSystem';
+import { ShakeSystem } from '../systems/ShakeSystem';
+import { StructureSystem } from '../systems/StructureSystem';
+import { MobileWaveSystem } from '../systems/MobileWaveSystem';
+import { TargetingSystem } from '../systems/TargetingSystem';
+import { BehaviorSystem } from '../systems/BehaviorSystem';
+import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { GameStateSystem } from '../systems/GameStateSystem'; // Added
+
+// Simplified Combat System for Tap-to-Kill
+import { IGameSystem, ICombatSystem } from './interfaces';
+import { GameEventBus } from '../events/GameEventBus';
+import { GameEvents } from '../events/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { FastEventBus, FastEvents, FX_IDS } from './FastEventBus';
+import { Entity } from './ecs/Entity';
+import { TransformComponent } from '../components/data/TransformComponent';
+
+// --- MICRO COMBAT SYSTEM (Mobile Specific) ---
+class MobileCombatSystem implements IGameSystem, ICombatSystem {
+    private registry!: EntityRegistry;
+
+    setup(locator: ServiceLocator) {
+        this.registry = locator.getRegistry() as EntityRegistry;
+        
+        // Listen for Tap Kills
+        GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+            const entity = this.registry.getEntity(p.id);
+            if (entity && entity.active) {
+                this.kill(entity);
+            }
+        });
+    }
+    
+    update() {}
+    teardown() {}
+    resolveCollision() {}
+
+    private kill(entity: Entity) {
+        const t = entity.getComponent<TransformComponent>('Transform');
+        if (t) {
+            const id = FX_IDS['EXPLOSION_PURPLE'];
+            FastEventBus.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
+            AudioSystem.playSound('fx_impact_light');
+        }
+        this.registry.destroyEntity(entity.id);
+    }
+}
+
+export const MobileBootstrapper = () => {
+  ServiceLocator.reset();
+
+  const registry = new EntityRegistry();
+  const spawner = new EntitySpawner(registry);
+  const engine = new GameEngineCore(registry);
+  
+  ServiceLocator.registerRegistry(registry);
+  ServiceLocator.registerSpawner(spawner);
+
+  // Initialize Catalogs
+  registerAllBehaviors();
+  registerAllAssets();
+
+  // --- REGISTER LEAN SYSTEM STACK ---
+  const systems: { id: string, sys: any }[] = [
+      { id: 'TimeSystem', sys: new TimeSystem() },
+      { id: 'PanelRegistrySystem', sys: PanelRegistry }, 
+      { id: 'StructureSystem', sys: new StructureSystem() },
+      { id: 'GameStateSystem', sys: new GameStateSystem() }, // Register Dependency
+      { id: 'MobileWaveSystem', sys: new MobileWaveSystem() },
+      { id: 'TargetingSystem', sys: new TargetingSystem() },
+      { id: 'BehaviorSystem', sys: new BehaviorSystem() },
+      { id: 'PhysicsSystem', sys: new PhysicsSystem() },
+      { id: 'MobileCombatSystem', sys: new MobileCombatSystem() },
+      { id: 'LifeCycleSystem', sys: new LifeCycleSystem() },
+      { id: 'VFXSystem', sys: new VFXSystem() },
+      { id: 'AudioDirectorSystem', sys: new AudioDirectorSystem() },
+      { id: 'ShakeSystem', sys: new ShakeSystem() },
+  ];
+
+  systems.forEach(({ id, sys }) => {
+      ServiceLocator.registerSystem(id, sys);
+      engine.registerSystem(sys);
+  });
+
+  systems.forEach(({ id }) => {
+      const sys = ServiceLocator.getSystem(id);
+      sys.setup(ServiceLocator);
+  });
+  
+  engine.setup(ServiceLocator);
+
+  return engine;
+};
 
 
 =====================================
@@ -9370,11 +9984,19 @@ export const DrillerLogic: EnemyLogic = {
     let destX = target.x;
     let destY = target.y;
     
+    // Improved Targeting Logic:
+    // If target is a Panel, clamp destination to the panel's bounding box edge
     if (target.type === 'PANEL' && target.id) {
         const rect = PanelRegistry.getPanelRect(target.id);
         if (rect) {
-            destX = Math.max(rect.left, Math.min(pos.x, rect.right));
-            destY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
+            // Find the closest point on the rectangle perimeter to the enemy
+            // Clamp X
+            const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
+            // Clamp Y
+            const clampY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
+            
+            destX = clampX;
+            destY = clampY;
         }
     }
 
@@ -9383,13 +10005,12 @@ export const DrillerLogic: EnemyLogic = {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     
-    // PURE MATH ANGLE (0 = Right)
     const angle = Math.atan2(dy, dx);
     
+    // Check if we are close enough to the TARGET POINT (which is now the edge)
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
-        // Snap logic
         if (dist > 0.001) {
             const normX = dx / dist;
             const normY = dy / dist;
@@ -9399,9 +10020,8 @@ export const DrillerLogic: EnemyLogic = {
 
         motion.vx = 0;
         motion.vy = 0;
-        pos.rotation = angle; // Store True Angle
+        pos.rotation = angle;
 
-        // Spawn Sparks
         ctx.spawnDrillSparks(destX, destY, angle);
 
         state.data.audioTimer -= ctx.delta;
@@ -9428,7 +10048,7 @@ export const DrillerLogic: EnemyLogic = {
         if (dist > 0.001) {
             motion.vx = (dx / dist) * speed;
             motion.vy = (dy / dist) * speed;
-            pos.rotation = angle; // Store True Angle
+            pos.rotation = angle; 
         }
     }
   }
@@ -10171,6 +10791,43 @@ export const PlayerAvatar = () => {
 
 
 =====================================
+FILE: ./src/game/components/MobileGameDirector.tsx
+=====================================
+import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useRef } from 'react';
+import { MobileBootstrapper } from '../core/MobileBootstrapper';
+import { GameEngineCore } from '../core/GameEngine';
+import { setActiveEngine } from './GameDirector';
+
+export const MobileGameDirector = () => {
+  const { viewport, size } = useThree();
+  const engineRef = useRef<GameEngineCore | null>(null);
+
+  useEffect(() => {
+    const engine = MobileBootstrapper();
+    engineRef.current = engine;
+    setActiveEngine(engine);
+    
+    engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
+
+    return () => {
+      engine.teardown();
+      engineRef.current = null;
+      setActiveEngine(null);
+    };
+  }, []);
+
+  useFrame((state, delta) => {
+    if (engineRef.current) {
+        engineRef.current.update(delta, state.clock.elapsedTime);
+    }
+  });
+
+  return null;
+};
+
+
+=====================================
 FILE: ./src/game/components/BulletRenderer.tsx
 =====================================
 import { Tag } from '../core/ecs/types';
@@ -10902,14 +11559,16 @@ export const DaemonBulletRenderer = () => {
 =====================================
 FILE: ./src/game/components/common/InstancedActor.tsx
 =====================================
-import { useRef, useLayoutEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useRef, useLayoutEffect, useMemo } from 'react';
+import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ActiveEngine } from '../GameDirector';
 import { TransformComponent } from '../data/TransformComponent';
 import { IdentityComponent } from '../data/IdentityComponent';
 import { Entity } from '@/game/core/ecs/Entity';
 import { TransformStore } from '@/game/core/ecs/TransformStore';
+import { GameEventBus } from '@/game/events/GameEventBus';
+import { GameEvents } from '@/game/events/GameEvents';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -10924,6 +11583,7 @@ interface InstancedActorProps {
   filter?: (entity: Entity) => boolean;
   baseColor?: string;
   colorSource?: 'identity' | 'base'; 
+  interactive?: boolean; 
 }
 
 export const InstancedActor = ({ 
@@ -10934,9 +11594,11 @@ export const InstancedActor = ({
   updateEntity, 
   filter, 
   baseColor = '#FFFFFF',
-  colorSource = 'identity' 
+  colorSource = 'identity',
+  interactive = false
 }: InstancedActorProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const instanceMap = useMemo(() => new Int32Array(maxCount).fill(-1), [maxCount]);
 
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -10947,11 +11609,8 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
-    // Use cached query from ActiveEngine if possible, or tag lookup
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
-    
-    // Direct Array Access for Speed
     const transformData = TransformStore.data;
 
     for (const entity of entities) {
@@ -10961,19 +11620,20 @@ export const InstancedActor = ({
       const transform = entity.getComponent<TransformComponent>('Transform');
       if (!transform) continue;
 
-      // OPTIMIZED READ: Direct buffer access using component index
+      if (interactive) {
+          instanceMap[count] = entity.id as number;
+      }
+
       const idx = transform.index * STRIDE;
       const x = transformData[idx];
       const y = transformData[idx + 1];
       const rot = transformData[idx + 2];
       const scale = transformData[idx + 3];
 
-      // 1. Base Transform
       tempObj.position.set(x, y, 0);
       tempObj.rotation.set(0, 0, rot);
       tempObj.scale.set(scale, scale, 1);
 
-      // 2. Color Logic
       if (colorSource === 'identity') {
           const identity = entity.getComponent<IdentityComponent>('Identity');
           if (identity) tempColor.set(identity.variant); 
@@ -10982,12 +11642,10 @@ export const InstancedActor = ({
           tempColor.set(baseColor); 
       }
 
-      // 3. Custom Logic (updateEntity might modify tempObj further)
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }
 
-      // 4. Apply
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       
@@ -11003,11 +11661,27 @@ export const InstancedActor = ({
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
+  // UPDATED: Use onPointerDown for instant reaction
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+      if (!interactive || e.instanceId === undefined) return;
+      e.stopPropagation();
+      
+      const entityId = instanceMap[e.instanceId];
+      if (entityId !== -1) {
+          GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { 
+              id: entityId, 
+              damage: 9999, 
+              type: 'TAP' 
+          });
+      }
+  };
+
   return (
     <instancedMesh 
       ref={meshRef} 
       args={[geometry, material, maxCount]} 
       frustumCulled={false}
+      onPointerDown={interactive ? handlePointerDown : undefined}
     />
   );
 };
@@ -11026,29 +11700,31 @@ import { PanelRegistry } from '../systems/PanelRegistrySystem';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 
+// Mutable Global for Renderers to access Registry (Performance optimization)
 export let ActiveEngine: GameEngineCore | null = null;
+
+// Allow external override (for MobileDirector)
+export const setActiveEngine = (engine: GameEngineCore | null) => {
+    ActiveEngine = engine;
+};
 
 export const GameDirector = () => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
-  
-  // Track mobile state via ref for loop access
   const isMobileRef = useRef(false);
 
   useEffect(() => {
     const checkMobile = () => {
-        // Same robust check as GameOverlay
         isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
                               ('ontouchstart' in window) || 
                               (navigator.maxTouchPoints > 0);
     };
-    
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
     const engine = GameBootstrapper();
     engineRef.current = engine;
-    ActiveEngine = engine;
+    setActiveEngine(engine);
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
@@ -11074,7 +11750,7 @@ export const GameDirector = () => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      ActiveEngine = null;
+      setActiveEngine(null);
     };
   }, []); 
 
@@ -11092,19 +11768,12 @@ export const GameDirector = () => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          
-          // INPUT LOGIC FIX:
-          // If on Mobile (pointer: coarse), IGNORE state.pointer.
-          // This forces the game to rely solely on the Joystick (which updates InputSystem directly).
           if (!isMobileRef.current) {
               const x = (state.pointer.x * viewport.width) / 2;
               const y = (state.pointer.y * viewport.height) / 2;
               input.updateCursor(x, y);
           }
-
-          // Render Loop
           engineRef.current.update(delta, state.clock.elapsedTime);
-          
       } catch (e: any) {
           console.error("Game Loop Critical Failure:", e);
           GameEventBus.emit(GameEvents.LOG_DEBUG, { 
@@ -11648,11 +12317,15 @@ import { StateComponent } from '@/game/components/data/StateComponent';
 import { TransformComponent } from '@/game/components/data/TransformComponent'; 
 import { AssetService } from '@/game/assets/AssetService';
 import { applyRotation } from '@/game/utils/RenderUtils';
+import { useStore } from '@/core/store/useStore';
 import * as THREE from 'three';
 
 export const DrillerRenderer = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
   const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
+  
+  // Enable interaction if in mobile lockdown mode
+  const isMobile = useStore(s => s.bootState === 'mobile_lockdown');
 
   return (
     <InstancedActor 
@@ -11662,6 +12335,7 @@ export const DrillerRenderer = () => {
       maxCount={500}
       baseColor={GAME_THEME.enemy.muncher}
       colorSource="base" 
+      interactive={isMobile} // NEW: Pass the flag
       filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
       updateEntity={(e, obj, color, delta) => {
           const state = e.getComponent<StateComponent>('State');
@@ -11674,7 +12348,6 @@ export const DrillerRenderer = () => {
           obj.position.z = 5.0;
           applyRotation(obj, spin, aim);
           
-          // Spawn Effect
           if (state && state.current === 'SPAWN') {
               const progress = 1.0 - (state.timers.spawn / 1.5);
               const eased = Math.pow(progress, 2); 
@@ -11773,6 +12446,43 @@ export const usePanelRegistry = (id: string) => {
   }, [id, registerPanel, unregisterPanel]);
 
   return elementRef;
+};
+
+
+=====================================
+FILE: ./src/game/hooks/useDeviceType.ts
+=====================================
+import { useState, useEffect } from 'react';
+
+type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
+export const useDeviceType = () => {
+  const [device, setDevice] = useState<DeviceType>('desktop');
+
+  useEffect(() => {
+    const checkDevice = () => {
+      const width = window.innerWidth;
+      
+      // Basic width checkpoints
+      // < 768px: Usually Phones
+      // 768px - 1024px: Tablets / Small Laptops
+      // > 1024px: Desktop
+      
+      if (width < 768) {
+        setDevice('mobile');
+      } else if (width < 1024) {
+        setDevice('tablet');
+      } else {
+        setDevice('desktop');
+      }
+    };
+
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  return device;
 };
 
 
@@ -13552,6 +14262,65 @@ export class GameStateSystem implements IGameStateSystem {
 
 
 =====================================
+FILE: ./src/game/systems/MobileWaveSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { EnemyTypes } from '../config/Identifiers';
+import { ViewportHelper } from '../utils/ViewportHelper';
+
+export class MobileWaveSystem implements IGameSystem {
+  private spawner!: IEntitySpawner;
+  private time = 0;
+  private nextSpawn = 0;
+  
+  // Difficulty Config
+  private readonly START_INTERVAL = 1.2;
+  private readonly MIN_INTERVAL = 0.4;
+  private readonly RAMP_DURATION = 60.0;
+
+  setup(locator: IServiceLocator): void {
+    this.spawner = locator.getSpawner();
+  }
+
+  update(delta: number, time: number): void {
+    this.time += delta;
+
+    if (this.time >= this.nextSpawn) {
+        this.spawnDriller();
+        
+        // Difficulty Ramp
+        const progress = Math.min(1.0, this.time / this.RAMP_DURATION);
+        const currentInterval = this.START_INTERVAL - (progress * (this.START_INTERVAL - this.MIN_INTERVAL));
+        
+        this.nextSpawn = this.time + currentInterval;
+    }
+  }
+
+  private spawnDriller() {
+      const { width, height } = ViewportHelper.viewport;
+      const pad = 3.0; // Spawn further out
+      
+      // RESTRICT TO TOP AND BOTTOM ONLY
+      // This gives the player more reaction time and prevents thumb occlusion
+      const isTop = Math.random() > 0.5;
+      
+      let x = (Math.random() - 0.5) * (width * 0.6); // Keep them somewhat central horizontally
+      let y = 0;
+
+      if (isTop) { 
+          y = (height / 2) + pad;
+      } else { 
+          y = -(height / 2) - pad;
+      }
+
+      this.spawner.spawnEnemy(EnemyTypes.DRILLER, x, y);
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/game/systems/TargetingSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator } from '../core/interfaces';
@@ -14336,15 +15105,15 @@ const SHADER_LIB = {
 
 export const registerAllAssets = () => {
   // --- ASYNC ASSETS ---
-  
-  // Create placeholder for Hunter
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
   AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
 
   // --- SYNC GENERATORS ---
   
   AssetService.registerGenerator('GEO_DRILLER', () => {
-      const { radius, height, segments } = MODEL_CONFIG.DRILLER;
+      // UPDATED: Increased radius 0.3 -> 0.5 for better touch target
+      const { height, segments } = MODEL_CONFIG.DRILLER;
+      const radius = 0.5; 
       return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
   });
 

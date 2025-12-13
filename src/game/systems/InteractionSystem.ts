@@ -61,7 +61,8 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(5.0); 
+            // DOUBLED: 4.0 per tick (was 2.0) = ~0.5s to revive
+            this.gameSystem.tickReboot(4.0); 
             this.lastRepairTime = time;
             
             AudioSystem.playSound('loop_reboot'); 
@@ -81,18 +82,19 @@ export class InteractionSystem implements IInteractionSystem {
       if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
         this.hoveringPanelId = p.id;
         
-        if (!p.isDestroyed && p.health >= 1000) continue;
+        if (!p.isDestroyed && p.health >= 100) continue;
 
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(p.id, 20);
+            // DOUBLED: 4 HP per tick (was 2) = ~1.25s to restore a dead panel
+            PanelRegistry.healPanel(p.id, 4); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
                 AudioSystem.playSound('loop_reboot');
             } else {
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 20 });
+                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
             }
 
             if (Math.random() > 0.3) {

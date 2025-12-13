@@ -41,20 +41,18 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     if (showGpuPanel && mainStackRef.current) {
+        // Only scroll if we aren't already user-scrolling
         mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'smooth' });
     }
   }, [showGpuPanel]);
 
-  // Wrapper to intercept initialization
   const handleWrapperClick = () => {
-      // IF MOBILE PHONE (Not Tablet), trigger Lockdown
       if (device === 'mobile') {
           AudioSystem.init();
-          AudioSystem.playSound('ui_error'); // Rejection sound
+          AudioSystem.playSound('ui_error');
           setIntroDone(true);
           setBootState('mobile_lockdown');
       } else {
-          // Standard Desktop Flow
           coreInitialize();
       }
   };
@@ -64,15 +62,17 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-hide overflow-y-auto overflow-x-hidden bg-black"
+      // FIXED: Removed scrollbar-hide, changed to overflow-x-auto, changed cursor to default
+      className="fixed inset-0 z-[100] font-mono outline-none cursor-auto overflow-y-auto overflow-x-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      <div className="min-h-full w-full flex items-center justify-center p-2 md:p-8 relative z-10">
+      {/* FIXED: Changed justify-center to m-auto logic via flex-col/row adjustments to allow left-side scrolling */}
+      <div className="min-h-full min-w-min w-full flex items-center p-2 md:p-8 relative z-10">
         
         <motion.div 
             className={clsx(
-                "flex flex-col gap-4 transition-all duration-500 ease-out",
+                "flex flex-col gap-4 transition-all duration-500 ease-out m-auto", // FIXED: m-auto centers it but respects overflow start
                 "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
                 showGpuPanel && !isBreaching 
                     ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
@@ -166,7 +166,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                             <button 
                             onClick={handleWrapperClick}
                             onMouseEnter={() => AudioSystem.playHover()}
-                            className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                            className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-pointer"
                             >
                             <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                             <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">

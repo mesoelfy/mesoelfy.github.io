@@ -15,7 +15,8 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 
-const DEFAULT_MAX_HEALTH = 1000;
+// FIXED: Default to 100 to match new Global Stats
+const DEFAULT_MAX_HEALTH = 100;
 
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },

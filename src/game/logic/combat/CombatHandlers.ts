@@ -15,12 +15,12 @@ const getPos = (e: Entity) => e.getComponent<TransformComponent>('Transform');
 // --- HANDLERS ---
 
 /**
- * PLAYER vs ENEMY
+ * PLAYER vs ENEMY (Contact)
  */
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // 1. DAEMON RAMMING
+  // 1. DAEMON (Player Upgrade) RAMMING
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
@@ -29,14 +29,16 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   // 2. STANDARD PLAYER CRASH
   const eId = getId(enemy);
   
-  // AAA POLISH: Specific Shake Tuning
+  // NEW STATS: 
+  // Kamikaze: 3 DMG (Big Boom)
+  // Others: 1 DMG (Standard Chip)
   if (eId?.variant === EnemyTypes.KAMIKAZE) {
-      ctx.damagePlayer(25);
-      ctx.addTrauma(0.9); // VIOLENT SHAKE
+      ctx.damagePlayer(3); 
+      ctx.addTrauma(0.5); 
       ctx.destroyEntity(enemy, 'EXPLOSION_RED');
   } else {
-      ctx.damagePlayer(10);
-      ctx.addTrauma(0.5); // HEAVY IMPACT (Driller/Hunter)
+      ctx.damagePlayer(1);
+      ctx.addTrauma(0.2); 
       ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
   }
 };
@@ -48,13 +50,13 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const pId = getId(player);
 
   if (pId?.variant === EnemyTypes.DAEMON) {
-      resolveDaemonCollision(player, bullet, ctx, 5);
+      resolveDaemonCollision(player, bullet, ctx, 1);
       return;
   }
 
-  ctx.damagePlayer(10);
+  // Hunter/Enemy Projectiles now deal 3 Damage
+  ctx.damagePlayer(3);
   ctx.destroyEntity(bullet, 'IMPACT_RED');
-  // Note: VFXSystem adds standard trauma (0.2 - 0.45) for damage events automatically
 };
 
 /**
@@ -77,18 +79,17 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const state = daemon.getComponent<StateComponent>('State');
   if (!state) return;
 
-  let incomingDamage = fixedDamage || 10;
+  // Daemon Shield takes damage
+  let incomingDamage = fixedDamage || 1; 
   
   if (!fixedDamage) {
-      const hp = getHp(attacker);
       const id = getId(attacker);
-      if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 20;
-      else if (hp) incomingDamage = hp.current * 5; 
+      // Kamikaze does 3 damage to shield
+      if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 3;
   }
 
   const shield = state.data.shieldHP || 0;
 
-  // Active Shield Logic
   if (state.current === 'CHARGING' || state.current === 'READY') {
       if (shield > 0) {
           state.data.shieldHP = Math.max(0, shield - incomingDamage);
@@ -103,6 +104,7 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       }
   }
 
+  // If shield broken or not active, just destroy attacker (Daemon is invincible hull)
   if (attacker.hasTag('ENEMY')) {
       ctx.destroyEntity(attacker, 'EXPLOSION_RED');
   } else {
@@ -114,8 +116,16 @@ function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext
   const hpA = getHp(a);
   const hpB = getHp(b);
 
+  // Default projectiles have 1 HP/Damage.
+  // Daemon projectiles have 10.
   const valA = hpA ? hpA.current : 1;
   const valB = hpB ? hpB.current : 1;
+  
+  // They damage each other by the MINIMUM of their remaining HP.
+  // Example: Daemon Bullet (10) vs Kamikaze (2).
+  // Impact = 2. 
+  // Daemon Bullet -> 8 HP (Survives).
+  // Kamikaze -> 0 HP (Dies).
   const impact = Math.min(valA, valB);
 
   if (hpA) hpA.current = Math.max(0, hpA.current - impact);

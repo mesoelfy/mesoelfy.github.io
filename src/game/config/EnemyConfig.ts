@@ -1,22 +1,22 @@
 import { EnemyTypes } from './Identifiers';
 
 export const ENEMY_CONFIG = {
-  [EnemyTypes.DRILLER]: { // RENAMED
-    hp: 2,
+  [EnemyTypes.DRILLER]: { 
+    hp: 1,             // One shot
     baseSpeed: 8,
     radius: 0.5,
-    damage: 15,
+    damage: 1,         // Chip damage
     score: 10
   },
   [EnemyTypes.KAMIKAZE]: {
-    hp: 3,
+    hp: 2,             // Two shots
     baseSpeed: 12,
-    radius: 0.5,
-    damage: 10,
+    radius: 0.6,
+    damage: 3,         // Heavy hit
     score: 20
   },
   [EnemyTypes.HUNTER]: {
-    hp: 3,
+    hp: 3,             // Three shots
     baseSpeed: 12,
     radius: 0.5,
     score: 50,

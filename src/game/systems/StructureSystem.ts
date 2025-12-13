@@ -5,7 +5,8 @@ export class StructureSystem implements IGameSystem {
   private decayTimer = 0;
   // Decay logic runs at 10hz (every 0.1s)
   private readonly DECAY_INTERVAL = 0.1; 
-  private readonly DECAY_AMOUNT = 5;
+  // FIXED: 1 HP per 0.1s = 10 DPS decay (10s to lose full bar)
+  private readonly DECAY_AMOUNT = 1; 
 
   setup(locator: IServiceLocator): void {
     // No dependencies needed yet
@@ -22,7 +23,6 @@ export class StructureSystem implements IGameSystem {
 
   private processDecay() {
       // Passive Rule: Destroyed panels lose residual charge (Health) over time
-      // This prevents them from staying at "1% / Offline" forever.
       const panels = PanelRegistry.getAllPanels();
       for (const p of panels) {
           if (p.isDestroyed && p.health > 0) {

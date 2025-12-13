@@ -16,7 +16,7 @@ import { GalleryModal } from '@/features/gallery/GalleryModal';
 import { ContactModal } from '@/features/contact/ContactModal';
 import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
-import { MobileExperience } from '@/features/mobile/MobileExperience'; // NEW
+import { MobileExperience } from '@/features/mobile/MobileExperience'; 
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useState, useEffect } from 'react';
@@ -40,7 +40,7 @@ export default function Home() {
   
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
-  const isMobileLockdown = bootState === 'mobile_lockdown'; // NEW FLAG
+  const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
   useEffect(() => {
       AudioSystem.init();
@@ -66,7 +66,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [bootState, recalcIntegrity]);
 
-  // Scene visible in Active, Breach, OR Mobile Lockdown
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
@@ -83,7 +82,6 @@ export default function Home() {
         <WebGLErrorBoundary>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
-            {/* Game Overlay (Canvas) - Hidden in Mobile Lockdown for now, will re-enable in Phase 3 with different props */}
             {!isMobileLockdown && (
                 <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
                     <GameOverlay />
@@ -104,7 +102,6 @@ export default function Home() {
             </>
         )}
 
-        {/* Boot Sequence (Standard) */}
         {bootState === 'standby' && (
           <MatrixBootSequence 
              onComplete={handleBootComplete} 
@@ -112,10 +109,8 @@ export default function Home() {
           />
         )}
 
-        {/* NEW: Mobile Lockdown Experience */}
         {isMobileLockdown && <MobileExperience />}
 
-        {/* Standard Desktop/Tablet Dashboard */}
         {!isSandbox && !isMobileLockdown && (
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />
@@ -125,8 +120,9 @@ export default function Home() {
                   isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
               )}>
                 
-                <div className="w-full h-full origin-top-left landscape:scale-[0.5] landscape:w-[200%] landscape:h-[200%] lg:landscape:scale-100 lg:landscape:w-full lg:landscape:h-full">
-                    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 min-h-full">
+                {/* FIXED: Removed min-h-full from inner container to prevent unnecessary scrolling */}
+                <div className="w-full origin-top-left landscape:scale-[0.5] landscape:w-[200%] landscape:h-[200%] lg:landscape:scale-100 lg:landscape:w-full lg:landscape:h-full">
+                    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                     <AnimatePresence>
                         {!isZenMode && (
                         <motion.div 
