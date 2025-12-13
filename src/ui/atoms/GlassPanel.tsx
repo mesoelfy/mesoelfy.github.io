@@ -15,7 +15,6 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 
-// FIXED: Default to 100 to match new Global Stats
 const DEFAULT_MAX_HEALTH = 100;
 
 const panelVariants = {
@@ -54,7 +53,7 @@ interface GlassPanelProps {
   className?: string;
   title?: string;
   gameId?: string;
-  maxHealth?: number; // NEW PROP
+  maxHealth?: number; 
 }
 
 export const GlassPanel = ({ 
@@ -67,7 +66,9 @@ export const GlassPanel = ({
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
-  const isInteracting = gameId && interactionTarget === gameId;
+  
+  // Determine if this specific panel is being repaired
+  const isInteracting = !!(gameId && interactionTarget === gameId);
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
@@ -77,7 +78,6 @@ export const GlassPanel = ({
   const health = panelState ? panelState.health : maxHealth;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   
-  // Calculate percent using the dynamic maxHealth
   let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
@@ -166,7 +166,7 @@ export const GlassPanel = ({
           <IntelligentHeader 
             title={title} 
             health={health} 
-            maxHealth={maxHealth} // PASS DOWN
+            maxHealth={maxHealth} 
             isDestroyed={isDestroyed} 
             isGameOver={isGameOver}
             gameId={gameId}
@@ -189,6 +189,7 @@ export const GlassPanel = ({
                         progress={healthPercent} 
                         isVideo={gameId === 'video'} 
                         showInteractive={true} 
+                        isRepairing={isInteracting}
                     />
                 </SafePanelContent>
             )}
