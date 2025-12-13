@@ -34,7 +34,6 @@ const DEFAULT_AUDIO: AudioSettings = {
   volumeSfx: 1.0,
   volumeAmbience: 1.0,
   
-  // Lab Defaults
   ambFilter: 0.5,
   ambSpeed: 0.5,
   ambWidth: 0.5,
@@ -65,8 +64,10 @@ interface AppState {
   isSimulationPaused: boolean;
   
   sandboxView: SandboxView;
+  
+  // Gallery State
   galleryTarget: string;
-  galleryAction: 'IDLE' | 'ATTACK';
+  galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   
   audioSettings: AudioSettings;
   graphicsMode: GraphicsMode;
@@ -82,7 +83,7 @@ interface AppState {
   
   setSandboxView: (view: SandboxView) => void;
   setGalleryTarget: (target: string) => void;
-  toggleGalleryAction: () => void;
+  setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
@@ -148,7 +149,7 @@ export const useStore = create<AppState>()(
       
       setSandboxView: (view) => set({ sandboxView: view }),
       setGalleryTarget: (target) => set({ galleryTarget: target }),
-      toggleGalleryAction: () => set(state => ({ galleryAction: state.galleryAction === 'IDLE' ? 'ATTACK' : 'IDLE' })),
+      setGalleryAction: (action) => set({ galleryAction: action }),
       
       openModal: (modal) => set({ activeModal: modal }),
       closeModal: () => set({ activeModal: 'none' }),
@@ -200,7 +201,6 @@ export const useStore = create<AppState>()(
       },
       
       setVolume: (channel, value, max = 2.0) => {
-          // Allow override max for lab settings
           const limit = max || 2.0;
           const clamped = Math.max(0, Math.min(limit, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));

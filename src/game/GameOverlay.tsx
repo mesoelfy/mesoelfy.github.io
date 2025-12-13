@@ -8,17 +8,24 @@ import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { ActionButton } from '@/ui/atoms/ActionButton';
 import { useStore } from '@/core/store/useStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
+import { registerAllAssets } from './assets/AssetCatalog';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [assetsReady, setAssetsReady] = useState(false);
+
+  // 1. Initialize Assets IMMEDIATELY before Canvas can mount
+  useLayoutEffect(() => {
+      registerAllAssets();
+      setAssetsReady(true);
+  }, []);
 
   useEffect(() => {
       setMounted(true);
-      // Robust Mobile/Touch Detection
       const checkMobile = () => {
         const isCoarse = window.matchMedia('(pointer: coarse)').matches;
         const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -30,7 +37,7 @@ export const GameOverlay = () => {
       return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted || !assetsReady) return null;
 
   return (
     <>
@@ -51,11 +58,11 @@ export const GameOverlay = () => {
                 <GalleryStage />
             ) : (
                 <>
-                    {/* Infrastructure & Logic */}
+                    {/* Logic Core */}
                     <GameDirector />
-                    <ScreenShaker />
                     
-                    {/* Visual Entities */}
+                    {/* Visuals */}
+                    <ScreenShaker />
                     <RenderDirector />
                 </>
             )}

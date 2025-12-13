@@ -4,14 +4,13 @@ import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '../config/Identifiers';
 
-// UPDATED TIMELINE: Early Hunters
 const WAVE_TIMELINE = [
   { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
-  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   // <--- Early Hunter
+  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   
   { at: 5,     type: 'driller', count: 5, interval: 0.5 }, 
   { at: 8,     type: 'kamikaze', count: 2, interval: 1.0 },
   { at: 12,    type: 'driller', count: 8, interval: 0.2 }, 
-  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, // <--- More Hunters
+  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, 
   { at: 20,    type: 'kamikaze', count: 5, interval: 0.5 },
   { at: 25,    type: 'hunter',  count: 3, interval: 1.0 }, 
 ];
@@ -37,6 +36,10 @@ export class WaveSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
+    
+    // STOP WAVES IN SANDBOX (Arena Mode)
+    // But do NOT stop the System update loop entirely if we had logic here needed for other things.
+    // Since this system is purely for waves, returning is fine.
     if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;

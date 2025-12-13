@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 13 10:09:44 CST 2025
+Generated on: Sat Dec 13 13:47:57 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -32,6 +32,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   └── page.tsx
 │   ├── core
 │   │   ├── audio
+│   │   │   ├── AudioMath.ts
 │   │   │   ├── AudioSystem.ts
 │   │   │   └── modules
 │   │   │       ├── AudioContextManager.ts
@@ -289,7 +290,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-68 directories, 213 files
+68 directories, 214 files
 
 =====================================
 FILE: ./next.config.js
@@ -2725,42 +2726,21 @@ export const GlobalBackdrop = () => {
 =====================================
 FILE: ./src/ui/overlays/RotationLock.tsx
 =====================================
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Smartphone, RotateCcw } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 
 export const RotationLock = () => {
-  const { setSimulationPaused, bootState } = useStore();
-
-  // We rely on CSS to show/hide this, but we need JS to pause the game.
-  useEffect(() => {
-    const checkOrientation = () => {
-      // If we are in the intro (standby), we never pause via this lock
-      if (bootState === 'standby') {
-        setSimulationPaused(false);
-        return;
-      }
-
-      const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-      // Only care if it's a mobile-sized device
-      if (isPortrait && window.innerWidth < 768) {
-        setSimulationPaused(true);
-      } else {
-        setSimulationPaused(false);
-      }
-    };
-
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, [setSimulationPaused, bootState]);
+  const { bootState } = useStore();
 
   // Don't render anything if we are still in the intro sequence
   if (bootState === 'standby') return null;
 
+  // VISUAL ONLY:
+  // The actual pausing logic is now handled centrally in page.tsx 
+  // to prevent conflicts with menus/modals.
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden">
+    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden pointer-events-auto">
       
       {/* ANIMATION CONTAINER */}
       <div className="relative w-32 h-32 flex items-center justify-center">
@@ -3289,6 +3269,62 @@ export const Header = () => {
 
 
 =====================================
+FILE: ./src/core/audio/AudioMath.ts
+=====================================
+/**
+ * AUDIO MATH LIBRARY
+ * Single source of truth for DSP conversions.
+ * 
+ * LOGIC UPDATE:
+ * Formulas use a base anchor at val=0.5 (The Default).
+ * The curve is calculated to hit the specific MAX at val=1.0.
+ * formula: Anchor * (Ratio ^ ((val - 0.5) * 2))
+ */
+
+// 1. FILTER (Density)
+// Anchor: 300Hz. Range: 30Hz - 3000Hz.
+export const getAmbienceFilterHz = (val: number): number => {
+  return 300 * Math.pow(10, (val - 0.5) * 2);
+};
+
+// 2. PAN SPEED (Circulation)
+// Anchor: 0.05Hz (Default). 
+// Target Max: 1.0Hz.
+// Ratio: 1.0 / 0.05 = 20.
+export const getAmbiencePanFreq = (val: number): number => {
+  return 0.05 * Math.pow(20, (val - 0.5) * 2);
+};
+
+// 3. MOD SPEED (Fluctuation / LFO Rate)
+// Anchor: 0.2Hz (Default).
+// Target Max: 6.0Hz.
+// Ratio: 6.0 / 0.2 = 30.
+export const getAmbienceModFreq = (val: number): number => {
+  return 0.2 * Math.pow(30, (val - 0.5) * 2);
+};
+
+// 4. MOD DEPTH (Instability / LFO Depth)
+// Anchor: 10Hz (Default).
+// Target Max: 200Hz.
+// Ratio: 200 / 10 = 20.
+export const getAmbienceModDepth = (val: number): number => {
+  return 10 * Math.pow(20, (val - 0.5) * 2);
+};
+
+// 5. STEREO WIDTH
+// Mapping: 0.0-1.0 -> Gain 0.0 - 0.8
+export const getAmbienceStereoGain = (val: number): number => {
+  return Math.pow(val, 3) * 0.8;
+};
+
+// 6. GRIT (Distortion)
+// Mapping: 0.0-1.0 -> Distortion Index 0 - 400
+export const getAmbienceDistortion = (val: number): number => {
+  return val * 400;
+};
+
+
+=====================================
 FILE: ./src/core/audio/AudioSystem.ts
 =====================================
 import { useStore } from '@/core/store/useStore';
@@ -3461,6 +3497,13 @@ export const AudioSystem = new AudioSystemController();
 FILE: ./src/core/audio/modules/AudioMixer.ts
 =====================================
 import { AudioContextManager } from './AudioContextManager';
+import { 
+  getAmbienceFilterHz, 
+  getAmbiencePanFreq, 
+  getAmbienceModFreq, 
+  getAmbienceModDepth, 
+  getAmbienceStereoGain
+} from '../AudioMath';
 
 export class AudioMixer {
   // Channels
@@ -3503,9 +3546,10 @@ export class AudioMixer {
     this.masterGain.connect(ctx.destination);
 
     // 3. Build Ambience DSP Graph
+    // Chain: Gain -> Filter -> Panner -> Master
     this.ambiencePanner = ctx.createStereoPanner();
     this.ambienceFilter = ctx.createBiquadFilter();
-    
+
     // LFO for Panning (Movement)
     this.ambienceLFO = ctx.createOscillator();
     this.ambiencePanConstraint = ctx.createGain();
@@ -3514,9 +3558,9 @@ export class AudioMixer {
     this.ambienceDepthLFO = ctx.createOscillator();
     this.ambienceDepthGain = ctx.createGain();
 
-    // Ambience Routing: Gain -> Filter -> Panner -> Master
+    // Ambience Routing
     this.ambienceGain.connect(this.ambienceFilter);
-    this.ambienceFilter.connect(this.ambiencePanner);
+    this.ambienceFilter.connect(this.ambiencePanner); 
     this.ambiencePanner.connect(this.masterGain);
 
     // Modulation Routing
@@ -3543,54 +3587,42 @@ export class AudioMixer {
 
     // Apply
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
-    
-    // Ensure we don't snap volume if currently ducking? 
-    // Actually, snapping on setting change is expected behavior.
     this.musicGain.gain.cancelScheduledValues(this.ctxManager.ctx!.currentTime);
     this.musicGain.gain.value = this._targetMusicVol;
     
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
+    
+    // 1:1 Gain (Source Volume is now 0.24 in config)
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
 
-    // Update DSP Params
+    // Update DSP Params (Using Shared Math)
     const filter = settings.ambFilter ?? 0.5;
     const speed = settings.ambSpeed ?? 0.5;
     const width = settings.ambWidth ?? 0.5;
     const modSpeed = settings.ambModSpeed ?? 0.5;
     const modDepth = settings.ambModDepth ?? 0.5;
 
-    this.ambienceFilter.frequency.value = 300 * Math.pow(10, (filter - 0.5) * 2);
-    this.ambienceLFO.frequency.value = 0.05 * Math.pow(10, (speed - 0.5) * 2);
-    this.ambiencePanConstraint.gain.value = Math.pow(width, 3) * 0.8;
-    this.ambienceDepthLFO.frequency.value = 0.2 * Math.pow(10, (modSpeed - 0.5) * 2);
-    this.ambienceDepthGain.gain.value = 10 * Math.pow(10, (modDepth - 0.5) * 2);
+    this.ambienceFilter.frequency.value = getAmbienceFilterHz(filter);
+    this.ambienceLFO.frequency.value = getAmbiencePanFreq(speed);
+    this.ambiencePanConstraint.gain.value = getAmbienceStereoGain(width);
+    this.ambienceDepthLFO.frequency.value = getAmbienceModFreq(modSpeed);
+    this.ambienceDepthGain.gain.value = getAmbienceModDepth(modDepth);
   }
 
   public duckMusic(intensity: number, duration: number) {
-    // 1. If muted, do nothing.
     if (!this.musicGain || this._isMusicMuted) return;
-    
     const ctx = this.ctxManager.ctx;
     if (!ctx) return;
 
-    // 2. Use the stored target volume, not a hardcoded value.
     const baseVol = this._targetMusicVol;
-    
-    // Safety check: if volume is practically zero, don't duck.
     if (baseVol < 0.001) return;
 
     const now = ctx.currentTime;
     const targetVol = Math.max(0, baseVol * (1.0 - intensity));
     
     this.musicGain.gain.cancelScheduledValues(now);
-    
-    // Start from current value to prevent clicks
     this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
-    
-    // Ramp down
     this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
-    
-    // Ramp back up to the user's setting
     this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
 }
@@ -3803,6 +3835,7 @@ interface AudioSettings {
   volumeSfx: number;
   volumeAmbience: number;
   
+  // Ambience Lab
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
@@ -3819,6 +3852,8 @@ const DEFAULT_AUDIO: AudioSettings = {
   volumeMusic: 1.0,
   volumeSfx: 1.0,
   volumeAmbience: 1.0,
+  
+  // Lab Defaults
   ambFilter: 0.5,
   ambSpeed: 0.5,
   ambWidth: 0.5,
@@ -3984,7 +4019,9 @@ export const useStore = create<AppState>()(
       },
       
       setVolume: (channel, value, max = 2.0) => {
-          const clamped = Math.max(0, Math.min(max, value));
+          // Allow override max for lab settings
+          const limit = max || 2.0;
+          const clamped = Math.max(0, Math.min(limit, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
           AudioSystem.updateVolumes();
       },
@@ -4118,7 +4155,7 @@ import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { MobileExperience } from '@/features/mobile/MobileExperience'; 
 import { GameOverlay } from '@/game/GameOverlay';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { useState, useEffect, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';
 import { ZenBomb } from '@/ui/atoms/ZenBomb';
@@ -4131,7 +4168,19 @@ import { RotationLock } from '@/ui/overlays/RotationLock';
 import { clsx } from 'clsx';
 
 export default function Home() {
-  const { openModal, setIntroDone, bootState, setBootState, isBreaching, startBreach } = useStore(); 
+  const { 
+    openModal, 
+    setIntroDone, 
+    bootState, 
+    setBootState, 
+    isBreaching, 
+    startBreach, 
+    activeModal, 
+    isDebugOpen, 
+    isDebugMinimized,
+    setSimulationPaused 
+  } = useStore(); 
+  
   const startGame = useGameStore(s => s.startGame);
   const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
@@ -4143,25 +4192,71 @@ export default function Home() {
 
   // --- SCALING LOGIC ---
   const [dashboardScale, setDashboardScale] = useState(1);
-  // SAFE_HEIGHT: Ideal height where layout fits without scrolling.
-  const SAFE_HEIGHT = 1050; 
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const handleResize = () => {
-        // Only scale on desktop/landscape
+        if (!contentRef.current) return;
         if (window.innerWidth >= 1024) {
-            const h = window.innerHeight;
-            const ratio = Math.min(1, h / SAFE_HEIGHT);
-            setDashboardScale(ratio);
+            const HEADER_H = 48;
+            const FOOTER_H = 32;
+            const PADDING_Y = 48; 
+            const availableHeight = window.innerHeight - HEADER_H - FOOTER_H;
+            const naturalHeight = contentRef.current.scrollHeight + PADDING_Y;
+            const ratio = Math.min(1, availableHeight / naturalHeight);
+            setDashboardScale(Math.floor(ratio * 1000) / 1000);
         } else {
             setDashboardScale(1);
         }
     };
 
+    const debouncedResize = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(handleResize, 100);
+    };
+
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const observer = new ResizeObserver(debouncedResize);
+    if (contentRef.current) observer.observe(contentRef.current);
+    window.addEventListener('resize', debouncedResize);
+    
+    return () => {
+        window.removeEventListener('resize', debouncedResize);
+        observer.disconnect();
+        clearTimeout(timeoutId);
+    };
+  }, [bootState]); 
+
+  // --- MASTER PAUSE LOGIC ---
+  useEffect(() => {
+    // Only active during the game
+    if (bootState !== 'active') return;
+
+    const checkPauseState = () => {
+        const isMenuOpen = activeModal !== 'none';
+        const isDebugActive = isDebugOpen && !isDebugMinimized;
+        
+        // Portrait check (Mobile only)
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        const isSmallScreen = window.innerWidth < 768;
+        const isRotationLocked = isPortrait && isSmallScreen;
+
+        if (isMenuOpen || isDebugActive || isRotationLocked) {
+            setSimulationPaused(true);
+        } else {
+            setSimulationPaused(false);
+        }
+    };
+
+    // Run immediately
+    checkPauseState();
+
+    // Listen for resize (orientation changes)
+    window.addEventListener('resize', checkPauseState);
+    return () => window.removeEventListener('resize', checkPauseState);
+  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused]);
 
   useEffect(() => {
       AudioSystem.init();
@@ -4237,20 +4332,20 @@ export default function Home() {
               <Header />
 
               <div className={clsx(
-                  "flex-1 min-h-0 relative w-full overflow-x-hidden scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-                  isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
+                  "flex-1 min-h-0 relative w-full overflow-hidden", // SCROLLBAR FIX: FORCE HIDDEN
+                  // We rely on the scaler to fit content. If content is too big, it scales down. 
+                  // No scrolling allowed in dashboard mode.
               )}>
                 
                 {/* SCALING WRAPPER */}
                 <div 
-                    className="w-full origin-top transition-transform duration-100 ease-linear"
+                    className="w-full origin-top transition-transform duration-300 ease-out"
                     style={{ 
                         transform: `scale(${dashboardScale})`,
-                        width: `${100 / dashboardScale}%`,
-                        marginLeft: `${(100 - (100 / dashboardScale)) / 2}%`
+                        marginBottom: `-${(1 - dashboardScale) * 100}%` 
                     }}
                 >
-                    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
+                    <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                     <AnimatePresence>
                         {!isZenMode && (
                         <motion.div 
@@ -4330,151 +4425,237 @@ FILE: ./src/features/settings/tabs/SoundTab.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Info } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind } from 'lucide-react';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { clsx } from 'clsx';
+import { 
+  getAmbienceFilterHz, 
+  getAmbiencePanFreq, 
+  getAmbienceModFreq, 
+  getAmbienceModDepth, 
+  getAmbienceStereoGain 
+} from '@/core/audio/AudioMath';
+
+// Dynamic Toggle Component
+const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
+  const Icon = isActive ? IconOn : (IconOff || IconOn);
+  
+  return (
+    <button
+      onClick={() => { onClick(); AudioSystem.playClick(); }}
+      onMouseEnter={() => AudioSystem.playHover()}
+      className={clsx(
+        "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
+        isActive 
+          ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
+          : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
+      )}
+    >
+      {isActive && (
+         <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
+      )}
+      {/* UPDATED: Removed fill-current, decreased strokeWidth to 1.5 */}
+      <Icon 
+        size={16} 
+        strokeWidth={1.5}
+        className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} 
+      />
+      <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
+    </button>
+  );
+};
 
 export const SoundTab = () => {
-  const { audioSettings, setVolume, resetAudioSettings } = useStore();
+  const { 
+    audioSettings, 
+    setVolume, 
+    resetAudioSettings,
+    toggleMaster,
+    toggleMusic,
+    toggleSfx,
+    toggleAmbience
+  } = useStore();
+
+  const BASE_VOL = 0.24;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+    <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pr-2">
       
-      {/* SECTION 1: GLOBAL MIXER */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-header font-black text-primary-green border-b border-primary-green/30 pb-2 mb-4 tracking-widest flex justify-between items-center">
-          <span>GLOBAL_MIXER</span>
-          <span className="text-[9px] font-mono opacity-50">HEADROOM: 300%</span>
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-          <RangeSlider 
-            label="MASTER_GAIN" 
-            value={audioSettings.volumeMaster} 
-            max={3.0}
-            displayMax={300}
-            onChange={(v) => setVolume('volumeMaster', v, 3.0)} 
-          />
-          <RangeSlider 
-            label="MUSIC_LEVEL" 
-            value={audioSettings.volumeMusic} 
-            max={3.0}
-            displayMax={300}
-            onChange={(v) => setVolume('volumeMusic', v, 3.0)} 
-          />
-          <RangeSlider 
-            label="SFX_LEVEL" 
-            value={audioSettings.volumeSfx} 
-            max={3.0}
-            displayMax={300}
-            onChange={(v) => setVolume('volumeSfx', v, 3.0)} 
-          />
-          <RangeSlider 
-            label="AMBIENCE_LEVEL" 
-            value={audioSettings.volumeAmbience} 
-            max={3.0}
-            displayMax={300}
-            onChange={(v) => setVolume('volumeAmbience', v, 3.0)} 
-          />
-        </div>
+      {/* HEADER ALERT */}
+      <div className="p-3 border border-primary-green/30 bg-primary-green/5 flex items-start gap-3">
+          <Activity size={16} className="text-primary-green mt-0.5 animate-pulse" />
+          <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-header font-black text-primary-green tracking-widest uppercase">
+                  AUDIO_ENGINE_V2 ONLINE
+              </span>
+              <p className="text-[9px] font-mono text-primary-green-dim leading-relaxed">
+                  Output Gain calibrated to Source (Vol: {BASE_VOL}).
+                  DSP Matrix Active.
+              </p>
+          </div>
       </div>
 
-      {/* SECTION 2: AMBIENCE LAB (CALIBRATED) */}
-      <div className="space-y-4 pt-4 border-t border-white/10">
-        <div className="flex items-center justify-between border-b border-alert-yellow/30 pb-2 mb-4">
-            <h3 className="text-sm font-header font-black text-alert-yellow tracking-widest">
-              AMBIENCE_LAB // NOISE_FLOOR_SYNTH
-            </h3>
-            <div className="flex items-center gap-2 text-[9px] text-alert-yellow opacity-70">
-                <Info size={12} />
-                <span>PROCEDURAL_GENERATION</span>
-            </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* LEFT: GLOBAL MIXER */}
+          <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
+                  <Volume2 size={14} className="text-white/70" />
+                  <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
+              </div>
+              
+              <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
+                  <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ffffff_10px,#ffffff_11px)] pointer-events-none" />
+                  
+                  {/* Channel Toggles Grid */}
+                  <div className="grid grid-cols-4 gap-2 relative z-10">
+                      <ChannelToggle 
+                        label="MAIN" 
+                        isActive={audioSettings.master} 
+                        onClick={toggleMaster} 
+                        iconOn={Volume2} 
+                        iconOff={VolumeX} 
+                      />
+                      <ChannelToggle 
+                        label="MUSIC" 
+                        isActive={audioSettings.music} 
+                        onClick={toggleMusic} 
+                        iconOn={Music} 
+                        // Music icon stays same, just dimmed (Header style)
+                      />
+                      <ChannelToggle 
+                        label="SFX" 
+                        isActive={audioSettings.sfx} 
+                        onClick={toggleSfx} 
+                        iconOn={Zap} 
+                        iconOff={ZapOff}
+                      />
+                      <ChannelToggle 
+                        label="AMB" 
+                        isActive={audioSettings.ambience} 
+                        onClick={toggleAmbience} 
+                        iconOn={Wind} 
+                        // Wind icon stays same, dimmed
+                      />
+                  </div>
 
-        <p className="text-[10px] font-mono text-gray-400 mb-6 max-w-2xl leading-relaxed">
-          The "Noise Floor" prevents digital silence. 
-          Modify the physics below to reshape the room acoustics in real-time.
-        </p>
+                  {/* Sliders */}
+                  <div className="space-y-5 relative z-10">
+                    <RangeSlider 
+                      label="MASTER_OUT" 
+                      value={audioSettings.volumeMaster} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeMaster', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                    <RangeSlider 
+                      label="MUSIC_BUS" 
+                      value={audioSettings.volumeMusic} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeMusic', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                    <RangeSlider 
+                      label="SFX_BUS" 
+                      value={audioSettings.volumeSfx} 
+                      max={2.0}
+                      onChange={(v) => setVolume('volumeSfx', v, 2.0)} 
+                      format={(v) => `${(v * 100).toFixed(0)}%`}
+                    />
+                  </div>
+              </div>
+          </div>
 
-        {/* ROW 1: TONE & SPACE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-          <RangeSlider 
-            label="DENSITY (FILTER)" 
-            value={audioSettings.ambFilter * 100} 
-            max={100}
-            markerValue={50}
-            onChange={(v) => setVolume('ambFilter', v / 100, 1.0)} 
-            color="accent-alert-yellow"
-            // Math: 300 * 10^((val-0.5)*2)
-            format={(v) => {
-                const norm = v / 100;
-                const hz = 300 * Math.pow(10, (norm - 0.5) * 2);
-                return `${hz.toFixed(0)} Hz`;
-            }}
-          />
-          <RangeSlider 
-            label="WIDTH (STEREO)" 
-            value={audioSettings.ambWidth * 100}
-            max={100} 
-            markerValue={50}
-            onChange={(v) => setVolume('ambWidth', v / 100, 1.0)} 
-            color="accent-alert-yellow"
-            format={(v) => {
-                const norm = v / 100;
-                return `${(Math.pow(norm, 3) * 80).toFixed(0)}% Sep`;
-            }}
-          />
-        </div>
+          {/* RIGHT: AMBIENCE LAB */}
+          <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 border-b border-alert-yellow/30 pb-2 mb-2">
+                  <Waves size={14} className="text-alert-yellow" />
+                  <h3 className="text-xs font-bold text-alert-yellow tracking-wider">
+                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE FLOOR)</span>
+                  </h3>
+              </div>
 
-        {/* ROW 2: MOVEMENT */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <RangeSlider 
-            label="CIRCULATION (SPEED)" 
-            value={audioSettings.ambSpeed * 100} 
-            max={100}
-            markerValue={50}
-            onChange={(v) => setVolume('ambSpeed', v / 100, 1.0)} 
-            color="accent-alert-yellow"
-            format={(v) => {
-                const norm = v / 100;
-                const hz = 0.05 * Math.pow(10, (norm - 0.5) * 2);
-                return `${(1/hz).toFixed(1)}s`;
-            }}
-          />
-          <RangeSlider 
-            label="FLUCTUATION (MOD)" 
-            value={audioSettings.ambModSpeed * 100} 
-            max={100}
-            markerValue={50}
-            onChange={(v) => setVolume('ambModSpeed', v / 100, 1.0)} 
-            color="accent-alert-yellow"
-            format={(v) => {
-                const norm = v / 100;
-                const hz = 0.2 * Math.pow(10, (norm - 0.5) * 2);
-                return `${(1/hz).toFixed(1)}s`;
-            }}
-          />
-          <RangeSlider 
-            label="INSTABILITY (DEPTH)" 
-            value={audioSettings.ambModDepth * 100} 
-            max={100}
-            markerValue={50}
-            onChange={(v) => setVolume('ambModDepth', v / 100, 1.0)} 
-            color="accent-alert-yellow"
-            format={(v) => `+/- ${(10 * Math.pow(10, (v/100 - 0.5) * 2)).toFixed(0)} Hz`}
-          />
-        </div>
+              <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative">
+                  {/* Decorative corner */}
+                  <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-alert-yellow/30" />
+
+                  <RangeSlider 
+                    label="OUTPUT_GAIN" 
+                    value={audioSettings.volumeAmbience} 
+                    max={5.0} 
+                    markerValue={1.0} 
+                    onChange={(v) => setVolume('volumeAmbience', v, 5.0)} 
+                    color="text-alert-yellow"
+                    format={(v) => `VOL: ${(v * BASE_VOL).toFixed(2)}`} 
+                  />
+
+                  <div className="h-px bg-alert-yellow/10 w-full" />
+
+                  <div className="grid grid-cols-1 gap-5">
+                      <RangeSlider 
+                        label="SPECTRAL_GATE (CUTOFF)" 
+                        value={audioSettings.ambFilter} 
+                        max={1.0} 
+                        markerValue={0.5}
+                        onChange={(v) => setVolume('ambFilter', v, 1.0)} 
+                        format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
+                      />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                      <RangeSlider 
+                        label="PAN_RATE" 
+                        value={audioSettings.ambSpeed} 
+                        max={1.0} 
+                        markerValue={0.5}
+                        onChange={(v) => setVolume('ambSpeed', v, 1.0)} 
+                        format={(v) => `${getAmbiencePanFreq(v).toFixed(2)} Hz`}
+                      />
+                      <RangeSlider 
+                        label="STEREO_IMG" 
+                        value={audioSettings.ambWidth} 
+                        max={1.0} 
+                        markerValue={0.5}
+                        onChange={(v) => setVolume('ambWidth', v, 1.0)} 
+                        format={(v) => {
+                            const gain = getAmbienceStereoGain(v);
+                            return `${((gain / 0.8) * 100).toFixed(0)}%`;
+                        }}
+                      />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                      <RangeSlider 
+                        label="LFO_RATE" 
+                        value={audioSettings.ambModSpeed} 
+                        max={1.0} 
+                        markerValue={0.5}
+                        onChange={(v) => setVolume('ambModSpeed', v, 1.0)} 
+                        format={(v) => `${getAmbienceModFreq(v).toFixed(1)} Hz`}
+                      />
+                      <RangeSlider 
+                        label="LFO_DEPTH" 
+                        value={audioSettings.ambModDepth} 
+                        max={1.0} 
+                        markerValue={0.5}
+                        onChange={(v) => setVolume('ambModDepth', v, 1.0)} 
+                        format={(v) => `+/- ${getAmbienceModDepth(v).toFixed(0)} Hz`}
+                      />
+                  </div>
+              </div>
+          </div>
       </div>
 
-      {/* SECTION 3: ACTIONS */}
-      <div className="pt-8 flex justify-end">
+      <div className="mt-auto pt-4 flex justify-end border-t border-white/10">
         <button 
           onClick={resetAudioSettings}
-          className="flex items-center gap-2 px-4 py-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black font-mono text-xs font-bold transition-all"
+          onMouseEnter={() => AudioSystem.playHover()}
+          className="flex items-center gap-2 px-4 py-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black font-header font-black text-xs tracking-widest transition-all group"
         >
-          <RotateCcw size={14} />
-          FACTORY_RESET
+          <RotateCcw size={14} className="group-hover:-rotate-180 transition-transform duration-500" />
+          RESET_ALL_MODULES
         </button>
       </div>
-
     </div>
   );
 };
@@ -4485,15 +4666,18 @@ FILE: ./src/features/settings/components/RangeSlider.tsx
 =====================================
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useRef, useState, useEffect } from 'react';
 
 interface RangeSliderProps {
   label: string;
   value: number; 
   onChange: (val: number) => void;
   max?: number; 
+  step?: number;
   displayMax?: number; 
   format?: (val: number) => string;
   markerValue?: number; 
+  color?: string;
 }
 
 export const RangeSlider = ({ 
@@ -4501,77 +4685,156 @@ export const RangeSlider = ({
   value, 
   onChange, 
   max = 3.0,
-  displayMax = 300,
+  step = 0.01,
   markerValue = 1.0,
-  format
+  format,
+  color
 }: RangeSliderProps) => {
   
-  const currentPercent = (value / max) * 100;
-  const uiValue = value * (displayMax / max);
-  const markerPercent = (markerValue / max) * 100;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const lastTickRef = useRef(value);
 
-  let trackColor = "bg-primary-green";
-  let glowColor = "shadow-[0_0_10px_#78F654]";
-  
-  if (value > 2.0) {
-      trackColor = "bg-critical-red";
-      glowColor = "shadow-[0_0_15px_#FF003C]";
-  } else if (value > 1.0) {
-      trackColor = "bg-alert-yellow";
-      glowColor = "shadow-[0_0_10px_#eae747]";
+  // Safety
+  const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
+  const percent = Math.min(100, Math.max(0, (safeValue / max) * 100));
+
+  // Audio Tick Logic (5% increments)
+  useEffect(() => {
+    const threshold = max * 0.05;
+    if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
+        // Debounce slightly to prevent zipper noise on instant jumps
+        // Only play if dragging to avoid spam on load
+        if (isDragging) {
+            AudioSystem.playSound('ui_hover'); // UPDATED: Changed to ui_hover
+        }
+        lastTickRef.current = safeValue;
+    }
+  }, [safeValue, max, isDragging]);
+
+  // Sync ref on external updates when not dragging
+  useEffect(() => {
+      if (!isDragging) lastTickRef.current = safeValue;
+  }, [safeValue, isDragging]);
+
+  // Semantic Coloring
+  let activeColor = "bg-primary-green";
+  let activeText = "text-primary-green";
+  let glowClass = "shadow-[0_0_10px_#78F654]";
+
+  if (percent > 80) {
+      activeColor = "bg-alert-yellow";
+      activeText = "text-alert-yellow";
+      glowClass = "shadow-[0_0_10px_#eae747]";
   }
+  if (percent > 95) {
+      activeColor = "bg-critical-red";
+      activeText = "text-critical-red";
+      glowClass = "shadow-[0_0_15px_#FF003C]";
+  }
+  if (color) activeText = color.replace('bg-', 'text-').replace('border-', 'text-');
 
-  const displayString = format ? format(value) : `${Math.round(uiValue)}%`;
+  const displayString = format ? format(safeValue) : `${Math.round(percent)}%`;
+  const segments = 20;
+
+  // --- DRAG LOGIC ---
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateValue(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    updateValue(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const updateValue = (e: React.PointerEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      // Calculate normalized position (0..1)
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const ratio = x / rect.width;
+      
+      // Map to Value & Step
+      let rawValue = ratio * max;
+      if (step > 0) {
+          rawValue = Math.round(rawValue / step) * step;
+      }
+      
+      // Clamp
+      const finalValue = Math.max(0, Math.min(max, rawValue));
+      
+      if (finalValue !== safeValue) {
+          onChange(finalValue);
+      }
+  };
 
   return (
     <div 
-        className="flex flex-col gap-1.5 w-full group"
+        className="flex flex-col gap-1 w-full select-none touch-none"
         onMouseEnter={() => AudioSystem.playHover()}
     >
-      <div className="flex justify-between items-end">
-        <span className="text-[10px] font-bold font-mono tracking-wider opacity-80 text-gray-400 group-hover:text-white transition-colors">{label}</span>
-        <span className={clsx("text-xs font-mono font-bold transition-colors", 
-            value > 2.0 ? "text-critical-red animate-pulse" : 
-            value > 1.0 ? "text-alert-yellow" : "text-primary-green"
-        )}>
+      {/* Header */}
+      <div className="flex justify-between items-end mb-1">
+        <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">
+            {label}
+        </span>
+        <span className={clsx("text-[10px] font-mono font-bold transition-colors bg-black/50 px-1.5 rounded-sm border border-white/10 min-w-[3rem] text-center", activeText)}>
             {displayString}
         </span>
       </div>
       
-      <div className="relative h-6 flex items-center">
-        <div className="absolute inset-x-0 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/10">
-             <div 
-                className={clsx("h-full transition-all duration-75 ease-out", trackColor, glowColor)} 
-                style={{ width: `${currentPercent}%` }}
-             />
+      {/* Interactive Track */}
+      <div 
+        ref={containerRef}
+        className="relative h-6 w-full flex items-center cursor-pointer group/slider py-1"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+      >
+        {/* Background Track (Segments) */}
+        <div className="absolute inset-x-0 h-2 flex justify-between items-center px-[1px] pointer-events-none z-0 opacity-30 bg-black/50 border border-white/10 rounded-sm">
+            {Array.from({ length: segments }).map((_, i) => (
+                <div key={i} className="w-[1px] h-1.5 bg-gray-500" />
+            ))}
         </div>
 
+        {/* Active Fill */}
         <div 
-            className="absolute top-0 bottom-0 w-[2px] bg-white/20 z-0 pointer-events-none group-hover:bg-white/50 transition-colors" 
-            style={{ left: `${markerPercent}%` }}
+            className="absolute left-0 h-2 top-2 z-10 pointer-events-none transition-none rounded-sm overflow-hidden" 
+            style={{ width: `${percent}%` }}
         >
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white/50 rounded-full" />
+            <div className={clsx("w-full h-full opacity-80", activeColor, glowClass)} />
         </div>
-        
-        <input 
-          type="range"
-          min="0" 
-          max={displayMax} 
-          step="1"
-          value={uiValue}
-          onChange={(e) => {
-              const raw = parseFloat(e.target.value);
-              const logicVal = (raw / displayMax) * max;
-              onChange(logicVal);
-          }}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-          data-interactive="true"
-        />
-        
+
+        {/* The "Thumb" Indicator */}
         <div 
-            className="absolute h-3 w-1 bg-white z-10 pointer-events-none shadow-sm"
-            style={{ left: `calc(${currentPercent}% - 2px)` }}
+            className={clsx(
+                "absolute h-4 w-1 top-1 z-20 pointer-events-none shadow-sm transition-transform duration-100",
+                activeColor === "bg-primary-green" ? "bg-white" : activeColor,
+                isDragging ? "scale-y-125 scale-x-110 brightness-150" : "group-hover/slider:scale-y-110"
+            )}
+            style={{ 
+                left: `${percent}%`, 
+                transform: `translateX(-50%) ${isDragging ? 'scale(1.2)' : ''}` 
+            }} 
         />
+        
+        {/* Marker (Default) */}
+        {markerValue !== undefined && (
+            <div 
+                className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/50 pointer-events-none z-0" 
+                style={{ left: `${(markerValue / max) * 100}%` }} 
+            />
+        )}
       </div>
     </div>
   );
@@ -4718,6 +4981,7 @@ import { clsx } from 'clsx';
 import { useState } from 'react';
 import { SoundTab } from './tabs/SoundTab';
 import { GpuConfigPanel } from './components/GpuConfigPanel';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 const TABS = [
   { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },
@@ -4740,14 +5004,23 @@ export const SettingsModal = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: "spring", bounce: 0, duration: 0.2 }}
-            className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto"
+            className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black/95 backdrop-blur-md border border-primary-green shadow-[0_0_80px_rgba(0,255,65,0.15)] flex flex-col overflow-hidden pointer-events-auto"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0">
-              <div className="flex items-center gap-3">
-                <Settings className="text-primary-green animate-spin-slow" size={24} />
-                <span className="font-header font-black text-2xl text-primary-green tracking-widest">
-                  SYSTEM_SETTINGS
-                </span>
+            
+            {/* HEADER (No Dots Here) */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-primary-green/30 bg-primary-green/5 shrink-0 relative z-20">
+              <div className="flex items-center gap-4">
+                <div className="p-2 border border-primary-green bg-black/50">
+                    <Settings className="text-primary-green animate-spin-slow" size={20} />
+                </div>
+                <div className="flex flex-col leading-none">
+                    <span className="font-header font-black text-xl text-primary-green tracking-widest">
+                    SYSTEM_SETTINGS
+                    </span>
+                    <span className="text-[9px] font-mono text-primary-green-dim tracking-[0.3em] opacity-70">
+                        ACCESS_LEVEL: ADMIN
+                    </span>
+                </div>
               </div>
               <button 
                 onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }}
@@ -4758,8 +5031,14 @@ export const SettingsModal = () => {
               </button>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                <div className="w-64 border-r border-primary-green/30 flex flex-col bg-black/50">
+            {/* MAIN LAYOUT */}
+            <div className="flex-1 flex overflow-hidden relative z-10">
+                
+                {/* Background Dots (Scoped to Body) */}
+                <DotGridBackground className="opacity-10" />
+
+                {/* SIDEBAR */}
+                <div className="w-16 md:w-64 border-r border-primary-green/30 flex flex-col bg-black/40 relative z-10">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
@@ -4769,26 +5048,28 @@ export const SettingsModal = () => {
                             }}
                             onMouseEnter={() => AudioSystem.playHover()}
                             className={clsx(
-                                "flex items-center gap-3 px-6 py-4 text-sm font-bold tracking-wider transition-all border-l-4",
+                                "group flex items-center gap-4 px-4 md:px-6 py-5 text-sm font-bold tracking-wider transition-all relative overflow-hidden",
                                 activeTab === tab.id
-                                    ? "bg-primary-green/10 text-primary-green border-primary-green"
-                                    : "border-transparent text-primary-green-dim hover:text-primary-green hover:bg-primary-green/5"
+                                    ? "bg-primary-green/10 text-primary-green"
+                                    : "text-primary-green-dim hover:text-primary-green hover:bg-primary-green/5"
                             )}
                         >
-                            <tab.icon size={18} />
-                            {tab.label}
+                            {activeTab === tab.id && (
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-green shadow-[0_0_10px_#78F654]" />
+                            )}
+                            <tab.icon size={20} className={activeTab === tab.id ? "drop-shadow-[0_0_5px_rgba(120,246,84,0.5)]" : ""} />
+                            <span className="hidden md:block group-hover:translate-x-1 transition-transform">{tab.label}</span>
                         </button>
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-                    <div className="absolute inset-0 pointer-events-none opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary-green/20 via-black to-black" />
-                    
-                    <div className="relative z-10 w-full h-full">
+                {/* CONTENT AREA */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black z-10">
+                    <div className="relative z-10 w-full h-full max-w-3xl mx-auto">
                         {activeTab === 'SOUND' && <SoundTab />}
                         
                         {activeTab === 'GRAPHICS' && (
-                            <div className="max-w-xl mx-auto pt-8">
+                            <div className="max-w-xl mx-auto pt-8 animate-in fade-in slide-in-from-bottom-4">
                                 <GpuConfigPanel />
                                 <div className="mt-6 p-4 border border-primary-green/30 bg-primary-green/5 text-xs font-mono text-primary-green-dim">
                                     <p className="mb-2 font-bold text-primary-green">&gt; PROFILE_DETAILS:</p>
@@ -4801,22 +5082,32 @@ export const SettingsModal = () => {
                         )}
 
                         {activeTab === 'SYSTEM' && (
-                            <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono">
+                            <div className="flex flex-col items-center justify-center h-64 text-primary-green-dim font-mono animate-in fade-in zoom-in-95">
+                                <Cpu size={48} className="mb-4 opacity-50" />
                                 <span className="animate-pulse">[ MODULE_OFFLINE ]</span>
+                                <span className="text-[10px] mt-2 opacity-50">WAITING FOR KERNEL UPDATE...</span>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="px-6 py-2 bg-black border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0">
-              <div className="flex gap-4">
+            {/* FOOTER */}
+            <div className="px-6 py-2 bg-black/80 border-t border-primary-green/30 flex justify-between items-center text-[10px] font-mono text-primary-green-dim shrink-0 relative z-20">
+              <div className="flex gap-6">
                   <span className="flex items-center gap-2">
-                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green">ESC</span> 
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green bg-primary-green/5">ESC</span> 
                       CLOSE_MENU
                   </span>
+                  <span className="hidden md:flex items-center gap-2">
+                      <span className="border border-primary-green/30 px-1.5 py-0.5 rounded text-primary-green bg-primary-green/5">~</span> 
+                      DEBUG_CONSOLE
+                  </span>
               </div>
-              <div className="opacity-50">FIRMWARE v2.0.4</div>
+              <div className="flex items-center gap-2 opacity-50">
+                  <div className="w-2 h-2 rounded-full bg-primary-green animate-pulse" />
+                  ONLINE
+              </div>
             </div>
           </motion.div>
         </div>
@@ -4964,9 +5255,8 @@ export const AboutModal = () => {
 =====================================
 FILE: ./src/features/intro/atoms/CoreHeader.tsx
 =====================================
-import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldAlert, Cpu, Unlock, Lock, Skull } from 'lucide-react';
+import { ShieldAlert, Unlock, Lock, Skull } from 'lucide-react';
 
 interface CoreHeaderProps {
   step: number;
@@ -4977,18 +5267,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
   const isBypass = step === 4;
   const isDecrypted = step === 5;
   const isCaution = step >= 6;
-
-  const [showCpu, setShowCpu] = useState(false);
-
-  useEffect(() => {
-    if (step === 5) {
-      setShowCpu(false);
-      const timer = setTimeout(() => {
-        setShowCpu(true);
-      }, 700); 
-      return () => clearTimeout(timer);
-    }
-  }, [step]);
 
   let borderColor = "border-primary-green/30";
   let bgColor = "bg-primary-green/10";
@@ -5025,7 +5303,9 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            {isUnsafe ? (
+            
+            {/* STEP 3: UNSAFE (RED SHIELD) */}
+            {isUnsafe && (
                 <motion.div 
                     key="unsafe"
                     initial={{ scale: 0 }} 
@@ -5035,21 +5315,56 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 >
                     <ShieldAlert size={18} className="text-critical-red" />
                 </motion.div>
-            ) : isBypass ? (
+            )}
+
+            {/* STEP 4: BYPASSING (PURPLE CLOSED LOCK) */}
+            {isBypass && (
                 <motion.div 
                     key="bypass"
-                    initial={{ opacity: 0, scale: 0.8 }} 
-                    animate={{ opacity: 1, scale: 1.1 }} 
-                    exit={{ opacity: 0, scale: 0, transition: { duration: 0.2, repeat: 0 } }}
-                    transition={{ repeat: Infinity, repeatType: "reverse", duration: 0.8 }}
+                    initial={{ scale: 0.8, opacity: 0 }} 
+                    animate={{ 
+                        scale: [1, 1.1, 1], 
+                        opacity: 1,
+                        x: [-1, 1, -1, 1, 0], // Shake
+                        filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
+                    }} 
+                    exit={{ scale: 0, transition: { duration: 0.1 } }}
+                    transition={{ 
+                        scale: { repeat: Infinity, duration: 0.5 },
+                        x: { repeat: Infinity, duration: 0.1 } // Fast shake
+                    }}
                 >
-                     <Unlock size={18} className="text-latent-purple-light" />
+                     <Lock size={18} className="text-latent-purple-light" />
                 </motion.div>
-            ) : isCaution ? (
+            )}
+
+            {/* STEP 5: DECRYPTED (GREEN OPEN LOCK) */}
+            {isDecrypted && (
+                <motion.div 
+                    key="unlocked"
+                    initial={{ scale: 0.5, opacity: 0, rotate: -15 }} 
+                    animate={{ 
+                        scale: [1.5, 1], 
+                        opacity: 1, 
+                        rotate: 0,
+                        filter: ["drop-shadow(0 0 0px #78F654)", "drop-shadow(0 0 10px #78F654)", "drop-shadow(0 0 0px #78F654)"]
+                    }} 
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ 
+                        default: { type: "spring", bounce: 0.5, duration: 0.4 },
+                        filter: { type: "tween", duration: 0.4, ease: "easeInOut" }
+                    }}
+                >
+                     <Unlock size={18} className="text-primary-green" strokeWidth={3} />
+                </motion.div>
+            )}
+
+            {/* STEP 6: CAUTION (SKULL) */}
+            {isCaution && (
                 <motion.div 
                     key="caution"
-                    initial={{ scale: 0, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }}
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1 }}
                 >
                     <motion.div
                        animate={{
@@ -5062,29 +5377,10 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                          <Skull size={18} />
                     </motion.div>
                 </motion.div>
-            ) : isDecrypted ? (
-                !showCpu ? (
-                    <motion.div 
-                        key="locked"
-                        initial={{ scale: 1.5, opacity: 0 }} 
-                        animate={{ scale: 1, opacity: 1 }} 
-                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
-                        transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    >
-                         <Lock size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                ) : (
-                    <motion.div 
-                        key="cpu"
-                        initial={{ scale: 0, rotate: -45 }} 
-                        animate={{ scale: 1, rotate: 0 }} 
-                        exit={{ scale: 0, opacity: 0, transition: { duration: 0.2 } }}
-                        transition={{ duration: 0.4, ease: "backOut" }}
-                    >
-                         <Cpu size={18} className="text-primary-green drop-shadow-[0_0_8px_rgba(120,246,84,0.8)]" />
-                    </motion.div>
-                )
-            ) : (
+            )}
+
+            {/* LOADING SPINNER (STEPS 0-2) */}
+            {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"
                     initial={{ opacity: 0 }} 
@@ -5105,6 +5401,8 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
 =====================================
 FILE: ./src/features/intro/atoms/BootHeader.tsx
 =====================================
+import { motion } from 'framer-motion';
+
 interface BootHeaderProps {
   step: number;
 }
@@ -5112,11 +5410,13 @@ interface BootHeaderProps {
 export const BootHeader = ({ step }: BootHeaderProps) => {
   const isUnsafe = step === 3;
   const isBypass = step === 4;
-  const isSecure = step >= 5;
+  const isDecrypted = step === 5;
+  const isCaution = step >= 6;
 
   let color = "text-primary-green-dim";
   let statusText = "ESTABLISHING...";
-  let bgClass = "bg-primary-green/5";
+  
+  let bgClass = "bg-primary-green/5 border-primary-green/20";
   
   if (isUnsafe) {
       color = "text-critical-red";
@@ -5126,16 +5426,20 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       color = "text-latent-purple-light";
       statusText = "INJECTING_PAYLOAD";
       bgClass = "bg-latent-purple/10 border-latent-purple/30";
-  } else if (isSecure) {
+  } else if (isDecrypted) {
       color = "text-primary-green";
       statusText = "UPLINK_STABLE";
       bgClass = "bg-primary-green/10 border-primary-green/30";
+  } else if (isCaution) {
+      color = "text-alert-yellow";
+      statusText = "CAUTION_ADVISED";
+      bgClass = "bg-alert-yellow/10 border-alert-yellow/30";
   } else if (step >= 1) {
       statusText = "HANDSHAKING...";
   }
 
   return (
-    <div className={`flex shrink-0 items-center justify-between border-b border-white/10 ${bgClass} px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300`}>
+    <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300 ${bgClass}`}>
       <div className="flex flex-col leading-none gap-1.5 mt-0.5">
           <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
             BOOT_LOADER.SYS
@@ -5144,28 +5448,85 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       </div>
       
       <div className="flex gap-1 items-end h-3">
-        {[1, 2, 3, 4].map(i => {
-           let heightClass = "h-1";
-           let animClass = "";
-           let barColor = isUnsafe ? "bg-critical-red" : isBypass ? "bg-latent-purple-light" : "bg-primary-green";
-           
-           if (isUnsafe) {
-               heightClass = i % 2 === 0 ? "h-3" : "h-1";
-               animClass = "animate-pulse";
+        {[0, 1, 2, 3].map(i => {
+           // --- STATIC COLORS ---
+           let barClass = "bg-primary-green";
+           if (isUnsafe) barClass = "bg-critical-red";
+           else if (isBypass) barClass = "bg-latent-purple-light";
+           else if (isCaution) barClass = "bg-alert-yellow";
+
+           // --- ANIMATION LOGIC ---
+           const isPulseActive = isDecrypted || isCaution; 
+           const pulseHex = isCaution ? "#eae747" : "#78F654";
+
+           let animate = {};
+           let transition = {};
+           let initialHeight = "0.125rem"; // Default tiny
+
+           if (isPulseActive) {
+               // 1. Decrypted/Caution Wave (Unchanged)
+               initialHeight = "0.5rem";
+               animate = {
+                   height: ["0.25rem", "0.75rem", "0.25rem"],
+                   opacity: [0.5, 1.0, 0.5],
+                   backgroundColor: pulseHex,
+                   boxShadow: [`0 0 0px ${pulseHex}`, `0 0 4px ${pulseHex}`, `0 0 0px ${pulseHex}`]
+               };
+               transition = {
+                   duration: 1.2,
+                   repeat: Infinity,
+                   ease: "easeInOut",
+                   delay: i * 0.15 
+               };
+           } else if (isUnsafe) {
+               // 2. Unsafe: Slow Communicative Pulse (Fill/Unfill)
+               // All bars breathe together to signal a specific error code feel
+               initialHeight = "0.25rem";
+               animate = {
+                   height: ["0.25rem", "0.75rem", "0.25rem"], // Fill and Unfill
+                   opacity: [0.5, 1.0, 0.5]
+               };
+               transition = {
+                   duration: 1.5, // Slow
+                   repeat: Infinity,
+                   ease: "easeInOut"
+               };
            } else if (isBypass) {
-               heightClass = (step + i) % 2 === 0 ? "h-3" : "h-2";
-           } else if (isSecure) {
-               heightClass = "h-3"; 
+               // 3. Bypass: Piston Effect
+               const isEven = i % 2 === 0;
+               initialHeight = isEven ? "0.75rem" : "0.5rem";
+               animate = {
+                   height: isEven ? ["0.75rem", "0.5rem"] : ["0.5rem", "0.75rem"],
+                   opacity: [0.7, 1.0]
+               };
+               transition = {
+                   duration: 0.8,
+                   repeat: Infinity,
+                   repeatType: "reverse",
+                   ease: "easeInOut"
+               };
            } else {
-               heightClass = step >= (i-1) ? "h-2" : "h-0.5";
-               animClass = step >= (i-1) ? "animate-pulse" : "";
+               // 4. Handshake: Sequential Fill
+               // Strictly show bar based on step index (0, 1, 2)
+               const isActive = step >= i; 
+               
+               if (isActive) {
+                   initialHeight = "0.5rem";
+                   animate = { opacity: [0.5, 1.0, 0.5] }; // Gentle breathe once active
+                   transition = { duration: 2.0, repeat: Infinity, ease: "easeInOut" };
+               } else {
+                   initialHeight = "0.125rem";
+                   animate = { opacity: 0.2 }; // Dim inactive
+               }
            }
 
            return (
-               <div 
+               <motion.div 
                  key={i} 
-                 className={`w-1 rounded-sm transition-all duration-300 ${barColor} ${animClass} ${heightClass}`} 
-                 style={{ opacity: isSecure ? 1 : 0.7 }} 
+                 className={`w-1 rounded-sm ${barClass}`}
+                 initial={{ height: initialHeight }}
+                 animate={animate}
+                 transition={transition}
                />
            );
         })}
@@ -5338,7 +5699,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="fixed inset-0 z-[100] font-mono outline-none cursor-auto overflow-y-auto overflow-x-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black"
+      className={clsx(
+          "fixed inset-0 z-[100] font-mono outline-none cursor-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+          // UPDATED: Force hidden overflow when breaching starts to prevent scrollbar flash
+          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
+      )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -7333,11 +7698,12 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu, Database, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';
@@ -7475,38 +7841,75 @@ export const DebugOverlay = () => {
       );
   }
 
+  // --- MINI MODE HUD ---
   if (isDebugMinimized) {
       return (
-        <div className="fixed top-1/2 -translate-y-1/2 left-0 z-[10000] p-2 pointer-events-auto">
-            <div className="bg-black/90 border border-primary-green/30 p-3 rounded-r shadow-[0_0_15px_rgba(0,255,65,0.1)] flex flex-col gap-2 min-w-[140px] pointer-events-auto cursor-default">
-                <div className="flex items-center justify-between border-b border-primary-green/20 pb-1 mb-1">
-                    <span className="text-[10px] font-bold text-primary-green tracking-wider">DEBUG_LIVE</span>
-                    <button 
-                        onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
-                        onMouseEnter={() => AudioSystem.playHover()}
-                        className="text-primary-green hover:text-white bg-white/10 p-1 rounded hover:bg-white/20 transition-colors"
-                    >
-                        <Maximize2 size={12} />
-                    </button>
+        <div className="fixed top-20 left-4 z-[10000] pointer-events-none">
+            <div className="bg-black/90 backdrop-blur-md border border-primary-green/30 p-4 shadow-[0_0_20px_rgba(0,0,0,0.5)] flex flex-col gap-3 min-w-[200px] pointer-events-auto transition-all duration-300 hover:border-primary-green/60 hover:shadow-[0_0_30px_rgba(0,255,65,0.15)] group">
+                
+                {/* Header Row */}
+                <div className="flex items-center justify-between border-b border-primary-green/20 pb-2">
+                    <div className="flex items-center gap-2">
+                        <Activity size={12} className="text-primary-green animate-pulse" />
+                        <span className="text-[10px] font-bold text-primary-green tracking-widest">TELEMETRY_LIVE</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                        <button 
+                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: true }); AudioSystem.playSound('ui_menu_open'); }} 
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="text-primary-green-dim hover:text-white bg-white/5 p-1 rounded hover:bg-white/10 transition-colors"
+                            title="Maximize"
+                        >
+                            <Maximize2 size={12} />
+                        </button>
+                        <button 
+                            onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
+                            onMouseEnter={() => AudioSystem.playHover()}
+                            className="text-critical-red hover:text-white bg-critical-red/10 p-1 rounded hover:bg-critical-red transition-colors"
+                            title="Close"
+                        >
+                            <X size={12} />
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Activity size={10} /> FPS</span><span className="text-primary-green font-bold">{stats.fps}</span></div>
-                <div className="flex items-center justify-between text-[10px] font-mono text-primary-green-dim"><span className="flex items-center gap-1"><Cpu size={10} /> ENT</span><span className="text-primary-green font-bold">{stats.active}</span></div>
-                <button 
-                    onClick={() => { useStore.setState({ isDebugMinimized: false, isDebugOpen: false }); AudioSystem.playSound('ui_menu_close'); }} 
-                    onMouseEnter={() => AudioSystem.playHover()}
-                    className="text-[9px] bg-critical-red/10 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black py-1.5 uppercase font-bold transition-colors w-full flex justify-center"
-                >
-                    CLOSE_DEBUG
-                </button>
+
+                {/* Big Stats Row */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col">
+                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">FrameRate</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-header font-black text-primary-green leading-none">{stats.fps}</span>
+                            <span className="text-[9px] font-bold text-primary-green/50">FPS</span>
+                        </div>
+                    </div>
+                    <div className="flex flex-col border-l border-white/10 pl-4">
+                        <span className="text-[9px] font-mono text-primary-green-dim uppercase tracking-wider mb-0.5">Entities</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-header font-black text-service-cyan leading-none">{stats.active}</span>
+                            <span className="text-[9px] font-bold text-service-cyan/50">OBJ</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Status Footer */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[9px] font-mono text-primary-green-dim/60">
+                    <span className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-primary-green rounded-full shadow-[0_0_5px_#78F654] animate-pulse" />
+                        RUNNING
+                    </span>
+                    <span>POOL: {stats.pooled}</span>
+                </div>
             </div>
         </div>
       );
   }
 
+  // --- FULL DEBUG MENU ---
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-3xl bg-black border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.2)] flex flex-col h-[600px] overflow-hidden relative">
-        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0">
+        <div className="h-10 border-b border-primary-green/50 bg-primary-green/10 flex items-center justify-center relative px-4 shrink-0 z-20">
           <div className="flex items-center gap-2"><Terminal size={16} /><span className="font-bold tracking-widest">KERNEL_ROOT_ACCESS // DEBUG_SUITE</span></div>
           <div className="absolute right-4 flex items-center gap-2">
              <button 
@@ -7525,8 +7928,12 @@ export const DebugOverlay = () => {
              </button>
           </div>
         </div>
-        <div className="flex flex-1 min-h-0">
-          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col">
+        
+        <div className="flex flex-1 min-h-0 relative z-10">
+          {/* Dots restricted to Body */}
+          <DotGridBackground className="opacity-10" />
+
+          <div className="w-48 border-r border-primary-green/30 bg-black/50 flex flex-col relative z-20">
             {TABS.map(tab => (
               <button 
                 key={tab.id} 
@@ -7538,14 +7945,14 @@ export const DebugOverlay = () => {
               </button>
             ))}
           </div>
-          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
+          <div className="flex-1 p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black relative z-20">
             {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
             {activeTab === 'STATS' && <StatsTab stats={stats} />}
             {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
           </div>
         </div>
-        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim">
+        <div className="h-6 bg-primary-green/5 border-t border-primary-green/30 flex items-center px-4 text-[9px] text-primary-green-dim z-20">
           <span>ROOT_ACCESS_GRANTED // EVENTS_FILTERED</span>
         </div>
       </div>
@@ -9238,7 +9645,8 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   // ==========================================
   // AMBIENCE
   // ==========================================
-  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.05, pitchVariance: 0 },
+  // UPDATED: Volume increased from 0.05 to 0.24 (Natural Source Level)
+  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0 },
 
   // ==========================================
   // SYNTHESIS LAB (RENAMED PROTOS)
@@ -13477,6 +13885,10 @@ export class PlayerSystem implements IGameSystem {
 
     for (const e of enemies) {
       if (!e.active) continue;
+      
+      // UPDATED: Ignore Bullets (Hunter Orbs, etc.)
+      if (e.hasTag(Tag.BULLET)) continue;
+
       const state = e.getComponent<StateComponent>('State');
       if (state && state.current === 'SPAWN') continue;
 
@@ -14481,6 +14893,10 @@ export class TargetingSystem implements IGameSystem {
 
       for (const e of enemies) {
           if (!e.active) continue;
+          
+          // UPDATED: Ignore Enemy Projectiles
+          if (e.hasTag(Tag.BULLET)) continue;
+
           const t = e.getComponent<TransformComponent>('Transform');
           if (!t) continue;
           
