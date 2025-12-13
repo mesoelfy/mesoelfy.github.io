@@ -15,6 +15,8 @@ import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
+import { useDeviceType } from '@/game/hooks/useDeviceType';
+import { useStore } from '@/core/store/useStore';
 
 interface Props {
   onComplete: () => void;
@@ -25,9 +27,12 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mainStackRef = useRef<HTMLDivElement>(null);
+  
+  const device = useDeviceType();
+  const { setBootState, setIntroDone } = useStore();
 
   const { 
-    step, isBreaching, showGpuPanel, handleInitialize, logsToShow,
+    step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
     showMatrix, showPayloadWindow, showWarningBox, showButton
   } = useBootSequence({ onComplete, onBreachStart });
 
@@ -40,12 +45,25 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [showGpuPanel]);
 
+  // Wrapper to intercept initialization
+  const handleWrapperClick = () => {
+      // IF MOBILE PHONE (Not Tablet), trigger Lockdown
+      if (device === 'mobile') {
+          AudioSystem.init();
+          AudioSystem.playSound('ui_error'); // Rejection sound
+          setIntroDone(true);
+          setBootState('mobile_lockdown');
+      } else {
+          // Standard Desktop Flow
+          coreInitialize();
+      }
+  };
+
   return (
     <motion.div 
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      // UPDATE: overflow-x-hidden ensures no horizontal scroll even if content is 1px too wide
       className="fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-hide overflow-y-auto overflow-x-hidden bg-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
@@ -131,13 +149,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                 boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                             }}
                             transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                            // UPDATE: Tighter padding (px-3), auto width, center alignment to fix cut-off on 360px
                             className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
                         >
-                            {/* Icons scale down on mobile */}
                             <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
                             
-                            {/* Text scales down (text-[9px]) and allows tight fit */}
                             <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">
                                 UNSAFE CONNECTION DETECTED
                             </span>
@@ -149,7 +164,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         {showButton && (
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
                             <button 
-                            onClick={handleInitialize}
+                            onClick={handleWrapperClick}
                             onMouseEnter={() => AudioSystem.playHover()}
                             className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                             >

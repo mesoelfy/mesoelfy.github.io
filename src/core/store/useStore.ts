@@ -40,7 +40,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
-type BootState = 'standby' | 'active' | 'sandbox';
+type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
 type SandboxView = 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
 
@@ -138,7 +138,7 @@ export const useStore = create<AppState>()(
 
       setBootState: (bs) => set({ 
           bootState: bs,
-          isBreaching: bs === 'active' ? false : get().isBreaching 
+          isBreaching: bs === 'active' || bs === 'mobile_lockdown' ? false : get().isBreaching 
       }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),

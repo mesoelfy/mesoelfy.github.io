@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 12 14:51:28 CST 2025
+Generated on: Fri Dec 12 21:04:15 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -249,6 +249,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   └── globals.css
 │   └── ui
 │       ├── atoms
+│       │   ├── ActionButton.tsx
 │       │   ├── CustomCursor.tsx
 │       │   ├── DotGridBackground.tsx
 │       │   ├── GlassPanel.tsx
@@ -276,11 +277,12 @@ PROJECT DIRECTORY STRUCTURE:
 │       └── overlays
 │           ├── ErrorBoundary.tsx
 │           ├── GlobalBackdrop.tsx
-│           └── ModalContainer.tsx
+│           ├── ModalContainer.tsx
+│           └── RotationLock.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-67 directories, 205 files
+67 directories, 207 files
 
 =====================================
 FILE: ./next.config.js
@@ -1977,7 +1979,8 @@ export const VirtualJoystick = () => {
   };
 
   return (
-    <div className="fixed bottom-8 right-8 w-32 h-32 z-[90] touch-none select-none">
+    // UPDATE: Moved to bottom-left (left-8)
+    <div className="fixed bottom-8 left-8 w-32 h-32 z-[90] touch-none select-none">
       {/* Base */}
       <div 
         className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
@@ -2020,6 +2023,93 @@ export const DotGridBackground = ({ className, color = '#15530A' }: Props) => (
     }} 
   />
 );
+
+
+=====================================
+FILE: ./src/ui/atoms/ActionButton.tsx
+=====================================
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { Crosshair } from 'lucide-react';
+import { ServiceLocator } from '@/game/core/ServiceLocator';
+
+export const ActionButton = () => {
+  const [pressed, setPressed] = useState(false);
+
+  const handleDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setPressed(true);
+    AudioSystem.playClick();
+    
+    // LOGIC: Simulate a click at the current virtual cursor position
+    try {
+        const input = ServiceLocator.getInputService();
+        const cursor = input.getCursor(); // This is in World Units (0,0 center)
+        
+        // We need Screen Coordinates for document.elementFromPoint
+        // Convert World (0,0) -> Screen (w/2, h/2)
+        // Note: ZOOM is 40 in GameOverlay
+        const ZOOM = 40;
+        const screenX = (cursor.x * ZOOM) + (window.innerWidth / 2);
+        // Invert Y: World Y+ is up, Screen Y+ is down
+        const screenY = -(cursor.y * ZOOM) + (window.innerHeight / 2);
+        
+        // Find element at that position
+        const el = document.elementFromPoint(screenX, screenY) as HTMLElement;
+        
+        if (el) {
+            // Trigger click
+            el.click();
+            
+            // Visual feedback on the element?
+            el.classList.add('active:scale-95');
+            setTimeout(() => el.classList.remove('active:scale-95'), 150);
+        }
+    } catch (err) {
+        console.warn("Action Button Failed:", err);
+    }
+  };
+
+  const handleUp = () => {
+    setPressed(false);
+  };
+
+  return (
+    <div className="fixed bottom-8 right-8 z-[90] touch-none select-none">
+      <motion.button
+        onPointerDown={handleDown}
+        onPointerUp={handleUp}
+        onPointerLeave={handleUp}
+        animate={{ scale: pressed ? 0.9 : 1.0 }}
+        className="w-24 h-24 rounded-full border-2 border-primary-green/50 bg-black/50 backdrop-blur-sm flex items-center justify-center relative group active:border-primary-green active:bg-primary-green/20 transition-colors cursor-pointer"
+      >
+        {/* Inner Ring */}
+        <div className="absolute inset-2 rounded-full border border-primary-green/20" />
+        
+        {/* Icon */}
+        <Crosshair 
+            size={32} 
+            className={`text-primary-green transition-all duration-100 ${pressed ? 'scale-90 opacity-100' : 'opacity-80'}`} 
+        />
+
+        {/* Pulse Effect */}
+        {pressed && (
+            <motion.div 
+                initial={{ scale: 1, opacity: 0.5 }}
+                animate={{ scale: 1.5, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 rounded-full bg-primary-green"
+            />
+        )}
+      </motion.button>
+      
+      <div className="absolute -top-6 w-full text-center text-[10px] text-primary-green/50 font-mono tracking-widest">
+          [ ACT ]
+      </div>
+    </div>
+  );
+};
 
 
 =====================================
@@ -2613,6 +2703,98 @@ export const GlobalBackdrop = () => {
         />
       )}
     </AnimatePresence>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/overlays/RotationLock.tsx
+=====================================
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Smartphone, RotateCcw } from 'lucide-react';
+import { useStore } from '@/core/store/useStore';
+
+export const RotationLock = () => {
+  const { setSimulationPaused, bootState } = useStore();
+
+  // We rely on CSS to show/hide this, but we need JS to pause the game.
+  useEffect(() => {
+    const checkOrientation = () => {
+      // If we are in the intro (standby), we never pause via this lock
+      if (bootState === 'standby') {
+        setSimulationPaused(false);
+        return;
+      }
+
+      const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+      // Only care if it's a mobile-sized device
+      if (isPortrait && window.innerWidth < 768) {
+        setSimulationPaused(true);
+      } else {
+        setSimulationPaused(false);
+      }
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, [setSimulationPaused, bootState]);
+
+  // Don't render anything if we are still in the intro sequence
+  if (bootState === 'standby') return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden">
+      
+      {/* ANIMATION CONTAINER */}
+      <div className="relative w-32 h-32 flex items-center justify-center">
+        {/* The Phone */}
+        <motion.div
+          animate={{ rotate: -90 }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 2.5, 
+            ease: "easeInOut", 
+            repeatDelay: 1 
+          }}
+          className="relative z-10"
+        >
+          <Smartphone size={64} className="text-primary-green drop-shadow-[0_0_15px_rgba(120,246,84,0.5)]" strokeWidth={1.5} />
+        </motion.div>
+
+        {/* The Arrow Hint */}
+        <motion.div
+          animate={{ opacity: [0, 1, 0], rotate: -90 }}
+          transition={{ 
+            repeat: Infinity, 
+            duration: 2.5, 
+            ease: "easeInOut", 
+            repeatDelay: 1 
+          }}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+           <RotateCcw size={100} className="text-primary-green-dim/30" />
+        </motion.div>
+      </div>
+
+      {/* TEXT */}
+      <div className="text-center space-y-2">
+        <h2 className="text-xl font-header font-black text-primary-green tracking-widest uppercase">
+          Orientation<br/>Lock
+        </h2>
+        <p className="text-xs font-mono text-primary-green-dim max-w-[200px] mx-auto leading-relaxed">
+          // SYSTEM_REQ:<br/>
+          PLEASE ROTATE DEVICE TO<br/>
+          LANDSCAPE MODE
+        </p>
+      </div>
+
+      {/* DECORATIVE LINES */}
+      <div className="absolute bottom-8 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-green/50 to-transparent opacity-50" />
+      <div className="absolute top-8 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-green/50 to-transparent opacity-50" />
+
+    </div>
   );
 };
 
@@ -3929,6 +4111,7 @@ import { SimulationHUD } from '@/features/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/features/meta/MetaManager'; 
+import { RotationLock } from '@/ui/overlays/RotationLock';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -3971,6 +4154,7 @@ export default function Home() {
     <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
       
       <MetaManager />
+      <RotationLock />
       <CustomCursor />
       <GlobalBackdrop />
       <DebugOverlay />
@@ -4009,78 +4193,81 @@ export default function Home() {
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />
 
-              {/* 
-                 LAYOUT FIX: FULL WIDTH SCROLL CONTAINER 
-                 Logic: If Game Over, lock scrolling (overflow-y-hidden). Otherwise allow auto.
-                 This prevents scrollbars from appearing when panels shatter and fall off-screen.
-              */}
               <div className={clsx(
                   "flex-1 min-h-0 relative w-full overflow-x-hidden scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
                   isGameOver ? "overflow-y-hidden" : "overflow-y-auto"
               )}>
                 
-                <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 min-h-full">
-                  <AnimatePresence>
-                    {!isZenMode && (
-                      <motion.div 
-                        className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
-                        initial="hidden"
-                        animate="visible"
-                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
-                        variants={{
-                          hidden: { opacity: 0 },
-                          visible: { 
-                            opacity: 1, 
-                            transition: { 
-                              staggerChildren: 0.3,
-                              delayChildren: 0.2 
-                            } 
-                          }
-                        }}
-                      >
-                        {/* IDENTITY COLUMN */}
-                        <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                          <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
-                            <IdentityHUD />
-                          </GlassPanel>
+                {/* 
+                    SCALING WRAPPER FOR MOBILE LANDSCAPE:
+                    - Only applies when in landscape mode on small screens.
+                    - Uses CSS zoom or scale to fit the desktop layout (1200px approx) into ~600-800px width.
+                    - This effectively "forces" the Desktop Grid Layout.
+                */}
+                <div className="w-full h-full origin-top-left landscape:scale-[0.5] landscape:w-[200%] landscape:h-[200%] lg:landscape:scale-100 lg:landscape:w-full lg:landscape:h-full">
+                    <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 min-h-full">
+                    <AnimatePresence>
+                        {!isZenMode && (
+                        <motion.div 
+                            className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
+                            initial="hidden"
+                            animate="visible"
+                            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                            variants={{
+                            hidden: { opacity: 0 },
+                            visible: { 
+                                opacity: 1, 
+                                transition: { 
+                                staggerChildren: 0.3,
+                                delayChildren: 0.2 
+                                } 
+                            }
+                            }}
+                        >
+                            {/* IDENTITY COLUMN */}
+                            <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                            <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
+                                <IdentityHUD />
+                            </GlassPanel>
 
-                          <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
-                             <SocialRow />
-                          </GlassPanel>
-                        </div>
-
-                        {/* CONTENT COLUMN */}
-                        <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                          <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
-                            <div className="w-full h-full flex items-center justify-center p-4">
-                              <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
-                                <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                                <button 
-                                  onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
-                                  onMouseEnter={() => AudioSystem.playHover()}
-                                  className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
-                                >
-                                  <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
-                                      [ ACCESS_TERMINAL ]
-                                  </span>
-                                </button>
-                              </div>
+                            <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
+                                <SocialRow />
+                            </GlassPanel>
                             </div>
-                          </GlassPanel>
 
-                          <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
-                            <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                               <LiveArtGrid />
+                            {/* CONTENT COLUMN */}
+                            <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                            <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
+                                <div className="w-full h-full flex items-center justify-center p-4">
+                                <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
+                                    <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+                                    <button 
+                                    onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
+                                    onMouseEnter={() => AudioSystem.playHover()}
+                                    className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
+                                    >
+                                    <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
+                                        [ ACCESS_TERMINAL ]
+                                    </span>
+                                    </button>
+                                </div>
+                                </div>
                             </GlassPanel>
 
-                            <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                               <HoloCommLog />
-                            </GlassPanel>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
+                                <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                                <LiveArtGrid />
+                                </GlassPanel>
+
+                                <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                                <HoloCommLog />
+                                </GlassPanel>
+                            </div>
+                            </div>
+                        </motion.div>
+                        )}
+                    </AnimatePresence>
+                    </div>
                 </div>
               </div>
               
@@ -4984,7 +5171,8 @@ export const AsciiRenderer = () => {
   }, [isHigh]); 
 
   return (
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[9px] md:text-[11px] shrink-0">
+    // UPDATE: text-[4px] ensures fit on 360px screens (Galaxy S8+)
+    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
       {renderedChars}
     </div>
   );
@@ -5080,7 +5268,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
 
   useEffect(() => {
     if (showGpuPanel && mainStackRef.current) {
-        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'auto' });
+        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'smooth' });
     }
   }, [showGpuPanel]);
 
@@ -5089,24 +5277,28 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className={clsx(
-        "fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-        isBreaching ? "overflow-hidden" : "overflow-auto"
-      )}
+      // UPDATE: overflow-x-hidden ensures no horizontal scroll even if content is 1px too wide
+      className="fixed inset-0 z-[100] font-mono outline-none cursor-none scrollbar-hide overflow-y-auto overflow-x-hidden bg-black"
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
 
-      <div className="min-h-full w-full flex p-8 lg:px-32 relative z-10">
+      <div className="min-h-full w-full flex items-center justify-center p-2 md:p-8 relative z-10">
         
         <motion.div 
             className={clsx(
-                "w-fit m-auto flex flex-col gap-4",
+                "flex flex-col gap-4 transition-all duration-500 ease-out",
+                "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
                 showGpuPanel && !isBreaching 
                     ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" 
-                    : "max-w-2xl"
+                    : ""
             )}
-            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { scale: 1, opacity: 1, filter: "blur(0px)" }}
-            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { opacity: 1, filter: "blur(0px)" }}
+            initial={{ opacity: 0 }}
+            transition={{ 
+                scale: { duration: 0.8, ease: "easeIn" }, 
+                opacity: { duration: 0.2, ease: "easeIn" }, 
+                filter: { duration: 0.2 } 
+            }}
         >
             
             {/* 1. GPU PANEL */}
@@ -5120,7 +5312,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         className="w-full lg:w-72 lg:col-start-1 lg:row-start-1 relative z-10 lg:justify-self-end order-2 lg:order-1"
                     >
                         <GpuConfigPanel />
-                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full">
+                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full hidden md:block">
                             &gt;&gt; CAN BE CHANGED LATER.
                         </div>
                     </motion.div>
@@ -5128,12 +5320,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             </AnimatePresence>
 
             {/* 2. MAIN TERMINAL */}
-            <div ref={mainStackRef} className="w-full max-w-2xl lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+            <div ref={mainStackRef} className="w-full lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
                 
                 {/* LOGS */}
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
-                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
                     <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
                         <DotGridBackground /> 
                         {logsToShow.map((line, i) => (
@@ -5160,8 +5351,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20"
                     >
                     <CoreHeader step={step} />
-                    {/* DOTS FIX: Injected into content wrapper, set to relative */}
-                    <div className="p-6 flex flex-col items-center gap-4 relative z-10">
+                    <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
                         <DotGridBackground />
                         <AsciiRenderer />
                         
@@ -5173,24 +5363,31 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                 boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"]
                             }}
                             transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                            className="relative border border-critical-red bg-critical-red/10 w-fit mx-auto flex items-center justify-center gap-4 py-2 px-6 select-none shrink-0"
+                            // UPDATE: Tighter padding (px-3), auto width, center alignment to fix cut-off on 360px
+                            className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
                         >
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
-                            <span className="text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-3xl text-critical-red">⚠</motion.span>
+                            {/* Icons scale down on mobile */}
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
+                            
+                            {/* Text scales down (text-[9px]) and allows tight fit */}
+                            <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">
+                                UNSAFE CONNECTION DETECTED
+                            </span>
+                            
+                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
                         </motion.div>
                         )}
 
                         {showButton && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
                             <button 
                             onClick={handleInitialize}
                             onMouseEnter={() => AudioSystem.playHover()}
-                            className="group relative px-8 py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
+                            className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-none"
                             >
                             <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                            <span className="relative z-10 font-mono font-bold text-xl md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap">
-                                [ INITIALIZE_SYSTEM.EXE ]
+                            <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">
+                                [ INITIALIZE_SYSTEM ]
                             </span>
                             </button>
                         </motion.div>
@@ -8030,20 +8227,28 @@ import { ScreenShaker } from './components/ScreenShaker';
 import { GalleryStage } from './components/GalleryStage';
 import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
+import { ActionButton } from '@/ui/atoms/ActionButton';
 import { useStore } from '@/core/store/useStore';
 import { useEffect, useState } from 'react';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
-  const [isTouch, setIsTouch] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
       setMounted(true);
-      const onTouch = () => setIsTouch(true);
-      window.addEventListener('touchstart', onTouch, { once: true });
-      return () => window.removeEventListener('touchstart', onTouch);
+      // Robust Mobile/Touch Detection
+      const checkMobile = () => {
+        const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        setIsMobile(isCoarse || isTouch);
+      };
+      
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   if (!mounted) return null;
@@ -8078,7 +8283,13 @@ export const GameOverlay = () => {
           </Canvas>
         </div>
         
-        {isTouch && !isGallery && <VirtualJoystick />}
+        {/* Mobile Controls Layer */}
+        {isMobile && !isGallery && (
+            <>
+                <VirtualJoystick />
+                <ActionButton />
+            </>
+        )}
     </>
   );
 };
@@ -10820,8 +11031,21 @@ export let ActiveEngine: GameEngineCore | null = null;
 export const GameDirector = () => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
+  
+  // Track mobile state via ref for loop access
+  const isMobileRef = useRef(false);
 
   useEffect(() => {
+    const checkMobile = () => {
+        // Same robust check as GameOverlay
+        isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
+                              ('ontouchstart' in window) || 
+                              (navigator.maxTouchPoints > 0);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     const engine = GameBootstrapper();
     engineRef.current = engine;
     ActiveEngine = engine;
@@ -10845,6 +11069,7 @@ export const GameDirector = () => {
     }, 100);
 
     return () => {
+      window.removeEventListener('resize', checkMobile);
       clearInterval(refreshInterval);
       clearInterval(fastPoll);
       engine.teardown();
@@ -10867,9 +11092,15 @@ export const GameDirector = () => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          const x = (state.pointer.x * viewport.width) / 2;
-          const y = (state.pointer.y * viewport.height) / 2;
-          input.updateCursor(x, y);
+          
+          // INPUT LOGIC FIX:
+          // If on Mobile (pointer: coarse), IGNORE state.pointer.
+          // This forces the game to rely solely on the Joystick (which updates InputSystem directly).
+          if (!isMobileRef.current) {
+              const x = (state.pointer.x * viewport.width) / 2;
+              const y = (state.pointer.y * viewport.height) / 2;
+              input.updateCursor(x, y);
+          }
 
           // Render Loop
           engineRef.current.update(delta, state.clock.elapsedTime);

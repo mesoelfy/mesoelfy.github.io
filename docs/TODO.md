@@ -495,5 +495,18 @@ can we implement a "zoomed" magnifying glass view under the action button?
 launched bullet should have some squash and stretch to it instead of perfect circle chape.
 
 scroll bar should disappear after leaving intro - - - have modal pop up asking user to  - -- - if user is zoomed more than 100%, briefly pause with an arrow pointing where the Chrome magnifying glass is saying game works best at 100% or less defualt zoom)
-
+ 
 - add enemies that go after individual slots within a panel.
+
+- Mobile mode - - - hold up, you inspired me.
+
+Your first step looks great.
+
+Since we are approaching the gameplay differently, what if the user could still see 
+
+
+it's a different game? What if you could collapse panels so it is just the headers, and that's how you protect panels. But baddies will still get inside and you have to open them to squish them? It can be our new enemy type we haven't introduced yet.
+
+
+VIBE CODE
+    have the AI generate sound and visual assets for you. It will run better, help you mock up better, and you can always replace with human made assets later if you want. (show diamond/and SVG animation examples)
