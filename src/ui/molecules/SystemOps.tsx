@@ -1,8 +1,8 @@
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
-import { UpgradeOption } from '@/game/types/game.types';
+import { UpgradeOption } from '@/sys/types/game.types';
 
 const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
 

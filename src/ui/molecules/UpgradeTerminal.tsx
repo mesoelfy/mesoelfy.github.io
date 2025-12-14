@@ -1,9 +1,9 @@
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeOption } from '@/game/types/game.types';
+import { UpgradeOption } from '@/sys/types/game.types';
 
 const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
 

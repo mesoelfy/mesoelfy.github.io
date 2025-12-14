@@ -1,9 +1,9 @@
 import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from '../common/InstancedActor';
-import { IdentityComponent } from '@/game/components/data/IdentityComponent';
-import { StateComponent } from '@/game/components/data/StateComponent';
+import { IdentityData } from '@/sys/data/IdentityData';
+import { AIStateData } from '@/sys/data/AIStateData';
 import { AssetService } from '@/game/assets/AssetService';
 
 export const KamikazeRenderer = () => {
@@ -18,9 +18,9 @@ export const KamikazeRenderer = () => {
       maxCount={200}
       baseColor={GAME_THEME.enemy.kamikaze}
       colorSource="base"
-      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.KAMIKAZE}
+      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.KAMIKAZE}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<StateComponent>('State');
+          const state = e.getComponent<AIStateData>('State');
           const time = performance.now() * 0.001;
           obj.position.z = 5.0;
           

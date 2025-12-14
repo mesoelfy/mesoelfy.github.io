@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bomb, Skull } from 'lucide-react';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState } from 'react';
 

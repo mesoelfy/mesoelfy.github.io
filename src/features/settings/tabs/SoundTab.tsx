@@ -1,4 +1,4 @@
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { RangeSlider } from '../components/RangeSlider';
 import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
 import { AudioSystem } from '@/engine/audio/AudioSystem';

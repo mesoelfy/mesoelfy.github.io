@@ -1,11 +1,11 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { useGameStore } from '../store/useGameStore';
-import { useStore } from '@/core/store/useStore';
-import { InteractionSystem, RepairState } from '../systems/InteractionSystem'; 
-import { EntitySystem } from '../systems/EntitySystem'; // Note: This might be legacy import, safe to ignore type if unused
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
+import { InteractionSystem, RepairState } from '@/sys/systems/InteractionSystem'; 
+import { EntitySystem } from '@/sys/systems/EntitySystem'; // Note: This might be legacy import, safe to ignore type if unused
 import * as THREE from 'three';
 
 // GLOBAL REUSABLES (Outside Component)

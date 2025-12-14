@@ -7,7 +7,7 @@ import { GalleryStage } from './components/GalleryStage';
 import { RenderDirector } from './components/RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { ActionButton } from '@/ui/atoms/ActionButton';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { useEffect, useState, useLayoutEffect } from 'react';
 import { registerAllAssets } from './assets/AssetCatalog';
 

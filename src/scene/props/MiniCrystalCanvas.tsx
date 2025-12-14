@@ -5,7 +5,7 @@ import { Float, MeshDistortMaterial } from '@react-three/drei';
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 
 // CONSTANTS
 const COLORS = {

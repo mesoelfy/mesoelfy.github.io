@@ -1,7 +1,7 @@
 'use client';
 
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { SocialRow } from '@/ui/molecules/SocialRow';

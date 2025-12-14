@@ -1,5 +1,5 @@
-import { useStore } from '@/core/store/useStore';
-import { AUDIO_CONFIG } from '@/game/config/AudioConfig';
+import { useStore } from '@/sys/state/global/useStore';
+import { AUDIO_CONFIG } from '@/sys/config/AudioConfig';
 
 // Modules
 import { AudioContextManager } from './modules/AudioContextManager';

@@ -1,4 +1,4 @@
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 

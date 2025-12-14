@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
-import { useGameStore } from '@/game/store/useGameStore';
-import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 

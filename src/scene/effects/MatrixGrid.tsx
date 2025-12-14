@@ -2,8 +2,8 @@ import { Grid } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { useGameStore } from '@/game/store/useGameStore';
-import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
 
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);

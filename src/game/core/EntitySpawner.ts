@@ -4,7 +4,7 @@ import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '../data/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
-import { ArchetypeIDs } from '../config/Identifiers';
+import { ArchetypeIDs } from '@/sys/config/Identifiers';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;

@@ -1,9 +1,9 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '../core/ServiceLocator';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { AssetService } from '../assets/AssetService';
-import { ParticleSystem } from '../systems/ParticleSystem';
+import { ParticleSystem } from '@/sys/systems/ParticleSystem';
 
 export const ParticleRenderer = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);

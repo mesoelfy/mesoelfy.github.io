@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 
 export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isVisible: boolean, isBreaching: boolean, step: number) => {
   const stepRef = useRef(step);

@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/game/hooks/usePanelRegistry';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { Skull } from 'lucide-react';

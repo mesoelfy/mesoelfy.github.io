@@ -3,9 +3,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ActiveEngine } from './GameDirector';
 import { Tag } from '@/engine/ecs/types';
-import { TransformComponent } from '../components/data/TransformComponent';
-import { MotionComponent } from '../components/data/MotionComponent';
-import { LifetimeComponent } from '../components/data/LifetimeComponent';
+import { TransformData } from '@/sys/data/TransformData';
+import { MotionData } from '@/sys/data/MotionData';
+import { LifetimeData } from '@/sys/data/LifetimeData';
 import { GAME_THEME } from '../theme';
 
 const MAX_TRAILS = 500; 
@@ -58,9 +58,9 @@ export const ProjectileTrails = () => {
 
     for (const b of bullets) {
         if (count >= MAX_TRAILS) break;
-        const t = b.getComponent<TransformComponent>('Transform');
-        const m = b.getComponent<MotionComponent>('Motion');
-        const life = b.getComponent<LifetimeComponent>('Lifetime');
+        const t = b.getComponent<TransformData>('Transform');
+        const m = b.getComponent<MotionData>('Motion');
+        const life = b.getComponent<LifetimeData>('Lifetime');
         if (!t || !m || !life) continue;
         const isEnemy = b.hasTag(Tag.ENEMY);
         const trailWidth = isEnemy ? 1.0 : 0.4;

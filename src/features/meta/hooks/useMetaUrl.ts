@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 
 export const useMetaUrl = (bootLogMessage: string | null) => {
   const { bootState, isSimulationPaused, isBreaching, isZenMode } = useStore();

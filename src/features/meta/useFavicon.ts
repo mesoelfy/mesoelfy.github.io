@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
 

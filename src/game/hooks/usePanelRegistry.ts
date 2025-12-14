@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useGameStore } from '../store/useGameStore';
-import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
 
 export const usePanelRegistry = (id: string) => {
   const elementRef = useRef<HTMLDivElement>(null);

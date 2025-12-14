@@ -1,4 +1,4 @@
-import { SoundRecipe } from '@/game/config/AudioConfig';
+import { SoundRecipe } from '@/sys/config/AudioConfig';
 
 export class AudioSynthesizer {
   

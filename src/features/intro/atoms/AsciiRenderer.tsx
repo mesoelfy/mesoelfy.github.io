@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useStore } from '@/core/store/useStore';
-import { ASCII_TITLE } from '@/game/config/TextAssets';
+import { useStore } from '@/sys/state/global/useStore';
+import { ASCII_TITLE } from '@/sys/config/TextAssets';
 
 export const AsciiRenderer = () => {
   const graphicsMode = useStore((state) => state.graphicsMode);

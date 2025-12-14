@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { MobileBootstrapper } from '../core/MobileBootstrapper';
-import { GameEngineCore } from '../core/GameEngine';
+import { MobileBootstrapper } from '@/sys/services/MobileBootstrapper';
+import { GameEngineCore } from '@/sys/services/GameEngine';
 import { setActiveEngine } from './GameDirector';
 
 export const MobileGameDirector = () => {

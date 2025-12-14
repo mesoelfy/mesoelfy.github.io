@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { motion, AnimatePresence } from 'framer-motion';

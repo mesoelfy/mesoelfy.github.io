@@ -1,4 +1,4 @@
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { Clock, Cpu, Server, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
 

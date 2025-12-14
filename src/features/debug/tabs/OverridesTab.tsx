@@ -1,8 +1,8 @@
 import { Play, Sparkles, Trash2, Skull, RefreshCw, Crown, Ghost, Shield, Crosshair } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
-import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';

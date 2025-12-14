@@ -1,5 +1,5 @@
-import { useGameStore } from '@/game/store/useGameStore';
-import { useStore } from '@/core/store/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { clsx } from 'clsx';
 

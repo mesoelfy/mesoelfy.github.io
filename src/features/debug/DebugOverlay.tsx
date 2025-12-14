@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useStore } from '@/core/store/useStore';
-import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { TimeSystem } from '@/game/systems/TimeSystem';
+import { useStore } from '@/sys/state/global/useStore';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { TimeSystem } from '@/sys/systems/TimeSystem';
 import { Terminal, Box, Activity, Shield, MinusSquare, X, Play, PauseCircle, Power } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/engine/signals/GameEventBus';

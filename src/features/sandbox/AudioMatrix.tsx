@@ -1,4 +1,4 @@
-import { SOUND_METADATA, SoundCategory } from '@/game/config/SoundMetadata';
+import { SOUND_METADATA, SoundCategory } from '@/sys/config/SoundMetadata';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Volume2, Play, Activity, Music, Radio, Database, Monitor } from 'lucide-react';
 import { clsx } from 'clsx';

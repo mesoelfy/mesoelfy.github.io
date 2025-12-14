@@ -1,5 +1,5 @@
-import { useStore } from '@/core/store/useStore';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { useStore } from '@/sys/state/global/useStore';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Box, PlayCircle, Crosshair, ChevronRight, Fingerprint, Activity } from 'lucide-react';

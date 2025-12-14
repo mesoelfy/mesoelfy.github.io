@@ -4,7 +4,7 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from './AudioSystem';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
+import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;

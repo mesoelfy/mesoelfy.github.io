@@ -16,7 +16,7 @@ import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
 import { useDeviceType } from '@/game/hooks/useDeviceType';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 
 interface Props {
   onComplete: () => void;

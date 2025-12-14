@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './common/InstancedActor';
-import { IdentityComponent } from '../data/IdentityComponent';
+import { IdentityData } from '../data/IdentityData';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
@@ -32,7 +32,7 @@ export const DaemonBulletRenderer = () => {
       maxCount={50}
       filter={(e) => {
           if (e.hasTag(Tag.ENEMY)) return false;
-          const id = e.getComponent<IdentityComponent>('Identity');
+          const id = e.getComponent<IdentityData>('Identity');
           return id?.variant === 'DAEMON_SHOT';
       }}
       updateEntity={(e, obj) => {

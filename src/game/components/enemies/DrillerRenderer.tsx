@@ -1,13 +1,13 @@
 import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from '../common/InstancedActor';
-import { IdentityComponent } from '@/game/components/data/IdentityComponent';
-import { StateComponent } from '@/game/components/data/StateComponent';
-import { TransformComponent } from '@/game/components/data/TransformComponent'; 
+import { IdentityData } from '@/sys/data/IdentityData';
+import { AIStateData } from '@/sys/data/AIStateData';
+import { TransformData } from '@/sys/data/TransformData'; 
 import { AssetService } from '@/game/assets/AssetService';
 import { applyRotation } from '@/engine/math/RenderUtils';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import * as THREE from 'three';
 
 export const DrillerRenderer = () => {
@@ -26,10 +26,10 @@ export const DrillerRenderer = () => {
       baseColor={GAME_THEME.enemy.muncher}
       colorSource="base" 
       interactive={isMobile} // NEW: Pass the flag
-      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DRILLER}
+      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.DRILLER}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<StateComponent>('State');
-          const transform = e.getComponent<TransformComponent>('Transform');
+          const state = e.getComponent<AIStateData>('State');
+          const transform = e.getComponent<TransformData>('Transform');
           
           const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
           const spin = performance.now() * 0.001 * speed;

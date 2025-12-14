@@ -1,5 +1,5 @@
 import { ModalContainer } from '@/ui/overlays/ModalContainer';
-import feed from '@/data/feed.json';
+import feed from '@/sys/config/static/feed.json';
 import { ExternalLink } from 'lucide-react';
 
 export const FeedModal = () => {

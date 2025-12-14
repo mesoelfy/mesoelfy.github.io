@@ -1,5 +1,5 @@
 import { Cpu, Database, LayoutTemplate } from 'lucide-react';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 interface StatsTabProps {

@@ -1,7 +1,7 @@
 import { Box, ArrowRight, Zap } from 'lucide-react';
-import { useStore } from '@/core/store/useStore';
-import { useGameStore } from '@/game/store/useGameStore';
-import { ServiceLocator } from '@/game/core/ServiceLocator';
+import { useStore } from '@/sys/state/global/useStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { motion } from 'framer-motion';
 

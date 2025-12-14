@@ -1,6 +1,6 @@
 import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './common/InstancedActor';
-import { HealthComponent } from '../components/data/HealthComponent';
+import { HealthData } from '@/sys/data/HealthData';
 import { AssetService } from '../assets/AssetService';
 
 export const EnemyBulletRenderer = () => {
@@ -15,7 +15,7 @@ export const EnemyBulletRenderer = () => {
       maxCount={200}
       filter={(e) => e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-          const hp = e.getComponent<HealthComponent>('Health');
+          const hp = e.getComponent<HealthData>('Health');
           let scale = 1.0;
           
           if (hp) {

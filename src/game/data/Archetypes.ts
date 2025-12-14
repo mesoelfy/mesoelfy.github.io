@@ -1,7 +1,7 @@
-import { ENEMY_CONFIG } from '../config/EnemyConfig';
-import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
-import { ArchetypeIDs } from '../config/Identifiers';
+import { ENEMY_CONFIG } from '@/sys/config/EnemyConfig';
+import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
+import { PhysicsConfig, CollisionLayers } from '@/sys/config/PhysicsConfig';
+import { ArchetypeIDs } from '@/sys/config/Identifiers';
 import { Tag } from '@/engine/ecs/types';
 
 export interface EntityBlueprint {

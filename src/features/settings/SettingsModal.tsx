@@ -1,4 +1,4 @@
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Settings, Volume2, Monitor, Cpu } from 'lucide-react';

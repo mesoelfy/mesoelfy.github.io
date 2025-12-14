@@ -1,10 +1,10 @@
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
-import { EnemyTypes } from '../config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
-import { IdentityComponent } from '../data/IdentityComponent';
-import { StateComponent } from '../data/StateComponent';
+import { IdentityData } from '../data/IdentityData';
+import { AIStateData } from '../data/AIStateData';
 
 export const DaemonRenderer = () => {
   const geometry = useMemo(() => new THREE.OctahedronGeometry(0.6, 0), []);
@@ -24,9 +24,9 @@ export const DaemonRenderer = () => {
       geometry={geometry} 
       material={material} 
       maxCount={5}
-      filter={(e) => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.DAEMON}
+      filter={(e) => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.DAEMON}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<StateComponent>('State');
+          const state = e.getComponent<AIStateData>('State');
           
           // Reset color
           color.copy(baseColor);

@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { ShakeSystem } from '../systems/ShakeSystem';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { ShakeSystem } from '@/sys/systems/ShakeSystem';
 
 export const ScreenShaker = () => {
   const { camera } = useThree();

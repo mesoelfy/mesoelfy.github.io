@@ -1,10 +1,10 @@
 import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from '../common/InstancedActor';
-import { IdentityComponent } from '@/game/components/data/IdentityComponent';
-import { StateComponent } from '@/game/components/data/StateComponent';
-import { TransformComponent } from '@/game/components/data/TransformComponent'; 
+import { IdentityData } from '@/sys/data/IdentityData';
+import { AIStateData } from '@/sys/data/AIStateData';
+import { TransformData } from '@/sys/data/TransformData'; 
 import { AssetService } from '@/game/assets/AssetService';
 import { applyRotation } from '@/engine/math/RenderUtils';
 import * as THREE from 'three';
@@ -23,10 +23,10 @@ export const HunterRenderer = () => {
       maxCount={100}
       baseColor={GAME_THEME.enemy.hunter}
       colorSource="base"
-      filter={e => e.getComponent<IdentityComponent>('Identity')?.variant === EnemyTypes.HUNTER}
+      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.HUNTER}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<StateComponent>('State');
-          const transform = e.getComponent<TransformComponent>('Transform');
+          const state = e.getComponent<AIStateData>('State');
+          const transform = e.getComponent<TransformData>('Transform');
           const time = performance.now() * 0.001;
 
           if (state && state.current === 'CHARGE') {

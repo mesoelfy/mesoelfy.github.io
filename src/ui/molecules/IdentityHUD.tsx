@@ -1,5 +1,5 @@
-import { useGameStore } from '@/game/store/useGameStore';
-import identity from '@/data/identity.json';
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import identity from '@/sys/config/static/identity.json';
 import { clsx } from 'clsx';
 
 // Sub-components

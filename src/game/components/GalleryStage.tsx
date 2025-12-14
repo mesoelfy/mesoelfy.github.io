@@ -2,8 +2,8 @@ import { useMemo, useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
-import { useStore } from '@/core/store/useStore';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { useStore } from '@/sys/state/global/useStore';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { GAME_THEME } from '@/game/theme';
 import { AssetService } from '@/game/assets/AssetService';
 

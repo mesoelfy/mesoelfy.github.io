@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 const IDLE_MESSAGES = [

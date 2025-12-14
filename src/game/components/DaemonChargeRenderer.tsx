@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
-import { EnemyTypes } from '../config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
-import { IdentityComponent } from '../data/IdentityComponent';
-import { StateComponent } from '../data/StateComponent';
-import { TransformComponent } from '../data/TransformComponent';
+import { IdentityData } from '../data/IdentityData';
+import { AIStateData } from '../data/AIStateData';
+import { TransformData } from '../data/TransformData';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
@@ -33,14 +33,14 @@ export const DaemonChargeRenderer = () => {
       material={material}
       maxCount={10}
       filter={(e) => {
-          const id = e.getComponent<IdentityComponent>('Identity');
-          const state = e.getComponent<StateComponent>('State');
+          const id = e.getComponent<IdentityData>('Identity');
+          const state = e.getComponent<AIStateData>('State');
           // Hide if BROKEN
           return id?.variant === EnemyTypes.DAEMON && (state?.current === 'CHARGING' || state?.current === 'READY');
       }}
       updateEntity={(e, obj) => {
-          const transform = e.getComponent<TransformComponent>('Transform');
-          const state = e.getComponent<StateComponent>('State');
+          const transform = e.getComponent<TransformData>('Transform');
+          const state = e.getComponent<AIStateData>('State');
           
           if (transform && state) {
               obj.position.copy(new THREE.Vector3(transform.x, transform.y, 0.1));

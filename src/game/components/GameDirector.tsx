@@ -1,10 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, memo } from 'react';
-import { GameBootstrapper } from '../core/GameBootstrapper';
-import { GameEngineCore } from '../core/GameEngine';
-import { ServiceLocator } from '../core/ServiceLocator';
-import { InputSystem } from '../systems/InputSystem';
-import { PanelRegistry } from '../systems/PanelRegistrySystem';
+import { GameBootstrapper } from '@/sys/services/GameBootstrapper';
+import { GameEngineCore } from '@/sys/services/GameEngine';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { InputSystem } from '@/sys/systems/InputSystem';
+import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 

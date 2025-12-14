@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { TransientDOMService } from '@/game/services/TransientDOMService';
+import { TransientDOMService } from '@/sys/services/TransientDOMService';
 
 /**
  * Registers a DOM element to the TransientDOMService.

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { HoloNav } from './HoloNav';
 import { HoloHeader } from './HoloHeader';
-import { useStore } from '@/core/store/useStore';
+import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Power } from 'lucide-react';
 import { motion } from 'framer-motion';

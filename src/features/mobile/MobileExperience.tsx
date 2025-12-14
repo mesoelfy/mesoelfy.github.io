@@ -5,7 +5,7 @@ import { MobileGameDirector } from '@/game/components/MobileGameDirector';
 import { RenderDirector } from '@/game/components/RenderDirector';
 import { ScreenShaker } from '@/game/components/ScreenShaker';
 import { SocialRow } from '@/ui/molecules/SocialRow';
-import { useGameStore } from '@/game/store/useGameStore';
+import { useGameStore } from '@/sys/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';

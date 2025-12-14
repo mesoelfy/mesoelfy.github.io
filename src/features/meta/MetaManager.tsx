@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/game/config/TextAssets';
+import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/sys/config/TextAssets';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { BOOT_KEYS } from './metaConstants';

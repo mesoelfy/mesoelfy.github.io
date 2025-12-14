@@ -1,11 +1,11 @@
 import { Tag } from '@/engine/ecs/types';
-import { EnemyTypes } from '../config/Identifiers';
+import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
-import { IdentityComponent } from '../data/IdentityComponent';
-import { StateComponent } from '../data/StateComponent';
-import { TransformComponent } from '../data/TransformComponent';
+import { IdentityData } from '../data/IdentityData';
+import { AIStateData } from '../data/AIStateData';
+import { TransformData } from '../data/TransformData';
 import { AssetService } from '../assets/AssetService';
-import { ServiceLocator } from '../core/ServiceLocator';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import * as THREE from 'three';
 
 export const HunterChargeRenderer = () => {
@@ -19,13 +19,13 @@ export const HunterChargeRenderer = () => {
       material={material}
       maxCount={50}
       filter={(e) => {
-          const id = e.getComponent<IdentityComponent>('Identity');
-          const state = e.getComponent<StateComponent>('State');
+          const id = e.getComponent<IdentityData>('Identity');
+          const state = e.getComponent<AIStateData>('State');
           return id?.variant === EnemyTypes.HUNTER && state?.current === 'CHARGE';
       }}
       updateEntity={(e, obj) => {
-          const transform = e.getComponent<TransformComponent>('Transform');
-          const state = e.getComponent<StateComponent>('State');
+          const transform = e.getComponent<TransformData>('Transform');
+          const state = e.getComponent<AIStateData>('State');
           
           if (transform && state) {
               const config = ServiceLocator.getConfigService().enemies[EnemyTypes.HUNTER];
