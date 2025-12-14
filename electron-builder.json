@@ -4,6 +4,10 @@
   "directories": {
     "output": "dist"
   },
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
   "files": [
     "out/**/*",
     "electron/**/*",
