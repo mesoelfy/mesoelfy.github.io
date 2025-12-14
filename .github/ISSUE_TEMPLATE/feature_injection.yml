@@ -1,0 +1,43 @@
+name: "INJECT_FEATURE"
+description: "Propose a new module, upgrade, or aesthetic enhancement."
+title: "[INJECTION]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### // UPLINK OPEN
+        *Submit your proposal for system augmentation.*
+
+  - type: input
+    id: concept
+    attributes:
+      label: "Module Name"
+      placeholder: "e.g. 'Advanced Particle Physics'"
+    validations:
+      required: true
+
+  - type: textarea
+    id: pitch
+    attributes:
+      label: "Injection Description"
+      description: "Describe the feature in detail."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: "Upgrade Class"
+      options:
+        - "VISUAL_AESTHETICS"
+        - "AUDIO_ENHANCEMENT"
+        - "GAMEPLAY_MECHANIC"
+        - "LORE_EXPANSION"
+        - "OPTIMIZATION"
+
+  - type: textarea
+    id: justification
+    attributes:
+      label: "System Value"
+      description: "Why does the OS need this?"

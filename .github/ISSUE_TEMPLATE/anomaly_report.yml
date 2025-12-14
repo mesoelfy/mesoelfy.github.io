@@ -1,0 +1,68 @@
+name: "REPORT_ANOMALY"
+description: "File a report regarding system instability or unexpected behavior."
+title: "[ANOMALY]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### // TRANSMISSION STARTED
+        *Please describe the instability found within the MESOELFY_OS architecture.*
+  
+  - type: textarea
+    id: description
+    attributes:
+      label: "Anomaly Description"
+      description: "What happened? Be specific."
+      placeholder: "The Audio Matrix desyncs when I toggle Potato Mode..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sector
+    attributes:
+      label: "Affected Sector"
+      description: "Where did the breach occur?"
+      options:
+        - "CORE_SYSTEM (Boot/Loading)"
+        - "VISUALS (Shaders/Rendering)"
+        - "AUDIO_MATRIX (Sound/Music)"
+        - "COMBAT_SIM (Enemies/Player)"
+        - "UI_OVERLAY (Menus/Modals)"
+        - "INSTALLER (Electron/Build)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: "Threat Level"
+      options:
+        - "LOW (Visual Glitch)"
+        - "MED (Feature Broken)"
+        - "HIGH (Game Crash)"
+        - "CRITICAL (System Failure / Won't Boot)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Trace Protocol (Steps to Reproduce)"
+      description: "How can we replicate this anomaly?"
+      placeholder: |
+        1. Initialize System
+        2. Open Settings
+        3. Click '...'
+        4. Crash occurs
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Hardware/Software Specs"
+      description: "OS, Browser, GPU (if known)"
+      placeholder: "Windows 11, Chrome Latest, RTX 3080"
+    validations:
+      required: false
