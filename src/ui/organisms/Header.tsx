@@ -1,12 +1,13 @@
 import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { getPan } from '@/core/audio/AudioUtils';
+import { useAudioVisualizer } from '@/core/audio/hooks/useAudioVisualizer';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -58,35 +59,41 @@ export const Header = () => {
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const heartbeatControls = useHeartbeat();
+  
+  // AUDIO VISUALIZER HOOK
+  const audioData = useAudioVisualizer(32); // 32 bins
+  const logoRef = useRef<HTMLSpanElement>(null);
+
+  // VISUALIZER LOOP
+  useEffect(() => {
+      const loop = () => {
+          if (logoRef.current) {
+              // Calculate average volume from low-mids (bins 0-8)
+              let sum = 0;
+              for(let i=0; i<8; i++) sum += audioData.current[i];
+              const avg = sum / 8;
+              
+              // Map 0-255 to 1.0 - 1.15 scale
+              const scale = 1.0 + (avg / 255) * 0.15;
+              const brightness = 1.0 + (avg / 255) * 0.5;
+              
+              logoRef.current.style.transform = `scale(${scale})`;
+              logoRef.current.style.filter = `brightness(${brightness})`;
+          }
+          requestAnimationFrame(loop);
+      };
+      const frameId = requestAnimationFrame(loop);
+      return () => cancelAnimationFrame(frameId);
+  }, []);
 
   const textVariants = {
       heartbeat: {
-          scale: [1, 1.05, 1],
           textShadow: [
               "0 0 0px #FF003C",
               "0 0 25px #FF003C", 
               "0 0 0px #FF003C"
           ],
-          transition: { 
-              duration: 0.8, 
-              times: [0, 0.04, 1], 
-              ease: "easeOut" 
-          }
-      }
-  };
-
-  const barVariants = {
-      heartbeat: {
-          filter: [
-              "brightness(1) drop-shadow(0 0 0px #FF003C)",
-              "brightness(2) drop-shadow(0 0 10px #FF003C)",
-              "brightness(1) drop-shadow(0 0 0px #FF003C"
-          ],
-          transition: { 
-              duration: 0.8, 
-              times: [0, 0.04, 1], 
-              ease: "easeOut" 
-          }
+          transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" }
       }
   };
 
@@ -96,10 +103,11 @@ export const Header = () => {
       {/* LEFT: Identity */}
       <div className="flex items-center gap-4">
         <motion.span 
+            ref={logoRef} // ATTACH REF
             animate={isCritical ? heartbeatControls : undefined}
             variants={textVariants}
             className={clsx(
-                "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500",
+                "font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-100 will-change-transform",
                 statusColor
             )}
         >
@@ -164,13 +172,9 @@ export const Header = () => {
             animate={{ width: `${systemIntegrity}%` }}
             transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
           >
-              <motion.div 
-                animate={isCritical ? heartbeatControls : undefined}
-                variants={barVariants}
-                className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", 
+              <div className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", 
                     isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
-                )} 
-              />
+              )} />
           </motion.div>
         </div>
       )}

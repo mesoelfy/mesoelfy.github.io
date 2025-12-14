@@ -14,6 +14,10 @@ export class AudioMixer {
   public musicGain!: GainNode;
   public ambienceGain!: GainNode;
 
+  // Mastering Chain
+  public compressor!: DynamicsCompressorNode;
+  public analyser!: AnalyserNode;
+
   // Ambience Graph (DSP)
   private ambiencePanner!: StereoPannerNode;
   private ambiencePanConstraint!: GainNode;
@@ -24,7 +28,6 @@ export class AudioMixer {
 
   private ctxManager: AudioContextManager;
   
-  // State for Ducking
   private _targetMusicVol: number = 0;
   private _isMusicMuted: boolean = true;
 
@@ -42,25 +45,40 @@ export class AudioMixer {
     this.musicGain = ctx.createGain();
     this.ambienceGain = ctx.createGain();
 
-    // 2. Connect Basic Graph
+    // 2. Create Mastering Nodes
+    this.compressor = ctx.createDynamicsCompressor();
+    this.analyser = ctx.createAnalyser();
+
+    // 3. Configure Mastering
+    // Compressor: "Limiter" style to catch loud explosions
+    this.compressor.threshold.value = -12; // Start compressing at -12dB
+    this.compressor.knee.value = 30;       // Soft knee
+    this.compressor.ratio.value = 12;      // High ratio (limit)
+    this.compressor.attack.value = 0.003;  // Fast attack
+    this.compressor.release.value = 0.25;  // Quick release
+
+    // Analyser: For Visuals
+    this.analyser.fftSize = 64; // Low res is fine for UI bars (32 bins)
+    this.analyser.smoothingTimeConstant = 0.8;
+
+    // 4. Connect Graph
+    // Sources -> Master Gain -> Compressor -> Analyser -> Destination
     this.sfxGain.connect(this.masterGain);
     this.musicGain.connect(this.masterGain);
-    this.masterGain.connect(ctx.destination);
+    
+    this.masterGain.connect(this.compressor);
+    this.compressor.connect(this.analyser);
+    this.analyser.connect(ctx.destination);
 
-    // 3. Build Ambience DSP Graph
-    // Chain: Gain -> Filter -> Panner -> Master
+    // 5. Build Ambience DSP Graph
     this.ambiencePanner = ctx.createStereoPanner();
     this.ambienceFilter = ctx.createBiquadFilter();
-
-    // LFO for Panning (Movement)
     this.ambienceLFO = ctx.createOscillator();
     this.ambiencePanConstraint = ctx.createGain();
-    
-    // LFO for Filter (Texture)
     this.ambienceDepthLFO = ctx.createOscillator();
     this.ambienceDepthGain = ctx.createGain();
 
-    // Ambience Routing
+    // Ambience Routing (Joins Master at the end)
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner); 
     this.ambiencePanner.connect(this.masterGain);
@@ -75,7 +93,6 @@ export class AudioMixer {
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
 
-    // Start Generators
     this.ambienceLFO.start();
     this.ambienceDepthLFO.start();
   }
@@ -83,21 +100,16 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
 
-    // Calculate Music State
     this._isMusicMuted = !settings.music;
     this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
 
-    // Apply
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.cancelScheduledValues(this.ctxManager.ctx!.currentTime);
     this.musicGain.gain.value = this._targetMusicVol;
     
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
-    
-    // 1:1 Gain (Source Volume is now 0.24 in config)
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
 
-    // Update DSP Params (Using Shared Math)
     const filter = settings.ambFilter ?? 0.5;
     const speed = settings.ambSpeed ?? 0.5;
     const width = settings.ambWidth ?? 0.5;
@@ -126,5 +138,12 @@ export class AudioMixer {
     this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
     this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
     this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
+  }
+  
+  // NEW: Accessor for Visualizer
+  public getByteFrequencyData(array: Uint8Array) {
+      if (this.analyser) {
+          this.analyser.getByteFrequencyData(array);
+      }
   }
 }

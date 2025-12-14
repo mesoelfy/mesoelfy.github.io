@@ -526,3 +526,8 @@ VIBE CODE
 
 
     - Panel being healed ding doesn't sound like it is coming from player mouse location. Feels like it is mostly centered.
+
+
+    - “We will make the "MESOELFY_OS" logo in the Header pulse with the beat/audio volume.” - how should we override this when in critical health? can we time the heart beat sound effect with the music and speed up the music when in critical health?
+
+    - can we make the MESOELFY_OS health bar animate like a waveform from the music? What about the moving motion background grid?

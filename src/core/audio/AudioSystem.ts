@@ -150,10 +150,14 @@ class AudioSystemController {
       this.mixer.duckMusic(intensity, duration);
   }
 
-  // --- UPDATED ALIASES (Spatial Aware) ---
+  // --- VISUALIZER ACCESS ---
+  public getFrequencyData(array: Uint8Array) {
+      this.mixer.getByteFrequencyData(array);
+  }
+
+  // --- ALIASES ---
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
-  
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 
   public playDrillSound() { this.playSound('loop_drill'); }
   public playRebootZap() { this.playSound('loop_reboot'); }
