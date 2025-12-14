@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Play, PauseCircle, Power } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -25,20 +25,22 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
 
 const IGNORED_EVENTS = new Set([
     GameEvents.PLAYER_FIRED,
-    GameEvents.PLAYER_HIT,
     GameEvents.ENEMY_DAMAGED,
     GameEvents.ENEMY_SPAWNED,
-    GameEvents.PANEL_DAMAGED,
     GameEvents.PROJECTILE_CLASH,
     GameEvents.SPAWN_FX,
 ]);
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal, openModal } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, activeModal, closeModal, openModal, toggleSettings } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
+  
+  // OPTIMIZATION: Logs state capped and controlled
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
+  const [isLogLive, setIsLogLive] = useState(false); // Default OFF
 
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '`' || e.key === '~') {
@@ -64,11 +66,11 @@ export const DebugOverlay = () => {
              AudioSystem.playSound(!isDebugOpen ? 'ui_menu_open' : 'ui_menu_close');
         }
       } 
-      
       else if (e.key === 'Escape') {
           if (isDebugOpen) {
               toggleDebugMenu();
-              openModal('settings');
+              // If we close debug, maybe open settings or just close? Original logic:
+              if (activeModal === 'none') openModal('settings');
               AudioSystem.playSound('ui_menu_open'); 
           } else if (activeModal !== 'none') {
               closeModal();
@@ -83,7 +85,11 @@ export const DebugOverlay = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal, openModal]);
 
+  // Event Subscription (Optimized)
   useEffect(() => {
+    // If not live, don't subscribe to high frequency events to save React updates
+    if (!isLogLive) return;
+
     const handlers = Object.values(GameEvents).map(evt => {
         return GameEventBus.subscribe(evt as any, (payload) => {
             if (IGNORED_EVENTS.has(evt as GameEvents)) return;
@@ -100,12 +106,25 @@ export const DebugOverlay = () => {
                 msg += ` [ID:${(payload as any).id}]`;
             }
             
-            setLogs(prev => [...prev.slice(-99), { time, msg, type: evt }]);
+            setLogs(prev => {
+                // OPTIMIZATION: Cap at 50
+                const newLogs = [...prev, { time, msg, type: evt }];
+                if (newLogs.length > 50) return newLogs.slice(newLogs.length - 50);
+                return newLogs;
+            });
         });
     });
 
+    return () => {
+        handlers.forEach(unsub => unsub());
+    };
+  }, [isLogLive]); // Re-run when toggle changes
+
+  // Stats Polling (Only when open)
+  useEffect(() => {
     const pollInterval = setInterval(() => {
         if (!isDebugOpen && !isDebugMinimized) return;
+        
         let fps = 0;
         let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
         try {
@@ -123,10 +142,7 @@ export const DebugOverlay = () => {
         });
     }, 250); 
 
-    return () => {
-        handlers.forEach(unsub => unsub());
-        clearInterval(pollInterval);
-    };
+    return () => clearInterval(pollInterval);
   }, [isDebugOpen, isDebugMinimized]);
 
   if (!isDebugOpen && !isDebugMinimized) return null;
@@ -134,12 +150,16 @@ export const DebugOverlay = () => {
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
-            {/* Minimal floating pause menu */}
+            {/* Minimal floating pause menu could go here */}
         </div>
       );
   }
 
-  // --- FULL DEBUG MENU ---
+  const toggleLiveFeed = () => {
+      setIsLogLive(!isLogLive);
+      AudioSystem.playClick();
+  };
+
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-4xl bg-[#050a05] border border-primary-green/50 shadow-[0_0_100px_rgba(0,255,65,0.1)] flex flex-col h-[650px] overflow-hidden relative rounded-sm">
@@ -196,11 +216,38 @@ export const DebugOverlay = () => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/50 scrollbar-track-black relative z-20">
-            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
-            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
-            {activeTab === 'STATS' && <StatsTab stats={stats} />}
-            {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
+          <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/50 scrollbar-track-black relative z-20 flex flex-col">
+            
+            {activeTab === 'CONSOLE' && (
+                <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                    <span className="text-xs font-bold text-gray-500">EVENT_STREAM</span>
+                    
+                    {/* BEAUTIFUL TOGGLE */}
+                    <button
+                        onClick={toggleLiveFeed}
+                        className={clsx(
+                            "flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-bold tracking-wider transition-all border",
+                            isLogLive 
+                                ? "border-primary-green text-primary-green bg-primary-green/10 shadow-[0_0_10px_rgba(0,255,65,0.3)]"
+                                : "border-gray-600 text-gray-500 bg-black/40 hover:border-gray-400"
+                        )}
+                    >
+                        <div className={clsx(
+                            "w-2 h-2 rounded-full transition-colors",
+                            isLogLive ? "bg-primary-green animate-pulse" : "bg-gray-600"
+                        )} />
+                        {isLogLive ? "LIVE FEED: ON" : "LIVE FEED: PAUSED"}
+                        {isLogLive ? <PauseCircle size={10} /> : <Play size={10} />}
+                    </button>
+                </div>
+            )}
+
+            <div className="flex-1 min-h-0 relative">
+                {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
+                {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
+                {activeTab === 'STATS' && <StatsTab stats={stats} />}
+                {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
+            </div>
           </div>
         </div>
 

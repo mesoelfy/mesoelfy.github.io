@@ -9,7 +9,7 @@ export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
   private interactionSystem!: InteractionSystem;
   
-  private readonly SYNC_INTERVAL = 0.1; // 10Hz UI updates are plenty
+  private readonly SYNC_INTERVAL = 0.1; // 10Hz
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
@@ -29,48 +29,65 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // 1. FAST PATH: Direct DOM Updates (No React Render)
-    // We assume the DOM elements are registered via useTransientRef
+    // 1. FAST PATH: Direct DOM Updates
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
     TransientDOMService.update('score-display', formattedScore);
     
     // 2. SLOW PATH: React State Sync
-    // Only update Zustand if values actually changed to prevent Virtual DOM trashing
-    const shouldSyncReact = 
-        store.playerHealth !== this.gameSystem.playerHealth || 
-        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || 
-        store.xp !== this.gameSystem.xp || 
-        store.score !== this.gameSystem.score ||
-        store.level !== this.gameSystem.level ||
-        store.upgradePoints !== this.gameSystem.upgradePoints ||
+    // OPTIMIZATION: Strict check. If absolutely nothing relevant changed, do not call set().
+    const gs = this.gameSystem;
+    
+    const hasChanged = 
+        store.playerHealth !== gs.playerHealth || 
+        store.playerRebootProgress !== gs.playerRebootProgress || 
+        store.xp !== gs.xp || 
+        store.score !== gs.score ||
+        store.level !== gs.level ||
+        store.upgradePoints !== gs.upgradePoints ||
         store.interactionTarget !== this.interactionSystem.hoveringPanelId ||
         Math.abs(store.systemIntegrity - PanelRegistry.systemIntegrity) > 1.0; 
 
-    if (shouldSyncReact) {
+    if (hasChanged) {
         store.syncGameState({
-            playerHealth: this.gameSystem.playerHealth, 
-            playerRebootProgress: this.gameSystem.playerRebootProgress, 
-            level: this.gameSystem.level,
-            xp: this.gameSystem.xp,
-            score: this.gameSystem.score,
-            xpToNextLevel: this.gameSystem.xpToNextLevel,
-            upgradePoints: this.gameSystem.upgradePoints,
-            activeUpgrades: { ...this.gameSystem.activeUpgrades },
+            playerHealth: gs.playerHealth, 
+            playerRebootProgress: gs.playerRebootProgress, 
+            level: gs.level,
+            xp: gs.xp,
+            score: gs.score,
+            xpToNextLevel: gs.xpToNextLevel,
+            upgradePoints: gs.upgradePoints,
+            activeUpgrades: { ...gs.activeUpgrades }, // Shallow copy needed
             systemIntegrity: PanelRegistry.systemIntegrity,
             interactionTarget: this.interactionSystem.hoveringPanelId 
         });
     }
 
-    // 3. Panel Sync (Slow path)
+    // 3. Panel Sync (Very Slow path)
+    // Only sync panels if one was actually destroyed/healed recently? 
+    // For now, we trust the React memoization in GlassPanel to reject updates if props match.
+    // But we can optimize data creation:
+    
+    // Check if we need to sync panel state at all (e.g. any damage taken?)
+    // This is hard to diff cheaply. For now, we rely on the 10Hz throttle.
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
+    let panelsChanged = false;
+
     for(const p of panels) {
-        uiPanels[p.id] = {
-            id: p.id,
-            health: p.health,
-            isDestroyed: p.isDestroyed
-        };
+        const prev = store.panels[p.id];
+        // Only update if data diff (prevents object identity churn)
+        if (!prev || prev.health !== p.health || prev.isDestroyed !== p.isDestroyed) {
+            uiPanels[p.id] = {
+                id: p.id,
+                health: p.health,
+                isDestroyed: p.isDestroyed
+            };
+            panelsChanged = true;
+        }
     }
-    store.syncPanels(uiPanels);
+    
+    if (panelsChanged) {
+        store.syncPanels(uiPanels);
+    }
   }
 }

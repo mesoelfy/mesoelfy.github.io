@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { GameBootstrapper } from '../core/GameBootstrapper';
 import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
@@ -11,12 +11,13 @@ import { GameEvents } from '../events/GameEvents';
 // Mutable Global for Renderers to access Registry (Performance optimization)
 export let ActiveEngine: GameEngineCore | null = null;
 
-// Allow external override (for MobileDirector)
+// Allow external override
 export const setActiveEngine = (engine: GameEngineCore | null) => {
     ActiveEngine = engine;
 };
 
-export const GameDirector = () => {
+// OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
+export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   const isMobileRef = useRef(false);
@@ -62,6 +63,7 @@ export const GameDirector = () => {
     };
   }, []); 
 
+  // Handle Resize updates
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.updateViewport(viewport.width, viewport.height, size.width, size.height);
@@ -72,6 +74,7 @@ export const GameDirector = () => {
     }
   }, [viewport, size]);
 
+  // Main Loop
   useFrame((state, delta) => {
     if (engineRef.current) {
       try {
@@ -93,4 +96,7 @@ export const GameDirector = () => {
   });
 
   return null;
-};
+});
+
+// Display name for devtools
+GameDirector.displayName = 'GameDirector';
