@@ -103,7 +103,8 @@ export const GlassPanel = ({
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
-        const timer = setTimeout(() => setShowReboot(false), 2000); 
+        // UPDATED: 900ms duration per user request
+        const timer = setTimeout(() => setShowReboot(false), 900); 
         return () => clearTimeout(timer);
     }
     prevDestroyed.current = isDestroyed;

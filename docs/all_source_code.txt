@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 13 17:09:59 CST 2025
+Generated on: Sat Dec 13 21:03:19 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -34,6 +34,9 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── audio
 │   │   │   ├── AudioMath.ts
 │   │   │   ├── AudioSystem.ts
+│   │   │   ├── AudioUtils.ts
+│   │   │   ├── hooks
+│   │   │   │   └── useAudioVisualizer.ts
 │   │   │   └── modules
 │   │   │       ├── AudioContextManager.ts
 │   │   │       ├── AudioMixer.ts
@@ -229,6 +232,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── MobileWaveSystem.ts
 │   │   │   ├── OrbitalSystem.ts
 │   │   │   ├── PanelRegistrySystem.ts
+│   │   │   ├── ParticleSystem.ts
 │   │   │   ├── PhysicsSystem.ts
 │   │   │   ├── PlayerSystem.ts
 │   │   │   ├── ShakeSystem.ts
@@ -300,7 +304,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-69 directories, 223 files
+70 directories, 226 files
 
 =====================================
 FILE: ./next.config.js
@@ -681,6 +685,7 @@ FILE: ./src/ui/molecules/SocialRow.tsx
 import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import socials from '@/data/socials.json';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 
@@ -717,8 +722,8 @@ export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
             href={isDestroyed ? undefined : social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onMouseEnter={() => !isDestroyed && AudioSystem.playHover()} 
-            onClick={() => !isDestroyed && AudioSystem.playClick()}
+            onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))} 
+            onClick={(e) => !isDestroyed && AudioSystem.playClick(getPan(e))}
             className={clsx(
                 "group flex items-center p-2 border transition-all duration-200",
                 layout === 'grid' ? "flex-col justify-center" : "flex-row gap-4 justify-start px-4 h-12",
@@ -1174,6 +1179,7 @@ import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
@@ -1219,10 +1225,9 @@ const VideoSlot = ({
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
   const graphicsMode = useStore((state) => state.graphicsMode);
-  const bootState = useStore((state) => state.bootState); // CHECK BOOT STATE
+  const bootState = useStore((state) => state.bootState); 
   const isPotato = graphicsMode === 'POTATO';
   
-  // Disable video if not active game or potato mode
   const showVideo = bootState === 'active' && !isPotato;
 
   const prevOffline = useRef(isOffline);
@@ -1278,7 +1283,7 @@ const VideoSlot = ({
   return (
     <div 
         className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
-        onMouseEnter={() => !isOffline && AudioSystem.playHover()}
+        onMouseEnter={(e) => !isOffline && AudioSystem.playHover(getPan(e))}
     >
       
       {isOffline ? (
@@ -1322,7 +1327,7 @@ const VideoSlot = ({
             rel="noopener noreferrer"
             className="absolute inset-0 z-50 cursor-pointer"
             aria-label="Watch on YouTube"
-            onClick={() => AudioSystem.playClick()}
+            onClick={(e) => AudioSystem.playClick(getPan(e))}
           />
 
           <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
@@ -1422,6 +1427,7 @@ FILE: ./src/ui/molecules/SystemOps.tsx
 =====================================
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
 import { UpgradeOption } from '@/game/types/game.types';
 
@@ -1441,9 +1447,9 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption) => {
+  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
       if (isPanelDead || upgradePoints <= 0) return; 
-      AudioSystem.playClick();
+      AudioSystem.playClick(getPan(e));
       selectUpgrade(u);
   };
 
@@ -1459,8 +1465,8 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
             return (
                 <button
                     key={u}
-                    onClick={() => handleUpgrade(u)}
-                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                    onClick={(e) => handleUpgrade(u, e)}
+                    onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
                     className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
                 >
                     <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
@@ -1493,6 +1499,7 @@ FILE: ./src/ui/molecules/UpgradeTerminal.tsx
 =====================================
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeOption } from '@/game/types/game.types';
@@ -1517,9 +1524,9 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption) => {
+  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
       if (isPanelDead || upgradePoints <= 0) return; 
-      AudioSystem.playClick();
+      AudioSystem.playClick(getPan(e));
       selectUpgrade(u);
   };
 
@@ -1552,8 +1559,8 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
                     return (
                         <button
                             key={u}
-                            onClick={() => handleUpgrade(u)}
-                            onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                            onClick={(e) => handleUpgrade(u, e)}
+                            onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
                             className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
                         >
                             <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
@@ -1606,6 +1613,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -1651,12 +1659,12 @@ export const LiveArtGrid = () => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 
-                onClick={() => {
+                onClick={(e) => {
                     if (isDestroyed) return;
-                    AudioSystem.playClick();
+                    AudioSystem.playClick(getPan(e));
                     openModal('gallery');
                 }}
-                onMouseEnter={() => !isDestroyed && AudioSystem.playHover()}
+                onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
                 
                 className={clsx(
                     "w-full aspect-square relative border group overflow-hidden flex items-center justify-center rounded-[1px] transition-colors",
@@ -1694,6 +1702,7 @@ FILE: ./src/ui/molecules/IdentityFooter.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 
 interface IdentityFooterProps {
   isPanelDead: boolean;
@@ -1702,24 +1711,24 @@ interface IdentityFooterProps {
 export const IdentityFooter = ({ isPanelDead }: IdentityFooterProps) => {
   const { openModal } = useStore();
 
-  const handleClick = (modal: 'about' | 'contact') => {
+  const handleClick = (modal: 'about' | 'contact', e: React.MouseEvent) => {
       if (isPanelDead) return;
-      AudioSystem.playClick();
+      AudioSystem.playClick(getPan(e));
       openModal(modal);
   };
 
   return (
     <div className="flex-none grid grid-cols-2 gap-px bg-primary-green-dim/20 border-t border-primary-green-dim/30 mt-auto">
       <button 
-        onClick={() => handleClick('about')} 
-        onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+        onClick={(e) => handleClick('about', e)} 
+        onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
         className="py-3 bg-black/80 hover:bg-primary-green hover:text-black text-primary-green text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
       >
         About_Me
       </button>
       <button 
-        onClick={() => handleClick('contact')} 
-        onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+        onClick={(e) => handleClick('contact', e)} 
+        onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
         className="py-3 bg-black/80 hover:bg-alert-yellow hover:text-black text-alert-yellow text-[10px] font-bold font-header uppercase transition-colors tracking-widest"
       >
         Contact_Link
@@ -3312,6 +3321,8 @@ import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
+import { useAudioVisualizer } from '@/core/audio/hooks/useAudioVisualizer';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -3331,7 +3342,8 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
 
 const ToggleBtn = ({ active, onClick, children, color }: any) => (
   <button 
-    onClick={onClick}
+    onClick={(e) => { onClick(); AudioSystem.playClick(getPan(e)); }}
+    onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     className={clsx(
       "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
@@ -3362,6 +3374,9 @@ export const Header = () => {
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const heartbeatControls = useHeartbeat();
+  
+  // NOTE: Audio Visualizer available via useAudioVisualizer() hook, but currently unwired to UI elements.
+  // const audioData = useAudioVisualizer(32); 
 
   const textVariants = {
       heartbeat: {
@@ -3448,7 +3463,7 @@ export const Header = () => {
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
             <button 
-                onClick={() => { toggleSettings(); AudioSystem.playSound('ui_menu_open'); }}
+                onClick={(e) => { toggleSettings(); AudioSystem.playSound('ui_menu_open', getPan(e)); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
@@ -3466,7 +3481,6 @@ export const Header = () => {
             className="h-full"
             initial={{ width: "100%" }}
             animate={{ width: `${systemIntegrity}%` }}
-            // UPDATED: 0.5 -> 0.3 for snappier decay
             transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
           >
               <motion.div 
@@ -3494,58 +3508,95 @@ export const Header = () => {
 
 
 =====================================
+FILE: ./src/core/audio/AudioUtils.ts
+=====================================
+import { MouseEvent as ReactMouseEvent } from 'react';
+
+/**
+ * Calculates stereo pan value (-1.0 to 1.0) based on mouse X position.
+ * Handles both React Synthetic Events and Native DOM Events.
+ */
+export const getPan = (e: ReactMouseEvent | MouseEvent | TouchEvent): number => {
+  if (typeof window === 'undefined') return 0;
+  
+  let clientX = 0;
+  
+  if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+  } else if ('clientX' in e) {
+      clientX = (e as MouseEvent).clientX;
+  } else {
+      return 0;
+  }
+
+  const width = window.innerWidth;
+  if (width === 0) return 0;
+
+  // Normalize: 0 to 1
+  const normalized = clientX / width;
+  
+  // Map: -1 to 1
+  const pan = (normalized * 2) - 1;
+  
+  // Clamp for safety
+  return Math.max(-1, Math.min(1, pan));
+};
+
+
+=====================================
 FILE: ./src/core/audio/AudioMath.ts
 =====================================
 /**
  * AUDIO MATH LIBRARY
- * Single source of truth for DSP conversions.
- * 
- * LOGIC UPDATE:
- * Formulas use a base anchor at val=0.5 (The Default).
- * The curve is calculated to hit the specific MAX at val=1.0.
- * formula: Anchor * (Ratio ^ ((val - 0.5) * 2))
  */
 
-// 1. FILTER (Density)
-// Anchor: 300Hz. Range: 30Hz - 3000Hz.
 export const getAmbienceFilterHz = (val: number): number => {
   return 300 * Math.pow(10, (val - 0.5) * 2);
 };
 
-// 2. PAN SPEED (Circulation)
-// Anchor: 0.05Hz (Default). 
-// Target Max: 1.0Hz.
-// Ratio: 1.0 / 0.05 = 20.
 export const getAmbiencePanFreq = (val: number): number => {
   return 0.05 * Math.pow(20, (val - 0.5) * 2);
 };
 
-// 3. MOD SPEED (Fluctuation / LFO Rate)
-// Anchor: 0.2Hz (Default).
-// Target Max: 6.0Hz.
-// Ratio: 6.0 / 0.2 = 30.
 export const getAmbienceModFreq = (val: number): number => {
   return 0.2 * Math.pow(30, (val - 0.5) * 2);
 };
 
-// 4. MOD DEPTH (Instability / LFO Depth)
-// Anchor: 10Hz (Default).
-// Target Max: 200Hz.
-// Ratio: 200 / 10 = 20.
 export const getAmbienceModDepth = (val: number): number => {
   return 10 * Math.pow(20, (val - 0.5) * 2);
 };
 
-// 5. STEREO WIDTH
-// Mapping: 0.0-1.0 -> Gain 0.0 - 0.8
 export const getAmbienceStereoGain = (val: number): number => {
   return Math.pow(val, 3) * 0.8;
 };
 
-// 6. GRIT (Distortion)
-// Mapping: 0.0-1.0 -> Distortion Index 0 - 400
 export const getAmbienceDistortion = (val: number): number => {
   return val * 400;
+};
+
+/**
+ * Generates a synthetic impulse response for reverb.
+ * Creates a "Metallic/Digital" decay sound.
+ */
+export const generateImpulseResponse = (ctx: AudioContext, duration: number = 2.0, decay: number = 2.0, reverse: boolean = false): AudioBuffer => {
+  const sampleRate = ctx.sampleRate;
+  const length = sampleRate * duration;
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  
+  const left = impulse.getChannelData(0);
+  const right = impulse.getChannelData(1);
+
+  for (let i = 0; i < length; i++) {
+    const n = reverse ? length - i : i;
+    // Exponential decay
+    const e = Math.pow(1 - n / length, decay);
+    
+    // Noise burst
+    left[i] = (Math.random() * 2 - 1) * e;
+    right[i] = (Math.random() * 2 - 1) * e;
+  }
+
+  return impulse;
 };
 
 
@@ -3571,7 +3622,6 @@ class AudioSystemController {
   
   private musicElement: HTMLAudioElement | null = null;
   
-  // Ambience State
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceKey: string | null = null;
 
@@ -3585,13 +3635,8 @@ class AudioSystemController {
     if (!ctx) return;
 
     this.mixer.init();
-    
-    // Sync initial volumes
     this.updateVolumes();
-
-    // Synthesis
     await this.generateAllSounds();
-    
     this.setupGlobalInteraction();
 
     this.isReady = true;
@@ -3628,7 +3673,7 @@ class AudioSystemController {
       this.mixer.updateVolumes(settings);
   }
 
-  public playSound(key: string) {
+  public playSound(key: string, pan: number = 0) {
       const ctx = this.ctxManager.ctx;
       if (!ctx || !this.mixer.sfxGain) return;
 
@@ -3645,7 +3690,17 @@ class AudioSystemController {
           source.detune.value = detune;
       }
 
-      source.connect(this.mixer.sfxGain);
+      const panner = ctx.createStereoPanner();
+      
+      // FIX: Strict NaN check. Fallback to 0.
+      let safePan = Number.isFinite(pan) ? pan : 0;
+      safePan = Math.max(-1, Math.min(1, safePan));
+      
+      panner.pan.value = safePan;
+
+      source.connect(panner);
+      panner.connect(this.mixer.sfxGain);
+      
       source.start();
   }
 
@@ -3655,7 +3710,6 @@ class AudioSystemController {
       
       if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
 
-      // Crossfade Out Old
       if (this.currentAmbienceNode) {
           const oldNode = this.currentAmbienceNode;
           try { oldNode.stop(ctx.currentTime + 0.5); } catch {}
@@ -3669,7 +3723,6 @@ class AudioSystemController {
       source.buffer = buffer;
       source.loop = true;
       
-      // Crossfade In New (Local Gain for fade)
       const fadeGain = ctx.createGain();
       fadeGain.gain.setValueAtTime(0, ctx.currentTime);
       fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
@@ -3707,15 +3760,54 @@ class AudioSystemController {
       this.mixer.duckMusic(intensity, duration);
   }
 
-  // --- ALIASES (Backward Compatibility) ---
-  public playClick() { this.playSound('ui_click'); }
-  public playHover() { this.playSound('ui_hover'); }
+  public getFrequencyData(array: Uint8Array) {
+      this.mixer.getByteFrequencyData(array);
+  }
+
+  // Aliases
+  public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
+  public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 
   public playDrillSound() { this.playSound('loop_drill'); }
   public playRebootZap() { this.playSound('loop_reboot'); }
 }
 
 export const AudioSystem = new AudioSystemController();
+
+
+=====================================
+FILE: ./src/core/audio/hooks/useAudioVisualizer.ts
+=====================================
+import { useEffect, useRef } from 'react';
+import { AudioSystem } from '../AudioSystem';
+
+/**
+ * Hooks into the AnalyserNode and returns a ref to the data buffer.
+ * It does NOT trigger re-renders. Use requestAnimationFrame in your component to read it.
+ */
+export const useAudioVisualizer = (fftSize: number = 32) => {
+  const dataRef = useRef(new Uint8Array(fftSize));
+  const active = useRef(true);
+
+  useEffect(() => {
+    active.current = true;
+    
+    const loop = () => {
+      if (!active.current) return;
+      AudioSystem.getFrequencyData(dataRef.current);
+      requestAnimationFrame(loop);
+    };
+    
+    loop();
+
+    return () => {
+      active.current = false;
+    };
+  }, []);
+
+  // Return the buffer itself so components can read it
+  return dataRef;
+};
 
 
 =====================================
@@ -3727,7 +3819,8 @@ import {
   getAmbiencePanFreq, 
   getAmbienceModFreq, 
   getAmbienceModDepth, 
-  getAmbienceStereoGain
+  getAmbienceStereoGain,
+  generateImpulseResponse
 } from '../AudioMath';
 
 export class AudioMixer {
@@ -3736,6 +3829,17 @@ export class AudioMixer {
   public sfxGain!: GainNode;
   public musicGain!: GainNode;
   public ambienceGain!: GainNode;
+
+  // Mastering Chain
+  public compressor!: DynamicsCompressorNode;
+  public analyser!: AnalyserNode;
+
+  // FX Rack
+  private reverbNode!: ConvolverNode;
+  private reverbSend!: GainNode;
+  private delayNode!: DelayNode;
+  private delayFeedback!: GainNode;
+  private delaySend!: GainNode;
 
   // Ambience Graph (DSP)
   private ambiencePanner!: StereoPannerNode;
@@ -3747,7 +3851,6 @@ export class AudioMixer {
 
   private ctxManager: AudioContextManager;
   
-  // State for Ducking
   private _targetMusicVol: number = 0;
   private _isMusicMuted: boolean = true;
 
@@ -3765,30 +3868,60 @@ export class AudioMixer {
     this.musicGain = ctx.createGain();
     this.ambienceGain = ctx.createGain();
 
-    // 2. Connect Basic Graph
-    this.sfxGain.connect(this.masterGain);
-    this.musicGain.connect(this.masterGain);
-    this.masterGain.connect(ctx.destination);
+    // 2. Create Mastering Nodes
+    this.compressor = ctx.createDynamicsCompressor();
+    this.analyser = ctx.createAnalyser();
 
-    // 3. Build Ambience DSP Graph
-    // Chain: Gain -> Filter -> Panner -> Master
+    // 3. Configure Mastering
+    this.compressor.threshold.value = -12; 
+    this.compressor.knee.value = 30;       
+    this.compressor.ratio.value = 12;      
+    this.compressor.attack.value = 0.003;  
+    this.compressor.release.value = 0.25;  
+
+    this.analyser.fftSize = 64; 
+    this.analyser.smoothingTimeConstant = 0.8;
+
+    // 4. Create FX Rack
+    this.reverbNode = ctx.createConvolver();
+    this.reverbNode.buffer = generateImpulseResponse(ctx, 1.5, 2.0);
+    this.reverbSend = ctx.createGain(); 
+
+    this.delayNode = ctx.createDelay(1.0);
+    this.delayFeedback = ctx.createGain();
+    this.delaySend = ctx.createGain(); 
+
+    this.delayNode.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.masterGain);
+
+    this.reverbNode.connect(this.masterGain);
+
+    // 5. Connect Signal Flow
+    this.musicGain.connect(this.masterGain);
+    this.sfxGain.connect(this.masterGain);
+    this.sfxGain.connect(this.reverbSend);
+    this.sfxGain.connect(this.delaySend);
+    
+    this.reverbSend.connect(this.reverbNode);
+    this.delaySend.connect(this.delayNode);
+
+    this.masterGain.connect(this.compressor);
+    this.compressor.connect(this.analyser);
+    this.analyser.connect(ctx.destination);
+
+    // 6. Ambience DSP
     this.ambiencePanner = ctx.createStereoPanner();
     this.ambienceFilter = ctx.createBiquadFilter();
-
-    // LFO for Panning (Movement)
     this.ambienceLFO = ctx.createOscillator();
     this.ambiencePanConstraint = ctx.createGain();
-    
-    // LFO for Filter (Texture)
     this.ambienceDepthLFO = ctx.createOscillator();
     this.ambienceDepthGain = ctx.createGain();
 
-    // Ambience Routing
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner); 
     this.ambiencePanner.connect(this.masterGain);
 
-    // Modulation Routing
     this.ambienceLFO.type = 'sine';
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
@@ -3798,7 +3931,6 @@ export class AudioMixer {
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
 
-    // Start Generators
     this.ambienceLFO.start();
     this.ambienceDepthLFO.start();
   }
@@ -3806,21 +3938,16 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
 
-    // Calculate Music State
     this._isMusicMuted = !settings.music;
     this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
 
-    // Apply
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.cancelScheduledValues(this.ctxManager.ctx!.currentTime);
     this.musicGain.gain.value = this._targetMusicVol;
     
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
-    
-    // 1:1 Gain (Source Volume is now 0.24 in config)
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
 
-    // Update DSP Params (Using Shared Math)
     const filter = settings.ambFilter ?? 0.5;
     const speed = settings.ambSpeed ?? 0.5;
     const width = settings.ambWidth ?? 0.5;
@@ -3832,6 +3959,21 @@ export class AudioMixer {
     this.ambiencePanConstraint.gain.value = getAmbienceStereoGain(width);
     this.ambienceDepthLFO.frequency.value = getAmbienceModFreq(modSpeed);
     this.ambienceDepthGain.gain.value = getAmbienceModDepth(modDepth);
+
+    // FX UPDATES (SAFE MODE: Handle undefined)
+    if (this.reverbSend) {
+        // Defaults: Reverb 20%, Delay 10%
+        this.reverbSend.gain.value = settings.fxReverbMix ?? 0.2;
+        this.delaySend.gain.value = settings.fxDelayMix ?? 0.1;
+        
+        // Delay Time: Default 0.25 (short slap)
+        const rawDelayTime = settings.fxDelayTime ?? 0.25;
+        // Clamp logic again just to be safe from NaN
+        const safeDelayTime = Number.isFinite(rawDelayTime) ? rawDelayTime : 0.25;
+        this.delayNode.delayTime.value = 0.1 + (safeDelayTime * 0.9);
+        
+        this.delayFeedback.gain.value = settings.fxDelayFeedback ?? 0.3;
+    }
   }
 
   public duckMusic(intensity: number, duration: number) {
@@ -3850,6 +3992,12 @@ export class AudioMixer {
     this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
     this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
+  
+  public getByteFrequencyData(array: Uint8Array) {
+      if (this.analyser) {
+          this.analyser.getByteFrequencyData(array);
+      }
+  }
 }
 
 
@@ -3864,13 +4012,21 @@ export class AudioSynthesizer {
     // Requires window to be present for OfflineAudioContext
     if (typeof window === 'undefined') return null;
 
+    // Standard AudioContext or Webkit prefix
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    // Use OfflineContext for rendering
+    const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+    if (!OfflineContextClass) return null;
+
     const sampleRate = 44100;
-    const length = sampleRate * recipe.duration;
+    // Ensure integer length
+    const length = Math.ceil(sampleRate * recipe.duration);
     
-    // Safety check for duration
     if (length <= 0) return null;
 
-    const offline = new OfflineAudioContext(1, length, sampleRate);
+    const offline = new OfflineContextClass(1, length, sampleRate);
 
     const mainGain = offline.createGain();
     mainGain.connect(offline.destination);
@@ -3942,7 +4098,7 @@ export class AudioSynthesizer {
         osc.start();
     } 
     else if (recipe.type === 'noise') {
-        const bufferSize = sampleRate * recipe.duration;
+        const bufferSize = length;
         const noiseBuffer = offline.createBuffer(1, bufferSize, sampleRate);
         const data = noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -4066,6 +4222,12 @@ interface AudioSettings {
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
+
+  // FX Rack
+  fxReverbMix: number; 
+  fxDelayMix: number;  
+  fxDelayTime: number; 
+  fxDelayFeedback: number; 
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
@@ -4083,6 +4245,12 @@ const DEFAULT_AUDIO: AudioSettings = {
   ambWidth: 0.5,
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
+
+  // TASTEFUL DEFAULTS
+  fxReverbMix: 0.2,     // 20% Wet (Atmosphere)
+  fxDelayMix: 0.1,      // 10% Wet (Subtle Echo)
+  fxDelayTime: 0.25,    // Short Slap-back
+  fxDelayFeedback: 0.3  // Quick Decay
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
@@ -4109,7 +4277,6 @@ interface AppState {
   
   sandboxView: SandboxView;
   
-  // Gallery State
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   
@@ -4638,7 +4805,7 @@ FILE: ./src/features/settings/tabs/SoundTab.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { clsx } from 'clsx';
 import { 
@@ -4649,13 +4816,12 @@ import {
   getAmbienceStereoGain 
 } from '@/core/audio/AudioMath';
 
-// Dynamic Toggle Component
 const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
   const Icon = isActive ? IconOn : (IconOff || IconOn);
   
   return (
     <button
-      onClick={() => { onClick(); AudioSystem.playClick(); }}
+      onClick={(e) => { onClick(); AudioSystem.playClick(); }}
       onMouseEnter={() => AudioSystem.playHover()}
       className={clsx(
         "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
@@ -4667,7 +4833,6 @@ const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: Icon
       {isActive && (
          <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
       )}
-      {/* UPDATED: Removed fill-current, decreased strokeWidth to 1.5 */}
       <Icon 
         size={16} 
         strokeWidth={1.5}
@@ -4694,7 +4859,6 @@ export const SoundTab = () => {
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pr-2">
       
-      {/* HEADER ALERT */}
       <div className="p-3 border border-primary-green/30 bg-primary-green/5 flex items-start gap-3">
           <Activity size={16} className="text-primary-green mt-0.5 animate-pulse" />
           <div className="flex flex-col gap-1">
@@ -4710,86 +4874,89 @@ export const SoundTab = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* LEFT: GLOBAL MIXER */}
-          <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
-                  <Volume2 size={14} className="text-white/70" />
-                  <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
-              </div>
+          {/* LEFT COLUMN: MIXER & FX */}
+          <div className="flex flex-col gap-6">
               
-              <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
-                  <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ffffff_10px,#ffffff_11px)] pointer-events-none" />
-                  
-                  {/* Channel Toggles Grid */}
-                  <div className="grid grid-cols-4 gap-2 relative z-10">
-                      <ChannelToggle 
-                        label="MAIN" 
-                        isActive={audioSettings.master} 
-                        onClick={toggleMaster} 
-                        iconOn={Volume2} 
-                        iconOff={VolumeX} 
-                      />
-                      <ChannelToggle 
-                        label="MUSIC" 
-                        isActive={audioSettings.music} 
-                        onClick={toggleMusic} 
-                        iconOn={Music} 
-                        // Music icon stays same, just dimmed (Header style)
-                      />
-                      <ChannelToggle 
-                        label="SFX" 
-                        isActive={audioSettings.sfx} 
-                        onClick={toggleSfx} 
-                        iconOn={Zap} 
-                        iconOff={ZapOff}
-                      />
-                      <ChannelToggle 
-                        label="AMB" 
-                        isActive={audioSettings.ambience} 
-                        onClick={toggleAmbience} 
-                        iconOn={Wind} 
-                        // Wind icon stays same, dimmed
-                      />
+              {/* GLOBAL MIXER */}
+              <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
+                      <Volume2 size={14} className="text-white/70" />
+                      <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
                   </div>
+                  
+                  <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
+                      <div className="grid grid-cols-4 gap-2 relative z-10">
+                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} />
+                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} />
+                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} />
+                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} />
+                      </div>
 
-                  {/* Sliders */}
-                  <div className="space-y-5 relative z-10">
-                    <RangeSlider 
-                      label="MASTER_OUT" 
-                      value={audioSettings.volumeMaster} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeMaster', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
-                    <RangeSlider 
-                      label="MUSIC_BUS" 
-                      value={audioSettings.volumeMusic} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeMusic', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
-                    <RangeSlider 
-                      label="SFX_BUS" 
-                      value={audioSettings.volumeSfx} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeSfx', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
+                      <div className="space-y-5 relative z-10">
+                        <RangeSlider label="MASTER_OUT" value={audioSettings.volumeMaster} max={2.0} onChange={(v) => setVolume('volumeMaster', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                        <RangeSlider label="MUSIC_BUS" value={audioSettings.volumeMusic} max={2.0} onChange={(v) => setVolume('volumeMusic', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                        <RangeSlider label="SFX_BUS" value={audioSettings.volumeSfx} max={2.0} onChange={(v) => setVolume('volumeSfx', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                      </div>
+                  </div>
+              </div>
+
+              {/* FX RACK */}
+              <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 border-b border-latent-purple/30 pb-2 mb-2">
+                      <Mic2 size={14} className="text-latent-purple" />
+                      <h3 className="text-xs font-bold text-latent-purple tracking-wider">FX_PROCESSOR</h3>
+                  </div>
+                  
+                  <div className="bg-latent-purple/5 p-4 border border-latent-purple/10 space-y-5 relative">
+                      <RangeSlider 
+                        label="REVERB_SEND" 
+                        value={audioSettings.fxReverbMix} 
+                        max={1.0} 
+                        onChange={(v) => setVolume('fxReverbMix', v, 1.0)} 
+                        format={(v) => `${(v * 100).toFixed(0)}%`}
+                        color="text-latent-purple"
+                      />
+                      <div className="h-px bg-latent-purple/10 w-full" />
+                      <RangeSlider 
+                        label="DELAY_SEND" 
+                        value={audioSettings.fxDelayMix} 
+                        max={1.0} 
+                        onChange={(v) => setVolume('fxDelayMix', v, 1.0)} 
+                        format={(v) => `${(v * 100).toFixed(0)}%`}
+                        color="text-latent-purple"
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                          <RangeSlider 
+                            label="DELAY_TIME" 
+                            value={audioSettings.fxDelayTime} 
+                            max={1.0} 
+                            onChange={(v) => setVolume('fxDelayTime', v, 1.0)} 
+                            format={(v) => `${(0.1 + v * 0.9).toFixed(2)}s`}
+                            color="text-latent-purple"
+                          />
+                          <RangeSlider 
+                            label="FEEDBACK" 
+                            value={audioSettings.fxDelayFeedback} 
+                            max={0.9} 
+                            onChange={(v) => setVolume('fxDelayFeedback', v, 0.9)} 
+                            format={(v) => `${(v * 100).toFixed(0)}%`}
+                            color="text-latent-purple"
+                          />
+                      </div>
                   </div>
               </div>
           </div>
 
-          {/* RIGHT: AMBIENCE LAB */}
+          {/* RIGHT COLUMN: AMBIENCE LAB */}
           <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 border-b border-alert-yellow/30 pb-2 mb-2">
                   <Waves size={14} className="text-alert-yellow" />
                   <h3 className="text-xs font-bold text-alert-yellow tracking-wider">
-                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE FLOOR)</span>
+                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE)</span>
                   </h3>
               </div>
 
-              <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative">
-                  {/* Decorative corner */}
+              <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative h-full">
                   <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-alert-yellow/30" />
 
                   <RangeSlider 
@@ -4804,16 +4971,14 @@ export const SoundTab = () => {
 
                   <div className="h-px bg-alert-yellow/10 w-full" />
 
-                  <div className="grid grid-cols-1 gap-5">
-                      <RangeSlider 
-                        label="SPECTRAL_GATE (CUTOFF)" 
-                        value={audioSettings.ambFilter} 
-                        max={1.0} 
-                        markerValue={0.5}
-                        onChange={(v) => setVolume('ambFilter', v, 1.0)} 
-                        format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
-                      />
-                  </div>
+                  <RangeSlider 
+                    label="SPECTRAL_GATE (CUTOFF)" 
+                    value={audioSettings.ambFilter} 
+                    max={1.0} 
+                    markerValue={0.5}
+                    onChange={(v) => setVolume('ambFilter', v, 1.0)} 
+                    format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
+                  />
                   
                   <div className="grid grid-cols-2 gap-4">
                       <RangeSlider 
@@ -4879,6 +5044,7 @@ FILE: ./src/features/settings/components/RangeSlider.tsx
 =====================================
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { useRef, useState, useEffect } from 'react';
 
 interface RangeSliderProps {
@@ -4907,30 +5073,27 @@ export const RangeSlider = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastTickRef = useRef(value);
+  const lastPanRef = useRef(0);
 
   // Safety
   const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
   const percent = Math.min(100, Math.max(0, (safeValue / max) * 100));
 
-  // Audio Tick Logic (5% increments)
+  // Audio Tick Logic
   useEffect(() => {
     const threshold = max * 0.05;
     if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
-        // Debounce slightly to prevent zipper noise on instant jumps
-        // Only play if dragging to avoid spam on load
         if (isDragging) {
-            AudioSystem.playSound('ui_hover'); // UPDATED: Changed to ui_hover
+            AudioSystem.playHover(lastPanRef.current);
         }
         lastTickRef.current = safeValue;
     }
   }, [safeValue, max, isDragging]);
 
-  // Sync ref on external updates when not dragging
   useEffect(() => {
       if (!isDragging) lastTickRef.current = safeValue;
   }, [safeValue, isDragging]);
 
-  // Semantic Coloring
   let activeColor = "bg-primary-green";
   let activeText = "text-primary-green";
   let glowClass = "shadow-[0_0_10px_#78F654]";
@@ -4950,7 +5113,6 @@ export const RangeSlider = ({
   const displayString = format ? format(safeValue) : `${Math.round(percent)}%`;
   const segments = 20;
 
-  // --- DRAG LOGIC ---
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -4969,19 +5131,18 @@ export const RangeSlider = ({
 
   const updateValue = (e: React.PointerEvent) => {
       if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
       
-      // Calculate normalized position (0..1)
+      // Update pan reference for audio tick
+      lastPanRef.current = getPan(e);
+
+      const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
       const ratio = x / rect.width;
       
-      // Map to Value & Step
       let rawValue = ratio * max;
       if (step > 0) {
           rawValue = Math.round(rawValue / step) * step;
       }
-      
-      // Clamp
       const finalValue = Math.max(0, Math.min(max, rawValue));
       
       if (finalValue !== safeValue) {
@@ -4992,9 +5153,8 @@ export const RangeSlider = ({
   return (
     <div 
         className="flex flex-col gap-1 w-full select-none touch-none"
-        onMouseEnter={() => AudioSystem.playHover()}
+        onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     >
-      {/* Header */}
       <div className="flex justify-between items-end mb-1">
         <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">
             {label}
@@ -5004,7 +5164,6 @@ export const RangeSlider = ({
         </span>
       </div>
       
-      {/* Interactive Track */}
       <div 
         ref={containerRef}
         className="relative h-6 w-full flex items-center cursor-pointer group/slider py-1"
@@ -5013,14 +5172,12 @@ export const RangeSlider = ({
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
-        {/* Background Track (Segments) */}
         <div className="absolute inset-x-0 h-2 flex justify-between items-center px-[1px] pointer-events-none z-0 opacity-30 bg-black/50 border border-white/10 rounded-sm">
             {Array.from({ length: segments }).map((_, i) => (
                 <div key={i} className="w-[1px] h-1.5 bg-gray-500" />
             ))}
         </div>
 
-        {/* Active Fill */}
         <div 
             className="absolute left-0 h-2 top-2 z-10 pointer-events-none transition-none rounded-sm overflow-hidden" 
             style={{ width: `${percent}%` }}
@@ -5028,7 +5185,6 @@ export const RangeSlider = ({
             <div className={clsx("w-full h-full opacity-80", activeColor, glowClass)} />
         </div>
 
-        {/* The "Thumb" Indicator */}
         <div 
             className={clsx(
                 "absolute h-4 w-1 top-1 z-20 pointer-events-none shadow-sm transition-transform duration-100",
@@ -5041,7 +5197,6 @@ export const RangeSlider = ({
             }} 
         />
         
-        {/* Marker (Default) */}
         {markerValue !== undefined && (
             <div 
                 className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/50 pointer-events-none z-0" 
@@ -8659,11 +8814,11 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
 =====================================
 FILE: ./src/features/debug/DebugOverlay.tsx
 =====================================
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
-import { Terminal, Box, Activity, Shield, MinusSquare, X, Maximize2, Cpu } from 'lucide-react';
+import { Terminal, Box, Activity, Shield, MinusSquare, X, Play, PauseCircle, Power } from 'lucide-react';
 import { clsx } from 'clsx';
 import { GameEventBus } from '@/game/events/GameEventBus';
 import { GameEvents } from '@/game/events/GameEvents';
@@ -8686,20 +8841,22 @@ const TABS: { id: Tab, label: string, icon: any }[] = [
 
 const IGNORED_EVENTS = new Set([
     GameEvents.PLAYER_FIRED,
-    GameEvents.PLAYER_HIT,
     GameEvents.ENEMY_DAMAGED,
     GameEvents.ENEMY_SPAWNED,
-    GameEvents.PANEL_DAMAGED,
     GameEvents.PROJECTILE_CLASH,
     GameEvents.SPAWN_FX,
 ]);
 
 export const DebugOverlay = () => {
-  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, resetApplication, toggleSettings, activeModal, closeModal, openModal } = useStore();
+  const { isDebugOpen, isDebugMinimized, toggleDebugMenu, setDebugFlag, bootState, activeModal, closeModal, openModal, toggleSettings } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('OVERRIDES');
   const [stats, setStats] = useState({ active: 0, pooled: 0, total: 0, fps: 0 });
+  
+  // OPTIMIZATION: Logs state capped and controlled
   const [logs, setLogs] = useState<{ time: string, msg: string, type: string }[]>([]);
+  const [isLogLive, setIsLogLive] = useState(false); // Default OFF
 
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '`' || e.key === '~') {
@@ -8725,11 +8882,11 @@ export const DebugOverlay = () => {
              AudioSystem.playSound(!isDebugOpen ? 'ui_menu_open' : 'ui_menu_close');
         }
       } 
-      
       else if (e.key === 'Escape') {
           if (isDebugOpen) {
               toggleDebugMenu();
-              openModal('settings');
+              // If we close debug, maybe open settings or just close? Original logic:
+              if (activeModal === 'none') openModal('settings');
               AudioSystem.playSound('ui_menu_open'); 
           } else if (activeModal !== 'none') {
               closeModal();
@@ -8744,7 +8901,11 @@ export const DebugOverlay = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleDebugMenu, isDebugMinimized, isDebugOpen, setDebugFlag, activeModal, toggleSettings, closeModal, openModal]);
 
+  // Event Subscription (Optimized)
   useEffect(() => {
+    // If not live, don't subscribe to high frequency events to save React updates
+    if (!isLogLive) return;
+
     const handlers = Object.values(GameEvents).map(evt => {
         return GameEventBus.subscribe(evt as any, (payload) => {
             if (IGNORED_EVENTS.has(evt as GameEvents)) return;
@@ -8761,12 +8922,25 @@ export const DebugOverlay = () => {
                 msg += ` [ID:${(payload as any).id}]`;
             }
             
-            setLogs(prev => [...prev.slice(-99), { time, msg, type: evt }]);
+            setLogs(prev => {
+                // OPTIMIZATION: Cap at 50
+                const newLogs = [...prev, { time, msg, type: evt }];
+                if (newLogs.length > 50) return newLogs.slice(newLogs.length - 50);
+                return newLogs;
+            });
         });
     });
 
+    return () => {
+        handlers.forEach(unsub => unsub());
+    };
+  }, [isLogLive]); // Re-run when toggle changes
+
+  // Stats Polling (Only when open)
+  useEffect(() => {
     const pollInterval = setInterval(() => {
         if (!isDebugOpen && !isDebugMinimized) return;
+        
         let fps = 0;
         let regStats = { active: 0, pooled: 0, totalAllocated: 0 };
         try {
@@ -8784,10 +8958,7 @@ export const DebugOverlay = () => {
         });
     }, 250); 
 
-    return () => {
-        handlers.forEach(unsub => unsub());
-        clearInterval(pollInterval);
-    };
+    return () => clearInterval(pollInterval);
   }, [isDebugOpen, isDebugMinimized]);
 
   if (!isDebugOpen && !isDebugMinimized) return null;
@@ -8795,12 +8966,16 @@ export const DebugOverlay = () => {
   if (bootState === 'sandbox') {
       return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm font-mono pointer-events-auto">
-            {/* Minimal floating pause menu */}
+            {/* Minimal floating pause menu could go here */}
         </div>
       );
   }
 
-  // --- FULL DEBUG MENU ---
+  const toggleLiveFeed = () => {
+      setIsLogLive(!isLogLive);
+      AudioSystem.playClick();
+  };
+
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-md font-mono text-primary-green p-4 pointer-events-auto">
       <div className="w-full max-w-4xl bg-[#050a05] border border-primary-green/50 shadow-[0_0_100px_rgba(0,255,65,0.1)] flex flex-col h-[650px] overflow-hidden relative rounded-sm">
@@ -8857,11 +9032,38 @@ export const DebugOverlay = () => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/50 scrollbar-track-black relative z-20">
-            {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
-            {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
-            {activeTab === 'STATS' && <StatsTab stats={stats} />}
-            {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
+          <div className="flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/50 scrollbar-track-black relative z-20 flex flex-col">
+            
+            {activeTab === 'CONSOLE' && (
+                <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                    <span className="text-xs font-bold text-gray-500">EVENT_STREAM</span>
+                    
+                    {/* BEAUTIFUL TOGGLE */}
+                    <button
+                        onClick={toggleLiveFeed}
+                        className={clsx(
+                            "flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-bold tracking-wider transition-all border",
+                            isLogLive 
+                                ? "border-primary-green text-primary-green bg-primary-green/10 shadow-[0_0_10px_rgba(0,255,65,0.3)]"
+                                : "border-gray-600 text-gray-500 bg-black/40 hover:border-gray-400"
+                        )}
+                    >
+                        <div className={clsx(
+                            "w-2 h-2 rounded-full transition-colors",
+                            isLogLive ? "bg-primary-green animate-pulse" : "bg-gray-600"
+                        )} />
+                        {isLogLive ? "LIVE FEED: ON" : "LIVE FEED: PAUSED"}
+                        {isLogLive ? <PauseCircle size={10} /> : <Play size={10} />}
+                    </button>
+                </div>
+            )}
+
+            <div className="flex-1 min-h-0 relative">
+                {activeTab === 'OVERRIDES' && <OverridesTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
+                {activeTab === 'SANDBOX' && <SandboxTab closeDebug={() => { toggleDebugMenu(); AudioSystem.playSound('ui_menu_close'); }} />}
+                {activeTab === 'STATS' && <StatsTab stats={stats} />}
+                {activeTab === 'CONSOLE' && <ConsoleTab logs={logs} />}
+            </div>
           </div>
         </div>
 
@@ -9450,11 +9652,16 @@ export class EntityRegistry implements IEntityRegistry {
   
   // ID Management
   private nextId = 0;
-  private freeIds: number[] = []; // Stack for recycled IDs
+  private freeIds: number[] = []; 
   
-  private tagCache = new Map<Tag, Set<EntityID>>();
+  // OPTIMIZATION: Cache Sets of Entities directly, not IDs.
+  // This avoids O(N) lookups and Array allocations during getByTag()
+  private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
+
+  // Reusable empty set to prevent null checks in loops
+  private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
       this.entityPool = new ObjectPool<Entity>(
@@ -9467,18 +9674,14 @@ export class EntityRegistry implements IEntityRegistry {
   public createEntity(): Entity {
     let idNum: number;
 
-    // 1. Try to recycle an ID
     if (this.freeIds.length > 0) {
         idNum = this.freeIds.pop()!;
     } else {
         idNum = ++this.nextId;
     }
 
-    // 2. Safety Check (Prevent Array OOB in SpatialGrid)
     if (idNum >= MAX_ENTITIES) {
-        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}). Recycling oldest logic needed.`);
-        // In a real engine, we might kill the oldest particle here.
-        // For now, we accept the risk or need to increase MAX_ENTITIES.
+        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}).`);
     }
 
     const newId = createEntityID(idNum);
@@ -9498,8 +9701,6 @@ export class EntityRegistry implements IEntityRegistry {
     
     this.removeFromCache(entity);
     this.entities.delete(eid);
-    
-    // 3. Recycle ID
     this.freeIds.push(id);
     
     entity.release();
@@ -9514,21 +9715,14 @@ export class EntityRegistry implements IEntityRegistry {
     return this.entities.values();
   }
 
-  public getByTag(tag: string): Entity[] {
+  public getByTag(tag: string): Iterable<Entity> {
     const t = tag as Tag;
-    if (!this.tagCache.has(t)) {
-        this.tagCache.set(t, new Set());
-    }
-    const ids = this.tagCache.get(t)!;
-    const results: Entity[] = [];
-    for (const id of ids) {
-        const e = this.entities.get(id);
-        if (e && e.active) results.push(e);
-    }
-    return results;
+    return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
   }
 
-  public query(def: QueryDef): Entity[] {
+  public query(def: QueryDef): Iterable<Entity> {
+    // We create a temporary query object to generate the ID string
+    // This is lightweight compared to array allocation
     const tempQ = new Query(def);
     let cache = this.activeQueries.get(tempQ.id);
     
@@ -9543,14 +9737,17 @@ export class EntityRegistry implements IEntityRegistry {
         cache = { query: q, results };
         this.activeQueries.set(q.id, cache);
     }
-    return Array.from(cache.results);
+    return cache.results;
   }
   
   public updateCache(entity: Entity) {
+      // 1. Update Tag Cache
       for (const tag of entity.tags) {
           if (!this.tagCache.has(tag)) this.tagCache.set(tag, new Set());
-          this.tagCache.get(tag)!.add(entity.id);
+          this.tagCache.get(tag)!.add(entity);
       }
+      
+      // 2. Update Query Cache
       for (const cache of this.activeQueries.values()) {
           if (cache.query.matches(entity)) {
               cache.results.add(entity);
@@ -9563,7 +9760,7 @@ export class EntityRegistry implements IEntityRegistry {
   private removeFromCache(entity: Entity) {
       for (const tag of entity.tags) {
           if (this.tagCache.has(tag)) {
-              this.tagCache.get(tag)!.delete(entity.id);
+              this.tagCache.get(tag)!.delete(entity);
           }
       }
       for (const cache of this.activeQueries.values()) {
@@ -9580,7 +9777,6 @@ export class EntityRegistry implements IEntityRegistry {
       this.tagCache.clear();
       this.activeQueries.clear();
       
-      // Reset ID counters
       this.nextId = 0;
       this.freeIds = [];
   }
@@ -9731,7 +9927,7 @@ export * from './interfaces';
 =====================================
 FILE: ./src/game/core/ServiceLocator.ts
 =====================================
-import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner } from './interfaces';
+import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from './interfaces';
 import { ConfigService } from '../services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {
@@ -9740,6 +9936,7 @@ class ServiceLocatorImpl implements IServiceLocator {
   private inputService?: IInputService;
   private registry?: IEntityRegistry;
   private spawner?: IEntitySpawner;
+  private particleSystem?: IParticleSystem;
 
   public getSystem<T extends IGameSystem>(id: string): T {
     const sys = this.systems.get(id);
@@ -9750,6 +9947,7 @@ class ServiceLocatorImpl implements IServiceLocator {
   public registerSystem(id: string, system: IGameSystem): void {
     this.systems.set(id, system);
     if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
+    if (id === 'ParticleSystem') this.particleSystem = system as unknown as IParticleSystem;
   }
 
   public registerRegistry(registry: IEntityRegistry) {
@@ -9779,6 +9977,11 @@ class ServiceLocatorImpl implements IServiceLocator {
       return this.spawner;
   }
 
+  public getParticleSystem(): IParticleSystem {
+      if (!this.particleSystem) throw new Error("ParticleSystem not registered");
+      return this.particleSystem;
+  }
+
   public getConfigService() {
       return ConfigService;
   }
@@ -9789,7 +9992,8 @@ class ServiceLocatorImpl implements IServiceLocator {
     this.inputService = undefined;
     this.registry = undefined;
     this.spawner = undefined;
-    ConfigService.reset(); // Reset configs on reboot
+    this.particleSystem = undefined;
+    ConfigService.reset(); 
   }
 }
 
@@ -9886,16 +10090,16 @@ FILE: ./src/game/core/FastEventBus.ts
 const BUFFER_SIZE = 2048; 
 const MASK = BUFFER_SIZE - 1;
 
-// Increased Stride to 5 (EventID + 4 Args) to support X, Y, Angle, etc.
 const STRIDE = 5; 
 
 export const FastEvents = {
   SPAWN_FX: 1,      // [ID, TYPE_ID, X, Y, ANGLE]
   TRAUMA: 2,        // [ID, AMOUNT, 0, 0, 0]
-  PLAY_SOUND: 3,    // [ID, SOUND_ID, 0, 0, 0]
+  PLAY_SOUND: 3,    // [ID, SOUND_ID, X_POS, 0, 0]
 } as const;
 
 export const FX_IDS: Record<string, number> = {
+  // VISUALS
   'EXPLOSION_PURPLE': 1,
   'EXPLOSION_YELLOW': 2,
   'EXPLOSION_RED': 3,
@@ -9905,7 +10109,12 @@ export const FX_IDS: Record<string, number> = {
   'DRILL_SPARKS': 7,
   'HUNTER_RECOIL': 8,
   'REBOOT_HEAL': 9,
-  'PURGE_BLAST': 10
+  'PURGE_BLAST': 10,
+  
+  // AUDIO TRIGGERS
+  'FX_PLAYER_FIRE': 50,
+  'FX_IMPACT_HEAVY': 51,
+  'FX_IMPACT_LIGHT': 52
 };
 
 export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
@@ -9916,23 +10125,35 @@ export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
 class FastEventBusController {
   private buffer = new Float32Array(BUFFER_SIZE * STRIDE);
   private writeCursor = 0;
-  private readCursor = 0;
 
   public emit(eventId: number, arg1: number = 0, arg2: number = 0, arg3: number = 0, arg4: number = 0) {
+    if (isNaN(arg1)) {
+        console.warn(`[FastEventBus] Attempted to emit NaN arg1 for event ${eventId}`);
+        return;
+    }
+
     const ptr = (this.writeCursor & MASK) * STRIDE;
     
     this.buffer[ptr] = eventId;
     this.buffer[ptr + 1] = arg1;
     this.buffer[ptr + 2] = arg2;
     this.buffer[ptr + 3] = arg3;
-    this.buffer[ptr + 4] = arg4; // Angle or Extra Data
+    this.buffer[ptr + 4] = arg4;
 
     this.writeCursor++;
   }
 
-  public processEvents(handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void) {
-    while (this.readCursor < this.writeCursor) {
-      const ptr = (this.readCursor & MASK) * STRIDE;
+  // UPDATED: Independent Reader Logic
+  // Returns the new cursor position for the caller to store
+  public readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number {
+    let current = fromCursor;
+    // Don't read more than buffer size (in case a system lags way behind)
+    if (this.writeCursor - current > BUFFER_SIZE) {
+        current = this.writeCursor - BUFFER_SIZE;
+    }
+
+    while (current < this.writeCursor) {
+      const ptr = (current & MASK) * STRIDE;
       
       const id = this.buffer[ptr];
       const a1 = this.buffer[ptr + 1];
@@ -9942,8 +10163,15 @@ class FastEventBusController {
 
       handler(id, a1, a2, a3, a4);
       
-      this.readCursor++;
+      current++;
     }
+    
+    return current;
+  }
+  
+  // Helper to init cursor for new systems
+  public getCursor() {
+      return this.writeCursor;
   }
 }
 
@@ -9976,6 +10204,7 @@ export interface IServiceLocator {
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
+  getParticleSystem(): IParticleSystem;
 }
 
 // --- CORE CONTRACTS ---
@@ -9985,17 +10214,14 @@ export interface IEntityRegistry {
   destroyEntity(id: number): void;
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
-  getByTag(tag: string): Entity[];
-  query(def: QueryDef): Entity[];
+  getByTag(tag: string): Iterable<Entity>; 
+  query(def: QueryDef): Iterable<Entity>;
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }
 
 export interface IEntitySpawner {
-  // Generic Assembler
   spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
-
-  // Convenience / Legacy Wrappers
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
@@ -10016,6 +10242,18 @@ export interface IInputService {
 }
 
 // --- SYSTEM CONTRACTS ---
+
+export interface IParticleSystem extends IGameSystem {
+  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number): void;
+  getCount(): number;
+  getData(): {
+    x: Float32Array;
+    y: Float32Array;
+    life: Float32Array;
+    maxLife: Float32Array;
+    color: Float32Array; 
+  };
+}
 
 export interface IPhysicsSystem extends IGameSystem {
   spatialGrid: SpatialGrid;
@@ -10053,7 +10291,8 @@ export interface IGameStateSystem extends IGameSystem {
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
   damagePanel(id: string, amount: number): void;
-  healPanel(id: string, amount: number): void;
+  // UPDATED: sourceX optional arg
+  healPanel(id: string, amount: number, sourceX?: number): void;
   getPanelRect(id: string): WorldRect | undefined;
 }
 
@@ -10621,9 +10860,11 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
 
   // ==========================================
-  // GAMEPLAY FX (ONE SHOT)
+  // GAMEPLAY FX
   // ==========================================
-  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.15, pitchVariance: 100 },
+  // UPDATED: Volume 0.15 -> 0.35, Slightly sharper attack
+  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.35, pitchVariance: 100, attack: 0.005 },
+  
   'fx_enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
   'fx_impact_light': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
   'fx_impact_heavy': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
@@ -10634,7 +10875,7 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
 
   // ==========================================
-  // LOOPS & STATES (CONTINUOUS)
+  // LOOPS & STATES
   // ==========================================
   'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
@@ -10644,11 +10885,10 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   // ==========================================
   // AMBIENCE
   // ==========================================
-  // UPDATED: Volume increased from 0.05 to 0.24 (Natural Source Level)
   'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0 },
 
   // ==========================================
-  // SYNTHESIS LAB (RENAMED PROTOS)
+  // SYNTH LAB
   // ==========================================
   'syn_fm_scream': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
   'syn_data_burst': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50 },
@@ -10768,7 +11008,7 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { StructureSystem } from '../systems/StructureSystem'; // NEW
+import { StructureSystem } from '../systems/StructureSystem'; 
 import { TargetingSystem } from '../systems/TargetingSystem';
 import { GuidanceSystem } from '../systems/GuidanceSystem';
 import { OrbitalSystem } from '../systems/OrbitalSystem';
@@ -10776,6 +11016,7 @@ import { OrbitalSystem } from '../systems/OrbitalSystem';
 // VFX
 import { ShakeSystem } from '../systems/ShakeSystem';
 import { VFXSystem } from '../systems/VFXSystem';
+import { ParticleSystem } from '../systems/ParticleSystem';
 
 type SystemFactory = () => IGameSystem;
 
@@ -10784,43 +11025,34 @@ interface SystemDef {
   factory: SystemFactory;
 }
 
-// HELPER: Wraps a class constructor
 const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new ClassRef();
-
-// HELPER: Wraps an existing singleton instance
 const useInstance = (instance: IGameSystem): SystemFactory => () => instance;
 
-/**
- * THE SYSTEM PIPELINE
- */
 export const SYSTEM_MANIFEST: SystemDef[] = [
-  // --- 1. CORE & INPUT (Prepare the frame) ---
   { id: 'TimeSystem',       factory: useClass(TimeSystem) },
   { id: 'InputSystem',      factory: useClass(InputSystem) },
-  { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) }, // Singleton
+  { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) },
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
-  { id: 'StructureSystem',  factory: useClass(StructureSystem) }, // NEW: World Logic
+  { id: 'StructureSystem',  factory: useClass(StructureSystem) },
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
-  // --- 2. AI & DECISION MAKING (Think) ---
+  { id: 'ParticleSystem',   factory: useClass(ParticleSystem) }, // NEW
+
   { id: 'TargetingSystem',  factory: useClass(TargetingSystem) },
   { id: 'OrbitalSystem',    factory: useClass(OrbitalSystem) },
   { id: 'PlayerSystem',     factory: useClass(PlayerSystem) },
-  { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) }, // AI Logic
+  { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) },
   { id: 'GuidanceSystem',   factory: useClass(GuidanceSystem) },
 
-  // --- 3. PHYSICS & RESOLUTION (Move & Hit) ---
   { id: 'PhysicsSystem',    factory: useClass(PhysicsSystem) },
   { id: 'CollisionSystem',  factory: useClass(CollisionSystem) },
   
-  // --- 4. OUTCOMES (Die & Explode) ---
-  { id: 'CombatSystem',     factory: useClass(CombatSystem) }, // Resolves damage logic
+  { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
   { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) },
   
-  // --- 5. RENDER PREP (Sync to View) ---
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
   { id: 'UISyncSystem',     factory: useClass(UISyncSystem) },
 ];
@@ -10845,38 +11077,31 @@ const getPos = (e: Entity) => e.getComponent<TransformComponent>('Transform');
 
 // --- HANDLERS ---
 
-/**
- * PLAYER vs ENEMY (Contact)
- */
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // 1. DAEMON (Player Upgrade) RAMMING
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
   }
 
-  // 2. STANDARD PLAYER CRASH
   const eId = getId(enemy);
-  
-  // NEW STATS: 
-  // Kamikaze: 3 DMG (Big Boom)
-  // Others: 1 DMG (Standard Chip)
+  const pos = getPos(enemy);
+  const x = pos ? pos.x : 0;
+
   if (eId?.variant === EnemyTypes.KAMIKAZE) {
       ctx.damagePlayer(3); 
       ctx.addTrauma(0.5); 
       ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+      ctx.playSpatialAudio('fx_impact_heavy', x);
   } else {
       ctx.damagePlayer(1);
       ctx.addTrauma(0.2); 
       ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+      ctx.playSpatialAudio('fx_impact_light', x);
   }
 };
 
-/**
- * PLAYER vs ENEMY_BULLET
- */
 export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatContext) => {
   const pId = getId(player);
 
@@ -10885,21 +11110,20 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
       return;
   }
 
-  // Hunter/Enemy Projectiles now deal 3 Damage
+  // Bullet hit player -> Usually center panned as player is center (mostly)
+  // But player moves, so we use bullet position
+  const pos = getPos(bullet);
+  const x = pos ? pos.x : 0;
+
   ctx.damagePlayer(3);
   ctx.destroyEntity(bullet, 'IMPACT_RED');
+  ctx.playSpatialAudio('fx_impact_heavy', x);
 };
 
-/**
- * ENEMY vs PLAYER_BULLET
- */
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx);
 };
 
-/**
- * BULLET vs BULLET
- */
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
   handleMassExchange(bulletA, bulletB, 'CLASH_YELLOW', ctx);
 };
@@ -10910,12 +11134,12 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const state = daemon.getComponent<StateComponent>('State');
   if (!state) return;
 
-  // Daemon Shield takes damage
+  const pos = getPos(attacker);
+  const x = pos ? pos.x : 0;
+
   let incomingDamage = fixedDamage || 1; 
-  
   if (!fixedDamage) {
       const id = getId(attacker);
-      // Kamikaze does 3 damage to shield
       if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 3;
   }
 
@@ -10931,42 +11155,46 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
           } else {
               ctx.destroyEntity(attacker, 'IMPACT_WHITE');
           }
+          ctx.playSpatialAudio('fx_impact_light', x);
           return;
       }
   }
 
-  // If shield broken or not active, just destroy attacker (Daemon is invincible hull)
   if (attacker.hasTag('ENEMY')) {
       ctx.destroyEntity(attacker, 'EXPLOSION_RED');
   } else {
       ctx.destroyEntity(attacker, 'IMPACT_RED');
   }
+  ctx.playSpatialAudio('fx_impact_light', x);
 }
 
 function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext) {
   const hpA = getHp(a);
   const hpB = getHp(b);
 
-  // Default projectiles have 1 HP/Damage.
-  // Daemon projectiles have 10.
   const valA = hpA ? hpA.current : 1;
   const valB = hpB ? hpB.current : 1;
-  
-  // They damage each other by the MINIMUM of their remaining HP.
-  // Example: Daemon Bullet (10) vs Kamikaze (2).
-  // Impact = 2. 
-  // Daemon Bullet -> 8 HP (Survives).
-  // Kamikaze -> 0 HP (Dies).
   const impact = Math.min(valA, valB);
 
   if (hpA) hpA.current = Math.max(0, hpA.current - impact);
   if (hpB) hpB.current = Math.max(0, hpB.current - impact);
 
   const pos = getPos(a);
+  const x = pos ? pos.x : 0;
   if (pos) ctx.spawnFX(fx, pos.x, pos.y);
 
-  if (hpA && hpA.current <= 0) ctx.destroyEntity(a, 'IMPACT_WHITE');
-  if (hpB && hpB.current <= 0) ctx.destroyEntity(b, 'IMPACT_WHITE');
+  let soundKey = '';
+
+  if (hpA && hpA.current <= 0) {
+      ctx.destroyEntity(a, 'IMPACT_WHITE');
+      soundKey = 'fx_impact_light';
+  }
+  if (hpB && hpB.current <= 0) {
+      ctx.destroyEntity(b, 'IMPACT_WHITE');
+      soundKey = 'fx_impact_light';
+  }
+  
+  if (soundKey) ctx.playSpatialAudio(soundKey, x);
 }
 
 
@@ -11014,7 +11242,8 @@ export interface CombatContext {
   destroyEntity: (entity: Entity, fx?: string) => void;
   spawnFX: (type: string, x: number, y: number) => void;
   playAudio: (key: string) => void;
-  addTrauma: (amount: number) => void; // NEW: Direct shake control
+  playSpatialAudio: (key: string, x: number) => void; // NEW
+  addTrauma: (amount: number) => void;
 }
 
 export type CollisionHandler = (entityA: Entity, entityB: Entity, ctx: CombatContext) => void;
@@ -11223,20 +11452,16 @@ export interface AIContext {
   delta: number;
   time: number;
   
-  // Audio/Visual
   spawnProjectile: (x: number, y: number, vx: number, vy: number, damage?: number) => void;
   spawnDrillSparks: (x: number, y: number, angle: number) => void; 
   spawnLaunchSparks: (x: number, y: number, angle: number) => void; 
   spawnFX: (type: string, x: number, y: number) => void;
-  playSound: (key: string) => void;
+  playSound: (key: string, x?: number) => void; // UPDATED
   
-  // World Interaction
   damagePanel: (id: string, amount: number) => void;
   
-  // Data Access
   getUpgradeLevel: (key: string) => number;
   
-  // Configuration (Injected)
   config: typeof ConfigService;
 }
 
@@ -11412,17 +11637,11 @@ export const DrillerLogic: EnemyLogic = {
     let destX = target.x;
     let destY = target.y;
     
-    // Improved Targeting Logic:
-    // If target is a Panel, clamp destination to the panel's bounding box edge
     if (target.type === 'PANEL' && target.id) {
         const rect = PanelRegistry.getPanelRect(target.id);
         if (rect) {
-            // Find the closest point on the rectangle perimeter to the enemy
-            // Clamp X
             const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
-            // Clamp Y
             const clampY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
-            
             destX = clampX;
             destY = clampY;
         }
@@ -11435,7 +11654,6 @@ export const DrillerLogic: EnemyLogic = {
     
     const angle = Math.atan2(dy, dx);
     
-    // Check if we are close enough to the TARGET POINT (which is now the edge)
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
@@ -11454,7 +11672,8 @@ export const DrillerLogic: EnemyLogic = {
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
-            ctx.playSound('loop_drill');
+            // SPATIAL AUDIO: Pass pos.x
+            ctx.playSound('loop_drill', pos.x);
             state.data.audioTimer = aiConfig.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 
@@ -12064,15 +12283,23 @@ export const DaemonChargeRenderer = () => {
 =====================================
 FILE: ./src/game/components/PlayerAvatar.tsx
 =====================================
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { InteractionSystem, RepairState } from '../systems/InteractionSystem'; 
-import { EntitySystem } from '../systems/EntitySystem';
+import { EntitySystem } from '../systems/EntitySystem'; // Note: This might be legacy import, safe to ignore type if unused
 import * as THREE from 'three';
+
+// GLOBAL REUSABLES (Outside Component)
+const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
+const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
+const colorReboot = new THREE.Color('#9E4EA5'); 
+const colorDead = new THREE.Color('#FF003C'); 
+const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 
 export const PlayerAvatar = () => {
   const groupRef = useRef<THREE.Group>(null);
@@ -12083,19 +12310,6 @@ export const PlayerAvatar = () => {
   
   const { introDone } = useStore(); 
 
-  const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
-  const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
-  const colorReboot = new THREE.Color('#9E4EA5'); 
-  const colorDead = new THREE.Color('#FF003C'); 
-
-  const isDead = useGameStore(state => state.playerHealth <= 0);
-  const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
-  
-  // GEOMETRIES
-  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
-  // Reverted: Use Circle with 3 segments for Triangle, size 0.12
-  const deadGeo = new THREE.CircleGeometry(0.12, 3); 
-  
   const animScale = useRef(0);
 
   useFrame((state, delta) => {
@@ -12119,12 +12333,15 @@ export const PlayerAvatar = () => {
 
     try { ServiceLocator.getInputService().updateCursor(x, y); } catch {}
 
-    // 2. State
+    // 2. State Access (No allocation)
+    const storeState = useGameStore.getState();
+    const isDead = storeState.playerHealth <= 0;
+    const isGameOver = storeState.systemIntegrity <= 0;
+
     let repairState: RepairState = 'IDLE';
-    let entitySys: EntitySystem | null = null;
     try {
-        repairState = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem').repairState;
-        entitySys = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
+        const sys = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem');
+        repairState = sys.repairState;
     } catch {}
     
     let targetColor = colorTurret;
@@ -12136,31 +12353,20 @@ export const PlayerAvatar = () => {
         let currentBaseScale = 1.0;
 
         if (isDead || isGameOver) {
-            // DEAD STATE: Red Triangle
+            // DEAD STATE
             ringRef.current.visible = false;
             glowRef.current.visible = false;
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.set(colorDead);
+            coreRef.current.material.color.copy(colorDead); // Use copy
             coreRef.current.material.wireframe = true; 
             
-            // ANIMATION LOGIC
             const isRebooting = repairState === 'REBOOTING';
-            
             if (isRebooting) {
-                // Fast Counter-Clockwise Spin
                 coreRef.current.rotation.z -= delta * 10.0;
-                
-                // Particle Spray
-                if (entitySys && Math.random() > 0.5) { // 30fps emission rate
-                    const pColor = Math.random() > 0.5 ? '#FF003C' : '#F7D277';
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = 2 + Math.random() * 3;
-                    
-                    entitySys.spawnParticle(x, y, pColor, 1, speed, 0.4);
-                }
+                // Particle spawning removed from here to keep Renderer pure. 
+                // Logic handles particles via InteractionSystem events now.
             } else {
-                // Slow Clockwise Idle Spin
                 coreRef.current.rotation.z += delta * 1.5; 
             }
             
@@ -12297,32 +12503,69 @@ export const BulletRenderer = () => {
 =====================================
 FILE: ./src/game/components/ParticleRenderer.tsx
 =====================================
-import { Tag } from '../core/ecs/types';
-import { InstancedActor } from './common/InstancedActor';
-import { LifetimeComponent } from '../components/data/LifetimeComponent';
-import { AssetService } from '../assets/AssetService';
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { ServiceLocator } from '../core/ServiceLocator';
+import { AssetService } from '../assets/AssetService';
+import { ParticleSystem } from '../systems/ParticleSystem';
 
 export const ParticleRenderer = () => {
-  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_PARTICLE');
-  const material = AssetService.get<THREE.Material>('MAT_PARTICLE');
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  
+  // Use generators from AssetService
+  const geometry = useMemo(() => AssetService.get<THREE.BufferGeometry>('GEO_PARTICLE'), []);
+  const material = useMemo(() => AssetService.get<THREE.Material>('MAT_PARTICLE'), []);
+
+  // Reusable objects for the loop
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const color = useMemo(() => new THREE.Color(), []);
+
+  useFrame(() => {
+    if (!meshRef.current) return;
+
+    let sys: ParticleSystem | null = null;
+    try {
+        sys = ServiceLocator.getParticleSystem() as ParticleSystem;
+    } catch { return; }
+
+    const count = sys.count;
+    
+    // Safety check
+    if (count === 0) {
+        meshRef.current.count = 0;
+        return;
+    }
+
+    for (let i = 0; i < count; i++) {
+        const x = sys.x[i];
+        const y = sys.y[i];
+        const life = sys.life[i];
+        const maxLife = sys.maxLife[i];
+        
+        // Scaling Logic
+        const scale = life / maxLife;
+        dummy.position.set(x, y, 6.0); // Z=6.0 (In front of enemies)
+        dummy.scale.set(scale, scale, 1);
+        dummy.updateMatrix();
+        
+        meshRef.current.setMatrixAt(i, dummy.matrix);
+        
+        // Color Logic
+        color.setRGB(sys.r[i], sys.g[i], sys.b[i]);
+        meshRef.current.setColorAt(i, color);
+    }
+
+    meshRef.current.count = count;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+  });
 
   return (
-    <InstancedActor 
-      tag={Tag.PARTICLE} 
-      geometry={geometry} 
-      material={material} 
-      maxCount={1000}
-      colorSource="identity"
-      updateEntity={(e, obj, color) => {
-         const life = e.getComponent<LifetimeComponent>('Lifetime');
-         if (life) {
-             const scale = life.remaining / life.total;
-             obj.scale.setScalar(scale);
-             const isInFront = (e.id as number) % 2 === 0;
-             obj.position.z = isInFront ? 6.0 : 4.0;
-         }
-      }}
+    <instancedMesh 
+      ref={meshRef} 
+      args={[geometry, material, 2000]} // Max 2000
+      frustumCulled={false}
     />
   );
 };
@@ -12843,6 +13086,7 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
+    // getByTag returns Iterable<Entity>, handled correctly by for...of
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
     const transformData = TransformStore.data;
@@ -12895,7 +13139,6 @@ export const InstancedActor = ({
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
-  // UPDATED: Use onPointerDown for instant reaction
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
       if (!interactive || e.instanceId === undefined) return;
       e.stopPropagation();
@@ -12925,7 +13168,7 @@ export const InstancedActor = ({
 FILE: ./src/game/components/GameDirector.tsx
 =====================================
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { GameBootstrapper } from '../core/GameBootstrapper';
 import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
@@ -12937,12 +13180,13 @@ import { GameEvents } from '../events/GameEvents';
 // Mutable Global for Renderers to access Registry (Performance optimization)
 export let ActiveEngine: GameEngineCore | null = null;
 
-// Allow external override (for MobileDirector)
+// Allow external override
 export const setActiveEngine = (engine: GameEngineCore | null) => {
     ActiveEngine = engine;
 };
 
-export const GameDirector = () => {
+// OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
+export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   const isMobileRef = useRef(false);
@@ -12988,6 +13232,7 @@ export const GameDirector = () => {
     };
   }, []); 
 
+  // Handle Resize updates
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.updateViewport(viewport.width, viewport.height, size.width, size.height);
@@ -12998,6 +13243,7 @@ export const GameDirector = () => {
     }
   }, [viewport, size]);
 
+  // Main Loop
   useFrame((state, delta) => {
     if (engineRef.current) {
       try {
@@ -13019,7 +13265,10 @@ export const GameDirector = () => {
   });
 
   return null;
-};
+});
+
+// Display name for devtools
+GameDirector.displayName = 'GameDirector';
 
 
 =====================================
@@ -13946,6 +14195,7 @@ export enum GameEvents {
   PROJECTILE_CLASH = 'PROJECTILE_CLASH',
   PANEL_DAMAGED = 'PANEL_DAMAGED',
   PANEL_HEALED = 'PANEL_HEALED',
+  PANEL_RESTORED = 'PANEL_RESTORED',
   PANEL_DESTROYED = 'PANEL_DESTROYED',
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
@@ -13982,6 +14232,7 @@ export interface GameEventPayloads {
   [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
   [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number };
   [GameEvents.PANEL_HEALED]: { id: string; amount: number };
+  [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; // ADDED optional X
   [GameEvents.PANEL_DESTROYED]: { id: string };
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
@@ -14077,7 +14328,7 @@ export class CollisionSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     
-    // 1. Get Candidates via Cached Query
+    // 1. Get Candidates via Cached Query (Returns Set<Entity>, no alloc)
     const collidables = this.registry.query({ all: ['Collider', 'Transform'] });
     
     this.handledPairs.clear();
@@ -14086,10 +14337,11 @@ export class CollisionSystem implements IGameSystem {
         if (!entity.active) continue;
 
         const collider = entity.getComponent<ColliderComponent>('Collider');
-        const transform = entity.getComponent<TransformComponent>('Transform');
+        // OPTIMIZATION: Early exit if mask is 0
+        if (!collider || collider.mask === 0) continue;
 
-        // Safety check (Type Guard)
-        if (!collider || !transform || collider.mask === 0) continue;
+        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!transform) continue;
 
         // Skip spawning entities
         const state = entity.getComponent<StateComponent>('State');
@@ -14115,16 +14367,18 @@ export class CollisionSystem implements IGameSystem {
             if (!other || !other.active) continue;
 
             const otherCollider = other.getComponent<ColliderComponent>('Collider');
-            const otherTransform = other.getComponent<TransformComponent>('Transform');
-            
-            if (!otherCollider || !otherTransform) continue;
+            if (!otherCollider) continue;
 
-            // Bitmask Check
+            // OPTIMIZATION: Check Bitmask BEFORE getting Transform or calculating distance
+            // This is the cheapest check we can do.
             const aHitsB = (collider.mask & otherCollider.layer) !== 0;
             const bHitsA = (otherCollider.mask & collider.layer) !== 0;
             if (!aHitsB && !bHitsA) continue;
 
-            // Circle-Circle Check
+            const otherTransform = other.getComponent<TransformComponent>('Transform');
+            if (!otherTransform) continue;
+
+            // OPTIMIZATION: Squared Distance Check (Avoid Math.sqrt)
             const dx = transform.x - otherTransform.x;
             const dy = transform.y - otherTransform.y;
             const distSq = dx * dx + dy * dy;
@@ -14149,71 +14403,102 @@ import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
+import { ViewportHelper } from '../utils/ViewportHelper';
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class AudioDirectorSystem implements IGameSystem {
+  private logTimer = 0;
+  
+  // Local Event Cursor
+  private readCursor = 0;
   
   setup(locator: IServiceLocator): void {
+    // Sync cursor
+    this.readCursor = FastEventBus.getCursor();
     this.setupEventListeners();
   }
 
   update(delta: number, time: number): void {
-    // Process High Frequency Audio Events (from FastEventBus)
-    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+    this.logTimer += delta;
+
+    // Read and update local cursor
+    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
-            // Note: We need a mapping for ID -> Key if we use FastBus for audio.
-            // Currently mostly used for VFX, but ready for expansion.
+            const key = FX_ID_MAP[a1];
+            
+            // DEBUG LOGGING
+            if (this.logTimer > 1.0) {
+                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+                    msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
+                    source: 'AudioDirector' 
+                });
+                this.logTimer = 0;
+            }
+
+            if (key) {
+                const audioKey = key.toLowerCase();
+                const pan = this.calculatePan(a2); 
+                AudioSystem.playSound(audioKey, pan);
+            } else {
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn(`[AudioDirector] Unknown Sound ID: ${a1}`);
+                }
+            }
         }
     });
   }
 
   private setupEventListeners() {
-    // 1. Player Actions
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => {
-        AudioSystem.playSound('fx_player_fire');
-    });
-
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        AudioSystem.playSound('fx_impact_heavy'); 
-        // Duck music on heavy impact
+        AudioSystem.playSound('fx_impact_heavy', 0);
         AudioSystem.duckMusic(0.7, 1.0);
     });
 
-    // 2. Enemy Interactions
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy');
-        else AudioSystem.playSound('fx_impact_light');
+        const pan = this.calculatePan(p.x);
+        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy', pan);
+        else AudioSystem.playSound('fx_impact_light', pan);
     });
 
-    // 3. UI / System State
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
+        const pan = this.getPanelPan(p.id);
+        AudioSystem.playSound('loop_heal', pan);
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        const pan = p.x !== undefined ? this.calculatePan(p.x) : this.getPanelPan(p.id);
+        AudioSystem.playSound('fx_reboot_success', pan);
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        const pan = this.getPanelPan(p.id);
+        AudioSystem.playSound('fx_impact_heavy', pan); 
+        AudioSystem.duckMusic(0.8, 1.5);
+    });
+
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
         AudioSystem.playSound('fx_impact_heavy');
         AudioSystem.duckMusic(1.0, 3.0);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {
-        AudioSystem.playSound('loop_heal');
-    });
-
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        AudioSystem.playSound('fx_impact_heavy'); 
-        AudioSystem.duckMusic(0.8, 1.5);
-    });
-
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => {
         AudioSystem.playSound('fx_level_up');
     });
-    
-    // 4. Ambient / Music Control
-    GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        // Switch to calmer ambience? 
-        // For now, standard behavior.
-    });
   }
 
-  teardown(): void {
-    // No explicit cleanup needed as EventBus clears on reload, 
-    // but in a strict engine we would unsubscribe here.
+  private calculatePan(worldX: number): number {
+      const halfWidth = ViewportHelper.viewport.width / 2;
+      if (halfWidth === 0) return 0;
+      return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
+
+  private getPanelPan(panelId: string): number {
+      const rect = PanelRegistry.getPanelRect(panelId);
+      if (!rect) return 0;
+      return this.calculatePan(rect.x);
+  }
+
+  teardown(): void {}
 }
 
 
@@ -14231,7 +14516,7 @@ export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
   private interactionSystem!: InteractionSystem;
   
-  private readonly SYNC_INTERVAL = 0.1; // 10Hz UI updates are plenty
+  private readonly SYNC_INTERVAL = 0.1; // 10Hz
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
@@ -14251,49 +14536,66 @@ export class UISyncSystem implements IGameSystem {
   private sync() {
     const store = useGameStore.getState();
     
-    // 1. FAST PATH: Direct DOM Updates (No React Render)
-    // We assume the DOM elements are registered via useTransientRef
+    // 1. FAST PATH: Direct DOM Updates
     const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
     TransientDOMService.update('score-display', formattedScore);
     
     // 2. SLOW PATH: React State Sync
-    // Only update Zustand if values actually changed to prevent Virtual DOM trashing
-    const shouldSyncReact = 
-        store.playerHealth !== this.gameSystem.playerHealth || 
-        store.playerRebootProgress !== this.gameSystem.playerRebootProgress || 
-        store.xp !== this.gameSystem.xp || 
-        store.score !== this.gameSystem.score ||
-        store.level !== this.gameSystem.level ||
-        store.upgradePoints !== this.gameSystem.upgradePoints ||
+    // OPTIMIZATION: Strict check. If absolutely nothing relevant changed, do not call set().
+    const gs = this.gameSystem;
+    
+    const hasChanged = 
+        store.playerHealth !== gs.playerHealth || 
+        store.playerRebootProgress !== gs.playerRebootProgress || 
+        store.xp !== gs.xp || 
+        store.score !== gs.score ||
+        store.level !== gs.level ||
+        store.upgradePoints !== gs.upgradePoints ||
         store.interactionTarget !== this.interactionSystem.hoveringPanelId ||
         Math.abs(store.systemIntegrity - PanelRegistry.systemIntegrity) > 1.0; 
 
-    if (shouldSyncReact) {
+    if (hasChanged) {
         store.syncGameState({
-            playerHealth: this.gameSystem.playerHealth, 
-            playerRebootProgress: this.gameSystem.playerRebootProgress, 
-            level: this.gameSystem.level,
-            xp: this.gameSystem.xp,
-            score: this.gameSystem.score,
-            xpToNextLevel: this.gameSystem.xpToNextLevel,
-            upgradePoints: this.gameSystem.upgradePoints,
-            activeUpgrades: { ...this.gameSystem.activeUpgrades },
+            playerHealth: gs.playerHealth, 
+            playerRebootProgress: gs.playerRebootProgress, 
+            level: gs.level,
+            xp: gs.xp,
+            score: gs.score,
+            xpToNextLevel: gs.xpToNextLevel,
+            upgradePoints: gs.upgradePoints,
+            activeUpgrades: { ...gs.activeUpgrades }, // Shallow copy needed
             systemIntegrity: PanelRegistry.systemIntegrity,
             interactionTarget: this.interactionSystem.hoveringPanelId 
         });
     }
 
-    // 3. Panel Sync (Slow path)
+    // 3. Panel Sync (Very Slow path)
+    // Only sync panels if one was actually destroyed/healed recently? 
+    // For now, we trust the React memoization in GlassPanel to reject updates if props match.
+    // But we can optimize data creation:
+    
+    // Check if we need to sync panel state at all (e.g. any damage taken?)
+    // This is hard to diff cheaply. For now, we rely on the 10Hz throttle.
     const uiPanels: Record<string, any> = {};
     const panels = PanelRegistry.getAllPanels();
+    let panelsChanged = false;
+
     for(const p of panels) {
-        uiPanels[p.id] = {
-            id: p.id,
-            health: p.health,
-            isDestroyed: p.isDestroyed
-        };
+        const prev = store.panels[p.id];
+        // Only update if data diff (prevents object identity churn)
+        if (!prev || prev.health !== p.health || prev.isDestroyed !== p.isDestroyed) {
+            uiPanels[p.id] = {
+                id: p.id,
+                health: p.health,
+                isDestroyed: p.isDestroyed
+            };
+            panelsChanged = true;
+        }
     }
-    store.syncPanels(uiPanels);
+    
+    if (panelsChanged) {
+        store.syncPanels(uiPanels);
+    }
   }
 }
 
@@ -14363,6 +14665,22 @@ export class InteractionSystem implements IInteractionSystem {
             this.gameSystem.tickReboot(4.0); 
             this.lastRepairTime = time;
             
+            // Note: Loops are handled by AudioDirector implicitly or we can update it
+            // AudioDirector listens for REBOOTING events? 
+            // Actually, PlayerAvatar does some loop logic but AudioDirector doesn't.
+            // Let's stick to event emission or just play sound here.
+            // AudioSystem.playSound('loop_reboot', ...pan) logic is currently manual here?
+            // Ah, previous code: AudioSystem.playSound('loop_reboot'); 
+            // We should Pan this too!
+            // BUT: Player revival isn't emitting PANEL_RESTORED in the same way.
+            // Let's keep this simple for now or use cursor.x pan.
+            // Since player is usually dead center or identity panel, using cursor.x is fine.
+            
+            // NOTE: InteractionSystem doesn't know pan calculation logic (width).
+            // Better to rely on AudioDirector or AudioSystem. 
+            // Actually, AudioDirector doesn't listen for tick events yet.
+            // Let's just keep loop_reboot centered or simple for now as it's not the "Ding".
+            
             AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
@@ -14385,11 +14703,14 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // UPDATED: Reduced from 4 to 2.8 (30% slower)
-            PanelRegistry.healPanel(p.id, 2.8); 
+            // FIX: PASS CURSOR.X
+            PanelRegistry.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
+                // Loop sound logic: Could improve this later, but for loops it's tricky to re-trigger.
+                // AudioSystem handles loops via playSound? No, it just restarts it.
+                // We'll leave the loop as is for now, focus is on the DING.
                 AudioSystem.playSound('loop_reboot');
             } else {
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
@@ -14412,7 +14733,7 @@ export class InteractionSystem implements IInteractionSystem {
 =====================================
 FILE: ./src/game/systems/VFXSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IParticleSystem } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
@@ -14422,17 +14743,25 @@ import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
 import { useStore } from '@/core/store/useStore';
 
 export class VFXSystem implements IGameSystem {
-  private spawner!: IEntitySpawner;
+  private particleSystem!: IParticleSystem;
   private locator!: IServiceLocator;
+  
+  // Local Event Cursor
+  private readCursor = 0;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.spawner = locator.getSpawner();
+    this.particleSystem = locator.getParticleSystem();
+    
+    // Sync cursor to start (ignore old events)
+    this.readCursor = FastEventBus.getCursor();
+    
     this.setupListeners();
   }
 
   update(delta: number, time: number): void {
-    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+    // Read and update local cursor
+    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.SPAWN_FX) {
             const key = FX_ID_MAP[a1];
             if (key) this.executeRecipe(key, a2, a3, a4);
@@ -14448,20 +14777,15 @@ export class VFXSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const isBig = p.damage > 10;
-        // Standard bullet hits add lighter trauma.
-        // Direct collisions add THEIR OWN trauma in CombatHandlers, 
-        // effectively stacking with this for a huge impact.
         if (isBig) this.triggerHitStop(0.05);
     });
 
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        // AAA POLISH: Increased structural failure feel
         this.addTrauma(0.75); 
         this.triggerHitStop(0.1); 
     });
 
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        // AAA POLISH: Maximum impact on death
         this.addTrauma(1.0);
         this.triggerHitStop(0.5); 
     });
@@ -14505,7 +14829,7 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           }
 
-          this.spawner.spawnParticle(x, y, color, vx, vy, life);
+          this.particleSystem.spawn(x, y, color, vx, vy, life);
       }
   }
 
@@ -14571,6 +14895,122 @@ export class StructureSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/game/systems/ParticleSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator, IParticleSystem } from '../core/interfaces';
+import * as THREE from 'three';
+
+const MAX_PARTICLES = 2000;
+
+export class ParticleSystem implements IParticleSystem {
+  public count = 0;
+
+  // Data Oriented Design (Structure of Arrays)
+  public x = new Float32Array(MAX_PARTICLES);
+  public y = new Float32Array(MAX_PARTICLES);
+  public vx = new Float32Array(MAX_PARTICLES);
+  public vy = new Float32Array(MAX_PARTICLES);
+  public life = new Float32Array(MAX_PARTICLES);
+  public maxLife = new Float32Array(MAX_PARTICLES);
+  
+  // Color: R, G, B interleaved stride 3? Or separate? 
+  // Let's use separate for simplicity in swap-remove logic, 
+  // or interleaved and multiply index by 3. Interleaved is better for upload if we were mapping directly, 
+  // but we usually upload via InstancedMesh setMatrix/setColor.
+  // Actually, keeping them separate arrays makes the update loop logic cleaner.
+  public r = new Float32Array(MAX_PARTICLES);
+  public g = new Float32Array(MAX_PARTICLES);
+  public b = new Float32Array(MAX_PARTICLES);
+
+  // Helper for hex parsing
+  private tempColor = new THREE.Color();
+
+  setup(locator: IServiceLocator): void {
+    this.count = 0;
+  }
+
+  update(delta: number, time: number): void {
+    if (this.count === 0) return;
+
+    let i = 0;
+    while (i < this.count) {
+      this.life[i] -= delta;
+
+      if (this.life[i] <= 0) {
+        // Swap & Pop
+        this.swap(i, this.count - 1);
+        this.count--;
+        // Do NOT increment i, process the swapped particle at this index next
+        continue;
+      }
+
+      // Physics
+      this.x[i] += this.vx[i] * delta;
+      this.y[i] += this.vy[i] * delta;
+      
+      // Friction
+      this.vx[i] *= 0.95;
+      this.vy[i] *= 0.95;
+
+      i++;
+    }
+  }
+
+  public spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number) {
+    if (this.count >= MAX_PARTICLES) return; // Pool full
+
+    const idx = this.count;
+    this.x[idx] = x;
+    this.y[idx] = y;
+    this.vx[idx] = vx;
+    this.vy[idx] = vy;
+    this.life[idx] = life;
+    this.maxLife[idx] = life;
+
+    this.tempColor.set(colorHex);
+    this.r[idx] = this.tempColor.r;
+    this.g[idx] = this.tempColor.g;
+    this.b[idx] = this.tempColor.b;
+
+    this.count++;
+  }
+
+  private swap(a: number, b: number) {
+    if (a === b) return;
+    
+    this.x[a] = this.x[b];
+    this.y[a] = this.y[b];
+    this.vx[a] = this.vx[b];
+    this.vy[a] = this.vy[b];
+    this.life[a] = this.life[b];
+    this.maxLife[a] = this.maxLife[b];
+    this.r[a] = this.r[b];
+    this.g[a] = this.g[b];
+    this.b[a] = this.b[b];
+  }
+
+  public getCount() {
+    return this.count;
+  }
+
+  // Not used directly by renderer anymore, but kept for interface compliance if needed
+  public getData() {
+    return {
+        x: this.x,
+        y: this.y,
+        life: this.life,
+        maxLife: this.maxLife,
+        color: this.r // Warning: returns only R array reference if we did this mapping
+    };
+  }
+
+  teardown(): void {
+    this.count = 0;
+  }
+}
+
+
+=====================================
 FILE: ./src/game/systems/PlayerSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '../core/interfaces';
@@ -14582,6 +15022,7 @@ import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
 import { ConfigService } from '../services/ConfigService';
+import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -14590,6 +15031,9 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
+  
+  // DEBUG: Throttle logs
+  private logTimer = 0;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
@@ -14604,8 +15048,12 @@ export class PlayerSystem implements IGameSystem {
   update(delta: number, time: number): void {
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    const players = this.registry.getByTag(Tag.PLAYER);
-    const playerEntity = players[0]; 
+    let playerEntity = null;
+    for (const p of this.registry.getByTag(Tag.PLAYER)) {
+        playerEntity = p;
+        break;
+    }
+    
     if (!playerEntity) return;
 
     const cursor = this.locator.getInputService().getCursor();
@@ -14639,6 +15087,9 @@ export class PlayerSystem implements IGameSystem {
             this.attemptAutoFire(time, playerEntity, upgrades);
         }
     }
+    
+    // Timer update
+    this.logTimer += delta;
   }
 
   teardown(): void {}
@@ -14663,7 +15114,7 @@ export class PlayerSystem implements IGameSystem {
       const damage = 100;
       const width = 3.0; 
 
-      GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: cursor.x, y: cursor.y });
+      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
       for (let i = 0; i < count; i++) {
@@ -14691,7 +15142,6 @@ export class PlayerSystem implements IGameSystem {
 
     for (const e of enemies) {
       if (!e.active) continue;
-      
       if (e.hasTag(Tag.BULLET)) continue;
 
       const state = e.getComponent<StateComponent>('State');
@@ -14718,7 +15168,7 @@ export class PlayerSystem implements IGameSystem {
 
       const width = 1.0;
       const baseSpread = 0.15;
-      const spreadAngle = baseSpread; // Fixed spread now that width scaling is gone
+      const spreadAngle = baseSpread; 
       
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;
@@ -14729,16 +15179,13 @@ export class PlayerSystem implements IGameSystem {
       const bSpeed = this.config.player.bulletSpeed;
       const bLife = this.config.player.bulletLife;
 
-      // 1. FORK (Main)
       for (let i = 0; i < projectileCount; i++) {
           const angle = startAngle + (i * spreadAngle);
           const vx = Math.cos(angle) * bSpeed;
           const vy = Math.sin(angle) * bSpeed;
-
           this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
-      // 2. BACKDOOR
       if (backdoorLevel > 0) {
           const rearAngle = baseAngle + Math.PI; 
           const vx = Math.cos(rearAngle) * bSpeed;
@@ -14746,7 +15193,6 @@ export class PlayerSystem implements IGameSystem {
           this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
-      // 3. SNIFFER
       if (snifferLevel > 0) {
           const angleStep = (Math.PI * 2) / snifferLevel;
           for(let i=0; i<snifferLevel; i++) {
@@ -14758,7 +15204,20 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      GameEventBus.emit(GameEvents.PLAYER_FIRED, { x: cursor.x, y: cursor.y });
+      // --- DEBUG TRACING ---
+      const soundId = FX_IDS['FX_PLAYER_FIRE'];
+      
+      // Throttle logging to once per second
+      if (this.logTimer > 1.0) {
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+              msg: `EMIT SOUND ID: ${soundId}`, 
+              source: 'PlayerSystem' 
+          });
+          this.logTimer = 0;
+      }
+
+      FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, cursor.x || 0);
+      
       this.lastFireTime = time;
     }
   }
@@ -14782,13 +15241,19 @@ export class OrbitalSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const orbitals = this.registry.getAll(); // Filter by component in loop for speed or tag?
-    // Optimization: In a real ECS we'd query by component. Here we iterate.
+    const orbitals = this.registry.getAll();
     
-    // Find Player Cache (Parent)
+    // OPTIMIZATION FIX: getByTag returns Iterable, not Array.
+    // Use iterator to get the first player efficiently.
+    let player = null;
     const players = this.registry.getByTag(Tag.PLAYER);
-    if (players.length === 0) return;
-    const player = players[0];
+    for (const p of players) {
+        player = p;
+        break; // Just get the first one
+    }
+
+    if (!player) return;
+    
     const pPos = player.getComponent<TransformComponent>('Transform');
     if (!pPos) return;
 
@@ -14808,9 +15273,6 @@ export class OrbitalSystem implements IGameSystem {
         // Update Position (Parent Pos + Orbit Offset)
         transform.x = pPos.x + Math.cos(orb.angle) * orb.radius;
         transform.y = pPos.y + Math.sin(orb.angle) * orb.radius;
-        
-        // Rotate self to look outward (tangent) or just spin?
-        // Let's spin the mesh in the renderer, keep physics rotation simple.
     }
   }
 
@@ -15123,7 +15585,19 @@ export class CombatSystem implements IGameSystem {
           
           playAudio: (key) => AudioSystem.playSound(key),
           
-          // IMPL: Direct Trauma Injection
+          // NEW: Spatial Audio Support
+          playSpatialAudio: (key, x) => {
+              // Convert lowercase config key (e.g. 'fx_impact_light') to uppercase ID key (FX_IMPACT_LIGHT)
+              const idKey = key.toUpperCase();
+              const soundId = FX_IDS[idKey];
+              if (soundId) {
+                  FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, x);
+              } else {
+                  // Fallback if ID mapping missing
+                  AudioSystem.playSound(key);
+              }
+          },
+          
           addTrauma: (amount) => {
               GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount });
           }
@@ -15245,7 +15719,6 @@ import { StructureHealthService } from '../services/StructureHealthService';
 
 class PanelRegistrySystemClass implements IPanelSystem {
   
-  // Expose integrity via getter to match Interface
   public get systemIntegrity() {
       return StructureHealthService.systemIntegrity;
   }
@@ -15254,7 +15727,6 @@ class PanelRegistrySystemClass implements IPanelSystem {
     StructureHealthService.reset();
     DOMSpatialService.refreshAll();
     
-    // Wire up Upgrade Event -> Service Logic
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = StructureHealthService.restoreAll();
@@ -15262,23 +15734,15 @@ class PanelRegistrySystemClass implements IPanelSystem {
             if (restoredCount > 0) {
                 GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
                 AudioSystem.playSound('fx_reboot_success'); 
-                
-                // Spawn FX on newly restored panels
-                // We iterate checking who was destroyed? No, simplest is just center screen FX or
-                // we can iterate the rects.
-                // For now, keep it simple.
             }
         }
     });
   }
 
   update(delta: number, time: number): void {
-      // Logic moved to Services or specific systems (like InteractionSystem)
   }
 
   teardown(): void {}
-
-  // --- IPanelSystem Implementation (Delegation) ---
 
   public register(id: string, element: HTMLElement) {
       DOMSpatialService.register(id, element);
@@ -15302,8 +15766,9 @@ class PanelRegistrySystemClass implements IPanelSystem {
       StructureHealthService.damage(id, amount);
   }
 
-  public healPanel(id: string, amount: number) {
-      StructureHealthService.heal(id, amount);
+  // UPDATED
+  public healPanel(id: string, amount: number, sourceX?: number) {
+      StructureHealthService.heal(id, amount, sourceX);
   }
   
   public decayPanel(id: string, amount: number) {
@@ -15322,7 +15787,6 @@ class PanelRegistrySystemClass implements IPanelSystem {
       return StructureHealthService.getState(id);
   }
   
-  // Composite Data Getter (Used by UI Sync)
   public getAllPanels() {
       const results = [];
       const rects = DOMSpatialService.getAllRects();
@@ -15576,15 +16040,17 @@ export class TargetingSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.updatePlayerCache();
 
+    // Iterate Iterable instead of array
     const entities = this.registry.getAll();
     
     for (const entity of entities) {
         if (!entity.active) continue;
 
         const target = entity.getComponent<TargetComponent>('Target');
-        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!target) continue;
 
-        if (!target || !transform) continue;
+        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!transform) continue;
 
         // Locked target validation
         if (target.locked && target.id) {
@@ -15603,10 +16069,6 @@ export class TargetingSystem implements IGameSystem {
             }
             // Validate Enemy Target (for Homing Bullets)
             else if (target.type === 'ENEMY') {
-                // If target ID is generic 'PLAYER', skip check.
-                // If it's a specific Entity ID (stringified), check if alive.
-                // For now, we recalculate nearest enemy every frame for bullets 
-                // because enemies die fast. Simple and robust.
                 target.locked = false; 
             }
             else if (target.type === 'PLAYER' && this.playerCache) {
@@ -15634,7 +16096,6 @@ export class TargetingSystem implements IGameSystem {
                 target.y = bestPanel.y;
                 target.locked = true; 
             } else {
-                // Fallback to Player if no panels
                 if (this.playerCache) {
                     target.x = this.playerCache.x;
                     target.y = this.playerCache.y;
@@ -15642,25 +16103,24 @@ export class TargetingSystem implements IGameSystem {
                 }
             }
         }
-        // NEW: Bullet Homing Logic
         else if (target.type === 'ENEMY') {
             const bestEnemy = this.findNearestEnemy(transform.x, transform.y);
             if (bestEnemy) {
-                // We don't ID lock bullets, we just steer to coordinates
                 target.x = bestEnemy.x;
                 target.y = bestEnemy.y;
                 target.id = 'ENEMY_LOCKED';
             } else {
-                target.id = null; // No target found, fly straight
+                target.id = null; 
             }
         }
     }
   }
 
   private updatePlayerCache() {
+      // getByTag now returns Iterable, so we iterator manually or use Array.from if strictly needed (but we just want first)
       const players = this.registry.getByTag(Tag.PLAYER);
-      if (players.length > 0) {
-          const t = players[0].getComponent<TransformComponent>('Transform');
+      for (const p of players) {
+          const t = p.getComponent<TransformComponent>('Transform');
           if (t) {
               this.playerCache = { x: t.x, y: t.y };
               return;
@@ -15678,6 +16138,7 @@ export class TargetingSystem implements IGameSystem {
           if (p.isDestroyed) continue;
           const dx = p.x - x;
           const dy = p.y - y;
+          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           if (distSq < minDist) {
               minDist = distSq;
@@ -15691,13 +16152,10 @@ export class TargetingSystem implements IGameSystem {
       const enemies = this.registry.getByTag(Tag.ENEMY);
       let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
-      // Range limit for homing (don't target things across map)
       const MAX_RANGE_SQ = 15 * 15; 
 
       for (const e of enemies) {
           if (!e.active) continue;
-          
-          // UPDATED: Ignore Enemy Projectiles
           if (e.hasTag(Tag.BULLET)) continue;
 
           const t = e.getComponent<TransformComponent>('Transform');
@@ -15705,6 +16163,7 @@ export class TargetingSystem implements IGameSystem {
           
           const dx = t.x - x;
           const dy = t.y - y;
+          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           
           if (distSq < minDist && distSq < MAX_RANGE_SQ) {
@@ -15734,6 +16193,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
 import { ConfigService } from '../services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
+import { ViewportHelper } from '../utils/ViewportHelper';
 
 import { AIRegistry } from '../logic/ai/AIRegistry';
 import { AIContext } from '../logic/ai/types';
@@ -15761,6 +16221,7 @@ export class BehaviorSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const upgrades = useGameStore.getState().activeUpgrades;
+    const halfWidth = ViewportHelper.viewport.width / 2;
 
     const aiContext: AIContext = {
       delta,
@@ -15773,7 +16234,6 @@ export class BehaviorSystem implements IGameSystem {
               this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
           }
       },
-      // PASS ANGLE AS ARG 4
       spawnDrillSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['DRILL_SPARKS'], x, y, angle),
       spawnLaunchSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['HUNTER_RECOIL'], x, y, angle),
       
@@ -15783,7 +16243,15 @@ export class BehaviorSystem implements IGameSystem {
       },
       
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
-      playSound: (key) => AudioSystem.playSound(key),
+      
+      // SPATIAL AUDIO
+      playSound: (key, x) => {
+          const pan = x !== undefined && halfWidth > 0 
+            ? Math.max(-1, Math.min(1, x / halfWidth)) 
+            : 0;
+          AudioSystem.playSound(key, pan);
+      },
+      
       getUpgradeLevel: (key) => upgrades[key] || 0,
       config: this.config
     };
@@ -16440,10 +16908,8 @@ FILE: ./src/game/services/StructureHealthService.ts
 =====================================
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useStore } from '@/core/store/useStore';
 
-// GLOBAL CONSTANT: RESET TO 100
 const MAX_PANEL_HEALTH = 100;
 
 export interface StructureState {
@@ -16494,7 +16960,7 @@ class StructureHealthServiceController {
     this.calculateIntegrity();
   }
 
-  public heal(id: string, amount: number) {
+  public heal(id: string, amount: number, sourceX?: number) {
     const state = this.states.get(id);
     if (!state) return;
 
@@ -16503,8 +16969,10 @@ class StructureHealthServiceController {
 
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = MAX_PANEL_HEALTH * 0.5; // Reboot to 50%
-        AudioSystem.playSound('fx_reboot_success');
+        state.health = MAX_PANEL_HEALTH * 0.5;
+        
+        // PASS sourceX
+        GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
     this.calculateIntegrity();
@@ -16518,10 +16986,11 @@ class StructureHealthServiceController {
 
   public restoreAll() {
       let restored = 0;
-      for (const state of this.states.values()) {
+      for (const [id, state] of this.states) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
               state.health = MAX_PANEL_HEALTH * 0.5;
+              GameEventBus.emit(GameEvents.PANEL_RESTORED, { id });
               restored++;
           } else if (state.health < MAX_PANEL_HEALTH) {
               state.health = MAX_PANEL_HEALTH;
@@ -17289,8 +17758,8 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
         
         <MatrixGrid />
         
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#78F654" />
+        {/* OPTIMIZATION: Removed pointLight. Use unlit materials/shaders. */}
+        <ambientLight intensity={0.2} />
         
         <Suspense fallback={null}>
            {children}
