@@ -19,6 +19,9 @@ export const useFavicon = (bootKey: string) => {
 
   // 1. PRE-BAKER
   useEffect(() => {
+    // DESKTOP CHECK: If running in Electron, do not mess with the icon.
+    if (typeof window !== 'undefined' && (window as any).electron) return;
+
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
       link = document.createElement('link');
@@ -43,6 +46,9 @@ export const useFavicon = (bootKey: string) => {
 
   // 2. UPDATE LOOP
   useEffect(() => {
+    // DESKTOP CHECK: Bail out of the loop too
+    if (typeof window !== 'undefined' && (window as any).electron) return;
+
     const interval = setInterval(() => {
       setTick(t => !t); 
       updateFavicon();
@@ -81,7 +87,6 @@ export const useFavicon = (bootKey: string) => {
         nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     } 
     else if (isSimulationPaused) {
-        // UPDATED: Now uses statusColor instead of hardcoded yellow
         visualKey = `PAUSED_${blinkOn}_${statusColor}`;
         nextHref = generatePausedIcon(blinkOn, statusColor);
     } 

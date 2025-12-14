@@ -1,0 +1,26 @@
+{
+  "appId": "com.mesoelfy.os",
+  "productName": "MESOELFY_OS",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "out/**/*",
+    "electron/**/*",
+    "package.json",
+    "app-icon.png"
+  ],
+  "mac": {
+    "icon": "app-icon.png",
+    "target": ["dmg"]
+  },
+  "win": {
+    "icon": "app-icon.png",
+    "target": ["nsis", "portable"]
+  },
+  "linux": {
+    "icon": "app-icon.png",
+    "target": ["AppImage", "deb"],
+    "category": "Game"
+  }
+}

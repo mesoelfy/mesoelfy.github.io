@@ -6,13 +6,16 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "package": "npm run build && electron-builder"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^2.19.1",
     "clsx": "^2.1.0",
+    "electron-serve": "^3.0.0",
     "framer-motion": "^11.0.0",
     "lucide-react": "^0.300.0",
     "maath": "^0.10.0",
@@ -29,10 +32,13 @@
     "@types/react-dom": "^18",
     "@types/three": "^0.181.0",
     "autoprefixer": "^10.0.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.7",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
-  }
+  },
+  "main": "electron/main.js"
 }
