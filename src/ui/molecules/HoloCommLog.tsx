@@ -3,6 +3,7 @@ import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
@@ -48,10 +49,9 @@ const VideoSlot = ({
   const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
   const graphicsMode = useStore((state) => state.graphicsMode);
-  const bootState = useStore((state) => state.bootState); // CHECK BOOT STATE
+  const bootState = useStore((state) => state.bootState); 
   const isPotato = graphicsMode === 'POTATO';
   
-  // Disable video if not active game or potato mode
   const showVideo = bootState === 'active' && !isPotato;
 
   const prevOffline = useRef(isOffline);
@@ -107,7 +107,7 @@ const VideoSlot = ({
   return (
     <div 
         className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
-        onMouseEnter={() => !isOffline && AudioSystem.playHover()}
+        onMouseEnter={(e) => !isOffline && AudioSystem.playHover(getPan(e))}
     >
       
       {isOffline ? (
@@ -151,7 +151,7 @@ const VideoSlot = ({
             rel="noopener noreferrer"
             className="absolute inset-0 z-50 cursor-pointer"
             aria-label="Watch on YouTube"
-            onClick={() => AudioSystem.playClick()}
+            onClick={(e) => AudioSystem.playClick(getPan(e))}
           />
 
           <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">

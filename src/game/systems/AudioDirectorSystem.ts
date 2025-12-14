@@ -3,6 +3,8 @@ import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
+import { ViewportHelper } from '../utils/ViewportHelper';
+import { PanelRegistry } from './PanelRegistrySystem';
 
 export class AudioDirectorSystem implements IGameSystem {
   
@@ -11,30 +13,45 @@ export class AudioDirectorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Process High Frequency Audio Events (from FastEventBus)
     FastEventBus.processEvents((id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
-            // Map ID back to string key (e.g. "FX_PLAYER_FIRE")
             const key = FX_ID_MAP[a1];
             if (key) {
-                // Config keys are lowercase (e.g. "fx_player_fire")
                 const audioKey = key.toLowerCase();
-                AudioSystem.playSound(audioKey);
+                const pan = this.calculatePan(a2); 
+                AudioSystem.playSound(audioKey, pan);
             }
         }
     });
   }
 
   private setupEventListeners() {
-    // Legacy Events (Low Frequency)
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        AudioSystem.playSound('fx_impact_heavy'); 
+        AudioSystem.playSound('fx_impact_heavy', 0);
         AudioSystem.duckMusic(0.7, 1.0);
     });
 
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy');
-        else AudioSystem.playSound('fx_impact_light');
+        const pan = this.calculatePan(p.x);
+        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy', pan);
+        else AudioSystem.playSound('fx_impact_light', pan);
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
+        const pan = this.getPanelPan(p.id);
+        AudioSystem.playSound('loop_heal', pan);
+    });
+
+    // UPDATED: Use p.x if provided (Mouse Position), otherwise Panel Center
+    GameEventBus.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        const pan = p.x !== undefined ? this.calculatePan(p.x) : this.getPanelPan(p.id);
+        AudioSystem.playSound('fx_reboot_success', pan);
+    });
+
+    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        const pan = this.getPanelPan(p.id);
+        AudioSystem.playSound('fx_impact_heavy', pan); 
+        AudioSystem.duckMusic(0.8, 1.5);
     });
 
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
@@ -42,24 +59,22 @@ export class AudioDirectorSystem implements IGameSystem {
         AudioSystem.duckMusic(1.0, 3.0);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, () => {
-        AudioSystem.playSound('loop_heal');
-    });
-
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        AudioSystem.playSound('fx_impact_heavy'); 
-        AudioSystem.duckMusic(0.8, 1.5);
-    });
-
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => {
         AudioSystem.playSound('fx_level_up');
     });
-    
-    GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        // ...
-    });
   }
 
-  teardown(): void {
+  private calculatePan(worldX: number): number {
+      const halfWidth = ViewportHelper.viewport.width / 2;
+      if (halfWidth === 0) return 0;
+      return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
+
+  private getPanelPan(panelId: string): number {
+      const rect = PanelRegistry.getPanelRect(panelId);
+      if (!rect) return 0;
+      return this.calculatePan(rect.x);
+  }
+
+  teardown(): void {}
 }

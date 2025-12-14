@@ -10,6 +10,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
 import { ConfigService } from '../services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
+import { ViewportHelper } from '../utils/ViewportHelper';
 
 import { AIRegistry } from '../logic/ai/AIRegistry';
 import { AIContext } from '../logic/ai/types';
@@ -37,6 +38,7 @@ export class BehaviorSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const upgrades = useGameStore.getState().activeUpgrades;
+    const halfWidth = ViewportHelper.viewport.width / 2;
 
     const aiContext: AIContext = {
       delta,
@@ -49,7 +51,6 @@ export class BehaviorSystem implements IGameSystem {
               this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
           }
       },
-      // PASS ANGLE AS ARG 4
       spawnDrillSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['DRILL_SPARKS'], x, y, angle),
       spawnLaunchSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['HUNTER_RECOIL'], x, y, angle),
       
@@ -59,7 +60,15 @@ export class BehaviorSystem implements IGameSystem {
       },
       
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
-      playSound: (key) => AudioSystem.playSound(key),
+      
+      // SPATIAL AUDIO
+      playSound: (key, x) => {
+          const pan = x !== undefined && halfWidth > 0 
+            ? Math.max(-1, Math.min(1, x / halfWidth)) 
+            : 0;
+          AudioSystem.playSound(key, pan);
+      },
+      
       getUpgradeLevel: (key) => upgrades[key] || 0,
       config: this.config
     };

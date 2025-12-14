@@ -6,6 +6,7 @@ import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -25,7 +26,8 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
 
 const ToggleBtn = ({ active, onClick, children, color }: any) => (
   <button 
-    onClick={onClick}
+    onClick={(e) => { onClick(); AudioSystem.playClick(getPan(e)); }}
+    onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     className={clsx(
       "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
@@ -142,7 +144,7 @@ export const Header = () => {
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
             <button 
-                onClick={() => { toggleSettings(); AudioSystem.playSound('ui_menu_open'); }}
+                onClick={(e) => { toggleSettings(); AudioSystem.playSound('ui_menu_open', getPan(e)); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
@@ -160,7 +162,6 @@ export const Header = () => {
             className="h-full"
             initial={{ width: "100%" }}
             animate={{ width: `${systemIntegrity}%` }}
-            // UPDATED: 0.5 -> 0.3 for snappier decay
             transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
           >
               <motion.div 

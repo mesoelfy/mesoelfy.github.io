@@ -1,5 +1,6 @@
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { useRef, useState, useEffect } from 'react';
 
 interface RangeSliderProps {
@@ -28,30 +29,27 @@ export const RangeSlider = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastTickRef = useRef(value);
+  const lastPanRef = useRef(0);
 
   // Safety
   const safeValue = typeof value === 'number' && !isNaN(value) ? value : 0;
   const percent = Math.min(100, Math.max(0, (safeValue / max) * 100));
 
-  // Audio Tick Logic (5% increments)
+  // Audio Tick Logic
   useEffect(() => {
     const threshold = max * 0.05;
     if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
-        // Debounce slightly to prevent zipper noise on instant jumps
-        // Only play if dragging to avoid spam on load
         if (isDragging) {
-            AudioSystem.playSound('ui_hover'); // UPDATED: Changed to ui_hover
+            AudioSystem.playHover(lastPanRef.current);
         }
         lastTickRef.current = safeValue;
     }
   }, [safeValue, max, isDragging]);
 
-  // Sync ref on external updates when not dragging
   useEffect(() => {
       if (!isDragging) lastTickRef.current = safeValue;
   }, [safeValue, isDragging]);
 
-  // Semantic Coloring
   let activeColor = "bg-primary-green";
   let activeText = "text-primary-green";
   let glowClass = "shadow-[0_0_10px_#78F654]";
@@ -71,7 +69,6 @@ export const RangeSlider = ({
   const displayString = format ? format(safeValue) : `${Math.round(percent)}%`;
   const segments = 20;
 
-  // --- DRAG LOGIC ---
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -90,19 +87,18 @@ export const RangeSlider = ({
 
   const updateValue = (e: React.PointerEvent) => {
       if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
       
-      // Calculate normalized position (0..1)
+      // Update pan reference for audio tick
+      lastPanRef.current = getPan(e);
+
+      const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
       const ratio = x / rect.width;
       
-      // Map to Value & Step
       let rawValue = ratio * max;
       if (step > 0) {
           rawValue = Math.round(rawValue / step) * step;
       }
-      
-      // Clamp
       const finalValue = Math.max(0, Math.min(max, rawValue));
       
       if (finalValue !== safeValue) {
@@ -113,9 +109,8 @@ export const RangeSlider = ({
   return (
     <div 
         className="flex flex-col gap-1 w-full select-none touch-none"
-        onMouseEnter={() => AudioSystem.playHover()}
+        onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     >
-      {/* Header */}
       <div className="flex justify-between items-end mb-1">
         <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">
             {label}
@@ -125,7 +120,6 @@ export const RangeSlider = ({
         </span>
       </div>
       
-      {/* Interactive Track */}
       <div 
         ref={containerRef}
         className="relative h-6 w-full flex items-center cursor-pointer group/slider py-1"
@@ -134,14 +128,12 @@ export const RangeSlider = ({
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       >
-        {/* Background Track (Segments) */}
         <div className="absolute inset-x-0 h-2 flex justify-between items-center px-[1px] pointer-events-none z-0 opacity-30 bg-black/50 border border-white/10 rounded-sm">
             {Array.from({ length: segments }).map((_, i) => (
                 <div key={i} className="w-[1px] h-1.5 bg-gray-500" />
             ))}
         </div>
 
-        {/* Active Fill */}
         <div 
             className="absolute left-0 h-2 top-2 z-10 pointer-events-none transition-none rounded-sm overflow-hidden" 
             style={{ width: `${percent}%` }}
@@ -149,7 +141,6 @@ export const RangeSlider = ({
             <div className={clsx("w-full h-full opacity-80", activeColor, glowClass)} />
         </div>
 
-        {/* The "Thumb" Indicator */}
         <div 
             className={clsx(
                 "absolute h-4 w-1 top-1 z-20 pointer-events-none shadow-sm transition-transform duration-100",
@@ -162,7 +153,6 @@ export const RangeSlider = ({
             }} 
         />
         
-        {/* Marker (Default) */}
         {markerValue !== undefined && (
             <div 
                 className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-white/50 pointer-events-none z-0" 

@@ -49,7 +49,19 @@ export class CombatSystem implements IGameSystem {
           
           playAudio: (key) => AudioSystem.playSound(key),
           
-          // IMPL: Direct Trauma Injection
+          // NEW: Spatial Audio Support
+          playSpatialAudio: (key, x) => {
+              // Convert lowercase config key (e.g. 'fx_impact_light') to uppercase ID key (FX_IMPACT_LIGHT)
+              const idKey = key.toUpperCase();
+              const soundId = FX_IDS[idKey];
+              if (soundId) {
+                  FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, x);
+              } else {
+                  // Fallback if ID mapping missing
+                  AudioSystem.playSound(key);
+              }
+          },
+          
           addTrauma: (amount) => {
               GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount });
           }

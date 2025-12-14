@@ -17,7 +17,6 @@ class AudioSystemController {
   
   private musicElement: HTMLAudioElement | null = null;
   
-  // Ambience State
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceKey: string | null = null;
 
@@ -31,13 +30,8 @@ class AudioSystemController {
     if (!ctx) return;
 
     this.mixer.init();
-    
-    // Sync initial volumes
     this.updateVolumes();
-
-    // Synthesis
     await this.generateAllSounds();
-    
     this.setupGlobalInteraction();
 
     this.isReady = true;
@@ -74,7 +68,7 @@ class AudioSystemController {
       this.mixer.updateVolumes(settings);
   }
 
-  public playSound(key: string) {
+  public playSound(key: string, pan: number = 0) {
       const ctx = this.ctxManager.ctx;
       if (!ctx || !this.mixer.sfxGain) return;
 
@@ -91,7 +85,12 @@ class AudioSystemController {
           source.detune.value = detune;
       }
 
-      source.connect(this.mixer.sfxGain);
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = Math.max(-1, Math.min(1, pan));
+
+      source.connect(panner);
+      panner.connect(this.mixer.sfxGain);
+      
       source.start();
   }
 
@@ -101,7 +100,6 @@ class AudioSystemController {
       
       if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
 
-      // Crossfade Out Old
       if (this.currentAmbienceNode) {
           const oldNode = this.currentAmbienceNode;
           try { oldNode.stop(ctx.currentTime + 0.5); } catch {}
@@ -115,7 +113,6 @@ class AudioSystemController {
       source.buffer = buffer;
       source.loop = true;
       
-      // Crossfade In New (Local Gain for fade)
       const fadeGain = ctx.createGain();
       fadeGain.gain.setValueAtTime(0, ctx.currentTime);
       fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
@@ -153,9 +150,10 @@ class AudioSystemController {
       this.mixer.duckMusic(intensity, duration);
   }
 
-  // --- ALIASES (Backward Compatibility) ---
-  public playClick() { this.playSound('ui_click'); }
-  public playHover() { this.playSound('ui_hover'); }
+  // --- UPDATED ALIASES (Spatial Aware) ---
+  public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
+  public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
+  
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 
   public playDrillSound() { this.playSound('loop_drill'); }
   public playRebootZap() { this.playSound('loop_reboot'); }

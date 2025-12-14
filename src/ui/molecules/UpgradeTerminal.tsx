@@ -1,5 +1,6 @@
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeOption } from '@/game/types/game.types';
@@ -24,9 +25,9 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption) => {
+  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
       if (isPanelDead || upgradePoints <= 0) return; 
-      AudioSystem.playClick();
+      AudioSystem.playClick(getPan(e));
       selectUpgrade(u);
   };
 
@@ -59,8 +60,8 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
                     return (
                         <button
                             key={u}
-                            onClick={() => handleUpgrade(u)}
-                            onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                            onClick={(e) => handleUpgrade(u, e)}
+                            onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
                             className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
                         >
                             <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />

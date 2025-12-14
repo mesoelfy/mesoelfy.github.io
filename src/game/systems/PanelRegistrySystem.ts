@@ -10,7 +10,6 @@ import { StructureHealthService } from '../services/StructureHealthService';
 
 class PanelRegistrySystemClass implements IPanelSystem {
   
-  // Expose integrity via getter to match Interface
   public get systemIntegrity() {
       return StructureHealthService.systemIntegrity;
   }
@@ -19,7 +18,6 @@ class PanelRegistrySystemClass implements IPanelSystem {
     StructureHealthService.reset();
     DOMSpatialService.refreshAll();
     
-    // Wire up Upgrade Event -> Service Logic
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = StructureHealthService.restoreAll();
@@ -27,23 +25,15 @@ class PanelRegistrySystemClass implements IPanelSystem {
             if (restoredCount > 0) {
                 GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
                 AudioSystem.playSound('fx_reboot_success'); 
-                
-                // Spawn FX on newly restored panels
-                // We iterate checking who was destroyed? No, simplest is just center screen FX or
-                // we can iterate the rects.
-                // For now, keep it simple.
             }
         }
     });
   }
 
   update(delta: number, time: number): void {
-      // Logic moved to Services or specific systems (like InteractionSystem)
   }
 
   teardown(): void {}
-
-  // --- IPanelSystem Implementation (Delegation) ---
 
   public register(id: string, element: HTMLElement) {
       DOMSpatialService.register(id, element);
@@ -67,8 +57,9 @@ class PanelRegistrySystemClass implements IPanelSystem {
       StructureHealthService.damage(id, amount);
   }
 
-  public healPanel(id: string, amount: number) {
-      StructureHealthService.heal(id, amount);
+  // UPDATED
+  public healPanel(id: string, amount: number, sourceX?: number) {
+      StructureHealthService.heal(id, amount, sourceX);
   }
   
   public decayPanel(id: string, amount: number) {
@@ -87,7 +78,6 @@ class PanelRegistrySystemClass implements IPanelSystem {
       return StructureHealthService.getState(id);
   }
   
-  // Composite Data Getter (Used by UI Sync)
   public getAllPanels() {
       const results = [];
       const rects = DOMSpatialService.getAllRects();

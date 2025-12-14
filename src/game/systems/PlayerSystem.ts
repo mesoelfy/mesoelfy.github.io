@@ -93,7 +93,7 @@ export class PlayerSystem implements IGameSystem {
       const damage = 100;
       const width = 3.0; 
 
-      // Optim: Use FastEvent for VFX
+      // SPATIAL MATRIX: Pass cursor.x for pan
       FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS.EXPLOSION_YELLOW, cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
@@ -184,12 +184,8 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      // OPTIMIZATION: Use FastEventBus for Audio
-      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS.FX_PLAYER_FIRE);
-      
-      // Keep GameEvent for other subscribers (Achievements etc if any) or remove if unused?
-      // AudioDirectorSystem handles sound. Removing GameEvent reduces object alloc.
-      // However, we must ensure AudioDirector listens to FastEvent.
+      // SPATIAL MATRIX: Pass cursor.x to playSound via FastEvent
+      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS.FX_PLAYER_FIRE, cursor.x);
       
       this.lastFireTime = time;
     }

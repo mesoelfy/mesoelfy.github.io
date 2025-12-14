@@ -1,9 +1,7 @@
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
 import { useStore } from '@/core/store/useStore';
 
-// GLOBAL CONSTANT: RESET TO 100
 const MAX_PANEL_HEALTH = 100;
 
 export interface StructureState {
@@ -54,7 +52,7 @@ class StructureHealthServiceController {
     this.calculateIntegrity();
   }
 
-  public heal(id: string, amount: number) {
+  public heal(id: string, amount: number, sourceX?: number) {
     const state = this.states.get(id);
     if (!state) return;
 
@@ -63,8 +61,10 @@ class StructureHealthServiceController {
 
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = MAX_PANEL_HEALTH * 0.5; // Reboot to 50%
-        AudioSystem.playSound('fx_reboot_success');
+        state.health = MAX_PANEL_HEALTH * 0.5;
+        
+        // PASS sourceX
+        GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
     this.calculateIntegrity();
@@ -78,10 +78,11 @@ class StructureHealthServiceController {
 
   public restoreAll() {
       let restored = 0;
-      for (const state of this.states.values()) {
+      for (const [id, state] of this.states) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
               state.health = MAX_PANEL_HEALTH * 0.5;
+              GameEventBus.emit(GameEvents.PANEL_RESTORED, { id });
               restored++;
           } else if (state.health < MAX_PANEL_HEALTH) {
               state.health = MAX_PANEL_HEALTH;

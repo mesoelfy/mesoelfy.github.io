@@ -60,6 +60,22 @@ export class InteractionSystem implements IInteractionSystem {
             this.gameSystem.tickReboot(4.0); 
             this.lastRepairTime = time;
             
+            // Note: Loops are handled by AudioDirector implicitly or we can update it
+            // AudioDirector listens for REBOOTING events? 
+            // Actually, PlayerAvatar does some loop logic but AudioDirector doesn't.
+            // Let's stick to event emission or just play sound here.
+            // AudioSystem.playSound('loop_reboot', ...pan) logic is currently manual here?
+            // Ah, previous code: AudioSystem.playSound('loop_reboot'); 
+            // We should Pan this too!
+            // BUT: Player revival isn't emitting PANEL_RESTORED in the same way.
+            // Let's keep this simple for now or use cursor.x pan.
+            // Since player is usually dead center or identity panel, using cursor.x is fine.
+            
+            // NOTE: InteractionSystem doesn't know pan calculation logic (width).
+            // Better to rely on AudioDirector or AudioSystem. 
+            // Actually, AudioDirector doesn't listen for tick events yet.
+            // Let's just keep loop_reboot centered or simple for now as it's not the "Ding".
+            
             AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
@@ -82,11 +98,14 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // UPDATED: Reduced from 4 to 2.8 (30% slower)
-            PanelRegistry.healPanel(p.id, 2.8); 
+            // FIX: PASS CURSOR.X
+            PanelRegistry.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
+                // Loop sound logic: Could improve this later, but for loops it's tricky to re-trigger.
+                // AudioSystem handles loops via playSound? No, it just restarts it.
+                // We'll leave the loop as is for now, focus is on the DING.
                 AudioSystem.playSound('loop_reboot');
             } else {
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });

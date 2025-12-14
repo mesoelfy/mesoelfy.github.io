@@ -1,5 +1,6 @@
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
 import { UpgradeOption } from '@/game/types/game.types';
 
@@ -19,9 +20,9 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption) => {
+  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
       if (isPanelDead || upgradePoints <= 0) return; 
-      AudioSystem.playClick();
+      AudioSystem.playClick(getPan(e));
       selectUpgrade(u);
   };
 
@@ -37,8 +38,8 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
             return (
                 <button
                     key={u}
-                    onClick={() => handleUpgrade(u)}
-                    onMouseEnter={() => !isPanelDead && AudioSystem.playHover()}
+                    onClick={(e) => handleUpgrade(u, e)}
+                    onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
                     className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
                 >
                     <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />

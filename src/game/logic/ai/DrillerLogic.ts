@@ -28,17 +28,11 @@ export const DrillerLogic: EnemyLogic = {
     let destX = target.x;
     let destY = target.y;
     
-    // Improved Targeting Logic:
-    // If target is a Panel, clamp destination to the panel's bounding box edge
     if (target.type === 'PANEL' && target.id) {
         const rect = PanelRegistry.getPanelRect(target.id);
         if (rect) {
-            // Find the closest point on the rectangle perimeter to the enemy
-            // Clamp X
             const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
-            // Clamp Y
             const clampY = Math.max(rect.bottom, Math.min(pos.y, rect.top));
-            
             destX = clampX;
             destY = clampY;
         }
@@ -51,7 +45,6 @@ export const DrillerLogic: EnemyLogic = {
     
     const angle = Math.atan2(dy, dx);
     
-    // Check if we are close enough to the TARGET POINT (which is now the edge)
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
         
@@ -70,7 +63,8 @@ export const DrillerLogic: EnemyLogic = {
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
-            ctx.playSound('loop_drill');
+            // SPATIAL AUDIO: Pass pos.x
+            ctx.playSound('loop_drill', pos.x);
             state.data.audioTimer = aiConfig.AUDIO_INTERVAL + Math.random() * 0.1; 
         }
 

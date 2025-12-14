@@ -42,7 +42,6 @@ export interface IEntitySpawner {
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
-  // Legacy wrapper (now delegates to ParticleSystem if available, or ECS fallback)
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void;
 }
 
@@ -69,7 +68,7 @@ export interface IParticleSystem extends IGameSystem {
     y: Float32Array;
     life: Float32Array;
     maxLife: Float32Array;
-    color: Float32Array; // Stored as 3 floats (r,g,b) per particle or packed uint? Using 3 floats for shader ease
+    color: Float32Array; 
   };
 }
 
@@ -109,6 +108,7 @@ export interface IGameStateSystem extends IGameSystem {
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
   damagePanel(id: string, amount: number): void;
-  healPanel(id: string, amount: number): void;
+  // UPDATED: sourceX optional arg
+  healPanel(id: string, amount: number, sourceX?: number): void;
   getPanelRect(id: string): WorldRect | undefined;
 }

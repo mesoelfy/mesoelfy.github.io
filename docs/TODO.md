@@ -518,3 +518,11 @@ VIBE CODE
 
 
     - Health Bar: With maxHealth={5000} passed, the panel should start at 100% (5000 HP). As Drillers hit it (15 dmg each), it should visually decrease slowly. - - - we need to get our DMG stuff re calibrated
+
+
+    - Player can only heal if identity core panel is at 100%, then they have to hover over the 3D crystal and they will spin like rebooting but will be green.
+
+    - how expensive is it to render our 3D enemy models? What other kinds of 3D shapes do you know how to render besides basic shapes with more sides? Can you make models that look like fighter space ships?
+
+
+    - Panel being healed ding doesn't sound like it is coming from player mouse location. Feels like it is mostly centered.

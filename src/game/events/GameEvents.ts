@@ -7,6 +7,7 @@ export enum GameEvents {
   PROJECTILE_CLASH = 'PROJECTILE_CLASH',
   PANEL_DAMAGED = 'PANEL_DAMAGED',
   PANEL_HEALED = 'PANEL_HEALED',
+  PANEL_RESTORED = 'PANEL_RESTORED',
   PANEL_DESTROYED = 'PANEL_DESTROYED',
   GAME_START = 'GAME_START',
   GAME_OVER = 'GAME_OVER',
@@ -43,6 +44,7 @@ export interface GameEventPayloads {
   [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
   [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number };
   [GameEvents.PANEL_HEALED]: { id: string; amount: number };
+  [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; // ADDED optional X
   [GameEvents.PANEL_DESTROYED]: { id: string };
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };

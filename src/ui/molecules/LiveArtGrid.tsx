@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { getPan } from '@/core/audio/AudioUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -47,12 +48,12 @@ export const LiveArtGrid = () => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 
-                onClick={() => {
+                onClick={(e) => {
                     if (isDestroyed) return;
-                    AudioSystem.playClick();
+                    AudioSystem.playClick(getPan(e));
                     openModal('gallery');
                 }}
-                onMouseEnter={() => !isDestroyed && AudioSystem.playHover()}
+                onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
                 
                 className={clsx(
                     "w-full aspect-square relative border group overflow-hidden flex items-center justify-center rounded-[1px] transition-colors",
