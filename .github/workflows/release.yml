@@ -114,9 +114,12 @@ jobs:
             *(Approx 200-400MB)*
 
             *   **Mac:** Download `MESOELFY_OS_Mac.zip`.
-                *   *Note: If you see a security warning, Right-Click the App -> Select "Open".*
+                *   *Note: If you get a "Damaged" error, open System Settings > Privacy & Security > Click "Open Anyway".*
+                *   *Still stuck? Run this in Terminal: `xattr -cr /Applications/MESOELFY_OS.app`*
             *   **Windows:** Download `MESOELFY_OS_Windows.zip`. Double-click to run.
+                *   *Note: Click "More Info" -> "Run Anyway" if Windows Defender warns you.*
             *   **Linux:** Download `MESOELFY_OS_Linux.zip`.
+                *   *Note: Right-click -> Properties -> Check "Allow executing file as program".*
 
             ---
 

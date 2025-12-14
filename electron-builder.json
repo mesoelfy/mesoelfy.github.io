@@ -16,7 +16,10 @@
   ],
   "mac": {
     "icon": "app-icon.png",
-    "target": ["dmg"]
+    "target": ["dmg"],
+    "category": "public.app-category.games",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false
   },
   "win": {
     "icon": "app-icon.png",
