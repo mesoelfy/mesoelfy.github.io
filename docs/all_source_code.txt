@@ -2,17 +2,21 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 13 21:03:19 CST 2025
+Generated on: Sun Dec 14 11:34:11 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
 =====================================
 .
-├── Icon\015
 ├── README.md
+├── app-icon.png
 ├── docs
 │   ├── MESOELFY_OS_AI_INSTRUCTIONS.md
 │   └── all_source_code.txt
+├── electron
+│   ├── main.js
+│   └── preload.js
+├── electron-builder.json
 ├── next-env.d.ts
 ├── next.config.js
 ├── package.json
@@ -304,7 +308,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-70 directories, 226 files
+71 directories, 229 files
 
 =====================================
 FILE: ./next.config.js
@@ -584,19 +588,22 @@ FILE: ./package.json
 =====================================
 {
   "name": "mesoelfy-site",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "electron .",
+    "package": "npm run build && electron-builder"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@react-three/postprocessing": "^2.19.1",
     "clsx": "^2.1.0",
+    "electron-serve": "^3.0.0",
     "framer-motion": "^11.0.0",
     "lucide-react": "^0.300.0",
     "maath": "^0.10.0",
@@ -613,13 +620,224 @@ FILE: ./package.json
     "@types/react-dom": "^18",
     "@types/three": "^0.181.0",
     "autoprefixer": "^10.0.1",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.7",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
-  }
+  },
+  "main": "electron/main.js",
+  "description": "A 3D generative OS portfolio.",
+  "author": "Elfy <mesoelfy@example.com>"
 }
+
+
+=====================================
+FILE: ./.github/workflows/release.yml
+=====================================
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # 1. BUILD WEB VERSION
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+      - run: npm run build
+      - run: cd out && zip -r ../MESOELFY_OS_Itch_Upload_Ready.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-artifact
+          path: MESOELFY_OS_Itch_Upload_Ready.zip
+
+  # 2. BUILD DESKTOP APPS
+  build-desktop:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+      
+      - name: Install Linux Deps
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libicns-dev graphicsmagick
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Electron
+        # Build but do not publish to GitHub yet (we do that manually in step 3)
+        run: npx electron-builder --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload raw files to temp storage
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-artifacts-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+
+  # 3. CURATE AND PUBLISH
+  publish:
+    needs: [build-web, build-desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: '*'
+          merge-multiple: true
+
+      - name: Bundle and Clean
+        run: |
+          # Create folders
+          mkdir -p release/Mac
+          mkdir -p release/Windows
+          mkdir -p release/Linux
+          
+          # Move files (and ignore the clutter like .blockmap)
+          mv artifacts/*.dmg release/Mac/ 2>/dev/null || true
+          mv artifacts/*.exe release/Windows/ 2>/dev/null || true
+          mv artifacts/*.AppImage release/Linux/ 2>/dev/null || true
+          mv artifacts/MESOELFY_OS_Itch_Upload_Ready.zip release/
+
+          # Zip the folders
+          cd release
+          zip -r MESOELFY_OS_Mac.zip Mac
+          zip -r MESOELFY_OS_Windows.zip Windows
+          zip -r MESOELFY_OS_Linux.zip Linux
+          
+          # Remove the folders now that they are zipped
+          rm -rf Mac Windows Linux
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/MESOELFY_OS_Mac.zip
+            release/MESOELFY_OS_Windows.zip
+            release/MESOELFY_OS_Linux.zip
+            release/MESOELFY_OS_Itch_Upload_Ready.zip
+          draft: false
+          prerelease: false
+          name: "MESOELFY_OS ${{ github.ref_name }}"
+          body: |
+            ### // SYSTEM_UPDATE: ${{ github.ref_name }}
+            
+            **// STANDALONE APPS (OFFLINE)**
+            *Contains the game wrapped in a Chromium engine (Electron) for max performance.*
+            *You're basically downloading a lite version of the Chrome browser to run the game.*
+            *(Approx 200-400MB)*
+
+            *   **Mac:** Download `MESOELFY_OS_Mac.zip`.
+                *   *Note: If you see a security warning, Right-Click the App -> Select "Open".*
+            *   **Windows:** Download `MESOELFY_OS_Windows.zip`. Double-click to run.
+            *   **Linux:** Download `MESOELFY_OS_Linux.zip`.
+
+            ---
+
+            **// WEB BUILD (HTML5)**
+            *   **File:** `MESOELFY_OS_Itch_Upload_Ready.zip`
+            *   **Usage:** Strictly for uploading to platforms like Itch.io or Newgrounds to host the game online. 
+            *   *Included for those who wish to inspect the compiled asset structure for learning purposes.*
+
+            ---
+
+            **// LOCAL HOST EXPERIENCE (SOURCE)**
+            *   **File:** `Source code (zip)` (Below)
+            *   **Usage:** Run the full project on your machine.
+            *   **Why `npm`?** You can't just open an HTML file anymore. This project uses complex 3D rendering that requires a local server. Think of `npm` as the "App Store" for code—it installs the engine needed to run the site.
+            *   **Instructions (It's very easy):**
+                1. Unzip the source code.
+                2. Open your terminal **inside that specific folder**.
+                3. Type `npm install` (this downloads the engine).
+                4. Type `npm run dev` (this starts the server).
+                5. Open `http://localhost:3000` in any browser, but **Chrome will work the best**.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+=====================================
+FILE: ./.github/workflows/deploy.yml
+=====================================
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        with:
+          static_site_generator: next
+          
+      - name: Install Dependencies
+        run: npm ci
+        
+      - name: Build with Next.js
+        run: npm run build
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
 
 =====================================
@@ -669,6 +887,78 @@ FILE: ./tsconfig.json
 
 
 =====================================
+FILE: ./electron/preload.js
+=====================================
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('electron', {
+  send: (channel, data) => {
+    let validChannels = ["toMain"];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.send(channel, data);
+    }
+  },
+  receive: (channel, func) => {
+    let validChannels = ["fromMain"];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
+    }
+  }
+});
+
+
+=====================================
+FILE: ./electron/main.js
+=====================================
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+const serve = require('electron-serve');
+
+const appServe = app.isPackaged ? serve({ directory: path.join(__dirname, '../out') }) : null;
+
+const createWindow = () => {
+  const win = new BrowserWindow({
+    width: 1600,
+    height: 1200, // UPDATED: Taller 4:3 Aspect Ratio
+    title: "MESOELFY_OS",
+    icon: path.join(__dirname, '../app-icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    }
+  });
+
+  win.setMenuBarVisibility(false);
+
+  if (app.isPackaged) {
+    appServe(win).then(() => {
+      win.loadURL('app://-');
+    });
+  } else {
+    win.loadURL('http://localhost:3000');
+    // win.webContents.openDevTools();
+  }
+};
+
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+
+=====================================
 FILE: ./postcss.config.js
 =====================================
 module.exports = {
@@ -676,6 +966,41 @@ module.exports = {
     tailwindcss: {},
     autoprefixer: {},
   },
+}
+
+
+=====================================
+FILE: ./electron-builder.json
+=====================================
+{
+  "appId": "com.mesoelfy.os",
+  "productName": "MESOELFY_OS",
+  "directories": {
+    "output": "dist"
+  },
+  "publish": {
+    "provider": "github",
+    "releaseType": "release"
+  },
+  "files": [
+    "out/**/*",
+    "electron/**/*",
+    "package.json",
+    "app-icon.png"
+  ],
+  "mac": {
+    "icon": "app-icon.png",
+    "target": ["dmg"]
+  },
+  "win": {
+    "icon": "app-icon.png",
+    "target": ["nsis", "portable"]
+  },
+  "linux": {
+    "icon": "app-icon.png",
+    "target": ["AppImage", "deb"],
+    "category": "Game"
+  }
 }
 
 
@@ -769,25 +1094,29 @@ const REPEAT_COUNT = 8;
 const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
 
 // --- SUB-COMPONENT: HAZARD STRIP ---
-const HazardStrip = ({ direction, isSecondary, isActive }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean }) => {
+const HazardStrip = ({ direction, isSecondary, isActive, index }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean, index: number }) => {
+  // Stagger Logic: 
+  // UPDATED: Use a prime multiplier (23) and a wide range (-40% to +40%) 
+  // to ensure no two lines (especially alternating ones) align visually.
+  const staggerOffset = ((index * 23) % 80) - 40; 
+
   return (
-    <div className={clsx(
-        "flex relative overflow-visible w-full select-none transition-opacity duration-500",
-        // Lowered overall opacity, with secondary rows much fainter
-        isSecondary ? "opacity-10" : "opacity-30" 
-    )}>
+    <div 
+        className={clsx(
+            "flex relative overflow-visible w-full select-none transition-opacity duration-500",
+            isSecondary ? "opacity-10" : "opacity-30" 
+        )}
+        style={{ transform: `translateX(${staggerOffset}%)` }}
+    >
       <motion.div
         className={clsx(
           "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
-          // Color: Deeper Purple instead of bright lavender
-          // Speed: 300ms transition for snappy feedback
           isActive ? "text-latent-purple" : "text-critical-red"
         )}
         animate={{ 
             x: direction === 1 ? ["-25%", "0%"] : ["0%", "-25%"] 
         }}
         transition={{ 
-            // Secondary (Left) rows move slower (80s) than Primary (Right) rows (50s)
             duration: isSecondary ? 80 : 50, 
             ease: "linear", 
             repeat: Infinity 
@@ -803,16 +1132,22 @@ interface BreachOverlayProps {
   progress: number;
   isVideo: boolean;
   showInteractive: boolean;
-  isRepairing?: boolean; 
+  isRepairing?: boolean;
+  panelId?: string;
 }
 
-export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false }: BreachOverlayProps) => {
+export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false, panelId }: BreachOverlayProps) => {
   const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) 
     ? Math.max(0, Math.min(100, progress)) 
     : 0;
 
-  // Active if repairing OR hovering (UI Feedback)
   const isActive = isRepairing;
+  
+  // Compact Check: Feed and Social are too short for the offset
+  const isCompactHeight = panelId === 'feed' || panelId === 'social';
+  
+  // Status Check: Social is too small for the text/bar
+  const showStatusBar = panelId !== 'social';
 
   return (
     <div className={clsx(
@@ -825,6 +1160,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
             {Array.from({ length: 16 }).map((_, i) => (
                 <HazardStrip 
                     key={i} 
+                    index={i} 
                     direction={i % 2 === 0 ? 1 : -1} 
                     isSecondary={i % 2 !== 0} 
                     isActive={isActive}
@@ -835,10 +1171,13 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
 
         {/* 2. INTERACTIVE LAYER */}
         {showInteractive && (
-          <div className="relative z-20 flex flex-col items-center justify-center gap-4 cursor-crosshair group">
+          <div className={clsx(
+              "relative z-20 flex flex-col items-center justify-center gap-1 cursor-crosshair group",
+              isCompactHeight ? "mb-0" : "mb-[25%]"
+          )}>
               
               {/* Animated Icon Container */}
-              <div className="relative h-24 flex items-center justify-center">
+              <div className="relative h-20 flex items-center justify-center">
                   
                   {/* IDLE: Red Alert Triangle */}
                   <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-300", isActive ? "opacity-0" : "group-hover:opacity-0")}>
@@ -867,49 +1206,48 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
               </div>
 
               {/* Status & Bar */}
-              <div className="flex flex-col items-center text-center gap-2">
-                  <div className={clsx(
-                      "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
-                      isActive 
-                          ? "bg-latent-purple/10 border-latent-purple/50" 
-                          : "bg-critical-red/10 border-critical-red/50"
-                  )}>
-                      <span className={clsx(
-                          "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
-                          isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
+              {showStatusBar && (
+                  <div className="flex flex-col items-center text-center gap-2">
+                      <div className={clsx(
+                          "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
+                          isActive 
+                              ? "bg-latent-purple/10 border-latent-purple/50" 
+                              : "bg-critical-red/10 border-critical-red/50"
                       )}>
-                          {isActive ? "REBOOTING..." : "HOLD TO REBOOT"}
-                      </span>
-                  </div>
-                  
-                  <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
-                      {/* Gradient: Deepest Purple -> Standard -> Bright Lavender (NO RED) */}
-                      <motion.div 
-                          className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
-                          initial={{ width: "0%" }}
-                          animate={{ width: `${safeProgress}%` }}
-                          transition={{ type: "tween", duration: 0.1 }}
-                      />
-                  </div>
-                  
-                  <div className="flex justify-between w-full text-[9px] font-mono font-bold">
-                      <span className={clsx(
-                          "transition-colors duration-200", 
-                          isActive ? "text-[#E0B0FF]" : "text-critical-red"
-                      )}>
-                          INTEGRITY: {Math.floor(safeProgress)}%
-                      </span>
+                          <span className={clsx(
+                              "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
+                              isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
+                          )}>
+                              {isActive ? "REBOOTING..." : "HOLD TO REBOOT"}
+                          </span>
+                      </div>
                       
-                      {/* Text is now ACTIVE... instead of RECOVERING... */}
-                      {/* FIX: Explicit color set for inactive state to prevent green flash */}
-                      <span className={clsx(
-                          "transition-all duration-300", 
-                          isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
-                      )}>
-                          ACTIVE...
-                      </span>
+                      <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
+                          <motion.div 
+                              className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
+                              initial={{ width: "0%" }}
+                              animate={{ width: `${safeProgress}%` }}
+                              transition={{ type: "tween", duration: 0.1 }}
+                          />
+                      </div>
+                      
+                      <div className="flex justify-between w-full text-[9px] font-mono font-bold">
+                          <span className={clsx(
+                              "transition-colors duration-200", 
+                              isActive ? "text-[#E0B0FF]" : "text-critical-red"
+                          )}>
+                              INTEGRITY: {Math.floor(safeProgress)}%
+                          </span>
+                          
+                          <span className={clsx(
+                              "transition-all duration-300", 
+                              isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
+                          )}>
+                              ACTIVE...
+                          </span>
+                      </div>
                   </div>
-              </div>
+              )}
           </div>
         )}
     </div>
@@ -925,31 +1263,52 @@ import { Power } from 'lucide-react';
 
 export const RebootOverlay = () => (
   <motion.div 
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-    transition={{ duration: 0.4, ease: "backOut" }}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    // Outer fade slightly delayed to let inner animations finish
+    exit={{ opacity: 0, transition: { delay: 0.1, duration: 0.2 } }}
     className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-[2px]"
   >
-    <div className="flex flex-col items-center gap-2 border-y-2 border-primary-green bg-primary-green/10 w-full py-4 relative overflow-hidden">
+    <motion.div 
+        initial={{ scaleY: 0, opacity: 0 }}
+        animate={{ scaleY: 1, opacity: 1 }}
+        exit={{ 
+            scaleY: 0, 
+            opacity: 0,
+            // Collapses quickly AFTER icon starts leaving
+            transition: { delay: 0.1, duration: 0.2, ease: "easeIn" } 
+        }}
+        transition={{ type: "spring", stiffness: 250, damping: 25 }}
+        className="flex flex-col items-center gap-2 border-y-2 border-primary-green bg-primary-green/10 w-full py-4 relative overflow-hidden origin-center"
+    >
       <motion.div 
         className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-primary-green/20 to-transparent"
         animate={{ top: ["-100%", "100%"] }}
         transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
       />
+
       <div className="relative z-10 flex items-center gap-3">
+        {/* Icon: Exits IMMEDIATELY with backIn easing */}
         <motion.div
           initial={{ rotate: -180, scale: 0 }}
           animate={{ rotate: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+          exit={{ 
+              rotate: -180, 
+              scale: 0,
+              transition: { duration: 0.2, ease: "backIn" } 
+          }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
             <Power className="text-primary-green w-8 h-8 md:w-10 md:h-10" />
         </motion.div>
-        <div className="flex flex-col">
+
+        <div className="flex flex-col overflow-hidden">
+            {/* Text: Fades instantly on exit trigger */}
             <motion.span 
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                exit={{ opacity: 0, transition: { duration: 0.1 } }} 
+                transition={{ delay: 0.1 }}
                 className="text-2xl md:text-3xl font-header font-black text-primary-green tracking-widest italic"
             >
                 SYSTEM
@@ -957,14 +1316,15 @@ export const RebootOverlay = () => (
             <motion.span 
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                transition={{ delay: 0.2 }}
                 className="text-xs md:text-sm font-mono font-bold text-primary-green-dim tracking-[0.3em]"
             >
                 RESTORED
             </motion.span>
         </div>
       </div>
-    </div>
+    </motion.div>
   </motion.div>
 );
 
@@ -2690,7 +3050,8 @@ export const GlassPanel = ({
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
-        const timer = setTimeout(() => setShowReboot(false), 2000); 
+        // UPDATED: 900ms duration per user request
+        const timer = setTimeout(() => setShowReboot(false), 900); 
         return () => clearTimeout(timer);
     }
     prevDestroyed.current = isDestroyed;
@@ -2777,6 +3138,7 @@ export const GlassPanel = ({
                         isVideo={gameId === 'video'} 
                         showInteractive={true} 
                         isRepairing={isInteracting}
+                        panelId={gameId} // NEW PROP PASSED
                     />
                 </SafePanelContent>
             )}
@@ -6932,6 +7294,9 @@ export const useFavicon = (bootKey: string) => {
 
   // 1. PRE-BAKER
   useEffect(() => {
+    // DESKTOP CHECK: If running in Electron, do not mess with the icon.
+    if (typeof window !== 'undefined' && (window as any).electron) return;
+
     let link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
     if (!link) {
       link = document.createElement('link');
@@ -6956,6 +7321,9 @@ export const useFavicon = (bootKey: string) => {
 
   // 2. UPDATE LOOP
   useEffect(() => {
+    // DESKTOP CHECK: Bail out of the loop too
+    if (typeof window !== 'undefined' && (window as any).electron) return;
+
     const interval = setInterval(() => {
       setTick(t => !t); 
       updateFavicon();
@@ -6994,7 +7362,6 @@ export const useFavicon = (bootKey: string) => {
         nextHref = generateBreachIcon(blinkOn ? 'A' : 'B');
     } 
     else if (isSimulationPaused) {
-        // UPDATED: Now uses statusColor instead of hardcoded yellow
         visualKey = `PAUSED_${blinkOn}_${statusColor}`;
         nextHref = generatePausedIcon(blinkOn, statusColor);
     } 

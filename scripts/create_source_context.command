@@ -2,8 +2,7 @@
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Change to the project root (assuming script is in /scripts or /docs)
-# If script is in root, comment this out. If in /scripts, keep it.
+# Change to the project root
 cd "$SCRIPT_DIR/.."
 
 # Define the output file path
@@ -31,7 +30,7 @@ echo "=====================================" >> "$OUTPUT_FILE"
 echo "PROJECT DIRECTORY STRUCTURE:" >> "$OUTPUT_FILE"
 echo "=====================================" >> "$OUTPUT_FILE"
 
-# IGNORE: node_modules, .next (build), .git, out (export), .DS_Store
+# IGNORE: node_modules, .next (build), .git, out (export), .DS_Store (Deleted electron from ignore list)
 if command -v tree >/dev/null 2>&1; then
     tree -I 'node_modules|.next|.git|out|.DS_Store|package-lock.json|yarn.lock' >> "$OUTPUT_FILE"
 else
@@ -40,10 +39,10 @@ else
 fi
 
 echo "" >> "$OUTPUT_FILE"
-echo "📁 Collecting source files..."
+echo "📦 Collecting source files..."
 
 # Step 3: Find files and append content
-# We look for: TS/TSX (Logic), CSS (Styles), JSON (Data), MD (Docs), JS/MJS (Config)
+# We look for: TS/TSX (Logic), CSS (Styles), JSON (Data), MD (Docs), JS/MJS (Config), YML (CI/CD)
 find . -type f \( \
   -name "*.ts" -o \
   -name "*.tsx" -o \
@@ -51,7 +50,9 @@ find . -type f \( \
   -name "*.mjs" -o \
   -name "*.css" -o \
   -name "*.json" -o \
-  -name "*.md" \
+  -name "*.md" -o \
+  -name "*.yml" -o \
+  -name "*.yaml" \
 \) \
 -not -path "./node_modules/*" \
 -not -path "./.next/*" \

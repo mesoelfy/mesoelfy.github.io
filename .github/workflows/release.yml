@@ -85,9 +85,6 @@ jobs:
           mv artifacts/*.AppImage release/Linux/ 2>/dev/null || true
           mv artifacts/MESOELFY_OS_Itch_Upload_Ready.zip release/
 
-          # Clean up any "Setup" exes if they duplicate the portable ones to keep it simple
-          # (Optional, but keeps it to one file per OS)
-          
           # Zip the folders
           cd release
           zip -r MESOELFY_OS_Mac.zip Mac
@@ -113,7 +110,8 @@ jobs:
             
             **// STANDALONE APPS (OFFLINE)**
             *Contains the game wrapped in a Chromium engine (Electron) for max performance.*
-            *(Approx 200MB)*
+            *You're basically downloading a lite version of the Chrome browser to run the game.*
+            *(Approx 200-400MB)*
 
             *   **Mac:** Download `MESOELFY_OS_Mac.zip`.
                 *   *Note: If you see a security warning, Right-Click the App -> Select "Open".*
@@ -125,18 +123,19 @@ jobs:
             **// WEB BUILD (HTML5)**
             *   **File:** `MESOELFY_OS_Itch_Upload_Ready.zip`
             *   **Usage:** Strictly for uploading to platforms like Itch.io or Newgrounds to host the game online. 
-            *   *Also included for those who wish to inspect the compiled asset structure for learning purposes.*
+            *   *Included for those who wish to inspect the compiled asset structure for learning purposes.*
 
             ---
 
             **// LOCAL HOST EXPERIENCE (SOURCE)**
             *   **File:** `Source code (zip)` (Below)
-            *   **Usage:** Run the full project on your machine with hot-reloading.
-            *   **Instructions:**
+            *   **Usage:** Run the full project on your machine.
+            *   **Why `npm`?** You can't just open an HTML file anymore. This project uses complex 3D rendering that requires a local server. Think of `npm` as the "App Store" for code—it installs the engine needed to run the site.
+            *   **Instructions (It's very easy):**
                 1. Unzip the source code.
                 2. Open your terminal **inside that specific folder**.
-                3. Type `npm install` (wait for it to finish).
-                4. Type `npm run dev`.
-                5. Open `http://localhost:3000`.
+                3. Type `npm install` (this downloads the engine).
+                4. Type `npm run dev` (this starts the server).
+                5. Open `http://localhost:3000` in any browser, but **Chrome will work the best**.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
