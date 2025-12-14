@@ -18,12 +18,11 @@ jobs:
         with: { node-version: 20, cache: 'npm' }
       - run: npm ci
       - run: npm run build
-      - run: cd out && zip -r ../mesoelfy-web.zip .
-      # Save to temporary storage
+      - run: cd out && zip -r ../MESOELFY_OS_Itch_Upload_Ready.zip .
       - uses: actions/upload-artifact@v4
         with:
           name: web-artifact
-          path: mesoelfy-web.zip
+          path: MESOELFY_OS_Itch_Upload_Ready.zip
 
   # 2. BUILD DESKTOP APPS
   build-desktop:
@@ -46,12 +45,12 @@ jobs:
         run: npm run build
 
       - name: Build Electron
-        # We perform a build but DO NOT publish yet. We just want the files.
+        # Build but do not publish to GitHub yet (we do that manually in step 3)
         run: npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Save the installers to temporary storage
+      # Upload raw files to temp storage
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -61,7 +60,7 @@ jobs:
             dist/*.dmg
             dist/*.AppImage
 
-  # 3. PUBLISH EVERYTHING (The Coordinator)
+  # 3. CURATE AND PUBLISH
   publish:
     needs: [build-web, build-desktop]
     runs-on: ubuntu-latest
@@ -73,24 +72,71 @@ jobs:
           pattern: '*'
           merge-multiple: true
 
-      - name: Create Professional Release
+      - name: Bundle and Clean
+        run: |
+          # Create folders
+          mkdir -p release/Mac
+          mkdir -p release/Windows
+          mkdir -p release/Linux
+          
+          # Move files (and ignore the clutter like .blockmap)
+          mv artifacts/*.dmg release/Mac/ 2>/dev/null || true
+          mv artifacts/*.exe release/Windows/ 2>/dev/null || true
+          mv artifacts/*.AppImage release/Linux/ 2>/dev/null || true
+          mv artifacts/MESOELFY_OS_Itch_Upload_Ready.zip release/
+
+          # Clean up any "Setup" exes if they duplicate the portable ones to keep it simple
+          # (Optional, but keeps it to one file per OS)
+          
+          # Zip the folders
+          cd release
+          zip -r MESOELFY_OS_Mac.zip Mac
+          zip -r MESOELFY_OS_Windows.zip Windows
+          zip -r MESOELFY_OS_Linux.zip Linux
+          
+          # Remove the folders now that they are zipped
+          rm -rf Mac Windows Linux
+
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: |
+            release/MESOELFY_OS_Mac.zip
+            release/MESOELFY_OS_Windows.zip
+            release/MESOELFY_OS_Linux.zip
+            release/MESOELFY_OS_Itch_Upload_Ready.zip
           draft: false
           prerelease: false
           name: "MESOELFY_OS ${{ github.ref_name }}"
           body: |
             ### // SYSTEM_UPDATE: ${{ github.ref_name }}
             
-            **// PLAYING THE GAME**
-            *   **Windows:** Download `.exe`. Double-click to run.
-            *   **Mac:** Download `.dmg`. Right-Click -> Open to bypass security warning.
-            *   **Linux:** Download `.AppImage`. Make executable and run.
-            *   **Web:** Use `mesoelfy-web.zip` for Itch.io upload.
+            **// STANDALONE APPS (OFFLINE)**
+            *Contains the game wrapped in a Chromium engine (Electron) for max performance.*
+            *(Approx 200MB)*
 
-            **// FOR DEVELOPERS (SOURCE)**
-            *   Download `Source code (zip)` below.
-            *   Run `npm install` and `npm run dev` to hack the mainframe locally.
+            *   **Mac:** Download `MESOELFY_OS_Mac.zip`.
+                *   *Note: If you see a security warning, Right-Click the App -> Select "Open".*
+            *   **Windows:** Download `MESOELFY_OS_Windows.zip`. Double-click to run.
+            *   **Linux:** Download `MESOELFY_OS_Linux.zip`.
+
+            ---
+
+            **// WEB BUILD (HTML5)**
+            *   **File:** `MESOELFY_OS_Itch_Upload_Ready.zip`
+            *   **Usage:** Strictly for uploading to platforms like Itch.io or Newgrounds to host the game online. 
+            *   *Also included for those who wish to inspect the compiled asset structure for learning purposes.*
+
+            ---
+
+            **// LOCAL HOST EXPERIENCE (SOURCE)**
+            *   **File:** `Source code (zip)` (Below)
+            *   **Usage:** Run the full project on your machine with hot-reloading.
+            *   **Instructions:**
+                1. Unzip the source code.
+                2. Open your terminal **inside that specific folder**.
+                3. Type `npm install` (wait for it to finish).
+                4. Type `npm run dev`.
+                5. Open `http://localhost:3000`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
