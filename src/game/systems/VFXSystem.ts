@@ -10,15 +10,23 @@ import { useStore } from '@/core/store/useStore';
 export class VFXSystem implements IGameSystem {
   private particleSystem!: IParticleSystem;
   private locator!: IServiceLocator;
+  
+  // Local Event Cursor
+  private readCursor = 0;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.particleSystem = locator.getParticleSystem();
+    
+    // Sync cursor to start (ignore old events)
+    this.readCursor = FastEventBus.getCursor();
+    
     this.setupListeners();
   }
 
   update(delta: number, time: number): void {
-    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+    // Read and update local cursor
+    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.SPAWN_FX) {
             const key = FX_ID_MAP[a1];
             if (key) this.executeRecipe(key, a2, a3, a4);
@@ -86,7 +94,6 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           }
 
-          // OPTIMIZATION: Direct call to buffer system
           this.particleSystem.spawn(x, y, color, vx, vy, life);
       }
   }

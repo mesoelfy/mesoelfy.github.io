@@ -16,6 +16,9 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
+  
+  // DEBUG: Throttle logs
+  private logTimer = 0;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
@@ -69,6 +72,9 @@ export class PlayerSystem implements IGameSystem {
             this.attemptAutoFire(time, playerEntity, upgrades);
         }
     }
+    
+    // Timer update
+    this.logTimer += delta;
   }
 
   teardown(): void {}
@@ -183,8 +189,19 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      // FIX: Use bracket notation for safety and ensure x is passed
-      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], cursor.x || 0);
+      // --- DEBUG TRACING ---
+      const soundId = FX_IDS['FX_PLAYER_FIRE'];
+      
+      // Throttle logging to once per second
+      if (this.logTimer > 1.0) {
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+              msg: `EMIT SOUND ID: ${soundId}`, 
+              source: 'PlayerSystem' 
+          });
+          this.logTimer = 0;
+      }
+
+      FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, cursor.x || 0);
       
       this.lastFireTime = time;
     }

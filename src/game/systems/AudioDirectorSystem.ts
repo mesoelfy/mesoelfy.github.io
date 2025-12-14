@@ -7,21 +7,39 @@ import { ViewportHelper } from '../utils/ViewportHelper';
 import { PanelRegistry } from './PanelRegistrySystem';
 
 export class AudioDirectorSystem implements IGameSystem {
+  private logTimer = 0;
+  
+  // Local Event Cursor
+  private readCursor = 0;
   
   setup(locator: IServiceLocator): void {
+    // Sync cursor
+    this.readCursor = FastEventBus.getCursor();
     this.setupEventListeners();
   }
 
   update(delta: number, time: number): void {
-    FastEventBus.processEvents((id, a1, a2, a3, a4) => {
+    this.logTimer += delta;
+
+    // Read and update local cursor
+    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
+            
+            // DEBUG LOGGING
+            if (this.logTimer > 1.0) {
+                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+                    msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
+                    source: 'AudioDirector' 
+                });
+                this.logTimer = 0;
+            }
+
             if (key) {
                 const audioKey = key.toLowerCase();
                 const pan = this.calculatePan(a2); 
                 AudioSystem.playSound(audioKey, pan);
             } else {
-                // Debug: Catch unmapped IDs
                 if (process.env.NODE_ENV === 'development') {
                     console.warn(`[AudioDirector] Unknown Sound ID: ${a1}`);
                 }
