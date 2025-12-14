@@ -7,6 +7,7 @@ import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
 import { ConfigService } from '../services/ConfigService';
+import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -29,7 +30,6 @@ export class PlayerSystem implements IGameSystem {
   update(delta: number, time: number): void {
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // OPTIMIZATION FIX: Handle Iterable return type
     let playerEntity = null;
     for (const p of this.registry.getByTag(Tag.PLAYER)) {
         playerEntity = p;
@@ -93,7 +93,8 @@ export class PlayerSystem implements IGameSystem {
       const damage = 100;
       const width = 3.0; 
 
-      GameEventBus.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: cursor.x, y: cursor.y });
+      // Optim: Use FastEvent for VFX
+      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS.EXPLOSION_YELLOW, cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
       for (let i = 0; i < count; i++) {
@@ -121,7 +122,6 @@ export class PlayerSystem implements IGameSystem {
 
     for (const e of enemies) {
       if (!e.active) continue;
-      
       if (e.hasTag(Tag.BULLET)) continue;
 
       const state = e.getComponent<StateComponent>('State');
@@ -131,7 +131,6 @@ export class PlayerSystem implements IGameSystem {
       if (!t) continue;
       const dx = t.x - cursor.x;
       const dy = t.y - cursor.y;
-      // Optimization: Squared distance
       const dist = dx*dx + dy*dy; 
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
@@ -160,16 +159,13 @@ export class PlayerSystem implements IGameSystem {
       const bSpeed = this.config.player.bulletSpeed;
       const bLife = this.config.player.bulletLife;
 
-      // 1. FORK (Main)
       for (let i = 0; i < projectileCount; i++) {
           const angle = startAngle + (i * spreadAngle);
           const vx = Math.cos(angle) * bSpeed;
           const vy = Math.sin(angle) * bSpeed;
-
           this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
-      // 2. BACKDOOR
       if (backdoorLevel > 0) {
           const rearAngle = baseAngle + Math.PI; 
           const vx = Math.cos(rearAngle) * bSpeed;
@@ -177,7 +173,6 @@ export class PlayerSystem implements IGameSystem {
           this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
       }
 
-      // 3. SNIFFER
       if (snifferLevel > 0) {
           const angleStep = (Math.PI * 2) / snifferLevel;
           for(let i=0; i<snifferLevel; i++) {
@@ -189,7 +184,13 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      GameEventBus.emit(GameEvents.PLAYER_FIRED, { x: cursor.x, y: cursor.y });
+      // OPTIMIZATION: Use FastEventBus for Audio
+      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS.FX_PLAYER_FIRE);
+      
+      // Keep GameEvent for other subscribers (Achievements etc if any) or remove if unused?
+      // AudioDirectorSystem handles sound. Removing GameEvent reduces object alloc.
+      // However, we must ensure AudioDirector listens to FastEvent.
+      
       this.lastFireTime = time;
     }
   }

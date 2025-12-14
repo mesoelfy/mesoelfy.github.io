@@ -2,7 +2,6 @@
 const BUFFER_SIZE = 2048; 
 const MASK = BUFFER_SIZE - 1;
 
-// Increased Stride to 5 (EventID + 4 Args) to support X, Y, Angle, etc.
 const STRIDE = 5; 
 
 export const FastEvents = {
@@ -21,7 +20,12 @@ export const FX_IDS: Record<string, number> = {
   'DRILL_SPARKS': 7,
   'HUNTER_RECOIL': 8,
   'REBOOT_HEAL': 9,
-  'PURGE_BLAST': 10
+  'PURGE_BLAST': 10,
+  
+  // AUDIO MAPPINGS (New)
+  'FX_PLAYER_FIRE': 50,
+  'FX_IMPACT_HEAVY': 51,
+  'FX_IMPACT_LIGHT': 52
 };
 
 export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
@@ -41,7 +45,7 @@ class FastEventBusController {
     this.buffer[ptr + 1] = arg1;
     this.buffer[ptr + 2] = arg2;
     this.buffer[ptr + 3] = arg3;
-    this.buffer[ptr + 4] = arg4; // Angle or Extra Data
+    this.buffer[ptr + 4] = arg4;
 
     this.writeCursor++;
   }

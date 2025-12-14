@@ -14,31 +14,29 @@ export class AudioDirectorSystem implements IGameSystem {
     // Process High Frequency Audio Events (from FastEventBus)
     FastEventBus.processEvents((id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
-            // Note: We need a mapping for ID -> Key if we use FastBus for audio.
-            // Currently mostly used for VFX, but ready for expansion.
+            // Map ID back to string key (e.g. "FX_PLAYER_FIRE")
+            const key = FX_ID_MAP[a1];
+            if (key) {
+                // Config keys are lowercase (e.g. "fx_player_fire")
+                const audioKey = key.toLowerCase();
+                AudioSystem.playSound(audioKey);
+            }
         }
     });
   }
 
   private setupEventListeners() {
-    // 1. Player Actions
-    GameEventBus.subscribe(GameEvents.PLAYER_FIRED, () => {
-        AudioSystem.playSound('fx_player_fire');
-    });
-
+    // Legacy Events (Low Frequency)
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         AudioSystem.playSound('fx_impact_heavy'); 
-        // Duck music on heavy impact
         AudioSystem.duckMusic(0.7, 1.0);
     });
 
-    // 2. Enemy Interactions
     GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
         if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy');
         else AudioSystem.playSound('fx_impact_light');
     });
 
-    // 3. UI / System State
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
         AudioSystem.playSound('fx_impact_heavy');
         AudioSystem.duckMusic(1.0, 3.0);
@@ -57,15 +55,11 @@ export class AudioDirectorSystem implements IGameSystem {
         AudioSystem.playSound('fx_level_up');
     });
     
-    // 4. Ambient / Music Control
     GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        // Switch to calmer ambience? 
-        // For now, standard behavior.
+        // ...
     });
   }
 
   teardown(): void {
-    // No explicit cleanup needed as EventBus clears on reload, 
-    // but in a strict engine we would unsubscribe here.
   }
 }

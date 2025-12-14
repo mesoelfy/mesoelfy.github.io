@@ -6,13 +6,21 @@ export class AudioSynthesizer {
     // Requires window to be present for OfflineAudioContext
     if (typeof window === 'undefined') return null;
 
+    // Standard AudioContext or Webkit prefix
+    const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    // Use OfflineContext for rendering
+    const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
+    if (!OfflineContextClass) return null;
+
     const sampleRate = 44100;
-    const length = sampleRate * recipe.duration;
+    // Ensure integer length
+    const length = Math.ceil(sampleRate * recipe.duration);
     
-    // Safety check for duration
     if (length <= 0) return null;
 
-    const offline = new OfflineAudioContext(1, length, sampleRate);
+    const offline = new OfflineContextClass(1, length, sampleRate);
 
     const mainGain = offline.createGain();
     mainGain.connect(offline.destination);
@@ -84,7 +92,7 @@ export class AudioSynthesizer {
         osc.start();
     } 
     else if (recipe.type === 'noise') {
-        const bufferSize = sampleRate * recipe.duration;
+        const bufferSize = length;
         const noiseBuffer = offline.createBuffer(1, bufferSize, sampleRate);
         const data = noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
