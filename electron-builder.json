@@ -18,8 +18,16 @@
     "icon": "app-icon.png",
     "target": ["dmg"],
     "category": "public.app-category.games",
-    "hardenedRuntime": true,
     "gatekeeperAssess": false
+  },
+  "dmg": {
+    "background": "public/assets/images/social-card.jpg",
+    "iconSize": 140,
+    "window": { "width": 800, "height": 500 },
+    "contents": [
+      { "x": 200, "y": 250, "type": "file" },
+      { "x": 600, "y": 250, "type": "link", "path": "/Applications" }
+    ]
   },
   "win": {
     "icon": "app-icon.png",

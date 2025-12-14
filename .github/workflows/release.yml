@@ -74,25 +74,25 @@ jobs:
 
       - name: Bundle and Clean
         run: |
-          # Create folders
-          mkdir -p release/Mac
-          mkdir -p release/Windows
-          mkdir -p release/Linux
+          # Create themed folders
+          mkdir -p "release/MESOELFY_OS_Mac_Build"
+          mkdir -p "release/MESOELFY_OS_Windows_Build"
+          mkdir -p "release/MESOELFY_OS_Linux_Build"
           
-          # Move files (and ignore the clutter like .blockmap)
-          mv artifacts/*.dmg release/Mac/ 2>/dev/null || true
-          mv artifacts/*.exe release/Windows/ 2>/dev/null || true
-          mv artifacts/*.AppImage release/Linux/ 2>/dev/null || true
+          # Move files
+          mv artifacts/*.dmg "release/MESOELFY_OS_Mac_Build/" 2>/dev/null || true
+          mv artifacts/*.exe "release/MESOELFY_OS_Windows_Build/" 2>/dev/null || true
+          mv artifacts/*.AppImage "release/MESOELFY_OS_Linux_Build/" 2>/dev/null || true
           mv artifacts/MESOELFY_OS_Itch_Upload_Ready.zip release/
 
-          # Zip the folders
+          # Zip the folders with the new names
           cd release
-          zip -r MESOELFY_OS_Mac.zip Mac
-          zip -r MESOELFY_OS_Windows.zip Windows
-          zip -r MESOELFY_OS_Linux.zip Linux
+          zip -r MESOELFY_OS_Mac.zip "MESOELFY_OS_Mac_Build"
+          zip -r MESOELFY_OS_Windows.zip "MESOELFY_OS_Windows_Build"
+          zip -r MESOELFY_OS_Linux.zip "MESOELFY_OS_Linux_Build"
           
           # Remove the folders now that they are zipped
-          rm -rf Mac Windows Linux
+          rm -rf "MESOELFY_OS_Mac_Build" "MESOELFY_OS_Windows_Build" "MESOELFY_OS_Linux_Build"
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2

@@ -1,13 +1,16 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const serve = require('electron-serve');
+
+// --- FIX: Handle ESM/CJS interoperability ---
+const serveExport = require('electron-serve');
+const serve = serveExport.default || serveExport; 
 
 const appServe = app.isPackaged ? serve({ directory: path.join(__dirname, '../out') }) : null;
 
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1600,
-    height: 1200, // UPDATED: Taller 4:3 Aspect Ratio
+    height: 1200, 
     title: "MESOELFY_OS",
     icon: path.join(__dirname, '../app-icon.png'),
     webPreferences: {
