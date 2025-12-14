@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;

@@ -1,16 +1,16 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { EnemyTypes } from '../config/Identifiers';
-import { GameEventBus } from '../events/GameEventBus'; 
-import { GameEvents, FXVariant } from '../events/GameEvents'; 
+import { GameEventBus } from '@/engine/signals/GameEventBus'; 
+import { GameEvents, FXVariant } from '@/engine/signals/GameEvents'; 
 import { useGameStore } from '@/game/store/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
 import { ConfigService } from '../services/ConfigService';
-import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 import { AIRegistry } from '../logic/ai/AIRegistry';
 import { AIContext } from '../logic/ai/types';

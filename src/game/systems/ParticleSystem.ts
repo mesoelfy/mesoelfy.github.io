@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IParticleSystem } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IParticleSystem } from '@/engine/interfaces';
 import * as THREE from 'three';
 
 const MAX_PARTICLES = 2000;

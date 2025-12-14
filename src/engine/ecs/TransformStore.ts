@@ -1,4 +1,4 @@
-import { MAX_ENTITIES } from '../Constants';
+import { MAX_ENTITIES } from './Constants';
 
 const STRIDE = 4; // X, Y, ROTATION, SCALE
 

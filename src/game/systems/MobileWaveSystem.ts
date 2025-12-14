@@ -1,6 +1,6 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '../config/Identifiers';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class MobileWaveSystem implements IGameSystem {
   private spawner!: IEntitySpawner;

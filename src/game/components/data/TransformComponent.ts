@@ -1,5 +1,5 @@
-import { Component } from '../../core/ecs/Component';
-import { TransformStore } from '../../core/ecs/TransformStore';
+import { Component } from '@/engine/ecs/Component';
+import { TransformStore } from '@/engine/ecs/TransformStore';
 
 const STRIDE = 4;
 

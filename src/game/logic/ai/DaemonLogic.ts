@@ -1,4 +1,4 @@
-import { Entity } from '../../core/ecs/Entity';
+import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { TransformComponent } from '../../components/data/TransformComponent';
 import { StateComponent } from '../../components/data/StateComponent';

@@ -1,5 +1,5 @@
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Zap, ZapOff } from 'lucide-react';
 import { clsx } from 'clsx';
 

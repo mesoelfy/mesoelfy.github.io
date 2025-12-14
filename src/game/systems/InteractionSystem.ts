@@ -1,8 +1,8 @@
-import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem } from '../core/interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { PanelRegistry } from './PanelRegistrySystem'; 
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 

@@ -1,4 +1,4 @@
-import { Entity } from '../../core/ecs/Entity';
+import { Entity } from '@/engine/ecs/Entity';
 
 export interface CombatContext {
   damagePlayer: (amount: number) => void;

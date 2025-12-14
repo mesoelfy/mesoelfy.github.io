@@ -5,8 +5,8 @@ import { GameEngineCore } from '../core/GameEngine';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { InputSystem } from '../systems/InputSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 
 // Mutable Global for Renderers to access Registry (Performance optimization)
 export let ActiveEngine: GameEngineCore | null = null;

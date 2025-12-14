@@ -4,9 +4,9 @@ import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { TimeSystem } from '@/game/systems/TimeSystem';
 import { Terminal, Box, Activity, Shield, MinusSquare, X, Play, PauseCircle, Power } from 'lucide-react';
 import { clsx } from 'clsx';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 
 import { OverridesTab } from './tabs/OverridesTab';

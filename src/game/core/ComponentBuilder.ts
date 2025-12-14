@@ -1,4 +1,4 @@
-import { ComponentPoolManager } from './ecs/ComponentPoolManager';
+import { ComponentPoolManager } from '@/engine/ecs/ComponentPoolManager';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
@@ -9,7 +9,7 @@ import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
 import { OrbitalComponent } from '../components/data/OrbitalComponent';
-import { Component } from './ecs/Component';
+import { Component } from '@/engine/ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
 

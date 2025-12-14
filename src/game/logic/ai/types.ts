@@ -1,4 +1,4 @@
-import { Entity } from '../../core/ecs/Entity';
+import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/game/services/ConfigService';
 
 export interface AIContext {

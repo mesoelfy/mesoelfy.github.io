@@ -1,8 +1,8 @@
-import { IGameSystem, IServiceLocator, IPanelSystem } from '../core/interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { WorldRect } from '../utils/ViewportHelper';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { WorldRect } from '@/engine/math/ViewportHelper';
 
 // Services
 import { DOMSpatialService } from '../services/DOMSpatialService';

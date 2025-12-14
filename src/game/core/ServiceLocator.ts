@@ -1,4 +1,4 @@
-import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from './interfaces';
+import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from '@/engine/interfaces';
 import { ConfigService } from '../services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {

@@ -1,7 +1,7 @@
-import { IEntitySpawner, IEntityRegistry } from './interfaces';
-import { Entity } from './ecs/Entity';
-import { Tag } from './ecs/types';
-import { EntityRegistry } from './ecs/EntityRegistry';
+import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
+import { Entity } from '@/engine/ecs/Entity';
+import { Tag } from '@/engine/ecs/types';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '../data/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '../config/Identifiers';

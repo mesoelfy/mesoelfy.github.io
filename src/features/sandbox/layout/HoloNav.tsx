@@ -1,5 +1,5 @@
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Speaker, Crosshair, ScanEye } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';

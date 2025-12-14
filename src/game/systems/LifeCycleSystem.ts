@@ -1,11 +1,11 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
 import { TransformComponent } from '../components/data/TransformComponent';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents, FXVariant } from '../events/GameEvents';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
 
 export class LifeCycleSystem implements IGameSystem {

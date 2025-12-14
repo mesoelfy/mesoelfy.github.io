@@ -1,6 +1,6 @@
 import { useGameStore } from '@/game/store/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeOption } from '@/game/types/game.types';

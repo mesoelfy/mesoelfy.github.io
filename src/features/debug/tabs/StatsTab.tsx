@@ -1,6 +1,6 @@
 import { Cpu, Database, LayoutTemplate } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 interface StatsTabProps {
   stats: { active: number, pooled: number, total: number, fps: number };

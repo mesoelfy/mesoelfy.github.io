@@ -1,19 +1,16 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
-import { ViewportHelper } from '../utils/ViewportHelper';
-import { PanelRegistry } from './PanelRegistrySystem';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from './AudioSystem';
+import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
 
-export class AudioDirectorSystem implements IGameSystem {
+export class AudioDirector implements IGameSystem {
   private logTimer = 0;
-  
-  // Local Event Cursor
   private readCursor = 0;
   
   setup(locator: IServiceLocator): void {
-    // Sync cursor
     this.readCursor = FastEventBus.getCursor();
     this.setupEventListeners();
   }
@@ -21,12 +18,10 @@ export class AudioDirectorSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.logTimer += delta;
 
-    // Read and update local cursor
     this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
             
-            // DEBUG LOGGING
             if (this.logTimer > 1.0) {
                 GameEventBus.emit(GameEvents.LOG_DEBUG, { 
                     msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 

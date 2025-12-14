@@ -1,9 +1,9 @@
-import { IGameSystem, IServiceLocator, IPhysicsSystem, ICombatSystem } from '../core/interfaces';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
+import { IGameSystem, IServiceLocator, IPhysicsSystem, ICombatSystem } from '@/engine/interfaces';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { ColliderComponent } from '../components/data/ColliderComponent';
-import { EntityID } from '../core/ecs/types';
+import { EntityID } from '@/engine/ecs/types';
 
 export class CollisionSystem implements IGameSystem {
   private physicsSystem!: IPhysicsSystem;

@@ -1,6 +1,6 @@
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 
 interface IdentityFooterProps {
   isPanelDead: boolean;

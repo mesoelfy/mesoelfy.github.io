@@ -1,4 +1,4 @@
-import { GameEvents as NewGameEvents } from '../events/GameEvents';
+import { GameEvents as NewGameEvents } from '@/engine/signals/GameEvents';
 
 export const EnemyTypes = {
   DRILLER: 'driller',

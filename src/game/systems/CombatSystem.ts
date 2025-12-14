@@ -1,15 +1,15 @@
-import { IGameSystem, IServiceLocator, IGameStateSystem, IEntityRegistry } from '../core/interfaces';
-import { Entity } from '../core/ecs/Entity';
+import { IGameSystem, IServiceLocator, IGameStateSystem, IEntityRegistry } from '@/engine/interfaces';
+import { Entity } from '@/engine/ecs/Entity';
 import { ColliderComponent } from '../components/data/ColliderComponent';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { IdentityComponent } from '../components/data/IdentityComponent';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents, FXVariant } from '../events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '../config/Identifiers';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { CollisionMatrix } from '../logic/combat/CollisionMatrix';
 import { CombatContext } from '../logic/combat/types';
-import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
+import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 
 export class CombatSystem implements IGameSystem {
   private gameSystem!: IGameStateSystem;

@@ -1,7 +1,7 @@
 import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import socials from '@/data/socials.json';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { useGameStore } from '@/game/store/useGameStore';
 import { clsx } from 'clsx';
 

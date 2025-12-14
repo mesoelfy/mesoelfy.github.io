@@ -1,6 +1,6 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
-import { EntityRegistry } from './ecs/EntityRegistry';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 import { registerAllBehaviors } from '../logic/ai/BehaviorCatalog';
 import { registerAllAssets } from '../assets/AssetCatalog';
@@ -10,7 +10,7 @@ import { TimeSystem } from '../systems/TimeSystem';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
 import { VFXSystem } from '../systems/VFXSystem';
-import { AudioDirectorSystem } from '../systems/AudioDirectorSystem';
+import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { ShakeSystem } from '../systems/ShakeSystem';
 import { StructureSystem } from '../systems/StructureSystem';
 import { MobileWaveSystem } from '../systems/MobileWaveSystem';
@@ -20,12 +20,12 @@ import { PanelRegistry } from '../systems/PanelRegistrySystem';
 import { GameStateSystem } from '../systems/GameStateSystem'; // Added
 
 // Simplified Combat System for Tap-to-Kill
-import { IGameSystem, ICombatSystem } from './interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { FastEventBus, FastEvents, FX_IDS } from './FastEventBus';
-import { Entity } from './ecs/Entity';
+import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { Entity } from '@/engine/ecs/Entity';
 import { TransformComponent } from '../components/data/TransformComponent';
 
 // --- MICRO COMBAT SYSTEM (Mobile Specific) ---
@@ -86,7 +86,7 @@ export const MobileBootstrapper = () => {
       { id: 'MobileCombatSystem', sys: new MobileCombatSystem() },
       { id: 'LifeCycleSystem', sys: new LifeCycleSystem() },
       { id: 'VFXSystem', sys: new VFXSystem() },
-      { id: 'AudioDirectorSystem', sys: new AudioDirectorSystem() },
+      { id: 'AudioDirectorSystem', sys: new AudioDirector() },
       { id: 'ShakeSystem', sys: new ShakeSystem() },
   ];
 

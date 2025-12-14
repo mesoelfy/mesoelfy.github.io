@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/game/hooks/useHeartbeat';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
-import { useAudioVisualizer } from '@/core/audio/hooks/useAudioVisualizer';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
+import { useAudioVisualizer } from '@/engine/audio/hooks/useAudioVisualizer';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>

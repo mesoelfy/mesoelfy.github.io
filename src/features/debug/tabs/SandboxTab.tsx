@@ -2,7 +2,7 @@ import { Box, ArrowRight, Zap } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { motion } from 'framer-motion';
 
 interface SandboxTabProps {

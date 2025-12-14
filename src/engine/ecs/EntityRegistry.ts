@@ -1,9 +1,9 @@
 import { EntityID, createEntityID, Tag } from './types';
 import { Entity } from './Entity';
-import { ObjectPool } from '../ObjectPool';
+import { ObjectPool } from './ObjectPool';
 import { IEntityRegistry } from '../interfaces';
 import { Query, QueryDef } from './Query';
-import { MAX_ENTITIES } from '../Constants';
+import { MAX_ENTITIES } from './Constants';
 
 export class EntityRegistry implements IEntityRegistry {
   private entities = new Map<EntityID, Entity>();

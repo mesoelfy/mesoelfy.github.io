@@ -1,4 +1,4 @@
-import { Tag } from '@/game/core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { InstancedActor } from '../common/InstancedActor';

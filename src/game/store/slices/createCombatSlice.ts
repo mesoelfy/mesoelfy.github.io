@@ -1,8 +1,8 @@
 import { StateCreator } from 'zustand';
 import { GameState } from '../useGameStore';
 import { PLAYER_CONFIG } from '../../config/PlayerConfig';
-import { GameEventBus } from '../../events/GameEventBus';
-import { GameEvents } from '../../events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 
 export interface CombatSlice {
   isPlaying: boolean;

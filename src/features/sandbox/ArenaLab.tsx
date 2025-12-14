@@ -1,5 +1,5 @@
 import { ServiceLocator } from '@/game/core/ServiceLocator';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { Bug, Trash2, Shield, Plus, Info, Crosshair } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { VirtualJoystickService } from '@/game/inputs/VirtualJoystickService';
+import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
 
 export const VirtualJoystick = () => {
   const [active, setActive] = useState(false);

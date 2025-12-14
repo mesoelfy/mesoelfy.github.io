@@ -1,7 +1,7 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { noise } from '../utils/Noise';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { noise } from '@/engine/math/Noise';
 import { useStore } from '@/core/store/useStore';
 
 export class ShakeSystem implements IGameSystem {

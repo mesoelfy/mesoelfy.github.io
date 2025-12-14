@@ -1,5 +1,5 @@
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/core/store/useStore';
 
 const MAX_PANEL_HEALTH = 100;

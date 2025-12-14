@@ -1,6 +1,6 @@
 import { useGameStore } from '@/game/store/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
 import { UpgradeOption } from '@/game/types/game.types';
 

@@ -1,13 +1,13 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry } from './interfaces';
+import { IGameSystem, IServiceLocator, IEntityRegistry } from '@/engine/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
-import { ViewportHelper } from '../utils/ViewportHelper';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelRegistrySystem } from '../systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '../systems/GameStateSystem';
 import { WorldConfig } from '../config/WorldConfig';
 import { TimeSystem } from '../systems/TimeSystem';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];

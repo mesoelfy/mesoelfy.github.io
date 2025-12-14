@@ -1,13 +1,13 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '../core/interfaces';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
-import { Tag } from '../core/ecs/types';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { Tag } from '@/engine/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { StateComponent } from '../components/data/StateComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
 import { ConfigService } from '../services/ConfigService';
-import { FastEventBus, FastEvents, FX_IDS } from '../core/FastEventBus';
+import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;

@@ -1,5 +1,5 @@
 import { SOUND_METADATA, SoundCategory } from '@/game/config/SoundMetadata';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Volume2, Play, Activity, Music, Radio, Database, Monitor } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState } from 'react';

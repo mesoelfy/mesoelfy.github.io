@@ -1,10 +1,10 @@
-import { IGameSystem, IServiceLocator, IParticleSystem } from '../core/interfaces';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { IGameSystem, IServiceLocator, IParticleSystem } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_RECIPES } from '../config/VFXConfig';
-import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
+import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { useStore } from '@/core/store/useStore';
 
 export class VFXSystem implements IGameSystem {

@@ -1,6 +1,6 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
-import { EntityRegistry } from './ecs/EntityRegistry';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 import { SYSTEM_MANIFEST } from '../config/SystemManifest';
 

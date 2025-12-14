@@ -3,9 +3,9 @@ import { clsx } from 'clsx';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { PanelRegistry } from '@/game/systems/PanelRegistrySystem';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 interface OverridesTabProps {
   closeDebug: () => void;

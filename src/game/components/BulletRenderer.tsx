@@ -1,4 +1,4 @@
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './common/InstancedActor';
 import { HealthComponent } from '../components/data/HealthComponent';
 import { AssetService } from '../assets/AssetService';

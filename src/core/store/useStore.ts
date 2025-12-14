@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/game/store/useGameStore';
 import { EnemyTypes } from '@/game/config/Identifiers';
 

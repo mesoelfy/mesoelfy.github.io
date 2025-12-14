@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { PanelRegistry } from './PanelRegistrySystem'; 

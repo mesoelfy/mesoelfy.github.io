@@ -1,4 +1,4 @@
-import { Component } from '../../core/ecs/Component';
+import { Component } from '@/engine/ecs/Component';
 
 export class OrbitalComponent extends Component {
   readonly _type = 'Orbital';

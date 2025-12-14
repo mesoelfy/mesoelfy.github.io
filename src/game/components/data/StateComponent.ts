@@ -1,4 +1,4 @@
-import { Component } from '../../core/ecs/Component';
+import { Component } from '@/engine/ecs/Component';
 
 export class StateComponent extends Component {
   readonly _type = 'State';

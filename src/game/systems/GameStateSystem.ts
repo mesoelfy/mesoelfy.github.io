@@ -1,9 +1,9 @@
-import { IGameSystem, IServiceLocator, IGameStateSystem } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IGameStateSystem } from '@/engine/interfaces';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
-import { GameEventBus } from '../events/GameEventBus';
-import { GameEvents } from '../events/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/core/store/useStore'; 
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { PanelRegistry } from './PanelRegistrySystem';
 
 export class GameStateSystem implements IGameStateSystem {

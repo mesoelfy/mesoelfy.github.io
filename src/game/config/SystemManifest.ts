@@ -1,15 +1,13 @@
-import { IGameSystem } from '../core/interfaces';
+import { IGameSystem } from '@/engine/interfaces';
 
-// Core Systems
 import { TimeSystem } from '../systems/TimeSystem';
 import { InputSystem } from '../systems/InputSystem';
 import { PhysicsSystem } from '../systems/PhysicsSystem';
 import { GameStateSystem } from '../systems/GameStateSystem';
 import { UISyncSystem } from '../systems/UISyncSystem';
 import { PanelRegistry } from '../systems/PanelRegistrySystem';
-import { AudioDirectorSystem } from '../systems/AudioDirectorSystem';
+import { AudioDirector } from '@/engine/audio/AudioDirector';
 
-// Gameplay Systems
 import { LifeCycleSystem } from '../systems/LifeCycleSystem';
 import { BehaviorSystem } from '../systems/BehaviorSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
@@ -22,7 +20,6 @@ import { TargetingSystem } from '../systems/TargetingSystem';
 import { GuidanceSystem } from '../systems/GuidanceSystem';
 import { OrbitalSystem } from '../systems/OrbitalSystem';
 
-// VFX
 import { ShakeSystem } from '../systems/ShakeSystem';
 import { VFXSystem } from '../systems/VFXSystem';
 import { ParticleSystem } from '../systems/ParticleSystem';
@@ -46,7 +43,7 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'StructureSystem',  factory: useClass(StructureSystem) },
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
-  { id: 'ParticleSystem',   factory: useClass(ParticleSystem) }, // NEW
+  { id: 'ParticleSystem',   factory: useClass(ParticleSystem) },
 
   { id: 'TargetingSystem',  factory: useClass(TargetingSystem) },
   { id: 'OrbitalSystem',    factory: useClass(OrbitalSystem) },
@@ -60,7 +57,8 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
-  { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) },
+  
+  { id: 'AudioDirectorSystem', factory: useClass(AudioDirector) },
   
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
   { id: 'UISyncSystem',     factory: useClass(UISyncSystem) },

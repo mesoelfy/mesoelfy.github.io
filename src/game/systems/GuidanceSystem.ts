@@ -1,9 +1,9 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 
 export class GuidanceSystem implements IGameSystem {
   private registry!: EntityRegistry;

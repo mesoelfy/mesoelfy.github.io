@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ActiveEngine } from './GameDirector';
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
 import { LifetimeComponent } from '../components/data/LifetimeComponent';

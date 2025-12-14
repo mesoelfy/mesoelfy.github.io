@@ -1,4 +1,4 @@
-import { Tag } from '@/game/core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { InstancedActor } from '../common/InstancedActor';
@@ -6,7 +6,7 @@ import { IdentityComponent } from '@/game/components/data/IdentityComponent';
 import { StateComponent } from '@/game/components/data/StateComponent';
 import { TransformComponent } from '@/game/components/data/TransformComponent'; 
 import { AssetService } from '@/game/assets/AssetService';
-import { applyRotation } from '@/game/utils/RenderUtils';
+import { applyRotation } from '@/engine/math/RenderUtils';
 import * as THREE from 'three';
 
 const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);

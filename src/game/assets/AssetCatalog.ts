@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
-import { addBarycentricCoordinates } from '../utils/GeometryUtils';
+import { addBarycentricCoordinates } from '@/engine/math/GeometryUtils';
 import { MODEL_CONFIG } from '../config/ModelConfig';
 import { GAME_THEME } from '../theme';
 

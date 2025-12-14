@@ -2,8 +2,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
 import { useGameStore } from '@/game/store/useGameStore';
 import { useStore } from '@/core/store/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 
 const VIDEO_POOL = [
   "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 

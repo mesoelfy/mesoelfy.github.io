@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
 import { PanelRegistry } from './PanelRegistrySystem';
 
 export class StructureSystem implements IGameSystem {

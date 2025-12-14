@@ -1,9 +1,9 @@
-import { IGameSystem, IServiceLocator } from '../core/interfaces';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
+import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { TargetComponent } from '../components/data/TargetComponent';
 import { PanelRegistry } from './PanelRegistrySystem';
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 
 export class TargetingSystem implements IGameSystem {
   private registry!: EntityRegistry;

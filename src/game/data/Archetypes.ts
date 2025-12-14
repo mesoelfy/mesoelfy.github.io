@@ -2,7 +2,7 @@ import { ENEMY_CONFIG } from '../config/EnemyConfig';
 import { PLAYER_CONFIG } from '../config/PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from '../config/PhysicsConfig';
 import { ArchetypeIDs } from '../config/Identifiers';
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 
 export interface EntityBlueprint {
   tags: Tag[];

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './common/InstancedActor';
 import { IdentityComponent } from '../data/IdentityComponent';
 

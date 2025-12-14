@@ -1,8 +1,8 @@
-import { IPhysicsSystem, IServiceLocator } from '../core/interfaces';
-import { SpatialGrid } from '../core/SpatialGrid';
+import { IPhysicsSystem, IServiceLocator } from '@/engine/interfaces';
+import { SpatialGrid } from '@/engine/ecs/SpatialGrid';
 import { TransformComponent } from '../components/data/TransformComponent';
 import { MotionComponent } from '../components/data/MotionComponent';
-import { EntityRegistry } from '../core/ecs/EntityRegistry';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 
 export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;

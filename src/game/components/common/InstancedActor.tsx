@@ -4,10 +4,10 @@ import * as THREE from 'three';
 import { ActiveEngine } from '../GameDirector';
 import { TransformComponent } from '../data/TransformComponent';
 import { IdentityComponent } from '../data/IdentityComponent';
-import { Entity } from '@/game/core/ecs/Entity';
-import { TransformStore } from '@/game/core/ecs/TransformStore';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
+import { Entity } from '@/engine/ecs/Entity';
+import { TransformStore } from '@/engine/ecs/TransformStore';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();

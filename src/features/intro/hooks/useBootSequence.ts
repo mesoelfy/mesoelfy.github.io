@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameEventBus } from '@/game/events/GameEventBus';
-import { GameEvents } from '@/game/events/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { LOG_DATA } from '../data/bootLogs';
 
 interface UseBootSequenceProps {

@@ -1,4 +1,4 @@
-import { ViewportHelper, WorldRect } from '../utils/ViewportHelper';
+import { ViewportHelper, WorldRect } from '@/engine/math/ViewportHelper';
 
 class DOMSpatialServiceController {
   private observedElements = new Map<string, HTMLElement>();

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/game/store/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 interface IntelligentHeaderProps {
   title: string;

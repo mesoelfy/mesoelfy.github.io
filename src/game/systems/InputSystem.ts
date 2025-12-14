@@ -1,5 +1,5 @@
-import { IGameSystem, IServiceLocator, IInputService } from '../core/interfaces';
-import { VirtualJoystickService } from '../inputs/VirtualJoystickService';
+import { IGameSystem, IServiceLocator, IInputService } from '@/engine/interfaces';
+import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };

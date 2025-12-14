@@ -1,7 +1,7 @@
-import { GameEvents, GameEventPayloads } from '../events/GameEvents';
+import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './SpatialGrid';
-import { WorldRect } from '../utils/ViewportHelper';
+import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '../services/ConfigService';
 import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';

@@ -1,4 +1,4 @@
-import { Entity } from '../../core/ecs/Entity';
+import { Entity } from '@/engine/ecs/Entity';
 import { CombatContext } from './types';
 import { HealthComponent } from '../../components/data/HealthComponent';
 import { IdentityComponent } from '../../components/data/IdentityComponent';

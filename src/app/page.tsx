@@ -18,7 +18,7 @@ import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { MobileExperience } from '@/features/mobile/MobileExperience'; 
 import { GameOverlay } from '@/game/GameOverlay';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from '@/ui/atoms/CustomCursor';

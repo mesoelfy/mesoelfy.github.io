@@ -1,4 +1,4 @@
-import { Tag } from '../core/ecs/types';
+import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '../config/Identifiers';
 import { InstancedActor } from './common/InstancedActor';
 import { IdentityComponent } from '../data/IdentityComponent';
