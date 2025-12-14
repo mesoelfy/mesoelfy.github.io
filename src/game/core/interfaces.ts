@@ -21,6 +21,7 @@ export interface IServiceLocator {
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
+  getParticleSystem(): IParticleSystem;
 }
 
 // --- CORE CONTRACTS ---
@@ -30,7 +31,6 @@ export interface IEntityRegistry {
   destroyEntity(id: number): void;
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
-  // UPDATED: Returns Iterable instead of Array to prevent allocation
   getByTag(tag: string): Iterable<Entity>; 
   query(def: QueryDef): Iterable<Entity>;
   clear(): void;
@@ -38,13 +38,11 @@ export interface IEntityRegistry {
 }
 
 export interface IEntitySpawner {
-  // Generic Assembler
   spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
-
-  // Convenience / Legacy Wrappers
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
+  // Legacy wrapper (now delegates to ParticleSystem if available, or ECS fallback)
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void;
 }
 
@@ -62,6 +60,18 @@ export interface IInputService {
 }
 
 // --- SYSTEM CONTRACTS ---
+
+export interface IParticleSystem extends IGameSystem {
+  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number): void;
+  getCount(): number;
+  getData(): {
+    x: Float32Array;
+    y: Float32Array;
+    life: Float32Array;
+    maxLife: Float32Array;
+    color: Float32Array; // Stored as 3 floats (r,g,b) per particle or packed uint? Using 3 floats for shader ease
+  };
+}
 
 export interface IPhysicsSystem extends IGameSystem {
   spatialGrid: SpatialGrid;

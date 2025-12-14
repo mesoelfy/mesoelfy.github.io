@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '../core/interfaces';
+import { IGameSystem, IServiceLocator, IParticleSystem } from '../core/interfaces';
 import { GameEventBus } from '../events/GameEventBus';
 import { GameEvents } from '../events/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
@@ -8,12 +8,12 @@ import { FastEventBus, FastEvents, FX_ID_MAP } from '../core/FastEventBus';
 import { useStore } from '@/core/store/useStore';
 
 export class VFXSystem implements IGameSystem {
-  private spawner!: IEntitySpawner;
+  private particleSystem!: IParticleSystem;
   private locator!: IServiceLocator;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    this.spawner = locator.getSpawner();
+    this.particleSystem = locator.getParticleSystem();
     this.setupListeners();
   }
 
@@ -34,20 +34,15 @@ export class VFXSystem implements IGameSystem {
   private setupListeners() {
     GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const isBig = p.damage > 10;
-        // Standard bullet hits add lighter trauma.
-        // Direct collisions add THEIR OWN trauma in CombatHandlers, 
-        // effectively stacking with this for a huge impact.
         if (isBig) this.triggerHitStop(0.05);
     });
 
     GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        // AAA POLISH: Increased structural failure feel
         this.addTrauma(0.75); 
         this.triggerHitStop(0.1); 
     });
 
     GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        // AAA POLISH: Maximum impact on death
         this.addTrauma(1.0);
         this.triggerHitStop(0.5); 
     });
@@ -91,7 +86,8 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * speed;
           }
 
-          this.spawner.spawnParticle(x, y, color, vx, vy, life);
+          // OPTIMIZATION: Direct call to buffer system
+          this.particleSystem.spawn(x, y, color, vx, vy, life);
       }
   }
 

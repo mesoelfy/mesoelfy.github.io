@@ -17,7 +17,7 @@ import { CombatSystem } from '../systems/CombatSystem';
 import { WaveSystem } from '../systems/WaveSystem';
 import { PlayerSystem } from '../systems/PlayerSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { StructureSystem } from '../systems/StructureSystem'; // NEW
+import { StructureSystem } from '../systems/StructureSystem'; 
 import { TargetingSystem } from '../systems/TargetingSystem';
 import { GuidanceSystem } from '../systems/GuidanceSystem';
 import { OrbitalSystem } from '../systems/OrbitalSystem';
@@ -25,6 +25,7 @@ import { OrbitalSystem } from '../systems/OrbitalSystem';
 // VFX
 import { ShakeSystem } from '../systems/ShakeSystem';
 import { VFXSystem } from '../systems/VFXSystem';
+import { ParticleSystem } from '../systems/ParticleSystem';
 
 type SystemFactory = () => IGameSystem;
 
@@ -33,43 +34,34 @@ interface SystemDef {
   factory: SystemFactory;
 }
 
-// HELPER: Wraps a class constructor
 const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new ClassRef();
-
-// HELPER: Wraps an existing singleton instance
 const useInstance = (instance: IGameSystem): SystemFactory => () => instance;
 
-/**
- * THE SYSTEM PIPELINE
- */
 export const SYSTEM_MANIFEST: SystemDef[] = [
-  // --- 1. CORE & INPUT (Prepare the frame) ---
   { id: 'TimeSystem',       factory: useClass(TimeSystem) },
   { id: 'InputSystem',      factory: useClass(InputSystem) },
-  { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) }, // Singleton
+  { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) },
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
-  { id: 'StructureSystem',  factory: useClass(StructureSystem) }, // NEW: World Logic
+  { id: 'StructureSystem',  factory: useClass(StructureSystem) },
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
-  // --- 2. AI & DECISION MAKING (Think) ---
+  { id: 'ParticleSystem',   factory: useClass(ParticleSystem) }, // NEW
+
   { id: 'TargetingSystem',  factory: useClass(TargetingSystem) },
   { id: 'OrbitalSystem',    factory: useClass(OrbitalSystem) },
   { id: 'PlayerSystem',     factory: useClass(PlayerSystem) },
-  { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) }, // AI Logic
+  { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) },
   { id: 'GuidanceSystem',   factory: useClass(GuidanceSystem) },
 
-  // --- 3. PHYSICS & RESOLUTION (Move & Hit) ---
   { id: 'PhysicsSystem',    factory: useClass(PhysicsSystem) },
   { id: 'CollisionSystem',  factory: useClass(CollisionSystem) },
   
-  // --- 4. OUTCOMES (Die & Explode) ---
-  { id: 'CombatSystem',     factory: useClass(CombatSystem) }, // Resolves damage logic
+  { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
   { id: 'AudioDirectorSystem', factory: useClass(AudioDirectorSystem) },
   
-  // --- 5. RENDER PREP (Sync to View) ---
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
   { id: 'UISyncSystem',     factory: useClass(UISyncSystem) },
 ];

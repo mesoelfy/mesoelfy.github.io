@@ -1,4 +1,4 @@
-import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner } from './interfaces';
+import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from './interfaces';
 import { ConfigService } from '../services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {
@@ -7,6 +7,7 @@ class ServiceLocatorImpl implements IServiceLocator {
   private inputService?: IInputService;
   private registry?: IEntityRegistry;
   private spawner?: IEntitySpawner;
+  private particleSystem?: IParticleSystem;
 
   public getSystem<T extends IGameSystem>(id: string): T {
     const sys = this.systems.get(id);
@@ -17,6 +18,7 @@ class ServiceLocatorImpl implements IServiceLocator {
   public registerSystem(id: string, system: IGameSystem): void {
     this.systems.set(id, system);
     if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
+    if (id === 'ParticleSystem') this.particleSystem = system as unknown as IParticleSystem;
   }
 
   public registerRegistry(registry: IEntityRegistry) {
@@ -46,6 +48,11 @@ class ServiceLocatorImpl implements IServiceLocator {
       return this.spawner;
   }
 
+  public getParticleSystem(): IParticleSystem {
+      if (!this.particleSystem) throw new Error("ParticleSystem not registered");
+      return this.particleSystem;
+  }
+
   public getConfigService() {
       return ConfigService;
   }
@@ -56,7 +63,8 @@ class ServiceLocatorImpl implements IServiceLocator {
     this.inputService = undefined;
     this.registry = undefined;
     this.spawner = undefined;
-    ConfigService.reset(); // Reset configs on reboot
+    this.particleSystem = undefined;
+    ConfigService.reset(); 
   }
 }
 

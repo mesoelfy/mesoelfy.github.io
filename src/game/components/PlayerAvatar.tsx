@@ -1,12 +1,20 @@
-import { useRef, useMemo } from 'react';
+import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { GAME_THEME } from '../theme';
 import { ServiceLocator } from '../core/ServiceLocator';
 import { useGameStore } from '../store/useGameStore';
 import { useStore } from '@/core/store/useStore';
 import { InteractionSystem, RepairState } from '../systems/InteractionSystem'; 
-import { EntitySystem } from '../systems/EntitySystem';
+import { EntitySystem } from '../systems/EntitySystem'; // Note: This might be legacy import, safe to ignore type if unused
 import * as THREE from 'three';
+
+// GLOBAL REUSABLES (Outside Component)
+const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
+const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
+const colorReboot = new THREE.Color('#9E4EA5'); 
+const colorDead = new THREE.Color('#FF003C'); 
+const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 
 export const PlayerAvatar = () => {
   const groupRef = useRef<THREE.Group>(null);
@@ -17,19 +25,6 @@ export const PlayerAvatar = () => {
   
   const { introDone } = useStore(); 
 
-  const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
-  const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
-  const colorReboot = new THREE.Color('#9E4EA5'); 
-  const colorDead = new THREE.Color('#FF003C'); 
-
-  const isDead = useGameStore(state => state.playerHealth <= 0);
-  const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
-  
-  // GEOMETRIES
-  const aliveGeo = new THREE.CircleGeometry(0.1, 16);
-  // Reverted: Use Circle with 3 segments for Triangle, size 0.12
-  const deadGeo = new THREE.CircleGeometry(0.12, 3); 
-  
   const animScale = useRef(0);
 
   useFrame((state, delta) => {
@@ -53,12 +48,15 @@ export const PlayerAvatar = () => {
 
     try { ServiceLocator.getInputService().updateCursor(x, y); } catch {}
 
-    // 2. State
+    // 2. State Access (No allocation)
+    const storeState = useGameStore.getState();
+    const isDead = storeState.playerHealth <= 0;
+    const isGameOver = storeState.systemIntegrity <= 0;
+
     let repairState: RepairState = 'IDLE';
-    let entitySys: EntitySystem | null = null;
     try {
-        repairState = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem').repairState;
-        entitySys = ServiceLocator.getSystem<EntitySystem>('EntitySystem');
+        const sys = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem');
+        repairState = sys.repairState;
     } catch {}
     
     let targetColor = colorTurret;
@@ -70,31 +68,20 @@ export const PlayerAvatar = () => {
         let currentBaseScale = 1.0;
 
         if (isDead || isGameOver) {
-            // DEAD STATE: Red Triangle
+            // DEAD STATE
             ringRef.current.visible = false;
             glowRef.current.visible = false;
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.set(colorDead);
+            coreRef.current.material.color.copy(colorDead); // Use copy
             coreRef.current.material.wireframe = true; 
             
-            // ANIMATION LOGIC
             const isRebooting = repairState === 'REBOOTING';
-            
             if (isRebooting) {
-                // Fast Counter-Clockwise Spin
                 coreRef.current.rotation.z -= delta * 10.0;
-                
-                // Particle Spray
-                if (entitySys && Math.random() > 0.5) { // 30fps emission rate
-                    const pColor = Math.random() > 0.5 ? '#FF003C' : '#F7D277';
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = 2 + Math.random() * 3;
-                    
-                    entitySys.spawnParticle(x, y, pColor, 1, speed, 0.4);
-                }
+                // Particle spawning removed from here to keep Renderer pure. 
+                // Logic handles particles via InteractionSystem events now.
             } else {
-                // Slow Clockwise Idle Spin
                 coreRef.current.rotation.z += delta * 1.5; 
             }
             

@@ -24,8 +24,8 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
         
         <MatrixGrid />
         
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#78F654" />
+        {/* OPTIMIZATION: Removed pointLight. Use unlit materials/shaders. */}
+        <ambientLight intensity={0.2} />
         
         <Suspense fallback={null}>
            {children}
