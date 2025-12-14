@@ -8,12 +8,20 @@ const REPEAT_COUNT = 8;
 const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
 
 // --- SUB-COMPONENT: HAZARD STRIP ---
-const HazardStrip = ({ direction, isSecondary, isActive }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean }) => {
+const HazardStrip = ({ direction, isSecondary, isActive, index }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean, index: number }) => {
+  // Stagger Logic: 
+  // UPDATED: Use a prime multiplier (23) and a wide range (-40% to +40%) 
+  // to ensure no two lines (especially alternating ones) align visually.
+  const staggerOffset = ((index * 23) % 80) - 40; 
+
   return (
-    <div className={clsx(
-        "flex relative overflow-visible w-full select-none transition-opacity duration-500",
-        isSecondary ? "opacity-10" : "opacity-30" 
-    )}>
+    <div 
+        className={clsx(
+            "flex relative overflow-visible w-full select-none transition-opacity duration-500",
+            isSecondary ? "opacity-10" : "opacity-30" 
+        )}
+        style={{ transform: `translateX(${staggerOffset}%)` }}
+    >
       <motion.div
         className={clsx(
           "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
@@ -66,6 +74,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
             {Array.from({ length: 16 }).map((_, i) => (
                 <HazardStrip 
                     key={i} 
+                    index={i} 
                     direction={i % 2 === 0 ? 1 : -1} 
                     isSecondary={i % 2 !== 0} 
                     isActive={isActive}
