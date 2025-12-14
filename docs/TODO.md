@@ -539,3 +539,5 @@ VIBE CODE
         - Implemented 'useAudioVisualizer' hook to bridge Web Audio data to React components via requestAnimationFrame. Wired this into the Header component, causing the 'MESOELFY_OS' logo to pulse in sync with the audio output (music + sfx).
 
     - need sound effect for hunter charging then releasing projectile
+
+    - I don't want driller doing damage to affect the MESOELFY_OS movement. Is there anything else affecting its movement?
