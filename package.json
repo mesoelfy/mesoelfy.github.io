@@ -40,5 +40,7 @@
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
   },
-  "main": "electron/main.js"
+  "main": "electron/main.js",
+  "description": "A 3D generative OS portfolio.",
+  "author": "Elfy <mesoelfy@example.com>"
 }
