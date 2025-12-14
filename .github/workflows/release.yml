@@ -49,12 +49,12 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # Linux-Specific Graphics Libs
+      # Linux-Specific Graphics Libs (FIXED)
       - name: Install Linux Deps
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libicns-dev libgraphicsmagick1-dev-compat
+          sudo apt-get install -y libicns-dev graphicsmagick
 
       - name: Build Next.js
         run: npm run build
