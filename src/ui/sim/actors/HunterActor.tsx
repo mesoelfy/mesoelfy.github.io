@@ -1,13 +1,18 @@
 import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/game/theme';
 import { EnemyTypes } from '@/sys/config/Identifiers';
-import { InstancedActor } from '../common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '@/sys/data/IdentityData';
 import { AIStateData } from '@/sys/data/AIStateData';
+import { TransformData } from '@/sys/data/TransformData'; 
 import { AssetService } from '@/game/assets/AssetService';
+import { applyRotation } from '@/engine/math/RenderUtils';
+import * as THREE from 'three';
 
-export const KamikazeRenderer = () => {
-  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_KAMIKAZE');
+const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
+
+export const HunterActor = () => {
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_HUNTER');
   const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
 
   return (
@@ -15,17 +20,25 @@ export const KamikazeRenderer = () => {
       tag={Tag.ENEMY}
       geometry={geometry}
       material={material}
-      maxCount={200}
-      baseColor={GAME_THEME.enemy.kamikaze}
+      maxCount={100}
+      baseColor={GAME_THEME.enemy.hunter}
       colorSource="base"
-      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.KAMIKAZE}
+      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.HUNTER}
       updateEntity={(e, obj, color, delta) => {
           const state = e.getComponent<AIStateData>('State');
+          const transform = e.getComponent<TransformData>('Transform');
           const time = performance.now() * 0.001;
-          obj.position.z = 5.0;
+
+          if (state && state.current === 'CHARGE') {
+              const alpha = (Math.sin(time * 20) + 1) / 2;
+              color.lerp(chargeColor, alpha);
+          }
           
-          // Kamikaze just tumbles chaotically
-          obj.rotation.set(time * 2, time, 0); 
+          const spin = state?.data?.spinAngle || 0;
+          const aim = transform ? transform.rotation : 0;
+
+          obj.position.z = 5.0;
+          applyRotation(obj, spin, aim);
           
           if (state && state.current === 'SPAWN') {
               const progress = 1.0 - (state.timers.spawn / 1.5);

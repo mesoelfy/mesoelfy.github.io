@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
@@ -15,7 +15,7 @@ const fragmentShader = `
   }
 `;
 
-export const DaemonBulletRenderer = () => {
+export const DaemonBulletActor = () => {
   // UPDATED: Scaled down by 20% (5.0 -> 4.0)
   const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []); 
   const material = useMemo(() => new THREE.ShaderMaterial({

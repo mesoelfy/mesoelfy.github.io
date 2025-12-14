@@ -1,14 +1,14 @@
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
 import { TransformData } from '../data/TransformData';
-import { AssetService } from '../assets/AssetService';
+import { AssetService } from '@/game/assets/AssetService';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import * as THREE from 'three';
 
-export const HunterChargeRenderer = () => {
+export const HunterChargeActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');
   const material = AssetService.get<THREE.Material>('MAT_BULLET_ENEMY');
 

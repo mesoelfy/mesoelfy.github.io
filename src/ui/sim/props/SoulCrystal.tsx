@@ -28,7 +28,6 @@ export const SoulCrystal = () => {
           wireframe
         />
       </mesh>
-      {/* Inner Core Glow */}
       <mesh scale={0.8}>
         <octahedronGeometry args={[1, 0]} />
         <meshBasicMaterial color="#ccffcc" transparent opacity={0.5} />

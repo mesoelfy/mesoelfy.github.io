@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { MatrixGrid } from '../effects/MatrixGrid';
+import { MatrixGrid } from '@/ui/sim/vfx/MatrixGrid';
 import { Suspense } from 'react';
 import { clsx } from 'clsx';
 

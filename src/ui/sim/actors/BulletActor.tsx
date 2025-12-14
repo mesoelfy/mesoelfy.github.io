@@ -1,11 +1,11 @@
 import { Tag } from '@/engine/ecs/types';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
-import { AssetService } from '../assets/AssetService';
+import { AssetService } from '@/game/assets/AssetService';
 import { TransformData } from '@/sys/data/TransformData';
 import * as THREE from 'three';
 
-export const BulletRenderer = () => {
+export const BulletActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_PLAYER');
   const material = AssetService.get<THREE.Material>('MAT_BULLET_PLAYER');
 

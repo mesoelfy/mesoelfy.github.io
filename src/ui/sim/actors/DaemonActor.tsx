@@ -2,11 +2,11 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
 
-export const DaemonRenderer = () => {
+export const DaemonActor = () => {
   const geometry = useMemo(() => new THREE.OctahedronGeometry(0.6, 0), []);
   const material = useMemo(() => new THREE.MeshBasicMaterial({ 
       color: '#00F0FF', 

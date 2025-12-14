@@ -1,4 +1,4 @@
-import { MiniCrystalCanvas } from '@/scene/props/MiniCrystalCanvas';
+import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 

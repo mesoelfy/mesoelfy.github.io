@@ -9,7 +9,7 @@ import { useFavicon } from './useFavicon';
 import { useMetaUrl } from './hooks/useMetaUrl';
 import { useMetaTitle } from './hooks/useMetaTitle';
 import { useMetaTheme } from './hooks/useMetaTheme';
-import { useWindowFocus } from '@/game/hooks/useWindowFocus';
+import { useWindowFocus } from '@/ui/sim/hooks/useWindowFocus';
 
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');

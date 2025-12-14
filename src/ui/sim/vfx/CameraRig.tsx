@@ -2,7 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { ShakeSystem } from '@/sys/systems/ShakeSystem';
 
-export const ScreenShaker = () => {
+export const CameraRig = () => {
   const { camera } = useThree();
   
   useFrame(() => {

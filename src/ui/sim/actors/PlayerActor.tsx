@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { GAME_THEME } from '../theme';
+import { GAME_THEME } from '@/game/theme';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useStore } from '@/sys/state/global/useStore';
@@ -16,7 +16,7 @@ const colorDead = new THREE.Color('#FF003C');
 const aliveGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 
-export const PlayerAvatar = () => {
+export const PlayerActor = () => {
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);

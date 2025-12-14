@@ -2,7 +2,7 @@
 
 import { useStore } from '@/sys/state/global/useStore';
 import { useGameStore } from '@/sys/state/game/useGameStore';
-import { SceneCanvas } from '@/scene/canvas/SceneCanvas';
+import { SceneCanvas } from '@/ui/sim/SceneCanvas';
 import { GlassPanel } from '@/ui/atoms/GlassPanel';
 import { SocialRow } from '@/ui/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
@@ -17,7 +17,7 @@ import { ContactModal } from '@/features/contact/ContactModal';
 import { SettingsModal } from '@/features/settings/SettingsModal';
 import { MatrixBootSequence } from '@/features/intro/MatrixBootSequence';
 import { MobileExperience } from '@/features/mobile/MobileExperience'; 
-import { GameOverlay } from '@/game/GameOverlay';
+import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

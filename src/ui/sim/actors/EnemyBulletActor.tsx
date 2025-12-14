@@ -1,9 +1,9 @@
 import { Tag } from '@/engine/ecs/types';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
-import { AssetService } from '../assets/AssetService';
+import { AssetService } from '@/game/assets/AssetService';
 
-export const EnemyBulletRenderer = () => {
+export const EnemyBulletActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');
   const material = AssetService.get<THREE.Material>('MAT_BULLET_ENEMY');
 

@@ -1,15 +1,15 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { GameDirector } from './components/GameDirector';
-import { ScreenShaker } from './components/ScreenShaker';
-import { GalleryStage } from './components/GalleryStage';
-import { RenderDirector } from './components/RenderDirector';
+import { GameDirector } from './GameDirector';
+import { CameraRig } from './vfx/CameraRig';
+import { GalleryStage } from './stages/GalleryStage';
+import { RenderDirector } from './RenderDirector';
 import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
 import { ActionButton } from '@/ui/atoms/ActionButton';
 import { useStore } from '@/sys/state/global/useStore';
 import { useEffect, useState, useLayoutEffect } from 'react';
-import { registerAllAssets } from './assets/AssetCatalog';
+import { registerAllAssets } from '@/game/assets/AssetCatalog';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
@@ -62,7 +62,7 @@ export const GameOverlay = () => {
                     <GameDirector />
                     
                     {/* Visuals */}
-                    <ScreenShaker />
+                    <CameraRig />
                     <RenderDirector />
                 </>
             )}

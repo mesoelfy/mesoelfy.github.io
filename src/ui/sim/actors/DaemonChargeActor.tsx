@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
-import { InstancedActor } from './common/InstancedActor';
+import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
 import { TransformData } from '../data/TransformData';
@@ -18,7 +18,7 @@ const fragmentShader = `
   }
 `;
 
-export const DaemonChargeRenderer = () => {
+export const DaemonChargeActor = () => {
   const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []);
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader,

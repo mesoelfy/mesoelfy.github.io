@@ -4,7 +4,7 @@ import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { useHeartbeat } from '@/game/hooks/useHeartbeat';
+import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useAudioVisualizer } from '@/engine/audio/hooks/useAudioVisualizer';

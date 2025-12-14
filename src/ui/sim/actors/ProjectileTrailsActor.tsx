@@ -1,16 +1,16 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ActiveEngine } from './GameDirector';
+import { ActiveEngine } from '../GameDirector';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { LifetimeData } from '@/sys/data/LifetimeData';
-import { GAME_THEME } from '../theme';
+import { GAME_THEME } from '@/game/theme';
 
 const MAX_TRAILS = 500; 
 
-export const ProjectileTrails = () => {
+export const ProjectileTrailsActor = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => {
       const geo = new THREE.PlaneGeometry(1, 1);

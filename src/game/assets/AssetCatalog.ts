@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { AssetService } from './AssetService';
 import { addBarycentricCoordinates } from '@/engine/math/GeometryUtils';
 import { MODEL_CONFIG } from '@/sys/config/ModelConfig';
-import { GAME_THEME } from '../theme';
+import { GAME_THEME } from '@/game/theme';
 
 // Shaders
 const SHADER_LIB = {

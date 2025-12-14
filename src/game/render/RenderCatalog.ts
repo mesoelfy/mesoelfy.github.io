@@ -1,43 +1,43 @@
 import { RenderRegistry } from './RenderRegistry';
 
 // Renderers
-import { PlayerAvatar } from '../components/PlayerAvatar';
-import { BulletRenderer } from '../components/BulletRenderer';
-import { EnemyBulletRenderer } from '../components/EnemyBulletRenderer';
-import { HunterChargeRenderer } from '../components/HunterChargeRenderer';
-import { ParticleRenderer } from '../components/ParticleRenderer';
-import { ProjectileTrails } from '../components/ProjectileTrails';
-import { DaemonRenderer } from '../components/DaemonRenderer';
-import { DaemonChargeRenderer } from '../components/DaemonChargeRenderer';
-import { DaemonBulletRenderer } from '../components/DaemonBulletRenderer';
+import { PlayerActor } from '@/ui/sim/actors/PlayerActor';
+import { BulletActor } from '@/ui/sim/actors/BulletActor';
+import { EnemyBulletActor } from '@/ui/sim/actors/EnemyBulletActor';
+import { HunterChargeActor } from '@/ui/sim/actors/HunterChargeActor';
+import { ParticleActor } from '@/ui/sim/actors/ParticleActor';
+import { ProjectileTrailsActor } from '@/ui/sim/actors/ProjectileTrailsActor';
+import { DaemonActor } from '@/ui/sim/actors/DaemonActor';
+import { DaemonChargeActor } from '@/ui/sim/actors/DaemonChargeActor';
+import { DaemonBulletActor } from '@/ui/sim/actors/DaemonBulletActor';
 
 // New Atomic Renderers
-import { DrillerRenderer } from '../components/enemies/DrillerRenderer';
-import { KamikazeRenderer } from '../components/enemies/KamikazeRenderer';
-import { HunterRenderer } from '../components/enemies/HunterRenderer';
+import { DrillerActor } from '@/ui/sim/actors/DrillerActor';
+import { KamikazeActor } from '@/ui/sim/actors/KamikazeActor';
+import { HunterActor } from '@/ui/sim/actors/HunterActor';
 
 export const registerAllRenderers = () => {
   // Core
-  RenderRegistry.register(PlayerAvatar);
-  RenderRegistry.register(ProjectileTrails);
+  RenderRegistry.register(PlayerActor);
+  RenderRegistry.register(ProjectileTrailsActor);
   
   // Projectiles
-  RenderRegistry.register(BulletRenderer);
-  RenderRegistry.register(EnemyBulletRenderer);
-  RenderRegistry.register(DaemonBulletRenderer);
+  RenderRegistry.register(BulletActor);
+  RenderRegistry.register(EnemyBulletActor);
+  RenderRegistry.register(DaemonBulletActor);
   
   // Enemies (Decoupled)
-  RenderRegistry.register(DrillerRenderer);
-  RenderRegistry.register(KamikazeRenderer);
-  RenderRegistry.register(HunterRenderer);
+  RenderRegistry.register(DrillerActor);
+  RenderRegistry.register(KamikazeActor);
+  RenderRegistry.register(HunterActor);
   
   // Friendlies
-  RenderRegistry.register(DaemonRenderer);
+  RenderRegistry.register(DaemonActor);
   
   // FX / States
-  RenderRegistry.register(ParticleRenderer);
-  RenderRegistry.register(HunterChargeRenderer);
-  RenderRegistry.register(DaemonChargeRenderer);
+  RenderRegistry.register(ParticleActor);
+  RenderRegistry.register(HunterChargeActor);
+  RenderRegistry.register(DaemonChargeActor);
   
   console.log('[RenderCatalog] Visual Components Registered.');
 };

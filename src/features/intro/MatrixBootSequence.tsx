@@ -15,7 +15,7 @@ import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
-import { useDeviceType } from '@/game/hooks/useDeviceType';
+import { useDeviceType } from '@/ui/sim/hooks/useDeviceType';
 import { useStore } from '@/sys/state/global/useStore';
 
 interface Props {

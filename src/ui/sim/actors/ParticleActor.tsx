@@ -2,10 +2,10 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { AssetService } from '../assets/AssetService';
+import { AssetService } from '@/game/assets/AssetService';
 import { ParticleSystem } from '@/sys/systems/ParticleSystem';
 
-export const ParticleRenderer = () => {
+export const ParticleActor = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
   // Use generators from AssetService

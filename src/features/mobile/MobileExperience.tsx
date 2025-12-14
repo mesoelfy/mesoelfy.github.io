@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { MobileRejectionModal } from './MobileRejectionModal';
 import { Canvas } from '@react-three/fiber';
-import { MobileGameDirector } from '@/game/components/MobileGameDirector';
-import { RenderDirector } from '@/game/components/RenderDirector';
-import { ScreenShaker } from '@/game/components/ScreenShaker';
+import { MobileGameDirector } from '@/ui/sim/MobileGameDirector';
+import { RenderDirector } from '@/ui/sim/RenderDirector';
+import { CameraRig } from '@/ui/sim/vfx/CameraRig';
 import { SocialRow } from '@/ui/molecules/SocialRow';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
@@ -67,7 +67,7 @@ export const MobileExperience = () => {
                         gl={{ alpha: true, antialias: true }}
                     >
                         <MobileGameDirector />
-                        <ScreenShaker />
+                        <CameraRig />
                         <RenderDirector />
                     </Canvas>
                 </div>
