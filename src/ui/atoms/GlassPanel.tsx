@@ -191,6 +191,7 @@ export const GlassPanel = ({
                         isVideo={gameId === 'video'} 
                         showInteractive={true} 
                         isRepairing={isInteracting}
+                        panelId={gameId} // NEW PROP PASSED
                     />
                 </SafePanelContent>
             )}

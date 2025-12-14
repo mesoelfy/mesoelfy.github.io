@@ -12,21 +12,17 @@ const HazardStrip = ({ direction, isSecondary, isActive }: { direction: 1 | -1, 
   return (
     <div className={clsx(
         "flex relative overflow-visible w-full select-none transition-opacity duration-500",
-        // Lowered overall opacity, with secondary rows much fainter
         isSecondary ? "opacity-10" : "opacity-30" 
     )}>
       <motion.div
         className={clsx(
           "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
-          // Color: Deeper Purple instead of bright lavender
-          // Speed: 300ms transition for snappy feedback
           isActive ? "text-latent-purple" : "text-critical-red"
         )}
         animate={{ 
             x: direction === 1 ? ["-25%", "0%"] : ["0%", "-25%"] 
         }}
         transition={{ 
-            // Secondary (Left) rows move slower (80s) than Primary (Right) rows (50s)
             duration: isSecondary ? 80 : 50, 
             ease: "linear", 
             repeat: Infinity 
@@ -42,16 +38,22 @@ interface BreachOverlayProps {
   progress: number;
   isVideo: boolean;
   showInteractive: boolean;
-  isRepairing?: boolean; 
+  isRepairing?: boolean;
+  panelId?: string;
 }
 
-export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false }: BreachOverlayProps) => {
+export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false, panelId }: BreachOverlayProps) => {
   const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) 
     ? Math.max(0, Math.min(100, progress)) 
     : 0;
 
-  // Active if repairing OR hovering (UI Feedback)
   const isActive = isRepairing;
+  
+  // Compact Check: Feed and Social are too short for the offset
+  const isCompactHeight = panelId === 'feed' || panelId === 'social';
+  
+  // Status Check: Social is too small for the text/bar
+  const showStatusBar = panelId !== 'social';
 
   return (
     <div className={clsx(
@@ -74,10 +76,13 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
 
         {/* 2. INTERACTIVE LAYER */}
         {showInteractive && (
-          <div className="relative z-20 flex flex-col items-center justify-center gap-4 cursor-crosshair group">
+          <div className={clsx(
+              "relative z-20 flex flex-col items-center justify-center gap-1 cursor-crosshair group",
+              isCompactHeight ? "mb-0" : "mb-[25%]"
+          )}>
               
               {/* Animated Icon Container */}
-              <div className="relative h-24 flex items-center justify-center">
+              <div className="relative h-20 flex items-center justify-center">
                   
                   {/* IDLE: Red Alert Triangle */}
                   <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-300", isActive ? "opacity-0" : "group-hover:opacity-0")}>
@@ -106,49 +111,48 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
               </div>
 
               {/* Status & Bar */}
-              <div className="flex flex-col items-center text-center gap-2">
-                  <div className={clsx(
-                      "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
-                      isActive 
-                          ? "bg-latent-purple/10 border-latent-purple/50" 
-                          : "bg-critical-red/10 border-critical-red/50"
-                  )}>
-                      <span className={clsx(
-                          "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
-                          isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
+              {showStatusBar && (
+                  <div className="flex flex-col items-center text-center gap-2">
+                      <div className={clsx(
+                          "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
+                          isActive 
+                              ? "bg-latent-purple/10 border-latent-purple/50" 
+                              : "bg-critical-red/10 border-critical-red/50"
                       )}>
-                          {isActive ? "REBOOTING..." : "HOLD TO REBOOT"}
-                      </span>
-                  </div>
-                  
-                  <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
-                      {/* Gradient: Deepest Purple -> Standard -> Bright Lavender (NO RED) */}
-                      <motion.div 
-                          className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
-                          initial={{ width: "0%" }}
-                          animate={{ width: `${safeProgress}%` }}
-                          transition={{ type: "tween", duration: 0.1 }}
-                      />
-                  </div>
-                  
-                  <div className="flex justify-between w-full text-[9px] font-mono font-bold">
-                      <span className={clsx(
-                          "transition-colors duration-200", 
-                          isActive ? "text-[#E0B0FF]" : "text-critical-red"
-                      )}>
-                          INTEGRITY: {Math.floor(safeProgress)}%
-                      </span>
+                          <span className={clsx(
+                              "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
+                              isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
+                          )}>
+                              {isActive ? "REBOOTING..." : "HOLD TO REBOOT"}
+                          </span>
+                      </div>
                       
-                      {/* Text is now ACTIVE... instead of RECOVERING... */}
-                      {/* FIX: Explicit color set for inactive state to prevent green flash */}
-                      <span className={clsx(
-                          "transition-all duration-300", 
-                          isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
-                      )}>
-                          ACTIVE...
-                      </span>
+                      <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
+                          <motion.div 
+                              className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
+                              initial={{ width: "0%" }}
+                              animate={{ width: `${safeProgress}%` }}
+                              transition={{ type: "tween", duration: 0.1 }}
+                          />
+                      </div>
+                      
+                      <div className="flex justify-between w-full text-[9px] font-mono font-bold">
+                          <span className={clsx(
+                              "transition-colors duration-200", 
+                              isActive ? "text-[#E0B0FF]" : "text-critical-red"
+                          )}>
+                              INTEGRITY: {Math.floor(safeProgress)}%
+                          </span>
+                          
+                          <span className={clsx(
+                              "transition-all duration-300", 
+                              isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
+                          )}>
+                              ACTIVE...
+                          </span>
+                      </div>
                   </div>
-              </div>
+              )}
           </div>
         )}
     </div>
