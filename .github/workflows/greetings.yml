@@ -1,0 +1,29 @@
+name: "Neural Handshake"
+
+on: [pull_request_target, issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: |
+          ### // TRANSMISSION RECEIVED
+          
+          **Identity Verified:** New Contributor detected.
+          **Status:** The Daemon is analyzing your anomaly report.
+          
+          > *Welcome to the Latent Space. Ensure your logs are clean before proceeding.*
+        
+        pr-message: |
+          ### // CODE_INJECTION DETECTED
+          
+          **Source:** External Node
+          **Payload:** Analysis Pending...
+          
+          > *Your contribution to the OS architecture has been logged. Stand by for code review and merge clearance.*

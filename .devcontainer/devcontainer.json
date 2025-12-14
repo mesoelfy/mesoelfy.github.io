@@ -1,0 +1,19 @@
+{
+  "name": "MESOELFY_OS // CLOUD_NODE",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  },
+  "postCreateCommand": "npm install && echo '// DEPENDENCIES INJECTED. SYSTEM READY.'",
+  "forwardPorts": [3000]
+}

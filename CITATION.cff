@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you utilize this OS architecture in your own latent space research, please cite it as follows."
+authors:
+  - family-names: "Meso"
+    given-names: "Elfy"
+    alias: "Latent Space Bandit"
+    alias: "Esper Elfy"
+title: "MESOELFY_OS: A Generative 3D Operating System"
+version: 0.1.0
+date-released: 2025-12-14
+url: "https://mesoelfy.github.io"
+repository-code: "https://github.com/mesoelfy/mesoelfy.github.io"
+keywords:
+  - "react-three-fiber"
+  - "generative-art"
+  - "cyberpunk"
+  - "os-simulation"
+  - "need-to-add-more"
+license: "CC0"
+note: "I'm mainly being silly here and exploring github functionality. Do whatcha want." 
