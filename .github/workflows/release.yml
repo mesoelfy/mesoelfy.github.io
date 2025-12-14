@@ -85,7 +85,7 @@ jobs:
           mv artifacts/*.AppImage "release/MESOELFY_OS_Linux_Build/" 2>/dev/null || true
           mv artifacts/MESOELFY_OS_Itch_Upload_Ready.zip release/
 
-          # Zip the folders with the new names
+          # Zip the folders
           cd release
           zip -r MESOELFY_OS_Mac.zip "MESOELFY_OS_Mac_Build"
           zip -r MESOELFY_OS_Windows.zip "MESOELFY_OS_Windows_Build"
@@ -106,18 +106,26 @@ jobs:
           prerelease: false
           name: "MESOELFY_OS ${{ github.ref_name }}"
           body: |
-            ### // SYSTEM_UPDATE: ${{ github.ref_name }}
-            
             **// STANDALONE APPS (OFFLINE)**
-            *Contains the game wrapped in a Chromium engine (Electron) for max performance.*
+            *Contains the game wrapped in a Chromium engine (Electron).*
             *You're basically downloading a lite version of the Chrome browser to run the game.*
             *(Approx 200-400MB)*
+            
+            **⚠ PERFORMANCE NOTE:** If the game stutters or hitches on first launch, the 3D shaders are compiling. Simply go to **View -> Force Reload** (or restart the app) to resolve this.
+
+            ---
 
             *   **Mac:** Download `MESOELFY_OS_Mac.zip`.
-                *   *Note: If you get a "Damaged" error, open System Settings > Privacy & Security > Click "Open Anyway".*
-                *   *Still stuck? Run this in Terminal: `xattr -cr /Applications/MESOELFY_OS.app`*
+                *   **"Damaged" Error?** Apple treats apps from indie developers as "Untrusted" until you manually verify them.
+                *   **The Fix:**
+                    1. Drag the app to your Applications folder.
+                    2. Open Terminal (Cmd+Space, type Terminal).
+                    3. Paste this command and hit Enter: `xattr -cr /Applications/MESOELFY_OS.app`
+                    4. **What does this do?** `xattr -cr` stands for "Extended Attributes - Clear Recursive". It simply wipes the "Quarantine" sticker macOS puts on files downloaded from the web, allowing your computer to trust it.
+            
             *   **Windows:** Download `MESOELFY_OS_Windows.zip`. Double-click to run.
                 *   *Note: Click "More Info" -> "Run Anyway" if Windows Defender warns you.*
+            
             *   **Linux:** Download `MESOELFY_OS_Linux.zip`.
                 *   *Note: Right-click -> Properties -> Check "Allow executing file as program".*
 

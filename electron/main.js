@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 
 // --- FIX: Handle ESM/CJS interoperability ---
@@ -17,6 +17,7 @@ const createWindow = () => {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: true // Keep true, we will handle Referer via session
     }
   });
 
@@ -33,6 +34,17 @@ const createWindow = () => {
 };
 
 app.whenReady().then(() => {
+  // --- YOUTUBE 153 FIX ---
+  // Intercept requests to YouTube and inject a valid 'Referer' header.
+  // This tricks YouTube into thinking the video is playing on your website.
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.youtube.com/*', '*://*.google.com/*'] },
+    (details, callback) => {
+      details.requestHeaders['Referer'] = 'https://mesoelfy.github.io/';
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
+
   createWindow();
 
   app.on('activate', () => {
