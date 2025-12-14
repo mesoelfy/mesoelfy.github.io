@@ -48,6 +48,7 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
+    // getByTag returns Iterable<Entity>, handled correctly by for...of
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
     const transformData = TransformStore.data;
@@ -100,7 +101,6 @@ export const InstancedActor = ({
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
 
-  // UPDATED: Use onPointerDown for instant reaction
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
       if (!interactive || e.instanceId === undefined) return;
       e.stopPropagation();

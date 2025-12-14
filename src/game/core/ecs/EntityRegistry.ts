@@ -10,11 +10,16 @@ export class EntityRegistry implements IEntityRegistry {
   
   // ID Management
   private nextId = 0;
-  private freeIds: number[] = []; // Stack for recycled IDs
+  private freeIds: number[] = []; 
   
-  private tagCache = new Map<Tag, Set<EntityID>>();
+  // OPTIMIZATION: Cache Sets of Entities directly, not IDs.
+  // This avoids O(N) lookups and Array allocations during getByTag()
+  private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
+
+  // Reusable empty set to prevent null checks in loops
+  private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
       this.entityPool = new ObjectPool<Entity>(
@@ -27,18 +32,14 @@ export class EntityRegistry implements IEntityRegistry {
   public createEntity(): Entity {
     let idNum: number;
 
-    // 1. Try to recycle an ID
     if (this.freeIds.length > 0) {
         idNum = this.freeIds.pop()!;
     } else {
         idNum = ++this.nextId;
     }
 
-    // 2. Safety Check (Prevent Array OOB in SpatialGrid)
     if (idNum >= MAX_ENTITIES) {
-        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}). Recycling oldest logic needed.`);
-        // In a real engine, we might kill the oldest particle here.
-        // For now, we accept the risk or need to increase MAX_ENTITIES.
+        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}).`);
     }
 
     const newId = createEntityID(idNum);
@@ -58,8 +59,6 @@ export class EntityRegistry implements IEntityRegistry {
     
     this.removeFromCache(entity);
     this.entities.delete(eid);
-    
-    // 3. Recycle ID
     this.freeIds.push(id);
     
     entity.release();
@@ -74,21 +73,14 @@ export class EntityRegistry implements IEntityRegistry {
     return this.entities.values();
   }
 
-  public getByTag(tag: string): Entity[] {
+  public getByTag(tag: string): Iterable<Entity> {
     const t = tag as Tag;
-    if (!this.tagCache.has(t)) {
-        this.tagCache.set(t, new Set());
-    }
-    const ids = this.tagCache.get(t)!;
-    const results: Entity[] = [];
-    for (const id of ids) {
-        const e = this.entities.get(id);
-        if (e && e.active) results.push(e);
-    }
-    return results;
+    return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
   }
 
-  public query(def: QueryDef): Entity[] {
+  public query(def: QueryDef): Iterable<Entity> {
+    // We create a temporary query object to generate the ID string
+    // This is lightweight compared to array allocation
     const tempQ = new Query(def);
     let cache = this.activeQueries.get(tempQ.id);
     
@@ -103,14 +95,17 @@ export class EntityRegistry implements IEntityRegistry {
         cache = { query: q, results };
         this.activeQueries.set(q.id, cache);
     }
-    return Array.from(cache.results);
+    return cache.results;
   }
   
   public updateCache(entity: Entity) {
+      // 1. Update Tag Cache
       for (const tag of entity.tags) {
           if (!this.tagCache.has(tag)) this.tagCache.set(tag, new Set());
-          this.tagCache.get(tag)!.add(entity.id);
+          this.tagCache.get(tag)!.add(entity);
       }
+      
+      // 2. Update Query Cache
       for (const cache of this.activeQueries.values()) {
           if (cache.query.matches(entity)) {
               cache.results.add(entity);
@@ -123,7 +118,7 @@ export class EntityRegistry implements IEntityRegistry {
   private removeFromCache(entity: Entity) {
       for (const tag of entity.tags) {
           if (this.tagCache.has(tag)) {
-              this.tagCache.get(tag)!.delete(entity.id);
+              this.tagCache.get(tag)!.delete(entity);
           }
       }
       for (const cache of this.activeQueries.values()) {
@@ -140,7 +135,6 @@ export class EntityRegistry implements IEntityRegistry {
       this.tagCache.clear();
       this.activeQueries.clear();
       
-      // Reset ID counters
       this.nextId = 0;
       this.freeIds = [];
   }

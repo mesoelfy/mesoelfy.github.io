@@ -23,7 +23,7 @@ export class CollisionSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     
-    // 1. Get Candidates via Cached Query
+    // 1. Get Candidates via Cached Query (Returns Set<Entity>, no alloc)
     const collidables = this.registry.query({ all: ['Collider', 'Transform'] });
     
     this.handledPairs.clear();
@@ -32,10 +32,11 @@ export class CollisionSystem implements IGameSystem {
         if (!entity.active) continue;
 
         const collider = entity.getComponent<ColliderComponent>('Collider');
-        const transform = entity.getComponent<TransformComponent>('Transform');
+        // OPTIMIZATION: Early exit if mask is 0
+        if (!collider || collider.mask === 0) continue;
 
-        // Safety check (Type Guard)
-        if (!collider || !transform || collider.mask === 0) continue;
+        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!transform) continue;
 
         // Skip spawning entities
         const state = entity.getComponent<StateComponent>('State');
@@ -61,16 +62,18 @@ export class CollisionSystem implements IGameSystem {
             if (!other || !other.active) continue;
 
             const otherCollider = other.getComponent<ColliderComponent>('Collider');
-            const otherTransform = other.getComponent<TransformComponent>('Transform');
-            
-            if (!otherCollider || !otherTransform) continue;
+            if (!otherCollider) continue;
 
-            // Bitmask Check
+            // OPTIMIZATION: Check Bitmask BEFORE getting Transform or calculating distance
+            // This is the cheapest check we can do.
             const aHitsB = (collider.mask & otherCollider.layer) !== 0;
             const bHitsA = (otherCollider.mask & collider.layer) !== 0;
             if (!aHitsB && !bHitsA) continue;
 
-            // Circle-Circle Check
+            const otherTransform = other.getComponent<TransformComponent>('Transform');
+            if (!otherTransform) continue;
+
+            // OPTIMIZATION: Squared Distance Check (Avoid Math.sqrt)
             const dx = transform.x - otherTransform.x;
             const dy = transform.y - otherTransform.y;
             const distSq = dx * dx + dy * dy;

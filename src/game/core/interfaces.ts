@@ -30,8 +30,9 @@ export interface IEntityRegistry {
   destroyEntity(id: number): void;
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
-  getByTag(tag: string): Entity[];
-  query(def: QueryDef): Entity[];
+  // UPDATED: Returns Iterable instead of Array to prevent allocation
+  getByTag(tag: string): Iterable<Entity>; 
+  query(def: QueryDef): Iterable<Entity>;
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
 }

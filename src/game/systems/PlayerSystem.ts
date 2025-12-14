@@ -29,8 +29,13 @@ export class PlayerSystem implements IGameSystem {
   update(delta: number, time: number): void {
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    const players = this.registry.getByTag(Tag.PLAYER);
-    const playerEntity = players[0]; 
+    // OPTIMIZATION FIX: Handle Iterable return type
+    let playerEntity = null;
+    for (const p of this.registry.getByTag(Tag.PLAYER)) {
+        playerEntity = p;
+        break;
+    }
+    
     if (!playerEntity) return;
 
     const cursor = this.locator.getInputService().getCursor();
@@ -126,6 +131,7 @@ export class PlayerSystem implements IGameSystem {
       if (!t) continue;
       const dx = t.x - cursor.x;
       const dy = t.y - cursor.y;
+      // Optimization: Squared distance
       const dist = dx*dx + dy*dy; 
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
@@ -143,7 +149,7 @@ export class PlayerSystem implements IGameSystem {
 
       const width = 1.0;
       const baseSpread = 0.15;
-      const spreadAngle = baseSpread; // Fixed spread now that width scaling is gone
+      const spreadAngle = baseSpread; 
       
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 13 14:16:36 CST 2025
+Generated on: Sat Dec 13 17:09:59 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -272,10 +272,12 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   ├── GraphicsToggle.tsx
 │       │   ├── PanelSparks.tsx
 │       │   ├── SafePanelContent.tsx
+│       │   ├── StatsRadar.tsx
 │       │   ├── VirtualJoystick.tsx
 │       │   ├── VitalsRing.tsx
 │       │   └── ZenBomb.tsx
 │       ├── molecules
+│       │   ├── FeedAccessTerminal.tsx
 │       │   ├── HoloCommLog.tsx
 │       │   ├── IdentityFooter.tsx
 │       │   ├── IdentityHUD.tsx
@@ -298,7 +300,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-69 directories, 221 files
+69 directories, 223 files
 
 =====================================
 FILE: ./next.config.js
@@ -753,22 +755,40 @@ export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
 FILE: ./src/ui/molecules/panel/BreachOverlay.tsx
 =====================================
 import { motion } from 'framer-motion';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 
-const ScrollingRow = ({ direction, text }: { direction: number, text: string }) => {
+// --- CONSTANTS ---
+const TEXT = "SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED // ";
+const REPEAT_COUNT = 8; 
+const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
+
+// --- SUB-COMPONENT: HAZARD STRIP ---
+const HazardStrip = ({ direction, isSecondary, isActive }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean }) => {
   return (
-    <div className="flex whitespace-nowrap overflow-hidden select-none opacity-60">
-      <motion.div 
-        className="flex gap-4 font-header font-black text-xl md:text-2xl text-critical-red tracking-widest uppercase py-1"
-        animate={{ x: direction === 1 ? ["-50%", "0%"] : ["0%", "-50%"] }} 
-        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+    <div className={clsx(
+        "flex relative overflow-visible w-full select-none transition-opacity duration-500",
+        // Lowered overall opacity, with secondary rows much fainter
+        isSecondary ? "opacity-10" : "opacity-30" 
+    )}>
+      <motion.div
+        className={clsx(
+          "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
+          // Color: Deeper Purple instead of bright lavender
+          // Speed: 300ms transition for snappy feedback
+          isActive ? "text-latent-purple" : "text-critical-red"
+        )}
+        animate={{ 
+            x: direction === 1 ? ["-25%", "0%"] : ["0%", "-25%"] 
+        }}
+        transition={{ 
+            // Secondary (Left) rows move slower (80s) than Primary (Right) rows (50s)
+            duration: isSecondary ? 80 : 50, 
+            ease: "linear", 
+            repeat: Infinity 
+        }}
       >
-        {Array.from({ length: 12 }).map((_, i) => (
-          <span key={i} className={i % 2 === 0 ? "text-critical-red" : "text-transparent stroke-critical-red stroke-1"}>
-             {text}
-          </span>
-        ))}
+        <span className="shrink-0 px-4">{FULL_TEXT}</span>
       </motion.div>
     </div>
   );
@@ -778,84 +798,111 @@ interface BreachOverlayProps {
   progress: number;
   isVideo: boolean;
   showInteractive: boolean;
+  isRepairing?: boolean; 
 }
 
-export const BreachOverlay = ({ progress, isVideo, showInteractive }: BreachOverlayProps) => {
-  // Safety: Ensure progress is a valid number for CSS width
+export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false }: BreachOverlayProps) => {
   const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) 
     ? Math.max(0, Math.min(100, progress)) 
     : 0;
 
+  // Active if repairing OR hovering (UI Feedback)
+  const isActive = isRepairing;
+
   return (
     <div className={clsx(
         "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
-        isVideo ? "bg-black/20 backdrop-blur-[2px]" : "bg-black/60 backdrop-blur-sm"
+        isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md"
     )}>
-        {/* Background Scrolling Text */}
-        <div className="absolute inset-[-50%] flex flex-col justify-center rotate-[-12deg] opacity-30 pointer-events-none">
-            <motion.div
-               className="flex flex-col gap-8"
-               animate={{ y: ["0%", "-50%"] }}
-               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-            >
-                {[0, 1].map((set) => (
-                    <div key={set} className="flex flex-col gap-8">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <ScrollingRow 
-                                key={`${set}-${i}`} 
-                                direction={i % 2 === 0 ? 1 : -1} 
-                                text="SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED //" 
-                            />
-                        ))}
-                    </div>
-                ))}
-            </motion.div>
+        
+        {/* 1. BACKGROUND LAYERS */}
+        <div className="absolute inset-[-100%] flex flex-col justify-center gap-0 md:gap-4 rotate-[-12deg] pointer-events-none">
+            {Array.from({ length: 16 }).map((_, i) => (
+                <HazardStrip 
+                    key={i} 
+                    direction={i % 2 === 0 ? 1 : -1} 
+                    isSecondary={i % 2 !== 0} 
+                    isActive={isActive}
+                />
+            ))}
         </div>
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,transparent_20%,#000_100%)] z-10" />
 
-        {/* Interactive Reboot UI */}
+        {/* 2. INTERACTIVE LAYER */}
         {showInteractive && (
-          <div className="relative z-20 flex flex-col items-center justify-center gap-2 cursor-crosshair transition-all duration-100">
-              <div className="relative">
-                  <div className="group-hover:opacity-0 transition-opacity duration-200 absolute inset-0 flex items-center justify-center">
+          <div className="relative z-20 flex flex-col items-center justify-center gap-4 cursor-crosshair group">
+              
+              {/* Animated Icon Container */}
+              <div className="relative h-24 flex items-center justify-center">
+                  
+                  {/* IDLE: Red Alert Triangle */}
+                  <div className={clsx("absolute inset-0 flex items-center justify-center transition-opacity duration-300", isActive ? "opacity-0" : "group-hover:opacity-0")}>
                       <motion.div 
                           animate={{ y: [0, -10, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-critical-red drop-shadow-md"
+                          className="text-critical-red drop-shadow-[0_0_15px_#FF003C]"
                       >
-                          <ChevronUp size={64} strokeWidth={3} />
+                          <AlertTriangle size={64} strokeWidth={1.5} />
                       </motion.div>
                   </div>
 
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute inset-0 flex items-center justify-center -translate-y-8">
+                  {/* ACTIVE/HOVER: Purple Uplink Chevron */}
+                  <div className={clsx("absolute inset-0 flex items-center justify-center -translate-y-8 transition-opacity duration-200", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
                       <motion.div 
-                          animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
+                          animate={{ 
+                              scale: [1, 1.2, 1], 
+                              filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] 
+                          }}
                           transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-latent-purple drop-shadow-[0_0_15px_#9E4EA5]"
+                          className="text-latent-purple drop-shadow-[0_0_25px_#E0B0FF]"
                       >
-                          <ChevronUp size={64} strokeWidth={4} />
+                          <ChevronUp size={80} strokeWidth={4} />
                       </motion.div>
                   </div>
-                  
-                  <div className="w-16 h-16 pointer-events-none opacity-0"><ChevronUp size={64} /></div>
               </div>
 
-              <div className="flex flex-col items-center text-center">
-                  <span className="text-sm font-header font-black tracking-widest text-critical-red group-hover:text-latent-purple transition-colors duration-200 drop-shadow-md">
-                      HOLD TO REBOOT
-                  </span>
+              {/* Status & Bar */}
+              <div className="flex flex-col items-center text-center gap-2">
+                  <div className={clsx(
+                      "px-4 py-1 backdrop-blur-md border transition-colors duration-300",
+                      isActive 
+                          ? "bg-latent-purple/10 border-latent-purple/50" 
+                          : "bg-critical-red/10 border-critical-red/50"
+                  )}>
+                      <span className={clsx(
+                          "text-xs font-header font-black tracking-[0.2em] transition-colors duration-200 drop-shadow-sm",
+                          isActive ? "text-[#E0B0FF]" : "text-critical-red group-hover:text-latent-purple"
+                      )}>
+                          {isActive ? "REBOOTING..." : "HOLD TO REBOOT"}
+                      </span>
+                  </div>
                   
-                  {/* Progress Bar Container */}
-                  <div className="w-32 bg-gray-900/80 h-1.5 mt-2 rounded-full overflow-hidden border border-gray-700 shadow-lg">
+                  <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
+                      {/* Gradient: Deepest Purple -> Standard -> Bright Lavender (NO RED) */}
                       <motion.div 
-                          className="h-full bg-latent-purple shadow-[0_0_10px_#9E4EA5]" 
+                          className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
                           initial={{ width: "0%" }}
                           animate={{ width: `${safeProgress}%` }}
                           transition={{ type: "tween", duration: 0.1 }}
                       />
                   </div>
                   
-                  <div className="text-[10px] font-mono text-latent-purple font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 px-2 rounded">
-                      INTEGRITY: {Math.floor(safeProgress)}%
+                  <div className="flex justify-between w-full text-[9px] font-mono font-bold">
+                      <span className={clsx(
+                          "transition-colors duration-200", 
+                          isActive ? "text-[#E0B0FF]" : "text-critical-red"
+                      )}>
+                          INTEGRITY: {Math.floor(safeProgress)}%
+                      </span>
+                      
+                      {/* Text is now ACTIVE... instead of RECOVERING... */}
+                      {/* FIX: Explicit color set for inactive state to prevent green flash */}
+                      <span className={clsx(
+                          "transition-all duration-300", 
+                          isActive ? "opacity-100 text-[#E0B0FF]" : "opacity-0 text-[#2a0a2e]"
+                      )}>
+                          ACTIVE...
+                      </span>
                   </div>
               </div>
           </div>
@@ -930,7 +977,7 @@ import { AudioSystem } from '@/core/audio/AudioSystem';
 interface IntelligentHeaderProps {
   title: string;
   health: number;
-  maxHealth?: number; // NEW PROP
+  maxHealth?: number; 
   isDestroyed: boolean;
   isGameOver: boolean;
   gameId?: string;
@@ -939,7 +986,7 @@ interface IntelligentHeaderProps {
 export const IntelligentHeader = ({ 
   title, 
   health, 
-  maxHealth = 1000, // Default for desktop panels
+  maxHealth = 1000,
   isDestroyed, 
   isGameOver, 
   gameId 
@@ -947,11 +994,9 @@ export const IntelligentHeader = ({
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
   
-  // Calculate percentage dynamically based on the passed maxHealth
+  // Calculate percentage
   let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
-  
-  // Clamp: Don't show > 100% visual overflow if overhealed
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
 
   const isDamaged = !isDestroyed && healthPercent < 100;
@@ -977,8 +1022,16 @@ export const IntelligentHeader = ({
       mainColor = "text-critical-red";
       statusText = "SYSTEM_FAILURE";
   } else if (isDestroyed) {
-      mainColor = isInteracting ? "text-latent-purple" : "text-critical-red";
-      statusText = isInteracting ? "REBOOTING..." : "OFFLINE";
+      // LOGIC UPDATE:
+      // If interacting: Purple.
+      // If NOT interacting (even if decaying): Red (Standard Offline State).
+      if (isInteracting) {
+          mainColor = "text-latent-purple";
+          statusText = "REBOOTING...";
+      } else {
+          mainColor = "text-critical-red";
+          statusText = "OFFLINE";
+      }
   } else if (isInteracting && isDamaged) {
       mainColor = "text-service-cyan";
       statusText = "HEALING...";
@@ -994,7 +1047,11 @@ export const IntelligentHeader = ({
     <div className={clsx(
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
-        isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
+        isDestroyed ? (
+            isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : 
+            // If decaying but not interacting, we want the Red Border (Offline state)
+            "bg-critical-red/10 border-critical-red/50" 
+        ) :
         (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
@@ -1091,6 +1148,8 @@ export const IntelligentHeader = ({
                     className={clsx(
                         "h-full transition-colors duration-200",
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
+                        // LOGIC UPDATE: Bar remains PURPLE while draining, even if panel frame is Red
+                        (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
                         (isInteracting && isDamaged) ? "bg-service-cyan" :
                         isDamaged ? "bg-alert-yellow" : 
@@ -1323,6 +1382,42 @@ export const HoloCommLog = () => {
 
 
 =====================================
+FILE: ./src/ui/molecules/FeedAccessTerminal.tsx
+=====================================
+import { useGameStore } from '@/game/store/useGameStore';
+import { useStore } from '@/core/store/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { clsx } from 'clsx';
+
+export const FeedAccessTerminal = () => {
+  const { openModal } = useStore();
+  const panelState = useGameStore((state) => state.panels['feed']);
+  const isDestroyed = panelState ? panelState.isDestroyed : false;
+
+  return (
+    <div className={clsx(
+        "w-full h-full flex items-center justify-center p-4 transition-all duration-500",
+        // When destroyed: Fade out almost completely and disable interaction
+        isDestroyed ? "opacity-10 pointer-events-none blur-sm grayscale" : "opacity-100 blur-0"
+    )}>
+        <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
+            <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
+            <button 
+                onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
+                onMouseEnter={() => AudioSystem.playHover()}
+                className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
+            >
+                <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
+                    [ ACCESS_TERMINAL ]
+                </span>
+            </button>
+        </div>
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/molecules/SystemOps.tsx
 =====================================
 import { useGameStore } from '@/game/store/useGameStore';
@@ -1398,16 +1493,15 @@ FILE: ./src/ui/molecules/UpgradeTerminal.tsx
 =====================================
 import { useGameStore } from '@/game/store/useGameStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Zap, Swords, Wifi, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
+import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeOption } from '@/game/types/game.types';
 
-const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'BANDWIDTH', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
+const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
 
-const UPGRADE_INFO: Record<string, { label: string, desc: string, icon: any }> = {
+const UPGRADE_INFO: Partial<Record<UpgradeOption, { label: string, desc: string, icon: any }>> = {
   'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: Zap },
   'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
-  'BANDWIDTH': { label: 'Bandwidth', desc: 'Size ++', icon: Wifi },
   'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
   'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
   'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
@@ -1419,7 +1513,6 @@ interface UpgradeTerminalProps {
 }
 
 export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
-  // Granular Selectors
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
@@ -1451,6 +1544,8 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
                 <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
                 {CORE_UPGRADES.map(u => {
                     const info = UPGRADE_INFO[u];
+                    if (!info) return null;
+                    
                     const Icon = info.icon;
                     const currentLvl = activeUpgrades[u] || 0;
 
@@ -2133,6 +2228,127 @@ export const ActionButton = () => {
 
 
 =====================================
+FILE: ./src/ui/atoms/StatsRadar.tsx
+=====================================
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+
+interface StatsRadarProps {
+  stats: Record<string, number>;
+  color?: string;
+  size?: number;
+}
+
+export const StatsRadar = ({ stats, color = "#78F654", size = 200 }: StatsRadarProps) => {
+  const keys = Object.keys(stats);
+  const total = keys.length;
+  const radius = size / 2;
+  const center = size / 2;
+  const angleStep = (Math.PI * 2) / total;
+
+  // Helper to get coordinates
+  const getPoint = (index: number, value: number) => {
+    // -PI/2 to start at top
+    const angle = (index * angleStep) - (Math.PI / 2);
+    // Normalize value (assumes max 100)
+    const dist = (value / 100) * radius; 
+    const x = center + Math.cos(angle) * dist;
+    const y = center + Math.sin(angle) * dist;
+    return { x, y };
+  };
+
+  const polyPoints = useMemo(() => {
+    return keys.map((key, i) => {
+      const { x, y } = getPoint(i, stats[key]);
+      return `${x},${y}`;
+    }).join(' ');
+  }, [stats]);
+
+  const bgPoints = useMemo(() => {
+    return keys.map((_, i) => {
+      const { x, y } = getPoint(i, 100); // Full scale
+      return `${x},${y}`;
+    }).join(' ');
+  }, [keys]);
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="overflow-visible">
+        
+        {/* Background Web */}
+        {[0.25, 0.5, 0.75, 1.0].map((scale) => (
+          <polygon
+            key={scale}
+            points={keys.map((_, i) => {
+               const { x, y } = getPoint(i, 100 * scale);
+               return `${x},${y}`;
+            }).join(' ')}
+            fill="none"
+            stroke={color}
+            strokeWidth="1"
+            strokeOpacity="0.2"
+          />
+        ))}
+
+        {/* Axis Lines */}
+        {keys.map((_, i) => {
+            const p = getPoint(i, 100);
+            return (
+                <line 
+                    key={i} 
+                    x1={center} y1={center} 
+                    x2={p.x} y2={p.y} 
+                    stroke={color} 
+                    strokeOpacity="0.1" 
+                />
+            );
+        })}
+
+        {/* The Data Shape */}
+        <motion.polygon
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 0.6, scale: 1 }}
+          transition={{ duration: 1, type: 'spring' }}
+          points={polyPoints}
+          fill={color}
+          fillOpacity="0.2"
+          stroke={color}
+          strokeWidth="2"
+        />
+        
+        {/* Vertices */}
+        {keys.map((key, i) => {
+            const p = getPoint(i, stats[key]);
+            const labelP = getPoint(i, 115); // Push labels out
+            return (
+                <g key={key}>
+                    <motion.circle 
+                        initial={{ r: 0 }}
+                        animate={{ r: 3 }}
+                        transition={{ delay: 0.2 + (i * 0.1) }}
+                        cx={p.x} cy={p.y} fill={color} 
+                    />
+                    <text 
+                        x={labelP.x} y={labelP.y} 
+                        fill={color} 
+                        fontSize="10" 
+                        fontFamily="monospace" 
+                        textAnchor="middle" 
+                        alignmentBaseline="middle"
+                        className="font-bold tracking-widest uppercase"
+                    >
+                        {key}
+                    </text>
+                </g>
+            );
+        })}
+      </svg>
+    </div>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/atoms/GraphicsToggle.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
@@ -2377,7 +2593,6 @@ import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 
-// FIXED: Default to 100 to match new Global Stats
 const DEFAULT_MAX_HEALTH = 100;
 
 const panelVariants = {
@@ -2416,7 +2631,7 @@ interface GlassPanelProps {
   className?: string;
   title?: string;
   gameId?: string;
-  maxHealth?: number; // NEW PROP
+  maxHealth?: number; 
 }
 
 export const GlassPanel = ({ 
@@ -2429,7 +2644,9 @@ export const GlassPanel = ({
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
-  const isInteracting = gameId && interactionTarget === gameId;
+  
+  // Determine if this specific panel is being repaired
+  const isInteracting = !!(gameId && interactionTarget === gameId);
 
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
@@ -2439,7 +2656,6 @@ export const GlassPanel = ({
   const health = panelState ? panelState.health : maxHealth;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
   
-  // Calculate percent using the dynamic maxHealth
   let rawPercent = (health / maxHealth) * 100;
   if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
   const healthPercent = Math.max(0, Math.min(100, rawPercent));
@@ -2528,7 +2744,7 @@ export const GlassPanel = ({
           <IntelligentHeader 
             title={title} 
             health={health} 
-            maxHealth={maxHealth} // PASS DOWN
+            maxHealth={maxHealth} 
             isDestroyed={isDestroyed} 
             isGameOver={isGameOver}
             gameId={gameId}
@@ -2551,6 +2767,7 @@ export const GlassPanel = ({
                         progress={healthPercent} 
                         isVideo={gameId === 'video'} 
                         showInteractive={true} 
+                        isRepairing={isInteracting}
                     />
                 </SafePanelContent>
             )}
@@ -4173,6 +4390,7 @@ import { WebGLErrorBoundary } from '@/ui/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/features/meta/MetaManager'; 
 import { RotationLock } from '@/ui/overlays/RotationLock';
+import { FeedAccessTerminal } from '@/ui/molecules/FeedAccessTerminal'; // NEW IMPORT
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -4386,20 +4604,7 @@ export default function Home() {
                             {/* CONTENT COLUMN */}
                             <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                             <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
-                                <div className="w-full h-full flex items-center justify-center p-4">
-                                <div className="flex flex-col items-center justify-center gap-4 bg-black/20 p-8 w-full max-w-lg marching-ants [--ant-color:rgba(27,185,48,0.3)]">
-                                    <p className="animate-pulse text-primary-green-dim text-xs tracking-widest font-bold">&gt; ESTABLISHING UPLINK...</p>
-                                    <button 
-                                    onClick={() => { AudioSystem.playClick(); openModal('feed'); }} 
-                                    onMouseEnter={() => AudioSystem.playHover()}
-                                    className="group w-full py-3 border border-primary-green-dim/50 text-primary-green font-header font-black text-lg tracking-[0.2em] uppercase transition-all duration-300 hover:border-alert-yellow hover:text-alert-yellow hover:shadow-[0_0_20px_rgba(234,231,71,0.3)] hover:bg-alert-yellow/5 relative overflow-hidden"
-                                    >
-                                    <span className="relative z-10 group-hover:translate-x-1 transition-transform duration-300 inline-block">
-                                        [ ACCESS_TERMINAL ]
-                                    </span>
-                                    </button>
-                                </div>
-                                </div>
+                                <FeedAccessTerminal />
                             </GlassPanel>
 
                             <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
@@ -5129,68 +5334,204 @@ export const SettingsModal = () => {
 FILE: ./src/features/contact/ContactModal.tsx
 =====================================
 import { ModalContainer } from '@/ui/overlays/ModalContainer';
-import { Send } from 'lucide-react';
+import { Send, Terminal, Signal, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { clsx } from 'clsx';
 
 export const ContactModal = () => {
+  const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT' | 'ERROR'>('IDLE');
+  const [signalStrength, setSignalStrength] = useState(0);
+
+  const handleInput = () => {
+      // Fluctuate signal on typing
+      setSignalStrength(Math.floor(Math.random() * 40) + 60);
+      AudioSystem.playSound('ui_hover'); // Subtle chirp
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setStatus('SENDING');
+      AudioSystem.playSound('ui_click');
+      AudioSystem.playRebootZap();
+
+      const form = e.currentTarget;
+      const data = new FormData(form);
+      
+      try {
+          const res = await fetch("https://formspree.io/f/xkgdbkpz", {
+              method: "POST",
+              body: data,
+              headers: { 'Accept': 'application/json' }
+          });
+          
+          if (res.ok) {
+              setStatus('SENT');
+              AudioSystem.playSound('fx_reboot_success');
+          } else {
+              setStatus('ERROR');
+              AudioSystem.playSound('ui_error');
+          }
+      } catch (err) {
+          setStatus('ERROR');
+          AudioSystem.playSound('ui_error');
+      }
+  };
+
   return (
-    <ModalContainer title="ENCRYPTED_UPLINK // CONTACT" type="contact">
-      <div className="max-w-2xl mx-auto h-full flex flex-col justify-center">
+    <ModalContainer title="SECURE_UPLINK // TERMINAL_01" type="contact">
+      <div className="max-w-3xl mx-auto h-full flex flex-col relative overflow-hidden">
         
-        {/* Added Triangles and Font-Header for the Warning */}
-        <div className="p-2 border border-alert-yellow/30 bg-alert-yellow/5 mb-6 text-center flex items-center justify-center gap-3">
-          <span className="text-alert-yellow animate-pulse">⚠</span>
-          <p className="text-xs text-alert-yellow font-header font-bold tracking-wider">
-            WARNING: TRANSMISSIONS ARE MONITORED BY THE AI OVERLORD.
-          </p>
-          <span className="text-alert-yellow animate-pulse">⚠</span>
+        {/* DECORATIVE BACKGROUND */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-cyan rounded-full blur-[100px]" />
         </div>
 
-        <form 
-          action="https://formspree.io/f/xkgdbkpz" 
-          method="POST"
-          className="space-y-6"
-        >
-          <div className="space-y-1">
-            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Codename</label>
-            <input 
-              type="text" 
-              name="name"
-              required
-              placeholder="Enter your handle..."
-              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
-            />
-          </div>
+        {/* STATUS BAR */}
+        <div className="flex items-center justify-between p-4 border-b border-primary-green/20 bg-black/40 backdrop-blur-sm z-10 shrink-0">
+            <div className="flex items-center gap-3">
+                <div className={clsx("w-3 h-3 rounded-full animate-pulse", status === 'ERROR' ? "bg-critical-red" : "bg-primary-green")} />
+                <span className="font-mono text-xs font-bold text-primary-green tracking-widest">
+                    CONNECTION: {status === 'IDLE' ? 'STABLE' : status}
+                </span>
+            </div>
+            <div className="flex items-center gap-2 text-primary-green/60 font-mono text-[10px]">
+                <Signal size={14} />
+                <span>SIG: {signalStrength}%</span>
+            </div>
+        </div>
 
-          <div className="space-y-1">
-            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Frequency (Email)</label>
-            <input 
-              type="email" 
-              name="email"
-              required
-              placeholder="Enter return frequency..."
-              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all"
-            />
-          </div>
+        {/* MAIN TERMINAL */}
+        <div className="flex-1 relative p-6 md:p-12 overflow-y-auto z-10">
+            
+            <AnimatePresence mode="wait">
+                {status === 'SENT' ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="h-full flex flex-col items-center justify-center text-center gap-6"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                            transition={{ type: "spring", bounce: 0.5 }}
+                            className="w-24 h-24 rounded-full border-4 border-primary-green flex items-center justify-center bg-primary-green/10"
+                        >
+                            <ShieldCheck size={48} className="text-primary-green" />
+                        </motion.div>
+                        <div>
+                            <h2 className="text-3xl font-header font-black text-white tracking-widest mb-2">TRANSMISSION CONFIRMED</h2>
+                            <p className="text-primary-green-dim font-mono">The payload has been delivered to the mainframe.</p>
+                        </div>
+                        <button 
+                            onClick={() => setStatus('IDLE')}
+                            className="mt-8 px-8 py-3 border border-primary-green/50 hover:bg-primary-green hover:text-black transition-all font-bold font-mono text-xs tracking-widest"
+                        >
+                            SEND_ANOTHER
+                        </button>
+                    </motion.div>
+                ) : (
+                    <motion.form 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        onSubmit={handleSubmit}
+                        className="space-y-8 max-w-xl mx-auto"
+                    >
+                        {/* TERMINAL HEADER */}
+                        <div className="font-mono text-primary-green text-sm mb-8 opacity-70">
+                            <p>&gt; ESTABLISHING SECURE TUNNEL...</p>
+                            <p>&gt; ENCRYPTION KEY: RSA-4096</p>
+                            <p>&gt; READY FOR INPUT.</p>
+                        </div>
 
-          <div className="space-y-1">
-            <label className="text-sm text-primary-green-dim uppercase tracking-wider font-header font-bold">Payload</label>
-            <textarea 
-              name="message"
-              required
-              rows={5}
-              placeholder="Type your message..."
-              className="w-full bg-black border border-primary-green-dim/50 p-3 text-primary-green font-mono focus:border-primary-green focus:outline-none focus:shadow-[0_0_10px_rgba(120,246,84,0.2)] transition-all resize-none"
-            />
-          </div>
+                        {/* INPUT: NAME */}
+                        <div className="group relative">
+                            <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
+                                CODENAME (Required)
+                            </label>
+                            <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
+                                <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
+                                <input 
+                                    type="text" 
+                                    name="name"
+                                    required
+                                    onKeyDown={handleInput}
+                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 uppercase"
+                                    placeholder="ENTER_IDENTITY"
+                                />
+                            </div>
+                        </div>
 
-          <button 
-            type="submit"
-            className="w-full py-4 bg-primary-green text-black font-header font-black uppercase tracking-widest hover:bg-white transition-colors flex items-center justify-center gap-2 group"
-          >
-            <span>Send Transmission</span>
-            <Send size={16} className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </form>
+                        {/* INPUT: EMAIL */}
+                        <div className="group relative">
+                            <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
+                                RETURN_ADDRESS (Required)
+                            </label>
+                            <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
+                                <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
+                                <input 
+                                    type="email" 
+                                    name="email"
+                                    required
+                                    onKeyDown={handleInput}
+                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700"
+                                    placeholder="user@netscape.com"
+                                />
+                            </div>
+                        </div>
+
+                        {/* INPUT: MESSAGE */}
+                        <div className="group relative">
+                            <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
+                                PAYLOAD (Message)
+                            </label>
+                            <div className="flex items-start border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
+                                <span className="text-primary-green mr-2 font-mono opacity-50 mt-1">&gt;</span>
+                                <textarea 
+                                    name="message"
+                                    required
+                                    rows={4}
+                                    onKeyDown={handleInput}
+                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 resize-none"
+                                    placeholder="Type your transmission here..."
+                                />
+                            </div>
+                        </div>
+
+                        {/* ACTION BAR */}
+                        <div className="pt-6">
+                            <button 
+                                type="submit"
+                                disabled={status === 'SENDING'}
+                                className={clsx(
+                                    "w-full py-4 font-header font-black text-lg tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-4 relative overflow-hidden group btn-glitch",
+                                    status === 'SENDING' 
+                                        ? "bg-primary-green/20 text-primary-green cursor-wait" 
+                                        : "bg-primary-green text-black hover:bg-white"
+                                )}
+                            >
+                                {status === 'SENDING' ? (
+                                    <>
+                                        <Terminal size={20} className="animate-spin" />
+                                        UPLOADING...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>INITIATE_UPLINK</span>
+                                        <Send size={20} className="group-hover:translate-x-2 transition-transform" />
+                                    </>
+                                )}
+                                
+                                {/* Button Scanline */}
+                                {!status && (
+                                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                                )}
+                            </button>
+                        </div>
+                    </motion.form>
+                )}
+            </AnimatePresence>
+        </div>
       </div>
     </ModalContainer>
   );
@@ -5202,57 +5543,129 @@ FILE: ./src/features/identity/AboutModal.tsx
 =====================================
 import { ModalContainer } from '@/ui/overlays/ModalContainer';
 import identity from '@/data/identity.json';
+import { StatsRadar } from '@/ui/atoms/StatsRadar';
+import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { motion } from 'framer-motion';
+import { Fingerprint, Hash, ShieldAlert } from 'lucide-react';
 
 export const AboutModal = () => {
+  // Normalize stats for radar
+  const stats = {
+    "STR": 30, // Coding Strength?
+    "INT": 100,
+    "AGI": 80,
+    "CHA": 60,
+    "LUCK": 90
+  };
+
   return (
-    <ModalContainer title="IDENTITY_DATABASE // ELFY" type="about">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-        
-        {/* LEFT: The Avatar Grid */}
-        <div className="space-y-4">
-          <div className="aspect-square w-full border border-latent-purple-light/50 bg-latent-purple-deep/30 relative overflow-hidden group shadow-[0_0_20px_rgba(188,134,186,0.2)]">
-            <div className="absolute inset-0 flex items-center justify-center text-latent-purple-light/50 font-bold text-2xl group-hover:text-latent-purple-light transition-colors font-header font-black tracking-widest text-center p-4">
-              [ COMPOSITE_IMAGE LOADING ]
+    <ModalContainer title="PERSONA_FILE // CLASSIFIED" type="about">
+      <div className="flex flex-col lg:flex-row h-full gap-8 relative">
+        <DotGridBackground className="opacity-5" />
+
+        {/* --- LEFT: VISUAL PROFILE --- */}
+        <div className="w-full lg:w-1/3 flex flex-col gap-6">
+            
+            {/* Avatar Frame */}
+            <div className="relative aspect-square w-full border-2 border-latent-purple bg-black overflow-hidden group shadow-[0_0_30px_rgba(158,78,165,0.2)]">
+                {/* Glitch Image Placeholder */}
+                <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/L0qTl8qbSkUIydeumD/giphy.gif')] opacity-20 mix-blend-screen bg-cover" />
+                
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                    <Fingerprint size={48} className="text-latent-purple animate-pulse mb-4" />
+                    <span className="text-2xl font-header font-black text-white tracking-widest uppercase drop-shadow-md">
+                        {identity.name}
+                    </span>
+                    <span className="text-[10px] font-mono text-latent-purple-light bg-latent-purple/10 px-2 py-1 mt-2 border border-latent-purple/30">
+                        ID: LATENT_SPACE_BANDIT
+                    </span>
+                </div>
+
+                {/* Corner Brackets */}
+                <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-latent-purple" />
+                <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-latent-purple" />
+                
+                {/* Scanline */}
+                <motion.div 
+                    className="absolute inset-x-0 h-1 bg-latent-purple/50 shadow-[0_0_10px_#9E4EA5]"
+                    animate={{ top: ["0%", "100%"] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                />
             </div>
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-latent-purple-light" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-latent-purple-light" />
-          </div>
-          
-          <div className="grid grid-cols-4 gap-2">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="aspect-square border border-latent-purple-dim/30 hover:bg-latent-purple-light/20 hover:border-latent-purple-light cursor-pointer transition-colors" />
-            ))}
-          </div>
+
+            {/* Stats Module */}
+            <div className="bg-black/40 border border-latent-purple/20 p-4 flex flex-col items-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 px-2 py-1 bg-latent-purple/10 text-[8px] font-mono text-latent-purple font-bold">
+                    ATTRIBUTE_MATRIX
+                </div>
+                <div className="mt-4">
+                    <StatsRadar stats={stats} color="#BC86BA" size={180} />
+                </div>
+            </div>
         </div>
 
-        {/* RIGHT: The Data */}
-        <div className="space-y-6">
-          <div>
-            {/* Header: Montserrat */}
-            <h2 className="text-4xl font-header font-black text-primary-green mb-2 tracking-wide">HI, I'M ELFY.</h2>
-            <div className="h-1 w-20 bg-latent-purple-light mb-4" />
+        {/* --- RIGHT: DECRYPTED DATA --- */}
+        <div className="flex-1 flex flex-col gap-6 relative">
             
-            {/* Body: Courier (font-mono) for ease of reading/typewriter feel */}
-            <p className="text-lg text-white/90 leading-relaxed font-mono">
-              {identity.bio}
-            </p>
-          </div>
+            {/* Header */}
+            <div className="border-b border-primary-green/30 pb-4">
+                <h2 className="text-4xl md:text-5xl font-header font-black text-primary-green tracking-tighter mb-2 glitch-text">
+                    ELFY_
+                </h2>
+                <div className="flex items-center gap-4 text-xs font-mono text-primary-green-dim">
+                    <span className="flex items-center gap-1"><Hash size={12} /> CLASS: ROGUE_DEV</span>
+                    <span className="flex items-center gap-1"><ShieldAlert size={12} /> BOUNTY: 5000_BTC</span>
+                </div>
+            </div>
 
-          <div className="space-y-2">
-            <h3 className="text-latent-purple-light font-header font-bold uppercase tracking-wider text-sm">Capabilities</h3>
-            <ul className="space-y-1">
-              {identity.abilities.map((ability, i) => (
-                 <li key={i} className="flex items-center gap-2 text-primary-green font-mono">
-                   <span className="text-latent-purple-light">&gt;</span> {ability}
-                 </li>
-              ))}
-            </ul>
-          </div>
+            {/* Bio */}
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary-green/20">
+                <p className="text-lg font-mono text-white/90 leading-relaxed mb-6">
+                    <span className="text-primary-green font-bold">&gt; BIO_DECRYPT:</span><br/>
+                    {identity.bio}
+                </p>
 
-          <div className="p-4 border border-latent-purple-dim/30 bg-latent-purple-deep/20 text-sm text-latent-purple-light font-mono">
-            <p>&gt; SYSTEM NOTE: Generated via Latent Space Injection.</p>
-            <p>&gt; STATUS: 100% Hype.</p>
-          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="p-4 border border-primary-green/20 bg-primary-green/5">
+                        <h3 className="text-xs font-bold text-primary-green uppercase tracking-widest mb-2 border-b border-primary-green/20 pb-1">
+                            Current_Mission
+                        </h3>
+                        <p className="text-sm font-mono text-primary-green-dim">
+                            To bridge the gap between retro aesthetics and modern 3D web technologies.
+                        </p>
+                    </div>
+                    <div className="p-4 border border-latent-purple/20 bg-latent-purple/5">
+                        <h3 className="text-xs font-bold text-latent-purple uppercase tracking-widest mb-2 border-b border-latent-purple/20 pb-1">
+                            Known_Associates
+                        </h3>
+                        <p className="text-sm font-mono text-latent-purple-light">
+                            React Three Fiber, GLSL, WebAudio API, Next.js.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <h3 className="text-primary-green font-header font-bold uppercase tracking-wider text-sm">
+                        SPECIAL_ABILITIES
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {identity.abilities.map((ability, i) => (
+                            <span 
+                                key={i} 
+                                className="px-3 py-1 bg-black border border-primary-green text-primary-green font-mono text-xs hover:bg-primary-green hover:text-black transition-colors cursor-default"
+                            >
+                                [{ability}]
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-white/10 text-[9px] font-mono text-gray-500 flex justify-between">
+                <span>LAST_SEEN: CYBERSPACE</span>
+                <span>STATUS: ONLINE</span>
+            </div>
         </div>
       </div>
     </ModalContainer>
@@ -6612,38 +7025,71 @@ export const useMetaTheme = () => {
 FILE: ./src/features/sandbox/layout/HoloHeader.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
-import { Clock, Cpu } from 'lucide-react';
+import { Clock, Cpu, Server, Wifi } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const StatPill = ({ icon: Icon, label, value, color = "text-service-cyan" }: any) => (
+  <div className="flex items-center gap-3 px-3 py-1 bg-black/40 border border-white/5 rounded-full">
+    <Icon size={12} className={`${color} opacity-80`} />
+    <span className="text-[9px] font-bold text-gray-500 uppercase">{label}</span>
+    <span className={`text-[10px] font-mono ${color}`}>{value}</span>
+  </div>
+);
 
 export const HoloHeader = () => {
   const { debugFlags, setDebugFlag } = useStore();
 
   return (
-    <div className="h-8 flex items-center justify-between px-4 bg-black border-b border-service-cyan/20 text-[10px] font-mono text-service-cyan/60 select-none">
-      <div className="flex items-center gap-6">
-        <span className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-service-cyan rounded-full animate-pulse shadow-[0_0_5px_#00F0FF]" />
-            SIMULATION_ACTIVE
-        </span>
-        <span className="opacity-50">build_ver: DEV_SANDBOX</span>
+    <div className="h-10 flex items-center justify-between px-4 text-[10px] font-mono select-none border-b border-white/5">
+      
+      {/* LEFT: Branding */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+            <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-service-cyan border-t-transparent rounded-full"
+            />
+            <span className="font-header font-black tracking-widest text-service-cyan text-sm drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]">
+                HOLO_DECK <span className="opacity-50 text-[10px]">// v.0.9.2</span>
+            </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 group">
-            <Clock size={12} className="group-hover:text-service-cyan transition-colors" />
+      {/* CENTER: Data Stream Visualization (Abstract) */}
+      <div className="hidden md:flex flex-1 items-center justify-center gap-1 opacity-30 mx-8">
+          {Array.from({ length: 32 }).map((_, i) => (
+              <motion.div 
+                key={i}
+                className="w-0.5 bg-service-cyan"
+                animate={{ height: [4, 12, 4] }}
+                transition={{ 
+                    duration: 0.5 + Math.random(), 
+                    repeat: Infinity, 
+                    delay: Math.random() * 0.5 
+                }}
+              />
+          ))}
+      </div>
+
+      {/* RIGHT: Controls */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 group mr-4">
+            <span className="text-service-cyan/50 font-bold">SIM_SPEED:</span>
             <input 
                 type="range" 
                 min="0.0" max="2.0" step="0.1"
                 value={debugFlags.timeScale}
                 onChange={(e) => setDebugFlag('timeScale', parseFloat(e.target.value))}
-                className="w-20 h-1 bg-service-cyan/20 rounded-full appearance-none cursor-pointer accent-service-cyan"
+                className="w-24 h-1.5 bg-service-cyan/20 rounded-full appearance-none cursor-pointer accent-service-cyan hover:accent-white transition-all"
             />
-            <span className="w-8 text-right font-bold text-service-cyan">{debugFlags.timeScale.toFixed(1)}x</span>
+            <span className="w-8 text-right font-bold text-white bg-service-cyan/20 px-1 rounded">
+                {debugFlags.timeScale.toFixed(1)}x
+            </span>
         </div>
         
-        <div className="flex items-center gap-2">
-            <Cpu size={12} />
-            <span>MEM: UNLIMITED</span>
-        </div>
+        <StatPill icon={Cpu} label="CPU" value="OPTIMAL" />
+        <StatPill icon={Server} label="MEM" value="UNLIMITED" color="text-latent-purple" />
       </div>
     </div>
   );
@@ -6658,15 +7104,17 @@ import { HoloNav } from './HoloNav';
 import { HoloHeader } from './HoloHeader';
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { LogOut, Hexagon } from 'lucide-react';
+import { Power } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { clsx } from 'clsx';
 
 interface HoloLayoutProps {
   children: ReactNode;
 }
 
 export const HoloLayout = ({ children }: HoloLayoutProps) => {
-  const { resetApplication } = useStore();
+  const { resetApplication, sandboxView } = useStore();
+  const is3D = sandboxView === 'arena' || sandboxView === 'gallery';
 
   const handleExit = () => {
       AudioSystem.playSound('ui_menu_close');
@@ -6674,77 +7122,87 @@ export const HoloLayout = ({ children }: HoloLayoutProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/90 text-service-cyan font-mono flex flex-col overflow-hidden">
+    <div className={clsx(
+        "fixed inset-0 z-[100] font-mono flex flex-col overflow-hidden transition-colors duration-500",
+        is3D ? "bg-transparent pointer-events-none" : "bg-[#020408] pointer-events-auto"
+    )}>
         
-        {/* --- BACKGROUND LAYER --- */}
-        <div className="absolute inset-0 pointer-events-none z-0">
-            {/* Hex Grid */}
-            <div 
-                className="absolute inset-0 opacity-10"
-                style={{ 
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill-opacity='0' stroke='%2300F0FF' stroke-width='1'/%3E%3C/svg%3E")`,
-                    backgroundSize: '60px 60px'
-                }}
-            />
-            {/* Radial Vignette */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)]" />
-            
-            {/* Animated Scanline */}
-            <motion.div 
-                className="absolute inset-0 bg-gradient-to-b from-transparent via-service-cyan/5 to-transparent h-[20%]"
-                animate={{ top: ['-20%', '120%'] }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            />
-        </div>
+        {/* --- BACKGROUND SIMULATION LAYER (2D ONLY) --- */}
+        {!is3D && (
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                {/* 1. Deep Gradient Pulse */}
+                <motion.div 
+                    className="absolute inset-0 bg-[radial-gradient(circle_at_center,#0b1a26_0%,#000000_100%)] opacity-80"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                />
 
-        {/* --- UI LAYER --- */}
-        <div className="relative z-50 flex-none flex flex-col backdrop-blur-sm border-b border-service-cyan/20">
+                {/* 2. Moving Floor Grid (Perspective) */}
+                <div className="absolute inset-0 opacity-20"
+                     style={{ 
+                         perspective: '1000px',
+                         transformStyle: 'preserve-3d'
+                     }}>
+                    <motion.div 
+                        className="absolute inset-[-100%] w-[300%] h-[300%] origin-center"
+                        style={{ 
+                            backgroundImage: `
+                                linear-gradient(to right, rgba(0, 240, 255, 0.1) 1px, transparent 1px),
+                                linear-gradient(to bottom, rgba(0, 240, 255, 0.1) 1px, transparent 1px)
+                            `,
+                            backgroundSize: '80px 80px',
+                            transform: 'rotateX(60deg) translateZ(-200px)'
+                        }}
+                        animate={{ y: [0, 80] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                </div>
+
+                {/* 3. Floating Particles */}
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
+                
+                {/* 4. Vignette & Scanline */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_40%,#000_100%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,240,255,0.02)_50%)] bg-[length:100%_4px] pointer-events-none" />
+            </div>
+        )}
+
+        {/* --- UI FRAME (Always on top, interactive) --- */}
+        <div className="relative z-50 flex-none flex flex-col border-b border-service-cyan/30 bg-black/40 backdrop-blur-sm shadow-[0_4px_30px_rgba(0,240,255,0.1)] pointer-events-auto">
             <HoloHeader />
-            <div className="flex justify-between items-end bg-black/40">
+            <div className="flex justify-between items-end px-4 pb-0 bg-gradient-to-r from-service-cyan/5 to-transparent">
                 <HoloNav />
+                
+                {/* EXIT BUTTON */}
                 <button 
                     onClick={handleExit}
                     onMouseEnter={() => AudioSystem.playHover()}
-                    className="group flex items-center gap-2 px-6 py-3 text-xs font-bold text-critical-red hover:bg-critical-red hover:text-black transition-all border-l border-service-cyan/20 relative overflow-hidden"
+                    className="group relative flex items-center gap-3 px-6 py-3 text-[10px] font-bold tracking-widest text-critical-red hover:text-black transition-all overflow-hidden border-t border-x border-critical-red/20 hover:border-critical-red rounded-t-sm mb-[-1px]"
                 >
-                    <div className="absolute inset-0 bg-critical-red/10 translate-y-full group-hover:translate-y-0 transition-transform" />
-                    <LogOut size={14} /> 
+                    <div className="absolute inset-0 bg-critical-red translate-y-full group-hover:translate-y-0 transition-transform duration-200" />
+                    
+                    <Power size={14} className="relative z-10" />
                     <span className="relative z-10">TERMINATE_SIM</span>
                 </button>
             </div>
         </div>
 
-        {/* --- MAIN CONTENT --- */}
-        <div className="relative z-10 flex-1 overflow-hidden p-4 md:p-8">
-            <div className="w-full h-full border border-service-cyan/30 bg-black/40 backdrop-blur-md relative overflow-hidden flex flex-col shadow-[0_0_30px_rgba(0,240,255,0.05)]">
-                
-                {/* Decorative UI Corners */}
-                <div className="absolute top-0 left-0 p-2">
-                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
-                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
-                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
-                </div>
-                <div className="absolute top-0 right-0 p-2 rotate-90">
-                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
-                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
-                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
-                </div>
-                <div className="absolute bottom-0 left-0 p-2 -rotate-90">
-                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
-                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
-                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
-                </div>
-                <div className="absolute bottom-0 right-0 p-2 rotate-180">
-                    <div className="w-2 h-2 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />
-                    <div className="w-16 h-[1px] bg-service-cyan absolute top-2 left-2" />
-                    <div className="w-[1px] h-16 bg-service-cyan absolute top-2 left-2" />
-                </div>
-
-                {/* Content Container */}
-                <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-service-cyan/50 scrollbar-track-black p-6 relative z-10">
-                    {children}
-                </div>
+        {/* --- MAIN CONTENT AREA --- */}
+        {/* In 3D mode, this is transparent layer over the canvas. 
+            Children (Sidebars/Overlays) must enable pointer-events-auto themselves. */}
+        <div className="relative z-10 flex-1 overflow-hidden p-6 md:p-10 flex flex-col">
+            <div className="flex-1 w-full h-full relative">
+                {children}
             </div>
+        </div>
+        
+        {/* --- DECORATIVE HUD ELEMENTS --- */}
+        <div className="absolute bottom-4 left-4 text-[9px] text-service-cyan/40 font-mono pointer-events-none">
+            COORD: {Math.random().toFixed(4)} // {Math.random().toFixed(4)}
+        </div>
+        <div className="absolute bottom-4 right-4 text-[9px] text-service-cyan/40 font-mono pointer-events-none flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-service-cyan/50 animate-pulse" />
+            LIVE_FEED
         </div>
     </div>
   );
@@ -6756,7 +7214,7 @@ FILE: ./src/features/sandbox/layout/HoloNav.tsx
 =====================================
 import { useStore } from '@/core/store/useStore';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Speaker, Crosshair, ScanEye, Box, Cpu } from 'lucide-react';
+import { Speaker, Crosshair, ScanEye } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 
@@ -6773,51 +7231,46 @@ export const HoloNav = () => {
 
   const NavItem = ({ id, label, icon: Icon }: { id: View, label: string, icon: any }) => {
     const isActive = sandboxView === id;
+    
     return (
       <button
         onClick={() => handleNav(id)}
         onMouseEnter={() => !isActive && AudioSystem.playHover()}
         className={clsx(
-          "relative flex items-center gap-3 px-6 py-3 transition-all duration-200 group overflow-hidden border-r border-service-cyan/10",
-          isActive ? "text-black" : "text-service-cyan hover:text-white"
+          "relative flex items-center gap-3 px-6 py-3 transition-all duration-300 group overflow-hidden border-t border-x rounded-t-md mx-1 mb-[-1px]",
+          isActive 
+            ? "border-service-cyan/50 text-black z-10" 
+            : "border-transparent text-service-cyan/60 hover:text-service-cyan hover:bg-service-cyan/5"
         )}
       >
         {/* Background Slide */}
         {isActive && (
             <motion.div 
-                layoutId="nav-bg"
-                className="absolute inset-0 bg-service-cyan"
+                layoutId="holo-nav-bg"
+                className="absolute inset-0 bg-service-cyan shadow-[0_0_20px_rgba(0,240,255,0.4)]"
                 initial={false}
-                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
             />
         )}
         
-        {/* Hover Highlight (Inactive) */}
+        {/* Scanline Effect on Hover (Inactive) */}
         {!isActive && (
-            <div className="absolute inset-0 bg-service-cyan/10 translate-y-full group-hover:translate-y-0 transition-transform duration-200" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-service-cyan/10 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-500" />
         )}
 
-        <Icon size={16} className="relative z-10" />
-        <span className="font-header font-bold text-xs tracking-[0.15em] relative z-10">{label}</span>
+        <Icon size={16} className="relative z-10" strokeWidth={isActive ? 2.5 : 1.5} />
+        <span className="font-header font-bold text-xs tracking-widest relative z-10">
+            {label}
+        </span>
       </button>
     );
   };
 
   return (
-    <div className="flex items-center h-full">
-      <div className="px-6 py-3 bg-service-cyan/5 border-r border-service-cyan/20 flex items-center gap-3 text-service-cyan">
-        <Box className="animate-spin-slow" size={18} />
-        <div className="flex flex-col leading-none">
-            <span className="font-header font-black tracking-widest text-sm">HOLO_DECK</span>
-            <span className="text-[8px] font-mono opacity-60">SIMULATION_CORE</span>
-        </div>
-      </div>
-      
-      <div className="flex h-full">
-        <NavItem id="audio" label="AUDIO_MATRIX" icon={Speaker} />
-        <NavItem id="arena" label="COMBAT_SIM" icon={Crosshair} />
-        <NavItem id="gallery" label="MODEL_INSPECTOR" icon={ScanEye} />
-      </div>
+    <div className="flex h-full items-end pt-2">
+      <NavItem id="audio" label="AUDIO_MATRIX" icon={Speaker} />
+      <NavItem id="arena" label="COMBAT_SIM" icon={Crosshair} />
+      <NavItem id="gallery" label="MODEL_INSPECTOR" icon={ScanEye} />
     </div>
   );
 };
@@ -6859,7 +7312,7 @@ FILE: ./src/features/sandbox/ArenaLab.tsx
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { EnemyTypes } from '@/game/config/Identifiers';
-import { Bug, Trash2, Shield, Plus, Play, Info } from 'lucide-react';
+import { Bug, Trash2, Shield, Plus, Info, Crosshair } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { clsx } from 'clsx';
 
@@ -6870,7 +7323,6 @@ export const ArenaLab = () => {
       try {
           const spawner = ServiceLocator.getSpawner();
           const radius = 10;
-          
           for(let i=0; i<count; i++) {
               const angle = Math.random() * Math.PI * 2;
               const r = 5 + Math.random() * radius;
@@ -6879,9 +7331,7 @@ export const ArenaLab = () => {
               spawner.spawnEnemy(type, x, y);
           }
           AudioSystem.playSound('ui_click');
-      } catch (e) {
-          console.warn("Spawn failed:", e);
-      }
+      } catch (e) { console.warn("Spawn failed:", e); }
   };
 
   const clearEnemies = () => {
@@ -6893,85 +7343,93 @@ export const ArenaLab = () => {
       } catch (e) { console.warn("Clear failed:", e); }
   };
 
-  const SpawnBtn = ({ label, type, count, color = "border-service-cyan text-service-cyan" }: any) => (
+  const SpawnBtn = ({ label, type, count, color = "border-service-cyan/30 text-service-cyan" }: any) => (
       <button 
         onClick={() => spawn(type, count)}
         onMouseEnter={() => AudioSystem.playHover()}
-        className={`group relative flex items-center justify-between p-2 border bg-black/60 hover:bg-white/10 transition-all ${color}`}
+        className={`group relative flex items-center justify-between p-3 border bg-black/40 hover:bg-service-cyan/10 transition-all ${color} backdrop-blur-sm`}
       >
+          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-current opacity-0 group-hover:opacity-100 transition-opacity" />
+          
           <div className="flex flex-col items-start">
-              <span className="text-[9px] font-bold font-header tracking-wider">{label}</span>
-              <span className="text-[8px] opacity-60">QTY: {count}</span>
+              <span className="text-[10px] font-bold font-header tracking-wider group-hover:text-white transition-colors">{label}</span>
+              <span className="text-[8px] opacity-60 font-mono">BATCH_SIZE: {count.toString().padStart(2, '0')}</span>
           </div>
-          <Plus size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Plus size={14} className="opacity-50 group-hover:scale-110 transition-transform" />
       </button>
   );
 
   return (
-    <div className="flex flex-col gap-px w-72 pointer-events-auto h-full bg-black/80 backdrop-blur-md border-l border-service-cyan/20">
+    <div className="flex flex-col gap-px w-80 pointer-events-auto h-full max-h-[80vh] bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-sm overflow-hidden mt-10 mr-10">
         
         {/* HEADER */}
-        <div className="p-3 border-b border-service-cyan/20 bg-service-cyan/5">
-            <h3 className="text-xs font-black font-header tracking-widest text-service-cyan flex items-center gap-2">
-                <Bug size={14} /> INJECTION_CONTROLS
+        <div className="p-4 border-b border-service-cyan/20 bg-gradient-to-r from-service-cyan/10 to-transparent flex justify-between items-center">
+            <h3 className="text-sm font-black font-header tracking-widest text-service-cyan flex items-center gap-2">
+                <Bug size={16} /> INJECTION_LAB
             </h3>
+            <div className="w-2 h-2 bg-service-cyan rounded-full animate-pulse shadow-[0_0_10px_#00F0FF]" />
         </div>
 
-        {/* SPAWNERS */}
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        {/* CONTROLS */}
+        <div className="p-4 space-y-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-service-cyan/30">
             
             <div className="space-y-2">
-                <span className="text-[9px] font-mono text-service-cyan/50 uppercase tracking-widest">Hostiles</span>
+                <div className="flex items-center gap-2 text-[9px] font-mono text-service-cyan/50 uppercase tracking-widest mb-1">
+                    <Crosshair size={10} /> Hostile Entities
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                     <SpawnBtn label="DRILLER" type={EnemyTypes.DRILLER} count={1} />
                     <SpawnBtn label="SWARM" type={EnemyTypes.DRILLER} count={5} />
-                    <SpawnBtn label="KAMIKAZE" type={EnemyTypes.KAMIKAZE} count={1} />
-                    <SpawnBtn label="HUNTER" type={EnemyTypes.HUNTER} count={1} />
+                    <SpawnBtn label="KAMIKAZE" type={EnemyTypes.KAMIKAZE} count={1} color="border-critical-red/30 text-critical-red" />
+                    <SpawnBtn label="HUNTER" type={EnemyTypes.HUNTER} count={1} color="border-alert-yellow/30 text-alert-yellow" />
                 </div>
             </div>
 
             <div className="space-y-2">
-                <span className="text-[9px] font-mono text-latent-purple/50 uppercase tracking-widest">Allies</span>
+                <div className="flex items-center gap-2 text-[9px] font-mono text-latent-purple/50 uppercase tracking-widest mb-1">
+                    <Shield size={10} /> Defensive Assets
+                </div>
                 <SpawnBtn 
                     label="DAEMON_CORE" 
                     type={EnemyTypes.DAEMON} 
                     count={1} 
-                    color="border-latent-purple text-latent-purple" 
+                    color="border-latent-purple/40 text-latent-purple hover:bg-latent-purple/10" 
                 />
             </div>
 
-            <div className="h-px bg-service-cyan/20 w-full my-4" />
+            <div className="h-px bg-gradient-to-r from-transparent via-service-cyan/20 to-transparent w-full" />
 
-            {/* TOGGLES */}
+            {/* GLOBAL OVERRIDES */}
             <div className="space-y-2">
                 <button 
                     onClick={() => setDebugFlag('godMode', !debugFlags.godMode)}
                     className={clsx(
-                        "w-full flex items-center justify-between p-3 border text-xs font-bold transition-all",
+                        "w-full flex items-center justify-between p-3 border text-xs font-bold transition-all backdrop-blur-sm",
                         debugFlags.godMode 
-                            ? "bg-service-cyan text-black border-service-cyan shadow-[0_0_10px_rgba(0,240,255,0.3)]" 
-                            : "bg-black border-service-cyan/30 text-service-cyan hover:bg-service-cyan/10"
+                            ? "bg-service-cyan/20 text-service-cyan border-service-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)]" 
+                            : "bg-black/40 border-service-cyan/20 text-gray-500 hover:text-service-cyan hover:border-service-cyan/50"
                     )}
                 >
-                    <span>PLAYER_INVULNERABLE</span>
-                    <Shield size={12} />
+                    <span>INVULNERABILITY</span>
+                    <Shield size={14} className={debugFlags.godMode ? "fill-current" : ""} />
                 </button>
 
                 <button 
                     onClick={clearEnemies}
                     onMouseEnter={() => AudioSystem.playHover()}
-                    className="w-full flex items-center justify-center gap-2 p-3 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold"
+                    className="w-full flex items-center justify-center gap-2 p-3 border border-critical-red/30 text-critical-red hover:bg-critical-red hover:text-black transition-all text-xs font-bold backdrop-blur-sm group"
                 >
-                    <Trash2 size={14} /> PURGE_ENTITIES
+                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" /> 
+                    PURGE_ENTITIES
                 </button>
             </div>
         </div>
 
-        {/* FOOTER INFO */}
-        <div className="p-3 border-t border-service-cyan/20 bg-black text-[9px] text-gray-500 font-mono flex gap-2">
-            <Info size={12} className="shrink-0" />
-            <p className="leading-tight">
-                Use WSAD/Arrow Keys to move. Mouse to Aim. Click to Fire.
+        {/* FOOTER */}
+        <div className="p-3 bg-black/60 border-t border-service-cyan/10 text-[9px] text-gray-500 font-mono flex items-start gap-2">
+            <Info size={12} className="shrink-0 mt-0.5 text-service-cyan" />
+            <p className="leading-relaxed opacity-80">
+                Sandbox mode enables free testing of entity interactions. Metrics may vary from live build.
             </p>
         </div>
     </div>
@@ -6986,14 +7444,14 @@ import { useStore } from '@/core/store/useStore';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Box, PlayCircle, Crosshair, ChevronRight } from 'lucide-react';
+import { Box, PlayCircle, Crosshair, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 
 const MODELS = [
-  { id: EnemyTypes.DRILLER, label: 'DRILLER_DRONE', desc: 'Standard melee unit. Swarms targets.' },
-  { id: EnemyTypes.KAMIKAZE, label: 'KAMIKAZE_UNIT', desc: 'Explosive payload. High damage.' },
-  { id: EnemyTypes.HUNTER, label: 'HUNTER_MK1', desc: 'Ranged attacker. Orbits target.' },
-  { id: EnemyTypes.DAEMON, label: 'DAEMON_CORE', desc: 'Player ally. Defensive shield.' },
-  { id: 'PLAYER', label: 'PLAYER_SHIP', desc: 'Mesos Class Interceptor.' },
+  { id: 'PLAYER', label: 'PLAYER_SHIP', desc: 'Mesos Class Interceptor.', color: 'text-primary-green' },
+  { id: EnemyTypes.DAEMON, label: 'DAEMON_CORE', desc: 'Defensive Subroutine.', color: 'text-latent-purple' },
+  { id: EnemyTypes.DRILLER, label: 'DRILLER_DRONE', desc: 'Standard Melee Unit.', color: 'text-service-cyan' },
+  { id: EnemyTypes.KAMIKAZE, label: 'KAMIKAZE_UNIT', desc: 'Volatile Payload.', color: 'text-critical-red' },
+  { id: EnemyTypes.HUNTER, label: 'HUNTER_MK1', desc: 'Ranged Ballistic Unit.', color: 'text-alert-yellow' },
 ];
 
 const STATES = ['IDLE', 'ATTACK', 'SPAWN', 'DIE'] as const;
@@ -7003,18 +7461,17 @@ export const ModelInspector = () => {
   const currentModel = MODELS.find(m => m.id === galleryTarget) || MODELS[0];
 
   return (
-    <div className="flex flex-col h-full pointer-events-auto">
-        <div className="flex-1" /> 
+    <div className="flex flex-col h-full pointer-events-auto relative">
         
-        {/* --- LEFT: MODEL SELECTOR --- */}
-        <div className="absolute top-0 bottom-0 left-0 w-64 bg-black/80 backdrop-blur-md border-r border-service-cyan/20 flex flex-col">
-            <div className="p-4 border-b border-service-cyan/20">
+        {/* --- LEFT PANEL: LIST --- */}
+        <div className="absolute top-10 left-10 w-72 bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 flex flex-col shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-sm">
+            <div className="p-4 border-b border-service-cyan/20 bg-service-cyan/5">
                 <h3 className="text-service-cyan text-xs font-black font-header tracking-widest flex items-center gap-2">
-                    <Box size={14} /> DATABASE_INDEX
+                    <Box size={14} /> ASSET_DATABASE
                 </h3>
             </div>
             
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-service-cyan/20">
                 {MODELS.map(model => {
                     const isActive = galleryTarget === model.id;
                     return (
@@ -7023,19 +7480,19 @@ export const ModelInspector = () => {
                             onClick={() => { setGalleryTarget(model.id); AudioSystem.playClick(); }}
                             onMouseEnter={() => AudioSystem.playHover()}
                             className={clsx(
-                                "w-full text-left p-4 border-b border-service-cyan/10 transition-all group relative overflow-hidden",
-                                isActive ? "bg-service-cyan/10 text-service-cyan" : "text-gray-500 hover:text-white"
+                                "w-full text-left p-4 border-b border-white/5 transition-all group relative overflow-hidden",
+                                isActive ? "bg-white/5" : "hover:bg-white/5"
                             )}
                         >
-                            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-service-cyan shadow-[0_0_10px_#00F0FF]" />}
+                            {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-service-cyan shadow-[0_0_15px_#00F0FF]" />}
                             
                             <div className="flex justify-between items-center mb-1">
-                                <span className={clsx("font-mono font-bold text-xs tracking-wider", isActive ? "" : "group-hover:translate-x-1 transition-transform")}>
+                                <span className={clsx("font-header font-bold text-xs tracking-wider transition-colors", isActive ? model.color : "text-gray-400 group-hover:text-white")}>
                                     {model.label}
                                 </span>
-                                {isActive && <ChevronRight size={12} />}
+                                {isActive && <ChevronRight size={14} className={model.color} />}
                             </div>
-                            <div className="text-[9px] font-mono opacity-50 truncate">
+                            <div className="text-[9px] font-mono text-gray-600 group-hover:text-gray-400 transition-colors">
                                 {model.desc}
                             </div>
                         </button>
@@ -7044,22 +7501,24 @@ export const ModelInspector = () => {
             </div>
         </div>
 
-        {/* --- RIGHT: STATE CONTROLS --- */}
-        <div className="absolute bottom-8 right-8 w-64 bg-black/90 backdrop-blur-md border border-service-cyan/30 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+        {/* --- BOTTOM RIGHT: CONTROLS --- */}
+        <div className="absolute bottom-10 right-10 w-80 bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 shadow-[0_0_40px_rgba(0,0,0,0.5)] rounded-sm">
             <div className="p-3 border-b border-service-cyan/20 bg-service-cyan/5 flex justify-between items-center">
-                <span className="text-service-cyan text-[10px] font-bold font-header tracking-widest">ANIMATION_STATE</span>
-                <PlayCircle size={14} className="text-service-cyan" />
+                <span className="text-service-cyan text-[10px] font-bold font-header tracking-widest flex items-center gap-2">
+                    <Activity size={14} /> ANIMATION_STATE
+                </span>
+                <PlayCircle size={14} className="text-service-cyan animate-pulse" />
             </div>
-            <div className="p-3 grid grid-cols-2 gap-2">
+            <div className="p-4 grid grid-cols-2 gap-3">
                 {STATES.map(state => (
                     <button
                         key={state}
                         onClick={() => { setGalleryAction(state); AudioSystem.playClick(); }}
                         className={clsx(
-                            "text-[9px] font-mono text-center py-2 border transition-all",
+                            "text-[10px] font-bold font-mono text-center py-3 border transition-all rounded-sm relative overflow-hidden group",
                             galleryAction === state
-                                ? "border-service-cyan bg-service-cyan text-black font-bold shadow-[0_0_10px_rgba(0,240,255,0.3)]"
-                                : "border-service-cyan/30 text-service-cyan/60 hover:text-service-cyan hover:border-service-cyan"
+                                ? "border-service-cyan text-black bg-service-cyan shadow-[0_0_15px_rgba(0,240,255,0.4)]"
+                                : "border-white/10 text-gray-500 hover:border-service-cyan/50 hover:text-service-cyan hover:bg-service-cyan/5"
                         )}
                     >
                         {state}
@@ -7068,15 +7527,21 @@ export const ModelInspector = () => {
             </div>
         </div>
 
-        {/* --- TOP RIGHT: METADATA --- */}
-        <div className="absolute top-8 right-8">
-             <div className="flex flex-col items-end gap-1">
-                 <h1 className="text-4xl font-header font-black text-white/10 select-none pointer-events-none tracking-tighter">
+        {/* --- TOP RIGHT: METADATA OVERLAY --- */}
+        <div className="absolute top-10 right-10 text-right pointer-events-none">
+             <div className="flex flex-col items-end gap-2">
+                 <h1 className={clsx("text-5xl font-header font-black tracking-tighter opacity-80 drop-shadow-[0_0_20px_rgba(0,0,0,0.8)]", currentModel.color)}>
                      {currentModel.label}
                  </h1>
-                 <div className="flex items-center gap-2 text-service-cyan/50 text-xs font-mono bg-black/60 px-2 py-1 border border-service-cyan/20">
-                     <Crosshair size={12} />
-                     <span>ID: {currentModel.id}</span>
+                 
+                 <div className="flex items-center gap-4 text-xs font-mono text-gray-400 bg-black/60 px-4 py-2 border border-white/10 rounded-full backdrop-blur-sm">
+                     <span className="flex items-center gap-2">
+                        <Crosshair size={12} /> ID: {currentModel.id}
+                     </span>
+                     <span className="w-px h-3 bg-white/20" />
+                     <span className="flex items-center gap-2">
+                        <Fingerprint size={12} /> VER: 2.0.4
+                     </span>
                  </div>
              </div>
         </div>
@@ -7090,19 +7555,54 @@ FILE: ./src/features/sandbox/AudioMatrix.tsx
 =====================================
 import { SOUND_METADATA, SoundCategory } from '@/game/config/SoundMetadata';
 import { AudioSystem } from '@/core/audio/AudioSystem';
-import { Volume2, Play } from 'lucide-react';
+import { Volume2, Play, Activity, Music, Radio, Database, Monitor } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const SECTIONS: { id: SoundCategory, label: string }[] = [
-  { id: 'UI', label: 'USER_INTERFACE' },
-  { id: 'COMBAT', label: 'COMBAT_FEEDBACK' },
-  { id: 'AMBIENCE', label: 'LOOPS_&_ENV' },
-  { id: 'UNUSED', label: 'ARCHIVED_ASSETS' },
+// --- CONFIGURATION ---
+
+const CATEGORIES: { id: SoundCategory; label: string; icon: any; color: string; border: string; bg: string }[] = [
+  { 
+    id: 'UI', 
+    label: 'SYSTEM_INTERFACE', 
+    icon: Monitor, 
+    color: 'text-service-cyan', 
+    border: 'border-service-cyan',
+    bg: 'bg-service-cyan'
+  },
+  { 
+    id: 'COMBAT', 
+    label: 'COMBAT_PROTOCOL', 
+    icon: Activity, 
+    color: 'text-critical-red', 
+    border: 'border-critical-red',
+    bg: 'bg-critical-red'
+  },
+  { 
+    id: 'AMBIENCE', 
+    label: 'ENVIRONMENTAL', 
+    icon: Radio, 
+    color: 'text-latent-purple', 
+    border: 'border-latent-purple',
+    bg: 'bg-latent-purple'
+  },
+  { 
+    id: 'UNUSED', 
+    label: 'SYNTH_ARCHIVE', 
+    icon: Database, 
+    color: 'text-primary-green', 
+    border: 'border-primary-green',
+    bg: 'bg-primary-green'
+  },
 ];
 
 export const AudioMatrix = () => {
+  const [activeCat, setActiveCat] = useState<SoundCategory>('UI');
   const [playing, setPlaying] = useState<string | null>(null);
+
+  const activeDef = CATEGORIES.find(c => c.id === activeCat) || CATEGORIES[0];
+  const sounds = Object.values(SOUND_METADATA).filter(s => s.category === activeCat);
 
   const handlePlay = (key: string) => {
     if (key.includes('ambience')) {
@@ -7111,68 +7611,132 @@ export const AudioMatrix = () => {
         AudioSystem.playSound(key);
     }
     setPlaying(key);
-    setTimeout(() => setPlaying(null), 200);
+    setTimeout(() => setPlaying(null), 300);
   };
 
   return (
-    <div className="space-y-8 pb-12">
-        {SECTIONS.map((section) => {
-            const sounds = Object.values(SOUND_METADATA).filter(s => s.category === section.id);
-            if (sounds.length === 0) return null;
+    <div className="flex w-full h-full gap-6 pointer-events-auto p-4 md:p-0">
+        
+        {/* --- LEFT: CATEGORY SELECTOR --- */}
+        <div className="w-16 md:w-64 flex-none flex flex-col gap-2">
+            {CATEGORIES.map((cat) => {
+                const isActive = activeCat === cat.id;
+                return (
+                    <button
+                        key={cat.id}
+                        onClick={() => { setActiveCat(cat.id); AudioSystem.playClick(); }}
+                        onMouseEnter={() => AudioSystem.playHover()}
+                        className={clsx(
+                            "relative group flex items-center h-16 md:h-14 px-0 md:px-4 border-l-2 transition-all duration-300 overflow-hidden",
+                            isActive 
+                                ? `bg-black/60 ${cat.border}`
+                                : "border-white/10 hover:border-white/30 hover:bg-white/5"
+                        )}
+                    >
+                        {/* Active Glow Background */}
+                        {isActive && (
+                            <div className={clsx("absolute inset-0 opacity-10", cat.bg)} />
+                        )}
 
-            return (
-                <div key={section.id} className="space-y-4">
-                    <div className="flex items-center gap-3 border-b border-service-cyan/30 pb-2">
-                        <Volume2 size={16} className={section.id === 'UNUSED' ? "text-gray-500" : "text-service-cyan"} />
-                        <h3 className={clsx(
-                            "font-header font-black tracking-widest text-sm",
-                            section.id === 'UNUSED' ? "text-gray-500" : "text-service-cyan"
-                        )}>
-                            {section.label}
-                        </h3>
-                    </div>
+                        <div className="flex items-center justify-center md:justify-start w-full gap-3 relative z-10">
+                            <cat.icon 
+                                size={20} 
+                                className={clsx(
+                                    "transition-colors duration-300", 
+                                    isActive ? cat.color : "text-gray-500 group-hover:text-gray-300"
+                                )} 
+                            />
+                            <span className={clsx(
+                                "hidden md:block font-header font-bold text-xs tracking-widest uppercase transition-colors duration-300",
+                                isActive ? cat.color : "text-gray-500 group-hover:text-gray-300"
+                            )}>
+                                {cat.label}
+                            </span>
+                        </div>
+                    </button>
+                );
+            })}
+        </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* --- RIGHT: SOUND GRID --- */}
+        <div className="flex-1 flex flex-col bg-[#020408]/80 backdrop-blur-md border border-white/10 rounded-sm shadow-2xl relative overflow-hidden">
+            
+            {/* Header / Visualizer Strip */}
+            <div className={clsx("h-10 border-b border-white/5 flex items-center justify-between px-4 bg-gradient-to-r from-black via-black to-transparent", activeDef.color)}>
+                <div className="flex items-center gap-2">
+                    <Music size={14} className="opacity-70" />
+                    <span className="font-mono text-xs font-bold tracking-widest">
+                        CHANNEL: {activeCat}
+                    </span>
+                </div>
+                <div className="flex gap-0.5 items-end h-4 opacity-50">
+                    {[...Array(12)].map((_, i) => (
+                        <motion.div 
+                            key={i}
+                            className={clsx("w-1 rounded-t-sm", activeDef.bg)}
+                            animate={{ height: ["20%", "80%", "30%"] }}
+                            transition={{ 
+                                duration: 0.5 + Math.random(), 
+                                repeat: Infinity, 
+                                ease: "easeInOut",
+                                delay: i * 0.05
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            {/* Grid Content */}
+            <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-white/10">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <AnimatePresence mode="popLayout">
                         {sounds.map((sound) => {
                             const isPlaying = playing === sound.key;
                             return (
-                                <button
+                                <motion.button
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.2 }}
                                     key={sound.key}
                                     onClick={() => handlePlay(sound.key)}
                                     className={clsx(
-                                        "group relative flex flex-col items-start p-3 border transition-all duration-200 text-left overflow-hidden",
+                                        "group relative flex flex-col items-start p-3 border transition-all duration-100 text-left overflow-hidden h-24 hover:shadow-[0_0_15px_rgba(0,0,0,0.5)]",
                                         isPlaying 
-                                            ? "bg-service-cyan text-black border-service-cyan"
-                                            : section.id === 'UNUSED' 
-                                                ? "bg-white/5 border-white/5 text-gray-500 hover:border-gray-400 hover:text-gray-300"
-                                                : "bg-black/40 border-service-cyan/20 text-service-cyan hover:bg-service-cyan/10 hover:border-service-cyan/50"
+                                            ? `${activeDef.bg} text-black border-transparent scale-95`
+                                            : `bg-black/40 border-white/10 hover:border-white/30 ${activeDef.color} hover:bg-white/5`
                                     )}
                                 >
-                                    {/* Play Icon Overlay */}
-                                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Play size={14} className="fill-current" />
+                                    <div className="flex w-full justify-between items-start mb-2">
+                                        <span className="font-bold text-[10px] tracking-wider uppercase opacity-90 line-clamp-1">
+                                            {sound.label}
+                                        </span>
+                                        <Play size={10} className={clsx("transition-opacity", isPlaying ? "opacity-100" : "opacity-30 group-hover:opacity-100")} />
                                     </div>
-
-                                    <span className="font-bold text-xs tracking-wider mb-1">{sound.label}</span>
-                                    <span className={clsx("text-[10px] font-mono", isPlaying ? "opacity-100" : "opacity-60")}>
+                                    
+                                    <span className="text-[8px] font-mono opacity-50 mb-auto break-all">
                                         {sound.key}
                                     </span>
                                     
-                                    <div className={clsx(
-                                        "w-full h-px mt-2 mb-2",
-                                        isPlaying ? "bg-black/30" : "bg-current opacity-20"
-                                    )} />
-                                    
-                                    <span className={clsx("text-[9px] leading-tight", isPlaying ? "opacity-90" : "opacity-50")}>
-                                        USAGE: {sound.usage}
-                                    </span>
-                                </button>
+                                    {/* Bottom Decor Bar */}
+                                    <div className="w-full h-0.5 bg-current opacity-20 mt-2 group-hover:opacity-100 transition-opacity relative overflow-hidden">
+                                        {isPlaying && (
+                                            <motion.div 
+                                                className="absolute inset-0 bg-white"
+                                                initial={{ x: "-100%" }}
+                                                animate={{ x: "100%" }}
+                                                transition={{ duration: 0.4, ease: "linear" }}
+                                            />
+                                        )}
+                                    </div>
+                                </motion.button>
                             );
                         })}
-                    </div>
+                    </AnimatePresence>
                 </div>
-            );
-        })}
+            </div>
+        </div>
     </div>
   );
 };
@@ -8011,11 +8575,12 @@ export const StatsTab = ({ stats }: StatsTabProps) => {
 =====================================
 FILE: ./src/features/debug/tabs/SandboxTab.tsx
 =====================================
-import { Box } from 'lucide-react';
+import { Box, ArrowRight, Zap } from 'lucide-react';
 import { useStore } from '@/core/store/useStore';
 import { useGameStore } from '@/game/store/useGameStore';
 import { ServiceLocator } from '@/game/core/ServiceLocator';
 import { AudioSystem } from '@/core/audio/AudioSystem';
+import { motion } from 'framer-motion';
 
 interface SandboxTabProps {
   closeDebug: () => void;
@@ -8028,39 +8593,64 @@ export const SandboxTab = ({ closeDebug }: SandboxTabProps) => {
   const enterSandbox = () => {
       AudioSystem.init();
       AudioSystem.startMusic();
-      
-      // 1. State Transition
       setIntroDone(true);
       setBootState('sandbox');
-      setSimulationPaused(false); // FORCE UNPAUSE
-      
-      // 2. Cleanup Legacy
+      setSimulationPaused(false);
       try {
           const reg = ServiceLocator.getRegistry();
           if (reg) reg.clear();
       } catch {}
-      
-      // 3. Init
       startGame();
       closeDebug();
   };
 
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-6 text-center">
-        <Box size={64} className="text-primary-green animate-pulse" />
-        <div>
-            <h2 className="text-xl font-bold mb-2">INITIALIZE_SIMULATION?</h2>
-            <p className="text-xs text-primary-green-dim max-w-xs mx-auto">
-                Loads the 'Holo-Deck' simulation environment. The main OS will be suspended.
-            </p>
-        </div>
-        <button 
-            onClick={enterSandbox}
-            onMouseEnter={() => AudioSystem.playHover()}
-            className="px-8 py-3 bg-primary-green text-black font-bold tracking-widest hover:bg-white transition-colors"
+    <div className="h-full flex flex-col items-center justify-center p-8">
+        
+        <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md border border-service-cyan/30 bg-[#001014] p-1 relative group overflow-hidden"
         >
-            [ ENTER_HOLO_DECK ]
-        </button>
+            {/* Corner Accents */}
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-service-cyan" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-service-cyan" />
+
+            <div className="bg-black/50 p-8 flex flex-col items-center text-center relative z-10 backdrop-blur-sm">
+                
+                <div className="w-20 h-20 bg-service-cyan/10 rounded-full flex items-center justify-center mb-6 border border-service-cyan/30 shadow-[0_0_30px_rgba(0,240,255,0.15)] group-hover:scale-110 transition-transform duration-500">
+                    <Box size={40} className="text-service-cyan" />
+                </div>
+
+                <h2 className="text-2xl font-header font-black text-service-cyan tracking-widest mb-2">
+                    HOLO_DECK
+                </h2>
+                
+                <p className="text-xs text-service-cyan/60 font-mono mb-8 leading-relaxed max-w-[240px]">
+                    Initialize high-fidelity simulation environment. 
+                    <br/><span className="text-gray-500">Warning: Main OS will be suspended.</span>
+                </p>
+
+                <button 
+                    onClick={enterSandbox}
+                    onMouseEnter={() => AudioSystem.playHover()}
+                    className="w-full py-4 bg-service-cyan text-black font-header font-black text-sm tracking-[0.2em] hover:bg-white transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn"
+                >
+                    <span className="relative z-10 flex items-center gap-2">
+                        INITIALIZE <ArrowRight size={16} />
+                    </span>
+                    <div className="absolute inset-0 bg-white translate-x-[-100%] group-hover/btn:translate-x-0 transition-transform duration-300 z-0" />
+                </button>
+            </div>
+
+            {/* Animated Grid BG */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(45deg,transparent_25%,rgba(0,240,255,0.1)_25%,rgba(0,240,255,0.1)_50%,transparent_50%,transparent_75%,rgba(0,240,255,0.1)_75%,rgba(0,240,255,0.1)_100%)] bg-[length:20px_20px] animate-pulse" />
+        </motion.div>
+
+        <div className="mt-6 flex items-center gap-2 text-[10px] font-mono text-gray-500">
+            <Zap size={12} className="text-alert-yellow" />
+            <span>GPU_ACCELERATION: ENABLED</span>
+        </div>
     </div>
   );
 };
@@ -8301,12 +8891,14 @@ export interface RegisteredPanel {
 
 export type UpgradeOption = 
   | 'OVERCLOCK'      // Attack Speed
-  | 'EXECUTE'        // Damage (Renamed from ROOT)
-  | 'BANDWIDTH'      // Width
+  | 'EXECUTE'        // Damage
   | 'FORK'           // Multishot
-  | 'SNIFFER'        // Homing Independent
-  | 'BACKDOOR'       // Rear Gun
-  | 'REPAIR_NANITES'; // Heal
+  | 'SNIFFER'        // Homing
+  | 'BACKDOOR'       // Rear Guard
+  | 'DAEMON'         // Summon Ally
+  | 'REPAIR_NANITES' // Heal
+  | 'RESTORE'        // System Op
+  | 'PURGE';         // System Op
 
 export interface GameState {
   isPlaying: boolean;
@@ -13793,7 +14385,8 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            PanelRegistry.healPanel(p.id, 4); 
+            // UPDATED: Reduced from 4 to 2.8 (30% slower)
+            PanelRegistry.healPanel(p.id, 2.8); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
@@ -13946,8 +14539,9 @@ export class StructureSystem implements IGameSystem {
   private decayTimer = 0;
   // Decay logic runs at 10hz (every 0.1s)
   private readonly DECAY_INTERVAL = 0.1; 
-  // FIXED: 1 HP per 0.1s = 10 DPS decay (10s to lose full bar)
-  private readonly DECAY_AMOUNT = 1; 
+  
+  // UPDATED: 2 HP per 0.1s = 20 DPS decay (Twice as fast as before)
+  private readonly DECAY_AMOUNT = 2; 
 
   setup(locator: IServiceLocator): void {
     // No dependencies needed yet
@@ -14002,7 +14596,7 @@ export class PlayerSystem implements IGameSystem {
     this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
-    this.config = locator.getConfigService(); // INJECTED CONFIG
+    this.config = locator.getConfigService();
     
     this.setupListeners();
   }
@@ -14039,7 +14633,6 @@ export class PlayerSystem implements IGameSystem {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
         
-        // USE INJECTED CONFIG
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
@@ -14099,7 +14692,6 @@ export class PlayerSystem implements IGameSystem {
     for (const e of enemies) {
       if (!e.active) continue;
       
-      // UPDATED: Ignore Bullets (Hunter Orbs, etc.)
       if (e.hasTag(Tag.BULLET)) continue;
 
       const state = e.getComponent<StateComponent>('State');
@@ -14121,13 +14713,12 @@ export class PlayerSystem implements IGameSystem {
       const projectileCount = 1 + (forkLevel * 2);
       const dmgLevel = upgrades['EXECUTE'] || 0;
       const damage = 1 + dmgLevel;
-      const widthLevel = upgrades['BANDWIDTH'] || 0;
-      const width = 1.0 + (widthLevel * 0.5);
       const snifferLevel = upgrades['SNIFFER'] || 0;
       const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
+      const width = 1.0;
       const baseSpread = 0.15;
-      const spreadAngle = baseSpread * width; 
+      const spreadAngle = baseSpread; // Fixed spread now that width scaling is gone
       
       const tPos = targetEnemy.getComponent<TransformComponent>('Transform')!;
       const dx = tPos.x - cursor.x;
@@ -14135,7 +14726,6 @@ export class PlayerSystem implements IGameSystem {
       const baseAngle = Math.atan2(dy, dx);
       const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-      // Use Config for Bullet Speed/Life
       const bSpeed = this.config.player.bulletSpeed;
       const bLife = this.config.player.bulletLife;
 
@@ -14791,7 +15381,7 @@ export class GameStateSystem implements IGameStateSystem {
   public upgradePoints: number = 0;
 
   public activeUpgrades: Record<string, number> = {
-    'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+    'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
@@ -14835,7 +15425,7 @@ export class GameStateSystem implements IGameStateSystem {
     this.upgradePoints = 0;
     this.isGameOver = false;
     this.activeUpgrades = { 
-        'OVERCLOCK': 0, 'EXECUTE': 0, 'BANDWIDTH': 0, 'FORK': 0,
+        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
     };
   }

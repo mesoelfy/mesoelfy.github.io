@@ -19,15 +19,17 @@ export class TargetingSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.updatePlayerCache();
 
+    // Iterate Iterable instead of array
     const entities = this.registry.getAll();
     
     for (const entity of entities) {
         if (!entity.active) continue;
 
         const target = entity.getComponent<TargetComponent>('Target');
-        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!target) continue;
 
-        if (!target || !transform) continue;
+        const transform = entity.getComponent<TransformComponent>('Transform');
+        if (!transform) continue;
 
         // Locked target validation
         if (target.locked && target.id) {
@@ -46,10 +48,6 @@ export class TargetingSystem implements IGameSystem {
             }
             // Validate Enemy Target (for Homing Bullets)
             else if (target.type === 'ENEMY') {
-                // If target ID is generic 'PLAYER', skip check.
-                // If it's a specific Entity ID (stringified), check if alive.
-                // For now, we recalculate nearest enemy every frame for bullets 
-                // because enemies die fast. Simple and robust.
                 target.locked = false; 
             }
             else if (target.type === 'PLAYER' && this.playerCache) {
@@ -77,7 +75,6 @@ export class TargetingSystem implements IGameSystem {
                 target.y = bestPanel.y;
                 target.locked = true; 
             } else {
-                // Fallback to Player if no panels
                 if (this.playerCache) {
                     target.x = this.playerCache.x;
                     target.y = this.playerCache.y;
@@ -85,25 +82,24 @@ export class TargetingSystem implements IGameSystem {
                 }
             }
         }
-        // NEW: Bullet Homing Logic
         else if (target.type === 'ENEMY') {
             const bestEnemy = this.findNearestEnemy(transform.x, transform.y);
             if (bestEnemy) {
-                // We don't ID lock bullets, we just steer to coordinates
                 target.x = bestEnemy.x;
                 target.y = bestEnemy.y;
                 target.id = 'ENEMY_LOCKED';
             } else {
-                target.id = null; // No target found, fly straight
+                target.id = null; 
             }
         }
     }
   }
 
   private updatePlayerCache() {
+      // getByTag now returns Iterable, so we iterator manually or use Array.from if strictly needed (but we just want first)
       const players = this.registry.getByTag(Tag.PLAYER);
-      if (players.length > 0) {
-          const t = players[0].getComponent<TransformComponent>('Transform');
+      for (const p of players) {
+          const t = p.getComponent<TransformComponent>('Transform');
           if (t) {
               this.playerCache = { x: t.x, y: t.y };
               return;
@@ -121,6 +117,7 @@ export class TargetingSystem implements IGameSystem {
           if (p.isDestroyed) continue;
           const dx = p.x - x;
           const dy = p.y - y;
+          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           if (distSq < minDist) {
               minDist = distSq;
@@ -134,13 +131,10 @@ export class TargetingSystem implements IGameSystem {
       const enemies = this.registry.getByTag(Tag.ENEMY);
       let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
-      // Range limit for homing (don't target things across map)
       const MAX_RANGE_SQ = 15 * 15; 
 
       for (const e of enemies) {
           if (!e.active) continue;
-          
-          // UPDATED: Ignore Enemy Projectiles
           if (e.hasTag(Tag.BULLET)) continue;
 
           const t = e.getComponent<TransformComponent>('Transform');
@@ -148,6 +142,7 @@ export class TargetingSystem implements IGameSystem {
           
           const dx = t.x - x;
           const dy = t.y - y;
+          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           
           if (distSq < minDist && distSq < MAX_RANGE_SQ) {

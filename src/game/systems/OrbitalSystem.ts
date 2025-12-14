@@ -12,13 +12,19 @@ export class OrbitalSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const orbitals = this.registry.getAll(); // Filter by component in loop for speed or tag?
-    // Optimization: In a real ECS we'd query by component. Here we iterate.
+    const orbitals = this.registry.getAll();
     
-    // Find Player Cache (Parent)
+    // OPTIMIZATION FIX: getByTag returns Iterable, not Array.
+    // Use iterator to get the first player efficiently.
+    let player = null;
     const players = this.registry.getByTag(Tag.PLAYER);
-    if (players.length === 0) return;
-    const player = players[0];
+    for (const p of players) {
+        player = p;
+        break; // Just get the first one
+    }
+
+    if (!player) return;
+    
     const pPos = player.getComponent<TransformComponent>('Transform');
     if (!pPos) return;
 
@@ -38,9 +44,6 @@ export class OrbitalSystem implements IGameSystem {
         // Update Position (Parent Pos + Orbit Offset)
         transform.x = pPos.x + Math.cos(orb.angle) * orb.radius;
         transform.y = pPos.y + Math.sin(orb.angle) * orb.radius;
-        
-        // Rotate self to look outward (tangent) or just spin?
-        // Let's spin the mesh in the renderer, keep physics rotation simple.
     }
   }
 
