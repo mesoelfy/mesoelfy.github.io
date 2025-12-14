@@ -1,6 +1,6 @@
 import { useStore } from '@/core/store/useStore';
 import { RangeSlider } from '../components/RangeSlider';
-import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind } from 'lucide-react';
+import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
 import { AudioSystem } from '@/core/audio/AudioSystem';
 import { clsx } from 'clsx';
 import { 
@@ -11,13 +11,12 @@ import {
   getAmbienceStereoGain 
 } from '@/core/audio/AudioMath';
 
-// Dynamic Toggle Component
 const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
   const Icon = isActive ? IconOn : (IconOff || IconOn);
   
   return (
     <button
-      onClick={() => { onClick(); AudioSystem.playClick(); }}
+      onClick={(e) => { onClick(); AudioSystem.playClick(); }}
       onMouseEnter={() => AudioSystem.playHover()}
       className={clsx(
         "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
@@ -29,7 +28,6 @@ const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: Icon
       {isActive && (
          <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
       )}
-      {/* UPDATED: Removed fill-current, decreased strokeWidth to 1.5 */}
       <Icon 
         size={16} 
         strokeWidth={1.5}
@@ -56,7 +54,6 @@ export const SoundTab = () => {
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pr-2">
       
-      {/* HEADER ALERT */}
       <div className="p-3 border border-primary-green/30 bg-primary-green/5 flex items-start gap-3">
           <Activity size={16} className="text-primary-green mt-0.5 animate-pulse" />
           <div className="flex flex-col gap-1">
@@ -72,86 +69,89 @@ export const SoundTab = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* LEFT: GLOBAL MIXER */}
-          <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
-                  <Volume2 size={14} className="text-white/70" />
-                  <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
-              </div>
+          {/* LEFT COLUMN: MIXER & FX */}
+          <div className="flex flex-col gap-6">
               
-              <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
-                  <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ffffff_10px,#ffffff_11px)] pointer-events-none" />
-                  
-                  {/* Channel Toggles Grid */}
-                  <div className="grid grid-cols-4 gap-2 relative z-10">
-                      <ChannelToggle 
-                        label="MAIN" 
-                        isActive={audioSettings.master} 
-                        onClick={toggleMaster} 
-                        iconOn={Volume2} 
-                        iconOff={VolumeX} 
-                      />
-                      <ChannelToggle 
-                        label="MUSIC" 
-                        isActive={audioSettings.music} 
-                        onClick={toggleMusic} 
-                        iconOn={Music} 
-                        // Music icon stays same, just dimmed (Header style)
-                      />
-                      <ChannelToggle 
-                        label="SFX" 
-                        isActive={audioSettings.sfx} 
-                        onClick={toggleSfx} 
-                        iconOn={Zap} 
-                        iconOff={ZapOff}
-                      />
-                      <ChannelToggle 
-                        label="AMB" 
-                        isActive={audioSettings.ambience} 
-                        onClick={toggleAmbience} 
-                        iconOn={Wind} 
-                        // Wind icon stays same, dimmed
-                      />
+              {/* GLOBAL MIXER */}
+              <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-2">
+                      <Volume2 size={14} className="text-white/70" />
+                      <h3 className="text-xs font-bold text-white/90 tracking-wider">GLOBAL_MIXER</h3>
                   </div>
+                  
+                  <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
+                      <div className="grid grid-cols-4 gap-2 relative z-10">
+                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} />
+                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} />
+                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} />
+                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} />
+                      </div>
 
-                  {/* Sliders */}
-                  <div className="space-y-5 relative z-10">
-                    <RangeSlider 
-                      label="MASTER_OUT" 
-                      value={audioSettings.volumeMaster} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeMaster', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
-                    <RangeSlider 
-                      label="MUSIC_BUS" 
-                      value={audioSettings.volumeMusic} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeMusic', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
-                    <RangeSlider 
-                      label="SFX_BUS" 
-                      value={audioSettings.volumeSfx} 
-                      max={2.0}
-                      onChange={(v) => setVolume('volumeSfx', v, 2.0)} 
-                      format={(v) => `${(v * 100).toFixed(0)}%`}
-                    />
+                      <div className="space-y-5 relative z-10">
+                        <RangeSlider label="MASTER_OUT" value={audioSettings.volumeMaster} max={2.0} onChange={(v) => setVolume('volumeMaster', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                        <RangeSlider label="MUSIC_BUS" value={audioSettings.volumeMusic} max={2.0} onChange={(v) => setVolume('volumeMusic', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                        <RangeSlider label="SFX_BUS" value={audioSettings.volumeSfx} max={2.0} onChange={(v) => setVolume('volumeSfx', v, 2.0)} format={(v) => `${(v * 100).toFixed(0)}%`} />
+                      </div>
+                  </div>
+              </div>
+
+              {/* FX RACK */}
+              <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 border-b border-latent-purple/30 pb-2 mb-2">
+                      <Mic2 size={14} className="text-latent-purple" />
+                      <h3 className="text-xs font-bold text-latent-purple tracking-wider">FX_PROCESSOR</h3>
+                  </div>
+                  
+                  <div className="bg-latent-purple/5 p-4 border border-latent-purple/10 space-y-5 relative">
+                      <RangeSlider 
+                        label="REVERB_SEND" 
+                        value={audioSettings.fxReverbMix} 
+                        max={1.0} 
+                        onChange={(v) => setVolume('fxReverbMix', v, 1.0)} 
+                        format={(v) => `${(v * 100).toFixed(0)}%`}
+                        color="text-latent-purple"
+                      />
+                      <div className="h-px bg-latent-purple/10 w-full" />
+                      <RangeSlider 
+                        label="DELAY_SEND" 
+                        value={audioSettings.fxDelayMix} 
+                        max={1.0} 
+                        onChange={(v) => setVolume('fxDelayMix', v, 1.0)} 
+                        format={(v) => `${(v * 100).toFixed(0)}%`}
+                        color="text-latent-purple"
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                          <RangeSlider 
+                            label="DELAY_TIME" 
+                            value={audioSettings.fxDelayTime} 
+                            max={1.0} 
+                            onChange={(v) => setVolume('fxDelayTime', v, 1.0)} 
+                            format={(v) => `${(0.1 + v * 0.9).toFixed(2)}s`}
+                            color="text-latent-purple"
+                          />
+                          <RangeSlider 
+                            label="FEEDBACK" 
+                            value={audioSettings.fxDelayFeedback} 
+                            max={0.9} 
+                            onChange={(v) => setVolume('fxDelayFeedback', v, 0.9)} 
+                            format={(v) => `${(v * 100).toFixed(0)}%`}
+                            color="text-latent-purple"
+                          />
+                      </div>
                   </div>
               </div>
           </div>
 
-          {/* RIGHT: AMBIENCE LAB */}
+          {/* RIGHT COLUMN: AMBIENCE LAB */}
           <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 border-b border-alert-yellow/30 pb-2 mb-2">
                   <Waves size={14} className="text-alert-yellow" />
                   <h3 className="text-xs font-bold text-alert-yellow tracking-wider">
-                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE FLOOR)</span>
+                    AMBIENCE_SYNTH <span className="opacity-50 text-[10px] ml-1 font-mono">// (BROWN NOISE)</span>
                   </h3>
               </div>
 
-              <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative">
-                  {/* Decorative corner */}
+              <div className="space-y-5 bg-alert-yellow/5 p-4 border border-alert-yellow/10 relative h-full">
                   <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-alert-yellow/30" />
 
                   <RangeSlider 
@@ -166,16 +166,14 @@ export const SoundTab = () => {
 
                   <div className="h-px bg-alert-yellow/10 w-full" />
 
-                  <div className="grid grid-cols-1 gap-5">
-                      <RangeSlider 
-                        label="SPECTRAL_GATE (CUTOFF)" 
-                        value={audioSettings.ambFilter} 
-                        max={1.0} 
-                        markerValue={0.5}
-                        onChange={(v) => setVolume('ambFilter', v, 1.0)} 
-                        format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
-                      />
-                  </div>
+                  <RangeSlider 
+                    label="SPECTRAL_GATE (CUTOFF)" 
+                    value={audioSettings.ambFilter} 
+                    max={1.0} 
+                    markerValue={0.5}
+                    onChange={(v) => setVolume('ambFilter', v, 1.0)} 
+                    format={(v) => `${getAmbienceFilterHz(v).toFixed(0)} Hz`}
+                  />
                   
                   <div className="grid grid-cols-2 gap-4">
                       <RangeSlider 

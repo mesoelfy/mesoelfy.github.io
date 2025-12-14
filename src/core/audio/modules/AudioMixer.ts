@@ -4,7 +4,8 @@ import {
   getAmbiencePanFreq, 
   getAmbienceModFreq, 
   getAmbienceModDepth, 
-  getAmbienceStereoGain
+  getAmbienceStereoGain,
+  generateImpulseResponse
 } from '../AudioMath';
 
 export class AudioMixer {
@@ -17,6 +18,13 @@ export class AudioMixer {
   // Mastering Chain
   public compressor!: DynamicsCompressorNode;
   public analyser!: AnalyserNode;
+
+  // FX Rack
+  private reverbNode!: ConvolverNode;
+  private reverbSend!: GainNode;
+  private delayNode!: DelayNode;
+  private delayFeedback!: GainNode;
+  private delaySend!: GainNode;
 
   // Ambience Graph (DSP)
   private ambiencePanner!: StereoPannerNode;
@@ -50,27 +58,44 @@ export class AudioMixer {
     this.analyser = ctx.createAnalyser();
 
     // 3. Configure Mastering
-    // Compressor: "Limiter" style to catch loud explosions
-    this.compressor.threshold.value = -12; // Start compressing at -12dB
-    this.compressor.knee.value = 30;       // Soft knee
-    this.compressor.ratio.value = 12;      // High ratio (limit)
-    this.compressor.attack.value = 0.003;  // Fast attack
-    this.compressor.release.value = 0.25;  // Quick release
+    this.compressor.threshold.value = -12; 
+    this.compressor.knee.value = 30;       
+    this.compressor.ratio.value = 12;      
+    this.compressor.attack.value = 0.003;  
+    this.compressor.release.value = 0.25;  
 
-    // Analyser: For Visuals
-    this.analyser.fftSize = 64; // Low res is fine for UI bars (32 bins)
+    this.analyser.fftSize = 64; 
     this.analyser.smoothingTimeConstant = 0.8;
 
-    // 4. Connect Graph
-    // Sources -> Master Gain -> Compressor -> Analyser -> Destination
-    this.sfxGain.connect(this.masterGain);
+    // 4. Create FX Rack
+    this.reverbNode = ctx.createConvolver();
+    this.reverbNode.buffer = generateImpulseResponse(ctx, 1.5, 2.0);
+    this.reverbSend = ctx.createGain(); 
+
+    this.delayNode = ctx.createDelay(1.0);
+    this.delayFeedback = ctx.createGain();
+    this.delaySend = ctx.createGain(); 
+
+    this.delayNode.connect(this.delayFeedback);
+    this.delayFeedback.connect(this.delayNode);
+    this.delayNode.connect(this.masterGain);
+
+    this.reverbNode.connect(this.masterGain);
+
+    // 5. Connect Signal Flow
     this.musicGain.connect(this.masterGain);
+    this.sfxGain.connect(this.masterGain);
+    this.sfxGain.connect(this.reverbSend);
+    this.sfxGain.connect(this.delaySend);
     
+    this.reverbSend.connect(this.reverbNode);
+    this.delaySend.connect(this.delayNode);
+
     this.masterGain.connect(this.compressor);
     this.compressor.connect(this.analyser);
     this.analyser.connect(ctx.destination);
 
-    // 5. Build Ambience DSP Graph
+    // 6. Ambience DSP
     this.ambiencePanner = ctx.createStereoPanner();
     this.ambienceFilter = ctx.createBiquadFilter();
     this.ambienceLFO = ctx.createOscillator();
@@ -78,12 +103,10 @@ export class AudioMixer {
     this.ambienceDepthLFO = ctx.createOscillator();
     this.ambienceDepthGain = ctx.createGain();
 
-    // Ambience Routing (Joins Master at the end)
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner); 
     this.ambiencePanner.connect(this.masterGain);
 
-    // Modulation Routing
     this.ambienceLFO.type = 'sine';
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
@@ -121,6 +144,21 @@ export class AudioMixer {
     this.ambiencePanConstraint.gain.value = getAmbienceStereoGain(width);
     this.ambienceDepthLFO.frequency.value = getAmbienceModFreq(modSpeed);
     this.ambienceDepthGain.gain.value = getAmbienceModDepth(modDepth);
+
+    // FX UPDATES (SAFE MODE: Handle undefined)
+    if (this.reverbSend) {
+        // Defaults: Reverb 20%, Delay 10%
+        this.reverbSend.gain.value = settings.fxReverbMix ?? 0.2;
+        this.delaySend.gain.value = settings.fxDelayMix ?? 0.1;
+        
+        // Delay Time: Default 0.25 (short slap)
+        const rawDelayTime = settings.fxDelayTime ?? 0.25;
+        // Clamp logic again just to be safe from NaN
+        const safeDelayTime = Number.isFinite(rawDelayTime) ? rawDelayTime : 0.25;
+        this.delayNode.delayTime.value = 0.1 + (safeDelayTime * 0.9);
+        
+        this.delayFeedback.gain.value = settings.fxDelayFeedback ?? 0.3;
+    }
   }
 
   public duckMusic(intensity: number, duration: number) {
@@ -140,7 +178,6 @@ export class AudioMixer {
     this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
   }
   
-  // NEW: Accessor for Visualizer
   public getByteFrequencyData(array: Uint8Array) {
       if (this.analyser) {
           this.analyser.getByteFrequencyData(array);

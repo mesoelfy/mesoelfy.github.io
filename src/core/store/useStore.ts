@@ -22,6 +22,12 @@ interface AudioSettings {
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
+
+  // FX Rack
+  fxReverbMix: number; 
+  fxDelayMix: number;  
+  fxDelayTime: number; 
+  fxDelayFeedback: number; 
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
@@ -39,6 +45,12 @@ const DEFAULT_AUDIO: AudioSettings = {
   ambWidth: 0.5,
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
+
+  // TASTEFUL DEFAULTS
+  fxReverbMix: 0.2,     // 20% Wet (Atmosphere)
+  fxDelayMix: 0.1,      // 10% Wet (Subtle Echo)
+  fxDelayTime: 0.25,    // Short Slap-back
+  fxDelayFeedback: 0.3  // Quick Decay
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
@@ -65,7 +77,6 @@ interface AppState {
   
   sandboxView: SandboxView;
   
-  // Gallery State
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   

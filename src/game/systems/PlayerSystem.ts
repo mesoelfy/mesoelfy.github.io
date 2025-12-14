@@ -93,8 +93,7 @@ export class PlayerSystem implements IGameSystem {
       const damage = 100;
       const width = 3.0; 
 
-      // SPATIAL MATRIX: Pass cursor.x for pan
-      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS.EXPLOSION_YELLOW, cursor.x, cursor.y);
+      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
 
       for (let i = 0; i < count; i++) {
@@ -184,8 +183,8 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      // SPATIAL MATRIX: Pass cursor.x to playSound via FastEvent
-      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS.FX_PLAYER_FIRE, cursor.x);
+      // FIX: Use bracket notation for safety and ensure x is passed
+      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], cursor.x || 0);
       
       this.lastFireTime = time;
     }

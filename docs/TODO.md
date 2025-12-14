@@ -530,4 +530,12 @@ VIBE CODE
 
     - “We will make the "MESOELFY_OS" logo in the Header pulse with the beat/audio volume.” - how should we override this when in critical health? can we time the heart beat sound effect with the music and speed up the music when in critical health?
 
-    - can we make the MESOELFY_OS health bar animate like a waveform from the music? What about the moving motion background grid?
+ 
+
+     Need to add frames and 
+
+            - can we make the MESOELFY_OS health bar animate like a waveform from the music? What about the moving motion background grid?
+
+        - Implemented 'useAudioVisualizer' hook to bridge Web Audio data to React components via requestAnimationFrame. Wired this into the Header component, causing the 'MESOELFY_OS' logo to pulse in sync with the audio output (music + sfx).
+
+    - need sound effect for hunter charging then releasing projectile

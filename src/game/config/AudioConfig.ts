@@ -35,9 +35,11 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0 },
 
   // ==========================================
-  // GAMEPLAY FX (ONE SHOT)
+  // GAMEPLAY FX
   // ==========================================
-  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.15, pitchVariance: 100 },
+  // UPDATED: Volume 0.15 -> 0.35, Slightly sharper attack
+  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.35, pitchVariance: 100, attack: 0.005 },
+  
   'fx_enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50 },
   'fx_impact_light': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20 },
   'fx_impact_heavy': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50 },
@@ -48,7 +50,7 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
 
   // ==========================================
-  // LOOPS & STATES (CONTINUOUS)
+  // LOOPS & STATES
   // ==========================================
   'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
@@ -58,11 +60,10 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   // ==========================================
   // AMBIENCE
   // ==========================================
-  // UPDATED: Volume increased from 0.05 to 0.24 (Natural Source Level)
   'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0 },
 
   // ==========================================
-  // SYNTHESIS LAB (RENAMED PROTOS)
+  // SYNTH LAB
   // ==========================================
   'syn_fm_scream': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 } },
   'syn_data_burst': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50 },

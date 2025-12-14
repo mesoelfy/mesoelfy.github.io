@@ -7,10 +7,11 @@ const STRIDE = 5;
 export const FastEvents = {
   SPAWN_FX: 1,      // [ID, TYPE_ID, X, Y, ANGLE]
   TRAUMA: 2,        // [ID, AMOUNT, 0, 0, 0]
-  PLAY_SOUND: 3,    // [ID, SOUND_ID, 0, 0, 0]
+  PLAY_SOUND: 3,    // [ID, SOUND_ID, X_POS, 0, 0]
 } as const;
 
 export const FX_IDS: Record<string, number> = {
+  // VISUALS
   'EXPLOSION_PURPLE': 1,
   'EXPLOSION_YELLOW': 2,
   'EXPLOSION_RED': 3,
@@ -22,7 +23,7 @@ export const FX_IDS: Record<string, number> = {
   'REBOOT_HEAL': 9,
   'PURGE_BLAST': 10,
   
-  // AUDIO MAPPINGS (New)
+  // AUDIO TRIGGERS (50+)
   'FX_PLAYER_FIRE': 50,
   'FX_IMPACT_HEAVY': 51,
   'FX_IMPACT_LIGHT': 52
@@ -39,6 +40,12 @@ class FastEventBusController {
   private readCursor = 0;
 
   public emit(eventId: number, arg1: number = 0, arg2: number = 0, arg3: number = 0, arg4: number = 0) {
+    // Safety check for NaN - prevents breaking the AudioDirector lookup
+    if (isNaN(arg1)) {
+        console.warn(`[FastEventBus] Attempted to emit NaN arg1 for event ${eventId}`);
+        return;
+    }
+
     const ptr = (this.writeCursor & MASK) * STRIDE;
     
     this.buffer[ptr] = eventId;

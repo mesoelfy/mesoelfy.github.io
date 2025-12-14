@@ -86,7 +86,12 @@ class AudioSystemController {
       }
 
       const panner = ctx.createStereoPanner();
-      panner.pan.value = Math.max(-1, Math.min(1, pan));
+      
+      // FIX: Strict NaN check. Fallback to 0.
+      let safePan = Number.isFinite(pan) ? pan : 0;
+      safePan = Math.max(-1, Math.min(1, safePan));
+      
+      panner.pan.value = safePan;
 
       source.connect(panner);
       panner.connect(this.mixer.sfxGain);
@@ -150,12 +155,11 @@ class AudioSystemController {
       this.mixer.duckMusic(intensity, duration);
   }
 
-  // --- VISUALIZER ACCESS ---
   public getFrequencyData(array: Uint8Array) {
       this.mixer.getByteFrequencyData(array);
   }
 
-  // --- ALIASES ---
+  // Aliases
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 

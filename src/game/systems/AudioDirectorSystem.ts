@@ -20,6 +20,11 @@ export class AudioDirectorSystem implements IGameSystem {
                 const audioKey = key.toLowerCase();
                 const pan = this.calculatePan(a2); 
                 AudioSystem.playSound(audioKey, pan);
+            } else {
+                // Debug: Catch unmapped IDs
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn(`[AudioDirector] Unknown Sound ID: ${a1}`);
+                }
             }
         }
     });
@@ -42,7 +47,6 @@ export class AudioDirectorSystem implements IGameSystem {
         AudioSystem.playSound('loop_heal', pan);
     });
 
-    // UPDATED: Use p.x if provided (Mouse Position), otherwise Panel Center
     GameEventBus.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : this.getPanelPan(p.id);
         AudioSystem.playSound('fx_reboot_success', pan);
