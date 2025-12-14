@@ -14,9 +14,10 @@
 
 ### **LATENT SPACE BANDIT // DIGITAL HQ**
 
-![System Status](https://img.shields.io/badge/SYSTEM-UNSECURE-ff003c?style=for-the-badge&logo=linux)
-![Encryption](https://img.shields.io/badge/ENCRYPTION-BYPASSED-78F654?style=for-the-badge)
-![Core](https://img.shields.io/badge/CORE-REACT_THREE_FIBER-9E4EA5?style=for-the-badge&logo=react)
+![System Integrity](https://img.shields.io/badge/SYSTEM_INTEGRITY-100%25-78F654?style=for-the-badge&logo=githubactions&logoColor=black)
+![Latent Space](https://img.shields.io/badge/LATENT_SPACE-CONNECTED-9E4EA5?style=for-the-badge&logo=network&logoColor=white)
+![Threat Level](https://img.shields.io/badge/THREAT_LEVEL-CRITICAL-FF003C?style=for-the-badge&logo=security&logoColor=white)
+![Core](https://img.shields.io/badge/KERNEL-REACT_THREE_FIBER-00F0FF?style=for-the-badge&logo=react&logoColor=black)
 
 </div>
 
