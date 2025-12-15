@@ -62,22 +62,27 @@ export const HunterLogic: EnemyLogic = {
     else if (state.current === 'LOCK') {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
+        
+        // Strictly face the target
         pos.rotation = angleToTarget;
         
-        // --- MARCHING ANTS LASER ---
-        // Emit particles that move FAST along the vector. 
-        // ParticleActor will stretch them into dashes.
+        // --- EXHAUST PLUME ---
         if (Math.random() > 0.2) { 
             const particleSys = ServiceLocator.getParticleSystem();
             
-            // Spawn at hunter
-            const px = pos.x + Math.cos(angleToTarget);
-            const py = pos.y + Math.sin(angleToTarget);
+            // SIMPLIFIED: Use current rotation (Tip Direction)
+            const fwdX = Math.cos(pos.rotation);
+            const fwdY = Math.sin(pos.rotation);
             
-            // Velocity towards player (High speed = Long Dash)
+            // Spawn at the rear (negative forward vector)
+            // Offset slightly so it doesn't clip inside the mesh center
+            const px = pos.x - fwdX;
+            const py = pos.y - fwdY;
+            
+            // Velocity: Fast backward thrust
             const speed = 25.0; 
-            const vx = Math.cos(angleToTarget) * speed;
-            const vy = Math.sin(angleToTarget) * speed;
+            const vx = -fwdX * speed;
+            const vy = -fwdY * speed;
             
             // Color: Bright Yellow
             particleSys.spawn(px, py, '#F7D277', vx, vy, 0.4); 
@@ -106,6 +111,7 @@ export const HunterLogic: EnemyLogic = {
         ctx.playSound('fx_enemy_fire', pos.x);
         ctx.spawnLaunchSparks(pos.x + dirX, pos.y + dirY, angleToTarget);
 
+        // Recoil kick backwards
         motion.vx = -dirX * 5.0;
         motion.vy = -dirY * 5.0;
 
