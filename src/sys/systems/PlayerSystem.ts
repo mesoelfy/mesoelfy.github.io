@@ -6,9 +6,18 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
+import { RenderData } from '@/sys/data/RenderData';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { GAME_THEME } from '@/ui/sim/config/theme';
+import * as THREE from 'three';
+
+// Helpers
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
+const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_DEAD = new THREE.Color('#FF003C');
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -18,6 +27,9 @@ export class PlayerSystem implements IGameSystem {
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
   private logTimer = 0;
+  
+  // Reusable
+  private tempColor = new THREE.Color();
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
@@ -30,8 +42,6 @@ export class PlayerSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
-
     let playerEntity = null;
     for (const p of this.registry.getByTag(Tag.PLAYER)) {
         playerEntity = p;
@@ -40,22 +50,67 @@ export class PlayerSystem implements IGameSystem {
     
     if (!playerEntity) return;
 
-    const cursor = this.locator.getInputService().getCursor();
+    // --- 1. VISUAL STATE UPDATE (ECS DRIVEN) ---
+    const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+    const cursor = this.locator.getInputService().getCursor();
+
     if (transform) {
         transform.x = cursor.x;
         transform.y = cursor.y;
     }
 
+    if (render) {
+        let targetCol = COL_BASE;
+        let spinSpeed = -0.02; // Idle spin
+        
+        let interactState = 'IDLE';
+        try {
+            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
+            interactState = interact.repairState;
+        } catch {}
+
+        if (this.gameSystem.playerHealth <= 0) {
+            targetCol = COL_DEAD;
+            if (interactState === 'REBOOTING') {
+                targetCol = COL_REBOOT;
+                spinSpeed = -10.0;
+            } else {
+                spinSpeed = 1.5;
+            }
+        } else {
+            if (interactState === 'HEALING') {
+                targetCol = COL_REPAIR;
+                spinSpeed = 0.4;
+            }
+        }
+
+        // LERP Color
+        this.tempColor.setRGB(render.r, render.g, render.b);
+        this.tempColor.lerp(targetCol, delta * 3.0);
+        render.r = this.tempColor.r;
+        render.g = this.tempColor.g;
+        render.b = this.tempColor.b;
+
+        // Apply Spin
+        render.visualRotation += spinSpeed;
+        
+        // Pulse Effect (if interacting)
+        if (interactState !== 'IDLE' && this.gameSystem.playerHealth > 0) {
+            render.visualScale = 1.2 + Math.sin(time * 20) * 0.2;
+        } else {
+            render.visualScale = 1.0;
+        }
+    }
+
+    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+
+    // --- 2. GAMEPLAY LOGIC ---
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         try {
             const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
-            if (interact && interact.repairState !== 'IDLE') {
-                stateComp.current = 'REBOOTING';
-            } else {
-                stateComp.current = 'ACTIVE';
-            }
+            stateComp.current = interact.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
         } catch {
             stateComp.current = 'ACTIVE';
         }

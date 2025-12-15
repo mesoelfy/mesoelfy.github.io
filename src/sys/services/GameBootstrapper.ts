@@ -6,6 +6,9 @@ import { SYSTEM_MANIFEST } from '@/sys/config/SystemManifest';
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
+import { Tag } from '@/engine/ecs/types';
+import { ComponentBuilder } from './ComponentBuilder';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();
@@ -20,23 +23,17 @@ export const GameBootstrapper = () => {
   registerAllBehaviors();
   registerAllAssets();
 
-  // Create PanelSystem instance manually to ensure we control its lifecycle
   const panelSystem = new PanelRegistrySystem();
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
   engine.registerSystem(panelSystem);
 
-  // Boot remaining systems
   SYSTEM_MANIFEST.forEach(def => {
-      // PanelRegistrySystem is already registered, skip it
       if (def.id === 'PanelRegistrySystem') return;
-      
       const system = def.factory();
       ServiceLocator.registerSystem(def.id, system);
       engine.registerSystem(system);
   });
 
-  // Setup Phase
-  // Manually setup PanelSystem first as others might depend on it
   panelSystem.setup(ServiceLocator);
 
   SYSTEM_MANIFEST.forEach(def => {
@@ -46,7 +43,16 @@ export const GameBootstrapper = () => {
   });
   
   engine.setup(ServiceLocator);
+  
+  // 1. Spawn Player
   spawner.spawnPlayer();
+
+  // 2. Spawn World Entity (Global Visual State)
+  const world = registry.createEntity();
+  world.addTag(Tag.WORLD);
+  // Default: Green, Normal Speed (1.0), 0 Rotation
+  world.addComponent(ComponentBuilder[ComponentType.Render]({ r: 0, g: 1, b: 0.25, visualScale: 1.0, visualRotation: 0 }));
+  registry.updateCache(world);
 
   return engine;
 };

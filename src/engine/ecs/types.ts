@@ -8,5 +8,6 @@ export enum Tag {
   ENEMY = 'ENEMY',
   BULLET = 'BULLET',
   PARTICLE = 'PARTICLE',
-  OBSTACLE = 'OBSTACLE'
+  OBSTACLE = 'OBSTACLE',
+  WORLD = 'WORLD' // NEW
 }

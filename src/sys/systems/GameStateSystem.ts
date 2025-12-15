@@ -1,9 +1,19 @@
-import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
 import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/sys/state/global/useStore'; 
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { RenderData } from '@/sys/data/RenderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Tag } from '@/engine/ecs/types';
+import * as THREE from 'three';
+
+// Constants for World Colors
+const COL_SAFE = new THREE.Color("#003300"); // Dark Green
+const COL_WARN = new THREE.Color("#4d3300"); // Dark Yellow
+const COL_CRIT = new THREE.Color("#4d0000"); // Dark Red
+const COL_SBX  = new THREE.Color("#001a33"); // Sandbox Blue
 
 export class GameStateSystem implements IGameStateSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -25,9 +35,15 @@ export class GameStateSystem implements IGameStateSystem {
   
   private heartbeatTimer: number = 0;
   private panelSystem!: IPanelSystem;
+  private registry!: IEntityRegistry;
+  
+  // Reusable lerp helpers
+  private targetColor = new THREE.Color();
+  private currentColor = new THREE.Color();
 
   setup(locator: IServiceLocator): void {
     this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+    this.registry = locator.getRegistry();
     this.reset();
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
@@ -38,10 +54,10 @@ export class GameStateSystem implements IGameStateSystem {
       if (this.isGameOver) return;
 
       const integrity = this.panelSystem.systemIntegrity;
-
+      
+      // --- HEARTBEAT LOGIC ---
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
-          
           if (this.heartbeatTimer <= 0) {
               const urgency = 1.0 - (integrity / 30);
               AudioSystem.playSound('loop_warning');
@@ -50,6 +66,33 @@ export class GameStateSystem implements IGameStateSystem {
           }
       } else {
           this.heartbeatTimer = 0;
+      }
+
+      // --- WORLD VISUAL UPDATE (ECS Driven) ---
+      const worldEntities = this.registry.getByTag(Tag.WORLD);
+      for (const world of worldEntities) {
+          const render = world.getComponent<RenderData>(ComponentType.Render);
+          if (render) {
+              const bootState = useStore.getState().bootState;
+              
+              if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
+              else if (integrity < 30) this.targetColor.copy(COL_CRIT);
+              else if (integrity < 60) this.targetColor.copy(COL_WARN);
+              else this.targetColor.copy(COL_SAFE);
+
+              // Smooth Lerp
+              this.currentColor.setRGB(render.r, render.g, render.b);
+              this.currentColor.lerp(this.targetColor, delta * 3.0);
+              
+              render.r = this.currentColor.r;
+              render.g = this.currentColor.g;
+              render.b = this.currentColor.b;
+              
+              // Scroll Speed (Visual Rotation used as Z-Scroll Offset)
+              // This drives the matrix grid scrolling in the shader
+              // 0.5 is base speed
+              render.visualRotation += 0.5 * delta; 
+          }
       }
   }
 

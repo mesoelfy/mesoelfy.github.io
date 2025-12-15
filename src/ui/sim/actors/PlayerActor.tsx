@@ -1,16 +1,15 @@
 import { useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { useGameStore } from '@/sys/state/game/useGameStore';
+import { Tag } from '@/engine/ecs/types';
+import { TransformData } from '@/sys/data/TransformData';
+import { RenderData } from '@/sys/data/RenderData';
 import { useStore } from '@/sys/state/global/useStore';
-import { InteractionSystem, RepairState } from '@/sys/systems/InteractionSystem'; 
+import { useGameStore } from '@/sys/state/game/useGameStore';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
-const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
-const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
-const colorReboot = new THREE.Color('#9E4EA5'); 
-const colorDead = new THREE.Color('#FF003C'); 
 const aliveGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 
@@ -19,15 +18,15 @@ export const PlayerActor = () => {
   const ringRef = useRef<THREE.Mesh>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Sprite>(null);
-  const { viewport } = useThree();
   
   const { introDone } = useStore(); 
-
   const animScale = useRef(0);
+  const tempColor = useRef(new THREE.Color());
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
 
+    // --- INTRO FADE ---
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
@@ -37,70 +36,52 @@ export const PlayerActor = () => {
     }
     groupRef.current.visible = true;
 
-    const x = (state.pointer.x * viewport.width) / 2;
-    const y = (state.pointer.y * viewport.height) / 2;
-    groupRef.current.position.x = x;
-    groupRef.current.position.y = y;
-
-    try { ServiceLocator.getInputService().updateCursor(x, y); } catch {}
-
-    const storeState = useGameStore.getState();
-    const isDead = storeState.playerHealth <= 0;
-    const isGameOver = storeState.systemIntegrity <= 0;
-
-    let repairState: RepairState = 'IDLE';
+    // --- ECS READ ---
+    let playerEntity;
     try {
-        const sys = ServiceLocator.getSystem<InteractionSystem>('InteractionSystem');
-        repairState = sys.repairState;
-    } catch {}
-    
-    let targetColor = colorTurret;
-    if (repairState === 'HEALING') targetColor = colorRepair; 
-    if (repairState === 'REBOOTING') targetColor = colorReboot; 
+        const registry = ServiceLocator.getRegistry();
+        const players = registry.getByTag(Tag.PLAYER);
+        for(const p of players) { playerEntity = p; break; }
+    } catch { return; }
 
-    if (ringRef.current && coreRef.current && glowRef.current) {
-        let currentBaseScale = 1.0;
+    if (!playerEntity) return;
 
-        if (isDead || isGameOver) {
+    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+    const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+    const isDead = useGameStore.getState().playerHealth <= 0; // Keeping this check for Geo Swap
+
+    if (transform) {
+        groupRef.current.position.set(transform.x, transform.y, 0);
+    }
+
+    if (render && ringRef.current && coreRef.current && glowRef.current) {
+        // Visual Rotation (Spin)
+        // We accumulate on Z.
+        ringRef.current.rotation.z = render.visualRotation;
+        
+        // Color
+        tempColor.current.setRGB(render.r, render.g, render.b);
+        ringRef.current.material.color.copy(tempColor.current);
+        coreRef.current.material.color.copy(tempColor.current);
+        glowRef.current.material.color.copy(tempColor.current);
+
+        // Scale
+        const scale = render.visualScale * animScale.current;
+        groupRef.current.scale.setScalar(scale);
+
+        // Geo Swap
+        if (isDead) {
             ringRef.current.visible = false;
             glowRef.current.visible = false;
-            
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.copy(colorDead); 
             coreRef.current.material.wireframe = true; 
-            
-            const isRebooting = repairState === 'REBOOTING';
-            if (isRebooting) {
-                coreRef.current.rotation.z -= delta * 10.0;
-            } else {
-                coreRef.current.rotation.z += delta * 1.5; 
-            }
-            
+            coreRef.current.rotation.z = render.visualRotation; // Dead spin
         } else {
             ringRef.current.visible = true;
             glowRef.current.visible = true;
             coreRef.current.geometry = aliveGeo;
             coreRef.current.material.wireframe = false;
-            
-            if (repairState !== 'IDLE') {
-                ringRef.current.rotation.z += 0.4; 
-                ringRef.current.material.color.lerp(targetColor, 0.4);
-                coreRef.current.material.color.lerp(targetColor, 0.4);
-                glowRef.current.material.color.lerp(targetColor, 0.4);
-                
-                const pulse = 1.2 + Math.sin(state.clock.elapsedTime * 20) * 0.2;
-                currentBaseScale = pulse;
-            } else {
-                ringRef.current.rotation.z -= 0.02; 
-                ringRef.current.material.color.lerp(colorTurret, 0.1);
-                coreRef.current.material.color.lerp(colorTurret, 0.1);
-                glowRef.current.material.color.lerp(colorTurret, 0.1);
-            }
         }
-        
-        groupRef.current.scale.setScalar(animScale.current);
-        coreRef.current.scale.setScalar(currentBaseScale);
-        ringRef.current.scale.setScalar(currentBaseScale); 
     }
   });
 
