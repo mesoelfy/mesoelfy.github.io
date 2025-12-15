@@ -1,4 +1,4 @@
-import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import feed from '@/sys/config/static/feed.json';
 import { ExternalLink } from 'lucide-react';
 

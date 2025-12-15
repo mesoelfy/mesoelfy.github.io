@@ -1,4 +1,4 @@
-import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import identity from '@/sys/config/static/identity.json';
 import { StatsRadar } from '@/ui/atoms/StatsRadar';
 import { DotGridBackground } from '@/ui/atoms/DotGridBackground';

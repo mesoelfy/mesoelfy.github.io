@@ -1,4 +1,4 @@
-import { ModalContainer } from '@/ui/overlays/ModalContainer';
+import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import { Send, Terminal, Signal, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { GpuConfigPanel } from '../settings/components/GpuConfigPanel';
+import { GpuConfigPanel } from '@/ui/os/apps/settings/components/GpuConfigPanel';
 import { clsx } from 'clsx';
 
 // Atoms
