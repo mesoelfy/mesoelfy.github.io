@@ -9,6 +9,7 @@ export interface VFXRecipe {
   spread?: number;
   size?: [number, number];
   shape?: number; // 0=Square, 1=Teardrop
+  omniChance?: number; // 0.0 - 1.0: Chance for a particle to ignore direction (Hybrid)
 }
 
 const PALETTE_PURPLE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
@@ -22,30 +23,33 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   'EXPLOSION_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [12, 18], speed: [8, 15], life: [0.4, 0.7] },
   'EXPLOSION_RED':    { pattern: 'RADIAL', colors: PALETTE_RED, count: [15, 25], speed: [10, 20], life: [0.6, 1.0] },
   
-  // --- EXPLOSIONS (DIRECTIONAL SPRAY) ---
+  // --- EXPLOSIONS (DIRECTIONAL HYBRID) ---
   'EXPLOSION_PURPLE_DIR': { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_PURPLE, 
-      count: [15, 25], 
-      speed: [8, 15], 
+      count: [20, 30], 
+      speed: [5, 10], 
       life: [0.5, 0.9],
-      spread: 1.6 // Widened from 1.5
+      spread: 1.6,
+      omniChance: 0.2 // 20% scatter
   },
   'EXPLOSION_YELLOW_DIR': { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_YELLOW, 
-      count: [12, 18], 
+      count: [15, 25], 
       speed: [10, 18], 
       life: [0.4, 0.8],
-      spread: 1.6
+      spread: 1.6,
+      omniChance: 0.2
   },
   'EXPLOSION_RED_DIR': { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_RED, 
-      count: [15, 25], 
+      count: [20, 35], 
       speed: [12, 22], 
       life: [0.6, 1.0],
-      spread: 1.6 
+      spread: 1.6,
+      omniChance: 0.2 
   },
 
   // --- IMPACTS ---
@@ -53,7 +57,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   'IMPACT_RED':   { pattern: 'RADIAL', colors: PALETTE_RED, count: [4, 7], speed: [3, 8], life: [0.2, 0.4] },
   'CLASH_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
 
-  // --- DIRECTIONAL ---
+  // --- DIRECTIONAL (PURE) ---
   'DRILL_SPARKS':  { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_PURPLE, 

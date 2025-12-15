@@ -79,20 +79,28 @@ export class VFXSystem implements IGameSystem {
           let vx = 0;
           let vy = 0;
 
-          if (recipe.pattern === 'RADIAL') {
+          // HYBRID LOGIC:
+          // If 'omniChance' passes, force Radial pattern for this particle.
+          const isOmni = recipe.omniChance && Math.random() < recipe.omniChance;
+          
+          // SPEED DAMPENING:
+          // If a particle is "rebel" (omni in a directional system), slow it down 
+          // so it stays closer to the center, creating a core debris effect.
+          const finalSpeed = (isOmni && recipe.pattern === 'DIRECTIONAL') ? speed * 0.4 : speed;
+
+          if (recipe.pattern === 'RADIAL' || isOmni) {
               const a = Math.random() * Math.PI * 2;
-              vx = Math.cos(a) * speed;
-              vy = Math.sin(a) * speed;
+              vx = Math.cos(a) * finalSpeed;
+              vy = Math.sin(a) * finalSpeed;
           } 
           else if (recipe.pattern === 'DIRECTIONAL') {
               const baseDir = angle + Math.PI; 
               const spread = recipe.spread || 0.5;
               const a = baseDir + (Math.random() - 0.5) * spread;
-              vx = Math.cos(a) * speed;
-              vy = Math.sin(a) * speed;
+              vx = Math.cos(a) * finalSpeed;
+              vy = Math.sin(a) * finalSpeed;
           }
 
-          // Pass shape from recipe (default 0)
           const shape = recipe.shape || 0;
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, shape);
       }
