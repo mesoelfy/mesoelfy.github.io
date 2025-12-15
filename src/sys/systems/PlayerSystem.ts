@@ -80,6 +80,10 @@ export class PlayerSystem implements IGameSystem {
             if (interactState === 'HEALING') {
                 targetCol = COL_REPAIR;
                 spinSpeed = 0.4;
+            } else if (interactState === 'REBOOTING') {
+                // FIXED: Added missing Purple state check
+                targetCol = COL_REBOOT;
+                spinSpeed = -0.4;
             }
         }
 
@@ -90,11 +94,8 @@ export class PlayerSystem implements IGameSystem {
         render.b = this.tempColor.b;
         render.visualRotation += spinSpeed;
         
-        if (interactState !== 'IDLE' && this.gameSystem.playerHealth > 0) {
-            render.visualScale = 1.2 + Math.sin(time * 20) * 0.2;
-        } else {
-            render.visualScale = 1.0;
-        }
+        // FIXED: Removed visualScale pulsing on interaction to keep reticle stable
+        render.visualScale = 1.0;
     }
 
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
@@ -194,11 +195,8 @@ export class PlayerSystem implements IGameSystem {
       const snifferLevel = upgrades['SNIFFER'] || 0;
       const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
-      // Determine Weapon Type ID
       let configId = 'PLAYER_STANDARD';
       if (forkLevel > 0) configId = 'PLAYER_FORK';
-      
-      // Sniffer overrides Fork visually if both present (prioritize tech)
       if (snifferLevel > 0) configId = 'PLAYER_SNIFFER';
 
       const baseSpread = 0.15;
@@ -230,14 +228,12 @@ export class PlayerSystem implements IGameSystem {
       }
 
       // SNIFFER
-      // Spawns ADDITIONAL bullets if Sniffer is active
       if (snifferLevel > 0) {
           const angleStep = (Math.PI * 2) / snifferLevel;
           for(let i=0; i<snifferLevel; i++) {
               const angle = baseAngle + (i * angleStep);
               const vx = Math.cos(angle) * bSpeed;
               const vy = Math.sin(angle) * bSpeed;
-              // Sniffers are separate shots
               const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, 'PLAYER_SNIFFER');
               bullet.addComponent(new TargetData(null, 'ENEMY'));
           }
