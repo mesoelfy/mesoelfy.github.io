@@ -25,6 +25,10 @@ export const HunterChargeActor = () => {
           return id?.variant === EnemyTypes.HUNTER && state?.current === 'CHARGE';
       }}
       updateEntity={(e, obj) => {
+          // We kept the calculation here because it involves jitter/offset relative to rotation
+          // Moving this to ECS is possible but low priority as it's a visual-only transient effect.
+          // For now, cleaning up imports and using ComponentType is enough.
+          
           const transform = e.getComponent<TransformData>(ComponentType.Transform);
           const state = e.getComponent<AIStateData>(ComponentType.State);
           
@@ -34,11 +38,9 @@ export const HunterChargeActor = () => {
               
               const currentTimer = state.timers.action;
               const remaining = typeof currentTimer === 'number' ? currentTimer : maxDuration;
-              
               const progress = Math.max(0, Math.min(1, 1.0 - (remaining / maxDuration)));
               
               const scale = 0.2 + (Math.pow(progress, 2) * 1.3); 
-              
               const rumble = progress > 0.8 ? (progress - 0.8) * 0.3 : 0;
               const jitterX = (Math.random() - 0.5) * rumble;
               const jitterY = (Math.random() - 0.5) * rumble;

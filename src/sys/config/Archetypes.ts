@@ -4,6 +4,21 @@ import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
 import { ArchetypeIDs } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { GAME_THEME } from '@/ui/sim/config/theme';
+
+const parseHex = (hex: string) => {
+    const c = parseInt(hex.replace('#', ''), 16);
+    return { 
+        r: ((c >> 16) & 255) / 255, 
+        g: ((c >> 8) & 255) / 255, 
+        b: (c & 255) / 255 
+    };
+};
+
+const DRILLER_COLOR = parseHex(GAME_THEME.enemy.muncher);
+const KAMIKAZE_COLOR = parseHex(GAME_THEME.enemy.kamikaze);
+const HUNTER_COLOR = parseHex(GAME_THEME.enemy.hunter);
+const DAEMON_COLOR = parseHex('#00F0FF');
 
 export interface EntityBlueprint {
   tags: Tag[];
@@ -22,7 +37,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           radius: PhysicsConfig.HITBOX.PLAYER, 
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
-      }}
+      }},
+      { type: ComponentType.Render, data: { visualScale: 1.0 } }
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
@@ -37,7 +53,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           radius: PhysicsConfig.HITBOX.BULLET, 
           layer: CollisionLayers.PLAYER_PROJECTILE, 
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
-      }}
+      }},
+      { type: ComponentType.Render, data: { visualScale: 1.0 } }
     ]
   },
   [ArchetypeIDs.BULLET_ENEMY]: {
@@ -52,7 +69,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           radius: PhysicsConfig.HITBOX.HUNTER_BULLET, 
           layer: CollisionLayers.ENEMY_PROJECTILE, 
           mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
-      }}
+      }},
+      { type: ComponentType.Render, data: { visualScale: 1.0 } }
     ]
   },
   [ArchetypeIDs.DRILLER]: {
@@ -65,7 +83,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Combat, data: { damage: ENEMY_CONFIG.driller.damage } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PANEL' } }
+      { type: ComponentType.Target, data: { type: 'PANEL' } },
+      { type: ComponentType.Render, data: { ...DRILLER_COLOR } }
     ]
   },
   [ArchetypeIDs.KAMIKAZE]: {
@@ -78,7 +97,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Combat, data: { damage: ENEMY_CONFIG.kamikaze.damage } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } }
+      { type: ComponentType.Target, data: { type: 'PLAYER' } },
+      { type: ComponentType.Render, data: { ...KAMIKAZE_COLOR } }
     ]
   },
   [ArchetypeIDs.HUNTER]: {
@@ -91,7 +111,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Combat, data: { damage: 10 } }, 
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } }
+      { type: ComponentType.Target, data: { type: 'PLAYER' } },
+      { type: ComponentType.Render, data: { ...HUNTER_COLOR } }
     ]
   },
   [ArchetypeIDs.DAEMON]: {
@@ -103,7 +124,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } },
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
-      { type: ComponentType.State, data: { current: 'ORBIT' } }
+      { type: ComponentType.State, data: { current: 'ORBIT' } },
+      { type: ComponentType.Render, data: { ...DAEMON_COLOR } }
     ]
   }
 };

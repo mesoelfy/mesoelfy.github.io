@@ -628,3 +628,9 @@ Solution: Disable Trails for now (Comment out ProjectileTrailsActor in RenderCat
 
 
         **!!!** FastEventBus using a Float32Array ring buffer is a brilliant optimization for FX/Audio triggers. You should migrate more logic to this pattern.
+
+
+
+Refactoring prompts:
+
+    - is there scattered logic in components that should be consolidated?

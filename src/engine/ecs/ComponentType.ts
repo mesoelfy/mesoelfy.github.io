@@ -8,5 +8,6 @@ export enum ComponentType {
   State = 'State',
   Collider = 'Collider',
   Target = 'Target',
-  Orbital = 'Orbital'
+  Orbital = 'Orbital',
+  Render = 'Render' // NEW
 }

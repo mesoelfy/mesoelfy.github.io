@@ -19,6 +19,7 @@ import { StructureSystem } from '@/sys/systems/StructureSystem';
 import { TargetingSystem } from '@/sys/systems/TargetingSystem';
 import { GuidanceSystem } from '@/sys/systems/GuidanceSystem';
 import { OrbitalSystem } from '@/sys/systems/OrbitalSystem';
+import { RenderSystem } from '@/sys/systems/RenderSystem'; // NEW
 
 import { ShakeSystem } from '@/sys/systems/ShakeSystem';
 import { VFXSystem } from '@/sys/systems/VFXSystem';
@@ -36,7 +37,7 @@ const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new C
 export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'TimeSystem',       factory: useClass(TimeSystem) },
   { id: 'InputSystem',      factory: useClass(InputSystem) },
-  { id: 'PanelRegistrySystem', factory: useClass(PanelRegistrySystem) }, // Fixed
+  { id: 'PanelRegistrySystem', factory: useClass(PanelRegistrySystem) },
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
   { id: 'StructureSystem',  factory: useClass(StructureSystem) },
@@ -55,6 +56,7 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   
   { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
+  { id: 'RenderSystem',     factory: useClass(RenderSystem) }, // Added
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
   
   { id: 'AudioDirectorSystem', factory: useClass(AudioDirector) },

@@ -4,6 +4,7 @@ import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
+import { RenderData } from '@/sys/data/RenderData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -11,6 +12,7 @@ const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Tr
 const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
 const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
+const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
 function rotateTowards(current: number, target: number, speed: number): number {
     let diff = target - current;
@@ -29,11 +31,12 @@ export const HunterLogic: EnemyLogic = {
     const motion = getMotion(e);
     const state = getState(e);
     const target = getTarget(e);
+    const render = getRender(e);
 
     const hunterConfig = ctx.config.enemies[EnemyTypes.HUNTER];
     const aiConfig = ctx.config.ai.HUNTER;
 
-    // --- INITIALIZATION ---
+    // Initialize State Data
     if (state.data.spinVelocity === undefined) {
         state.data.spinVelocity = aiConfig.SPIN_SPEED_IDLE;
         state.data.spinAngle = 0;
@@ -48,14 +51,11 @@ export const HunterLogic: EnemyLogic = {
     let targetSpinSpeed = aiConfig.SPIN_SPEED_IDLE; 
     let spinLerpRate = ctx.delta * 2.0;
 
-    // --- AIMING LOGIC ---
     const aimDx = target.x - pos.x;
     const aimDy = target.y - pos.y;
     const trueAngle = Math.atan2(aimDy, aimDx);
 
     // --- STATE MACHINE ---
-
-    // 1. HUNT
     if (state.current === 'HUNT') {
         const currentAngle = (ctx.time * aiConfig.ORBIT_SPEED) + state.data.offsetAngle;
         const tx = target.x + Math.cos(currentAngle) * aiConfig.TARGET_RADIUS;
@@ -83,11 +83,8 @@ export const HunterLogic: EnemyLogic = {
             motion.vy *= 0.1;
         }
     } 
-    
-    // 2. CHARGE
     else if (state.current === 'CHARGE') {
         state.timers.action -= ctx.delta;
-        
         pos.rotation = rotateTowards(pos.rotation, trueAngle, aiConfig.CHARGE_LERP);
 
         const progress = 1.0 - (state.timers.action / hunterConfig.chargeDuration);
@@ -99,30 +96,28 @@ export const HunterLogic: EnemyLogic = {
             state.current = 'FIRE';
         }
     }
-    
-    // 3. FIRE
     else if (state.current === 'FIRE') {
         const dx = target.x - pos.x;
         const dy = target.y - pos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
-        
         const offset = aiConfig.OFFSET_DIST;
         
-        const spawnX = pos.x + (dirX * offset);
-        const spawnY = pos.y + (dirY * offset);
-
-        ctx.spawnProjectile(spawnX, spawnY, dirX * aiConfig.PROJECTILE_SPEED, dirY * aiConfig.PROJECTILE_SPEED);
-        ctx.spawnLaunchSparks(spawnX, spawnY, pos.rotation);
+        ctx.spawnProjectile(pos.x + (dirX * offset), pos.y + (dirY * offset), dirX * aiConfig.PROJECTILE_SPEED, dirY * aiConfig.PROJECTILE_SPEED);
+        ctx.spawnLaunchSparks(pos.x + (dirX * offset), pos.y + (dirY * offset), pos.rotation);
 
         state.current = 'HUNT';
         state.timers.action = 2.0 + Math.random() * 2.0;
-        
         state.data.spinVelocity = 50.0; 
     }
 
+    // --- VISUAL UPDATES ---
     state.data.spinVelocity = lerp(state.data.spinVelocity, targetSpinSpeed, spinLerpRate);
     state.data.spinAngle += state.data.spinVelocity * ctx.delta;
+    
+    // PUSH TO RENDER COMPONENT
+    render.visualRotation = state.data.spinAngle;
+    render.visualScale = 1.0; 
   }
 };

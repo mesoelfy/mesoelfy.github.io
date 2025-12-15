@@ -1,14 +1,16 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/sys/services/ServiceLocator'; // Use Locator
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { TransformData } from '@/sys/data/TransformData';
 import { IdentityData } from '@/sys/data/IdentityData';
+import { RenderData } from '@/sys/data/RenderData';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformStore } from '@/engine/ecs/TransformStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { applyRotation } from '@/engine/math/RenderUtils';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -22,8 +24,8 @@ interface InstancedActorProps {
   updateEntity?: (entity: Entity, obj: THREE.Object3D, color: THREE.Color, delta: number) => void;
   filter?: (entity: Entity) => boolean;
   baseColor?: string;
-  colorSource?: 'identity' | 'base'; 
   interactive?: boolean; 
+  z?: number;
 }
 
 export const InstancedActor = ({ 
@@ -34,11 +36,14 @@ export const InstancedActor = ({
   updateEntity, 
   filter, 
   baseColor = '#FFFFFF',
-  colorSource = 'identity',
-  interactive = false
+  interactive = false,
+  z = 0
 }: InstancedActorProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const instanceMap = useMemo(() => new Int32Array(maxCount).fill(-1), [maxCount]);
+  
+  // Pre-parse base color
+  const defaultColor = useMemo(() => new THREE.Color(baseColor), [baseColor]);
 
   useLayoutEffect(() => {
     if (meshRef.current) {
@@ -49,16 +54,8 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current) return;
 
-    // SAFE ACCESS: Get registry from Locator
-    // If Engine isn't running/booted, this might throw or return null depending on your implementation.
-    // We try/catch or just safe check.
     let registry;
-    try {
-        registry = ServiceLocator.getRegistry();
-    } catch {
-        // Registry not ready yet (or game ended)
-        return;
-    }
+    try { registry = ServiceLocator.getRegistry(); } catch { return; }
 
     const entities = registry.getByTag(tag);
     let count = 0;
@@ -75,24 +72,39 @@ export const InstancedActor = ({
           instanceMap[count] = entity.id as number;
       }
 
+      // 1. Base Transform
       const idx = transform.index * STRIDE;
       const x = transformData[idx];
       const y = transformData[idx + 1];
       const rot = transformData[idx + 2];
       const scale = transformData[idx + 3];
 
-      tempObj.position.set(x, y, 0);
-      tempObj.rotation.set(0, 0, rot);
-      tempObj.scale.set(scale, scale, 1);
+      tempObj.position.set(x, y, z);
+      
+      // 2. Render Overrides (The core change)
+      const render = entity.getComponent<RenderData>(ComponentType.Render);
+      
+      let finalScale = scale;
+      let visualRot = 0;
 
-      if (colorSource === 'identity') {
-          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
-          if (identity) tempColor.set(identity.variant); 
-          else tempColor.set(baseColor);
+      if (render) {
+          finalScale *= render.visualScale;
+          visualRot = render.visualRotation;
+          
+          // Apply Color from RenderData
+          tempColor.setRGB(render.r, render.g, render.b);
       } else {
-          tempColor.set(baseColor); 
+          // Fallback Color
+          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+          if (identity) tempColor.set(identity.variant); // Legacy support
+          else tempColor.copy(defaultColor);
       }
 
+      // Apply Rotations (Model Spin + World Aim)
+      applyRotation(tempObj, visualRot, rot);
+      tempObj.scale.setScalar(finalScale);
+
+      // 3. Custom Logic (Optional Override)
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }

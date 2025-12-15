@@ -4,6 +4,7 @@ import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
+import { RenderData } from '@/sys/data/RenderData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -11,6 +12,7 @@ const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Tr
 const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
 const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
+const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
@@ -18,6 +20,7 @@ export const DrillerLogic: EnemyLogic = {
     const motion = getMotion(e);
     const state = getState(e);
     const target = getTarget(e);
+    const render = getRender(e);
 
     const drillerConfig = ctx.config.enemies[EnemyTypes.DRILLER];
     const aiConfig = ctx.config.ai.DRILLER;
@@ -29,7 +32,6 @@ export const DrillerLogic: EnemyLogic = {
     let destY = target.y;
     
     if (target.type === 'PANEL' && target.id) {
-        // Use Context instead of Global
         const rect = ctx.getPanelRect(target.id);
         if (rect) {
             const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
@@ -43,8 +45,10 @@ export const DrillerLogic: EnemyLogic = {
     const dy = destY - pos.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
-    
     const angle = Math.atan2(dy, dx);
+    
+    // Default Visuals
+    let targetScale = 1.0;
     
     if (dist <= aiConfig.TIP_OFFSET + aiConfig.SNAP_THRESHOLD && target.id !== null) {
         state.current = 'DRILLING';
@@ -62,6 +66,9 @@ export const DrillerLogic: EnemyLogic = {
 
         ctx.spawnDrillSparks(destX, destY, angle);
 
+        // Faster spin when drilling
+        render.visualRotation += ctx.delta * 20.0;
+
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
             ctx.playSound('loop_drill', pos.x);
@@ -71,8 +78,7 @@ export const DrillerLogic: EnemyLogic = {
         state.data.damageTimer -= ctx.delta;
         if (state.data.damageTimer <= 0) {
              if (target.type === 'PANEL' && target.id) {
-                 const dmg = drillerConfig.damage; 
-                 ctx.damagePanel(target.id, dmg);
+                 ctx.damagePanel(target.id, drillerConfig.damage);
                  state.data.damageTimer = 0.2; 
              }
         }
@@ -88,6 +94,16 @@ export const DrillerLogic: EnemyLogic = {
             motion.vy = (dy / dist) * speed;
             pos.rotation = angle; 
         }
+        
+        // Normal spin
+        render.visualRotation += ctx.delta * 5.0;
     }
+
+    if (state.current === 'SPAWN') {
+        const progress = 1.0 - (state.timers.spawn / 1.5);
+        targetScale = Math.pow(progress, 2); 
+    }
+    
+    render.visualScale = targetScale;
   }
 };

@@ -10,6 +10,7 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { ColliderData } from '@/sys/data/ColliderData';
 import { TargetData } from '@/sys/data/TargetData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
+import { RenderData } from '@/sys/data/RenderData';
 import { Component } from '@/engine/ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
@@ -63,5 +64,9 @@ export const ComponentBuilder: Record<string, ComponentFactory> = {
   [ComponentType.Orbital]: (data) => get(ComponentType.Orbital,
       () => new OrbitalData(data.parentId, data.radius, data.speed, data.angle, data.active),
       (c) => c.reset(data.parentId, data.radius, data.speed, data.angle, data.active)
+  ),
+  [ComponentType.Render]: (data) => get(ComponentType.Render,
+      () => new RenderData(data.visualRotation, data.visualScale, data.r, data.g, data.b, data.opacity),
+      (c) => c.reset(data.visualRotation || 0, data.visualScale || 1.0, data.r ?? 1, data.g ?? 1, data.b ?? 1, data.opacity ?? 1.0)
   )
 };

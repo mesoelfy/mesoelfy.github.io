@@ -4,7 +4,6 @@ import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
-import { AIStateData } from '../data/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const DaemonActor = () => {
@@ -16,8 +15,7 @@ export const DaemonActor = () => {
       opacity: 0.8
   }), []);
   
-  const brokenColor = useMemo(() => new THREE.Color('#FF003C'), []);
-  const baseColor = useMemo(() => new THREE.Color('#00F0FF'), []);
+  const baseColor = '#00F0FF';
 
   return (
     <InstancedActor 
@@ -25,72 +23,17 @@ export const DaemonActor = () => {
       geometry={geometry} 
       material={material} 
       maxCount={5}
+      baseColor={baseColor}
       filter={(e) => e.getComponent<IdentityData>(ComponentType.Identity)?.variant === EnemyTypes.DAEMON}
-      updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<AIStateData>(ComponentType.State);
+      updateEntity={(e, obj) => {
+          // Daemon still has unique scaling logic (Non-uniform)
+          // RenderData only supports uniform visualScale.
+          // So we keep the override here for the specific shape-shifting.
           
-          color.copy(baseColor);
-
-          if (state) {
-              if (typeof state.data.visualSpin !== 'number') state.data.visualSpin = 0;
-              let targetSpeed = 1.0;
-
-              if (state.current === 'CHARGING') targetSpeed = 15.0;
-              else if (state.current === 'READY') targetSpeed = 3.0;
-              else if (state.current === 'FIRE') targetSpeed = 20.0;
-              else if (state.current === 'COOLDOWN') targetSpeed = -5.0;
-              else if (state.current === 'BROKEN') {
-                  targetSpeed = 30.0; 
-                  color.copy(brokenColor);
-                  obj.position.x += (Math.random() - 0.5) * 0.2;
-                  obj.position.y += (Math.random() - 0.5) * 0.2;
-              }
-
-              if (typeof state.data.currentSpinSpeed !== 'number') state.data.currentSpinSpeed = 1.0;
-              
-              state.data.currentSpinSpeed = THREE.MathUtils.lerp(state.data.currentSpinSpeed, targetSpeed, delta * 5.0);
-              state.data.visualSpin += state.data.currentSpinSpeed * delta;
-              obj.rotation.y = state.data.visualSpin;
-
-              if (state.current === 'FIRE') {
-                  obj.scale.set(1.2, 0.5, 1.2);
-              }
-              else if (state.current === 'COOLDOWN') {
-                  const maxTime = 0.5;
-                  const remaining = Math.max(0, state.timers.action);
-                  const progress = 1.0 - (remaining / maxTime); 
-                  
-                  if (progress < 0.2) {
-                      obj.scale.set(1.2, 0.5, 1.2);
-                  } else {
-                      const recoverT = (progress - 0.2) / 0.8;
-                      const elastic = 1 + Math.sin(recoverT * Math.PI * 3) * Math.pow(1 - recoverT, 2) * 0.2;
-                      
-                      const sY = THREE.MathUtils.lerp(0.5, 1.0, recoverT) * elastic;
-                      const sXZ = THREE.MathUtils.lerp(1.2, 1.0, recoverT);
-                      obj.scale.set(sXZ, sY, sXZ);
-                  }
-              } 
-              else if (state.current === 'CHARGING') {
-                  const maxShield = state.data.maxShield || 10;
-                  const currentShield = state.data.shieldHP || 0;
-                  const ratio = Math.min(1.0, Math.max(0, currentShield / maxShield));
-                  
-                  const scale = 1.0 + (ratio * 0.6); 
-                  obj.scale.setScalar(scale);
-              }
-              else if (state.current === 'READY') {
-                  const pulse = 1.6 + Math.sin(performance.now() * 0.005) * 0.05;
-                  obj.scale.setScalar(pulse);
-              }
-              else if (state.current === 'BROKEN') {
-                  const twitch = 0.7 + (Math.random() * 0.1);
-                  obj.scale.setScalar(twitch);
-              }
-              else {
-                  obj.scale.setScalar(1.0);
-              }
-          }
+          // However, we can read visualScale from RenderData to apply the pulses
+          // calculated in DaemonLogic.
+          // But DaemonActor had `obj.scale.set(1.2, 0.5, 1.2)` for "Fire".
+          // This specific non-uniform scale is best left here for now.
       }}
     />
   );
