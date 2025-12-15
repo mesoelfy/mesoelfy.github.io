@@ -1,4 +1,4 @@
-import { EntityID } from './ecs/types';
+import { EntityID } from './types';
 import { MAX_ENTITIES, SPATIAL_GRID_SIZE, SPATIAL_CELL_SIZE } from './Constants';
 
 // Primes for Hashing
@@ -20,59 +20,63 @@ export class SpatialGrid {
   }
 
   public clear() {
-    // We only need to reset the heads to "Empty"
-    // The 'entityNext' values will be overwritten on insert, so no need to loop 10k items.
+    // Only reset heads. entityNext is overwritten on insert.
     this.cellHead.fill(-1);
   }
 
-  /**
-   * Spatial Hash Function (2D -> 1D Index)
-   */
   private getHash(x: number, y: number): number {
     const cx = Math.floor(x / SPATIAL_CELL_SIZE);
     const cy = Math.floor(y / SPATIAL_CELL_SIZE);
-    
-    // XOR Hash mapped to Grid Size (Power of 2 for bitwise AND)
-    const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
-    return hash;
+    return ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
   }
 
   public insert(id: EntityID, x: number, y: number) {
     const eid = id as number;
-    if (eid >= MAX_ENTITIES) return; // Safety check
+    // Bounds check
+    if (eid >= MAX_ENTITIES || eid < 0) return;
 
     const hash = this.getHash(x, y);
 
-    // Linked List Insertion (Prepend)
-    // 1. Point current entity to whatever was previously first
+    // Prepend to linked list
     this.entityNext[eid] = this.cellHead[hash];
-    
-    // 2. Make current entity the new first
     this.cellHead[hash] = eid;
   }
 
-  public query(x: number, y: number, radius: number, outResults: Set<EntityID>) {
-    outResults.clear();
+  /**
+   * Zero-GC Query
+   * Writes results into 'outArray'.
+   * Returns the number of results found.
+   */
+  public query(x: number, y: number, radius: number, outArray: Int32Array): number {
+    let count = 0;
+    const max = outArray.length;
     
+    // Scan range
     const startX = Math.floor((x - radius) / SPATIAL_CELL_SIZE);
     const endX = Math.floor((x + radius) / SPATIAL_CELL_SIZE);
     const startY = Math.floor((y - radius) / SPATIAL_CELL_SIZE);
     const endY = Math.floor((y + radius) / SPATIAL_CELL_SIZE);
 
+    // To prevent duplicates if an entity spans multiple cells,
+    // we strictly rely on the fact that insert() puts an entity in ONE cell (center point).
+    // This implies point-based spatial hashing (buckets), not bounds-based.
+    // So we check all buckets the query radius touches.
+    
     for (let cy = startY; cy <= endY; cy++) {
       for (let cx = startX; cx <= endX; cx++) {
-        // Recompute hash for neighbor cells
-        // Note: We duplicate the hash logic here to avoid function call overhead in hot loop
         const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
         
-        // Traverse Linked List
         let id = this.cellHead[hash];
         
         while (id !== -1) {
-          outResults.add(id as EntityID);
+          if (count < max) {
+            outArray[count++] = id;
+          }
           id = this.entityNext[id];
         }
       }
     }
+    
+    return count;
   }
 }

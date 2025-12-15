@@ -543,3 +543,65 @@ VIBE CODE
     - I don't want driller doing damage to affect the MESOELFY_OS movement. Is there anything else affecting its movement?
 
     - tauri.conf.json - - was a Tauri thing to include, what should I include with Electron What Electron stuff should I hide from my source code collection command? release.ymlrelease.yml
+
+
+Secret: Hide a password in the 3D environment (texture on a boss) that unlocks "Admin Mode" in the console. - - - - have the konami code password be revealed one character at a time after boss battles.
+
+
+
+
+    https://obscuritory.com/arcade/barrack/ (JezzBall)
+Cyclone II / https://www.youtube.com/watch?v=wvHAEpYQLjQ
+    Star Castle  (1980) Cinematronics - https://www.youtube.com/watch?v=L84tOfOLdl0
+
+
+
+
+The Weapon DNA (WeaponRegistry)
+Instead of switching guns, we define Mutation Paths for the main weapon.
+Refactor: Decouple PlayerSystem logic into src/sys/handlers/combat/WeaponSystem.ts.
+Data: Create WeaponData component.
+fireRate, damage, spread, projectileCount, behavior (Straight, Wiggle, Homing).
+The "Evolution" Logic:
+Level 1-5: Pure stat boosts (Fire Rate ++).
+Level 6 (Mutation): "Split Stream" (Bullets fork on impact).
+Level 10 (Mutation): "Railgun" (Bullets pierce enemies).
+
+
+
+1980 game "Star Castle" by cinematronics? It was also an old Mac game called Cyclone and Cyclone II.
+THE "STAR CASTLE" TRIBUTE (Bosses)
+Goal: A structured, multi-stage encounter to break up the wave survival monotony.
+Step 6.1: The "Citadel" Boss Architecture
+This requires a Hierarchical Entity structure (Parent -> Children).
+The Core: Stationary, high HP. Tracks player with a generic turret.
+The Rings (Shields):
+Spawn 3 concentric rings of "Segment" entities around the Core.
+Use OrbitalData to spin them at different speeds/directions.
+Regen Mechanic: If the player destroys one segment, it's fine. If they destroy an entire ring, the Core enters a "Panic" state and eventually respawns the ring aggressively.
+The Payoff:
+The Core is invulnerable while the Inner Ring exists.
+You have to time your shots through the rotating gaps of 3 layers.
+If you get greedy and fly inside the rings? The Core emits a "Repulsor" blast (knockback + damage).
+
+
+
+
+
+The "Weaver" (Firewall Enemy)
+JezzBall/Qix inspired enemy.
+Concept: A spider-like bot that crawls GlassPanel edges and attempts to make a triangle shape.
+Logic (WeaverLogic.ts):
+1: Seek: Finds a random Panel edge. When it touches an edge it gives the panel a "burn" tag in the code. Embeds an anchor node.
+2: Crawls edge towards nearest corner. Embeds an anchor node.
+3: Crawls edge towards nearest corner. Embeds an anchor node.
+4: Makes a bee line across the panel to the first anchor node to complete the triangle shape.
+5: Burn: The area inside the triangle turns into electrical lava (hazard zone). Touching it damages the player. 
+Constraint: If a panel has a "Burn" tag, other Weavers ignore it.
+Counterplay: Killing the Weaver before it closes the loop cancels the web. Killing it after requires shooting the "Anchor Nodes" it left behind. If the closest panel, weaver will aim for the anchor node to continue building the web triangle hazard.
+A completed triangle slowly damages the panel.
+the hazard will remain until all three anchors have been destroyed.
+weavers can repair anchor nodes that haven't been destroyed, and will prioritize building replacement anchors if player has destroyed some.
+
+
+
