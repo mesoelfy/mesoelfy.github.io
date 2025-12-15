@@ -632,3 +632,5 @@ X/Y-Axis (Thickness): Scales down slightly to preserve "volume"
 I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked?
 
 VFX config - laser sight should be exhaust right?
+
+three explosion types (PURPLE, YELLOW, RED). - - - could probably consolidate this better using SOLID right?

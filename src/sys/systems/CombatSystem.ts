@@ -41,7 +41,7 @@ export class CombatSystem implements IGameSystem {
               this.gameSystem.damagePlayer(amount);
               GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
-          destroyEntity: (entity, fx) => this.destroyEntity(entity, fx),
+          destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y);
@@ -64,7 +64,7 @@ export class CombatSystem implements IGameSystem {
       handler(a, b, context);
   }
 
-  private destroyEntity(entity: Entity, fx?: string) {
+  private destroyEntity(entity: Entity, fx?: string, impactAngle?: number) {
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
       
@@ -84,15 +84,22 @@ export class CombatSystem implements IGameSystem {
       
       if (fx && transform) {
           let finalFX = fx;
+          let angleToUse = impactAngle || 0;
           
-          // FIX: Added Driller to the FX Override check.
-          // Previously, it fell back to the passed 'fx' (usually IMPACT_WHITE)
-          if (identity?.variant === EnemyTypes.HUNTER) finalFX = 'EXPLOSION_YELLOW';
-          else if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
-          else if (identity?.variant === EnemyTypes.DRILLER) finalFX = 'EXPLOSION_PURPLE';
+          if (identity?.variant === EnemyTypes.HUNTER) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
+          }
+          else if (identity?.variant === EnemyTypes.KAMIKAZE) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
+          }
+          else if (identity?.variant === EnemyTypes.DRILLER) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+          }
           
           const id = FX_IDS[finalFX];
-          if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y);
+          if (id) {
+              FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y, angleToUse);
+          }
       }
   }
 
