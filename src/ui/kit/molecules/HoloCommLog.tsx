@@ -1,137 +1,99 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { ExternalLink, Radio, WifiOff, BatteryWarning } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ExternalLink, Radio, WifiOff, BatteryWarning, SignalHigh } from 'lucide-react';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useStore } from '@/sys/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
+import { clsx } from 'clsx';
+import { useHoloCycler } from '@/ui/kit/hooks/useHoloCycler';
 
-const VIDEO_POOL = [
-  "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
-  "bHUcvHx9zlA", "Eq6EYcpWB_c", "sJyWgks1ZtA", 
-  "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
-];
+// --- SUB-COMPONENTS ---
 
-const OfflineStatic = () => (
-  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-critical-red/20 overflow-hidden w-full h-full">
-    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-40 bg-cover mix-blend-screen pointer-events-none" />
-    <div className="relative z-10 animate-pulse text-critical-red font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2">
-        <WifiOff size={12} />
-        <span>SIGNAL_LOST</span>
-    </div>
-  </div>
-);
-
-const PowerSaveStatic = () => (
-  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center border border-alert-yellow/20 overflow-hidden w-full h-full">
-    <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none" />
+const StaticOverlay = ({ label, icon: Icon, color = "text-primary-green", animate = false }: any) => (
+  <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center overflow-hidden w-full h-full">
+    {/* Noise Texture */}
+    <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-20 bg-cover mix-blend-screen pointer-events-none" />
     
-    <div className="relative z-10 flex flex-col items-center gap-2 text-alert-yellow opacity-80">
-        <BatteryWarning size={24} />
-        <span className="font-header font-bold text-xs tracking-widest">POWER_SAVE_MODE</span>
-        <span className="font-mono text-[9px] opacity-60">VIDEO_FEED_DISABLED</span>
+    <div className={clsx("relative z-10 font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2 border border-current", color, animate && "animate-pulse")}>
+        <Icon size={12} />
+        <span>{label}</span>
     </div>
   </div>
 );
 
 const VideoSlot = ({ 
   slotIndex, 
-  initialVideo, 
-  getNextVideo
+  canMount 
 }: { 
   slotIndex: number, 
-  initialVideo: string, 
-  getNextVideo: () => string
+  canMount: boolean 
 }) => {
-  const [videoId, setVideoId] = useState(initialVideo);
-  const [isMasked, setIsMasked] = useState(true); 
-
   const panelState = useGameStore((state) => state.panels['video']);
-  const isOffline = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
+  const isDead = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
   
   const graphicsMode = useStore((state) => state.graphicsMode);
-  const bootState = useStore((state) => state.bootState); 
   const isPotato = graphicsMode === 'POTATO';
   
-  const showVideo = bootState === 'active' && !isPotato;
+  // Hook manages the playlist logic
+  const { videoId, isMasked } = useHoloCycler(slotIndex, canMount && !isDead && !isPotato);
 
-  const prevOffline = useRef(isOffline);
+  // --- RENDER LOGIC ---
 
-  useEffect(() => {
-    if (isOffline && !prevOffline.current) {
-        setIsMasked(true); 
-    }
-    
-    if (!isOffline && prevOffline.current) {
-        setVideoId(getNextVideo()); 
-        setIsMasked(true); 
-        
-        const t = setTimeout(() => setIsMasked(false), 2000);
-        
-        prevOffline.current = isOffline;
-        return () => clearTimeout(t);
-    }
+  if (isDead) {
+      return (
+        <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-critical-red/30 bg-black">
+            <StaticOverlay label="SIGNAL_LOST" icon={WifiOff} color="text-critical-red" animate />
+        </div>
+      );
+  }
 
-    if (!isOffline && isMasked) {
-         const t = setTimeout(() => setIsMasked(false), 2000);
-         return () => clearTimeout(t);
-    }
-    
-    prevOffline.current = isOffline;
-  }, [isOffline, getNextVideo]);
+  if (isPotato) {
+      return (
+        <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-alert-yellow/30 bg-black">
+            <StaticOverlay label="POWER_SAVE_MODE" icon={BatteryWarning} color="text-alert-yellow" />
+        </div>
+      );
+  }
 
-  useEffect(() => {
-    if (isOffline) return; 
-    if (!showVideo) return;
-
-    const duration = 30000 + (Math.random() * 15000);
-    
-    const rotateTimer = setTimeout(() => {
-      setIsMasked(true);
-      
-      const swapTimer = setTimeout(() => {
-        setVideoId(getNextVideo());
-        
-        const unmaskTimer = setTimeout(() => {
-            setIsMasked(false);
-        }, 2000);
-        
-        return () => clearTimeout(unmaskTimer);
-      }, 1000); 
-      
-      return () => clearTimeout(swapTimer);
-    }, duration);
-
-    return () => clearTimeout(rotateTimer);
-  }, [videoId, isOffline, getNextVideo, showVideo]);
+  // Not ready to mount yet (Cascade delay or Boot sequence)
+  if (!canMount) {
+      return (
+        <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green/20 bg-black">
+            <div className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-primary-green/30 animate-pulse">
+                INITIALIZING...
+            </div>
+        </div>
+      );
+  }
 
   return (
     <div 
         className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
-        onMouseEnter={(e) => !isOffline && AudioSystem.playHover(getPan(e))}
+        onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     >
-      
-      {isOffline ? (
-          <OfflineStatic />
-      ) : !showVideo ? (
-          <PowerSaveStatic />
-      ) : (
-        <>
-          <div className="absolute inset-0 z-10">
-            <iframe 
-              key={videoId} 
-              width="100%" 
-              height="100%" 
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
-              title="HOLO_COMM" 
-              frameBorder="0" 
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-              className="w-full h-full object-cover grayscale"
-            />
-          </div>
+        {/* IFRAME LAYER: Only renders if we have a video ID */}
+        {videoId && (
+            <div className="absolute inset-0 z-10">
+                <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
+                    title={`HOLO_COMM_${slotIndex}`} 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    className="w-full h-full object-cover grayscale pointer-events-none"
+                />
+            </div>
+        )}
 
-          <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
-          
-          <div className={`absolute inset-0 z-40 transition-opacity duration-500 flex items-center justify-center pointer-events-none ${isMasked ? 'opacity-100 bg-black' : 'opacity-0 group-hover/video:opacity-100 bg-black/40'}`}>
+        {/* SCANLINE OVERLAY (Always on top of video) */}
+        <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
+        
+        {/* INTERACTION MASK */}
+        <div className={clsx(
+            "absolute inset-0 z-40 transition-all duration-500 flex items-center justify-center pointer-events-none",
+            isMasked ? "opacity-100 bg-black" : "opacity-0 group-hover/video:opacity-100 bg-black/40"
+        )}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
                     <Radio className="text-primary-green animate-pulse w-6 h-6 mb-2" />
@@ -143,68 +105,56 @@ const VideoSlot = ({
                     <ExternalLink size={12} />
                  </div>
              )}
-          </div>
-          
-          <a 
+        </div>
+        
+        {/* CLICK TARGET */}
+        <a 
             href={`https://www.youtube.com/watch?v=${videoId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="absolute inset-0 z-50 cursor-pointer"
             aria-label="Watch on YouTube"
             onClick={(e) => AudioSystem.playClick(getPan(e))}
-          />
+        />
 
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors">
-             CAM_0{slotIndex + 1}
-          </div>
-        </>
-      )}
-      
-      {isOffline && (
-          <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-critical-red font-mono bg-black/80 px-1 pointer-events-none">
-             CAM_0{slotIndex + 1} [ERR]
-          </div>
-      )}
+        {/* HUD OVERLAY */}
+        <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors flex items-center gap-1">
+             <SignalHigh size={8} /> CAM_0{slotIndex + 1}
+        </div>
     </div>
   );
 };
 
+// --- MAIN COMPONENT ---
+
 export const HoloCommLog = () => {
-  const deckRef = useRef<string[]>([...VIDEO_POOL]);
-  const [initialVideos, setInitialVideos] = useState<string[] | null>(null);
+  const { bootState } = useStore();
+  const [mountStage, setMountStage] = useState(0); // 0, 1, 2, 3
 
+  // CASCADE MOUNT LOGIC
   useEffect(() => {
-    deckRef.current = [...VIDEO_POOL];
-    const init: string[] = [];
-    for(let i=0; i<3; i++) {
-      const randomIndex = Math.floor(Math.random() * deckRef.current.length);
-      const vid = deckRef.current[randomIndex];
-      deckRef.current.splice(randomIndex, 1);
-      init.push(vid);
-    }
-    setInitialVideos(init);
-  }, []);
+      if (bootState !== 'active') {
+          setMountStage(0);
+          return;
+      }
 
-  const getNextVideo = useCallback(() => {
-    if (deckRef.current.length === 0) deckRef.current = [...VIDEO_POOL];
-    const randomIndex = Math.floor(Math.random() * deckRef.current.length);
-    const selected = deckRef.current[randomIndex];
-    deckRef.current.splice(randomIndex, 1);
-    return selected || VIDEO_POOL[0];
-  }, []);
+      // Stagger mounting: 0ms -> Slot 1, 800ms -> Slot 2, 1600ms -> Slot 3
+      const t1 = setTimeout(() => setMountStage(1), 100);
+      const t2 = setTimeout(() => setMountStage(2), 900);
+      const t3 = setTimeout(() => setMountStage(3), 1700);
 
-  if (!initialVideos) return <div className="h-full bg-black" />;
+      return () => {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          clearTimeout(t3);
+      };
+  }, [bootState]);
 
   return (
-    <div className="flex flex-col gap-2 p-1">
-      {initialVideos.map((vid, i) => (
-        <VideoSlot 
-          key={i} 
-          slotIndex={i} 
-          initialVideo={vid} 
-          getNextVideo={getNextVideo}
-        />
-      ))}
+    <div className="flex flex-col gap-2 p-1 h-full">
+      <VideoSlot slotIndex={0} canMount={mountStage >= 1} />
+      <VideoSlot slotIndex={1} canMount={mountStage >= 2} />
+      <VideoSlot slotIndex={2} canMount={mountStage >= 3} />
     </div>
   );
 };
