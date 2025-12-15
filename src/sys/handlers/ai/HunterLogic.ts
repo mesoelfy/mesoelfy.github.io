@@ -5,8 +5,10 @@ import { MotionData } from '@/sys/data/MotionData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
 import { RenderData } from '@/sys/data/RenderData';
+import { OrdnanceData } from '@/sys/data/OrdnanceData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 
 const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
 const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
@@ -81,6 +83,15 @@ export const HunterLogic: EnemyLogic = {
             state.timers.action = hunterConfig.chargeDuration;
             motion.vx *= 0.1; 
             motion.vy *= 0.1;
+            
+            // SPAWN CHARGING ORB (Attached to Gun)
+            // It will be frozen in 'CHARGING' state by OrdnanceSystem
+            const orb = ctx.spawnProjectile(pos.x, pos.y, 0, 0, undefined, 'ORB', e.id as number);
+            
+            const ord = orb.getComponent<OrdnanceData>(ComponentType.Ordnance);
+            if (ord) ord.state = 'CHARGING';
+            
+            state.data.chargeId = orb.id; // Store ID to release later
         }
     } 
     else if (state.current === 'CHARGE') {
@@ -91,6 +102,22 @@ export const HunterLogic: EnemyLogic = {
         const revCurve = Math.pow(progress, 3); 
         targetSpinSpeed = aiConfig.SPIN_SPEED_IDLE - (revCurve * 35.0); 
         spinLerpRate = ctx.delta * 10.0;
+        
+        // Retrieve the orb to update its visual size/pulse
+        if (state.data.chargeId) {
+            const registry = ServiceLocator.getRegistry();
+            const orb = registry.getEntity(state.data.chargeId);
+            if (orb && orb.active) {
+                const orbRender = orb.getComponent<RenderData>(ComponentType.Render);
+                if (orbRender) {
+                    // Grow as it charges
+                    orbRender.visualScale = 0.5 + (progress * 2.5);
+                }
+            } else {
+                // If orb died (e.g. game over), clear ref
+                state.data.chargeId = null;
+            }
+        }
 
         if (state.timers.action <= 0) {
             state.current = 'FIRE';
@@ -104,7 +131,29 @@ export const HunterLogic: EnemyLogic = {
         const dirY = dist > 0 ? dy/dist : 1;
         const offset = aiConfig.OFFSET_DIST;
         
-        ctx.spawnProjectile(pos.x + (dirX * offset), pos.y + (dirY * offset), dirX * aiConfig.PROJECTILE_SPEED, dirY * aiConfig.PROJECTILE_SPEED);
+        // RELEASE THE ORB
+        if (state.data.chargeId) {
+            const registry = ServiceLocator.getRegistry();
+            const orb = registry.getEntity(state.data.chargeId);
+            
+            if (orb && orb.active) {
+                const ord = orb.getComponent<OrdnanceData>(ComponentType.Ordnance);
+                const mot = orb.getComponent<MotionData>(ComponentType.Motion);
+                const tf = orb.getComponent<TransformData>(ComponentType.Transform);
+                
+                if (ord && mot && tf) {
+                    // Unstick logic
+                    ord.state = 'FLIGHT';
+                    // Apply Kick
+                    mot.vx = dirX * aiConfig.PROJECTILE_SPEED;
+                    mot.vy = dirY * aiConfig.PROJECTILE_SPEED;
+                    // Ensure rotation matches travel
+                    tf.rotation = Math.atan2(dirY, dirX);
+                }
+            }
+            state.data.chargeId = null;
+        }
+
         ctx.spawnLaunchSparks(pos.x + (dirX * offset), pos.y + (dirY * offset), pos.rotation);
 
         state.current = 'HUNT';
@@ -116,7 +165,6 @@ export const HunterLogic: EnemyLogic = {
     state.data.spinVelocity = lerp(state.data.spinVelocity, targetSpinSpeed, spinLerpRate);
     state.data.spinAngle += state.data.spinVelocity * ctx.delta;
     
-    // PUSH TO RENDER COMPONENT
     render.visualRotation = state.data.spinAngle;
     render.visualScale = 1.0; 
   }

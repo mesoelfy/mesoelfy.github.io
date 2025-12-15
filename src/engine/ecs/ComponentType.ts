@@ -9,5 +9,6 @@ export enum ComponentType {
   Collider = 'Collider',
   Target = 'Target',
   Orbital = 'Orbital',
-  Render = 'Render' // NEW
+  Render = 'Render',
+  Ordnance = 'Ordnance'
 }

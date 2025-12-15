@@ -11,6 +11,7 @@ import { ColliderData } from '@/sys/data/ColliderData';
 import { TargetData } from '@/sys/data/TargetData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
 import { RenderData } from '@/sys/data/RenderData';
+import { OrdnanceData } from '@/sys/data/OrdnanceData';
 import { Component } from '@/engine/ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
@@ -68,5 +69,9 @@ export const ComponentBuilder: Record<string, ComponentFactory> = {
   [ComponentType.Render]: (data) => get(ComponentType.Render,
       () => new RenderData(data.visualRotation, data.visualScale, data.r, data.g, data.b, data.opacity),
       (c) => c.reset(data.visualRotation || 0, data.visualScale || 1.0, data.r ?? 1, data.g ?? 1, data.b ?? 1, data.opacity ?? 1.0)
+  ),
+  [ComponentType.Ordnance]: (data) => get(ComponentType.Ordnance,
+      () => new OrdnanceData(data.type, data.state, data.ownerId, data.glowIntensity),
+      (c) => c.reset(data.type || 'PLASMA', data.state || 'FLIGHT', data.ownerId || -1, data.glowIntensity || 1.0)
   )
 };

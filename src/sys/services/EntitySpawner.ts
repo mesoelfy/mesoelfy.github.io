@@ -4,8 +4,9 @@ import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/sys/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
-import { ArchetypeIDs, EnemyTypes } from '@/sys/config/Identifiers';
+import { ArchetypeIDs } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { OrdnanceType } from '@/sys/data/OrdnanceData';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -55,17 +56,11 @@ export class EntitySpawner implements IEntitySpawner {
       isEnemy: boolean, 
       life: number,
       damage: number = 1,
-      widthMult: number = 1.0
+      widthMult: number = 1.0,
+      ordnanceType?: OrdnanceType // Optional override
   ): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
-    
-    // Determine Color based on Bullet Type (or override later)
-    // Daemon shots will be colored via BehaviorSystem injecting RenderData
-    // Standard shots use Archetype defaults.
-    
-    // Note: RenderData is already on the archetype.
-    // If we want custom colors per bullet type beyond archetype, we pass it in overrides.
     
     return this.spawn(id, {
         [ComponentType.Transform]: { x, y, rotation, scale: widthMult },
@@ -75,7 +70,9 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Collider]: { 
             radius: (ARCHETYPES[id].components.find(c => c.type === ComponentType.Collider)?.data.radius || 0.2) * widthMult 
-        }
+        },
+        // If ordnanceType provided, override; otherwise Archetype default sticks
+        ...(ordnanceType ? { [ComponentType.Ordnance]: { type: ordnanceType, state: 'FLIGHT' } } : {})
     });
   }
 

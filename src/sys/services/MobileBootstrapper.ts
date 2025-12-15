@@ -18,7 +18,8 @@ import { TargetingSystem } from '@/sys/systems/TargetingSystem';
 import { BehaviorSystem } from '@/sys/systems/BehaviorSystem';
 import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { GameStateSystem } from '@/sys/systems/GameStateSystem';
-import { RenderSystem } from '@/sys/systems/RenderSystem'; // NEW
+import { RenderSystem } from '@/sys/systems/RenderSystem';
+import { OrdnanceSystem } from '@/sys/systems/OrdnanceSystem'; // NEW
 
 import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
@@ -84,9 +85,10 @@ export const MobileBootstrapper = () => {
       { id: 'TargetingSystem', sys: new TargetingSystem() },
       { id: 'BehaviorSystem', sys: new BehaviorSystem() },
       { id: 'PhysicsSystem', sys: new PhysicsSystem() },
+      { id: 'OrdnanceSystem', sys: new OrdnanceSystem() }, // Registered
       { id: 'MobileCombatSystem', sys: new MobileCombatSystem() },
       { id: 'LifeCycleSystem', sys: new LifeCycleSystem() },
-      { id: 'RenderSystem', sys: new RenderSystem() }, // Added
+      { id: 'RenderSystem', sys: new RenderSystem() },
       { id: 'VFXSystem', sys: new VFXSystem() },
       { id: 'AudioDirectorSystem', sys: new AudioDirector() },
       { id: 'ShakeSystem', sys: new ShakeSystem() },

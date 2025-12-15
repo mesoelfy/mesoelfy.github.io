@@ -19,7 +19,8 @@ import { StructureSystem } from '@/sys/systems/StructureSystem';
 import { TargetingSystem } from '@/sys/systems/TargetingSystem';
 import { GuidanceSystem } from '@/sys/systems/GuidanceSystem';
 import { OrbitalSystem } from '@/sys/systems/OrbitalSystem';
-import { RenderSystem } from '@/sys/systems/RenderSystem'; // NEW
+import { RenderSystem } from '@/sys/systems/RenderSystem';
+import { OrdnanceSystem } from '@/sys/systems/OrdnanceSystem'; // NEW
 
 import { ShakeSystem } from '@/sys/systems/ShakeSystem';
 import { VFXSystem } from '@/sys/systems/VFXSystem';
@@ -52,11 +53,12 @@ export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'GuidanceSystem',   factory: useClass(GuidanceSystem) },
 
   { id: 'PhysicsSystem',    factory: useClass(PhysicsSystem) },
+  { id: 'OrdnanceSystem',   factory: useClass(OrdnanceSystem) }, // Added
   { id: 'CollisionSystem',  factory: useClass(CollisionSystem) },
   
   { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
-  { id: 'RenderSystem',     factory: useClass(RenderSystem) }, // Added
+  { id: 'RenderSystem',     factory: useClass(RenderSystem) },
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
   
   { id: 'AudioDirectorSystem', factory: useClass(AudioDirector) },

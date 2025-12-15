@@ -241,9 +241,14 @@ I want to overhaul how projectiles look. How are we currently handling them? Are
 
 
 
-For trails, what if we manipulate the pixels to smear them based on motion vectors? How expensive would that be? 
-What about a Phosphor Decay? an "Afterimage" post-processing pass (render the previous frame on top of the current frame with 90% opacity).
-Result: Everything leaves a very faint, ghostly trail. Fast moving bright objects (like bullets) effectively paint lines of light on the screen that fade over 0.2s.
+            For trails, what if we manipulate the pixels to smear them based on motion vectors? How expensive would that be? 
+            What about a Phosphor Decay? an "Afterimage" post-processing pass (render the previous frame on top of the current frame with 90% opacity).
+            Result: Everything leaves a very faint, ghostly trail. Fast moving bright objects (like bullets) effectively paint lines of light on the screen that fade over 0.2s.
+
+
+            OrdnanceRenderer
+            This is the heart of the new look. It uses a custom shader to draw SDF shapes (Capsules, Diamonds, Circles) instead of textures.
+
 
 Please share thoughts about both those ideas.
 
