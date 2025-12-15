@@ -19,7 +19,7 @@ import { BehaviorSystem } from '@/sys/systems/BehaviorSystem';
 import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { GameStateSystem } from '@/sys/systems/GameStateSystem';
 import { RenderSystem } from '@/sys/systems/RenderSystem';
-import { OrdnanceSystem } from '@/sys/systems/OrdnanceSystem'; // NEW
+import { ProjectileSystem } from '@/sys/systems/ProjectileSystem';
 
 import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
@@ -72,7 +72,6 @@ export const MobileBootstrapper = () => {
   registerAllBehaviors();
   registerAllAssets();
 
-  // Create PanelSystem instance manually
   const panelSystem = new PanelRegistrySystem();
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
   engine.registerSystem(panelSystem);
@@ -85,7 +84,7 @@ export const MobileBootstrapper = () => {
       { id: 'TargetingSystem', sys: new TargetingSystem() },
       { id: 'BehaviorSystem', sys: new BehaviorSystem() },
       { id: 'PhysicsSystem', sys: new PhysicsSystem() },
-      { id: 'OrdnanceSystem', sys: new OrdnanceSystem() }, // Registered
+      { id: 'ProjectileSystem', sys: new ProjectileSystem() },
       { id: 'MobileCombatSystem', sys: new MobileCombatSystem() },
       { id: 'LifeCycleSystem', sys: new LifeCycleSystem() },
       { id: 'RenderSystem', sys: new RenderSystem() },

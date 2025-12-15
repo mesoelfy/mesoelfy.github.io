@@ -1,11 +1,12 @@
 import { IGameSystem, IServiceLocator, IEntityRegistry } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { OrdnanceData } from '@/sys/data/OrdnanceData';
+import { ProjectileData } from '@/sys/data/ProjectileData';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { RenderData } from '@/sys/data/RenderData';
+import { PROJECTILE_CONFIG } from '@/sys/config/ProjectileConfig';
 
-export class OrdnanceSystem implements IGameSystem {
+export class ProjectileSystem implements IGameSystem {
   private registry!: IEntityRegistry;
 
   setup(locator: IServiceLocator): void {
@@ -13,20 +14,24 @@ export class OrdnanceSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const entities = this.registry.query({ all: [ComponentType.Ordnance, ComponentType.Transform] });
+    const entities = this.registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });
 
     for (const entity of entities) {
         if (!entity.active) continue;
 
-        const ordnance = entity.getComponent<OrdnanceData>(ComponentType.Ordnance);
+        const proj = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
         const render = entity.getComponent<RenderData>(ComponentType.Render);
+        const motion = entity.getComponent<MotionData>(ComponentType.Motion);
         
-        if (!ordnance || !transform) continue;
+        if (!proj || !transform) continue;
 
-        // --- STATE: CHARGING (Stuck to Gun) ---
-        if (ordnance.state === 'CHARGING' && ordnance.ownerId !== -1) {
-            const owner = this.registry.getEntity(ordnance.ownerId);
+        const config = PROJECTILE_CONFIG[proj.configId];
+        if (!config) continue;
+
+        // --- STATE: CHARGING (Stuck to Owner) ---
+        if (proj.state === 'CHARGING' && proj.ownerId !== -1) {
+            const owner = this.registry.getEntity(proj.ownerId);
             
             if (!owner || !owner.active) {
                 this.registry.destroyEntity(entity.id);
@@ -35,7 +40,6 @@ export class OrdnanceSystem implements IGameSystem {
 
             const ownerTransform = owner.getComponent<TransformData>(ComponentType.Transform);
             if (ownerTransform) {
-                // Offset logic matches Hunter/Daemon visual design
                 const offsetDist = 1.6; 
                 
                 const cos = Math.cos(ownerTransform.rotation);
@@ -45,7 +49,6 @@ export class OrdnanceSystem implements IGameSystem {
                 transform.y = ownerTransform.y + (sin * offsetDist);
                 transform.rotation = ownerTransform.rotation;
                 
-                const motion = entity.getComponent<MotionData>(ComponentType.Motion);
                 if (motion) {
                     motion.vx = 0;
                     motion.vy = 0;
@@ -54,15 +57,15 @@ export class OrdnanceSystem implements IGameSystem {
         }
         
         // --- STATE: FLIGHT (Visual Physics) ---
-        else if (ordnance.state === 'FLIGHT' && render) {
-            // SHARD (Enemy) -> Spin around Z axis relative to travel
-            // ORB (Charge shot) -> Slow rotation
-            // PLASMA (Player) -> Stable
-            
-            if (ordnance.type === 'SHARD') {
-                render.visualRotation += delta * 15.0; // Fast Sawblade Spin
-            } else if (ordnance.type === 'ORB') {
-                render.visualRotation += delta * 2.0;
+        else if (proj.state === 'FLIGHT' && render) {
+            // Apply Spin
+            if (!config.faceVelocity && config.spinSpeed !== 0) {
+                render.visualRotation += delta * config.spinSpeed;
+            }
+
+            // Apply Pulse
+            if (config.pulseSpeed > 0) {
+                render.visualScale = 1.0 + Math.sin(time * config.pulseSpeed) * 0.2;
             }
         }
     }

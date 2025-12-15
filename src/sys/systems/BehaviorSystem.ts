@@ -2,7 +2,7 @@ import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/en
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { IdentityData } from '@/sys/data/IdentityData';
 import { RenderData } from '@/sys/data/RenderData';
-import { OrdnanceData } from '@/sys/data/OrdnanceData';
+import { ProjectileData } from '@/sys/data/ProjectileData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { GameEventBus } from '@/engine/signals/GameEventBus'; 
 import { GameEvents } from '@/engine/signals/GameEvents'; 
@@ -46,32 +46,22 @@ export class BehaviorSystem implements IGameSystem {
     const aiContext: AIContext = {
       delta,
       time,
-      spawnProjectile: (x, y, vx, vy, damage, type, ownerId) => {
+      spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
           let bullet;
           if (damage) {
               // DAEMON or Special
-              // If type not provided, default to PLASMA/ORB based on damage?
-              // Let's assume Daemon passes 'ORB' or 'PLASMA'
-              const finalType = type || 'PLASMA';
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, 4.0, finalType);
-              
+              const finalConfig = configId || 'DAEMON_ORB';
+              bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
-              
-              // Inject Color for Daemon
-              const render = bullet.getComponent<RenderData>(ComponentType.Render);
-              if (render) {
-                  render.r = 0; render.g = 0.94; render.b = 1.0;
-                  render.baseR = 0; render.baseG = 0.94; render.baseB = 1.0;
-              }
           } else {
               // HUNTER / STANDARD ENEMY
-              const finalType = type || 'SHARD';
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 10, 1.0, finalType);
+              const finalConfig = configId || 'ENEMY_HUNTER';
+              bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 10, finalConfig);
           }
 
           if (ownerId !== undefined) {
-              const ord = bullet.getComponent<OrdnanceData>(ComponentType.Ordnance);
-              if (ord) ord.ownerId = ownerId;
+              const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
+              if (proj) proj.ownerId = ownerId;
           }
 
           return bullet;

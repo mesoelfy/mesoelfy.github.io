@@ -4,8 +4,8 @@ import { RenderRegistry } from './RenderRegistry';
 import { PlayerActor } from '../actors/PlayerActor';
 import { ParticleActor } from '../actors/ParticleActor';
 
-// New Unified Renderer
-import { OrdnanceRenderer } from '../actors/OrdnanceRenderer';
+// Unified 3D Renderer
+import { ProjectileRenderer } from '../actors/ProjectileRenderer';
 
 // Enemies
 import { DrillerActor } from '../actors/DrillerActor';
@@ -14,19 +14,15 @@ import { HunterActor } from '../actors/HunterActor';
 import { DaemonActor } from '../actors/DaemonActor';
 
 export const registerAllRenderers = () => {
-  // Core
   RenderRegistry.register(PlayerActor);
   RenderRegistry.register(ParticleActor);
   
-  // Projectiles & Charging FX
-  RenderRegistry.register(OrdnanceRenderer);
+  // The new 3D system
+  RenderRegistry.register(ProjectileRenderer);
   
-  // Enemies
   RenderRegistry.register(DrillerActor);
   RenderRegistry.register(KamikazeActor);
   RenderRegistry.register(HunterActor);
-  
-  // Friendlies
   RenderRegistry.register(DaemonActor);
   
   console.log('[RenderCatalog] Visual Components Registered.');

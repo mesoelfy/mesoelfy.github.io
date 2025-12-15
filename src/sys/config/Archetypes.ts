@@ -54,8 +54,9 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER_PROJECTILE, 
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0, ...parseHex(GAME_THEME.bullet.plasma) } },
-      { type: ComponentType.Ordnance, data: { type: 'PLASMA', state: 'FLIGHT' } }
+      // RenderData and ProjectileData are set dynamically by Spawner based on Config
+      { type: ComponentType.Render, data: { visualScale: 1.0 } },
+      { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } }
     ]
   },
   [ArchetypeIDs.BULLET_ENEMY]: {
@@ -71,8 +72,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.ENEMY_PROJECTILE, 
           mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0, ...parseHex(GAME_THEME.bullet.hunter) } },
-      { type: ComponentType.Ordnance, data: { type: 'SHARD', state: 'FLIGHT' } }
+      { type: ComponentType.Render, data: { visualScale: 1.0 } },
+      { type: ComponentType.Projectile, data: { configId: 'ENEMY_HUNTER', state: 'FLIGHT' } }
     ]
   },
   [ArchetypeIDs.DRILLER]: {

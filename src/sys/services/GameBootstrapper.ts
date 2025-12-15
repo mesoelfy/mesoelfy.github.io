@@ -44,13 +44,10 @@ export const GameBootstrapper = () => {
   
   engine.setup(ServiceLocator);
   
-  // 1. Spawn Player
   spawner.spawnPlayer();
 
-  // 2. Spawn World Entity (Global Visual State)
   const world = registry.createEntity();
   world.addTag(Tag.WORLD);
-  // Default: Green, Normal Speed (1.0), 0 Rotation
   world.addComponent(ComponentBuilder[ComponentType.Render]({ r: 0, g: 1, b: 0.25, visualScale: 1.0, visualRotation: 0 }));
   registry.updateCache(world);
 

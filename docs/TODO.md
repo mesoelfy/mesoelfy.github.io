@@ -249,6 +249,18 @@ I want to overhaul how projectiles look. How are we currently handling them? Are
             OrdnanceRenderer
             This is the heart of the new look. It uses a custom shader to draw SDF shapes (Capsules, Diamonds, Circles) instead of textures.
 
+                  Expand SDF Library:
+                Update the fragment shader in the Renderer to support a wider library of 2D Signed Distance Functions (SDFs):
+                Capsule: (Standard rapid fire)
+                Chevron/Arrow: (Fork/Spread shot)
+                Diamond/Kite: (Sniper/High velocity)
+                Cross/Plus: (Daemon/Tech shots)
+                Ring/Donut: (Backdoor/Special)
+                Shuriken/Star: (Enemy aggressive shots)
+
+
+
+
 
 Please share thoughts about both those ideas.
 
@@ -607,3 +619,7 @@ Refactoring prompts:
     - is there scattered logic in components that should be consolidated?
     - tell me what else in the project has become a God Component.
 
+
+
+
+The music has a set playlist order, but if the player clicks >> for next track, the next track will be random (and whatever tracks come next naturally without clicking >> will also be random). Once a track has played, it gets removed from the set of possible tracks to play until all of them have played, then the whole setlist gets reset again.

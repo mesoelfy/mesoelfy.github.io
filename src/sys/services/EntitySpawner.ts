@@ -6,7 +6,7 @@ import { ARCHETYPES } from '@/sys/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { OrdnanceType } from '@/sys/data/OrdnanceData';
+import { PROJECTILE_CONFIG } from '@/sys/config/ProjectileConfig';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -56,23 +56,26 @@ export class EntitySpawner implements IEntitySpawner {
       isEnemy: boolean, 
       life: number,
       damage: number = 1,
-      widthMult: number = 1.0,
-      ordnanceType?: OrdnanceType // Optional override
+      projectileId: string = 'PLAYER_STANDARD'
   ): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     
+    // Config Lookup
+    const config = PROJECTILE_CONFIG[projectileId] || PROJECTILE_CONFIG['PLAYER_STANDARD'];
+    
+    // IMPORTANT: RenderData is now mostly controlled by the Renderer reading the Config,
+    // BUT we still init it so other systems (like Physics/Collisions) don't crash 
+    // if they try to access RenderData for debug visuals or bounding boxes.
+    
     return this.spawn(id, {
-        [ComponentType.Transform]: { x, y, rotation, scale: widthMult },
+        [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, // Config scale handles the rest
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Collider]: { 
-            radius: (ARCHETYPES[id].components.find(c => c.type === ComponentType.Collider)?.data.radius || 0.2) * widthMult 
-        },
-        // If ordnanceType provided, override; otherwise Archetype default sticks
-        ...(ordnanceType ? { [ComponentType.Ordnance]: { type: ordnanceType, state: 'FLIGHT' } } : {})
+        [ComponentType.Render]: { visualScale: 1.0, visualRotation: 0 },
+        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT' }
     });
   }
 

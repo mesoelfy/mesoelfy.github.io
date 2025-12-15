@@ -3,16 +3,18 @@ import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './InstancedActor';
-import { IdentityData } from '../data/IdentityData';
+import { IdentityData } from '@/sys/data/IdentityData';
+import { AIStateData } from '@/sys/data/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const DaemonActor = () => {
-  const geometry = useMemo(() => new THREE.OctahedronGeometry(0.6, 0), []);
+  // Cage Geometry (Octahedron)
+  const geometry = useMemo(() => new THREE.OctahedronGeometry(0.7, 0), []);
   const material = useMemo(() => new THREE.MeshBasicMaterial({ 
       color: '#00F0FF', 
       wireframe: true,
       transparent: true,
-      opacity: 0.8
+      opacity: 0.6
   }), []);
   
   const baseColor = '#00F0FF';
@@ -25,15 +27,29 @@ export const DaemonActor = () => {
       maxCount={5}
       baseColor={baseColor}
       filter={(e) => e.getComponent<IdentityData>(ComponentType.Identity)?.variant === EnemyTypes.DAEMON}
-      updateEntity={(e, obj) => {
-          // Daemon still has unique scaling logic (Non-uniform)
-          // RenderData only supports uniform visualScale.
-          // So we keep the override here for the specific shape-shifting.
+      updateEntity={(e, obj, color) => {
+          const state = e.getComponent<AIStateData>(ComponentType.State);
           
-          // However, we can read visualScale from RenderData to apply the pulses
-          // calculated in DaemonLogic.
-          // But DaemonActor had `obj.scale.set(1.2, 0.5, 1.2)` for "Fire".
-          // This specific non-uniform scale is best left here for now.
+          if (state && state.current === 'FIRE') {
+              // SPRING SQUISH: Flatten on Y, Bulge on X/Z
+              // We use a sine wave based on time or simple recoil?
+              // Logic is fast, so let's just hard squash it.
+              obj.scale.set(1.5, 0.4, 1.5);
+              
+              // Flash White
+              color.set('#FFFFFF');
+          } else {
+              // Reset Scale handled by InstancedActor base logic (uniform),
+              // but we need to ensure we don't leave it squashed.
+              // InstancedActor applies `tempObj.scale.setScalar(finalScale)` BEFORE this callback.
+              // So we are just multiplying/overriding here.
+              
+              // Gentle breathing in IDLE/READY
+              if (state && state.current === 'READY') {
+                  const s = 1.0 + Math.sin(Date.now() * 0.005) * 0.05;
+                  obj.scale.multiplyScalar(s);
+              }
+          }
       }}
     />
   );

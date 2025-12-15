@@ -1,18 +1,16 @@
 import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { WorldRect } from '@/engine/math/ViewportHelper';
-import { OrdnanceType } from '@/sys/data/OrdnanceData';
 
 export interface AIContext {
   delta: number;
   time: number;
   
-  // Updated signature: Returns Entity so we can track it
   spawnProjectile: (
       x: number, y: number, 
       vx: number, vy: number, 
       damage?: number, 
-      ordnanceType?: OrdnanceType,
+      configId?: string, // CHANGED from OrdnanceType to Config Key
       ownerId?: number
   ) => Entity;
 

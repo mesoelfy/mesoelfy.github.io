@@ -10,5 +10,5 @@ export enum ComponentType {
   Target = 'Target',
   Orbital = 'Orbital',
   Render = 'Render',
-  Ordnance = 'Ordnance'
+  Projectile = 'Projectile'
 }

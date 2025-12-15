@@ -26,9 +26,7 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
-  private logTimer = 0;
   
-  // Reusable
   private tempColor = new THREE.Color();
 
   setup(locator: IServiceLocator): void {
@@ -50,7 +48,7 @@ export class PlayerSystem implements IGameSystem {
     
     if (!playerEntity) return;
 
-    // --- 1. VISUAL STATE UPDATE (ECS DRIVEN) ---
+    // --- VISUAL STATE ---
     const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const cursor = this.locator.getInputService().getCursor();
@@ -62,7 +60,7 @@ export class PlayerSystem implements IGameSystem {
 
     if (render) {
         let targetCol = COL_BASE;
-        let spinSpeed = -0.02; // Idle spin
+        let spinSpeed = -0.02;
         
         let interactState = 'IDLE';
         try {
@@ -85,17 +83,13 @@ export class PlayerSystem implements IGameSystem {
             }
         }
 
-        // LERP Color
         this.tempColor.setRGB(render.r, render.g, render.b);
         this.tempColor.lerp(targetCol, delta * 3.0);
         render.r = this.tempColor.r;
         render.g = this.tempColor.g;
         render.b = this.tempColor.b;
-
-        // Apply Spin
         render.visualRotation += spinSpeed;
         
-        // Pulse Effect (if interacting)
         if (interactState !== 'IDLE' && this.gameSystem.playerHealth > 0) {
             render.visualScale = 1.2 + Math.sin(time * 20) * 0.2;
         } else {
@@ -105,7 +99,7 @@ export class PlayerSystem implements IGameSystem {
 
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // --- 2. GAMEPLAY LOGIC ---
+    // --- LOGIC ---
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         try {
@@ -125,14 +119,12 @@ export class PlayerSystem implements IGameSystem {
             this.attemptAutoFire(time, playerEntity, upgrades);
         }
     }
-    
-    this.logTimer += delta;
   }
 
   teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (payload) => {
+    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
       this.gameSystem.addScore(1);
       this.gameSystem.addXp(10);
     });
@@ -149,7 +141,6 @@ export class PlayerSystem implements IGameSystem {
       const count = 360; 
       const speed = 45;  
       const damage = 100;
-      const width = 3.0; 
 
       FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
@@ -165,7 +156,7 @@ export class PlayerSystem implements IGameSystem {
               false, 
               2.0,   
               damage, 
-              width
+              'PLAYER_PURGE'
           );
       }
   }
@@ -203,7 +194,13 @@ export class PlayerSystem implements IGameSystem {
       const snifferLevel = upgrades['SNIFFER'] || 0;
       const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
-      const width = 1.0;
+      // Determine Weapon Type ID
+      let configId = 'PLAYER_STANDARD';
+      if (forkLevel > 0) configId = 'PLAYER_FORK';
+      
+      // Sniffer overrides Fork visually if both present (prioritize tech)
+      if (snifferLevel > 0) configId = 'PLAYER_SNIFFER';
+
       const baseSpread = 0.15;
       const spreadAngle = baseSpread; 
       
@@ -216,43 +213,37 @@ export class PlayerSystem implements IGameSystem {
       const bSpeed = this.config.player.bulletSpeed;
       const bLife = this.config.player.bulletLife;
 
+      // FORK / STANDARD
       for (let i = 0; i < projectileCount; i++) {
           const angle = startAngle + (i * spreadAngle);
           const vx = Math.cos(angle) * bSpeed;
           const vy = Math.sin(angle) * bSpeed;
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, configId);
       }
 
+      // BACKDOOR
       if (backdoorLevel > 0) {
           const rearAngle = baseAngle + Math.PI; 
           const vx = Math.cos(rearAngle) * bSpeed;
           const vy = Math.sin(rearAngle) * bSpeed;
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
+          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, 'PLAYER_BACKDOOR');
       }
 
+      // SNIFFER
+      // Spawns ADDITIONAL bullets if Sniffer is active
       if (snifferLevel > 0) {
           const angleStep = (Math.PI * 2) / snifferLevel;
           for(let i=0; i<snifferLevel; i++) {
               const angle = baseAngle + (i * angleStep);
               const vx = Math.cos(angle) * bSpeed;
               const vy = Math.sin(angle) * bSpeed;
-              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, width);
+              // Sniffers are separate shots
+              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, 'PLAYER_SNIFFER');
               bullet.addComponent(new TargetData(null, 'ENEMY'));
           }
       }
       
-      const soundId = FX_IDS['FX_PLAYER_FIRE'];
-      
-      if (this.logTimer > 1.0) {
-          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
-              msg: `EMIT SOUND ID: ${soundId}`, 
-              source: 'PlayerSystem' 
-          });
-          this.logTimer = 0;
-      }
-
-      FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, cursor.x || 0);
-      
+      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], cursor.x || 0);
       this.lastFireTime = time;
     }
   }
