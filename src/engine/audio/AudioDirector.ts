@@ -1,16 +1,17 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from './AudioSystem';
 import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
   private readCursor = 0;
+  private panelSystem!: IPanelSystem;
   
   setup(locator: IServiceLocator): void {
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
     this.readCursor = FastEventBus.getCursor();
     this.setupEventListeners();
   }
@@ -34,10 +35,6 @@ export class AudioDirector implements IGameSystem {
                 const audioKey = key.toLowerCase();
                 const pan = this.calculatePan(a2); 
                 AudioSystem.playSound(audioKey, pan);
-            } else {
-                if (process.env.NODE_ENV === 'development') {
-                    console.warn(`[AudioDirector] Unknown Sound ID: ${a1}`);
-                }
             }
         }
     });
@@ -88,7 +85,7 @@ export class AudioDirector implements IGameSystem {
   }
 
   private getPanelPan(panelId: string): number {
-      const rect = PanelRegistry.getPanelRect(panelId);
+      const rect = this.panelSystem.getPanelRect(panelId);
       if (!rect) return 0;
       return this.calculatePan(rect.x);
   }

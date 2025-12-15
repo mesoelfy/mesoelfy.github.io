@@ -1,16 +1,13 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
-import { PanelRegistry } from './PanelRegistrySystem';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
 
 export class StructureSystem implements IGameSystem {
+  private panelSystem!: IPanelSystem;
   private decayTimer = 0;
-  // Decay logic runs at 10hz (every 0.1s)
   private readonly DECAY_INTERVAL = 0.1; 
-  
-  // UPDATED: 2 HP per 0.1s = 20 DPS decay (Twice as fast as before)
   private readonly DECAY_AMOUNT = 2; 
 
   setup(locator: IServiceLocator): void {
-    // No dependencies needed yet
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
   }
 
   update(delta: number, time: number): void {
@@ -23,11 +20,10 @@ export class StructureSystem implements IGameSystem {
   }
 
   private processDecay() {
-      // Passive Rule: Destroyed panels lose residual charge (Health) over time
-      const panels = PanelRegistry.getAllPanels();
+      const panels = this.panelSystem.getAllPanels();
       for (const p of panels) {
           if (p.isDestroyed && p.health > 0) {
-               PanelRegistry.decayPanel(p.id, this.DECAY_AMOUNT);
+               this.panelSystem.decayPanel(p.id, this.DECAY_AMOUNT);
           }
       }
   }

@@ -1,20 +1,20 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IPanelSystem, IInteractionSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { GameStateSystem } from './GameStateSystem';
-import { PanelRegistry } from './PanelRegistrySystem';
-import { InteractionSystem } from './InteractionSystem';
 import { TransientDOMService } from '@/sys/services/TransientDOMService';
 
 export class UISyncSystem implements IGameSystem {
   private gameSystem!: GameStateSystem;
-  private interactionSystem!: InteractionSystem;
+  private interactionSystem!: IInteractionSystem;
+  private panelSystem!: IPanelSystem;
   
-  private readonly SYNC_INTERVAL = 0.1; // 10Hz
+  private readonly SYNC_INTERVAL = 0.1; 
   private timeSinceLastSync = 0;
 
   setup(locator: IServiceLocator): void {
     this.gameSystem = locator.getSystem<GameStateSystem>('GameStateSystem');
-    this.interactionSystem = locator.getSystem<InteractionSystem>('InteractionSystem');
+    this.interactionSystem = locator.getSystem<IInteractionSystem>('InteractionSystem');
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
   }
 
   update(delta: number, time: number): void {
@@ -28,14 +28,10 @@ export class UISyncSystem implements IGameSystem {
 
   private sync() {
     const store = useGameStore.getState();
-    
-    // 1. FAST PATH: Direct DOM Updates
-    const formattedScore = this.gameSystem.score.toString().padStart(4, '0');
-    TransientDOMService.update('score-display', formattedScore);
-    
-    // 2. SLOW PATH: React State Sync
-    // OPTIMIZATION: Strict check. If absolutely nothing relevant changed, do not call set().
     const gs = this.gameSystem;
+    
+    const formattedScore = gs.score.toString().padStart(4, '0');
+    TransientDOMService.update('score-display', formattedScore);
     
     const hasChanged = 
         store.playerHealth !== gs.playerHealth || 
@@ -45,7 +41,7 @@ export class UISyncSystem implements IGameSystem {
         store.level !== gs.level ||
         store.upgradePoints !== gs.upgradePoints ||
         store.interactionTarget !== this.interactionSystem.hoveringPanelId ||
-        Math.abs(store.systemIntegrity - PanelRegistry.systemIntegrity) > 1.0; 
+        Math.abs(store.systemIntegrity - this.panelSystem.systemIntegrity) > 1.0; 
 
     if (hasChanged) {
         store.syncGameState({
@@ -56,26 +52,18 @@ export class UISyncSystem implements IGameSystem {
             score: gs.score,
             xpToNextLevel: gs.xpToNextLevel,
             upgradePoints: gs.upgradePoints,
-            activeUpgrades: { ...gs.activeUpgrades }, // Shallow copy needed
-            systemIntegrity: PanelRegistry.systemIntegrity,
+            activeUpgrades: { ...gs.activeUpgrades }, 
+            systemIntegrity: this.panelSystem.systemIntegrity,
             interactionTarget: this.interactionSystem.hoveringPanelId 
         });
     }
 
-    // 3. Panel Sync (Very Slow path)
-    // Only sync panels if one was actually destroyed/healed recently? 
-    // For now, we trust the React memoization in GlassPanel to reject updates if props match.
-    // But we can optimize data creation:
-    
-    // Check if we need to sync panel state at all (e.g. any damage taken?)
-    // This is hard to diff cheaply. For now, we rely on the 10Hz throttle.
     const uiPanels: Record<string, any> = {};
-    const panels = PanelRegistry.getAllPanels();
+    const panels = this.panelSystem.getAllPanels();
     let panelsChanged = false;
 
     for(const p of panels) {
         const prev = store.panels[p.id];
-        // Only update if data diff (prevents object identity churn)
         if (!prev || prev.health !== p.health || prev.isDestroyed !== p.isDestroyed) {
             uiPanels[p.id] = {
                 id: p.id,

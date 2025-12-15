@@ -5,7 +5,7 @@ import { InputSystem } from '@/sys/systems/InputSystem';
 import { PhysicsSystem } from '@/sys/systems/PhysicsSystem';
 import { GameStateSystem } from '@/sys/systems/GameStateSystem';
 import { UISyncSystem } from '@/sys/systems/UISyncSystem';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
+import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 
 import { LifeCycleSystem } from '@/sys/systems/LifeCycleSystem';
@@ -32,12 +32,11 @@ interface SystemDef {
 }
 
 const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new ClassRef();
-const useInstance = (instance: IGameSystem): SystemFactory => () => instance;
 
 export const SYSTEM_MANIFEST: SystemDef[] = [
   { id: 'TimeSystem',       factory: useClass(TimeSystem) },
   { id: 'InputSystem',      factory: useClass(InputSystem) },
-  { id: 'PanelRegistrySystem', factory: useInstance(PanelRegistry) },
+  { id: 'PanelRegistrySystem', factory: useClass(PanelRegistrySystem) }, // Fixed
   { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
   { id: 'StructureSystem',  factory: useClass(StructureSystem) },

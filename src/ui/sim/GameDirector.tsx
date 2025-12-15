@@ -4,17 +4,9 @@ import { GameBootstrapper } from '@/sys/services/GameBootstrapper';
 import { GameEngineCore } from '@/sys/services/GameEngine';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { InputSystem } from '@/sys/systems/InputSystem';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
+import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-
-// Mutable Global for Renderers to access Registry (Performance optimization)
-export let ActiveEngine: GameEngineCore | null = null;
-
-// Allow external override
-export const setActiveEngine = (engine: GameEngineCore | null) => {
-    ActiveEngine = engine;
-};
 
 // OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
 export const GameDirector = memo(() => {
@@ -33,7 +25,6 @@ export const GameDirector = memo(() => {
 
     const engine = GameBootstrapper();
     engineRef.current = engine;
-    setActiveEngine(engine);
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
@@ -42,13 +33,21 @@ export const GameDirector = memo(() => {
         input.updateBounds(viewport.width, viewport.height);
     } catch {}
     
+    // Panel Refresh Loop (10Hz) - Now using ServiceLocator
     const refreshInterval = setInterval(() => {
-        PanelRegistry.refreshAll();
+        try {
+            const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            panelSys.refreshAll();
+        } catch {}
     }, 500);
 
     let initialPolls = 0;
     const fastPoll = setInterval(() => {
-        PanelRegistry.refreshAll();
+        try {
+            const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            panelSys.refreshAll();
+        } catch {}
+        
         initialPolls++;
         if (initialPolls > 20) clearInterval(fastPoll); 
     }, 100);
@@ -59,7 +58,6 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      setActiveEngine(null);
     };
   }, []); 
 
@@ -98,5 +96,4 @@ export const GameDirector = memo(() => {
   return null;
 });
 
-// Display name for devtools
 GameDirector.displayName = 'GameDirector';

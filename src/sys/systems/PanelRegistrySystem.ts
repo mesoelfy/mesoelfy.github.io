@@ -1,14 +1,15 @@
-import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
+import { IServiceLocator, IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 
-// Services
+// Services (We still use singleton services for DOM/Structure internals, 
+// but access to them is now strictly gated through this System instance)
 import { DOMSpatialService } from '@/sys/services/DOMSpatialService';
 import { StructureHealthService } from '@/sys/services/StructureHealthService';
 
-class PanelRegistrySystemClass implements IPanelSystem {
+export class PanelRegistrySystem implements IPanelSystem {
   
   public get systemIntegrity() {
       return StructureHealthService.systemIntegrity;
@@ -57,7 +58,6 @@ class PanelRegistrySystemClass implements IPanelSystem {
       StructureHealthService.damage(id, amount);
   }
 
-  // UPDATED
   public healPanel(id: string, amount: number, sourceX?: number) {
       StructureHealthService.heal(id, amount, sourceX);
   }
@@ -90,5 +90,3 @@ class PanelRegistrySystemClass implements IPanelSystem {
       return results;
   }
 }
-
-export const PanelRegistry = new PanelRegistrySystemClass();

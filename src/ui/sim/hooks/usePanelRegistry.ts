@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/sys/state/game/useGameStore';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
 
 export const usePanelRegistry = (id: string) => {
   const elementRef = useRef<HTMLDivElement>(null);
@@ -12,23 +13,57 @@ export const usePanelRegistry = (id: string) => {
     const el = elementRef.current;
     if (!el) return;
 
-    // 1. Register Logic (Health/Store)
+    // 1. React State Registration (Immediate)
     registerPanel(id, el);
 
-    // 2. Register Spatial (Singleton)
-    // This works immediately, even if game hasn't started
-    PanelRegistry.register(id, el);
+    // 2. Engine System Registration (With Retry)
+    let panelSys: IPanelSystem | undefined;
+    let registered = false;
+    
+    const attemptRegistration = () => {
+        if (registered) return;
+        try {
+            panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            if (panelSys) {
+                panelSys.register(id, el);
+                registered = true;
+                // Force a refresh immediately
+                panelSys.refreshSingle(id);
+            }
+        } catch (e) {
+            // Engine not ready, wait for next attempt
+        }
+    };
+
+    // Attempt immediately
+    attemptRegistration();
+
+    // Poll until registered (needed because Engine boots async relative to React mount)
+    const retryInterval = setInterval(() => {
+        if (registered) {
+            clearInterval(retryInterval);
+        } else {
+            attemptRegistration();
+        }
+    }, 100);
 
     // 3. Resize Observer
     const observer = new ResizeObserver(() => {
-        PanelRegistry.refreshSingle(id);
+        try {
+            // Try getting system fresh in case of HMR/Reload
+            if (!panelSys) panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            if (panelSys) panelSys.refreshSingle(id);
+        } catch {}
     });
     observer.observe(el);
 
     return () => {
+      clearInterval(retryInterval);
       observer.disconnect();
       unregisterPanel(id);
-      PanelRegistry.unregister(id);
+      try {
+          if (panelSys) panelSys.unregister(id);
+      } catch {}
     };
   }, [id, registerPanel, unregisterPanel]);
 

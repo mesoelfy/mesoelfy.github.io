@@ -1,6 +1,6 @@
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { Entity } from './ecs/Entity';
-import { SpatialGrid } from './SpatialGrid';
+import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { QueryDef } from './ecs/Query';
@@ -23,8 +23,6 @@ export interface IServiceLocator {
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
 }
-
-// --- CORE CONTRACTS ---
 
 export interface IEntityRegistry {
   createEntity(): Entity;
@@ -57,8 +55,6 @@ export interface IInputService {
   updateCursor(x: number, y: number): void;
   updateBounds(width: number, height: number): void; 
 }
-
-// --- SYSTEM CONTRACTS ---
 
 export interface IParticleSystem extends IGameSystem {
   spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number): void;
@@ -105,10 +101,18 @@ export interface IGameStateSystem extends IGameSystem {
   decayReboot(amount: number): void;
 }
 
+// UPDATED: Expose necessary methods for systems/hooks
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
+  register(id: string, element: HTMLElement): void;
+  unregister(id: string): void;
+  refreshAll(): void;
+  refreshSingle(id: string): void;
   damagePanel(id: string, amount: number): void;
-  // UPDATED: sourceX optional arg
   healPanel(id: string, amount: number, sourceX?: number): void;
+  decayPanel(id: string, amount: number): void;
+  destroyAll(): void;
   getPanelRect(id: string): WorldRect | undefined;
+  getPanelState(id: string): { health: number; isDestroyed: boolean } | undefined;
+  getAllPanels(): any[]; // Keeping loose type for the merged object to avoid circ deps
 }

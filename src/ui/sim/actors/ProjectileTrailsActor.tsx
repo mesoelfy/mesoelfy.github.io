@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ActiveEngine } from '../GameDirector';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
@@ -51,11 +51,15 @@ export const ProjectileTrailsActor = () => {
   }), []);
 
   useFrame(() => {
-    if (!meshRef.current || !ActiveEngine) return;
+    if (!meshRef.current) return;
+    
+    let registry;
+    try { registry = ServiceLocator.getRegistry(); } catch { return; }
+
     const tempObj = new THREE.Object3D();
     const tempColor = new THREE.Color();
     let count = 0;
-    const bullets = ActiveEngine.registry.getByTag(Tag.BULLET);
+    const bullets = registry.getByTag(Tag.BULLET);
 
     for (const b of bullets) {
         if (count >= MAX_TRAILS) break;

@@ -1,10 +1,9 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { IdentityData } from '@/sys/data/IdentityData';
-import { PanelRegistry } from './PanelRegistrySystem';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { GameEventBus } from '@/engine/signals/GameEventBus'; 
-import { GameEvents, FXVariant } from '@/engine/signals/GameEvents'; 
+import { GameEvents } from '@/engine/signals/GameEvents'; 
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { OrbitalData } from '@/sys/data/OrbitalData';
@@ -19,11 +18,13 @@ export class BehaviorSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
   private config!: typeof ConfigService;
+  private panelSystem!: IPanelSystem; // NEW Dependency
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     this.config = locator.getConfigService();
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem'); // Inject
     
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -57,7 +58,8 @@ export class BehaviorSystem implements IGameSystem {
           const id = FX_IDS[type];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
       },
-      damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
+      damagePanel: (id, amount) => this.panelSystem.damagePanel(id, amount), // Use injected system
+      getPanelRect: (id) => this.panelSystem.getPanelRect(id), // New context method
       playSound: (key, x) => {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 

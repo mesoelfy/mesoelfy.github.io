@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ActiveEngine } from '../GameDirector';
+import { ServiceLocator } from '@/sys/services/ServiceLocator'; // Use Locator
 import { TransformData } from '@/sys/data/TransformData';
 import { IdentityData } from '@/sys/data/IdentityData';
 import { Entity } from '@/engine/ecs/Entity';
@@ -47,9 +47,20 @@ export const InstancedActor = ({
   }, [maxCount]);
 
   useFrame((state, delta) => {
-    if (!meshRef.current || !ActiveEngine) return;
+    if (!meshRef.current) return;
 
-    const entities = ActiveEngine.registry.getByTag(tag);
+    // SAFE ACCESS: Get registry from Locator
+    // If Engine isn't running/booted, this might throw or return null depending on your implementation.
+    // We try/catch or just safe check.
+    let registry;
+    try {
+        registry = ServiceLocator.getRegistry();
+    } catch {
+        // Registry not ready yet (or game ended)
+        return;
+    }
+
+    const entities = registry.getByTag(tag);
     let count = 0;
     const transformData = TransformStore.data;
 

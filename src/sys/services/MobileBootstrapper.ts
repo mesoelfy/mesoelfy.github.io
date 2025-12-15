@@ -16,7 +16,7 @@ import { StructureSystem } from '@/sys/systems/StructureSystem';
 import { MobileWaveSystem } from '@/sys/systems/MobileWaveSystem';
 import { TargetingSystem } from '@/sys/systems/TargetingSystem';
 import { BehaviorSystem } from '@/sys/systems/BehaviorSystem';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
+import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { GameStateSystem } from '@/sys/systems/GameStateSystem';
 
 import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
@@ -70,9 +70,13 @@ export const MobileBootstrapper = () => {
   registerAllBehaviors();
   registerAllAssets();
 
+  // Create PanelSystem instance manually
+  const panelSystem = new PanelRegistrySystem();
+  ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
+  engine.registerSystem(panelSystem);
+
   const systems: { id: string, sys: any }[] = [
       { id: 'TimeSystem', sys: new TimeSystem() },
-      { id: 'PanelRegistrySystem', sys: PanelRegistry }, 
       { id: 'StructureSystem', sys: new StructureSystem() },
       { id: 'GameStateSystem', sys: new GameStateSystem() },
       { id: 'MobileWaveSystem', sys: new MobileWaveSystem() },
@@ -90,6 +94,8 @@ export const MobileBootstrapper = () => {
       ServiceLocator.registerSystem(id, sys);
       engine.registerSystem(sys);
   });
+
+  panelSystem.setup(ServiceLocator);
 
   systems.forEach(({ id }) => {
       const sys = ServiceLocator.getSystem(id);

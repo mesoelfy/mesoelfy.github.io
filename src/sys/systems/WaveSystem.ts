@@ -1,7 +1,6 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useStore } from '@/sys/state/global/useStore';
-import { PanelRegistry } from './PanelRegistrySystem'; 
 import { EnemyTypes } from '@/sys/config/Identifiers';
 
 const WAVE_TIMELINE = [
@@ -17,6 +16,7 @@ const WAVE_TIMELINE = [
 
 export class WaveSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
+  private panelSystem!: IPanelSystem;
   private waveTime = 0;
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
@@ -24,6 +24,7 @@ export class WaveSystem implements IGameSystem {
 
   setup(locator: IServiceLocator): void {
     this.spawner = locator.getSpawner();
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
     this.reset();
   }
 
@@ -36,10 +37,6 @@ export class WaveSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
-    
-    // STOP WAVES IN SANDBOX (Arena Mode)
-    // But do NOT stop the System update loop entirely if we had logic here needed for other things.
-    // Since this system is purely for waves, returning is fine.
     if (useStore.getState().bootState === 'sandbox') return;
 
     this.waveTime += delta;
@@ -56,7 +53,7 @@ export class WaveSystem implements IGameSystem {
       const flags = useStore.getState().debugFlags;
       if (flags.panelGodMode || flags.peaceMode) return;
 
-      const allPanels = PanelRegistry.getAllPanels();
+      const allPanels = this.panelSystem.getAllPanels();
       const deadPanels = allPanels.filter(p => p.isDestroyed && p.width > 0);
       
       if (deadPanels.length === 0) return;

@@ -4,7 +4,6 @@ import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem'; 
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -30,7 +29,8 @@ export const DrillerLogic: EnemyLogic = {
     let destY = target.y;
     
     if (target.type === 'PANEL' && target.id) {
-        const rect = PanelRegistry.getPanelRect(target.id);
+        // Use Context instead of Global
+        const rect = ctx.getPanelRect(target.id);
         if (rect) {
             const clampX = Math.max(rect.left, Math.min(pos.x, rect.right));
             const clampY = Math.max(rect.bottom, Math.min(pos.y, rect.top));

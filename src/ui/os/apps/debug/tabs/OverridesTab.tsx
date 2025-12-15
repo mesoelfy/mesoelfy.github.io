@@ -2,7 +2,8 @@ import { Play, Sparkles, Trash2, Skull, RefreshCw, Crown, Ghost, Shield, Crossha
 import { clsx } from 'clsx';
 import { useStore } from '@/sys/state/global/useStore';
 import { useGameStore } from '@/sys/state/game/useGameStore';
-import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
@@ -28,10 +29,15 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   };
 
   const executeCrash = () => {
-    useGameStore.setState({ systemIntegrity: 0 });
-    PanelRegistry.destroyAll();
-    GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
-    stopGame();
+    try {
+        // Destroy all panels via System
+        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+        panels.destroyAll();
+        
+        useGameStore.setState({ systemIntegrity: 0 });
+        GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
+        stopGame();
+    } catch {}
   };
 
   const handleForceCrash = () => {
@@ -50,8 +56,11 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const handleReboot = () => {
     useGameStore.setState({ playerHealth: 100, playerRebootProgress: 0 });
-    const panels = PanelRegistry.getAllPanels();
-    panels.forEach(p => PanelRegistry.healPanel(p.id, 1000));
+    try {
+        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+        const list = panels.getAllPanels();
+        list.forEach((p: any) => panels.healPanel(p.id, 1000));
+    } catch {}
     closeDebug();
   };
 
@@ -72,7 +81,6 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const toggleGodSuite = () => {
       const newState = !areAllGodModesOn;
-      // Play sound before state change
       if (newState) {
           AudioSystem.playSound('powerup');
       } else {

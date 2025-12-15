@@ -1,10 +1,9 @@
-import { IGameSystem, IServiceLocator, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem } from '@/engine/interfaces';
 import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/sys/state/global/useStore'; 
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { PanelRegistry } from './PanelRegistrySystem';
 
 export class GameStateSystem implements IGameStateSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -25,8 +24,10 @@ export class GameStateSystem implements IGameStateSystem {
   public isGameOver: boolean = false;
   
   private heartbeatTimer: number = 0;
+  private panelSystem!: IPanelSystem;
 
   setup(locator: IServiceLocator): void {
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
     this.reset();
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
@@ -36,11 +37,13 @@ export class GameStateSystem implements IGameStateSystem {
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
 
-      if (PanelRegistry.systemIntegrity < 30 && PanelRegistry.systemIntegrity > 0) {
+      const integrity = this.panelSystem.systemIntegrity;
+
+      if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           
           if (this.heartbeatTimer <= 0) {
-              const urgency = 1.0 - (PanelRegistry.systemIntegrity / 30);
+              const urgency = 1.0 - (integrity / 30);
               AudioSystem.playSound('loop_warning');
               GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
               this.heartbeatTimer = 1.4 - (urgency * 1.05); 

@@ -1,7 +1,6 @@
-import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { PanelRegistry } from './PanelRegistrySystem'; 
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
@@ -15,11 +14,13 @@ export class InteractionSystem implements IInteractionSystem {
   private locator!: IServiceLocator;
   private spawner!: IEntitySpawner;
   private gameSystem!: IGameStateSystem; 
+  private panelSystem!: IPanelSystem;
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     this.spawner = locator.getSpawner();
     this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
   }
 
   update(delta: number, time: number): void {
@@ -44,7 +45,7 @@ export class InteractionSystem implements IInteractionSystem {
   teardown(): void {}
 
   private handleRevival(cursor: {x: number, y: number}, time: number) {
-    const rect = PanelRegistry.getPanelRect('identity');
+    const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
     const padding = 2.0; 
     const isHovering = 
@@ -59,23 +60,6 @@ export class InteractionSystem implements IInteractionSystem {
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.gameSystem.tickReboot(4.0); 
             this.lastRepairTime = time;
-            
-            // Note: Loops are handled by AudioDirector implicitly or we can update it
-            // AudioDirector listens for REBOOTING events? 
-            // Actually, PlayerAvatar does some loop logic but AudioDirector doesn't.
-            // Let's stick to event emission or just play sound here.
-            // AudioSystem.playSound('loop_reboot', ...pan) logic is currently manual here?
-            // Ah, previous code: AudioSystem.playSound('loop_reboot'); 
-            // We should Pan this too!
-            // BUT: Player revival isn't emitting PANEL_RESTORED in the same way.
-            // Let's keep this simple for now or use cursor.x pan.
-            // Since player is usually dead center or identity panel, using cursor.x is fine.
-            
-            // NOTE: InteractionSystem doesn't know pan calculation logic (width).
-            // Better to rely on AudioDirector or AudioSystem. 
-            // Actually, AudioDirector doesn't listen for tick events yet.
-            // Let's just keep loop_reboot centered or simple for now as it's not the "Ding".
-            
             AudioSystem.playSound('loop_reboot'); 
 
             if (Math.random() > 0.3) {
@@ -88,7 +72,7 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panels = PanelRegistry.getAllPanels();
+    const panels = this.panelSystem.getAllPanels();
     for (const p of panels) {
       if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
         this.hoveringPanelId = p.id;
@@ -98,14 +82,10 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // FIX: PASS CURSOR.X
-            PanelRegistry.healPanel(p.id, 2.8, cursor.x); 
+            this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
-                // Loop sound logic: Could improve this later, but for loops it's tricky to re-trigger.
-                // AudioSystem handles loops via playSound? No, it just restarts it.
-                // We'll leave the loop as is for now, focus is on the DING.
                 AudioSystem.playSound('loop_reboot');
             } else {
                 GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });

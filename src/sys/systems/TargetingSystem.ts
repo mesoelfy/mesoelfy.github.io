@@ -1,19 +1,20 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformData } from '@/sys/data/TransformData';
 import { TargetData } from '@/sys/data/TargetData';
-import { PanelRegistry } from './PanelRegistrySystem';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class TargetingSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private locator!: IServiceLocator;
+  private panelSystem!: IPanelSystem;
   private playerCache: { x: number, y: number } | null = null;
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.locator = locator;
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
   }
 
   update(delta: number, time: number): void {
@@ -32,12 +33,12 @@ export class TargetingSystem implements IGameSystem {
 
         if (target.locked && target.id) {
             if (target.type === 'PANEL') {
-                const panel = PanelRegistry.getPanelState(target.id);
+                const panel = this.panelSystem.getPanelState(target.id);
                 if (!panel || panel.isDestroyed) {
                     target.locked = false;
                     target.id = null;
                 } else {
-                    const rect = PanelRegistry.getPanelRect(target.id);
+                    const rect = this.panelSystem.getPanelRect(target.id);
                     if (rect) {
                         target.x = rect.x;
                         target.y = rect.y;
@@ -103,7 +104,7 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private findNearestPanel(x: number, y: number) {
-      const panels = PanelRegistry.getAllPanels();
+      const panels = this.panelSystem.getAllPanels();
       let nearest: any = null;
       let minDist = Infinity;
 
