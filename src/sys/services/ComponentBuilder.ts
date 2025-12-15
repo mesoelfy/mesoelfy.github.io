@@ -13,7 +13,6 @@ import { Component } from '@/engine/ecs/Component';
 
 type ComponentFactory = (data: any) => Component;
 
-// Helper to acquire or create
 const get = <T extends Component>(type: string, factory: () => T, reset: (c: T) => void): T => {
     const pooled = ComponentPoolManager.acquire<T>(type);
     if (pooled) {

@@ -4,13 +4,13 @@ import { Canvas } from '@react-three/fiber';
 import { MobileGameDirector } from '@/ui/sim/MobileGameDirector';
 import { RenderDirector } from '@/ui/sim/RenderDirector';
 import { CameraRig } from '@/ui/sim/vfx/CameraRig';
-import { SocialRow } from '@/ui/molecules/SocialRow';
+import { SocialRow } from '@/ui/kit/molecules/SocialRow';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Skull, Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
-import { GlassPanel } from '@/ui/atoms/GlassPanel';
+import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 

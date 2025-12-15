@@ -7,7 +7,7 @@ import { clsx } from 'clsx';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 
 import { OverridesTab } from './tabs/OverridesTab';
 import { SandboxTab } from './tabs/SandboxTab';

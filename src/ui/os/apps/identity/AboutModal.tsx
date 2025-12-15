@@ -1,7 +1,7 @@
 import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import identity from '@/sys/config/static/identity.json';
-import { StatsRadar } from '@/ui/atoms/StatsRadar';
-import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { StatsRadar } from '@/ui/kit/atoms/StatsRadar';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { motion } from 'framer-motion';
 import { Fingerprint, Hash, ShieldAlert } from 'lucide-react';
 

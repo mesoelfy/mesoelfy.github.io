@@ -7,13 +7,13 @@ export const GAME_THEME = {
   bullet: {
     plasma: '#FFFFFF',
     trail: '#78F654',
-    hunter: '#F7D277', // Specific color for Hunter shots
+    hunter: '#F7D277', 
   },
   enemy: {
     muncher: '#9E4EA5',
     kamikaze: '#FF003C',
     hunter: '#F7D277',
-    charge: '#FFFFFF',  // Telegraph flash
+    charge: '#FFFFFF',  
   },
   hud: {
     text: '#78F654',

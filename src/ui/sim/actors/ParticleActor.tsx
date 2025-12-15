@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { AssetService } from '@/game/assets/AssetService';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ParticleSystem } from '@/sys/systems/ParticleSystem';
 
 export const ParticleActor = () => {

@@ -5,11 +5,11 @@ import { GameDirector } from './GameDirector';
 import { CameraRig } from './vfx/CameraRig';
 import { GalleryStage } from './stages/GalleryStage';
 import { RenderDirector } from './RenderDirector';
-import { VirtualJoystick } from '@/ui/atoms/VirtualJoystick';
-import { ActionButton } from '@/ui/atoms/ActionButton';
+import { VirtualJoystick } from '@/ui/kit/atoms/VirtualJoystick';
+import { ActionButton } from '@/ui/kit/atoms/ActionButton';
 import { useStore } from '@/sys/state/global/useStore';
 import { useEffect, useState, useLayoutEffect } from 'react';
-import { registerAllAssets } from '@/game/assets/AssetCatalog';
+import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();

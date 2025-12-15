@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, Cpu, Scan, Biohazard, Waves, Ban, Skull, AlertTriangle, Terminal } from 'lucide-react';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { clsx } from 'clsx';
 
 interface Props {

@@ -4,8 +4,8 @@ import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/sys/state/global/useStore';
 import { EnemyTypes } from '@/sys/config/Identifiers';
-import { GAME_THEME } from '@/game/theme';
-import { AssetService } from '@/game/assets/AssetService';
+import { GAME_THEME } from '@/ui/sim/config/theme';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 
 // --- SHADERS ---
 const bodyVertexShader = `

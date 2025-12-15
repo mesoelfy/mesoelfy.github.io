@@ -3,11 +3,11 @@
 import { useStore } from '@/sys/state/global/useStore';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { SceneCanvas } from '@/ui/sim/SceneCanvas';
-import { GlassPanel } from '@/ui/atoms/GlassPanel';
-import { SocialRow } from '@/ui/molecules/SocialRow';
-import { LiveArtGrid } from '@/ui/molecules/LiveArtGrid';
-import { HoloCommLog } from '@/ui/molecules/HoloCommLog';
-import { IdentityHUD } from '@/ui/molecules/IdentityHUD';
+import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
+import { SocialRow } from '@/ui/kit/molecules/SocialRow';
+import { LiveArtGrid } from '@/ui/kit/molecules/LiveArtGrid';
+import { HoloCommLog } from '@/ui/kit/molecules/HoloCommLog';
+import { IdentityHUD } from '@/ui/kit/molecules/IdentityHUD';
 import { Header } from '@/ui/os/desktop/Header';
 import { Footer } from '@/ui/os/desktop/Footer';
 import { AboutModal } from '@/ui/os/apps/identity/AboutModal';
@@ -21,15 +21,15 @@ import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CustomCursor } from '@/ui/atoms/CustomCursor';
-import { ZenBomb } from '@/ui/atoms/ZenBomb';
+import { CustomCursor } from '@/ui/kit/atoms/CustomCursor';
+import { ZenBomb } from '@/ui/kit/atoms/ZenBomb';
 import { DebugOverlay } from '@/ui/os/apps/debug/DebugOverlay';
 import { SimulationHUD } from '@/ui/os/apps/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/os/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
 import { RotationLock } from '@/ui/os/overlays/RotationLock';
-import { FeedAccessTerminal } from '@/ui/molecules/FeedAccessTerminal'; // NEW IMPORT
+import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; // NEW IMPORT
 import { clsx } from 'clsx';
 
 export default function Home() {

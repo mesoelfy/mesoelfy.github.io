@@ -4,7 +4,7 @@ import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
 import { TransformData } from '../data/TransformData';
-import { AssetService } from '@/game/assets/AssetService';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import * as THREE from 'three';
 

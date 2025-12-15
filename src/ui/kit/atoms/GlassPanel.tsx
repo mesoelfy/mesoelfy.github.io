@@ -9,9 +9,9 @@ import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 
-import { RebootOverlay } from '@/ui/molecules/panel/RebootOverlay';
-import { IntelligentHeader } from '@/ui/molecules/panel/IntelligentHeader';
-import { BreachOverlay } from '@/ui/molecules/panel/BreachOverlay';
+import { RebootOverlay } from '@/ui/kit/molecules/panel/RebootOverlay';
+import { IntelligentHeader } from '@/ui/kit/molecules/panel/IntelligentHeader';
+import { BreachOverlay } from '@/ui/kit/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 

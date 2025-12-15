@@ -6,7 +6,7 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { LifetimeData } from '@/sys/data/LifetimeData';
-import { GAME_THEME } from '@/game/theme';
+import { GAME_THEME } from '@/ui/sim/config/theme';
 
 const MAX_TRAILS = 500; 
 

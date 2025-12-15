@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { RenderRegistry } from '@/game/render/RenderRegistry';
-import { registerAllRenderers } from '@/game/render/RenderCatalog';
+import { RenderRegistry } from '@/ui/sim/registry/RenderRegistry';
+import { registerAllRenderers } from '@/ui/sim/registry/RenderCatalog';
 
 // Flag to ensure we only register once per session
 let hasRegistered = false;

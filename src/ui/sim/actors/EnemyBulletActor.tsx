@@ -1,7 +1,7 @@
 import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
-import { AssetService } from '@/game/assets/AssetService';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 
 export const EnemyBulletActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');

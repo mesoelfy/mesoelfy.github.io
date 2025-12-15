@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { GAME_THEME } from '@/game/theme';
+import { GAME_THEME } from '@/ui/sim/config/theme';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useStore } from '@/sys/state/global/useStore';

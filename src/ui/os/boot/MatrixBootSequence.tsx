@@ -9,7 +9,7 @@ import { BootHeader } from './atoms/BootHeader';
 import { CoreHeader } from './atoms/CoreHeader';
 import { AsciiRenderer } from './atoms/AsciiRenderer';
 import { TypedLog } from './atoms/TypedLog';
-import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 
 // Hooks
 import { useBootSequence } from './hooks/useBootSequence';

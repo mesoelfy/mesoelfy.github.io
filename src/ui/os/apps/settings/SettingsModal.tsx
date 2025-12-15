@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import { useState } from 'react';
 import { SoundTab } from './tabs/SoundTab';
 import { GpuConfigPanel } from './components/GpuConfigPanel';
-import { DotGridBackground } from '@/ui/atoms/DotGridBackground';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 
 const TABS = [
   { id: 'SOUND', label: 'AUDIO_CONFIG', icon: Volume2 },

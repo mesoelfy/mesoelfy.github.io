@@ -1,9 +1,9 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { EntitySpawner } from '@/game/core/EntitySpawner';
+import { EntitySpawner } from '@/sys/services/EntitySpawner';
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
-import { registerAllAssets } from '@/game/assets/AssetCatalog';
+import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 
 // Systems
 import { TimeSystem } from '@/sys/systems/TimeSystem';

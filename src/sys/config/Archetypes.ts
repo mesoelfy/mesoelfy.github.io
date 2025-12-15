@@ -1,7 +1,7 @@
-import { ENEMY_CONFIG } from '@/sys/config/EnemyConfig';
-import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
-import { PhysicsConfig, CollisionLayers } from '@/sys/config/PhysicsConfig';
-import { ArchetypeIDs } from '@/sys/config/Identifiers';
+import { ENEMY_CONFIG } from './EnemyConfig';
+import { PLAYER_CONFIG } from './PlayerConfig';
+import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
+import { ArchetypeIDs } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 
 export interface EntityBlueprint {
@@ -10,7 +10,6 @@ export interface EntityBlueprint {
 }
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
-  // --- PLAYER ---
   [ArchetypeIDs.PLAYER]: {
     tags: [Tag.PLAYER],
     components: [
@@ -25,8 +24,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       }}
     ]
   },
-
-  // --- PROJECTILES ---
   [ArchetypeIDs.BULLET_PLAYER]: {
     tags: [Tag.BULLET, Tag.PLAYER],
     components: [
@@ -57,13 +54,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       }}
     ]
   },
-
-  // --- ENEMIES ---
   [ArchetypeIDs.DRILLER]: {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
       { type: 'Identity', data: { variant: ArchetypeIDs.DRILLER } },
-      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
+      { type: 'Transform', data: { scale: 1.0 } }, 
       { type: 'Health', data: { max: ENEMY_CONFIG.driller.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.driller.damage } },
@@ -76,7 +71,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
       { type: 'Identity', data: { variant: ArchetypeIDs.KAMIKAZE } },
-      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
+      { type: 'Transform', data: { scale: 1.0 } }, 
       { type: 'Health', data: { max: ENEMY_CONFIG.kamikaze.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: ENEMY_CONFIG.kamikaze.damage } },
@@ -89,7 +84,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     components: [
       { type: 'Identity', data: { variant: ArchetypeIDs.HUNTER } },
-      { type: 'Transform', data: { scale: 1.0 } }, // FIX: Added Transform
+      { type: 'Transform', data: { scale: 1.0 } }, 
       { type: 'Health', data: { max: ENEMY_CONFIG.hunter.hp } },
       { type: 'Motion', data: { friction: 0 } },
       { type: 'Combat', data: { damage: 10 } }, 

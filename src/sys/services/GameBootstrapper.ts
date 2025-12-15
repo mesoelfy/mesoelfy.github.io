@@ -1,12 +1,12 @@
 import { ServiceLocator } from './ServiceLocator';
 import { GameEngineCore } from './GameEngine';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { EntitySpawner } from '@/game/core/EntitySpawner';
+import { EntitySpawner } from '@/sys/services/EntitySpawner';
 import { SYSTEM_MANIFEST } from '@/sys/config/SystemManifest';
 
 // Registries
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
-import { registerAllAssets } from '@/game/assets/AssetCatalog'; // NEW
+import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog'; // NEW
 
 export const GameBootstrapper = () => {
   ServiceLocator.reset();

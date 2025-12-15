@@ -1,7 +1,7 @@
 import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
-import { AssetService } from '@/game/assets/AssetService';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 import { TransformData } from '@/sys/data/TransformData';
 import * as THREE from 'three';
 

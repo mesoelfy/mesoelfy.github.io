@@ -3,7 +3,7 @@ import identity from '@/sys/config/static/identity.json';
 import { clsx } from 'clsx';
 
 // Sub-components
-import { VitalsRing } from '../atoms/VitalsRing';
+import { VitalsRing } from '@/ui/kit/atoms/VitalsRing';
 import { UpgradeTerminal } from './UpgradeTerminal';
 import { SystemOps } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';

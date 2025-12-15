@@ -1,5 +1,3 @@
-// Pure Math implementation of geometry generation to run off-main-thread
-
 const computeBarycentric = (positionCount: number) => {
   const array = new Float32Array(positionCount * 3);
   for (let i = 0; i < positionCount; i += 3) {
@@ -56,7 +54,6 @@ const generateHunterSpear = () => {
   return { positions: posArray, barycentric: baryArray };
 };
 
-// Worker Listener
 self.onmessage = (e: MessageEvent) => {
   const { id, task } = e.data;
   
@@ -65,10 +62,9 @@ self.onmessage = (e: MessageEvent) => {
     if (task === 'GEO_HUNTER') {
         result = generateHunterSpear();
     } else {
-        throw new Error(`Unknown task: ${task}`);
+        throw new Error('Unknown task: ' + task);
     }
 
-    // Transfer buffers to avoid copy
     self.postMessage(
         { id, success: true, ...result }, 
         [result.positions.buffer, result.barycentric.buffer]

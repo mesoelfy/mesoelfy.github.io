@@ -1,10 +1,10 @@
 import { Tag } from '@/engine/ecs/types';
-import { GAME_THEME } from '@/game/theme';
+import { GAME_THEME } from '@/ui/sim/config/theme';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '@/sys/data/IdentityData';
 import { AIStateData } from '@/sys/data/AIStateData';
-import { AssetService } from '@/game/assets/AssetService';
+import { AssetService } from '@/ui/sim/assets/AssetService';
 
 export const KamikazeActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_KAMIKAZE');
