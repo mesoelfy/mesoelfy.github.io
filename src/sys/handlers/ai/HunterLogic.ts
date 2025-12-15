@@ -14,6 +14,11 @@ const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.St
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
 const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
+// CONFIGURATION
+const EXHAUST_OFFSET_DIST = 1.0; // Distance from center to tail
+const EXHAUST_CONE_ANGLE = 0.5;  // ~30 degrees spread
+const EXHAUST_DENSITY = 2;       // Particles per frame
+
 export const HunterLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
     const pos = getPos(e);
@@ -63,29 +68,30 @@ export const HunterLogic: EnemyLogic = {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
         
-        // Strictly face the target
+        // Face Target
         pos.rotation = angleToTarget;
         
-        // --- EXHAUST PLUME ---
-        if (Math.random() > 0.2) { 
-            const particleSys = ServiceLocator.getParticleSystem();
-            
-            // SIMPLIFIED: Use current rotation (Tip Direction)
-            const fwdX = Math.cos(pos.rotation);
-            const fwdY = Math.sin(pos.rotation);
-            
-            // Spawn at the rear (negative forward vector)
-            // Offset slightly so it doesn't clip inside the mesh center
-            const px = pos.x - fwdX;
-            const py = pos.y - fwdY;
-            
-            // Velocity: Fast backward thrust
-            const speed = 25.0; 
-            const vx = -fwdX * speed;
-            const vy = -fwdY * speed;
-            
-            // Color: Bright Yellow
-            particleSys.spawn(px, py, '#F7D277', vx, vy, 0.4); 
+        // --- ENGINE EXHAUST CONE ---
+        const particleSys = ServiceLocator.getParticleSystem();
+        const rearAngle = pos.rotation + Math.PI;
+
+        for (let i = 0; i < EXHAUST_DENSITY; i++) {
+            // 1. Calculate spread within the cone
+            const spread = (Math.random() - 0.5) * EXHAUST_CONE_ANGLE;
+            const thrustAngle = rearAngle + spread;
+
+            // 2. Position: Start at tail, offset slightly by randomness to create "volume"
+            const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.5);
+            const px = pos.x + Math.cos(thrustAngle) * spawnDist;
+            const py = pos.y + Math.sin(thrustAngle) * spawnDist;
+
+            // 3. Velocity: High speed, decaying over time (simulated via drag in ParticleSystem)
+            const thrustSpeed = 20.0 + (Math.random() * 10.0);
+            const vx = Math.cos(thrustAngle) * thrustSpeed;
+            const vy = Math.sin(thrustAngle) * thrustSpeed;
+
+            // 4. Emit
+            particleSys.spawn(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2));
         }
 
         state.timers.action -= ctx.delta;
@@ -111,7 +117,6 @@ export const HunterLogic: EnemyLogic = {
         ctx.playSound('fx_enemy_fire', pos.x);
         ctx.spawnLaunchSparks(pos.x + dirX, pos.y + dirY, angleToTarget);
 
-        // Recoil kick backwards
         motion.vx = -dirX * 5.0;
         motion.vy = -dirY * 5.0;
 
