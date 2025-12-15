@@ -29,7 +29,7 @@ import { WebGLErrorBoundary } from '@/ui/os/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
 import { RotationLock } from '@/ui/os/overlays/RotationLock';
-import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; // NEW IMPORT
+import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -43,7 +43,8 @@ export default function Home() {
     activeModal, 
     isDebugOpen, 
     isDebugMinimized,
-    setSimulationPaused 
+    setSimulationPaused,
+    sessionId // NEW
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
@@ -55,7 +56,6 @@ export default function Home() {
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
-  // --- SCALING LOGIC ---
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -94,16 +94,12 @@ export default function Home() {
     };
   }, [bootState]); 
 
-  // --- MASTER PAUSE LOGIC ---
   useEffect(() => {
-    // Only active during the game
     if (bootState !== 'active') return;
 
     const checkPauseState = () => {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
-        
-        // Portrait check (Mobile only)
         const isPortrait = window.matchMedia("(orientation: portrait)").matches;
         const isSmallScreen = window.innerWidth < 768;
         const isRotationLocked = isPortrait && isSmallScreen;
@@ -115,10 +111,7 @@ export default function Home() {
         }
     };
 
-    // Run immediately
     checkPauseState();
-
-    // Listen for resize (orientation changes)
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
   }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused]);
@@ -160,7 +153,8 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
-        <WebGLErrorBoundary>
+        {/* WEBGLErrorBoundary and Scene Canvas are keyed by sessionId to force recreation on reset */}
+        <WebGLErrorBoundary key={sessionId}>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
             {!isMobileLockdown && (
@@ -196,13 +190,7 @@ export default function Home() {
             <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
               <Header />
 
-              <div className={clsx(
-                  "flex-1 min-h-0 relative w-full overflow-hidden", // SCROLLBAR FIX: FORCE HIDDEN
-                  // We rely on the scaler to fit content. If content is too big, it scales down. 
-                  // No scrolling allowed in dashboard mode.
-              )}>
-                
-                {/* SCALING WRAPPER */}
+              <div className="flex-1 min-h-0 relative w-full overflow-hidden">
                 <div 
                     className="w-full origin-top transition-transform duration-300 ease-out"
                     style={{ 
@@ -229,7 +217,6 @@ export default function Home() {
                             }
                             }}
                         >
-                            {/* IDENTITY COLUMN */}
                             <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
                             <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
                                 <IdentityHUD />
@@ -240,7 +227,6 @@ export default function Home() {
                             </GlassPanel>
                             </div>
 
-                            {/* CONTENT COLUMN */}
                             <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
                             <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
                                 <FeedAccessTerminal />

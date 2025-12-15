@@ -16,14 +16,12 @@ interface AudioSettings {
   volumeSfx: number;
   volumeAmbience: number;
   
-  // Ambience Lab
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
 
-  // FX Rack
   fxReverbMix: number; 
   fxDelayMix: number;  
   fxDelayTime: number; 
@@ -46,11 +44,10 @@ const DEFAULT_AUDIO: AudioSettings = {
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
 
-  // TASTEFUL DEFAULTS
-  fxReverbMix: 0.2,     // 20% Wet (Atmosphere)
-  fxDelayMix: 0.1,      // 10% Wet (Subtle Echo)
-  fxDelayTime: 0.25,    // Short Slap-back
-  fxDelayFeedback: 0.3  // Quick Decay
+  fxReverbMix: 0.2,     
+  fxDelayMix: 0.1,      
+  fxDelayTime: 0.25,    
+  fxDelayFeedback: 0.3  
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
@@ -67,6 +64,7 @@ interface DebugFlags {
 }
 
 interface AppState {
+  sessionId: number; // NEW: Triggers Engine Re-mount
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
@@ -124,6 +122,7 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
+      sessionId: 0,
       bootState: 'standby',
       introDone: false,
       isBreaching: false,
@@ -174,9 +173,16 @@ export const useStore = create<AppState>()(
       setHovered: (item) => set({ hoveredItem: item }),
       
       resetApplication: () => {
+          // Stop Audio
+          AudioSystem.stopAll();
+          
+          // Reset Game Logic State
           useGameStore.getState().stopGame();
           useGameStore.getState().resetGame(); 
-          set({
+          
+          // Reset UI State
+          set(state => ({
+              sessionId: state.sessionId + 1, // Increment ID to force remount
               bootState: 'standby',
               introDone: false,
               isBreaching: false,
@@ -187,7 +193,7 @@ export const useStore = create<AppState>()(
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
               isSimulationPaused: false
-          });
+          }));
       },
       
       toggleMaster: () => {

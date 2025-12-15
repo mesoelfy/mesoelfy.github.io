@@ -432,16 +432,6 @@ DISABLED - POTATO_MODE (lighting bolt icon with line through it)
 
 ---
 
-### **PHASE D: Engine Wiring (Resolution & Post-Process)**
-**Goal:** Connect the settings to the heavy 3D rendering pipeline.
-1.  **Dynamic Resolution (DPR):**
-    *   Update `SceneCanvas.tsx`.
-    *   Bind the `<Canvas>` `dpr` prop to the store.
-    *   **HIGH:** `[1, 2]` (Native/Retina).
-    *   **POTATO:** `0.5` (Half-Res Retro).
-2.  **Effect Composer:**
-    *   Conditionally render `<EffectsLayer />` (Bloom/Vignette).
-    *   If **POTATO**, unmount it entirely.
 
 
 Mega Man vault opening sounds for inspiration:
@@ -451,16 +441,6 @@ https://x.com/MegaMan/status/1999326723611996349?s=20
 
 
 
-    - bloom/vignette with potato mode ??? I'm using vignette? 
-    -  Dynamic Resolution (DPR) - - - 
-
-
-  
-
-- in dashboard, the way panels resize with browser dimension change is perfect. I'd like the same property to happen when zooming the browser.
-
-
-Well done. Please provide the commit then tell me what else in the project has become a God Component.
 
 
   - 
@@ -472,9 +452,6 @@ Well done. Please provide the commit then tell me what else in the project has b
     
 
 
-can we implement a "zoomed" magnifying glass view under the action button?
-
-launched bullet should have some squash and stretch to it instead of perfect circle chape.
 
 
 
@@ -491,7 +468,6 @@ HOW TO VIBE CODE (make it a taller tab in settings) [mac and pc]
 - the scroll bar should match the health status color of the OS (GREEN/YELLOW/RED)
 
 
-If window height is greater than 800px, but panels are still extending into an area of the screen that would cause scroll bars to appear, it should scale down.
 
 
 can we implement a "zoomed" magnifying glass view under the action button?
@@ -512,12 +488,10 @@ Since we are approaching the gameplay differently, what if the user could still 
 it's a different game? What if you could collapse panels so it is just the headers, and that's how you protect panels. But baddies will still get inside and you have to open them to squish them? It can be our new enemy type we haven't introduced yet.
 
 
-VIBE CODE
-    have the AI generate sound and visual assets for you. It will run better, help you mock up better, and you can always replace with human made assets later if you want. (show diamond/and SVG animation examples)
+        VIBE CODE
+            have the AI generate sound and visual assets for you. It will run better, help you mock up better, and you can always replace with human made assets later if you want. (show diamond/and SVG animation examples)
 
 
-
-    - Health Bar: With maxHealth={5000} passed, the panel should start at 100% (5000 HP). As Drillers hit it (15 dmg each), it should visually decrease slowly. - - - we need to get our DMG stuff re calibrated
 
 
     - Player can only heal if identity core panel is at 100%, then they have to hover over the 3D crystal and they will spin like rebooting but will be green.
@@ -528,21 +502,13 @@ VIBE CODE
     - Panel being healed ding doesn't sound like it is coming from player mouse location. Feels like it is mostly centered.
 
 
-    - “We will make the "MESOELFY_OS" logo in the Header pulse with the beat/audio volume.” - how should we override this when in critical health? can we time the heart beat sound effect with the music and speed up the music when in critical health?
 
  
 
-     Need to add frames and 
-
-            - can we make the MESOELFY_OS health bar animate like a waveform from the music? What about the moving motion background grid?
-
-        - Implemented 'useAudioVisualizer' hook to bridge Web Audio data to React components via requestAnimationFrame. Wired this into the Header component, causing the 'MESOELFY_OS' logo to pulse in sync with the audio output (music + sfx).
 
     - need sound effect for hunter charging then releasing projectile
 
-    - I don't want driller doing damage to affect the MESOELFY_OS movement. Is there anything else affecting its movement?
 
-    - tauri.conf.json - - was a Tauri thing to include, what should I include with Electron What Electron stuff should I hide from my source code collection command? release.ymlrelease.yml
 
 
 Secret: Hide a password in the 3D environment (texture on a boss) that unlocks "Admin Mode" in the console. - - - - have the konami code password be revealed one character at a time after boss battles.
@@ -612,7 +578,7 @@ weavers can repair anchor nodes that haven't been destroyed, and will prioritize
 Browsers are single-threaded yes? What optimizations do you see available to run different aspects of the project like a multi-core application so that Game Logic (AI, Physics), Rendering (Three.js), and UI (React/DOM) aren't all fighting over limited bandwidth? Am I articulating the situation correctly? Please expand on the idea and help me here. Don't write any code, just outline advice based on your audit of the code base.
 
 
-I'd like to retain the functionality of my youtube videos in the HOLO COMM panel, but it was one of the earliest parts of the site architecture and is probably over due for some refactoring/optimization. What can you tell me about opportunities to improve it?
+
 
 
 
@@ -634,3 +600,5 @@ Solution: Disable Trails for now (Comment out ProjectileTrailsActor in RenderCat
 Refactoring prompts:
 
     - is there scattered logic in components that should be consolidated?
+    - tell me what else in the project has become a God Component.
+

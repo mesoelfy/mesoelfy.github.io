@@ -86,11 +86,8 @@ class AudioSystemController {
       }
 
       const panner = ctx.createStereoPanner();
-      
-      // FIX: Strict NaN check. Fallback to 0.
       let safePan = Number.isFinite(pan) ? pan : 0;
       safePan = Math.max(-1, Math.min(1, safePan));
-      
       panner.pan.value = safePan;
 
       source.connect(panner);
@@ -136,7 +133,10 @@ class AudioSystemController {
         this.playAmbience('ambience_core');
     }
     if (!this.musicElement) this.setupMusic();
-    if (this.musicElement) this.musicElement.play().catch(() => {});
+    if (this.musicElement) {
+        this.musicElement.currentTime = 0; // Restart
+        this.musicElement.play().catch(() => {});
+    }
   }
 
   private setupMusic() {
@@ -157,6 +157,21 @@ class AudioSystemController {
 
   public getFrequencyData(array: Uint8Array) {
       this.mixer.getByteFrequencyData(array);
+  }
+
+  public stopAll() {
+      if (this.musicElement) {
+          this.musicElement.pause();
+          this.musicElement.currentTime = 0;
+      }
+      
+      if (this.currentAmbienceNode) {
+          try { this.currentAmbienceNode.stop(); } catch {}
+          this.currentAmbienceNode = null;
+          this.currentAmbienceKey = null;
+      }
+      
+      // Note: Transient SFX nodes stop themselves naturally.
   }
 
   // Aliases
