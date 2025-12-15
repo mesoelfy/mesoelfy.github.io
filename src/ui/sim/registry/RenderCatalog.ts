@@ -1,29 +1,31 @@
 import { RenderRegistry } from './RenderRegistry';
 
-// Actors
+// Core Actors
 import { PlayerActor } from '../actors/PlayerActor';
-import { BulletActor } from '../actors/BulletActor';
-import { EnemyBulletActor } from '../actors/EnemyBulletActor';
-import { HunterChargeActor } from '../actors/HunterChargeActor';
-import { ParticleActor } from '../actors/ParticleActor';
 import { ProjectileTrailsActor } from '../actors/ProjectileTrailsActor';
-import { DaemonActor } from '../actors/DaemonActor';
-import { DaemonChargeActor } from '../actors/DaemonChargeActor';
-import { DaemonBulletActor } from '../actors/DaemonBulletActor';
+import { ParticleActor } from '../actors/ParticleActor';
 
+// Generic Renderers
+import { BallisticsRenderer } from '../actors/BallisticsRenderer'; // NEW
+
+// Enemies
 import { DrillerActor } from '../actors/DrillerActor';
 import { KamikazeActor } from '../actors/KamikazeActor';
 import { HunterActor } from '../actors/HunterActor';
+import { DaemonActor } from '../actors/DaemonActor';
+
+// Special States
+import { HunterChargeActor } from '../actors/HunterChargeActor';
+import { DaemonChargeActor } from '../actors/DaemonChargeActor';
 
 export const registerAllRenderers = () => {
   // Core
   RenderRegistry.register(PlayerActor);
   RenderRegistry.register(ProjectileTrailsActor);
+  RenderRegistry.register(ParticleActor);
   
-  // Projectiles
-  RenderRegistry.register(BulletActor);
-  RenderRegistry.register(EnemyBulletActor);
-  RenderRegistry.register(DaemonBulletActor);
+  // Bullets (Consolidated)
+  RenderRegistry.register(BallisticsRenderer);
   
   // Enemies
   RenderRegistry.register(DrillerActor);
@@ -33,8 +35,9 @@ export const registerAllRenderers = () => {
   // Friendlies
   RenderRegistry.register(DaemonActor);
   
-  // FX / States
-  RenderRegistry.register(ParticleActor);
+  // Special FX States
+  // Note: HunterChargeActor handles the "Charging" ball. 
+  // Once fired, it becomes a generic BULLET entity handled by BallisticsRenderer.
   RenderRegistry.register(HunterChargeActor);
   RenderRegistry.register(DaemonChargeActor);
   

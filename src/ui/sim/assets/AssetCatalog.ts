@@ -35,6 +35,43 @@ const SHADER_LIB = {
       '  gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);\n' +
       '}'
   },
+  BALLISTIC: {
+    vertex: `
+      #ifndef USE_INSTANCING_COLOR
+      attribute vec3 instanceColor;
+      #endif
+      varying vec2 vUv;
+      varying vec3 vColor;
+      void main() {
+        vUv = uv;
+        vColor = instanceColor;
+        gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragment: `
+      varying vec2 vUv;
+      varying vec3 vColor;
+      uniform float uTime;
+      float sdCapsule(vec2 p, vec2 a, vec2 b, float r) {
+        vec2 pa = p - a, ba = b - a;
+        float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+        return length( pa - ba*h ) - r;
+      }
+      void main() {
+        vec2 p = vUv - 0.5;
+        vec2 a = vec2(0.0, -0.4);
+        vec2 b = vec2(0.0, 0.4);
+        float radius = 0.08;
+        float dist = sdCapsule(p, a, b, radius);
+        float core = 1.0 - smoothstep(0.0, 0.02, dist);
+        float glow = exp(-25.0 * max(0.0, dist));
+        float alpha = core + glow;
+        vec3 finalColor = mix(vColor, vec3(1.0), core * 0.9);
+        if (alpha < 0.01) discard;
+        gl_FragColor = vec4(finalColor, alpha);
+      }
+    `
+  },
   GLOW_BILLBOARD: {
     vertex: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
     fragment: 
@@ -45,20 +82,6 @@ const SHADER_LIB = {
       '  float glow = pow(1.0 - smoothstep(0.25, 0.5, dist), 3.0);\n' +
       '  gl_FragColor = vec4(mix(uColor, vec3(1.0), core), max(core, glow));\n' +
       '}'
-  },
-  BEAM_BILLBOARD: {
-    vertex: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
-    fragment: 
-      'varying vec2 vUv; uniform vec3 uColor;\n' +
-      'float sdBox(vec2 p, vec2 b) { vec2 d = abs(p)-b; return length(max(d,0.0)) + min(max(d.x,d.y),0.0); }\n' +
-      'void main() {\n' +
-      '  vec2 p = vUv - 0.5;\n' +
-      '  float d = sdBox(p, vec2(0.2, 0.4));\n' +
-      '  float core = 1.0 - smoothstep(0.0, 0.02, d);\n' +
-      '  float glow = exp(-20.0 * max(0.0, d));\n' +
-      '  vec3 color = mix(uColor, vec3(1.0), core);\n' +
-      '  gl_FragColor = vec4(color, max(core, glow));\n' +
-      '}'
   }
 };
 
@@ -68,8 +91,7 @@ export const registerAllAssets = () => {
 
   AssetService.registerGenerator('GEO_DRILLER', () => {
       const { height, segments } = MODEL_CONFIG.DRILLER;
-      const radius = 0.5; 
-      return addBarycentricCoordinates(new THREE.ConeGeometry(radius, height, segments));
+      return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, height, segments));
   });
 
   AssetService.registerGenerator('GEO_KAMIKAZE', () => {
@@ -80,11 +102,11 @@ export const registerAllAssets = () => {
       return new THREE.OctahedronGeometry(0.6, 0);
   });
 
-  AssetService.registerGenerator('GEO_BULLET_PLAYER', () => {
+  AssetService.registerGenerator('GEO_BALLISTIC', () => {
       return new THREE.PlaneGeometry(1.0, 1.0);
   });
-
-  AssetService.registerGenerator('GEO_BULLET_ENEMY', () => {
+  
+  AssetService.registerGenerator('GEO_CHARGE_ORB', () => {
       return new THREE.PlaneGeometry(2.0, 2.0);
   });
   
@@ -98,21 +120,23 @@ export const registerAllAssets = () => {
         fragmentShader: SHADER_LIB.ENEMY_BODY.fragment,
         uniforms: {},
         vertexColors: true,
-        extensions: { derivatives: true },
         side: THREE.DoubleSide,
       });
   });
 
-  AssetService.registerGenerator('MAT_BULLET_PLAYER', () => {
+  AssetService.registerGenerator('MAT_BALLISTIC', () => {
       return new THREE.ShaderMaterial({
-        vertexShader: SHADER_LIB.BEAM_BILLBOARD.vertex,
-        fragmentShader: SHADER_LIB.BEAM_BILLBOARD.fragment,
-        uniforms: { uColor: { value: new THREE.Color(GAME_THEME.bullet.plasma) } },
-        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+        vertexShader: SHADER_LIB.BALLISTIC.vertex,
+        fragmentShader: SHADER_LIB.BALLISTIC.fragment,
+        uniforms: { uTime: { value: 0 } },
+        vertexColors: true,
+        transparent: true, 
+        blending: THREE.AdditiveBlending, 
+        depthWrite: false,
       });
   });
-
-  AssetService.registerGenerator('MAT_BULLET_ENEMY', () => {
+  
+  AssetService.registerGenerator('MAT_CHARGE_ORB', () => {
       return new THREE.ShaderMaterial({
         vertexShader: SHADER_LIB.GLOW_BILLBOARD.vertex,
         fragmentShader: SHADER_LIB.GLOW_BILLBOARD.fragment,

@@ -10,8 +10,8 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
 export const HunterChargeActor = () => {
-  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');
-  const material = AssetService.get<THREE.Material>('MAT_BULLET_ENEMY');
+  const geometry = AssetService.get<THREE.BufferGeometry>('GEO_CHARGE_ORB');
+  const material = AssetService.get<THREE.Material>('MAT_CHARGE_ORB');
 
   return (
     <InstancedActor
@@ -25,10 +25,6 @@ export const HunterChargeActor = () => {
           return id?.variant === EnemyTypes.HUNTER && state?.current === 'CHARGE';
       }}
       updateEntity={(e, obj) => {
-          // We kept the calculation here because it involves jitter/offset relative to rotation
-          // Moving this to ECS is possible but low priority as it's a visual-only transient effect.
-          // For now, cleaning up imports and using ComponentType is enough.
-          
           const transform = e.getComponent<TransformData>(ComponentType.Transform);
           const state = e.getComponent<AIStateData>(ComponentType.State);
           
@@ -38,10 +34,29 @@ export const HunterChargeActor = () => {
               
               const currentTimer = state.timers.action;
               const remaining = typeof currentTimer === 'number' ? currentTimer : maxDuration;
+              
+              // Progress: 0.0 (Start) -> 1.0 (Ready to Fire)
               const progress = Math.max(0, Math.min(1, 1.0 - (remaining / maxDuration)));
               
-              const scale = 0.2 + (Math.pow(progress, 2) * 1.3); 
-              const rumble = progress > 0.8 ? (progress - 0.8) * 0.3 : 0;
+              let scale = 0.0;
+
+              // --- IMPLOSION CURVE ---
+              if (progress < 0.8) {
+                  // Phase 1: Grow (0% to 80%)
+                  // Exponential Easing: slow start, fast growth
+                  const p = progress / 0.8;
+                  scale = Math.pow(p, 3) * 1.5;
+              } else {
+                  // Phase 2: Implode (80% to 100%)
+                  // Shrink down rapidly to concentrate energy
+                  const p = (progress - 0.8) / 0.2;
+                  scale = 1.5 * (1.0 - Math.pow(p, 0.5)); 
+                  // Never hit actual 0, keep it visible as a dense point
+                  scale = Math.max(0.2, scale);
+              }
+              
+              // Jitter increases with charge
+              const rumble = Math.pow(progress, 2) * 0.15;
               const jitterX = (Math.random() - 0.5) * rumble;
               const jitterY = (Math.random() - 0.5) * rumble;
 

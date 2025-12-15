@@ -1,6 +1,7 @@
 import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { IdentityData } from '@/sys/data/IdentityData';
+import { RenderData } from '@/sys/data/RenderData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { GameEventBus } from '@/engine/signals/GameEventBus'; 
 import { GameEvents } from '@/engine/signals/GameEvents'; 
@@ -18,13 +19,13 @@ export class BehaviorSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private spawner!: IEntitySpawner;
   private config!: typeof ConfigService;
-  private panelSystem!: IPanelSystem; // NEW Dependency
+  private panelSystem!: IPanelSystem;
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     this.config = locator.getConfigService();
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem'); // Inject
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
     
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -46,9 +47,19 @@ export class BehaviorSystem implements IGameSystem {
       time,
       spawnProjectile: (x, y, vx, vy, damage) => {
           if (damage) {
+              // DAEMON SHOT
               const bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, 4.0);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
+              
+              // NEW: Inject Render Color for Daemon
+              // Cyan: #00F0FF -> r:0, g:0.94, b:1.0
+              const render = bullet.getComponent<RenderData>(ComponentType.Render);
+              if (render) {
+                  render.r = 0; render.g = 0.94; render.b = 1.0;
+                  render.baseR = 0; render.baseG = 0.94; render.baseB = 1.0;
+              }
           } else {
+              // HUNTER SHOT (Default Enemy Bullet is fine)
               this.spawner.spawnBullet(x, y, vx, vy, true, 3.0);
           }
       },
@@ -58,8 +69,8 @@ export class BehaviorSystem implements IGameSystem {
           const id = FX_IDS[type];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
       },
-      damagePanel: (id, amount) => this.panelSystem.damagePanel(id, amount), // Use injected system
-      getPanelRect: (id) => this.panelSystem.getPanelRect(id), // New context method
+      damagePanel: (id, amount) => this.panelSystem.damagePanel(id, amount),
+      getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 

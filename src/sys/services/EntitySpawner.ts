@@ -4,7 +4,7 @@ import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/sys/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
-import { ArchetypeIDs } from '@/sys/config/Identifiers';
+import { ArchetypeIDs, EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class EntitySpawner implements IEntitySpawner {
@@ -29,8 +29,6 @@ export class EntitySpawner implements IEntitySpawner {
     for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            // Need to handle key mapping if overrides use strings vs enums
-            // But usually overrides are passed as { Transform: {...} } where key matches ComponentType string value
             const runtimeData = overrides[compDef.type] || {};
             const mergedData = { ...compDef.data, ...runtimeData };
             e.addComponent(builder(mergedData));
@@ -61,7 +59,14 @@ export class EntitySpawner implements IEntitySpawner {
   ): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
-
+    
+    // Determine Color based on Bullet Type (or override later)
+    // Daemon shots will be colored via BehaviorSystem injecting RenderData
+    // Standard shots use Archetype defaults.
+    
+    // Note: RenderData is already on the archetype.
+    // If we want custom colors per bullet type beyond archetype, we pass it in overrides.
+    
     return this.spawn(id, {
         [ComponentType.Transform]: { x, y, rotation, scale: widthMult },
         [ComponentType.Motion]: { vx, vy },
