@@ -14,8 +14,9 @@ const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.St
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
 const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
-const EXHAUST_OFFSET_DIST = 1.0;
-const EXHAUST_CONE_ANGLE = 0.5;
+// REFINED: User requested values
+const EXHAUST_OFFSET_DIST = 0.2;
+const EXHAUST_CONE_ANGLE = 0.15;
 const EXHAUST_DENSITY = 2;
 
 export const HunterLogic: EnemyLogic = {
@@ -66,7 +67,7 @@ export const HunterLogic: EnemyLogic = {
         for (let i = 0; i < EXHAUST_DENSITY; i++) {
             const spread = (Math.random() - 0.5) * EXHAUST_CONE_ANGLE;
             const thrustAngle = rearAngle + spread;
-            const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.5);
+            const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.1); 
             const px = pos.x + Math.cos(thrustAngle) * spawnDist;
             const py = pos.y + Math.sin(thrustAngle) * spawnDist;
             const thrustSpeed = 20.0 + (Math.random() * 10.0);

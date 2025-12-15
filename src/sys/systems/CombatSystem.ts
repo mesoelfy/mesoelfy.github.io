@@ -84,8 +84,12 @@ export class CombatSystem implements IGameSystem {
       
       if (fx && transform) {
           let finalFX = fx;
+          
+          // FIX: Added Driller to the FX Override check.
+          // Previously, it fell back to the passed 'fx' (usually IMPACT_WHITE)
           if (identity?.variant === EnemyTypes.HUNTER) finalFX = 'EXPLOSION_YELLOW';
-          if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
+          else if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
+          else if (identity?.variant === EnemyTypes.DRILLER) finalFX = 'EXPLOSION_PURPLE';
           
           const id = FX_IDS[finalFX];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y);

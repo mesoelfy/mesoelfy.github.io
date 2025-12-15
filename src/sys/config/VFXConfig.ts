@@ -18,7 +18,14 @@ const PALETTE_CYAN = ['#00F0FF', '#008ba3', '#FFFFFF'];
 
 export const VFX_RECIPES: Record<string, VFXRecipe> = {
   // --- EXPLOSIONS ---
-  'EXPLOSION_PURPLE': { pattern: 'RADIAL', colors: PALETTE_PURPLE, count: [10, 15], speed: [5, 12], life: [0.5, 0.8] },
+  // UPDATED: Boosted Driller explosion to match Kamikaze/Hunter "Fireworks" intensity
+  'EXPLOSION_PURPLE': { 
+      pattern: 'RADIAL', 
+      colors: PALETTE_PURPLE, 
+      count: [15, 25],    // Increased from [10, 15]
+      speed: [10, 20],    // Increased from [5, 12]
+      life: [0.6, 1.0]    // Increased from [0.5, 0.8]
+  },
   'EXPLOSION_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [12, 18], speed: [8, 15], life: [0.4, 0.7] },
   'EXPLOSION_RED':    { pattern: 'RADIAL', colors: PALETTE_RED, count: [15, 25], speed: [10, 20], life: [0.6, 1.0] },
   
@@ -28,7 +35,6 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   'CLASH_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
 
   // --- DIRECTIONAL ---
-  // UPDATED: Added shape: 1 (Teardrop)
   'DRILL_SPARKS':  { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_PURPLE, 
@@ -42,7 +48,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   
   'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: PALETTE_YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
   
-  'LASER_SIGHT': { 
+  'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
     colors: ['#F7D277', '#FFFFFF'], 
     count: [3, 5], 

@@ -25,7 +25,7 @@ export const ParticleActor = () => {
       }
   }, []);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (!meshRef.current) return;
 
     let sys: ParticleSystem | null = null;
@@ -49,7 +49,13 @@ export const ParticleActor = () => {
         const baseSize = sys.size[i];
         const shape = sys.shape[i];
         
-        dummy.position.set(x, y, 6.0);
+        // Z-DEPTH FIX: 
+        // Driller is at Z=5.0. 
+        // We alternate particles between Z=3.5 (Behind) and Z=6.5 (In Front).
+        // This creates volume and prevents the "X-Ray" look where all sparks appear inside the mesh.
+        const zDepth = (i % 2 === 0) ? 3.5 : 6.5;
+        
+        dummy.position.set(x, y, zDepth);
         
         const speedSq = vx*vx + vy*vy;
         const speed = Math.sqrt(speedSq);
@@ -66,10 +72,16 @@ export const ParticleActor = () => {
             
             dummy.scale.set(scaleX, scaleY, 1);
 
-            // OFFSET LOGIC:
-            // Shift the center forward by half the length so the "tail" sits at the original (x,y).
-            // This prevents sparks from appearing "behind" the spawn point (inside walls).
-            const shift = scaleX * 0.03;
+            // OVERSHOOT FIX: Pivot Correction
+            // The geometry (Plane) is 0.3 units wide and centered at (0,0).
+            // When we stretch it to 'scaleX', it grows in both directions (-X and +X).
+            // This causes the "tail" to push backward past the spawn point (into the wall).
+            // We calculate the actual visual length and shift the center FORWARD by half that length.
+            // This pins the tail to the origin.
+            
+            const visualLength = 0.3 * scaleX; 
+            const shift = visualLength * 0.5;
+
             dummy.position.x += Math.cos(angle) * shift;
             dummy.position.y += Math.sin(angle) * shift;
 

@@ -20,7 +20,9 @@ export const FX_IDS: Record<string, number> = {
   'HUNTER_RECOIL': 8,
   'REBOOT_HEAL': 9,
   'PURGE_BLAST': 10,
-  'LASER_SIGHT': 11, // Added
+  
+  // RENAMED: LASER_SIGHT -> ENGINE_FLARE
+  'ENGINE_FLARE': 11, 
   
   // AUDIO
   'FX_PLAYER_FIRE': 50,
