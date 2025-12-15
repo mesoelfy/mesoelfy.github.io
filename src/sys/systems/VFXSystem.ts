@@ -82,11 +82,14 @@ export class VFXSystem implements IGameSystem {
           // HYBRID LOGIC:
           // If 'omniChance' passes, force Radial pattern for this particle.
           const isOmni = recipe.omniChance && Math.random() < recipe.omniChance;
+          const isHybridDir = isOmni && recipe.pattern === 'DIRECTIONAL';
           
-          // SPEED DAMPENING:
-          // If a particle is "rebel" (omni in a directional system), slow it down 
-          // so it stays closer to the center, creating a core debris effect.
-          const finalSpeed = (isOmni && recipe.pattern === 'DIRECTIONAL') ? speed * 0.4 : speed;
+          // DAMPENING (Speed & Life):
+          // If a particle is "rebel" (omni in a directional system):
+          // 1. Slow it down (40% speed) to stay near center.
+          // 2. Kill it faster (50% life) to simulate rapid cooling/dissipation of core mass.
+          const finalSpeed = isHybridDir ? speed * 0.4 : speed;
+          const finalLife = isHybridDir ? life * 0.5 : life;
 
           if (recipe.pattern === 'RADIAL' || isOmni) {
               const a = Math.random() * Math.PI * 2;
@@ -102,7 +105,7 @@ export class VFXSystem implements IGameSystem {
           }
 
           const shape = recipe.shape || 0;
-          this.particleSystem.spawn(x, y, color, vx, vy, life, size, shape);
+          this.particleSystem.spawn(x, y, color, vx, vy, finalLife, size, shape);
       }
   }
 
