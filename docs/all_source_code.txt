@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 14 18:51:43 CST 2025
+Generated on: Sun Dec 14 22:42:58 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -53,6 +53,10 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │       ├── AudioMixer.ts
 │   │   │       ├── AudioSynthesizer.ts
 │   │   │       └── SoundBank.ts
+│   │   ├── bridge
+│   │   │   ├── WorkerClient.ts
+│   │   │   ├── WorkerHost.ts
+│   │   │   └── messages.ts
 │   │   ├── ecs
 │   │   │   ├── Component.ts
 │   │   │   ├── ComponentPoolManager.ts
@@ -310,7 +314,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-71 directories, 231 files
+72 directories, 234 files
 
 =====================================
 FILE: ./next.config.js
@@ -12470,14 +12474,20 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { ColliderData } from '@/sys/data/ColliderData';
 import { EntityID } from '@/engine/ecs/types';
 
+const MAX_COLLISION_RESULTS = 128; // Max neighbors to check per entity
+
 export class CollisionSystem implements IGameSystem {
   private physicsSystem!: IPhysicsSystem;
   private registry!: EntityRegistry;
   private combatSystem!: ICombatSystem;
 
-  // Reusable buffers to avoid GC
-  private resultBuffer = new Set<EntityID>();
-  private handledPairs = new Set<string>();
+  // Pre-allocated buffers to avoid GC
+  private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
+  
+  // Bitset for deduplication could be added if needed, 
+  // but for simple point-bucket hashing, we mostly trust the grid.
+  // We use a simple pair check here.
+  private handledPairs = new Set<number>(); // We'll encode pairs as numbers if possible or string
 
   setup(locator: IServiceLocator): void {
     this.physicsSystem = locator.getSystem<IPhysicsSystem>('PhysicsSystem');
@@ -12487,50 +12497,53 @@ export class CollisionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
-    
-    // 1. Get Candidates via Cached Query (Returns Set<Entity>, no alloc)
     const collidables = this.registry.query({ all: ['Collider', 'Transform'] });
     
+    // Clear pairs (Set.clear() is optimized in V8)
     this.handledPairs.clear();
 
     for (const entity of collidables) {
         if (!entity.active) continue;
 
         const collider = entity.getComponent<ColliderData>('Collider');
-        // OPTIMIZATION: Early exit if mask is 0
         if (!collider || collider.mask === 0) continue;
 
         const transform = entity.getComponent<TransformData>('Transform');
         if (!transform) continue;
 
-        // Skip spawning entities
         const state = entity.getComponent<AIStateData>('State');
         if (state && state.current === 'SPAWN') continue;
 
-        // 2. Broad Phase (Zero-alloc query)
-        // Check slightly larger radius to catch edge cases
-        spatial.query(transform.x, transform.y, collider.radius + 1.0, this.resultBuffer);
+        // 1. Broad Phase: Zero-alloc query
+        const count = spatial.query(transform.x, transform.y, collider.radius + 1.0, this.queryBuffer);
 
-        // 3. Narrow Phase
-        for (const otherId of this.resultBuffer) {
+        // 2. Narrow Phase
+        for (let i = 0; i < count; i++) {
+            const otherId = this.queryBuffer[i];
+            
             if (otherId === entity.id) continue;
-            
-            // Fast unique pair check (Smallest ID first)
-            const id1 = entity.id < (otherId as number) ? entity.id : otherId;
-            const id2 = entity.id < (otherId as number) ? otherId : entity.id;
-            const pairId = `${id1}:${id2}`;
-            
-            if (this.handledPairs.has(pairId)) continue;
-            this.handledPairs.add(pairId);
 
-            const other = this.registry.getEntity(otherId as number);
+            // Fast unique pair check using Int encoding (assuming IDs < 65535)
+            // Combine two 16-bit IDs into one 32-bit integer key
+            const idA = entity.id as number;
+            const idB = otherId;
+            const minId = idA < idB ? idA : idB;
+            const maxId = idA < idB ? idB : idA;
+            
+            // Limit: This optimization works for IDs up to 65535.
+            // If MAX_ENTITIES > 65k, use string keys. Currently MAX_ENTITIES=10000.
+            const pairKey = (minId << 16) | maxId;
+
+            if (this.handledPairs.has(pairKey)) continue;
+            this.handledPairs.add(pairKey);
+
+            const other = this.registry.getEntity(otherId);
             if (!other || !other.active) continue;
 
             const otherCollider = other.getComponent<ColliderData>('Collider');
             if (!otherCollider) continue;
 
-            // OPTIMIZATION: Check Bitmask BEFORE getting Transform or calculating distance
-            // This is the cheapest check we can do.
+            // Bitmask Check
             const aHitsB = (collider.mask & otherCollider.layer) !== 0;
             const bHitsA = (otherCollider.mask & collider.layer) !== 0;
             if (!aHitsB && !bHitsA) continue;
@@ -12538,7 +12551,7 @@ export class CollisionSystem implements IGameSystem {
             const otherTransform = other.getComponent<TransformData>('Transform');
             if (!otherTransform) continue;
 
-            // OPTIMIZATION: Squared Distance Check (Avoid Math.sqrt)
+            // Squared Distance Check
             const dx = transform.x - otherTransform.x;
             const dy = transform.y - otherTransform.y;
             const distSq = dx * dx + dy * dy;
@@ -16436,6 +16449,158 @@ export const VirtualJoystickService = new VirtualJoystickServiceController();
 
 
 =====================================
+FILE: ./src/engine/bridge/WorkerHost.ts
+=====================================
+import { WorkerMessage, WorkerMessageType, FrameData } from './messages';
+import { TransformStore } from '@/engine/ecs/TransformStore';
+
+export class WorkerHost {
+  private worker: Worker | null = null;
+  private onFrameCallback: ((data: FrameData) => void) | null = null;
+
+  public init() {
+    if (typeof window === 'undefined') return;
+
+    // We point to a separate entry file we will create
+    this.worker = new Worker(new URL('./WorkerClient.ts', import.meta.url));
+    
+    this.worker.onmessage = (e: MessageEvent) => {
+      const msg = e.data as WorkerMessage;
+      
+      if (msg.type === WorkerMessageType.FRAME) {
+        // Sync the Main Thread TransformStore with the Worker's snapshot
+        // This effectively "teleports" the simulation state to the UI thread
+        const { transforms, activeCount } = msg.payload;
+        
+        // We assume TransformStore.data is large enough
+        if (transforms instanceof Float32Array) {
+            TransformStore.data.set(transforms);
+        }
+        
+        if (this.onFrameCallback) {
+            this.onFrameCallback(msg.payload);
+        }
+      }
+    };
+
+    this.postMessage(WorkerMessageType.INIT);
+  }
+
+  public onFrame(cb: (data: FrameData) => void) {
+    this.onFrameCallback = cb;
+  }
+
+  public sendInput(x: number, y: number) {
+    this.postMessage(WorkerMessageType.INPUT, { x, y });
+  }
+
+  public updateViewport(width: number, height: number) {
+    this.postMessage(WorkerMessageType.RESIZE, { width, height });
+  }
+
+  public terminate() {
+    this.worker?.terminate();
+  }
+
+  private postMessage(type: WorkerMessageType, payload?: any) {
+    this.worker?.postMessage({ type, payload });
+  }
+}
+
+
+=====================================
+FILE: ./src/engine/bridge/messages.ts
+=====================================
+export enum WorkerMessageType {
+  INIT = 'INIT',
+  FRAME = 'FRAME',
+  INPUT = 'INPUT',
+  RESIZE = 'RESIZE',
+  AUDIO_EVENT = 'AUDIO_EVENT'
+}
+
+export interface WorkerMessage {
+  type: WorkerMessageType;
+  payload?: any;
+}
+
+export interface FrameData {
+  transforms: Float32Array; // The raw buffer
+  activeCount: number;
+}
+
+
+=====================================
+FILE: ./src/engine/bridge/WorkerClient.ts
+=====================================
+// This file runs INSIDE the Web Worker.
+// It acts as the "GameDirector" for the off-screen world.
+
+import { WorkerMessage, WorkerMessageType } from './messages';
+import { GameBootstrapper } from '@/sys/services/GameBootstrapper';
+import { GameEngineCore } from '@/sys/services/GameEngine';
+import { TransformStore } from '@/engine/ecs/TransformStore';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { InputSystem } from '@/sys/systems/InputSystem';
+
+let engine: GameEngineCore | null = null;
+let lastTime = 0;
+
+// Loop
+const gameLoop = (time: number) => {
+  if (!engine) return;
+  
+  const delta = (time - lastTime) / 1000;
+  lastTime = time;
+
+  // 1. Run Logic
+  engine.update(delta, time / 1000);
+
+  // 2. Snapshot State
+  // We copy the active portion of the TransformStore to send to Main
+  // Optimization: In a real "SharedArrayBuffer" setup, we wouldn't copy.
+  // Here we copy to ensure thread safety without SAB requirements.
+  const snapshot = new Float32Array(TransformStore.data);
+
+  // 3. Send to Main
+  self.postMessage({
+    type: WorkerMessageType.FRAME,
+    payload: {
+      transforms: snapshot,
+      activeCount: engine.registry.getStats().active
+    }
+  }, [snapshot.buffer]); // Transfer ownership for zero-copy transmission
+
+  requestAnimationFrame(gameLoop);
+};
+
+self.onmessage = (e: MessageEvent) => {
+  const msg = e.data as WorkerMessage;
+
+  switch (msg.type) {
+    case WorkerMessageType.INIT:
+      engine = GameBootstrapper();
+      lastTime = performance.now();
+      gameLoop(lastTime);
+      break;
+
+    case WorkerMessageType.INPUT:
+      try {
+        const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
+        input.updateCursor(msg.payload.x, msg.payload.y);
+      } catch {}
+      break;
+
+    case WorkerMessageType.RESIZE:
+      if (engine) {
+        engine.updateViewport(msg.payload.width, msg.payload.height, 0, 0); // Approx
+      }
+      break;
+  }
+};
+
+
+=====================================
 FILE: ./src/engine/signals/GameEvents.ts
 =====================================
 export enum GameEvents {
@@ -16940,7 +17105,7 @@ export class Query {
 =====================================
 FILE: ./src/engine/ecs/SpatialGrid.ts
 =====================================
-import { EntityID } from './ecs/types';
+import { EntityID } from './types';
 import { MAX_ENTITIES, SPATIAL_GRID_SIZE, SPATIAL_CELL_SIZE } from './Constants';
 
 // Primes for Hashing
@@ -16962,60 +17127,64 @@ export class SpatialGrid {
   }
 
   public clear() {
-    // We only need to reset the heads to "Empty"
-    // The 'entityNext' values will be overwritten on insert, so no need to loop 10k items.
+    // Only reset heads. entityNext is overwritten on insert.
     this.cellHead.fill(-1);
   }
 
-  /**
-   * Spatial Hash Function (2D -> 1D Index)
-   */
   private getHash(x: number, y: number): number {
     const cx = Math.floor(x / SPATIAL_CELL_SIZE);
     const cy = Math.floor(y / SPATIAL_CELL_SIZE);
-    
-    // XOR Hash mapped to Grid Size (Power of 2 for bitwise AND)
-    const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
-    return hash;
+    return ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
   }
 
   public insert(id: EntityID, x: number, y: number) {
     const eid = id as number;
-    if (eid >= MAX_ENTITIES) return; // Safety check
+    // Bounds check
+    if (eid >= MAX_ENTITIES || eid < 0) return;
 
     const hash = this.getHash(x, y);
 
-    // Linked List Insertion (Prepend)
-    // 1. Point current entity to whatever was previously first
+    // Prepend to linked list
     this.entityNext[eid] = this.cellHead[hash];
-    
-    // 2. Make current entity the new first
     this.cellHead[hash] = eid;
   }
 
-  public query(x: number, y: number, radius: number, outResults: Set<EntityID>) {
-    outResults.clear();
+  /**
+   * Zero-GC Query
+   * Writes results into 'outArray'.
+   * Returns the number of results found.
+   */
+  public query(x: number, y: number, radius: number, outArray: Int32Array): number {
+    let count = 0;
+    const max = outArray.length;
     
+    // Scan range
     const startX = Math.floor((x - radius) / SPATIAL_CELL_SIZE);
     const endX = Math.floor((x + radius) / SPATIAL_CELL_SIZE);
     const startY = Math.floor((y - radius) / SPATIAL_CELL_SIZE);
     const endY = Math.floor((y + radius) / SPATIAL_CELL_SIZE);
 
+    // To prevent duplicates if an entity spans multiple cells,
+    // we strictly rely on the fact that insert() puts an entity in ONE cell (center point).
+    // This implies point-based spatial hashing (buckets), not bounds-based.
+    // So we check all buckets the query radius touches.
+    
     for (let cy = startY; cy <= endY; cy++) {
       for (let cx = startX; cx <= endX; cx++) {
-        // Recompute hash for neighbor cells
-        // Note: We duplicate the hash logic here to avoid function call overhead in hot loop
         const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
         
-        // Traverse Linked List
         let id = this.cellHead[hash];
         
         while (id !== -1) {
-          outResults.add(id as EntityID);
+          if (count < max) {
+            outArray[count++] = id;
+          }
           id = this.entityNext[id];
         }
       }
     }
+    
+    return count;
   }
 }
 

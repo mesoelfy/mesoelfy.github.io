@@ -70,7 +70,7 @@ Your cursor could leave a psychedelic trail of colors behind it
 
 
 
-- DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it).
+- DEBUG mode will have asterisk slots for entering konami code to access it. If they have entered the code at least one time, their browswer will remember and not ask for it again (saves it). (hint with the phrase Anyone Else but You)
 
 
 - Indicate to player to press ESC or ~ in zen mode
@@ -605,3 +605,26 @@ weavers can repair anchor nodes that haven't been destroyed, and will prioritize
 
 
 
+
+
+
+
+Browsers are single-threaded yes? What optimizations do you see available to run different aspects of the project like a multi-core application so that Game Logic (AI, Physics), Rendering (Three.js), and UI (React/DOM) aren't all fighting over limited bandwidth? Am I articulating the situation correctly? Please expand on the idea and help me here. Don't write any code, just outline advice based on your audit of the code base.
+
+
+I'd like to retain the functionality of my youtube videos in the HOLO COMM panel, but it was one of the earliest parts of the site architecture and is probably over due for some refactoring/optimization. What can you tell me about opportunities to improve it?
+
+
+
+
+
+
+
+
+Phase 3 Limitation: Trails are hard. They require history.
+Solution: Disable Trails for now (Comment out ProjectileTrailsActor in RenderCatalog.ts). We will rebuild them purely visually later using GPU particles.
+
+
+
+
+        **!!!** FastEventBus using a Float32Array ring buffer is a brilliant optimization for FX/Audio triggers. You should migrate more logic to this pattern.

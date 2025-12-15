@@ -1,10 +1,11 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const DaemonActor = () => {
   const geometry = useMemo(() => new THREE.OctahedronGeometry(0.6, 0), []);
@@ -24,15 +25,13 @@ export const DaemonActor = () => {
       geometry={geometry} 
       material={material} 
       maxCount={5}
-      filter={(e) => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.DAEMON}
+      filter={(e) => e.getComponent<IdentityData>(ComponentType.Identity)?.variant === EnemyTypes.DAEMON}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<AIStateData>('State');
+          const state = e.getComponent<AIStateData>(ComponentType.State);
           
-          // Reset color
           color.copy(baseColor);
 
           if (state) {
-              // --- SPIN PHYSICS ---
               if (typeof state.data.visualSpin !== 'number') state.data.visualSpin = 0;
               let targetSpeed = 1.0;
 
@@ -43,26 +42,20 @@ export const DaemonActor = () => {
               else if (state.current === 'BROKEN') {
                   targetSpeed = 30.0; 
                   color.copy(brokenColor);
-                  // Shake effect
                   obj.position.x += (Math.random() - 0.5) * 0.2;
                   obj.position.y += (Math.random() - 0.5) * 0.2;
               }
 
               if (typeof state.data.currentSpinSpeed !== 'number') state.data.currentSpinSpeed = 1.0;
               
-              // Smoothly interpolate spin speed (Inertia)
               state.data.currentSpinSpeed = THREE.MathUtils.lerp(state.data.currentSpinSpeed, targetSpeed, delta * 5.0);
               state.data.visualSpin += state.data.currentSpinSpeed * delta;
               obj.rotation.y = state.data.visualSpin;
 
-              // --- SCALE / ANIMATION LOGIC ---
-              
               if (state.current === 'FIRE') {
-                  // Instant Impact Squish
                   obj.scale.set(1.2, 0.5, 1.2);
               }
               else if (state.current === 'COOLDOWN') {
-                  // Recover: Squish (1.2, 0.5, 1.2) -> Normal (1.0)
                   const maxTime = 0.5;
                   const remaining = Math.max(0, state.timers.action);
                   const progress = 1.0 - (remaining / maxTime); 
@@ -79,24 +72,18 @@ export const DaemonActor = () => {
                   }
               } 
               else if (state.current === 'CHARGING') {
-                  // Grow based on SHIELD HP (0% -> 100%)
-                  // This ensures it starts exactly at 1.0 (where Cooldown left off)
-                  // and grows to 1.6 (max size)
                   const maxShield = state.data.maxShield || 10;
                   const currentShield = state.data.shieldHP || 0;
                   const ratio = Math.min(1.0, Math.max(0, currentShield / maxShield));
                   
-                  // Lerp 1.0 -> 1.6
                   const scale = 1.0 + (ratio * 0.6); 
                   obj.scale.setScalar(scale);
               }
               else if (state.current === 'READY') {
-                  // Pulse at max size (1.6 base)
                   const pulse = 1.6 + Math.sin(performance.now() * 0.005) * 0.05;
                   obj.scale.setScalar(pulse);
               }
               else if (state.current === 'BROKEN') {
-                  // Shrivel / Glitch
                   const twitch = 0.7 + (Math.random() * 0.1);
                   obj.scale.setScalar(twitch);
               }

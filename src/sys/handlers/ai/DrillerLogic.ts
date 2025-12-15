@@ -6,11 +6,12 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
 import { PanelRegistry } from '@/sys/systems/PanelRegistrySystem'; 
 import { EnemyTypes } from '@/sys/config/Identifiers';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
-const getPos = (e: Entity) => e.requireComponent<TransformData>('Transform');
-const getMotion = (e: Entity) => e.requireComponent<MotionData>('Motion');
-const getState = (e: Entity) => e.requireComponent<AIStateData>('State');
-const getTarget = (e: Entity) => e.requireComponent<TargetData>('Target');
+const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
+const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
+const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
+const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
 
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
@@ -63,7 +64,6 @@ export const DrillerLogic: EnemyLogic = {
 
         state.data.audioTimer -= ctx.delta;
         if (state.data.audioTimer <= 0) {
-            // SPATIAL AUDIO: Pass pos.x
             ctx.playSound('loop_drill', pos.x);
             state.data.audioTimer = aiConfig.AUDIO_INTERVAL + Math.random() * 0.1; 
         }

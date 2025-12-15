@@ -2,12 +2,13 @@ import { useRef, useLayoutEffect, useMemo } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ActiveEngine } from '../GameDirector';
-import { TransformData } from '../data/TransformData';
-import { IdentityData } from '../data/IdentityData';
+import { TransformData } from '@/sys/data/TransformData';
+import { IdentityData } from '@/sys/data/IdentityData';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformStore } from '@/engine/ecs/TransformStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -48,7 +49,6 @@ export const InstancedActor = ({
   useFrame((state, delta) => {
     if (!meshRef.current || !ActiveEngine) return;
 
-    // getByTag returns Iterable<Entity>, handled correctly by for...of
     const entities = ActiveEngine.registry.getByTag(tag);
     let count = 0;
     const transformData = TransformStore.data;
@@ -57,7 +57,7 @@ export const InstancedActor = ({
       if (count >= maxCount) break;
       if (filter && !filter(entity)) continue;
 
-      const transform = entity.getComponent<TransformData>('Transform');
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       if (!transform) continue;
 
       if (interactive) {
@@ -75,7 +75,7 @@ export const InstancedActor = ({
       tempObj.scale.set(scale, scale, 1);
 
       if (colorSource === 'identity') {
-          const identity = entity.getComponent<IdentityData>('Identity');
+          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity) tempColor.set(identity.variant); 
           else tempColor.set(baseColor);
       } else {

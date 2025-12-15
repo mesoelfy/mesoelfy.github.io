@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class OrbitalData extends Component {
-  readonly _type = 'Orbital';
+  readonly _type = ComponentType.Orbital;
 
   constructor(
     public parentId: number | null = null,

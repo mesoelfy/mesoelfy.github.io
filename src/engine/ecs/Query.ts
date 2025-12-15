@@ -1,9 +1,10 @@
 import { Entity } from './Entity';
+import { ComponentType } from './ComponentType';
 
 export interface QueryDef {
-  all?: string[];  // Must have ALL these components
-  any?: string[];  // Must have AT LEAST ONE of these
-  none?: string[]; // Must NOT have any of these
+  all?: ComponentType[];  // Must have ALL
+  any?: ComponentType[];  // Must have AT LEAST ONE
+  none?: ComponentType[]; // Must NOT have any
 }
 
 export class Query {
@@ -12,7 +13,7 @@ export class Query {
 
   constructor(def: QueryDef) {
     this.def = def;
-    // Generate a unique signature for this query to use as a Map key
+    // Generate signature. Sort ensures order independence.
     this.id = `ALL:${(def.all || []).sort().join(',')}|ANY:${(def.any || []).sort().join(',')}|NONE:${(def.none || []).sort().join(',')}`;
   }
 

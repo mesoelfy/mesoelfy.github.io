@@ -5,11 +5,12 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
 import { AI_CONFIG } from '@/sys/config/AIConfig';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
-const getPos = (e: Entity) => e.requireComponent<TransformData>('Transform');
-const getState = (e: Entity) => e.requireComponent<AIStateData>('State');
-const getTarget = (e: Entity) => e.requireComponent<TargetData>('Target');
-const getOrbital = (e: Entity) => e.requireComponent<OrbitalData>('Orbital');
+const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
+const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
+const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
+const getOrbital = (e: Entity) => e.requireComponent<OrbitalData>(ComponentType.Orbital);
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
@@ -67,8 +68,6 @@ export const DaemonLogic: EnemyLogic = {
         const dirX = dist > 0 ? dx/dist : 0;
         const dirY = dist > 0 ? dy/dist : 1;
         
-        // FIX: Use Standard Math (0 = Right)
-        // Previous: Math.atan2(dy, dx) - Math.PI/2
         pos.rotation = Math.atan2(dy, dx);
 
         ctx.spawnProjectile(pos.x, pos.y, dirX * 35, dirY * 35, maxShield);
@@ -94,7 +93,6 @@ export const DaemonLogic: EnemyLogic = {
         state.data.shieldHP = 0;
         state.timers.action -= ctx.delta;
         
-        // Spin Logic
         pos.rotation += ctx.delta * AI_CONFIG.DAEMON.ROTATION_SPEED.BROKEN;
 
         if (state.timers.action <= 0) {

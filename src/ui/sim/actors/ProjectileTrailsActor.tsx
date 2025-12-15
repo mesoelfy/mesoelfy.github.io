@@ -7,6 +7,7 @@ import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { LifetimeData } from '@/sys/data/LifetimeData';
 import { GAME_THEME } from '@/ui/sim/config/theme';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 const MAX_TRAILS = 500; 
 
@@ -58,9 +59,9 @@ export const ProjectileTrailsActor = () => {
 
     for (const b of bullets) {
         if (count >= MAX_TRAILS) break;
-        const t = b.getComponent<TransformData>('Transform');
-        const m = b.getComponent<MotionData>('Motion');
-        const life = b.getComponent<LifetimeData>('Lifetime');
+        const t = b.getComponent<TransformData>(ComponentType.Transform);
+        const m = b.getComponent<MotionData>(ComponentType.Motion);
+        const life = b.getComponent<LifetimeData>(ComponentType.Lifetime);
         if (!t || !m || !life) continue;
         const isEnemy = b.hasTag(Tag.ENEMY);
         const trailWidth = isEnemy ? 1.0 : 0.4;

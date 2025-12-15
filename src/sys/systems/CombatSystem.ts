@@ -10,6 +10,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { CollisionMatrix } from '@/sys/handlers/combat/CollisionMatrix';
 import { CombatContext } from '@/sys/handlers/combat/types';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class CombatSystem implements IGameSystem {
   private gameSystem!: IGameStateSystem;
@@ -23,8 +24,8 @@ export class CombatSystem implements IGameSystem {
   update(delta: number, time: number): void {}
 
   public resolveCollision(e1: Entity, e2: Entity) {
-      const col1 = e1.getComponent<ColliderData>('Collider');
-      const col2 = e2.getComponent<ColliderData>('Collider');
+      const col1 = e1.getComponent<ColliderData>(ComponentType.Collider);
+      const col2 = e2.getComponent<ColliderData>(ComponentType.Collider);
       if (!col1 || !col2) return;
 
       const handler = CollisionMatrix.getHandler(col1.layer, col2.layer);
@@ -41,27 +42,20 @@ export class CombatSystem implements IGameSystem {
               GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx) => this.destroyEntity(entity, fx),
-          
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y);
           },
-          
           playAudio: (key) => AudioSystem.playSound(key),
-          
-          // NEW: Spatial Audio Support
           playSpatialAudio: (key, x) => {
-              // Convert lowercase config key (e.g. 'fx_impact_light') to uppercase ID key (FX_IMPACT_LIGHT)
               const idKey = key.toUpperCase();
               const soundId = FX_IDS[idKey];
               if (soundId) {
                   FastEventBus.emit(FastEvents.PLAY_SOUND, soundId, x);
               } else {
-                  // Fallback if ID mapping missing
                   AudioSystem.playSound(key);
               }
           },
-          
           addTrauma: (amount) => {
               GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount });
           }
@@ -71,8 +65,8 @@ export class CombatSystem implements IGameSystem {
   }
 
   private destroyEntity(entity: Entity, fx?: string) {
-      const transform = entity.getComponent<TransformData>('Transform');
-      const identity = entity.getComponent<IdentityData>('Identity');
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+      const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
       
       if (identity && transform) {
           const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);

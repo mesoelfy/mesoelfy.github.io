@@ -1,5 +1,6 @@
 import { EntityID, Tag } from './types';
 import { Component } from './Component';
+import { ComponentType } from './ComponentType';
 import { ComponentPoolManager } from './ComponentPoolManager';
 
 export class Entity {
@@ -8,7 +9,7 @@ export class Entity {
   public active = true;
   public pooled = false;
 
-  public components = new Map<string, Component>();
+  public components = new Map<ComponentType, Component>();
 
   constructor(id: EntityID) {
     this.id = id;
@@ -19,17 +20,17 @@ export class Entity {
     return this;
   }
 
-  public getComponent<T extends Component>(type: string): T | undefined {
+  public getComponent<T extends Component>(type: ComponentType): T | undefined {
     return this.components.get(type) as T;
   }
   
-  public requireComponent<T extends Component>(type: string): T {
+  public requireComponent<T extends Component>(type: ComponentType): T {
     const c = this.components.get(type);
     if (!c) throw new Error(`Entity ${this.id} missing required component: ${type}`);
     return c as T;
   }
 
-  public hasComponent(type: string): boolean {
+  public hasComponent(type: ComponentType): boolean {
     return this.components.has(type);
   }
 
@@ -42,22 +43,18 @@ export class Entity {
     return this.tags.has(tag);
   }
 
-  // Called when pulled FROM the pool
   public reset(newId: EntityID) {
       this.id = newId;
       this.active = true;
       this.pooled = false;
-      // Components are cleared in release(), but safety check:
       this.components.clear();
       this.tags.clear();
   }
 
-  // Called when pushed TO the pool
   public release() {
       this.active = false;
       this.pooled = true;
       
-      // Return all components to their respective pools
       for (const component of this.components.values()) {
           ComponentPoolManager.release(component);
       }

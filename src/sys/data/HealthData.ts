@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class HealthData extends Component {
-  readonly _type = 'Health';
+  readonly _type = ComponentType.Health;
   public current: number;
 
   constructor(public max: number, public invincibilityTime: number = 0) {

@@ -1,9 +1,10 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export type TargetType = 'PLAYER' | 'PANEL' | 'LOCATION' | 'ENEMY';
 
 export class TargetData extends Component {
-  readonly _type = 'Target';
+  readonly _type = ComponentType.Target;
 
   constructor(
     public id: string | null = null, 

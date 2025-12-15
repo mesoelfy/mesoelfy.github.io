@@ -5,10 +5,8 @@ import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { useStore } from '@/sys/state/global/useStore';
 import { InteractionSystem, RepairState } from '@/sys/systems/InteractionSystem'; 
-import { EntitySystem } from '@/sys/systems/EntitySystem'; // Note: This might be legacy import, safe to ignore type if unused
 import * as THREE from 'three';
 
-// GLOBAL REUSABLES (Outside Component)
 const colorTurret = new THREE.Color(GAME_THEME.turret.base); 
 const colorRepair = new THREE.Color(GAME_THEME.turret.repair); 
 const colorReboot = new THREE.Color('#9E4EA5'); 
@@ -30,7 +28,6 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!groupRef.current) return;
 
-    // FADE IN LOGIC
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
@@ -40,7 +37,6 @@ export const PlayerActor = () => {
     }
     groupRef.current.visible = true;
 
-    // 1. Position
     const x = (state.pointer.x * viewport.width) / 2;
     const y = (state.pointer.y * viewport.height) / 2;
     groupRef.current.position.x = x;
@@ -48,7 +44,6 @@ export const PlayerActor = () => {
 
     try { ServiceLocator.getInputService().updateCursor(x, y); } catch {}
 
-    // 2. State Access (No allocation)
     const storeState = useGameStore.getState();
     const isDead = storeState.playerHealth <= 0;
     const isGameOver = storeState.systemIntegrity <= 0;
@@ -63,30 +58,25 @@ export const PlayerActor = () => {
     if (repairState === 'HEALING') targetColor = colorRepair; 
     if (repairState === 'REBOOTING') targetColor = colorReboot; 
 
-    // 3. Visuals
     if (ringRef.current && coreRef.current && glowRef.current) {
         let currentBaseScale = 1.0;
 
         if (isDead || isGameOver) {
-            // DEAD STATE
             ringRef.current.visible = false;
             glowRef.current.visible = false;
             
             coreRef.current.geometry = deadGeo;
-            coreRef.current.material.color.copy(colorDead); // Use copy
+            coreRef.current.material.color.copy(colorDead); 
             coreRef.current.material.wireframe = true; 
             
             const isRebooting = repairState === 'REBOOTING';
             if (isRebooting) {
                 coreRef.current.rotation.z -= delta * 10.0;
-                // Particle spawning removed from here to keep Renderer pure. 
-                // Logic handles particles via InteractionSystem events now.
             } else {
                 coreRef.current.rotation.z += delta * 1.5; 
             }
             
         } else {
-            // ALIVE STATE
             ringRef.current.visible = true;
             glowRef.current.visible = true;
             coreRef.current.geometry = aliveGeo;

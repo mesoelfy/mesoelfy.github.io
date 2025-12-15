@@ -7,6 +7,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '@/sys/config/Identifiers';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class LifeCycleSystem implements IGameSystem {
   private registry!: EntityRegistry;
@@ -20,14 +21,14 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // NEW: Query any entity that CAN die (has Lifetime OR Health)
-    const mortals = this.registry.query({ any: ['Lifetime', 'Health'] });
+    // Enum Query
+    const mortals = this.registry.query({ any: [ComponentType.Lifetime, ComponentType.Health] });
 
     for (const entity of mortals) {
       if (!entity.active) continue;
 
-      // 1. Time-based Death
-      const lifetime = entity.getComponent<LifetimeData>('Lifetime');
+      // Time Check
+      const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
         if (lifetime.remaining <= 0) {
@@ -36,11 +37,11 @@ export class LifeCycleSystem implements IGameSystem {
         }
       }
 
-      // 2. Health-based Death
-      const health = entity.getComponent<HealthData>('Health');
+      // Health Check
+      const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
-          const identity = entity.getComponent<IdentityData>('Identity');
-          const transform = entity.getComponent<TransformData>('Transform');
+          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+          const transform = entity.getComponent<TransformData>(ComponentType.Transform);
           
           if (identity && transform) {
              GameEventBus.emit(GameEvents.ENEMY_DESTROYED, { 

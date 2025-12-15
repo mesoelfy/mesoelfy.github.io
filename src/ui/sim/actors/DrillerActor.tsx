@@ -8,13 +8,13 @@ import { TransformData } from '@/sys/data/TransformData';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { applyRotation } from '@/engine/math/RenderUtils';
 import { useStore } from '@/sys/state/global/useStore';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
 export const DrillerActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_DRILLER');
   const material = AssetService.get<THREE.Material>('MAT_ENEMY_BASE');
   
-  // Enable interaction if in mobile lockdown mode
   const isMobile = useStore(s => s.bootState === 'mobile_lockdown');
 
   return (
@@ -25,11 +25,11 @@ export const DrillerActor = () => {
       maxCount={500}
       baseColor={GAME_THEME.enemy.muncher}
       colorSource="base" 
-      interactive={isMobile} // NEW: Pass the flag
-      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.DRILLER}
+      interactive={isMobile}
+      filter={e => e.getComponent<IdentityData>(ComponentType.Identity)?.variant === EnemyTypes.DRILLER}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<AIStateData>('State');
-          const transform = e.getComponent<TransformData>('Transform');
+          const state = e.getComponent<AIStateData>(ComponentType.State);
+          const transform = e.getComponent<TransformData>(ComponentType.Transform);
           
           const speed = (state && state.current === 'DRILLING') ? 20.0 : 5.0;
           const spin = performance.now() * 0.001 * speed;

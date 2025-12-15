@@ -6,6 +6,7 @@ import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
 import { AIStateData } from '../data/AIStateData';
 import { TransformData } from '../data/TransformData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
@@ -33,26 +34,23 @@ export const DaemonChargeActor = () => {
       material={material}
       maxCount={10}
       filter={(e) => {
-          const id = e.getComponent<IdentityData>('Identity');
-          const state = e.getComponent<AIStateData>('State');
-          // Hide if BROKEN
+          const id = e.getComponent<IdentityData>(ComponentType.Identity);
+          const state = e.getComponent<AIStateData>(ComponentType.State);
           return id?.variant === EnemyTypes.DAEMON && (state?.current === 'CHARGING' || state?.current === 'READY');
       }}
       updateEntity={(e, obj) => {
-          const transform = e.getComponent<TransformData>('Transform');
-          const state = e.getComponent<AIStateData>('State');
+          const transform = e.getComponent<TransformData>(ComponentType.Transform);
+          const state = e.getComponent<AIStateData>(ComponentType.State);
           
           if (transform && state) {
               obj.position.copy(new THREE.Vector3(transform.x, transform.y, 0.1));
               obj.rotation.set(0,0,0);
 
-              // SCALE BASED ON SHIELD HP
               const maxShield = state.data.maxShield || 10;
               const currentShield = state.data.shieldHP || 0;
               const healthRatio = Math.max(0, currentShield / maxShield);
               
               if (state.current === 'READY') {
-                  // Pulse at full current size
                   const pulse = 1.0 + Math.sin(performance.now() * 0.01) * 0.1;
                   obj.scale.setScalar(healthRatio * pulse);
               } else {

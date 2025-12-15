@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class AIStateData extends Component {
-  readonly _type = 'State';
+  readonly _type = ComponentType.State;
 
   constructor(
     public current: string = 'IDLE',

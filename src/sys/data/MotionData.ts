@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class MotionData extends Component {
-  readonly _type = 'Motion';
+  readonly _type = ComponentType.Motion;
 
   constructor(
     public vx: number = 0,

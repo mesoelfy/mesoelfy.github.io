@@ -7,6 +7,7 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { TransformData } from '@/sys/data/TransformData'; 
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { applyRotation } from '@/engine/math/RenderUtils';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
 const chargeColor = new THREE.Color(GAME_THEME.enemy.charge);
@@ -23,10 +24,10 @@ export const HunterActor = () => {
       maxCount={100}
       baseColor={GAME_THEME.enemy.hunter}
       colorSource="base"
-      filter={e => e.getComponent<IdentityData>('Identity')?.variant === EnemyTypes.HUNTER}
+      filter={e => e.getComponent<IdentityData>(ComponentType.Identity)?.variant === EnemyTypes.HUNTER}
       updateEntity={(e, obj, color, delta) => {
-          const state = e.getComponent<AIStateData>('State');
-          const transform = e.getComponent<TransformData>('Transform');
+          const state = e.getComponent<AIStateData>(ComponentType.State);
+          const transform = e.getComponent<TransformData>(ComponentType.Transform);
           const time = performance.now() * 0.001;
 
           if (state && state.current === 'CHARGE') {

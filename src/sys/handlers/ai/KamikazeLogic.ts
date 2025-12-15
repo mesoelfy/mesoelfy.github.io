@@ -7,11 +7,12 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { ENEMY_CONFIG } from '@/sys/config/EnemyConfig';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { AI_CONFIG } from '@/sys/config/AIConfig';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
-const getPos = (e: Entity) => e.requireComponent<TransformData>('Transform');
-const getMotion = (e: Entity) => e.requireComponent<MotionData>('Motion');
-const getTarget = (e: Entity) => e.requireComponent<TargetData>('Target');
-const getState = (e: Entity) => e.requireComponent<AIStateData>('State');
+const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
+const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
+const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
+const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
 
 export const KamikazeLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {

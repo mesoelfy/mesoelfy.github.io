@@ -5,14 +5,11 @@ import { IdentityData } from '@/sys/data/IdentityData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TransformData } from '@/sys/data/TransformData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
-// --- HELPERS ---
-
-const getHp = (e: Entity) => e.getComponent<HealthData>('Health');
-const getId = (e: Entity) => e.getComponent<IdentityData>('Identity');
-const getPos = (e: Entity) => e.getComponent<TransformData>('Transform');
-
-// --- HANDLERS ---
+const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
+const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
+const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
@@ -47,8 +44,6 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
       return;
   }
 
-  // Bullet hit player -> Usually center panned as player is center (mostly)
-  // But player moves, so we use bullet position
   const pos = getPos(bullet);
   const x = pos ? pos.x : 0;
 
@@ -65,10 +60,8 @@ export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatC
   handleMassExchange(bulletA, bulletB, 'CLASH_YELLOW', ctx);
 };
 
-// --- SHARED LOGIC ---
-
 function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatContext, fixedDamage?: number) {
-  const state = daemon.getComponent<AIStateData>('State');
+  const state = daemon.getComponent<AIStateData>(ComponentType.State);
   if (!state) return;
 
   const pos = getPos(attacker);

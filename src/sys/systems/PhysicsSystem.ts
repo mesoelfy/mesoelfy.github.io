@@ -3,6 +3,7 @@ import { SpatialGrid } from '@/engine/ecs/SpatialGrid';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
@@ -18,17 +19,16 @@ export class PhysicsSystem implements IPhysicsSystem {
   }
 
   update(delta: number, time: number): void {
-    // 1. Clear the reusable grid buckets
     this.spatialGrid.clear();
     
-    // 2. Iterate only movables via Cache
-    const movables = this.registry.query({ all: ['Transform', 'Motion'] });
+    // Strict Enum Usage
+    const movables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Motion] });
     
     for (const entity of movables) {
       if (!entity.active) continue;
 
-      const transform = entity.getComponent<TransformData>('Transform');
-      const motion = entity.getComponent<MotionData>('Motion');
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
       
       if (transform && motion) {
         transform.x += motion.vx * delta;
@@ -39,7 +39,6 @@ export class PhysicsSystem implements IPhysicsSystem {
             motion.vy *= (1 - motion.friction);
         }
 
-        // 3. Populate Grid for CollisionSystem to read later
         this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
     }

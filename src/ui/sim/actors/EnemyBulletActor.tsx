@@ -2,6 +2,8 @@ import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
 import { AssetService } from '@/ui/sim/assets/AssetService';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import * as THREE from 'three';
 
 export const EnemyBulletActor = () => {
   const geometry = AssetService.get<THREE.BufferGeometry>('GEO_BULLET_ENEMY');
@@ -15,13 +17,11 @@ export const EnemyBulletActor = () => {
       maxCount={200}
       filter={(e) => e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-          const hp = e.getComponent<HealthData>('Health');
+          const hp = e.getComponent<HealthData>(ComponentType.Health);
           let scale = 1.0;
           
           if (hp) {
               const ratio = hp.current / hp.max;
-              // MATCHED: Max Scale is now 1.5 to match HunterChargeRenderer
-              // Range: 0.6 (Damaged) -> 1.5 (Full)
               scale = 0.6 + (0.9 * ratio);
           }
 

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Tag } from '@/engine/ecs/types';
 import { InstancedActor } from './InstancedActor';
 import { IdentityData } from '../data/IdentityData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 const vertexShader = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`;
 const fragmentShader = `
@@ -16,11 +17,10 @@ const fragmentShader = `
 `;
 
 export const DaemonBulletActor = () => {
-  // UPDATED: Scaled down by 20% (5.0 -> 4.0)
   const geometry = useMemo(() => new THREE.PlaneGeometry(4.0, 4.0), []); 
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader, fragmentShader,
-    uniforms: { uColor: { value: new THREE.Color('#00F0FF') } }, // CYAN
+    uniforms: { uColor: { value: new THREE.Color('#00F0FF') } },
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
   }), []);
 
@@ -32,7 +32,7 @@ export const DaemonBulletActor = () => {
       maxCount={50}
       filter={(e) => {
           if (e.hasTag(Tag.ENEMY)) return false;
-          const id = e.getComponent<IdentityData>('Identity');
+          const id = e.getComponent<IdentityData>(ComponentType.Identity);
           return id?.variant === 'DAEMON_SHOT';
       }}
       updateEntity={(e, obj) => {

@@ -8,6 +8,7 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -16,8 +17,6 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
-  
-  // DEBUG: Throttle logs
   private logTimer = 0;
 
   setup(locator: IServiceLocator): void {
@@ -42,13 +41,13 @@ export class PlayerSystem implements IGameSystem {
     if (!playerEntity) return;
 
     const cursor = this.locator.getInputService().getCursor();
-    const transform = playerEntity.getComponent<TransformData>('Transform');
+    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     if (transform) {
         transform.x = cursor.x;
         transform.y = cursor.y;
     }
 
-    const stateComp = playerEntity.getComponent<AIStateData>('State');
+    const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         try {
             const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
@@ -65,7 +64,6 @@ export class PlayerSystem implements IGameSystem {
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
-        
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
@@ -73,7 +71,6 @@ export class PlayerSystem implements IGameSystem {
         }
     }
     
-    // Timer update
     this.logTimer += delta;
   }
 
@@ -129,10 +126,10 @@ export class PlayerSystem implements IGameSystem {
       if (!e.active) continue;
       if (e.hasTag(Tag.BULLET)) continue;
 
-      const state = e.getComponent<AIStateData>('State');
+      const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === 'SPAWN') continue;
 
-      const t = e.getComponent<TransformData>('Transform');
+      const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
       const dx = t.x - cursor.x;
       const dy = t.y - cursor.y;
@@ -155,7 +152,7 @@ export class PlayerSystem implements IGameSystem {
       const baseSpread = 0.15;
       const spreadAngle = baseSpread; 
       
-      const tPos = targetEnemy.getComponent<TransformData>('Transform')!;
+      const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
       const dx = tPos.x - cursor.x;
       const dy = tPos.y - cursor.y;
       const baseAngle = Math.atan2(dy, dx);
@@ -189,10 +186,8 @@ export class PlayerSystem implements IGameSystem {
           }
       }
       
-      // --- DEBUG TRACING ---
       const soundId = FX_IDS['FX_PLAYER_FIRE'];
       
-      // Throttle logging to once per second
       if (this.logTimer > 1.0) {
           GameEventBus.emit(GameEvents.LOG_DEBUG, { 
               msg: `EMIT SOUND ID: ${soundId}`, 

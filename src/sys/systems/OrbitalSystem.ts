@@ -3,6 +3,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformData } from '@/sys/data/TransformData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
 import { Tag } from '@/engine/ecs/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class OrbitalSystem implements IGameSystem {
   private registry!: EntityRegistry;
@@ -13,35 +14,30 @@ export class OrbitalSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const orbitals = this.registry.getAll();
-    
-    // OPTIMIZATION FIX: getByTag returns Iterable, not Array.
-    // Use iterator to get the first player efficiently.
     let player = null;
     const players = this.registry.getByTag(Tag.PLAYER);
     for (const p of players) {
         player = p;
-        break; // Just get the first one
+        break; 
     }
 
     if (!player) return;
     
-    const pPos = player.getComponent<TransformData>('Transform');
+    const pPos = player.getComponent<TransformData>(ComponentType.Transform);
     if (!pPos) return;
 
     for (const entity of orbitals) {
         if (!entity.active) continue;
         
-        const orb = entity.getComponent<OrbitalData>('Orbital');
-        const transform = entity.getComponent<TransformData>('Transform');
+        const orb = entity.getComponent<OrbitalData>(ComponentType.Orbital);
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
 
         if (!orb || !transform) continue;
 
-        // Update Angle
         if (orb.active) {
             orb.angle += orb.speed * delta;
         }
 
-        // Update Position (Parent Pos + Orbit Offset)
         transform.x = pPos.x + Math.cos(orb.angle) * orb.radius;
         transform.y = pPos.y + Math.sin(orb.angle) * orb.radius;
     }

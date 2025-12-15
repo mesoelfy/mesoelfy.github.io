@@ -3,6 +3,7 @@ import { InstancedActor } from './InstancedActor';
 import { HealthData } from '@/sys/data/HealthData';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { TransformData } from '@/sys/data/TransformData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
 export const BulletActor = () => {
@@ -17,8 +18,8 @@ export const BulletActor = () => {
       maxCount={500} 
       filter={(e) => !e.hasTag(Tag.ENEMY)}
       updateEntity={(e, obj) => {
-         const transform = e.getComponent<TransformData>('Transform');
-         const hp = e.getComponent<HealthData>('Health');
+         const transform = e.getComponent<TransformData>(ComponentType.Transform);
+         const hp = e.getComponent<HealthData>(ComponentType.Health);
          
          let hpScale = 1.0;
          if (hp && hp.max > 1) {

@@ -1,14 +1,10 @@
 import { Component } from './Component';
-
-type CompConstructor = new (...args: any[]) => Component;
+import { ComponentType } from './ComponentType';
 
 class ComponentPoolManagerController {
-  private pools = new Map<string, Component[]>();
+  private pools = new Map<ComponentType, Component[]>();
 
-  // Acquire a component from the pool or create new if empty.
-  // Note: We don't construct here because the Builder handles specific args.
-  // We return null if empty, letting the Builder do the 'new'.
-  public acquire<T extends Component>(type: string): T | null {
+  public acquire<T extends Component>(type: ComponentType): T | null {
     const pool = this.pools.get(type);
     if (pool && pool.length > 0) {
       return pool.pop() as T;

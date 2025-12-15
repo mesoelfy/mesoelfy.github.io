@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class CombatData extends Component {
-  readonly _type = 'Combat';
+  readonly _type = ComponentType.Combat;
 
   constructor(
     public damage: number,

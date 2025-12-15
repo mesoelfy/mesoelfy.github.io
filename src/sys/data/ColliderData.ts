@@ -1,7 +1,8 @@
 import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class ColliderData extends Component {
-  readonly _type = 'Collider';
+  readonly _type = ComponentType.Collider;
 
   constructor(
     public radius: number,

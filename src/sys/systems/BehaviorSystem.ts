@@ -11,9 +11,9 @@ import { OrbitalData } from '@/sys/data/OrbitalData';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
-
 import { AIRegistry } from '@/sys/handlers/ai/AIRegistry';
 import { AIContext } from '@/sys/handlers/ai/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class BehaviorSystem implements IGameSystem {
   private registry!: EntityRegistry;
@@ -27,7 +27,7 @@ export class BehaviorSystem implements IGameSystem {
     
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
-        const orbital = e.getComponent<OrbitalData>('Orbital');
+        const orbital = e.getComponent<OrbitalData>(ComponentType.Orbital);
         if (orbital) {
             orbital.radius = 4.0;
             orbital.speed = 1.5 + Math.random() * 1.0; 
@@ -53,22 +53,17 @@ export class BehaviorSystem implements IGameSystem {
       },
       spawnDrillSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['DRILL_SPARKS'], x, y, angle),
       spawnLaunchSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['HUNTER_RECOIL'], x, y, angle),
-      
       spawnFX: (type, x, y) => {
           const id = FX_IDS[type];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
       },
-      
       damagePanel: (id, amount) => PanelRegistry.damagePanel(id, amount),
-      
-      // SPATIAL AUDIO
       playSound: (key, x) => {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 
             : 0;
           AudioSystem.playSound(key, pan);
       },
-      
       getUpgradeLevel: (key) => upgrades[key] || 0,
       config: this.config
     };
@@ -76,7 +71,7 @@ export class BehaviorSystem implements IGameSystem {
     const entities = this.registry.getAll();
     for (const entity of entities) {
         if (!entity.active) continue;
-        const identity = entity.getComponent<IdentityData>('Identity');
+        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
         if (!identity) continue;
 
         const behavior = AIRegistry.get(identity.variant);

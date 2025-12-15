@@ -4,11 +4,11 @@ import { TransformData } from '@/sys/data/TransformData';
 import { TargetData } from '@/sys/data/TargetData';
 import { PanelRegistry } from './PanelRegistrySystem';
 import { Tag } from '@/engine/ecs/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class TargetingSystem implements IGameSystem {
   private registry!: EntityRegistry;
   private locator!: IServiceLocator;
-
   private playerCache: { x: number, y: number } | null = null;
 
   setup(locator: IServiceLocator): void {
@@ -19,19 +19,17 @@ export class TargetingSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.updatePlayerCache();
 
-    // Iterate Iterable instead of array
     const entities = this.registry.getAll();
     
     for (const entity of entities) {
         if (!entity.active) continue;
 
-        const target = entity.getComponent<TargetData>('Target');
+        const target = entity.getComponent<TargetData>(ComponentType.Target);
         if (!target) continue;
 
-        const transform = entity.getComponent<TransformData>('Transform');
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
         if (!transform) continue;
 
-        // Locked target validation
         if (target.locked && target.id) {
             if (target.type === 'PANEL') {
                 const panel = PanelRegistry.getPanelState(target.id);
@@ -46,7 +44,6 @@ export class TargetingSystem implements IGameSystem {
                     }
                 }
             }
-            // Validate Enemy Target (for Homing Bullets)
             else if (target.type === 'ENEMY') {
                 target.locked = false; 
             }
@@ -57,8 +54,6 @@ export class TargetingSystem implements IGameSystem {
             
             if (target.locked) continue; 
         }
-
-        // --- FIND NEW TARGET ---
 
         if (target.type === 'PLAYER') {
             if (this.playerCache) {
@@ -96,10 +91,9 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private updatePlayerCache() {
-      // getByTag now returns Iterable, so we iterator manually or use Array.from if strictly needed (but we just want first)
       const players = this.registry.getByTag(Tag.PLAYER);
       for (const p of players) {
-          const t = p.getComponent<TransformData>('Transform');
+          const t = p.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
               this.playerCache = { x: t.x, y: t.y };
               return;
@@ -117,7 +111,6 @@ export class TargetingSystem implements IGameSystem {
           if (p.isDestroyed) continue;
           const dx = p.x - x;
           const dy = p.y - y;
-          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           if (distSq < minDist) {
               minDist = distSq;
@@ -137,12 +130,11 @@ export class TargetingSystem implements IGameSystem {
           if (!e.active) continue;
           if (e.hasTag(Tag.BULLET)) continue;
 
-          const t = e.getComponent<TransformData>('Transform');
+          const t = e.getComponent<TransformData>(ComponentType.Transform);
           if (!t) continue;
           
           const dx = t.x - x;
           const dy = t.y - y;
-          // OPTIMIZATION: Squared Distance
           const distSq = dx*dx + dy*dy;
           
           if (distSq < minDist && distSq < MAX_RANGE_SQ) {
