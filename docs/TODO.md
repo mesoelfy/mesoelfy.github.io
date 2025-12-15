@@ -623,3 +623,8 @@ Refactoring prompts:
 
 
 The music has a set playlist order, but if the player clicks >> for next track, the next track will be random (and whatever tracks come next naturally without clicking >> will also be random). Once a track has played, it gets removed from the set of possible tracks to play until all of them have played, then the whole setlist gets reset again.
+
+
+velocity-based deformation
+Z-Axis (Forward): Scales up with speed.
+X/Y-Axis (Thickness): Scales down slightly to preserve "volume"

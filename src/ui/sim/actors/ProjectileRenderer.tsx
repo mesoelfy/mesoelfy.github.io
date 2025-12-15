@@ -5,6 +5,7 @@ import { ServiceLocator } from '@/sys/services/ServiceLocator';
 import { TransformData } from '@/sys/data/TransformData';
 import { RenderData } from '@/sys/data/RenderData';
 import { ProjectileData } from '@/sys/data/ProjectileData';
+import { MotionData } from '@/sys/data/MotionData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG, GeometryType } from '@/sys/config/ProjectileConfig';
 import { applyRotation } from '@/engine/math/RenderUtils';
@@ -13,15 +14,18 @@ const MAX_PER_TYPE = 1000;
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
 
-// Reusable Material (Shared across all shapes)
-// We use BasicMaterial because we want pure, unlit neon colors for Bloom.
+// Reusable Material
 const neonMaterial = new THREE.MeshBasicMaterial({ 
     color: 0xffffff,
-    toneMapped: false // Critical for Bloom intensity > 1.0
+    toneMapped: false 
 });
 
+// Stretch Config
+const STRETCH_FACTOR = 0.08; 
+const SQUASH_FACTOR = 0.04;
+const MAX_STRETCH = 4.0;
+
 export const ProjectileRenderer = () => {
-  // Refs for each geometry bucket
   const sphereRef = useRef<THREE.InstancedMesh>(null);
   const capsuleRef = useRef<THREE.InstancedMesh>(null);
   const diamondRef = useRef<THREE.InstancedMesh>(null);
@@ -29,7 +33,6 @@ export const ProjectileRenderer = () => {
   const ringRef = useRef<THREE.InstancedMesh>(null);
   const arrowRef = useRef<THREE.InstancedMesh>(null);
 
-  // Geometry Definitions
   const geos = useMemo(() => ({
       SPHERE: new THREE.IcosahedronGeometry(1, 1),
       CAPSULE: new THREE.CylinderGeometry(0.5, 0.5, 1, 6),
@@ -39,7 +42,6 @@ export const ProjectileRenderer = () => {
       ARROW: new THREE.ConeGeometry(0.5, 1, 4)
   }), []);
 
-  // Pre-allocate Color Buffers
   useLayoutEffect(() => {
       const refs = [sphereRef, capsuleRef, diamondRef, pyramidRef, ringRef, arrowRef];
       refs.forEach(ref => {
@@ -53,12 +55,10 @@ export const ProjectileRenderer = () => {
     let registry;
     try { registry = ServiceLocator.getRegistry(); } catch { return; }
 
-    // Counters for each bucket
     const counts: Record<GeometryType, number> = {
         SPHERE: 0, CAPSULE: 0, DIAMOND: 0, PYRAMID: 0, RING: 0, ARROW: 0
     };
 
-    // References Map
     const refs: Record<GeometryType, THREE.InstancedMesh | null> = {
         SPHERE: sphereRef.current,
         CAPSULE: capsuleRef.current,
@@ -76,6 +76,7 @@ export const ProjectileRenderer = () => {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         const p = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const r = entity.getComponent<RenderData>(ComponentType.Render);
+        const m = entity.getComponent<MotionData>(ComponentType.Motion);
 
         if (!t || !p) continue;
 
@@ -92,39 +93,38 @@ export const ProjectileRenderer = () => {
         tempObj.position.set(t.x, t.y, 0);
 
         // --- ROTATION ---
-        // 1. Base Rotation (from Spawner/Physics)
-        // If faceVelocity is true, t.rotation is already set to direction of travel.
-        // We need to align the model.
-        // Cylinder/Cone default is Y-up. We want them pointing +X (0 radians).
-        // So we rotate -PI/2 on Z.
-        
-        const alignOffset = -Math.PI / 2;
-        let baseRotation = t.rotation + alignOffset;
-        
-        // 2. Visual Spin (RenderData)
-        // If config has spin, we spin around the LOCAL Y axis of the mesh.
         const spin = r ? r.visualRotation : 0;
         
-        // Use utility to combine "Facing Direction" with "Local Spin"
+        // FIX: Removed manual alignOffset. applyRotation handles Y-Up -> X-Forward.
+        // Special case: Rings (Torus) are Z-up/flat. We might want to rotate them differently,
+        // but for now let's trust the standard logic for bullets.
         applyRotation(tempObj, spin, t.rotation);
 
+        // --- SQUASH & STRETCH ---
+        let stretchY = 1.0; // Y is the Forward axis for Cylinders/Cones
+        let squashXZ = 1.0; // X/Z is thickness
+
+        if (m) {
+            const speedSq = m.vx*m.vx + m.vy*m.vy;
+            if (speedSq > 1.0) {
+                const speed = Math.sqrt(speedSq);
+                stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR));
+                squashXZ = Math.max(0.4, 1.0 - (speed * SQUASH_FACTOR));
+            }
+        }
+
         // --- SCALE ---
-        // Config Base * Transform Base * Visual Pulse
         const vScale = r?.visualScale || 1.0;
+        
         tempObj.scale.set(
-            config.scale[0] * t.scale * vScale,
-            config.scale[1] * t.scale * vScale,
-            config.scale[2] * t.scale * vScale
+            config.scale[0] * t.scale * vScale * squashXZ, // Thickness
+            config.scale[1] * t.scale * vScale * stretchY, // Length (Forward)
+            config.scale[2] * t.scale * vScale * squashXZ  // Thickness
         );
 
         // --- COLOR ---
-        // We ignore RenderData.r/g/b for base color because we want the Config's NEON values.
-        // RenderData only provides 0-1 values usually.
-        // We use the Config's HDR color array directly.
-        
         tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
         
-        // Commit
         tempObj.updateMatrix();
         mesh.setMatrixAt(index, tempObj.matrix);
         mesh.setColorAt(index, tempColor);
@@ -132,7 +132,6 @@ export const ProjectileRenderer = () => {
         counts[geoType]++;
     }
 
-    // Update all meshes
     Object.keys(refs).forEach((key) => {
         const k = key as GeometryType;
         const mesh = refs[k];
