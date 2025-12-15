@@ -9,7 +9,7 @@ export interface VFXRecipe {
   spread?: number;
   size?: [number, number];
   shape?: number; // 0=Square, 1=Teardrop
-  omniChance?: number; // 0.0 - 1.0: Chance for a particle to ignore direction (Hybrid)
+  omniChance?: number; // 0.0 - 1.0: Chance for a particle to be Backblast
 }
 
 const PALETTE_PURPLE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
@@ -31,7 +31,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       speed: [5, 10], 
       life: [0.5, 0.9],
       spread: 1.6,
-      omniChance: 0.2 // 20% scatter
+      omniChance: 0.15   // Reduced to 15% (Half of 30%)
   },
   'EXPLOSION_YELLOW_DIR': { 
       pattern: 'DIRECTIONAL', 
@@ -40,7 +40,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       speed: [10, 18], 
       life: [0.4, 0.8],
       spread: 1.6,
-      omniChance: 0.2
+      omniChance: 0.15
   },
   'EXPLOSION_RED_DIR': { 
       pattern: 'DIRECTIONAL', 
@@ -49,7 +49,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       speed: [12, 22], 
       life: [0.6, 1.0],
       spread: 1.6,
-      omniChance: 0.2 
+      omniChance: 0.15 
   },
 
   // --- IMPACTS ---

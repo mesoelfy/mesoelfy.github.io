@@ -79,27 +79,32 @@ export class VFXSystem implements IGameSystem {
           let vx = 0;
           let vy = 0;
 
-          // HYBRID LOGIC:
-          // If 'omniChance' passes, force Radial pattern for this particle.
-          const isOmni = recipe.omniChance && Math.random() < recipe.omniChance;
-          const isHybridDir = isOmni && recipe.pattern === 'DIRECTIONAL';
+          const isBackblast = recipe.omniChance && Math.random() < recipe.omniChance;
+          const isDirectional = recipe.pattern === 'DIRECTIONAL';
           
-          // DAMPENING (Speed & Life):
-          // If a particle is "rebel" (omni in a directional system):
-          // 1. Slow it down (40% speed) to stay near center.
-          // 2. Kill it faster (50% life) to simulate rapid cooling/dissipation of core mass.
-          const finalSpeed = isHybridDir ? speed * 0.4 : speed;
-          const finalLife = isHybridDir ? life * 0.5 : life;
+          // SPEED: 50% power for backblast
+          const finalSpeed = (isDirectional && isBackblast) ? speed * 0.5 : speed;
+          
+          // LIFE: 20% faster death (0.8x life) for backblast
+          const finalLife = (isDirectional && isBackblast) ? life * 0.8 : life;
 
-          if (recipe.pattern === 'RADIAL' || isOmni) {
+          if (recipe.pattern === 'RADIAL') {
               const a = Math.random() * Math.PI * 2;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
           } 
-          else if (recipe.pattern === 'DIRECTIONAL') {
-              const baseDir = angle + Math.PI; 
-              const spread = recipe.spread || 0.5;
-              const a = baseDir + (Math.random() - 0.5) * spread;
+          else if (isDirectional) {
+              let dir = angle + Math.PI; 
+              let spread = recipe.spread || 0.5;
+
+              if (isBackblast) {
+                  // Flip to Entry Wound side
+                  dir += Math.PI; 
+                  // Wide spray for backblast
+                  spread *= 1.5; 
+              }
+
+              const a = dir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
           }
