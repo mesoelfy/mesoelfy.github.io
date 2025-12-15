@@ -40,7 +40,7 @@ export interface IEntitySpawner {
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
   spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
-  spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void;
+  spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
 }
 
 export interface IAudioService {
@@ -57,7 +57,7 @@ export interface IInputService {
 }
 
 export interface IParticleSystem extends IGameSystem {
-  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number): void;
+  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
   getCount(): number;
   getData(): {
     x: Float32Array;
@@ -101,7 +101,6 @@ export interface IGameStateSystem extends IGameSystem {
   decayReboot(amount: number): void;
 }
 
-// UPDATED: Expose necessary methods for systems/hooks
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
   register(id: string, element: HTMLElement): void;
@@ -114,5 +113,5 @@ export interface IPanelSystem extends IGameSystem {
   destroyAll(): void;
   getPanelRect(id: string): WorldRect | undefined;
   getPanelState(id: string): { health: number; isDestroyed: boolean } | undefined;
-  getAllPanels(): any[]; // Keeping loose type for the merged object to avoid circ deps
+  getAllPanels(): any[]; 
 }

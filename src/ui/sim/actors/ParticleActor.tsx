@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
@@ -7,13 +7,24 @@ import { ParticleSystem } from '@/sys/systems/ParticleSystem';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
-const axisZ = new THREE.Vector3(0, 0, 1);
 
 export const ParticleActor = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
   const geometry = useMemo(() => AssetService.get<THREE.BufferGeometry>('GEO_PARTICLE'), []);
   const material = useMemo(() => AssetService.get<THREE.Material>('MAT_PARTICLE'), []);
+
+  // Setup Attributes
+  useLayoutEffect(() => {
+      if (meshRef.current) {
+          // Max particles matches ParticleSystem constant (2000)
+          const max = 2000;
+          meshRef.current.geometry.setAttribute(
+              'shapeID', 
+              new THREE.InstancedBufferAttribute(new Float32Array(max), 1)
+          );
+      }
+  }, []);
 
   useFrame(() => {
     if (!meshRef.current) return;
@@ -27,6 +38,8 @@ export const ParticleActor = () => {
         return;
     }
 
+    const shapeAttr = meshRef.current.geometry.getAttribute('shapeID') as THREE.InstancedBufferAttribute;
+
     for (let i = 0; i < count; i++) {
         const x = sys.x[i];
         const y = sys.y[i];
@@ -34,28 +47,30 @@ export const ParticleActor = () => {
         const vy = sys.vy[i];
         const life = sys.life[i];
         const maxLife = sys.maxLife[i];
+        const baseSize = sys.size[i];
+        const shape = sys.shape[i];
         
         dummy.position.set(x, y, 6.0);
         
-        // --- STRETCH LOGIC ---
-        // Calculate speed
         const speedSq = vx*vx + vy*vy;
         const speed = Math.sqrt(speedSq);
-        
-        // Base scale fades with life
         const lifeScale = life / maxLife;
         
         if (speed > 1.0) {
-            // It's moving fast (like a laser part) -> Stretch it
             const angle = Math.atan2(vy, vx);
             dummy.rotation.set(0, 0, angle);
             
-            // Stretch X based on speed, Shrink Y slightly
-            dummy.scale.set(lifeScale * (1 + speed * 0.2), lifeScale * 0.5, 1);
+            // For Teardrop (Shape 1), we want more length stretch
+            const stretchMult = shape === 1 ? 0.3 : 0.2;
+            
+            dummy.scale.set(
+                lifeScale * baseSize * (1 + speed * stretchMult), 
+                lifeScale * baseSize * 0.5, 
+                1
+            );
         } else {
-            // Stationary/Slow -> Normal square/dot
             dummy.rotation.set(0, 0, 0);
-            dummy.scale.set(lifeScale, lifeScale, 1);
+            dummy.scale.set(lifeScale * baseSize, lifeScale * baseSize, 1);
         }
         
         dummy.updateMatrix();
@@ -63,11 +78,17 @@ export const ParticleActor = () => {
         
         color.setRGB(sys.r[i], sys.g[i], sys.b[i]);
         meshRef.current.setColorAt(i, color);
+        
+        // Update Shape Attribute
+        shapeAttr.setX(i, shape);
     }
 
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+    
+    // Important: Flag attribute for upload
+    shapeAttr.needsUpdate = true;
   });
 
   return (

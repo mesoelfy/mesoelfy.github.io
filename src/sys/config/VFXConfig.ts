@@ -7,6 +7,8 @@ export interface VFXRecipe {
   speed: [number, number];
   life: [number, number];
   spread?: number;
+  size?: [number, number];
+  shape?: number; // 0=Square, 1=Teardrop
 }
 
 const PALETTE_PURPLE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
@@ -26,10 +28,20 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   'CLASH_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
 
   // --- DIRECTIONAL ---
-  'DRILL_SPARKS':  { pattern: 'DIRECTIONAL', colors: PALETTE_PURPLE, count: [3, 6], speed: [4, 9], life: [0.2, 0.4], spread: 0.8 },
+  // UPDATED: Added shape: 1 (Teardrop)
+  'DRILL_SPARKS':  { 
+      pattern: 'DIRECTIONAL', 
+      colors: PALETTE_PURPLE, 
+      count: [3, 6], 
+      speed: [20, 30], 
+      life: [0.2, 0.4], 
+      spread: 0.8, 
+      size: [0.5, 0.5],
+      shape: 1 
+  },
+  
   'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: PALETTE_YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
   
-  // --- NEW: SNIPER LASER SIGHT ---
   'LASER_SIGHT': { 
     pattern: 'DIRECTIONAL', 
     colors: ['#F7D277', '#FFFFFF'], 

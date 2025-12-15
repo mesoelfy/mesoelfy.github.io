@@ -14,10 +14,9 @@ const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.St
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
 const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
-// CONFIGURATION
-const EXHAUST_OFFSET_DIST = 1.0; // Distance from center to tail
-const EXHAUST_CONE_ANGLE = 0.5;  // ~30 degrees spread
-const EXHAUST_DENSITY = 2;       // Particles per frame
+const EXHAUST_OFFSET_DIST = 1.0;
+const EXHAUST_CONE_ANGLE = 0.5;
+const EXHAUST_DENSITY = 2;
 
 export const HunterLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
@@ -27,7 +26,6 @@ export const HunterLogic: EnemyLogic = {
     const target = getTarget(e);
     const render = getRender(e);
 
-    // Initialization
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
         state.current = 'HOVER';
         state.timers.action = 2.0 + Math.random(); 
@@ -40,86 +38,58 @@ export const HunterLogic: EnemyLogic = {
     const dist = Math.sqrt(dx*dx + dy*dy);
     const angleToTarget = Math.atan2(dy, dx);
 
-    // --- STATE MACHINE ---
-
     if (state.current === 'HOVER') {
         const tooClose = dist < 8.0;
         const tooFar = dist > 16.0;
-        
         let tx = state.data.driftX;
         let ty = state.data.driftY;
-
         if (tooClose) { tx -= dx * 0.5; ty -= dy * 0.5; }
         if (tooFar)   { tx += dx * 0.5; ty += dy * 0.5; }
-
         motion.vx += (tx - motion.vx) * ctx.delta * 2.0;
         motion.vy += (ty - motion.vy) * ctx.delta * 2.0;
-
         pos.rotation = angleToTarget;
-
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'LOCK';
-            state.timers.action = 1.0; // 1s Lock time
+            state.timers.action = 1.0;
             ctx.playSound('ui_chirp', pos.x);
         }
     }
     else if (state.current === 'LOCK') {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
-        
-        // Face Target
         pos.rotation = angleToTarget;
         
-        // --- ENGINE EXHAUST CONE ---
         const particleSys = ServiceLocator.getParticleSystem();
         const rearAngle = pos.rotation + Math.PI;
 
         for (let i = 0; i < EXHAUST_DENSITY; i++) {
-            // 1. Calculate spread within the cone
             const spread = (Math.random() - 0.5) * EXHAUST_CONE_ANGLE;
             const thrustAngle = rearAngle + spread;
-
-            // 2. Position: Start at tail, offset slightly by randomness to create "volume"
             const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.5);
             const px = pos.x + Math.cos(thrustAngle) * spawnDist;
             const py = pos.y + Math.sin(thrustAngle) * spawnDist;
-
-            // 3. Velocity: High speed, decaying over time (simulated via drag in ParticleSystem)
             const thrustSpeed = 20.0 + (Math.random() * 10.0);
             const vx = Math.cos(thrustAngle) * thrustSpeed;
             const vy = Math.sin(thrustAngle) * thrustSpeed;
-
-            // 4. Emit
-            particleSys.spawn(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2));
+            
+            // Params: color, vx, vy, life, size, shape
+            // Shape 1 = Teardrop
+            particleSys.spawn(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, 1);
         }
 
         state.timers.action -= ctx.delta;
-        if (state.timers.action <= 0) {
-            state.current = 'FIRE';
-        }
+        if (state.timers.action <= 0) state.current = 'FIRE';
     }
     else if (state.current === 'FIRE') {
         const dirX = Math.cos(angleToTarget);
         const dirY = Math.sin(angleToTarget);
         const speed = 40.0;
-
-        ctx.spawnProjectile(
-            pos.x + dirX * 1.5, 
-            pos.y + dirY * 1.5, 
-            dirX * speed, 
-            dirY * speed, 
-            undefined, 
-            'ENEMY_HUNTER', 
-            e.id as number
-        );
-
+        ctx.spawnProjectile(pos.x + dirX * 1.5, pos.y + dirY * 1.5, dirX * speed, dirY * speed, undefined, 'ENEMY_HUNTER', e.id as number);
         ctx.playSound('fx_enemy_fire', pos.x);
         ctx.spawnLaunchSparks(pos.x + dirX, pos.y + dirY, angleToTarget);
-
         motion.vx = -dirX * 5.0;
         motion.vy = -dirY * 5.0;
-
         state.current = 'COOLDOWN';
         state.timers.action = 2.0;
     }

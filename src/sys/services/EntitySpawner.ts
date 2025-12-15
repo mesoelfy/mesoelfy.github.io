@@ -60,16 +60,10 @@ export class EntitySpawner implements IEntitySpawner {
   ): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
-    
-    // Config Lookup
     const config = PROJECTILE_CONFIG[projectileId] || PROJECTILE_CONFIG['PLAYER_STANDARD'];
     
-    // IMPORTANT: RenderData is now mostly controlled by the Renderer reading the Config,
-    // BUT we still init it so other systems (like Physics/Collisions) don't crash 
-    // if they try to access RenderData for debug visuals or bounding boxes.
-    
     return this.spawn(id, {
-        [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, // Config scale handles the rest
+        [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
@@ -79,14 +73,24 @@ export class EntitySpawner implements IEntitySpawner {
     });
   }
 
-  public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number): void {
+  public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: number = 0): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
     
-    e.addComponent(ComponentBuilder[ComponentType.Transform]({ x, y }));
+    // We store shape in Identity for Entity-based particles? 
+    // No, entity based particles are different from the IParticleSystem implementation.
+    // This method spawns an ENTITY particle (heavyweight).
+    // The IParticleSystem spawns a LIGHTWEIGHT particle.
+    // The previous implementation of EntitySpawner.spawnParticle used ECS.
+    // We should keep it consistent but it seems unused in current loop?
+    // HunterLogic uses ServiceLocator.getParticleSystem(), not Spawner.spawnParticle.
+    // So this method might be legacy or for special particles.
+    
+    e.addComponent(ComponentBuilder[ComponentType.Transform]({ x, y, scale: size }));
     e.addComponent(ComponentBuilder[ComponentType.Motion]({ vx, vy, friction: 0.05 }));
     e.addComponent(ComponentBuilder[ComponentType.Lifetime]({ remaining: life, total: life }));
     e.addComponent(ComponentBuilder[ComponentType.Identity]({ variant: color }));
+    // We are ignoring shape here for entity particles unless we add a component for it.
     
     this.registry.updateCache(e);
   }

@@ -13,12 +13,9 @@ export class ParticleSystem implements IParticleSystem {
   public vy = new Float32Array(MAX_PARTICLES);
   public life = new Float32Array(MAX_PARTICLES);
   public maxLife = new Float32Array(MAX_PARTICLES);
+  public size = new Float32Array(MAX_PARTICLES);
+  public shape = new Float32Array(MAX_PARTICLES); // NEW: 0=Square, 1=Teardrop
   
-  // Color: R, G, B interleaved stride 3? Or separate? 
-  // Let's use separate for simplicity in swap-remove logic, 
-  // or interleaved and multiply index by 3. Interleaved is better for upload if we were mapping directly, 
-  // but we usually upload via InstancedMesh setMatrix/setColor.
-  // Actually, keeping them separate arrays makes the update loop logic cleaner.
   public r = new Float32Array(MAX_PARTICLES);
   public g = new Float32Array(MAX_PARTICLES);
   public b = new Float32Array(MAX_PARTICLES);
@@ -38,18 +35,14 @@ export class ParticleSystem implements IParticleSystem {
       this.life[i] -= delta;
 
       if (this.life[i] <= 0) {
-        // Swap & Pop
         this.swap(i, this.count - 1);
         this.count--;
-        // Do NOT increment i, process the swapped particle at this index next
         continue;
       }
 
-      // Physics
       this.x[i] += this.vx[i] * delta;
       this.y[i] += this.vy[i] * delta;
       
-      // Friction
       this.vx[i] *= 0.95;
       this.vy[i] *= 0.95;
 
@@ -57,8 +50,15 @@ export class ParticleSystem implements IParticleSystem {
     }
   }
 
-  public spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number) {
-    if (this.count >= MAX_PARTICLES) return; // Pool full
+  public spawn(
+      x: number, y: number, 
+      colorHex: string, 
+      vx: number, vy: number, 
+      life: number, 
+      size: number = 1.0,
+      shape: number = 0
+  ) {
+    if (this.count >= MAX_PARTICLES) return;
 
     const idx = this.count;
     this.x[idx] = x;
@@ -67,6 +67,8 @@ export class ParticleSystem implements IParticleSystem {
     this.vy[idx] = vy;
     this.life[idx] = life;
     this.maxLife[idx] = life;
+    this.size[idx] = size;
+    this.shape[idx] = shape;
 
     this.tempColor.set(colorHex);
     this.r[idx] = this.tempColor.r;
@@ -85,23 +87,22 @@ export class ParticleSystem implements IParticleSystem {
     this.vy[a] = this.vy[b];
     this.life[a] = this.life[b];
     this.maxLife[a] = this.maxLife[b];
+    this.size[a] = this.size[b];
+    this.shape[a] = this.shape[b];
     this.r[a] = this.r[b];
     this.g[a] = this.g[b];
     this.b[a] = this.b[b];
   }
 
-  public getCount() {
-    return this.count;
-  }
+  public getCount() { return this.count; }
 
-  // Not used directly by renderer anymore, but kept for interface compliance if needed
   public getData() {
     return {
         x: this.x,
         y: this.y,
         life: this.life,
         maxLife: this.maxLife,
-        color: this.r // Warning: returns only R array reference if we did this mapping
+        color: this.r 
     };
   }
 

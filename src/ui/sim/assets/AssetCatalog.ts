@@ -35,10 +35,8 @@ const SHADER_LIB = {
       '  gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);\n' +
       '}'
   },
-  // ... (Other shaders omitted for brevity, will retain them implicitly via this overwrite logic) ...
 };
 
-// We redefine registerAllAssets to include the new Particle Shader Logic
 export const registerAllAssets = () => {
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
   AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
@@ -70,7 +68,7 @@ export const registerAllAssets = () => {
       });
   });
   
-  // NEW: Velocity-Stretched Particle Shader
+  // NEW: Shape-Aware Particle Shader
   AssetService.registerGenerator('MAT_PARTICLE', () => {
       return new THREE.ShaderMaterial({
         vertexShader: `
@@ -78,31 +76,53 @@ export const registerAllAssets = () => {
           attribute vec3 instanceColor;
           #endif
           
-          // We assume "instanceMatrix" columns 0,1 contain velocity info or we pass it? 
-          // Actually, ParticleActor updates the matrix directly. 
-          // To stretch, we need velocity passed in.
-          // BUT, ParticleSystem doesn't pass velocity to the shader easily without a new attribute.
-          // TRICK: We will rotate the particle in JS to face velocity, and scale X.
-          
-          // REVERT TO STANDARD: We will handle the stretching in ParticleActor.tsx logic 
-          // instead of the shader to keep this clean.
-          
+          attribute float shapeID; // 0=Square, 1=Teardrop
+          varying float vShape;
           varying vec2 vUv;
           varying vec3 vColor;
+          
           void main() { 
             vUv = uv; 
             vColor = instanceColor; 
+            vShape = shapeID;
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); 
           }
         `,
         fragmentShader: `
           varying vec2 vUv;
           varying vec3 vColor;
+          varying float vShape;
+          
           void main() {
-            // Square shape with soft edges
-            vec2 d = abs(vUv - 0.5) * 2.0;
-            float shape = max(d.x, d.y);
-            float alpha = 1.0 - smoothstep(0.8, 1.0, shape);
+            float alpha = 0.0;
+            
+            // SHAPE 0: SOFT SQUARE
+            if (vShape < 0.5) {
+                vec2 d = abs(vUv - 0.5) * 2.0;
+                float shape = max(d.x, d.y);
+                alpha = 1.0 - smoothstep(0.8, 1.0, shape);
+            } 
+            // SHAPE 1: TEARDROP / TRAIL
+            else {
+                // vUv.x is length (0..1). vUv.y is width (0..1).
+                // Particle aligns +X with velocity.
+                // Head at 1.0, Tail at 0.0.
+                
+                float T = vUv.x; // 0 (Tail) to 1 (Head)
+                
+                // Width profile: 0 at tail, full at head.
+                // pow(T, 0.5) makes a rounded bullet/parabolic shape
+                float widthProfile = sqrt(T); 
+                
+                float distY = abs(vUv.y - 0.5) * 2.0;
+                
+                // Compare distance from center line against allowed width
+                // Smooth edges
+                alpha = 1.0 - smoothstep(widthProfile - 0.2, widthProfile, distY);
+                
+                // Cut off the hard back edge if needed, though T=0 handles it naturally
+                if (T < 0.01) alpha = 0.0;
+            }
             
             if (alpha < 0.01) discard;
             gl_FragColor = vec4(vColor, alpha);
