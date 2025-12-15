@@ -8,7 +8,6 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const DaemonActor = () => {
-  // Cage Geometry (Octahedron)
   const geometry = useMemo(() => new THREE.OctahedronGeometry(0.7, 0), []);
   const material = useMemo(() => new THREE.MeshBasicMaterial({ 
       color: '#00F0FF', 
@@ -30,24 +29,20 @@ export const DaemonActor = () => {
       updateEntity={(e, obj, color) => {
           const state = e.getComponent<AIStateData>(ComponentType.State);
           
-          if (state && state.current === 'FIRE') {
-              // SPRING SQUISH: Flatten on Y, Bulge on X/Z
-              // We use a sine wave based on time or simple recoil?
-              // Logic is fast, so let's just hard squash it.
-              obj.scale.set(1.5, 0.4, 1.5);
+          if (state && typeof state.data.springVal === 'number') {
+              // Apply the physics-based squash/stretch
+              const val = state.data.springVal;
+              const sy = 1.0 + val;
+              const sx = 1.0 - (val * 0.5);
               
-              // Flash White
-              color.set('#FFFFFF');
-          } else {
-              // Reset Scale handled by InstancedActor base logic (uniform),
-              // but we need to ensure we don't leave it squashed.
-              // InstancedActor applies `tempObj.scale.setScalar(finalScale)` BEFORE this callback.
-              // So we are just multiplying/overriding here.
+              // Apply local scale deformation
+              obj.scale.set(sx, sy, sx);
               
-              // Gentle breathing in IDLE/READY
-              if (state && state.current === 'READY') {
-                  const s = 1.0 + Math.sin(Date.now() * 0.005) * 0.05;
-                  obj.scale.multiplyScalar(s);
+              // Flash on high recoil (when velocity is high)
+              if (Math.abs(state.data.springVel) > 10.0) {
+                  color.set('#FFFFFF');
+              } else {
+                  color.set('#00F0FF');
               }
           }
       }}

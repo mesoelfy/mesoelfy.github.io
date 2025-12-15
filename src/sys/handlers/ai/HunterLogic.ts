@@ -6,7 +6,7 @@ import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
 import { RenderData } from '@/sys/data/RenderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 
 const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
 const getMotion = (e: Entity) => e.requireComponent<MotionData>(ComponentType.Motion);
@@ -22,6 +22,7 @@ export const HunterLogic: EnemyLogic = {
     const target = getTarget(e);
     const render = getRender(e);
 
+    // Initialization
     if (state.current === 'SPAWN' || state.current === 'IDLE') {
         state.current = 'HOVER';
         state.timers.action = 2.0 + Math.random(); 
@@ -54,7 +55,7 @@ export const HunterLogic: EnemyLogic = {
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'LOCK';
-            state.timers.action = 1.0; 
+            state.timers.action = 1.0; // 1s Lock time
             ctx.playSound('ui_chirp', pos.x);
         }
     }
@@ -63,13 +64,23 @@ export const HunterLogic: EnemyLogic = {
         motion.vy *= 0.9;
         pos.rotation = angleToTarget;
         
-        // LASER SIGHT: High Density Yellow Stream
-        // We emit 3 particles per frame for a solid line look
-        for(let i=0; i<3; i++) {
-            const r = Math.random() * dist;
-            const px = pos.x + (Math.cos(angleToTarget) * r);
-            const py = pos.y + (Math.sin(angleToTarget) * r);
-            FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['LASER_SIGHT'], px, py, angleToTarget);
+        // --- MARCHING ANTS LASER ---
+        // Emit particles that move FAST along the vector. 
+        // ParticleActor will stretch them into dashes.
+        if (Math.random() > 0.2) { 
+            const particleSys = ServiceLocator.getParticleSystem();
+            
+            // Spawn at hunter
+            const px = pos.x + Math.cos(angleToTarget);
+            const py = pos.y + Math.sin(angleToTarget);
+            
+            // Velocity towards player (High speed = Long Dash)
+            const speed = 25.0; 
+            const vx = Math.cos(angleToTarget) * speed;
+            const vy = Math.sin(angleToTarget) * speed;
+            
+            // Color: Bright Yellow
+            particleSys.spawn(px, py, '#F7D277', vx, vy, 0.4); 
         }
 
         state.timers.action -= ctx.delta;
@@ -104,7 +115,6 @@ export const HunterLogic: EnemyLogic = {
     else if (state.current === 'COOLDOWN') {
         motion.vx *= 0.95;
         motion.vy *= 0.95;
-        
         state.timers.action -= ctx.delta;
         if (state.timers.action <= 0) {
             state.current = 'HOVER';
