@@ -628,3 +628,7 @@ The music has a set playlist order, but if the player clicks >> for next track, 
 velocity-based deformation
 Z-Axis (Forward): Scales up with speed.
 X/Y-Axis (Thickness): Scales down slightly to preserve "volume"
+
+I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked?
+
+VFX config - laser sight should be exhaust right?

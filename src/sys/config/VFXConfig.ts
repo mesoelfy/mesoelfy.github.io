@@ -33,9 +33,9 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_PURPLE, 
       count: [3, 6], 
-      speed: [20, 30], 
+      speed: [10, 10], 
       life: [0.2, 0.4], 
-      spread: 0.8, 
+      spread: 0.7, 
       size: [0.5, 0.5],
       shape: 1 
   },

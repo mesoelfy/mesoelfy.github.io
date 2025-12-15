@@ -17,7 +17,6 @@ export const ParticleActor = () => {
   // Setup Attributes
   useLayoutEffect(() => {
       if (meshRef.current) {
-          // Max particles matches ParticleSystem constant (2000)
           const max = 2000;
           meshRef.current.geometry.setAttribute(
               'shapeID', 
@@ -60,14 +59,20 @@ export const ParticleActor = () => {
             const angle = Math.atan2(vy, vx);
             dummy.rotation.set(0, 0, angle);
             
-            // For Teardrop (Shape 1), we want more length stretch
+            // Teardrop Stretch Logic
             const stretchMult = shape === 1 ? 0.3 : 0.2;
+            const scaleX = lifeScale * baseSize * (1 + speed * stretchMult);
+            const scaleY = lifeScale * baseSize * 0.5;
             
-            dummy.scale.set(
-                lifeScale * baseSize * (1 + speed * stretchMult), 
-                lifeScale * baseSize * 0.5, 
-                1
-            );
+            dummy.scale.set(scaleX, scaleY, 1);
+
+            // OFFSET LOGIC:
+            // Shift the center forward by half the length so the "tail" sits at the original (x,y).
+            // This prevents sparks from appearing "behind" the spawn point (inside walls).
+            const shift = scaleX * 0.03;
+            dummy.position.x += Math.cos(angle) * shift;
+            dummy.position.y += Math.sin(angle) * shift;
+
         } else {
             dummy.rotation.set(0, 0, 0);
             dummy.scale.set(lifeScale * baseSize, lifeScale * baseSize, 1);
@@ -79,15 +84,12 @@ export const ParticleActor = () => {
         color.setRGB(sys.r[i], sys.g[i], sys.b[i]);
         meshRef.current.setColorAt(i, color);
         
-        // Update Shape Attribute
         shapeAttr.setX(i, shape);
     }
 
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-    
-    // Important: Flag attribute for upload
     shapeAttr.needsUpdate = true;
   });
 
