@@ -60,7 +60,9 @@ export class PlayerSystem implements IGameSystem {
 
     if (render) {
         let targetCol = COL_BASE;
-        let spinSpeed = -0.02;
+        
+        // SPIN LOGIC: (+) = CW, (-) = CCW
+        let spinSpeed = 0.02; // IDLE: Slow Clockwise
         
         let interactState = 'IDLE';
         try {
@@ -72,18 +74,17 @@ export class PlayerSystem implements IGameSystem {
             targetCol = COL_DEAD;
             if (interactState === 'REBOOTING') {
                 targetCol = COL_REBOOT;
-                spinSpeed = -10.0;
+                spinSpeed = -0.3; // REBOOTING (DEAD): CCW
             } else {
-                spinSpeed = 1.5;
+                spinSpeed = 1.5; // DEAD: Fast CW
             }
         } else {
             if (interactState === 'HEALING') {
                 targetCol = COL_REPAIR;
-                spinSpeed = 0.4;
+                spinSpeed = -0.3; // HEALING: CCW (Increased to 0.3)
             } else if (interactState === 'REBOOTING') {
-                // FIXED: Added missing Purple state check
                 targetCol = COL_REBOOT;
-                spinSpeed = -0.4;
+                spinSpeed = -0.3; // REBOOTING: CCW (Increased to 0.3)
             }
         }
 
@@ -92,9 +93,10 @@ export class PlayerSystem implements IGameSystem {
         render.r = this.tempColor.r;
         render.g = this.tempColor.g;
         render.b = this.tempColor.b;
+        
+        // Accumulate rotation
         render.visualRotation += spinSpeed;
         
-        // FIXED: Removed visualScale pulsing on interaction to keep reticle stable
         render.visualScale = 1.0;
     }
 

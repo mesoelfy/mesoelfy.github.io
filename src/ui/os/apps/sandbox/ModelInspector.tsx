@@ -5,7 +5,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Box, PlayCircle, Crosshair, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 
 const MODELS = [
-  { id: 'PLAYER', label: 'PLAYER_SHIP', desc: 'Mesos Class Interceptor.', color: 'text-primary-green' },
+  // REMOVED: PLAYER_SHIP (No 3D model)
   { id: EnemyTypes.DAEMON, label: 'DAEMON_CORE', desc: 'Defensive Subroutine.', color: 'text-latent-purple' },
   { id: EnemyTypes.DRILLER, label: 'DRILLER_DRONE', desc: 'Standard Melee Unit.', color: 'text-service-cyan' },
   { id: EnemyTypes.KAMIKAZE, label: 'KAMIKAZE_UNIT', desc: 'Volatile Payload.', color: 'text-critical-red' },
