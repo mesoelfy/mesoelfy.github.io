@@ -1,0 +1,13 @@
+[
+  { "at": 0,     "type": "driller", "count": 3, "interval": 0.1 }, 
+  { "at": 2,     "type": "hunter",  "count": 1, "interval": 0 },   
+  { "at": 5,     "type": "driller", "count": 5, "interval": 0.5 }, 
+  { "at": 8,     "type": "kamikaze", "count": 2, "interval": 1.0 },
+  { "at": 12,    "type": "driller", "count": 8, "interval": 0.2 }, 
+  { "at": 15,    "type": "hunter",  "count": 2, "interval": 2.0 }, 
+  { "at": 20,    "type": "kamikaze", "count": 5, "interval": 0.5 },
+  { "at": 25,    "type": "hunter",  "count": 3, "interval": 1.0 },
+  { "at": 35,    "type": "driller", "count": 10, "interval": 0.1 },
+  { "at": 40,    "type": "kamikaze", "count": 5, "interval": 0.3 },
+  { "at": 50,    "type": "hunter",  "count": 5, "interval": 1.5 }
+]

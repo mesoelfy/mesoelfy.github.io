@@ -2,17 +2,14 @@ import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/co
 import { useGameStore } from '@/game/state/game/useGameStore';
 import { useStore } from '@/game/state/global/useStore';
 import { EnemyTypes } from '@/game/config/Identifiers';
+import waves from '@/game/config/static/waves.json';
 
-const WAVE_TIMELINE = [
-  { at: 0,     type: 'driller', count: 3, interval: 0.1 }, 
-  { at: 2,     type: 'hunter',  count: 1, interval: 0 },   
-  { at: 5,     type: 'driller', count: 5, interval: 0.5 }, 
-  { at: 8,     type: 'kamikaze', count: 2, interval: 1.0 },
-  { at: 12,    type: 'driller', count: 8, interval: 0.2 }, 
-  { at: 15,    type: 'hunter',  count: 2, interval: 2.0 }, 
-  { at: 20,    type: 'kamikaze', count: 5, interval: 0.5 },
-  { at: 25,    type: 'hunter',  count: 3, interval: 1.0 }, 
-];
+interface WaveDef {
+    at: number;
+    type: string;
+    count: number;
+    interval: number;
+}
 
 export class WaveSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
@@ -21,6 +18,7 @@ export class WaveSystem implements IGameSystem {
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
+  private timeline: WaveDef[] = waves as WaveDef[];
 
   setup(locator: IServiceLocator): void {
     this.spawner = locator.getSpawner();
@@ -84,20 +82,21 @@ export class WaveSystem implements IGameSystem {
   }
 
   private checkTimeline() {
-    if (this.currentWaveIndex >= WAVE_TIMELINE.length) {
+    if (this.currentWaveIndex >= this.timeline.length) {
         this.waveTime = 0;
         this.currentWaveIndex = 0;
         this.loopCount++;
     }
 
-    const nextWave = WAVE_TIMELINE[this.currentWaveIndex];
+    const nextWave = this.timeline[this.currentWaveIndex];
     if (nextWave && this.waveTime >= nextWave.at) {
         this.queueSpawns(nextWave);
         this.currentWaveIndex++;
     }
   }
 
-  private queueSpawns(wave: any) {
+  private queueSpawns(wave: WaveDef) {
+    // Increase count on subsequent loops to ramp difficulty
     const count = wave.count + (this.loopCount * 2);
     for (let i = 0; i < count; i++) {
         this.spawnQueue.push({

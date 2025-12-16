@@ -9,6 +9,7 @@ import { TargetData } from '@/game/data/TargetData';
 import { ConfigService } from '@/game/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/core/signals/FastEventBus';
 import { ComponentType } from '@/core/ecs/ComponentType';
+import { calculatePlayerShots, ShotDef } from '@/game/handlers/weapons/WeaponLogic';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -67,7 +68,7 @@ export class PlayerSystem implements IGameSystem {
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
-            this.attemptAutoFire(time, playerEntity, upgrades);
+            this.attemptAutoFire(time, transform, upgrades);
         }
     }
   }
@@ -75,8 +76,6 @@ export class PlayerSystem implements IGameSystem {
   teardown(): void {}
 
   private setupListeners() {
-    // REMOVED: Scoring logic. Handled by ProgressionSystem.
-    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') {
             this.triggerPurge();
@@ -109,8 +108,8 @@ export class PlayerSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, player: any, upgrades: Record<string, number>) {
-    const cursor = this.locator.getInputService().getCursor();
+  private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>) {
+    // 1. Find Target
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
     const RANGE = 14; 
@@ -125,8 +124,8 @@ export class PlayerSystem implements IGameSystem {
 
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      const dx = t.x - cursor.x;
-      const dy = t.y - cursor.y;
+      const dx = t.x - playerTransform.x;
+      const dy = t.y - playerTransform.y;
       const dist = dx*dx + dy*dy; 
       if (dist < (RANGE * RANGE) && dist < nearestDist) {
           nearestDist = dist;
@@ -134,60 +133,35 @@ export class PlayerSystem implements IGameSystem {
       }
     }
 
-    if (targetEnemy) {
-      const forkLevel = upgrades['FORK'] || 0;
-      const projectileCount = 1 + (forkLevel * 2);
-      const dmgLevel = upgrades['EXECUTE'] || 0;
-      const damage = 1 + dmgLevel;
-      const snifferLevel = upgrades['SNIFFER'] || 0;
-      const backdoorLevel = upgrades['BACKDOOR'] || 0;
+    if (!targetEnemy) return;
 
-      let configId = 'PLAYER_STANDARD';
-      if (forkLevel > 0) configId = 'PLAYER_FORK';
-      if (snifferLevel > 0) configId = 'PLAYER_SNIFFER';
+    // 2. Get Target Position
+    const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
+    
+    // 3. Delegate Calculation
+    const shots = calculatePlayerShots(
+        { x: playerTransform.x, y: playerTransform.y },
+        { x: tPos.x, y: tPos.y },
+        upgrades
+    );
 
-      const baseSpread = 0.15;
-      const spreadAngle = baseSpread; 
-      
-      const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-      const dx = tPos.x - cursor.x;
-      const dy = tPos.y - cursor.y;
-      const baseAngle = Math.atan2(dy, dx);
-      const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
+    // 4. Spawn
+    shots.forEach(shot => {
+        const bullet = this.spawner.spawnBullet(
+            shot.x, shot.y, 
+            shot.vx, shot.vy, 
+            false, 
+            shot.life, 
+            shot.damage, 
+            shot.configId
+        );
 
-      const bSpeed = this.config.player.bulletSpeed;
-      const bLife = this.config.player.bulletLife;
+        if (shot.isHoming) {
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
+        }
+    });
 
-      // FORK / STANDARD
-      for (let i = 0; i < projectileCount; i++) {
-          const angle = startAngle + (i * spreadAngle);
-          const vx = Math.cos(angle) * bSpeed;
-          const vy = Math.sin(angle) * bSpeed;
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, configId);
-      }
-
-      // BACKDOOR
-      if (backdoorLevel > 0) {
-          const rearAngle = baseAngle + Math.PI; 
-          const vx = Math.cos(rearAngle) * bSpeed;
-          const vy = Math.sin(rearAngle) * bSpeed;
-          this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, 'PLAYER_BACKDOOR');
-      }
-
-      // SNIFFER
-      if (snifferLevel > 0) {
-          const angleStep = (Math.PI * 2) / snifferLevel;
-          for(let i=0; i<snifferLevel; i++) {
-              const angle = baseAngle + (i * angleStep);
-              const vx = Math.cos(angle) * bSpeed;
-              const vy = Math.sin(angle) * bSpeed;
-              const bullet = this.spawner.spawnBullet(cursor.x, cursor.y, vx, vy, false, bLife, damage, 'PLAYER_SNIFFER');
-              bullet.addComponent(new TargetData(null, 'ENEMY'));
-          }
-      }
-      
-      FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], cursor.x || 0);
-      this.lastFireTime = time;
-    }
+    FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], playerTransform.x);
+    this.lastFireTime = time;
   }
 }
