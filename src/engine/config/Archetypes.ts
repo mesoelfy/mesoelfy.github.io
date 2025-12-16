@@ -1,4 +1,3 @@
-import { ENEMY_CONFIG } from './EnemyConfig';
 import { PLAYER_CONFIG } from './PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
 import { ArchetypeIDs } from './Identifiers';
@@ -42,8 +41,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Render, data: { visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },
-  // Bullets don't strictly use UniversalActor yet (they have ProjectileRenderer), 
-  // but we can add data for future proofing.
   [ArchetypeIDs.BULLET_PLAYER]: {
     tags: [Tag.BULLET, Tag.PLAYER],
     components: [
@@ -83,9 +80,9 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: ENEMY_CONFIG.driller.hp } },
+      { type: ComponentType.Health, data: { max: 1 } }, 
       { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: ENEMY_CONFIG.driller.damage } },
+      { type: ComponentType.Combat, data: { damage: 1 } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
@@ -97,9 +94,9 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: ENEMY_CONFIG.kamikaze.hp } },
+      { type: ComponentType.Health, data: { max: 2 } }, 
       { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: ENEMY_CONFIG.kamikaze.damage } },
+      { type: ComponentType.Combat, data: { damage: 3 } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
@@ -111,7 +108,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: ENEMY_CONFIG.hunter.hp } },
+      { type: ComponentType.Health, data: { max: 3 } }, 
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Combat, data: { damage: 10 } }, 
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },

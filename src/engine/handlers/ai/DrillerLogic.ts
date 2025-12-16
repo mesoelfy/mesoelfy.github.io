@@ -5,33 +5,27 @@ import { Succeeder } from '@/engine/ai/behavior/decorators';
 import { MoveToTarget, SpinVisual } from '@/engine/ai/nodes/actions';
 import { IsTargetInRange } from '@/engine/ai/nodes/conditions';
 import { DrillAttack } from '@/engine/ai/nodes/drillerNodes';
-import { SpawnPhase } from '@/engine/ai/nodes/logic'; // Imported
-import { ENEMY_CONFIG } from '@/engine/config/EnemyConfig';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+
+const BASE_SPEED = 8;
 
 let treeRoot: any = null;
 
-const getDrillerTree = (config: any) => {
+const getDrillerTree = () => {
     if (treeRoot) return treeRoot;
 
-    // ROOT SEQUENCE:
-    // 1. Spawn Phase (Blocks until ready)
-    // 2. Main Loop (Spin + Decide)
-    
     treeRoot = new Sequence([
         new SpawnPhase(1.5), 
         
         new Sequence([
-            new Succeeder(new SpinVisual(5.0)), // Always spin visually
+            new Succeeder(new SpinVisual(5.0)), 
             new Selector([
-                // Attack Branch
                 new Sequence([
                     new IsTargetInRange(0.5), 
-                    new Succeeder(new SpinVisual(15.0)), // Fast spin
-                    new DrillAttack(config.damage, 0.2)
+                    new Succeeder(new SpinVisual(15.0)), 
+                    new DrillAttack(0.2) // Interval only
                 ]),
-                // Move Branch
-                new MoveToTarget(config.baseSpeed)
+                new MoveToTarget(BASE_SPEED)
             ])
         ])
     ]);
@@ -40,8 +34,7 @@ const getDrillerTree = (config: any) => {
 
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    const config = ctx.config.enemies[EnemyTypes.DRILLER];
-    const tree = getDrillerTree(config);
+    const tree = getDrillerTree();
     tree.tick(e, ctx);
   }
 };

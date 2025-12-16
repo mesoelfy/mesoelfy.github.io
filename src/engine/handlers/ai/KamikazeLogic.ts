@@ -4,21 +4,20 @@ import { Sequence, Parallel } from '@/engine/ai/behavior/composites';
 import { Succeeder } from '@/engine/ai/behavior/decorators';
 import { MoveToTarget, SpinVisual } from '@/engine/ai/nodes/actions';
 import { SpawnPhase } from '@/engine/ai/nodes/logic';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+
+const BASE_SPEED = 12;
 
 let treeRoot: any = null;
 
-const getKamikazeTree = (config: any) => {
+const getKamikazeTree = () => {
     if (treeRoot) return treeRoot;
 
     treeRoot = new Sequence([
-        // 1. Warm up
         new SpawnPhase(1.5),
         
-        // 2. Main Loop: Move AND Spin
         new Parallel([
-            new Succeeder(new SpinVisual(10.0)), // Fast Tumble
-            new MoveToTarget(config.baseSpeed)   // Homing Missile
+            new Succeeder(new SpinVisual(10.0)), 
+            new MoveToTarget(BASE_SPEED)
         ])
     ]);
     return treeRoot;
@@ -26,8 +25,7 @@ const getKamikazeTree = (config: any) => {
 
 export const KamikazeLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    const config = ctx.config.enemies[EnemyTypes.KAMIKAZE];
-    const tree = getKamikazeTree(config);
+    const tree = getKamikazeTree();
     tree.tick(e, ctx);
   }
 };
