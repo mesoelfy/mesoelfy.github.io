@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Tue Dec 16 15:14:51 CST 2025
+Generated on: Tue Dec 16 17:23:11 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -353,14 +353,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  reactStrictMode: true,
+  // ENGINE OPTIMIZATION:
+  // We disable Strict Mode because the Game Engine manages its own lifecycle.
+  // Double-invoking mount/unmount in Dev causes AudioContext and WebGL context thrashing.
+  reactStrictMode: false,
   transpilePackages: ['three'],
   
   // Disable Indicators
   devIndicators: false,
 
-
-  
   env: {
     NEXT_PUBLIC_COMMIT_HASH: commitHash,
   },
@@ -534,67 +535,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- SEMANTIC PALETTE ---
-        
-        // The core system color (Safe, Online, Active)
         'primary-green': {
           light: '#7FF65F',
           DEFAULT: 'rgba(96, 196, 68, 1)',
           dim: '#1bb930ff',
           dark: '#217e10ff',
         },
-        
-        // Lore, Regeneration, Special Enemies
         'latent-purple': {
           light: '#BC86BA',
           DEFAULT: '#9E4EA5',
           dim: '#822B8A',
           deep: '#350E3A',
         },
-        
-        // Repair, Friendly AI, Constructive
         'service-cyan': {
           DEFAULT: '#00F0FF', 
           dim: '#008ba3',
         },
-        
-        // Warnings, Highlights, Interaction Focus
         'alert-yellow': {
           DEFAULT: '#eae747ff',
         },
-        
-        // Critical Failure, Enemies, Destruction
         'critical-red': {
           DEFAULT: '#FF003C', 
         },
-        
-        // Backgrounds and Structures
         'muted-gray': '#27282A',
         'void-black': '#050505',
-        
-        // --- LEGACY GAME TOKENS (Keep for Logic/Canvas referencing if needed) ---
-        game: {
-          turret: {
-            base: '#78F654',
-            glow: '#C2FE9A',
-          },
-          bullet: {
-            plasma: '#FFFFFF', 
-            trail: '#78F654',
-          },
-          enemy: {
-            seeker: '#9E4EA5',
-            eater: '#FF003C',
-            boss: '#F7D277',
-          },
-          hud: {
-            text: '#78F654',
-            warning: '#FF003C',
-          },
-          vfx: {
-            spark: '#FFFFFF',
-            damage: '#FF003C',
-          }
+        'game': {
+          turret: { base: '#78F654', glow: '#C2FE9A' },
+          bullet: { plasma: '#FFFFFF', trail: '#78F654' },
+          enemy: { seeker: '#9E4EA5', eater: '#FF003C', boss: '#F7D277' },
+          hud: { text: '#78F654', warning: '#FF003C' },
+          vfx: { spark: '#FFFFFF', damage: '#FF003C' }
         }
       },
       fontFamily: {
@@ -608,6 +578,8 @@ const config: Config = {
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
+        // UPDATED: Duration 1.2s
+        'restore-flash': 'restore-flash 1.2s ease-out forwards',
       },
       keyframes: {
         'spin-diamond': {
@@ -627,6 +599,12 @@ const config: Config = {
           '0%, 30%': { opacity: '1' }, 
           '50%': { opacity: '0' },     
           '100%': { opacity: '1' },    
+        },
+        'restore-flash': {
+          '0%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' },
+          // Keyframe adjusted to snap on quickly (5%) then fade out long
+          '5%': { boxShadow: '0 0 15px rgba(96, 196, 68, 1)', borderColor: '#78F654' },
+          '100%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' }
         }
       }
     },
@@ -2619,13 +2597,16 @@ export const CustomCursor = () => {
   const [isClicking, setIsClicking] = useState(false);
   const [isOnScrollbar, setIsOnScrollbar] = useState(false);
   
-  const { bootState, activeModal, isDebugOpen } = useStore();
+  const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
   
   // UPDATED: Treat mobile_lockdown as an active game state for cursor purposes
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  const showCustomCursor = (!isGameActive || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
+  // LOGIC FIX: Explicitly hide during breach transition
+  const showCustomCursor = 
+    ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') 
+    && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -2662,7 +2643,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen]);
+  }, [isGameActive, isMenuOpen, isBreaching]);
 
   return (
     <>
@@ -3293,6 +3274,19 @@ const pulseVariants = {
     }
 };
 
+// --- CIRCUIT LOCK OVERLAY (INNER) ---
+// REVERTED: Kept at 0.6s (Fast Flash)
+const CircuitLockOverlay = () => {
+    return (
+        <motion.div 
+            className="absolute inset-0 pointer-events-none z-[60] border-2 border-white/50 bg-primary-green/20 shadow-[inset_0_0_20px_#78F654]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+    );
+};
+
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
@@ -3328,7 +3322,10 @@ export const GlassPanel = ({
   const isDamaged = !isDestroyed && health < maxHealth;
 
   const [showReboot, setShowReboot] = useReactState(false);
+  const [showCircuitLock, setShowCircuitLock] = useReactState(false);
+  
   const prevDestroyed = useReactRef(isDestroyed);
+  const prevHealth = useReactRef(health);
   
   const shakeControls = useAnimation();
   const heartbeatControls = useHeartbeat(); 
@@ -3343,6 +3340,7 @@ export const GlassPanel = ({
       }
   }, [isGameOver, shakeControls]);
 
+  // REBOOT LOGIC
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
@@ -3351,6 +3349,17 @@ export const GlassPanel = ({
     }
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
+
+  // HEAL COMPLETE LOGIC
+  useReactEffect(() => {
+      if (prevHealth.current < maxHealth && health >= maxHealth && !isDestroyed && !isGameOver) {
+          setShowCircuitLock(true);
+          // Timer matches the OUTER glow duration (1.2s) from Tailwind
+          const timer = setTimeout(() => setShowCircuitLock(false), 1200); 
+          return () => clearTimeout(timer);
+      }
+      prevHealth.current = health;
+  }, [health, maxHealth, isDestroyed, isGameOver]);
 
   // SHAKE LISTENER
   useReactEffect(() => {
@@ -3368,7 +3377,13 @@ export const GlassPanel = ({
   }, [gameId, shakeControls]);
 
   let borderColor = "border-primary-green-dim/30";
-  if (isDestroyed) {
+  
+  // Outer Glow Logic
+  if (showCircuitLock) {
+      // Handled by animate-restore-flash
+      borderColor = "border-primary-green"; 
+  }
+  else if (isDestroyed) {
       borderColor = isInteracting 
         ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" 
         : "border-critical-red animate-pulse"; 
@@ -3391,6 +3406,8 @@ export const GlassPanel = ({
         "border",
         borderColor, 
         "rounded-sm",
+        // Apply keyframe animation class for the outer glow flash (1.2s)
+        showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300",
         className
       )}
     >
@@ -3443,6 +3460,7 @@ export const GlassPanel = ({
 
         <AnimatePresence>
             {showReboot && <RebootOverlay key="reboot" />}
+            {showCircuitLock && <CircuitLockOverlay key="lock" />}
         </AnimatePresence>
         
         {isGameOver && (
@@ -4106,7 +4124,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const mainStackRef = useRef<HTMLDivElement>(null);
   
   const device = useDeviceType();
-  const { setBootState, setIntroDone } = useStore();
+  const { setBootState, setIntroDone, setInitialClickPos } = useStore();
 
   const { 
     step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
@@ -4122,7 +4140,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [showGpuPanel]);
 
-  const handleWrapperClick = () => {
+  const handleWrapperClick = (e: React.MouseEvent) => {
+      // Capture click position for seamless cursor transition
+      setInitialClickPos({ x: e.clientX, y: e.clientY });
+
       if (device === 'mobile') {
           AudioSystem.init();
           AudioSystem.playSound('ui_error');
@@ -4139,9 +4160,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
       className={clsx(
-          "fixed inset-0 z-[100] font-mono outline-none cursor-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-          // UPDATED: Force hidden overflow when breaching starts to prevent scrollbar flash
-          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
+          "fixed inset-0 z-[100] font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+          // CURSOR FIX: Explicitly hide system cursor during breach to prevent white arrow flash
+          isBreaching ? "overflow-hidden cursor-none" : "overflow-y-auto overflow-x-auto cursor-auto"
       )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
@@ -9613,7 +9634,7 @@ export const ParticleActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/PlayerActor.tsx
 =====================================
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
@@ -9624,6 +9645,8 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { IInteractionSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import * as THREE from 'three';
 
 // --- GEOMETRY GENERATION ---
@@ -9745,6 +9768,13 @@ const softCircleShader = {
   `
 };
 
+// Colors
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
+const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_DEAD = new THREE.Color('#FF003C');
+const COL_HIT = new THREE.Color('#FF003C'); 
+
 export const PlayerActor = () => {
   const containerRef = useRef<THREE.Group>(null);
   const centerDotRef = useRef<THREE.Mesh>(null);
@@ -9754,8 +9784,12 @@ export const PlayerActor = () => {
   
   const { introDone } = useStore(); 
   const animScale = useRef(0);
-  const tempColor = useRef(new THREE.Color());
+  
+  // FIX: Initialize to Green to prevent white flash on load
+  const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
+  
   const currentEnergy = useRef(0.0);
+  const hitFlash = useRef(0.0); 
 
   const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
       vertexShader: techGlowShader.vertex,
@@ -9783,6 +9817,13 @@ export const PlayerActor = () => {
       blending: THREE.NormalBlending 
   }), []);
 
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
+          hitFlash.current = 1.0; 
+      });
+      return unsub;
+  }, []);
+
   useFrame((state, delta) => {
     if (!containerRef.current) return;
 
@@ -9795,7 +9836,10 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
-    // --- INTERACTION LOGIC ---
+    if (hitFlash.current > 0) {
+        hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
+    }
+
     let interactState = 'IDLE';
     try {
         const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
@@ -9805,16 +9849,14 @@ export const PlayerActor = () => {
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     const targetEnergy = isActive ? 1.0 : 0.0;
     
-    // UPDATED: Asymmetric Fade
-    // Fade IN: Fast (12.0)
-    // Fade OUT: Gentle (3.0)
     const lerpSpeed = isActive ? 12.0 : 3.0;
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * lerpSpeed);
 
-    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
-    ambientMaterial.uniforms.uEnergy.value = currentEnergy.current;
+    const effectiveEnergy = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
-    // --- ECS SYNC ---
+    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    ambientMaterial.uniforms.uEnergy.value = effectiveEnergy;
+
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -9835,7 +9877,17 @@ export const PlayerActor = () => {
     if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
         reticleRef.current.rotation.z = -render.visualRotation;
         
+        let targetColor = COL_BASE;
+        if (isDead) targetColor = COL_DEAD;
+        else if (interactState === 'HEALING') targetColor = COL_REPAIR;
+        else if (interactState === 'REBOOTING') targetColor = COL_REBOOT;
+
         tempColor.current.setRGB(render.r, render.g, render.b);
+        tempColor.current.lerp(targetColor, 0.2); 
+
+        if (hitFlash.current > 0.01) {
+            tempColor.current.lerp(COL_HIT, hitFlash.current);
+        }
         
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
@@ -10454,12 +10506,15 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { useStore } from '@/engine/state/global/useStore';
 
-// OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   const isMobileRef = useRef(false);
+  
+  // REACTIVE STATE: We listen to this
+  const initialClickPos = useStore(state => state.initialClickPos);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -10475,12 +10530,7 @@ export const GameDirector = memo(() => {
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    try {
-        const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-        input.updateBounds(viewport.width, viewport.height);
-    } catch {}
-    
-    // Panel Refresh Loop (10Hz) - Now using ServiceLocator
+    // Panel Refresh Loop (10Hz)
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
@@ -10507,6 +10557,26 @@ export const GameDirector = memo(() => {
       engineRef.current = null;
     };
   }, []); 
+
+  // --- NEW: Position Seeding Effect ---
+  // Runs whenever initialClickPos changes (i.e. when button is clicked)
+  useEffect(() => {
+      if (!initialClickPos || isMobileRef.current || !engineRef.current) return;
+
+      try {
+          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
+          input.updateBounds(viewport.width, viewport.height);
+          
+          // Screen (Pixels) -> World (Units)
+          // X: (clientX / width) * vpW - (vpW/2)
+          // Y: -((clientY / height) * vpH - (vpH/2))  <-- Flip Y
+          
+          const wx = (initialClickPos.x / size.width) * viewport.width - (viewport.width / 2);
+          const wy = -((initialClickPos.y / size.height) * viewport.height - (viewport.height / 2));
+          
+          input.updateCursor(wx, wy);
+      } catch {}
+  }, [initialClickPos, viewport, size]);
 
   // Handle Resize updates
   useEffect(() => {
@@ -10970,7 +11040,7 @@ export default function Home() {
     isDebugOpen, 
     isDebugMinimized,
     setSimulationPaused,
-    sessionId // NEW
+    sessionId 
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
@@ -11079,7 +11149,6 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
-        {/* WEBGLErrorBoundary and Scene Canvas are keyed by sessionId to force recreation on reset */}
         <WebGLErrorBoundary key={sessionId}>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
@@ -11137,8 +11206,8 @@ export default function Home() {
                             visible: { 
                                 opacity: 1, 
                                 transition: { 
-                                staggerChildren: 0.3,
-                                delayChildren: 0.2 
+                                staggerChildren: 0.05, // FIXED: Fast stagger
+                                delayChildren: 0.0    // FIXED: Instant start
                                 } 
                             }
                             }}
@@ -11977,6 +12046,7 @@ const DRILLER_COLOR = parseHex(GAME_THEME.enemy.muncher);
 const KAMIKAZE_COLOR = parseHex(GAME_THEME.enemy.kamikaze);
 const HUNTER_COLOR = parseHex(GAME_THEME.enemy.hunter);
 const DAEMON_COLOR = parseHex('#00F0FF');
+const PLAYER_COLOR = parseHex(GAME_THEME.turret.base); // NEW: Explicit Player Green
 
 export interface EntityBlueprint {
   tags: Tag[];
@@ -11997,7 +12067,8 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
+      // UPDATED: Injected PLAYER_COLOR to prevent white flash on spawn
+      { type: ComponentType.Render, data: { ...PLAYER_COLOR, visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
@@ -12640,7 +12711,10 @@ class TransformStoreController {
     }
     
     if (this.nextIndex >= MAX_ENTITIES) {
-      console.warn('[TransformStore] Buffer overflow!');
+      // SAFETY: Return 0 (dummy slot) to prevent TypedArray crash.
+      // In a real scenario, we might want to recycle the oldest entity, 
+      // but preventing the crash is priority #1.
+      console.error('[TransformStore] CRITICAL: Entity limit reached! Increase MAX_ENTITIES.');
       return 0; 
     }
 
@@ -13051,7 +13125,7 @@ export class AIStateData extends Component {
 =====================================
 FILE: ./src/engine/ecs/Constants.ts
 =====================================
-export const MAX_ENTITIES = 10000; // Cap for static memory allocation
+export const MAX_ENTITIES = 30000; // Scaled for Bullet Hell capability
 export const SPATIAL_GRID_SIZE = 4096; // Power of 2 for bitwise masking
 export const SPATIAL_CELL_SIZE = 4; // World Units
 
@@ -13755,7 +13829,7 @@ interface DebugFlags {
 }
 
 interface AppState {
-  sessionId: number; // NEW: Triggers Engine Re-mount
+  sessionId: number; 
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
@@ -13763,6 +13837,7 @@ interface AppState {
   hoveredItem: string | null;
   
   isSimulationPaused: boolean;
+  initialClickPos: { x: number, y: number } | null; // NEW: Track init click
   
   sandboxView: SandboxView;
   
@@ -13808,6 +13883,7 @@ interface AppState {
   resetDebugFlags: () => void;
   
   setSimulationPaused: (paused: boolean) => void;
+  setInitialClickPos: (pos: { x: number, y: number } | null) => void; // NEW
 }
 
 export const useStore = create<AppState>()(
@@ -13821,6 +13897,7 @@ export const useStore = create<AppState>()(
       hoveredItem: null,
       
       isSimulationPaused: false,
+      initialClickPos: null,
       
       sandboxView: 'audio',
       galleryTarget: EnemyTypes.DRILLER,
@@ -13864,16 +13941,11 @@ export const useStore = create<AppState>()(
       setHovered: (item) => set({ hoveredItem: item }),
       
       resetApplication: () => {
-          // Stop Audio
           AudioSystem.stopAll();
-          
-          // Reset Game Logic State
           useGameStore.getState().stopGame();
           useGameStore.getState().resetGame(); 
-          
-          // Reset UI State
           set(state => ({
-              sessionId: state.sessionId + 1, // Increment ID to force remount
+              sessionId: state.sessionId + 1,
               bootState: 'standby',
               introDone: false,
               isBreaching: false,
@@ -13883,7 +13955,8 @@ export const useStore = create<AppState>()(
               sandboxView: 'audio',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
-              isSimulationPaused: false
+              isSimulationPaused: false,
+              initialClickPos: null
           }));
       },
       
@@ -13933,7 +14006,8 @@ export const useStore = create<AppState>()(
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
       }),
       
-      setSimulationPaused: (paused) => set({ isSimulationPaused: paused })
+      setSimulationPaused: (paused) => set({ isSimulationPaused: paused }),
+      setInitialClickPos: (pos) => set({ initialClickPos: pos })
     }),
     {
       name: 'mesoelfy-ui-settings-v3',
@@ -15870,13 +15944,13 @@ export class SpinVisual extends BTNode {
 FILE: ./src/engine/systems/CollisionSystem.ts
 =====================================
 import { IGameSystem, IPhysicsSystem, ICombatSystem, IEntityRegistry } from '@/engine/interfaces';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
-const MAX_COLLISION_RESULTS = 128;
+// SCALING FIX: Increased buffer to handle massive overlaps (e.g. Nukes)
+const MAX_COLLISION_RESULTS = 1024;
 
 export class CollisionSystem implements IGameSystem {
   private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
@@ -17432,8 +17506,8 @@ export class PanelRegistrySystem implements IPanelSystem {
   public refreshAll() { DOMSpatialService.refreshAll(); }
   public refreshSingle(id: string) { DOMSpatialService.refreshSingle(id); }
 
-  public damagePanel(id: string, amount: number) {
-      StructureHealthService.damage(id, amount);
+  public damagePanel(id: string, amount: number, silent: boolean = false) {
+      StructureHealthService.damage(id, amount, silent);
   }
 
   public healPanel(id: string, amount: number, sourceX?: number) {
@@ -17990,6 +18064,7 @@ import { IGameSystem, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -17999,12 +18074,18 @@ interface WaveDef {
     interval: number;
 }
 
+// Matches DrillerLogic TIP_OFFSET to ensure visual continuity
+const DRILLER_OFFSET = 0.4; 
+
 export class WaveSystem implements IGameSystem {
   private waveTime = 0;
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
+  
+  // Scenario Flag
+  private scenarioInit = false;
 
   constructor(
     private spawner: IEntitySpawner,
@@ -18018,11 +18099,24 @@ export class WaveSystem implements IGameSystem {
     this.currentWaveIndex = 0;
     this.spawnQueue = [];
     this.loopCount = 0;
+    this.scenarioInit = false;
   }
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
+
+    // --- STORY SCENARIO INJECTION ---
+    if (!this.scenarioInit) {
+        // We wait until panels are physically laid out (width > 0)
+        const panels = this.panelSystem.getAllPanels();
+        const ready = panels.some(p => p.width > 0);
+        
+        if (ready) {
+            this.runScenario(panels);
+            this.scenarioInit = true;
+        }
+    }
 
     this.waveTime += delta;
     
@@ -18034,6 +18128,94 @@ export class WaveSystem implements IGameSystem {
     this.handleBreaches(delta);
   }
 
+  private runScenario(panels: any[]) {
+      // 1. Destroy ART_DB (Story: First casualty)
+      this.panelSystem.damagePanel('art', 9999, true); 
+
+      // 2. Critical Threat on HOLO_COMM
+      // Set to 15% Health (85 Damage) and max infestation to force destruction event
+      this.panelSystem.damagePanel('video', 85, true); 
+      const videoPanel = panels.find(p => p.id === 'video');
+      if (videoPanel) {
+          this.spawnDrillerOn(videoPanel, 3);
+      }
+
+      // 3. Infest remaining panels
+      const targets = panels.filter(p => p.id !== 'art' && p.id !== 'video');
+      
+      targets.forEach(p => {
+          // Damage randomly between 20% and 50%
+          const dmg = 20 + Math.floor(Math.random() * 30);
+          this.panelSystem.damagePanel(p.id, dmg, true); 
+          
+          // Spawn 1-3 drillers
+          const count = 1 + Math.floor(Math.random() * 3);
+          this.spawnDrillerOn(p, count);
+      });
+  }
+
+  private spawnDrillerOn(panel: any, count: number) {
+      for(let i=0; i<count; i++) {
+          // Determine Random Edge Position
+          const side = Math.floor(Math.random() * 4);
+          let edgeX = 0, edgeY = 0; // The point on the panel border
+          let normalX = 0, normalY = 0; // Vector pointing OUT from center
+          
+          const halfW = panel.width / 2;
+          const halfH = panel.height / 2;
+          
+          switch(side) {
+              case 0: // Top
+                  edgeX = (Math.random() - 0.5) * panel.width;
+                  edgeY = halfH;
+                  normalX = 0; normalY = 1;
+                  break;
+              case 1: // Bottom
+                  edgeX = (Math.random() - 0.5) * panel.width;
+                  edgeY = -halfH;
+                  normalX = 0; normalY = -1;
+                  break;
+              case 2: // Left
+                  edgeX = -halfW;
+                  edgeY = (Math.random() - 0.5) * panel.height;
+                  normalX = -1; normalY = 0;
+                  break;
+              case 3: // Right
+                  edgeX = halfW;
+                  edgeY = (Math.random() - 0.5) * panel.height;
+                  normalX = 1; normalY = 0;
+                  break;
+          }
+
+          // Calculate Spawn Position
+          const spawnX = panel.x + edgeX + (normalX * DRILLER_OFFSET);
+          const spawnY = panel.y + edgeY + (normalY * DRILLER_OFFSET);
+
+          // Calculate Rotation (Face Inward = Opposite of Normal)
+          const angle = Math.atan2(-normalY, -normalX);
+
+          // Spawn with overrides to bypass animations and logic delays
+          this.spawner.spawn(EnemyTypes.DRILLER, {
+              [ComponentType.Transform]: { 
+                  x: spawnX, 
+                  y: spawnY, 
+                  scale: 1.0, 
+                  rotation: angle 
+              },
+              [ComponentType.State]: { 
+                  current: 'ACTIVE', // Skip 'SPAWN'
+                  timers: { 
+                      spawn: 0,
+                      drillAudio: Math.random() * 0.2 // Stagger audio slightly
+                  } 
+              },
+              [ComponentType.Render]: { 
+                  visualScale: 1.0 
+              }
+          });
+      }
+  }
+
   private handleBreaches(delta: number) {
       const flags = useStore.getState().debugFlags;
       if (flags.panelGodMode || flags.peaceMode) return;
@@ -18043,6 +18225,7 @@ export class WaveSystem implements IGameSystem {
       
       if (deadPanels.length === 0) return;
 
+      // Base spawn rate for breach
       const enemiesPerSecondPerPanel = 0.2 + (this.waveTime * 0.005);
       const spawnChance = enemiesPerSecondPerPanel * delta;
 
@@ -18476,6 +18659,9 @@ export interface ShotDef {
   isHoming: boolean;
 }
 
+// VISUAL TWEAK: Push bullets out so they don't clip the player mesh when stretched
+const MUZZLE_OFFSET = 1.2; 
+
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
@@ -18511,9 +18697,14 @@ export const calculatePlayerShots = (
 
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
+      
+      // Offset spawn point along the firing vector
+      const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+      const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+
       shots.push({
-          x: origin.x,
-          y: origin.y,
+          x: spawnX,
+          y: spawnY,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           damage,
@@ -18526,9 +18717,13 @@ export const calculatePlayerShots = (
   // 5. Generate Backdoor (Rear Shot)
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
+      
+      const spawnX = origin.x + Math.cos(rearAngle) * MUZZLE_OFFSET;
+      const spawnY = origin.y + Math.sin(rearAngle) * MUZZLE_OFFSET;
+
       shots.push({
-          x: origin.x,
-          y: origin.y,
+          x: spawnX,
+          y: spawnY,
           vx: Math.cos(rearAngle) * speed,
           vy: Math.sin(rearAngle) * speed,
           damage,
@@ -18546,9 +18741,13 @@ export const calculatePlayerShots = (
       
       for(let i=0; i<snifferLevel; i++) {
           const angle = angleOffset + (i * angleStep);
+          
+          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+
           shots.push({
-              x: origin.x,
-              y: origin.y,
+              x: spawnX,
+              y: spawnY,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               damage,
@@ -19198,7 +19397,7 @@ class StructureHealthServiceController {
     this.calculateIntegrity();
   }
 
-  public damage(id: string, amount: number) {
+  public damage(id: string, amount: number, silent: boolean = false) {
     if (useStore.getState().debugFlags.panelGodMode) return;
 
     const state = this.states.get(id);
@@ -19209,15 +19408,19 @@ class StructureHealthServiceController {
     if (state.health <= 0) {
         state.isDestroyed = true;
         state.health = 0;
-        GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
+        
+        if (!silent) {
+            GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+            GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
+        }
     } else {
-        // EMIT DAMAGE EVENT (UI Listens to this for Shake)
-        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
-            id, 
-            amount, 
-            currentHealth: state.health 
-        });
+        if (!silent) {
+            GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
+                id, 
+                amount, 
+                currentHealth: state.health 
+            });
+        }
     }
     this.calculateIntegrity();
   }
@@ -20027,7 +20230,7 @@ export interface IPanelSystem extends IGameSystem {
   unregister(id: string): void;
   refreshAll(): void;
   refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number): void;
+  damagePanel(id: string, amount: number, silent?: boolean): void; // UPDATED
   healPanel(id: string, amount: number, sourceX?: number): void;
   decayPanel(id: string, amount: number): void;
   destroyAll(): void;

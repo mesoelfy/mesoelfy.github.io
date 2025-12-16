@@ -126,12 +126,21 @@ export const GlassPanel = ({
 
   // HEAL COMPLETE LOGIC
   useReactEffect(() => {
+      // 1. Rising Edge (Healed to Full)
       if (prevHealth.current < maxHealth && health >= maxHealth && !isDestroyed && !isGameOver) {
           setShowCircuitLock(true);
           // Timer matches the OUTER glow duration (1.2s) from Tailwind
           const timer = setTimeout(() => setShowCircuitLock(false), 1200); 
+          prevHealth.current = health;
           return () => clearTimeout(timer);
       }
+      
+      // 2. Falling Edge (Took Damage or destroyed)
+      // FIX: Reset animation state immediately so it can trigger again next heal
+      if (health < maxHealth || isDestroyed || isGameOver) {
+          setShowCircuitLock(false);
+      }
+
       prevHealth.current = health;
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
