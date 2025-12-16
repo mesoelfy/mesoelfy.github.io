@@ -1,6 +1,6 @@
 import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import socials from '@/sys/config/static/socials.json';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { clsx } from 'clsx';
@@ -21,6 +21,7 @@ interface SocialRowProps {
 export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
   const panelState = useGameStore((state) => state.panels['social']);
   const isDestroyed = panelState ? panelState.isDestroyed : false;
+  const audio = useAudio();
 
   return (
     <div className={clsx(
@@ -38,8 +39,8 @@ export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
             href={isDestroyed ? undefined : social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))} 
-            onClick={(e) => !isDestroyed && AudioSystem.playClick(getPan(e))}
+            onMouseEnter={(e) => !isDestroyed && audio.playHover(getPan(e))} 
+            onClick={(e) => !isDestroyed && audio.playClick(getPan(e))}
             className={clsx(
                 "group flex items-center p-2 border transition-all duration-200",
                 layout === 'grid' ? "flex-col justify-center" : "flex-row gap-4 justify-start px-4 h-12",

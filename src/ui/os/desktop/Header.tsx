@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { useAudioVisualizer } from '@/engine/audio/hooks/useAudioVisualizer';
+import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -25,10 +25,10 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const ToggleBtn = ({ active, onClick, children, color }: any) => (
+const ToggleBtn = ({ active, onClick, children, color, audio }: any) => (
   <button 
-    onClick={(e) => { onClick(); AudioSystem.playClick(getPan(e)); }}
-    onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
+    onClick={(e) => { onClick(); audio.playClick(getPan(e)); }}
+    onMouseEnter={(e) => audio.playHover(getPan(e))}
     className={clsx(
       "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
@@ -42,10 +42,13 @@ const ToggleBtn = ({ active, onClick, children, color }: any) => (
 
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
+  const audio = useAudio();
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
-  const score = useGameStore(state => state.score);
+
+  // RECONNECTED: This hook registers the span with the Game Engine
+  const scoreRef = useTransientRef('score-display', 'text');
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -59,9 +62,6 @@ export const Header = () => {
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const heartbeatControls = useHeartbeat();
-  
-  // NOTE: Audio Visualizer available via useAudioVisualizer() hook, but currently unwired to UI elements.
-  // const audioData = useAudioVisualizer(32); 
 
   const textVariants = {
       heartbeat: {
@@ -115,8 +115,9 @@ export const Header = () => {
             <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
-                <span className="font-bold text-lg tabular-nums tracking-widest">
-                    {score.toString().padStart(4, '0')}
+                {/* TRANSIENT TARGET: Updated by GameEngine directly */}
+                <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">
+                    0000
                 </span>
             </div>
           </div>
@@ -127,28 +128,28 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor}>
+            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} audio={audio}>
                 <Wind size={14} />
             </ToggleBtn>
             
-            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor}>
+            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} audio={audio}>
                 <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span>
             </ToggleBtn>
             
-            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor}>
+            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor} audio={audio}>
                 {audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}
             </ToggleBtn>
             
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
             
-            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor}>
+            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor} audio={audio}>
                 {audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}
             </ToggleBtn>
 
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
             <button 
-                onClick={(e) => { toggleSettings(); AudioSystem.playSound('ui_menu_open', getPan(e)); }}
+                onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor

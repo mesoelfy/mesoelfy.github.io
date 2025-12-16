@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useRef, useState, useEffect } from 'react';
 
@@ -26,6 +26,7 @@ export const RangeSlider = ({
   color
 }: RangeSliderProps) => {
   
+  const audio = useAudio();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastTickRef = useRef(value);
@@ -40,11 +41,11 @@ export const RangeSlider = ({
     const threshold = max * 0.05;
     if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
         if (isDragging) {
-            AudioSystem.playHover(lastPanRef.current);
+            audio.playHover(lastPanRef.current);
         }
         lastTickRef.current = safeValue;
     }
-  }, [safeValue, max, isDragging]);
+  }, [safeValue, max, isDragging, audio]);
 
   useEffect(() => {
       if (!isDragging) lastTickRef.current = safeValue;
@@ -88,7 +89,6 @@ export const RangeSlider = ({
   const updateValue = (e: React.PointerEvent) => {
       if (!containerRef.current) return;
       
-      // Update pan reference for audio tick
       lastPanRef.current = getPan(e);
 
       const rect = containerRef.current.getBoundingClientRect();
@@ -109,7 +109,7 @@ export const RangeSlider = ({
   return (
     <div 
         className="flex flex-col gap-1 w-full select-none touch-none"
-        onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
+        onMouseEnter={(e) => audio.playHover(getPan(e))}
     >
       <div className="flex justify-between items-end mb-1">
         <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">

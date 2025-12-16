@@ -1,7 +1,7 @@
 import { useStore } from '@/sys/state/global/useStore';
 import { RangeSlider } from '../components/RangeSlider';
 import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import { 
   getAmbienceFilterHz, 
@@ -11,13 +11,13 @@ import {
   getAmbienceStereoGain 
 } from '@/engine/audio/AudioMath';
 
-const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
+const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff, audio }: any) => {
   const Icon = isActive ? IconOn : (IconOff || IconOn);
   
   return (
     <button
-      onClick={(e) => { onClick(); AudioSystem.playClick(); }}
-      onMouseEnter={() => AudioSystem.playHover()}
+      onClick={(e) => { onClick(); audio.playClick(); }}
+      onMouseEnter={() => audio.playHover()}
       className={clsx(
         "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
         isActive 
@@ -48,7 +48,8 @@ export const SoundTab = () => {
     toggleSfx,
     toggleAmbience
   } = useStore();
-
+  
+  const audio = useAudio();
   const BASE_VOL = 0.24;
 
   return (
@@ -81,10 +82,10 @@ export const SoundTab = () => {
                   
                   <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
                       <div className="grid grid-cols-4 gap-2 relative z-10">
-                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} />
-                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} />
-                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} />
-                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} />
+                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} audio={audio} />
+                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} audio={audio} />
+                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} audio={audio} />
+                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} audio={audio} />
                       </div>
 
                       <div className="space-y-5 relative z-10">
@@ -222,7 +223,7 @@ export const SoundTab = () => {
       <div className="mt-auto pt-4 flex justify-end border-t border-white/10">
         <button 
           onClick={resetAudioSettings}
-          onMouseEnter={() => AudioSystem.playHover()}
+          onMouseEnter={() => audio.playHover()}
           className="flex items-center gap-2 px-4 py-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black font-header font-black text-xs tracking-widest transition-all group"
         >
           <RotateCcw size={14} className="group-hover:-rotate-180 transition-transform duration-500" />
