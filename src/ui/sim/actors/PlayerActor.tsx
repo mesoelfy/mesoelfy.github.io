@@ -10,14 +10,59 @@ import { useGameStore } from '@/sys/state/game/useGameStore';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
-// --- GEOMETRY ---
+// --- GEOMETRY GENERATION ---
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
-const reticleGeo = new THREE.RingGeometry(0.4, 0.45, 4); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
-// --- SHADER (Tech Glow) ---
-const glowShader = {
+// Helper to generate the Star-Ring (12 points, pulled in valleys)
+const createStarRingGeo = () => {
+    const points = 12;
+    const outerRadius = 0.45;
+    const innerRadius = 0.40;
+    const indentFactor = 0.12; // How much to pull the valleys in (12%)
+
+    const shape = new THREE.Shape();
+    const step = (Math.PI * 2) / points;
+    const halfStep = step / 2;
+
+    // 1. Define Outer Star
+    for (let i = 0; i < points; i++) {
+        const theta = i * step;
+        
+        // Tip (The original 12 points)
+        if (i === 0) shape.moveTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
+        else shape.lineTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
+        
+        // Valley (The pulled-in midpoint)
+        const midTheta = theta + halfStep;
+        const rValley = outerRadius * (1.0 - indentFactor);
+        shape.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
+    }
+
+    // 2. Define Inner Hole (Matching star shape to keep width consistent)
+    const hole = new THREE.Path();
+    for (let i = 0; i < points; i++) {
+        const theta = i * step;
+        
+        // Tip
+        if (i === 0) hole.moveTo(Math.cos(theta) * innerRadius, Math.sin(theta) * innerRadius);
+        else hole.lineTo(Math.cos(theta) * innerRadius, Math.sin(theta) * innerRadius);
+        
+        // Valley
+        const midTheta = theta + halfStep;
+        const rValley = innerRadius * (1.0 - indentFactor);
+        hole.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
+    }
+    
+    shape.holes.push(hole);
+    return new THREE.ShapeGeometry(shape);
+};
+
+const reticleGeo = createStarRingGeo();
+
+// --- SHADER: COMPLEX TECH GLOW (Ambient Layer) ---
+const techGlowShader = {
   vertex: `
     varying vec2 vUv;
     void main() {
@@ -35,30 +80,46 @@ const glowShader = {
       vec2 center = vec2(0.5);
       vec2 pos = vUv - center;
       
-      // 1. Angular Warble (Subtle distortion)
       float angle = atan(pos.y, pos.x);
       float warble = 0.005 * sin(angle * 10.0 + uTime * 2.0);
       float dist = length(pos) + warble;
       
-      // 2. Base Glow (Sharp Falloff)
       float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
       alpha = pow(alpha, 3.5); 
       
-      // 3. Concentric Rings (Darker bands)
-      // Generates expanding/contracting rings based on distance and time
+      // Structure Rings (Slow, thick bands)
       float rings = 0.7 + 0.3 * sin(dist * 80.0 - uTime * 1.0);
       
-      // 4. Scanlines (Vertical interference)
-      float scan = 0.85 + 0.15 * sin(vUv.y * 150.0 + uTime * 5.0);
+      // Radial Scanlines (Fast, thin concentric ripples)
+      float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
       
-      // Combine textures
-      // We multiply the alpha by rings/scan to "cut out" the dark parts
       float finalAlpha = alpha * rings * scan * uOpacity;
-      
-      // Reduce hard clipping at edges
       if (finalAlpha < 0.01) discard;
 
       gl_FragColor = vec4(uColor, finalAlpha);
+    }
+  `
+};
+
+// --- SHADER: SIMPLE SOFT CIRCLE (Backing Layer) ---
+const softCircleShader = {
+  vertex: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragment: `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main() {
+      float dist = distance(vUv, vec2(0.5));
+      // Softer Edge
+      float alpha = 1.0 - smoothstep(0.25, 0.5, dist); 
+      if (alpha < 0.01) discard;
+      gl_FragColor = vec4(uColor, alpha * uOpacity);
     }
   `
 };
@@ -67,16 +128,16 @@ export const PlayerActor = () => {
   const containerRef = useRef<THREE.Group>(null);
   const centerDotRef = useRef<THREE.Mesh>(null);
   const reticleRef = useRef<THREE.Mesh>(null);
+  const backingCircleRef = useRef<THREE.Mesh>(null);
   const ambientGlowRef = useRef<THREE.Mesh>(null);
   
   const { introDone } = useStore(); 
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
 
-  // Memoize shader material
-  const glowMaterial = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: glowShader.vertex,
-      fragmentShader: glowShader.fragment,
+  const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
+      vertexShader: techGlowShader.vertex,
+      fragmentShader: techGlowShader.fragment,
       uniforms: {
           uColor: { value: new THREE.Color(GAME_THEME.turret.glow) },
           uOpacity: { value: 0.6 },
@@ -87,10 +148,21 @@ export const PlayerActor = () => {
       blending: THREE.AdditiveBlending
   }), []);
 
+  const backingMaterial = useMemo(() => new THREE.ShaderMaterial({
+      vertexShader: softCircleShader.vertex,
+      fragmentShader: softCircleShader.fragment,
+      uniforms: {
+          uColor: { value: new THREE.Color(GAME_THEME.turret.glow) },
+          uOpacity: { value: 0.5 }
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending 
+  }), []);
+
   useFrame((state, delta) => {
     if (!containerRef.current) return;
 
-    // --- INTRO FADE ---
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
@@ -100,10 +172,8 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
-    // --- SHADER UPDATE ---
-    glowMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
 
-    // --- ECS SYNC ---
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -129,7 +199,8 @@ export const PlayerActor = () => {
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         
-        glowMaterial.uniforms.uColor.value.copy(tempColor.current);
+        ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
+        backingMaterial.uniforms.uColor.value.copy(tempColor.current);
 
         const scale = render.visualScale * animScale.current;
         containerRef.current.scale.setScalar(scale);
@@ -137,12 +208,16 @@ export const PlayerActor = () => {
         if (isDead) {
             reticleRef.current.visible = false;
             ambientGlowRef.current.visible = false;
+            backingCircleRef.current!.visible = false;
+            
             centerDotRef.current.geometry = deadGeo;
             (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = true; 
             centerDotRef.current.rotation.z = -render.visualRotation; 
         } else {
             reticleRef.current.visible = true;
             ambientGlowRef.current.visible = true;
+            backingCircleRef.current!.visible = true;
+            
             centerDotRef.current.geometry = centerGeo;
             (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = false;
         }
@@ -151,16 +226,19 @@ export const PlayerActor = () => {
 
   return (
     <group ref={containerRef}>
-      <mesh ref={centerDotRef} renderOrder={2}>
+      <mesh ref={centerDotRef} renderOrder={3}>
         <bufferGeometry />
         <meshBasicMaterial color={GAME_THEME.turret.base} />
       </mesh>
 
-      <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 4]} renderOrder={1}>
+      {/* Spinning Star-Reticle */}
+      <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}>
         <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
       </mesh>
 
-      <mesh ref={ambientGlowRef} material={glowMaterial} geometry={glowPlaneGeo} scale={[6, 6, 1]} renderOrder={0} />
+      <mesh ref={backingCircleRef} material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3, 1.3, 1]} renderOrder={1} />
+
+      <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6, 6, 1]} renderOrder={0} />
     </group>
   );
 };
