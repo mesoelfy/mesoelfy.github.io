@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Tue Dec 16 12:09:58 CST 2025
+Generated on: Tue Dec 16 12:24:17 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -9152,8 +9152,10 @@ FILE: ./src/ui/sim/vfx/MatrixGrid.tsx
 =====================================
 import { Grid } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
+import { useGameStore } from '@/game/state/game/useGameStore';
+import { useStore } from '@/game/state/global/useStore';
 import { ServiceLocator } from '@/game/services/ServiceLocator';
 import { Tag } from '@/core/ecs/types';
 import { RenderData } from '@/game/data/RenderData';
@@ -9162,46 +9164,81 @@ import { ComponentType } from '@/core/ecs/ComponentType';
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);
   const gridRef = useRef<any>(null);
+
+  // 1. Restore specific palettes from the old build
+  const colors = useMemo(() => ({
+    safe: {
+      section: new THREE.Color("#003300"),
+      cell: new THREE.Color("#044d0f")
+    },
+    warning: {
+      section: new THREE.Color("#4d3300"),
+      cell: new THREE.Color("#d48806") // Amber/Orange
+    },
+    critical: {
+      section: new THREE.Color("#4d0000"),
+      cell: new THREE.Color("#ff003c") // Critical Red
+    },
+    sandbox: {
+      section: new THREE.Color("#001a33"), 
+      cell: new THREE.Color("#00F0FF") // Cyan
+    }
+  }), []);
+
+  const currentSectionColor = useRef(new THREE.Color(colors.safe.section));
+  const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
   
-  const SECTION_SIZE = 5;   
-  const tempColor = useRef(new THREE.Color());
+  const SECTION_SIZE = 5;
 
   useFrame((state, delta) => {
+    // --- MOTION SYNC (ECS) ---
+    // We still use the ECS entity to drive movement, ensuring it respects 
+    // game pauses, slow-mo, and speed changes managed by TimeSystem.
     let worldEntity;
     try {
         const registry = ServiceLocator.getRegistry();
-        // Use the cache-optimized getByTag
         const worlds = registry.getByTag(Tag.WORLD);
         for(const w of worlds) { worldEntity = w; break; }
     } catch { return; }
 
-    if (!worldEntity) return;
-
-    const render = worldEntity.getComponent<RenderData>(ComponentType.Render);
-
-    if (render) {
-        // 1. MOTION (Z-Scrolling)
-        // Controlled by visualRotation (used as Z offset)
-        const zOffset = render.visualRotation % SECTION_SIZE;
-        if (groupRef.current) {
-            groupRef.current.position.z = zOffset;
+    if (worldEntity && groupRef.current) {
+        const render = worldEntity.getComponent<RenderData>(ComponentType.Render);
+        if (render) {
+             const zOffset = render.visualRotation % SECTION_SIZE;
+             groupRef.current.position.z = zOffset;
         }
+    }
 
-        // 2. COLOR SYNC
-        tempColor.current.setRGB(render.r, render.g, render.b);
-        
-        // Safety check for Grid material uniforms
-        if (gridRef.current && gridRef.current.material) {
-            const mat = gridRef.current.material;
-            
-            // Drei GridShader uses 'sectionColor' and 'cellColor' uniforms
-            if (mat.uniforms.sectionColor) {
-                mat.uniforms.sectionColor.value.copy(tempColor.current);
-            }
-            if (mat.uniforms.cellColor) {
-                // Boost brightness for cells
-                mat.uniforms.cellColor.value.copy(tempColor.current).multiplyScalar(1.5);
-            }
+    // --- COLOR LOGIC (STATE) ---
+    // We revert to reading state directly for color to get the specific palettes back.
+    const systemIntegrity = useGameStore.getState().systemIntegrity;
+    const bootState = useStore.getState().bootState;
+
+    let targetSection = colors.safe.section;
+    let targetCell = colors.safe.cell;
+
+    if (bootState === 'sandbox') {
+        targetSection = colors.sandbox.section;
+        targetCell = colors.sandbox.cell;
+    } else if (systemIntegrity < 30) {
+        targetSection = colors.critical.section;
+        targetCell = colors.critical.cell;
+    } else if (systemIntegrity < 60) {
+        targetSection = colors.warning.section;
+        targetCell = colors.warning.cell;
+    }
+
+    // Smooth Interpolation
+    currentSectionColor.current.lerp(targetSection, delta * 3.0);
+    currentCellColor.current.lerp(targetCell, delta * 3.0);
+
+    if (gridRef.current && gridRef.current.material) {
+        const mat = gridRef.current.material;
+        if (mat.uniforms.sectionColor) {
+            mat.uniforms.sectionColor.value.copy(currentSectionColor.current);
+        }
+        if (mat.uniforms.cellColor) {
+            mat.uniforms.cellColor.value.copy(currentCellColor.current);
         }
     }
   });
@@ -9216,9 +9253,9 @@ export const MatrixGrid = () => {
           args={[60, 60]} 
           cellSize={1}
           sectionSize={SECTION_SIZE}
+          // Tuned values from old build
           fadeDistance={30}
-          fadeStrength={2.5}
-          // Default colors (will be overridden by frame loop)
+          fadeStrength={2.5} 
           sectionColor="#003300"
           cellColor="#044d0f"
           sectionThickness={1.2} 

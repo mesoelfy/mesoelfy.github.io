@@ -1,7 +1,6 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/core/interfaces';
+import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem, IParticleSystem } from '@/core/interfaces';
 import { EntityRegistry } from '@/core/ecs/EntityRegistry';
 import { IdentityData } from '@/game/data/IdentityData';
-import { RenderData } from '@/game/data/RenderData';
 import { ProjectileData } from '@/game/data/ProjectileData';
 import { EnemyTypes } from '@/game/config/Identifiers';
 import { GameEventBus } from '@/core/signals/GameEventBus'; 
@@ -21,12 +20,14 @@ export class BehaviorSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private config!: typeof ConfigService;
   private panelSystem!: IPanelSystem;
+  private particleSystem!: IParticleSystem;
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry() as EntityRegistry;
     this.spawner = locator.getSpawner();
     this.config = locator.getConfigService();
     this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+    this.particleSystem = locator.getParticleSystem();
     
     GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -49,12 +50,10 @@ export class BehaviorSystem implements IGameSystem {
       spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
           let bullet;
           if (damage) {
-              // DAEMON or Special
               const finalConfig = configId || 'DAEMON_ORB';
               bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
-              // HUNTER / STANDARD ENEMY
               const finalConfig = configId || 'ENEMY_HUNTER';
               bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 10, finalConfig);
           }
@@ -71,6 +70,11 @@ export class BehaviorSystem implements IGameSystem {
       spawnFX: (type, x, y) => {
           const id = FX_IDS[type];
           if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
+      },
+      // FIXED: Route to ParticleSystem directly for rendering
+      spawnParticle: (x, y, color, vx, vy, life, size) => {
+          // Shape 1 is teardrop/trail appropriate for exhaust
+          this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
       },
       damagePanel: (id, amount) => this.panelSystem.damagePanel(id, amount),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),

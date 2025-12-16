@@ -6,7 +6,6 @@ import { ARCHETYPES } from '@/game/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/game/config/Identifiers';
 import { ComponentType } from '@/core/ecs/ComponentType';
-import { PROJECTILE_CONFIG } from '@/game/config/ProjectileConfig';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -30,8 +29,14 @@ export class EntitySpawner implements IEntitySpawner {
     for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
+            // CRITICAL FIX: Deep clone the blueprint data to prevent shared state refs
+            // simple JSON clone is sufficient for our data structures
+            const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
             const runtimeData = overrides[compDef.type] || {};
-            const mergedData = { ...compDef.data, ...runtimeData };
+            
+            // Merge runtime overrides on top of cloned blueprint
+            const mergedData = { ...blueprintData, ...runtimeData };
+            
             e.addComponent(builder(mergedData));
         }
     }
@@ -40,6 +45,8 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
+  // ... (Keep remaining methods: spawnPlayer, spawnEnemy, spawnBullet, spawnParticle as is)
+  
   public spawnPlayer(): Entity {
     return this.spawn(ArchetypeIDs.PLAYER);
   }
@@ -60,9 +67,6 @@ export class EntitySpawner implements IEntitySpawner {
   ): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
-    
-    // Projectiles currently use ProjectileRenderer system, not UniversalActor,
-    // so geometryId is less critical, but we pass defaults to be safe.
     
     return this.spawn(id, {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
