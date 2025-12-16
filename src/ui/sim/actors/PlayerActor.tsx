@@ -15,43 +15,46 @@ const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
-// Helper to generate the Star-Ring (6 points, pulled in valleys)
+// Helper to generate the Star-Ring (6 points, twisted buzz-saw style)
 const createStarRingGeo = () => {
-    const points = 6;
-    const outerRadius = 0.50;
-    const innerRadius = 0.30;
-    
-    // SHARPENING: How much to pull the valleys in.
+    const points = 4;
+    const outerRadius = 0.65;
+    const innerRadius = 0.35;
     const indentFactor = 0.60; 
+    
+    // TWIST: Shifts the tip angle relative to the base to create "teeth"
+    const twistAngle = 0.55; 
 
     const shape = new THREE.Shape();
     const step = (Math.PI * 2) / points;
     const halfStep = step / 2;
 
-    // 1. Define Outer Star
+    // 1. Define Outer Saw
     for (let i = 0; i < points; i++) {
         const theta = i * step;
         
-        // Tip (The original points)
-        if (i === 0) shape.moveTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
-        else shape.lineTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
+        // Tip (Twisted forward)
+        const tipA = theta - twistAngle;
+        if (i === 0) shape.moveTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
+        else shape.lineTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
         
-        // Valley (The pulled-in midpoint)
+        // Valley (Centered)
         const midTheta = theta + halfStep;
         const rValley = outerRadius * (1.0 - indentFactor);
         shape.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
     }
 
-    // 2. Define Inner Hole (Matching star shape to keep width consistent)
+    // 2. Define Inner Hole (Slightly less twisted to create blade thickness)
     const hole = new THREE.Path();
     for (let i = 0; i < points; i++) {
         const theta = i * step;
         
-        // Tip
-        if (i === 0) hole.moveTo(Math.cos(theta) * innerRadius, Math.sin(theta) * innerRadius);
-        else hole.lineTo(Math.cos(theta) * innerRadius, Math.sin(theta) * innerRadius);
+        // Inner Tip (Partial twist for structure)
+        const tipA = theta - (twistAngle * 0.5);
+        if (i === 0) hole.moveTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
+        else hole.lineTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
         
-        // Valley
+        // Inner Valley
         const midTheta = theta + halfStep;
         const rValley = innerRadius * (1.0 - indentFactor);
         hole.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
@@ -89,10 +92,10 @@ const techGlowShader = {
       float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
       alpha = pow(alpha, 3.5); 
       
-      // Structure Rings (Slow, thick bands)
+      // Structure Rings
       float rings = 0.7 + 0.3 * sin(dist * 80.0 - uTime * 1.0);
       
-      // Radial Scanlines (Fast, thin concentric ripples)
+      // Radial Scanlines
       float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
       
       float finalAlpha = alpha * rings * scan * uOpacity;
@@ -118,7 +121,6 @@ const softCircleShader = {
     varying vec2 vUv;
     void main() {
       float dist = distance(vUv, vec2(0.5));
-      // Softer Edge
       float alpha = 1.0 - smoothstep(0.25, 0.5, dist); 
       if (alpha < 0.01) discard;
       gl_FragColor = vec4(uColor, alpha * uOpacity);
@@ -233,7 +235,8 @@ export const PlayerActor = () => {
         <meshBasicMaterial color={GAME_THEME.turret.base} />
       </mesh>
 
-      {/* Spinning Star-Reticle */}
+      {/* Spinning Buzz-Saw Reticle */}
+      {/* 6 segments = 6 teeth. Rotated PI/12 to align nicely. */}
       <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}>
         <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
       </mesh>

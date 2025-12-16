@@ -81,10 +81,10 @@ export class PlayerSystem implements IGameSystem {
         } else {
             if (interactState === 'HEALING') {
                 targetCol = COL_REPAIR;
-                spinSpeed = -0.3; // HEALING: CCW (Increased to 0.3)
+                spinSpeed = -0.24; // HEALING: CCW (Increased to 0.3)
             } else if (interactState === 'REBOOTING') {
                 targetCol = COL_REBOOT;
-                spinSpeed = -0.3; // REBOOTING: CCW (Increased to 0.3)
+                spinSpeed = -0.24; // REBOOTING: CCW (Increased to 0.3)
             }
         }
 
