@@ -16,21 +16,17 @@ const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
-// Helper to generate the Star-Ring (4 points, twisted buzz-saw style)
 const createStarRingGeo = () => {
     const points = 4;
     const outerRadius = 0.65;
     const innerRadius = 0.35;
     const indentFactor = 0.60; 
-    
-    // TWIST: Shifts the tip angle relative to the base to create "teeth"
     const twistAngle = 0.55; 
 
     const shape = new THREE.Shape();
     const step = (Math.PI * 2) / points;
     const halfStep = step / 2;
 
-    // 1. Define Outer Saw
     for (let i = 0; i < points; i++) {
         const theta = i * step;
         const tipA = theta - twistAngle;
@@ -41,7 +37,6 @@ const createStarRingGeo = () => {
         shape.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
     }
 
-    // 2. Define Inner Hole
     const hole = new THREE.Path();
     for (let i = 0; i < points; i++) {
         const theta = i * step;
@@ -59,7 +54,7 @@ const createStarRingGeo = () => {
 
 const reticleGeo = createStarRingGeo();
 
-// --- SHADER: COMPLEX TECH GLOW (Ambient Layer) ---
+// --- SHADER: CROSS-FADE TECH GLOW ---
 const techGlowShader = {
   vertex: `
     varying vec2 vUv;
@@ -72,7 +67,7 @@ const techGlowShader = {
     uniform vec3 uColor;
     uniform float uOpacity;
     uniform float uTime;
-    uniform float uEnergy; // 0.0 (Idle) -> 1.0 (Healing/Active)
+    uniform float uEnergy; // 0.0 (Idle) -> 1.0 (Active) acts as Cross-Fade Mix
     varying vec2 vUv;
 
     void main() {
@@ -80,33 +75,31 @@ const techGlowShader = {
       vec2 pos = vUv - center;
       
       float angle = atan(pos.y, pos.x);
-      // Warble increases slightly with Energy to look "unstable"
-      float warble = (0.005 + 0.01 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
+      
+      // Warble increases with Energy
+      float warble = (0.005 + 0.015 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
       float dist = length(pos) + warble;
       
-      // Base soft glow circle
-      float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
-      alpha = pow(alpha, 3.5); 
+      // Base Shape (Circle Fade)
+      float alphaBase = 1.0 - smoothstep(0.0, 0.5, dist);
+      alphaBase = pow(alphaBase, 3.5); 
       
-      // --- DYNAMIC RINGS ---
-      // Idle: Freq 80.0 (Tight, small rings)
-      // Active: Freq 30.0 (Wide, big waves)
-      float freq = mix(80.0, 30.0, uEnergy);
+      // --- PATTERN A: IDLE (Tight, Slow) ---
+      float ringsIdle = 0.6 + 0.4 * sin(dist * 80.0 - uTime * 1.5);
       
-      // Idle: Speed 1.0
-      // Active: Speed 5.0 (Fast pulse)
-      float speed = 1.0 + (uEnergy * 4.0);
+      // --- PATTERN B: ACTIVE (Wide, Fast, Aggressive) ---
+      float ringsActive = 0.5 + 0.5 * sin(dist * 30.0 - uTime * 8.0);
       
-      float rings = 0.6 + 0.4 * sin(dist * freq - uTime * speed);
+      // Cross-Fade between patterns
+      float ringMix = mix(ringsIdle, ringsActive, uEnergy);
       
-      // Radial Scanlines (Subtle texture)
+      // Scanlines (Static texture)
       float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
       
-      // Combine
-      float finalAlpha = alpha * rings * scan * uOpacity;
-      
-      // Boost Brightness/Bloom based on Energy
-      finalAlpha *= (1.0 + uEnergy * 2.0);
+      // Boost Brightness heavily during Active state
+      float brightness = 1.0 + (uEnergy * 2.5);
+
+      float finalAlpha = alphaBase * ringMix * scan * uOpacity * brightness;
 
       if (finalAlpha < 0.01) discard;
 
@@ -115,7 +108,7 @@ const techGlowShader = {
   `
 };
 
-// --- SHADER: SIMPLE SOFT CIRCLE (Backing Layer) ---
+// --- SHADER: SIMPLE SOFT CIRCLE (Backing) ---
 const softCircleShader = {
   vertex: `
     varying vec2 vUv;
@@ -187,18 +180,21 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
-    // --- INTERACTION / ENERGY LOGIC ---
+    // --- INTERACTION LOGIC ---
     let interactState = 'IDLE';
     try {
         const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
         if (interact) interactState = interact.repairState;
     } catch {}
 
-    // Target Energy: 1.0 if healing/rebooting, 0.0 if idle
-    const targetEnergy = (interactState === 'HEALING' || interactState === 'REBOOTING') ? 1.0 : 0.0;
+    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
+    const targetEnergy = isActive ? 1.0 : 0.0;
     
-    // UPDATED: Increased lerp speed from 4.0 to 15.0 for snappy "Instant" feel
-    currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * 15.0);
+    // UPDATED: Asymmetric Fade
+    // Fade IN: Fast (12.0)
+    // Fade OUT: Gentle (3.0)
+    const lerpSpeed = isActive ? 12.0 : 3.0;
+    currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * lerpSpeed);
 
     ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
     ambientMaterial.uniforms.uEnergy.value = currentEnergy.current;
