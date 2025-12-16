@@ -9,9 +9,19 @@ import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
+import { IAudioService } from '@/engine/interfaces';
 
 export const GameBootstrapper = () => {
-  ServiceLocator.reset();
+  // NOTE: We do NOT reset ServiceLocator here anymore for Audio,
+  // because Audio might have been initialized by the UI layer already.
+  // ServiceLocator.reset() would kill the active AudioContext.
+  
+  // Instead, we clear specifically GAME services, but keep Global ones.
+  // Ideally, ServiceLocator.reset() should accept a "keepGlobals" flag,
+  // or we just manually re-register what we need. 
+  // For now, let's assume we perform a soft reset or just overwrite.
+  // We'll manually register the new Game Engine components.
 
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
@@ -20,9 +30,18 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  // Check if AudioService exists, if not, create it.
+  try {
+      ServiceLocator.getAudioService();
+  } catch {
+      ServiceLocator.register('AudioService', new AudioServiceImpl());
+  }
+
+  // 2. Assets & Behavior
   registerAllBehaviors();
   registerAllAssets();
 
+  // 3. Systems
   const panelSystem = new PanelRegistrySystem();
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
   engine.registerSystem(panelSystem);
@@ -34,6 +53,7 @@ export const GameBootstrapper = () => {
       engine.registerSystem(system);
   });
 
+  // 4. Setup
   panelSystem.setup(ServiceLocator);
 
   SYSTEM_MANIFEST.forEach(def => {

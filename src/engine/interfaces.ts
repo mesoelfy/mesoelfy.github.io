@@ -1,4 +1,3 @@
-import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
@@ -13,9 +12,12 @@ export interface IGameSystem {
 }
 
 export interface IServiceLocator {
+  register<T>(id: string, instance: T): void;
+  get<T>(id: string): T;
+  
+  // Legacy Helpers
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
-  
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
@@ -33,6 +35,7 @@ export interface IEntityRegistry {
   query(def: QueryDef): Iterable<Entity>;
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
+  updateCache(entity: Entity): void; 
 }
 
 export interface IEntitySpawner {
@@ -44,9 +47,25 @@ export interface IEntitySpawner {
 }
 
 export interface IAudioService {
-  playSound(key: string, volume?: number): void;
-  playMusic(key: string): void;
-  setVolume(volume: number): void;
+  init(): Promise<void>;
+  startMusic(): void;
+  stopAll(): void;
+  updateVolumes(): void;
+  
+  playSound(key: string, pan?: number): void;
+  playAmbience(key: string): void;
+  playMusic(key: string): void; // Kept for compat, though we use startMusic() mostly
+  
+  setVolume(volume: number): void; // Legacy single setter
+  duckMusic(intensity: number, duration: number): void;
+  getFrequencyData(array: Uint8Array): void;
+  
+  // Helpers
+  playClick(pan?: number): void;
+  playHover(pan?: number): void;
+  playBootSequence(): void;
+  playDrillSound(): void;
+  playRebootZap(): void;
 }
 
 export interface IInputService {

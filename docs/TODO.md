@@ -617,7 +617,10 @@ Solution: Disable Trails for now (Comment out ProjectileTrailsActor in RenderCat
 Refactoring prompts:
 
     - is there scattered logic in components that should be consolidated?
-    - tell me what else in the project has become a God Component.
+    - tell me what in the project has become a God Object.
+    - What in the architecture relies on tight coupling?
+    - Where is re "Tech Debt" accumulating?
+    - Please audit the obvious and not obvious ways I could better use SOLID and other good practices then layout a step-by-step PHASE-based remediation protocol to refactor the code base into a healthier, more readable, cleaner architecture.
 
 
 
@@ -629,8 +632,13 @@ velocity-based deformation
 Z-Axis (Forward): Scales up with speed.
 X/Y-Axis (Thickness): Scales down slightly to preserve "volume"
 
-I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked?
+I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked? - - - new videos coming in you can see the edges... take another long look at this section and ask for the logic.
 
 VFX config - laser sight should be exhaust right?
 
 three explosion types (PURPLE, YELLOW, RED). - - - could probably consolidate this better using SOLID right?
+
+
+After getting in red critical health, MESOELFY_OS health bar retains its glow from red status and that should go away after leaving red status.
+
+- after playing for about 5 minutes, the kamikaze glitch a super large size for a frame when they spawn in.

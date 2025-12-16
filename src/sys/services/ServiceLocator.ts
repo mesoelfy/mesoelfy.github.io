@@ -1,70 +1,76 @@
-import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from '@/engine/interfaces';
+import { 
+  IServiceLocator, 
+  IGameSystem, 
+  IAudioService, 
+  IInputService, 
+  IEntityRegistry, 
+  IEntitySpawner, 
+  IParticleSystem 
+} from '@/engine/interfaces';
 import { ConfigService } from '@/sys/services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {
-  private systems = new Map<string, IGameSystem>();
-  private audioService?: IAudioService;
-  private inputService?: IInputService;
-  private registry?: IEntityRegistry;
-  private spawner?: IEntitySpawner;
-  private particleSystem?: IParticleSystem;
+  private services = new Map<string, any>();
 
-  public getSystem<T extends IGameSystem>(id: string): T {
-    const sys = this.systems.get(id);
-    if (!sys) throw new Error(`System not registered: ${id}`);
-    return sys as T;
+  public register<T>(id: string, instance: T): void {
+    if (this.services.has(id)) {
+      console.warn(`[ServiceLocator] Overwriting service: ${id}`);
+    }
+    this.services.set(id, instance);
+  }
+
+  public get<T>(id: string): T {
+    const service = this.services.get(id);
+    if (!service) {
+      throw new Error(`[ServiceLocator] Service not found: ${id}`);
+    }
+    return service as T;
+  }
+
+  public reset(): void {
+    this.services.clear();
+    ConfigService.reset();
   }
 
   public registerSystem(id: string, system: IGameSystem): void {
-    this.systems.set(id, system);
-    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
-    if (id === 'ParticleSystem') this.particleSystem = system as unknown as IParticleSystem;
+    this.register(id, system);
+  }
+
+  public getSystem<T extends IGameSystem>(id: string): T {
+    return this.get<T>(id);
   }
 
   public registerRegistry(registry: IEntityRegistry) {
-      this.registry = registry;
+    this.register('EntityRegistry', registry);
+  }
+
+  public getRegistry(): IEntityRegistry {
+    return this.get<IEntityRegistry>('EntityRegistry');
   }
 
   public registerSpawner(spawner: IEntitySpawner) {
-      this.spawner = spawner;
-  }
-
-  public getAudioService(): IAudioService {
-    return { playSound: () => {}, playMusic: () => {}, setVolume: () => {} }; 
-  }
-
-  public getInputService(): IInputService {
-    if (!this.inputService) throw new Error("InputService not registered");
-    return this.inputService;
-  }
-  
-  public getRegistry(): IEntityRegistry {
-      if (!this.registry) throw new Error("Registry not registered");
-      return this.registry;
+    this.register('EntitySpawner', spawner);
   }
 
   public getSpawner(): IEntitySpawner {
-      if (!this.spawner) throw new Error("Spawner not registered");
-      return this.spawner;
+    return this.get<IEntitySpawner>('EntitySpawner');
+  }
+
+  public getInputService(): IInputService {
+    return this.get<IInputService>('InputSystem');
   }
 
   public getParticleSystem(): IParticleSystem {
-      if (!this.particleSystem) throw new Error("ParticleSystem not registered");
-      return this.particleSystem;
+    return this.get<IParticleSystem>('ParticleSystem');
+  }
+
+  public getAudioService(): IAudioService {
+    // Phase 2 Update: Return the registered AudioService
+    return this.get<IAudioService>('AudioService');
   }
 
   public getConfigService() {
-      return ConfigService;
-  }
-  
-  public reset(): void {
-    this.systems.clear();
-    this.audioService = undefined;
-    this.inputService = undefined;
-    this.registry = undefined;
-    this.spawner = undefined;
-    this.particleSystem = undefined;
-    ConfigService.reset(); 
+    return ConfigService;
   }
 }
 

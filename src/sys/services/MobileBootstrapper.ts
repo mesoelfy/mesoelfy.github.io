@@ -4,6 +4,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from '@/sys/services/EntitySpawner';
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
 
 // Systems
 import { TimeSystem } from '@/sys/systems/TimeSystem';
@@ -60,14 +61,19 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
 }
 
 export const MobileBootstrapper = () => {
-  ServiceLocator.reset();
-
+  // No full reset to preserve Audio
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
+
+  try {
+      ServiceLocator.getAudioService();
+  } catch {
+      ServiceLocator.register('AudioService', new AudioServiceImpl());
+  }
 
   registerAllBehaviors();
   registerAllAssets();
