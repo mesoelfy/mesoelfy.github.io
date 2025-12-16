@@ -1,6 +1,8 @@
 README description
     a custom, data-oriented game engine in TypeScript on top of React.
 
+First upgrade should be a bullet speed increase to what you'd actually want to start the game at. This let's the player feel relief early on by a significant boost.
+
 
 # MESOELFY_OS // REFACTOR ROADMAP
 

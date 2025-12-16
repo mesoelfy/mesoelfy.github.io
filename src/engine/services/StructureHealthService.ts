@@ -33,7 +33,7 @@ class StructureHealthServiceController {
     this.calculateIntegrity();
   }
 
-  public damage(id: string, amount: number) {
+  public damage(id: string, amount: number, silent: boolean = false) {
     if (useStore.getState().debugFlags.panelGodMode) return;
 
     const state = this.states.get(id);
@@ -44,15 +44,19 @@ class StructureHealthServiceController {
     if (state.health <= 0) {
         state.isDestroyed = true;
         state.health = 0;
-        GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
+        
+        if (!silent) {
+            GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
+            GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
+        }
     } else {
-        // EMIT DAMAGE EVENT (UI Listens to this for Shake)
-        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
-            id, 
-            amount, 
-            currentHealth: state.health 
-        });
+        if (!silent) {
+            GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
+                id, 
+                amount, 
+                currentHealth: state.health 
+            });
+        }
     }
     this.calculateIntegrity();
   }

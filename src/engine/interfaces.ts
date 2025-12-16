@@ -140,7 +140,7 @@ export interface IPanelSystem extends IGameSystem {
   unregister(id: string): void;
   refreshAll(): void;
   refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number): void;
+  damagePanel(id: string, amount: number, silent?: boolean): void; // UPDATED
   healPanel(id: string, amount: number, sourceX?: number): void;
   decayPanel(id: string, amount: number): void;
   destroyAll(): void;

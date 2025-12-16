@@ -2,6 +2,7 @@ import { IGameSystem, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -11,12 +12,18 @@ interface WaveDef {
     interval: number;
 }
 
+// Matches DrillerLogic TIP_OFFSET to ensure visual continuity
+const DRILLER_OFFSET = 0.4; 
+
 export class WaveSystem implements IGameSystem {
   private waveTime = 0;
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
+  
+  // Scenario Flag
+  private scenarioInit = false;
 
   constructor(
     private spawner: IEntitySpawner,
@@ -30,11 +37,24 @@ export class WaveSystem implements IGameSystem {
     this.currentWaveIndex = 0;
     this.spawnQueue = [];
     this.loopCount = 0;
+    this.scenarioInit = false;
   }
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
+
+    // --- STORY SCENARIO INJECTION ---
+    if (!this.scenarioInit) {
+        // We wait until panels are physically laid out (width > 0)
+        const panels = this.panelSystem.getAllPanels();
+        const ready = panels.some(p => p.width > 0);
+        
+        if (ready) {
+            this.runScenario(panels);
+            this.scenarioInit = true;
+        }
+    }
 
     this.waveTime += delta;
     
@@ -46,6 +66,94 @@ export class WaveSystem implements IGameSystem {
     this.handleBreaches(delta);
   }
 
+  private runScenario(panels: any[]) {
+      // 1. Destroy ART_DB (Story: First casualty)
+      this.panelSystem.damagePanel('art', 9999, true); 
+
+      // 2. Critical Threat on HOLO_COMM
+      // Set to 15% Health (85 Damage) and max infestation to force destruction event
+      this.panelSystem.damagePanel('video', 85, true); 
+      const videoPanel = panels.find(p => p.id === 'video');
+      if (videoPanel) {
+          this.spawnDrillerOn(videoPanel, 3);
+      }
+
+      // 3. Infest remaining panels
+      const targets = panels.filter(p => p.id !== 'art' && p.id !== 'video');
+      
+      targets.forEach(p => {
+          // Damage randomly between 20% and 50%
+          const dmg = 20 + Math.floor(Math.random() * 30);
+          this.panelSystem.damagePanel(p.id, dmg, true); 
+          
+          // Spawn 1-3 drillers
+          const count = 1 + Math.floor(Math.random() * 3);
+          this.spawnDrillerOn(p, count);
+      });
+  }
+
+  private spawnDrillerOn(panel: any, count: number) {
+      for(let i=0; i<count; i++) {
+          // Determine Random Edge Position
+          const side = Math.floor(Math.random() * 4);
+          let edgeX = 0, edgeY = 0; // The point on the panel border
+          let normalX = 0, normalY = 0; // Vector pointing OUT from center
+          
+          const halfW = panel.width / 2;
+          const halfH = panel.height / 2;
+          
+          switch(side) {
+              case 0: // Top
+                  edgeX = (Math.random() - 0.5) * panel.width;
+                  edgeY = halfH;
+                  normalX = 0; normalY = 1;
+                  break;
+              case 1: // Bottom
+                  edgeX = (Math.random() - 0.5) * panel.width;
+                  edgeY = -halfH;
+                  normalX = 0; normalY = -1;
+                  break;
+              case 2: // Left
+                  edgeX = -halfW;
+                  edgeY = (Math.random() - 0.5) * panel.height;
+                  normalX = -1; normalY = 0;
+                  break;
+              case 3: // Right
+                  edgeX = halfW;
+                  edgeY = (Math.random() - 0.5) * panel.height;
+                  normalX = 1; normalY = 0;
+                  break;
+          }
+
+          // Calculate Spawn Position
+          const spawnX = panel.x + edgeX + (normalX * DRILLER_OFFSET);
+          const spawnY = panel.y + edgeY + (normalY * DRILLER_OFFSET);
+
+          // Calculate Rotation (Face Inward = Opposite of Normal)
+          const angle = Math.atan2(-normalY, -normalX);
+
+          // Spawn with overrides to bypass animations and logic delays
+          this.spawner.spawn(EnemyTypes.DRILLER, {
+              [ComponentType.Transform]: { 
+                  x: spawnX, 
+                  y: spawnY, 
+                  scale: 1.0, 
+                  rotation: angle 
+              },
+              [ComponentType.State]: { 
+                  current: 'ACTIVE', // Skip 'SPAWN'
+                  timers: { 
+                      spawn: 0,
+                      drillAudio: Math.random() * 0.2 // Stagger audio slightly
+                  } 
+              },
+              [ComponentType.Render]: { 
+                  visualScale: 1.0 
+              }
+          });
+      }
+  }
+
   private handleBreaches(delta: number) {
       const flags = useStore.getState().debugFlags;
       if (flags.panelGodMode || flags.peaceMode) return;
@@ -55,6 +163,7 @@ export class WaveSystem implements IGameSystem {
       
       if (deadPanels.length === 0) return;
 
+      // Base spawn rate for breach
       const enemiesPerSecondPerPanel = 0.2 + (this.waveTime * 0.005);
       const spawnChance = enemiesPerSecondPerPanel * delta;
 
