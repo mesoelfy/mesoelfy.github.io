@@ -15,10 +15,10 @@ export const MatrixGrid = () => {
   const tempColor = useRef(new THREE.Color());
 
   useFrame((state, delta) => {
-    // --- ECS READ ---
     let worldEntity;
     try {
         const registry = ServiceLocator.getRegistry();
+        // Use the cache-optimized getByTag
         const worlds = registry.getByTag(Tag.WORLD);
         for(const w of worlds) { worldEntity = w; break; }
     } catch { return; }
@@ -28,23 +28,27 @@ export const MatrixGrid = () => {
     const render = worldEntity.getComponent<RenderData>(ComponentType.Render);
 
     if (render) {
-        // SCROLLING: Controlled by visualRotation (used as Z offset)
-        // We modulo it here to keep precision safe
+        // 1. MOTION (Z-Scrolling)
+        // Controlled by visualRotation (used as Z offset)
         const zOffset = render.visualRotation % SECTION_SIZE;
         if (groupRef.current) {
             groupRef.current.position.z = zOffset;
         }
 
-        // COLOR:
+        // 2. COLOR SYNC
         tempColor.current.setRGB(render.r, render.g, render.b);
         
+        // Safety check for Grid material uniforms
         if (gridRef.current && gridRef.current.material) {
-            if (gridRef.current.material.uniforms.sectionColor) {
-                gridRef.current.material.uniforms.sectionColor.value.copy(tempColor.current);
+            const mat = gridRef.current.material;
+            
+            // Drei GridShader uses 'sectionColor' and 'cellColor' uniforms
+            if (mat.uniforms.sectionColor) {
+                mat.uniforms.sectionColor.value.copy(tempColor.current);
             }
-            if (gridRef.current.material.uniforms.cellColor) {
-                // Slightly brighter cell color
-                gridRef.current.material.uniforms.cellColor.value.copy(tempColor.current).multiplyScalar(1.5);
+            if (mat.uniforms.cellColor) {
+                // Boost brightness for cells
+                mat.uniforms.cellColor.value.copy(tempColor.current).multiplyScalar(1.5);
             }
         }
     }
@@ -62,6 +66,7 @@ export const MatrixGrid = () => {
           sectionSize={SECTION_SIZE}
           fadeDistance={30}
           fadeStrength={2.5}
+          // Default colors (will be overridden by frame loop)
           sectionColor="#003300"
           cellColor="#044d0f"
           sectionThickness={1.2} 

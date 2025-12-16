@@ -642,3 +642,8 @@ three explosion types (PURPLE, YELLOW, RED). - - - could probably consolidate th
 After getting in red critical health, MESOELFY_OS health bar retains its glow from red status and that should go away after leaving red status.
 
 - after playing for about 5 minutes, the kamikaze glitch a super large size for a frame when they spawn in.
+
+
+- player and crusor should turn red briefly when damaged
+
+background motion grid not the right colors. Give codebase from older to fix.

@@ -1,19 +1,21 @@
 import { ServiceLocator } from './ServiceLocator';
-import { GameEngineCore } from './GameEngine';
+import { GameEngineCore } from '@/core/services/GameEngine';
 import { EntityRegistry } from '@/core/ecs/EntityRegistry';
 import { EntitySpawner } from '@/game/services/EntitySpawner';
 import { registerAllBehaviors } from '@/game/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { AudioServiceImpl } from '@/core/audio/AudioService';
 import { GameEventService } from '@/core/signals/GameEventBus';
-import { FastEventService, FastEvents, FX_IDS } from '@/core/signals/FastEventBus';
+import { FastEventService } from '@/core/signals/FastEventBus';
 
-// Systems
-import { TimeSystem } from '@/game/systems/TimeSystem';
-import { PhysicsSystem } from '@/game/systems/PhysicsSystem';
+// Core Systems
+import { TimeSystem } from '@/core/systems/TimeSystem';
+import { PhysicsSystem } from '@/core/systems/PhysicsSystem';
+import { AudioDirector } from '@/core/audio/AudioDirector';
+
+// Game Systems
 import { LifeCycleSystem } from '@/game/systems/LifeCycleSystem';
 import { VFXSystem } from '@/game/systems/VFXSystem';
-import { AudioDirector } from '@/core/audio/AudioDirector';
 import { ShakeSystem } from '@/game/systems/ShakeSystem';
 import { StructureSystem } from '@/game/systems/StructureSystem';
 import { MobileWaveSystem } from '@/game/systems/MobileWaveSystem';
@@ -29,6 +31,7 @@ import { GameEvents } from '@/core/signals/GameEvents';
 import { Entity } from '@/core/ecs/Entity';
 import { TransformData } from '@/game/data/TransformData';
 import { ComponentType } from '@/core/ecs/ComponentType';
+import { FastEvents, FX_IDS } from '@/core/signals/FastEventBus';
 
 class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private registry!: EntityRegistry;
@@ -84,14 +87,18 @@ export const MobileBootstrapper = () => {
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
   engine.registerSystem(panelSystem);
 
+  // Manual Instantiation for Core Systems
+  const timeSystem = new TimeSystem();
+  const physicsSystem = new PhysicsSystem(registry);
+
   const systems: { id: string, sys: any }[] = [
-      { id: 'TimeSystem', sys: new TimeSystem() },
+      { id: 'TimeSystem', sys: timeSystem },
+      { id: 'PhysicsSystem', sys: physicsSystem },
       { id: 'StructureSystem', sys: new StructureSystem() },
       { id: 'GameStateSystem', sys: new GameStateSystem() },
       { id: 'MobileWaveSystem', sys: new MobileWaveSystem() },
       { id: 'TargetingSystem', sys: new TargetingSystem() },
       { id: 'BehaviorSystem', sys: new BehaviorSystem() },
-      { id: 'PhysicsSystem', sys: new PhysicsSystem() },
       { id: 'ProjectileSystem', sys: new ProjectileSystem() },
       { id: 'MobileCombatSystem', sys: new MobileCombatSystem() },
       { id: 'LifeCycleSystem', sys: new LifeCycleSystem() },
@@ -108,11 +115,12 @@ export const MobileBootstrapper = () => {
 
   panelSystem.setup(ServiceLocator);
 
-  systems.forEach(({ id }) => {
-      const sys = ServiceLocator.getSystem(id);
-      sys.setup(ServiceLocator);
+  // Setup Legacy Systems
+  systems.forEach(({ id, sys }) => {
+      if (sys.setup) sys.setup(ServiceLocator);
   });
   
+  // Setup Engine (Legacy support)
   engine.setup(ServiceLocator);
 
   return engine;

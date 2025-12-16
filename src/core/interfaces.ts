@@ -7,7 +7,9 @@ import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/core/signals/GameEvents';
 
 export interface IGameSystem {
-  setup(locator: IServiceLocator): void;
+  // DEPRECATED: Moving to Constructor Injection.
+  setup?(locator: IServiceLocator): void;
+  
   update(delta: number, time: number): void;
   teardown(): void;
 }

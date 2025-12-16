@@ -5,7 +5,7 @@ import { ViewportHelper } from '@/core/math/ViewportHelper';
 import { PanelRegistrySystem } from '@/game/systems/PanelRegistrySystem'; 
 import { GameStateSystem } from '@/game/systems/GameStateSystem';
 import { WorldConfig } from '@/game/config/WorldConfig';
-import { TimeSystem } from '@/game/systems/TimeSystem';
+import { TimeSystem } from '@/core/systems/TimeSystem';
 import { GameEventBus } from '@/core/signals/GameEventBus';
 import { GameEvents } from '@/core/signals/GameEvents';
 
@@ -23,7 +23,13 @@ export class GameEngineCore implements IGameSystem {
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    // FXManager.init() removed. VFXSystem handles this now.
+    // LEGACY SETUP SUPPORT
+    // We call setup() only on systems that still have it.
+    this.systems.forEach(sys => {
+        if (sys.setup) {
+            sys.setup(locator);
+        }
+    });
   }
 
   public registerSystem(system: IGameSystem) {
@@ -38,20 +44,26 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
-    
-    if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
-        gameStore.stopGame();
-        GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
-        gameSys.isGameOver = true; 
-        return;
-    }
-
-    if (!gameStore.isPlaying) {
-        gameSys.isGameOver = true;
-    }
-
+    // TODO: Phase 3 - Decouple this GameState check from generic Engine
+    let isGameOver = false;
     let timeScale = 1.0;
+
+    try {
+        const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
+        
+        if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
+            gameStore.stopGame();
+            GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
+            gameSys.isGameOver = true; 
+            return;
+        }
+
+        if (!gameStore.isPlaying) {
+            gameSys.isGameOver = true;
+        }
+        isGameOver = gameSys.isGameOver;
+    } catch {}
+
     try {
         const timeSys = this.locator.getSystem<TimeSystem>('TimeSystem');
         timeSys.tickRealTime(renderDelta);

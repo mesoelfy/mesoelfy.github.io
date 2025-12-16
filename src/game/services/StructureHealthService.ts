@@ -47,7 +47,12 @@ class StructureHealthServiceController {
         GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
     } else {
-        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
+        // EMIT DAMAGE EVENT (UI Listens to this for Shake)
+        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
+            id, 
+            amount, 
+            currentHealth: state.health 
+        });
     }
     this.calculateIntegrity();
   }
@@ -63,7 +68,6 @@ class StructureHealthServiceController {
         state.isDestroyed = false;
         state.health = MAX_PANEL_HEALTH * 0.5;
         
-        // PASS sourceX
         GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }

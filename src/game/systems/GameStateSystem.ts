@@ -6,14 +6,15 @@ import { ComponentType } from '@/core/ecs/ComponentType';
 import { Tag } from '@/core/ecs/types';
 import * as THREE from 'three';
 
-// Sub-Systems (Injected)
+// Sub-Systems
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
 
-const COL_SAFE = new THREE.Color("#003300"); 
-const COL_WARN = new THREE.Color("#4d3300"); 
-const COL_CRIT = new THREE.Color("#4d0000"); 
-const COL_SBX  = new THREE.Color("#001a33"); 
+// COLOR PALETTE (NEON BOOSTED)
+const COL_SAFE = new THREE.Color("#00FF41"); // Matrix Green
+const COL_WARN = new THREE.Color("#FFD700"); // Gold/Amber
+const COL_CRIT = new THREE.Color("#FF003C"); // Critical Red
+const COL_SBX  = new THREE.Color("#00FFFF"); // Cyan
 
 export class GameStateSystem implements IGameStateSystem {
   private healthSys!: HealthSystem;
@@ -36,7 +37,6 @@ export class GameStateSystem implements IGameStateSystem {
     this.healthSys = locator.get<HealthSystem>('HealthSystem');
     this.progSys = locator.get<ProgressionSystem>('ProgressionSystem');
     
-    // Wire up special upgrade cases
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
             this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.2);
@@ -51,7 +51,7 @@ export class GameStateSystem implements IGameStateSystem {
 
       const integrity = this.panelSystem.systemIntegrity;
       
-      // Heartbeat Logic
+      // Heartbeat
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -64,12 +64,12 @@ export class GameStateSystem implements IGameStateSystem {
           this.heartbeatTimer = 0;
       }
 
-      // World Visuals (Atmosphere)
       this.updateAtmosphere(delta, integrity);
   }
 
   private updateAtmosphere(delta: number, integrity: number) {
       const worldEntities = this.registry.getByTag(Tag.WORLD);
+      
       for (const world of worldEntities) {
           const render = world.getComponent<RenderData>(ComponentType.Render);
           if (render) {
@@ -80,12 +80,15 @@ export class GameStateSystem implements IGameStateSystem {
               else if (integrity < 60) this.targetColor.copy(COL_WARN);
               else this.targetColor.copy(COL_SAFE);
 
+              // Smooth Interpolation
               this.currentColor.setRGB(render.r, render.g, render.b);
-              this.currentColor.lerp(this.targetColor, delta * 3.0);
+              this.currentColor.lerp(this.targetColor, delta * 2.0);
               
               render.r = this.currentColor.r;
               render.g = this.currentColor.g;
               render.b = this.currentColor.b;
+              
+              // Scrolling
               render.visualRotation += 0.5 * delta; 
           }
       }
@@ -96,8 +99,7 @@ export class GameStateSystem implements IGameStateSystem {
       this.progSys.reset();
   }
 
-  // --- PROXY METHODS (For IGameStateSystem compatibility) ---
-  
+  // Proxies
   get playerHealth() { return this.healthSys.playerHealth; }
   get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
   get playerRebootProgress() { return this.healthSys.playerRebootProgress; }

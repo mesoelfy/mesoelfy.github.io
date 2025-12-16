@@ -30,34 +30,31 @@ export class UISyncSystem implements IGameSystem {
     const store = useGameStore.getState();
     const gs = this.gameSystem;
     
+    // 1. Transient DOM (High Frequency)
+    // We update this every sync tick because it's cheap (direct DOM manipulation)
     const formattedScore = gs.score.toString().padStart(4, '0');
     TransientDOMService.update('score-display', formattedScore);
     
-    const hasChanged = 
-        store.playerHealth !== gs.playerHealth || 
-        store.playerRebootProgress !== gs.playerRebootProgress || 
-        store.xp !== gs.xp || 
-        store.score !== gs.score ||
-        store.level !== gs.level ||
-        store.upgradePoints !== gs.upgradePoints ||
-        store.interactionTarget !== this.interactionSystem.hoveringPanelId ||
-        Math.abs(store.systemIntegrity - this.panelSystem.systemIntegrity) > 1.0; 
+    // 2. React State (Medium Frequency)
+    // Only update if values changed to prevent React re-renders
+    if (store.score !== gs.score) store.setScore(gs.score);
+    if (store.playerHealth !== gs.playerHealth) store.setPlayerHealth(gs.playerHealth);
+    if (store.playerRebootProgress !== gs.playerRebootProgress) store.setPlayerRebootProgress(gs.playerRebootProgress);
+    if (Math.abs(store.systemIntegrity - this.panelSystem.systemIntegrity) > 1.0) {
+        store.setSystemIntegrity(this.panelSystem.systemIntegrity);
+    }
 
-    if (hasChanged) {
-        store.syncGameState({
-            playerHealth: gs.playerHealth, 
-            playerRebootProgress: gs.playerRebootProgress, 
-            level: gs.level,
+    // Bulk update progression data if any part changed
+    if (store.xp !== gs.xp || store.level !== gs.level || store.upgradePoints !== gs.upgradePoints) {
+        store.setProgressionData({
             xp: gs.xp,
-            score: gs.score,
-            xpToNextLevel: gs.xpToNextLevel,
-            upgradePoints: gs.upgradePoints,
-            activeUpgrades: { ...gs.activeUpgrades }, 
-            systemIntegrity: this.panelSystem.systemIntegrity,
-            interactionTarget: this.interactionSystem.hoveringPanelId 
+            level: gs.level,
+            nextXp: gs.xpToNextLevel,
+            points: gs.upgradePoints
         });
     }
 
+    // 3. Panel Sync (Slow / Complex Object)
     const uiPanels: Record<string, any> = {};
     const panels = this.panelSystem.getAllPanels();
     let panelsChanged = false;

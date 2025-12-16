@@ -1,4 +1,4 @@
-import { IPhysicsSystem, IServiceLocator } from '@/core/interfaces';
+import { IPhysicsSystem, IEntityRegistry } from '@/core/interfaces';
 import { SpatialGrid } from '@/core/ecs/SpatialGrid';
 import { TransformData } from '@/game/data/TransformData';
 import { MotionData } from '@/game/data/MotionData';
@@ -7,21 +7,18 @@ import { ComponentType } from '@/core/ecs/ComponentType';
 
 export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
-  private registry!: EntityRegistry;
+  private registry: EntityRegistry;
 
-  constructor() {
+  // INJECTION: We now require the Registry in the constructor
+  constructor(registry: IEntityRegistry) {
     this.spatialGrid = new SpatialGrid();
-  }
-
-  setup(locator: IServiceLocator): void {
-    this.registry = locator.getRegistry() as EntityRegistry;
+    this.registry = registry as EntityRegistry;
     this.spatialGrid.clear();
   }
 
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    // Strict Enum Usage
     const movables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Motion] });
     
     for (const entity of movables) {

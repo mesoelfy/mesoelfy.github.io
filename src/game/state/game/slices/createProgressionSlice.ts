@@ -14,10 +14,12 @@ export interface ProgressionSlice {
   upgradePoints: number;
   activeUpgrades: Record<string, number>;
 
-  addScore: (amount: number) => void;
-  addXp: (amount: number) => void;
-  selectUpgrade: (option: UpgradeOption) => void;
+  // Setters (Called by ECS)
+  setScore: (val: number) => void;
+  setProgressionData: (data: { xp: number, level: number, nextXp: number, points: number }) => void;
   
+  // UI Actions
+  selectUpgrade: (option: UpgradeOption) => void;
   resetProgressionState: () => void;
 }
 
@@ -30,16 +32,24 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   upgradePoints: 0,
   activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
 
-  addScore: (amount) => set((state) => ({ score: state.score + amount })),
-  
-  addXp: (amount) => set((state) => ({ xp: state.xp + amount })),
+  setScore: (val) => set((state) => {
+      // High Score logic remains here as it's a persistent data concern, not gameplay simulation
+      const newHigh = Math.max(state.highScore, val);
+      return { score: val, highScore: newHigh };
+  }),
+
+  setProgressionData: (data) => set({
+      xp: data.xp,
+      level: data.level,
+      xpToNextLevel: data.nextXp,
+      upgradePoints: data.points
+  }),
 
   selectUpgrade: (option) => {
+    // We just emit intent. ECS handles the logic.
+    // However, for immediate UI feedback, we can optimistically update?
+    // No, trust ECS.
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
-    // Logic for applying the upgrade to state happens via sync from ECS or direct here?
-    // In current arch, ECS handles logic, but UI needs to know points spent.
-    // The GameStateSystem in ECS actually manages the 'truth', so we emit the event 
-    // and rely on UISyncSystem to update us back.
   },
 
   resetProgressionState: () => set({

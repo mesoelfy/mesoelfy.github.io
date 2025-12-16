@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator } from '@/core/interfaces';
+import { IGameSystem } from '@/core/interfaces';
 
 export class TimeSystem implements IGameSystem {
   public timeScale: number = 1.0;
@@ -11,7 +11,7 @@ export class TimeSystem implements IGameSystem {
   private frames: number = 0;
   private lastFpsTime: number = 0;
 
-  setup(locator: IServiceLocator): void {
+  constructor() {
     this.reset();
   }
 

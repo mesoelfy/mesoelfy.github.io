@@ -67,9 +67,7 @@ export const GlassPanel = ({
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
-  // Determine if this specific panel is being repaired
   const isInteracting = !!(gameId && interactionTarget === gameId);
-
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
 
@@ -103,15 +101,16 @@ export const GlassPanel = ({
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
-        // UPDATED: 900ms duration per user request
         const timer = setTimeout(() => setShowReboot(false), 900); 
         return () => clearTimeout(timer);
     }
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
 
+  // SHAKE LISTENER
   useReactEffect(() => {
       if (!gameId) return;
+      
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
               shakeControls.start({
@@ -191,7 +190,7 @@ export const GlassPanel = ({
                         isVideo={gameId === 'video'} 
                         showInteractive={true} 
                         isRepairing={isInteracting}
-                        panelId={gameId} // NEW PROP PASSED
+                        panelId={gameId} 
                     />
                 </SafePanelContent>
             )}

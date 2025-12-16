@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IInputService } from '@/core/interfaces';
+import { IGameSystem, IInputService } from '@/core/interfaces';
 import { VirtualJoystickService } from '@/core/input/VirtualJoystickService';
 
 export class InputSystem implements IGameSystem, IInputService {
@@ -6,10 +6,6 @@ export class InputSystem implements IGameSystem, IInputService {
   
   // Bounds for clamping (updated by GameEngine/ViewportHelper)
   private _bounds = { width: 30, height: 20 }; 
-
-  setup(locator: IServiceLocator): void {
-    // Initial setup
-  }
 
   update(delta: number, time: number): void {
     // Poll Providers
@@ -35,10 +31,6 @@ export class InputSystem implements IGameSystem, IInputService {
   
   public updateCursor(x: number, y: number) {
     // Mouse movement takes precedence over joystick relative motion
-    // if the user moves the mouse, we snap to it.
-    // If joystick is active, it adds relative motion in the update() loop.
-    
-    // Simple conflict resolution: If joystick is NOT active, trust mouse.
     if (!VirtualJoystickService.isActive) {
         this._cursor.x = x;
         this._cursor.y = y;
@@ -55,7 +47,6 @@ export class InputSystem implements IGameSystem, IInputService {
   }
 
   public isPressed(action: string): boolean {
-    // Placeholder for button mapping
     return false;
   }
 }

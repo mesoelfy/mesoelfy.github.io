@@ -6,12 +6,11 @@ import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
 import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
 import { createUISlice, UISlice } from './slices/createUISlice';
 
-// Combined State Type
 export type GameState = CombatSlice & ProgressionSlice & UISlice & {
-  // Global Actions that touch multiple slices
-  syncGameState: (data: Partial<GameState>) => void;
   resetGame: () => void;
-  recalculateIntegrity: () => void; // Legacy hook
+  startGame: () => void;
+  stopGame: () => void;
+  recalculateIntegrity: () => void; // Deprecated but kept for type safety until fully removed
 };
 
 export const useGameStore = create<GameState>()(
@@ -21,24 +20,27 @@ export const useGameStore = create<GameState>()(
       ...createProgressionSlice(set, get, api),
       ...createUISlice(set, get, api),
 
-      // --- BRIDGE ACTIONS ---
+      startGame: () => {
+          get().resetGame();
+          get().setPlaying(true);
+      },
 
-      // Called by UISyncSystem (ECS) to update React State
-      syncGameState: (data) => set((state) => ({ ...state, ...data })),
+      stopGame: () => {
+          get().setPlaying(false);
+      },
 
-      // Master Reset
       resetGame: () => {
           get().resetCombatState();
           get().resetProgressionState();
           get().resetUIState();
       },
 
-      // Legacy/Placeholder
+      // No-op (Logic moved to StructureHealthService)
       recalculateIntegrity: () => {},
     }),
     {
-      name: 'mesoelfy-os-storage-v3', // Bump version for clean state
-      partialize: (state) => ({ highScore: state.highScore }), // Only persist High Score
+      name: 'mesoelfy-os-storage-v3', 
+      partialize: (state) => ({ highScore: state.highScore }), 
     }
   )
 );
