@@ -1,12 +1,12 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, memo } from 'react';
-import { GameBootstrapper } from '@/sys/services/GameBootstrapper';
-import { GameEngineCore } from '@/sys/services/GameEngine';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { InputSystem } from '@/sys/systems/InputSystem';
-import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
+import { GameBootstrapper } from '@/game/services/GameBootstrapper';
+import { GameEngineCore } from '@/game/services/GameEngine';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { InputSystem } from '@/game/systems/InputSystem';
+import { IPanelSystem } from '@/core/interfaces';
+import { GameEventBus } from '@/core/signals/GameEventBus';
+import { GameEvents } from '@/core/signals/GameEvents';
 
 // OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
 export const GameDirector = memo(() => {

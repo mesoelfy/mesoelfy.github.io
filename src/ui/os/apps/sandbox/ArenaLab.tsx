@@ -1,8 +1,8 @@
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { EnemyTypes } from '@/sys/config/Identifiers';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { EnemyTypes } from '@/game/config/Identifiers';
 import { Bug, Trash2, Shield, Plus, Info, Crosshair } from 'lucide-react';
-import { useStore } from '@/sys/state/global/useStore';
+import { useStore } from '@/game/state/global/useStore';
 import { clsx } from 'clsx';
 
 export const ArenaLab = () => {

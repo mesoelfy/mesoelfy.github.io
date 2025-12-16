@@ -1,12 +1,12 @@
 import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
-import { useStore } from '@/sys/state/global/useStore';
-import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useStore } from '@/game/state/global/useStore';
+import { useGameStore } from '@/game/state/game/useGameStore';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
-import { getPan } from '@/engine/audio/AudioUtils';
+import { getPan } from '@/core/audio/AudioUtils';
 import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (

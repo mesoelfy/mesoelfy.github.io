@@ -5,7 +5,7 @@ import { Float, MeshDistortMaterial } from '@react-three/drei';
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useGameStore } from '@/game/state/game/useGameStore';
 
 const COLORS = {
   SAFE: new THREE.Color("#78F654"),

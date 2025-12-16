@@ -1,14 +1,14 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { Tag } from '@/engine/ecs/types';
-import { EnemyTypes } from '@/sys/config/Identifiers';
-import { IdentityData } from '@/sys/data/IdentityData';
-import { TransformData } from '@/sys/data/TransformData';
-import { AIStateData } from '@/sys/data/AIStateData';
-import { RenderData } from '@/sys/data/RenderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { Tag } from '@/core/ecs/types';
+import { EnemyTypes } from '@/game/config/Identifiers';
+import { IdentityData } from '@/game/data/IdentityData';
+import { TransformData } from '@/game/data/TransformData';
+import { AIStateData } from '@/game/data/AIStateData';
+import { RenderData } from '@/game/data/RenderData';
+import { ComponentType } from '@/core/ecs/ComponentType';
 
 // Config
 const MAX_DAEMONS = 5;

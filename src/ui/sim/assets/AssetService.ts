@@ -9,7 +9,8 @@ class AssetServiceController {
 
   public init() {
     if (typeof window !== 'undefined' && !this.worker) {
-        this.worker = new Worker(new URL('../../../sys/handlers/workers/GeometryWorker.ts', import.meta.url));
+        // FIX: Updated path from 'sys' to 'game'
+        this.worker = new Worker(new URL('../../../game/handlers/workers/GeometryWorker.ts', import.meta.url));
         this.worker.onmessage = (e) => {
             const { id, success, positions, barycentric } = e.data;
             if (this.pendingRequests.has(id)) {

@@ -1,10 +1,10 @@
-import { Tag } from '@/engine/ecs/types';
+import { Tag } from '@/core/ecs/types';
 import { GAME_THEME } from '@/ui/sim/config/theme';
-import { EnemyTypes } from '@/sys/config/Identifiers';
+import { EnemyTypes } from '@/game/config/Identifiers';
 import { InstancedActor } from './InstancedActor';
-import { IdentityData } from '@/sys/data/IdentityData';
+import { IdentityData } from '@/game/data/IdentityData';
 import { AssetService } from '@/ui/sim/assets/AssetService';
-import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ComponentType } from '@/core/ecs/ComponentType';
 import * as THREE from 'three';
 
 export const KamikazeActor = () => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useGameStore } from '@/sys/state/game/useGameStore';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { IPanelSystem } from '@/engine/interfaces';
+import { useGameStore } from '@/game/state/game/useGameStore';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { IPanelSystem } from '@/core/interfaces';
 
 export const usePanelRegistry = (id: string) => {
   const elementRef = useRef<HTMLDivElement>(null);

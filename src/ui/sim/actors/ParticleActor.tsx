@@ -1,9 +1,9 @@
 import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
 import { AssetService } from '@/ui/sim/assets/AssetService';
-import { ParticleSystem } from '@/sys/systems/ParticleSystem';
+import { ParticleSystem } from '@/game/systems/ParticleSystem';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();

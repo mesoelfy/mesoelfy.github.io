@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAnimation, AnimationControls } from 'framer-motion';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
+import { GameEventBus } from '@/core/signals/GameEventBus';
+import { GameEvents } from '@/core/signals/GameEvents';
 
 export const useHeartbeat = (): AnimationControls => {
   const controls = useAnimation();

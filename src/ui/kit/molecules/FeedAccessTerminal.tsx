@@ -1,6 +1,6 @@
-import { useGameStore } from '@/sys/state/game/useGameStore';
-import { useStore } from '@/sys/state/global/useStore';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useGameStore } from '@/game/state/game/useGameStore';
+import { useStore } from '@/game/state/global/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { clsx } from 'clsx';
 
 export const FeedAccessTerminal = () => {

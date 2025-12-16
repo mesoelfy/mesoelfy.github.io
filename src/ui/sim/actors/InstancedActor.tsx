@@ -1,16 +1,16 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { TransformData } from '@/sys/data/TransformData';
-import { IdentityData } from '@/sys/data/IdentityData';
-import { RenderData } from '@/sys/data/RenderData';
-import { Entity } from '@/engine/ecs/Entity';
-import { TransformStore } from '@/engine/ecs/TransformStore';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { applyRotation } from '@/engine/math/RenderUtils';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { TransformData } from '@/game/data/TransformData';
+import { IdentityData } from '@/game/data/IdentityData';
+import { RenderData } from '@/game/data/RenderData';
+import { Entity } from '@/core/ecs/Entity';
+import { TransformStore } from '@/core/ecs/TransformStore';
+import { GameEventBus } from '@/core/signals/GameEventBus';
+import { GameEvents } from '@/core/signals/GameEvents';
+import { ComponentType } from '@/core/ecs/ComponentType';
+import { applyRotation } from '@/core/math/RenderUtils';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();

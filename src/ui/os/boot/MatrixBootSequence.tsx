@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { GpuConfigPanel } from '@/ui/os/apps/settings/components/GpuConfigPanel';
 import { clsx } from 'clsx';
 
@@ -16,7 +16,7 @@ import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
 import { useDeviceType } from '@/ui/sim/hooks/useDeviceType';
-import { useStore } from '@/sys/state/global/useStore';
+import { useStore } from '@/game/state/global/useStore';
 
 interface Props {
   onComplete: () => void;

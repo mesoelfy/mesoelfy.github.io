@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Tue Dec 16 09:35:28 CST 2025
+Generated on: Tue Dec 16 10:56:29 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -44,6 +44,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── audio
 │   │   │   ├── AudioDirector.ts
 │   │   │   ├── AudioMath.ts
+│   │   │   ├── AudioService.ts
 │   │   │   ├── AudioSystem.ts
 │   │   │   ├── AudioUtils.ts
 │   │   │   ├── hooks
@@ -60,6 +61,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── ecs
 │   │   │   ├── Component.ts
 │   │   │   ├── ComponentPoolManager.ts
+│   │   │   ├── ComponentRegistry.ts
 │   │   │   ├── ComponentType.ts
 │   │   │   ├── Constants.ts
 │   │   │   ├── Entity.ts
@@ -160,6 +162,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── CombatSystem.ts
 │   │   │   ├── GameStateSystem.ts
 │   │   │   ├── GuidanceSystem.ts
+│   │   │   ├── HealthSystem.ts
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
 │   │   │   ├── LifeCycleSystem.ts
@@ -169,6 +172,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── ParticleSystem.ts
 │   │   │   ├── PhysicsSystem.ts
 │   │   │   ├── PlayerSystem.ts
+│   │   │   ├── ProgressionSystem.ts
 │   │   │   ├── ProjectileSystem.ts
 │   │   │   ├── RenderSystem.ts
 │   │   │   ├── ShakeSystem.ts
@@ -182,6 +186,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   └── types
 │   │       └── game.types.ts
 │   └── ui
+│       ├── hooks
+│       │   └── useAudio.ts
 │       ├── kit
 │       │   ├── atoms
 │       │   │   ├── ActionButton.tsx
@@ -318,7 +324,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-73 directories, 237 files
+74 directories, 242 files
 
 =====================================
 FILE: ./next.config.js
@@ -1273,7 +1279,7 @@ FILE: ./src/ui/kit/molecules/SocialRow.tsx
 =====================================
 import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import socials from '@/sys/config/static/socials.json';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useGameStore } from '@/sys/state/game/useGameStore';
 import { clsx } from 'clsx';
@@ -1294,6 +1300,7 @@ interface SocialRowProps {
 export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
   const panelState = useGameStore((state) => state.panels['social']);
   const isDestroyed = panelState ? panelState.isDestroyed : false;
+  const audio = useAudio();
 
   return (
     <div className={clsx(
@@ -1311,8 +1318,8 @@ export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
             href={isDestroyed ? undefined : social.url}
             target="_blank"
             rel="noopener noreferrer"
-            onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))} 
-            onClick={(e) => !isDestroyed && AudioSystem.playClick(getPan(e))}
+            onMouseEnter={(e) => !isDestroyed && audio.playHover(getPan(e))} 
+            onClick={(e) => !isDestroyed && audio.playClick(getPan(e))}
             className={clsx(
                 "group flex items-center p-2 border transition-all duration-200",
                 layout === 'grid' ? "flex-col justify-center" : "flex-row gap-4 justify-start px-4 h-12",
@@ -3646,6 +3653,32 @@ export const useHoloCycler = (slotIndex: number, isSystemActive: boolean) => {
 
 
 =====================================
+FILE: ./src/ui/hooks/useAudio.ts
+=====================================
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { IAudioService } from '@/engine/interfaces';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
+import { useMemo } from 'react';
+
+export const useAudio = (): IAudioService => {
+  const audio = useMemo(() => {
+    try {
+        // Try to get existing instance
+        return ServiceLocator.getAudioService();
+    } catch {
+        // If missing (UI loaded before Engine), create and register it now.
+        // This ensures components always get a working service.
+        const impl = new AudioServiceImpl();
+        ServiceLocator.register('AudioService', impl);
+        return impl;
+    }
+  }, []);
+
+  return audio;
+};
+
+
+=====================================
 FILE: ./src/ui/os/boot/atoms/CoreHeader.tsx
 =====================================
 import { motion, AnimatePresence } from 'framer-motion';
@@ -4832,9 +4865,9 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { useAudioVisualizer } from '@/engine/audio/hooks/useAudioVisualizer';
+import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -4852,10 +4885,10 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const ToggleBtn = ({ active, onClick, children, color }: any) => (
+const ToggleBtn = ({ active, onClick, children, color, audio }: any) => (
   <button 
-    onClick={(e) => { onClick(); AudioSystem.playClick(getPan(e)); }}
-    onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
+    onClick={(e) => { onClick(); audio.playClick(getPan(e)); }}
+    onMouseEnter={(e) => audio.playHover(getPan(e))}
     className={clsx(
       "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
       active 
@@ -4869,10 +4902,13 @@ const ToggleBtn = ({ active, onClick, children, color }: any) => (
 
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
+  const audio = useAudio();
   
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
-  const score = useGameStore(state => state.score);
+
+  // RECONNECTED: This hook registers the span with the Game Engine
+  const scoreRef = useTransientRef('score-display', 'text');
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -4886,9 +4922,6 @@ export const Header = () => {
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const heartbeatControls = useHeartbeat();
-  
-  // NOTE: Audio Visualizer available via useAudioVisualizer() hook, but currently unwired to UI elements.
-  // const audioData = useAudioVisualizer(32); 
 
   const textVariants = {
       heartbeat: {
@@ -4942,8 +4975,9 @@ export const Header = () => {
             <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
-                <span className="font-bold text-lg tabular-nums tracking-widest">
-                    {score.toString().padStart(4, '0')}
+                {/* TRANSIENT TARGET: Updated by GameEngine directly */}
+                <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">
+                    0000
                 </span>
             </div>
           </div>
@@ -4954,28 +4988,28 @@ export const Header = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
             
-            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor}>
+            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} audio={audio}>
                 <Wind size={14} />
             </ToggleBtn>
             
-            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor}>
+            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} audio={audio}>
                 <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span>
             </ToggleBtn>
             
-            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor}>
+            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor} audio={audio}>
                 {audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}
             </ToggleBtn>
             
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
             
-            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor}>
+            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor} audio={audio}>
                 {audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}
             </ToggleBtn>
 
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
 
             <button 
-                onClick={(e) => { toggleSettings(); AudioSystem.playSound('ui_menu_open', getPan(e)); }}
+                onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }}
                 className={clsx(
                   "flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5",
                   statusColor
@@ -5519,7 +5553,7 @@ FILE: ./src/ui/os/apps/settings/tabs/SoundTab.tsx
 import { useStore } from '@/sys/state/global/useStore';
 import { RangeSlider } from '../components/RangeSlider';
 import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import { 
   getAmbienceFilterHz, 
@@ -5529,13 +5563,13 @@ import {
   getAmbienceStereoGain 
 } from '@/engine/audio/AudioMath';
 
-const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff }: any) => {
+const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff, audio }: any) => {
   const Icon = isActive ? IconOn : (IconOff || IconOn);
   
   return (
     <button
-      onClick={(e) => { onClick(); AudioSystem.playClick(); }}
-      onMouseEnter={() => AudioSystem.playHover()}
+      onClick={(e) => { onClick(); audio.playClick(); }}
+      onMouseEnter={() => audio.playHover()}
       className={clsx(
         "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
         isActive 
@@ -5566,7 +5600,8 @@ export const SoundTab = () => {
     toggleSfx,
     toggleAmbience
   } = useStore();
-
+  
+  const audio = useAudio();
   const BASE_VOL = 0.24;
 
   return (
@@ -5599,10 +5634,10 @@ export const SoundTab = () => {
                   
                   <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
                       <div className="grid grid-cols-4 gap-2 relative z-10">
-                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} />
-                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} />
-                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} />
-                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} />
+                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} audio={audio} />
+                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} audio={audio} />
+                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} audio={audio} />
+                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} audio={audio} />
                       </div>
 
                       <div className="space-y-5 relative z-10">
@@ -5740,7 +5775,7 @@ export const SoundTab = () => {
       <div className="mt-auto pt-4 flex justify-end border-t border-white/10">
         <button 
           onClick={resetAudioSettings}
-          onMouseEnter={() => AudioSystem.playHover()}
+          onMouseEnter={() => audio.playHover()}
           className="flex items-center gap-2 px-4 py-2 border border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black font-header font-black text-xs tracking-widest transition-all group"
         >
           <RotateCcw size={14} className="group-hover:-rotate-180 transition-transform duration-500" />
@@ -5756,7 +5791,7 @@ export const SoundTab = () => {
 FILE: ./src/ui/os/apps/settings/components/RangeSlider.tsx
 =====================================
 import { clsx } from 'clsx';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useRef, useState, useEffect } from 'react';
 
@@ -5783,6 +5818,7 @@ export const RangeSlider = ({
   color
 }: RangeSliderProps) => {
   
+  const audio = useAudio();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastTickRef = useRef(value);
@@ -5797,11 +5833,11 @@ export const RangeSlider = ({
     const threshold = max * 0.05;
     if (Math.abs(safeValue - lastTickRef.current) >= threshold) {
         if (isDragging) {
-            AudioSystem.playHover(lastPanRef.current);
+            audio.playHover(lastPanRef.current);
         }
         lastTickRef.current = safeValue;
     }
-  }, [safeValue, max, isDragging]);
+  }, [safeValue, max, isDragging, audio]);
 
   useEffect(() => {
       if (!isDragging) lastTickRef.current = safeValue;
@@ -5845,7 +5881,6 @@ export const RangeSlider = ({
   const updateValue = (e: React.PointerEvent) => {
       if (!containerRef.current) return;
       
-      // Update pan reference for audio tick
       lastPanRef.current = getPan(e);
 
       const rect = containerRef.current.getBoundingClientRect();
@@ -5866,7 +5901,7 @@ export const RangeSlider = ({
   return (
     <div 
         className="flex flex-col gap-1 w-full select-none touch-none"
-        onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
+        onMouseEnter={(e) => audio.playHover(getPan(e))}
     >
       <div className="flex justify-between items-end mb-1">
         <span className="text-[10px] font-bold font-header tracking-widest text-gray-500 group-hover:text-white transition-colors uppercase">
@@ -9352,26 +9387,26 @@ export const useWindowFocus = () => {
 =====================================
 FILE: ./src/ui/sim/hooks/useTransientRef.ts
 =====================================
-import { useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { TransientDOMService } from '@/sys/services/TransientDOMService';
 
 /**
- * Registers a DOM element to the TransientDOMService.
- * Allows the GameLoop to write to it directly without React Re-renders.
+ * Registers a DOM element to the TransientDOMService via a Callback Ref.
+ * This ensures registration happens exactly when the element mounts/unmounts,
+ * even if it is conditionally rendered.
  */
 export const useTransientRef = (id: string, type: 'text' | 'width' | 'css-var') => {
-  const ref = useRef<any>(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      TransientDOMService.register(id, ref.current, type);
-    }
-    return () => {
+  const setRef = useCallback((node: HTMLElement | null) => {
+    if (node) {
+      // Element Mounted
+      TransientDOMService.register(id, node, type);
+    } else {
+      // Element Unmounted
       TransientDOMService.unregister(id);
-    };
+    }
   }, [id, type]);
 
-  return ref;
+  return setRef;
 };
 
 
@@ -11959,6 +11994,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
     tags: [Tag.PLAYER],
     components: [
+      { type: ComponentType.Identity, data: { variant: 'PLAYER' } }, // FIXED: Added Identity
       { type: ComponentType.Transform, data: { x: 0, y: 0, rotation: 0, scale: 1 } },
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
@@ -11984,7 +12020,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER_PROJECTILE, 
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
       }},
-      // RenderData and ProjectileData are set dynamically by Spawner based on Config
       { type: ComponentType.Render, data: { visualScale: 1.0 } },
       { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } }
     ]
@@ -12115,6 +12150,10 @@ import { ShakeSystem } from '@/sys/systems/ShakeSystem';
 import { VFXSystem } from '@/sys/systems/VFXSystem';
 import { ParticleSystem } from '@/sys/systems/ParticleSystem';
 
+// New Systems
+import { HealthSystem } from '@/sys/systems/HealthSystem';
+import { ProgressionSystem } from '@/sys/systems/ProgressionSystem';
+
 type SystemFactory = () => IGameSystem;
 
 interface SystemDef {
@@ -12125,33 +12164,42 @@ interface SystemDef {
 const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new ClassRef();
 
 export const SYSTEM_MANIFEST: SystemDef[] = [
+  // Core / Input
   { id: 'TimeSystem',       factory: useClass(TimeSystem) },
   { id: 'InputSystem',      factory: useClass(InputSystem) },
   { id: 'PanelRegistrySystem', factory: useClass(PanelRegistrySystem) },
-  { id: 'GameStateSystem',  factory: useClass(GameStateSystem) },
+  
+  // Logic Core (Order Matters)
+  { id: 'HealthSystem',     factory: useClass(HealthSystem) },
+  { id: 'ProgressionSystem', factory: useClass(ProgressionSystem) },
+  { id: 'GameStateSystem',  factory: useClass(GameStateSystem) }, // Depends on Health/Progression
+  
   { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
   { id: 'StructureSystem',  factory: useClass(StructureSystem) },
   { id: 'WaveSystem',       factory: useClass(WaveSystem) },
 
   { id: 'ParticleSystem',   factory: useClass(ParticleSystem) },
 
+  // Entity Behavior
   { id: 'TargetingSystem',  factory: useClass(TargetingSystem) },
   { id: 'OrbitalSystem',    factory: useClass(OrbitalSystem) },
   { id: 'PlayerSystem',     factory: useClass(PlayerSystem) },
   { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) },
   { id: 'GuidanceSystem',   factory: useClass(GuidanceSystem) },
 
+  // Physics
   { id: 'PhysicsSystem',    factory: useClass(PhysicsSystem) },
   { id: 'ProjectileSystem', factory: useClass(ProjectileSystem) },
   { id: 'CollisionSystem',  factory: useClass(CollisionSystem) },
   
+  // Resolution
   { id: 'CombatSystem',     factory: useClass(CombatSystem) },
   { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
+  
+  // Visuals
   { id: 'RenderSystem',     factory: useClass(RenderSystem) },
   { id: 'VFXSystem',        factory: useClass(VFXSystem) },
-  
   { id: 'AudioDirectorSystem', factory: useClass(AudioDirector) },
-  
   { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
   { id: 'UISyncSystem',     factory: useClass(UISyncSystem) },
 ];
@@ -12766,6 +12814,85 @@ export class CollisionSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/sys/systems/HealthSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
+import { useStore } from '@/sys/state/global/useStore';
+
+export class HealthSystem implements IGameSystem {
+  public playerHealth: number = PLAYER_CONFIG.maxHealth;
+  public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
+  public playerRebootProgress: number = 0;
+  public isGameOver: boolean = false;
+
+  private events!: IGameEventService;
+  private audio!: IAudioService;
+  private panelSystem!: IPanelSystem;
+
+  setup(locator: IServiceLocator): void {
+    this.events = locator.getGameEventBus();
+    this.audio = locator.getAudioService();
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+    this.reset();
+  }
+
+  update(delta: number, time: number): void {
+    if (this.isGameOver) return;
+    
+    // Check Panel Integrity for Game Over
+    if (this.panelSystem.systemIntegrity <= 0) {
+        this.isGameOver = true;
+        this.events.emit(GameEvents.GAME_OVER, { score: 0 }); // Score handled elsewhere
+        this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
+    }
+  }
+
+  public damagePlayer(amount: number) {
+    if (this.isGameOver) return;
+    const { godMode } = useStore.getState().debugFlags;
+    if (godMode) return;
+    
+    if (this.playerHealth > 0) {
+        this.playerHealth = Math.max(0, this.playerHealth - amount);
+        if (this.playerHealth <= 0) this.audio.playSound('fx_player_death');
+    } else {
+        this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
+    }
+  }
+
+  public healPlayer(amount: number) {
+    this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
+  }
+
+  public tickReboot(amount: number) {
+    if (this.playerHealth > 0) return;
+    this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+    
+    if (this.playerRebootProgress >= 100) {
+        this.playerHealth = this.maxPlayerHealth; 
+        this.playerRebootProgress = 0;
+        this.audio.playSound('fx_reboot_success'); 
+    }
+  }
+
+  public decayReboot(amount: number) {
+      if (this.playerHealth > 0) return; 
+      this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
+  }
+
+  public reset() {
+      this.playerHealth = this.maxPlayerHealth;
+      this.playerRebootProgress = 0;
+      this.isGameOver = false;
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/sys/systems/UISyncSystem.ts
 =====================================
 import { IGameSystem, IServiceLocator, IPanelSystem, IInteractionSystem } from '@/engine/interfaces';
@@ -13345,18 +13472,9 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
-import { RenderData } from '@/sys/data/RenderData';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { GAME_THEME } from '@/ui/sim/config/theme';
-import * as THREE from 'three';
-
-// Helpers
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -13365,8 +13483,6 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
-  
-  private tempColor = new THREE.Color();
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
@@ -13379,16 +13495,15 @@ export class PlayerSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // 1. Get Player
     let playerEntity = null;
     for (const p of this.registry.getByTag(Tag.PLAYER)) {
         playerEntity = p;
         break;
     }
-    
     if (!playerEntity) return;
 
-    // --- VISUAL STATE ---
-    const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+    // 2. Input -> Transform Logic
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const cursor = this.locator.getInputService().getCursor();
 
@@ -13397,51 +13512,10 @@ export class PlayerSystem implements IGameSystem {
         transform.y = cursor.y;
     }
 
-    if (render) {
-        let targetCol = COL_BASE;
-        
-        // SPIN LOGIC: (+) = CW, (-) = CCW
-        let spinSpeed = 0.02; // IDLE: Slow Clockwise
-        
-        let interactState = 'IDLE';
-        try {
-            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
-            interactState = interact.repairState;
-        } catch {}
-
-        if (this.gameSystem.playerHealth <= 0) {
-            targetCol = COL_DEAD;
-            if (interactState === 'REBOOTING') {
-                targetCol = COL_REBOOT;
-                spinSpeed = -0.3; // REBOOTING (DEAD): CCW
-            } else {
-                spinSpeed = 1.5; // DEAD: Fast CW
-            }
-        } else {
-            if (interactState === 'HEALING') {
-                targetCol = COL_REPAIR;
-                spinSpeed = -0.24; // HEALING: CCW
-            } else if (interactState === 'REBOOTING') {
-                targetCol = COL_REBOOT;
-                spinSpeed = -0.24; // REBOOTING: CCW
-            }
-        }
-
-        this.tempColor.setRGB(render.r, render.g, render.b);
-        this.tempColor.lerp(targetCol, delta * 3.0);
-        render.r = this.tempColor.r;
-        render.g = this.tempColor.g;
-        render.b = this.tempColor.b;
-        
-        // Accumulate rotation
-        render.visualRotation += spinSpeed;
-        
-        render.visualScale = 1.0;
-    }
-
+    // 3. Game Over Check
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // --- LOGIC ---
+    // 4. State Management
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         try {
@@ -13452,6 +13526,7 @@ export class PlayerSystem implements IGameSystem {
         }
     }
 
+    // 5. Firing Logic
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
@@ -13466,11 +13541,8 @@ export class PlayerSystem implements IGameSystem {
   teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-      this.gameSystem.addScore(1);
-      this.gameSystem.addXp(10);
-    });
-
+    // REMOVED: Scoring logic. Handled by ProgressionSystem.
+    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') {
             this.triggerPurge();
@@ -13807,27 +13879,41 @@ export class ShakeSystem implements IGameSystem {
 =====================================
 FILE: ./src/sys/systems/RenderSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
 import { RenderData } from '@/sys/data/RenderData';
+import { IdentityData } from '@/sys/data/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Tag } from '@/engine/ecs/types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { GAME_THEME } from '@/ui/sim/config/theme';
+import * as THREE from 'three';
+
+// Helpers
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
+const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_DEAD = new THREE.Color('#FF003C');
 
 export class RenderSystem implements IGameSystem {
   private registry!: IEntityRegistry;
-  private readonly FLASH_DECAY = 5.0; // Speed of color recovery
+  private gameSystem!: IGameStateSystem;
+  private locator!: IServiceLocator;
+  private tempColor = new THREE.Color();
+  
+  private readonly FLASH_DECAY = 5.0; 
 
   setup(locator: IServiceLocator): void {
     this.registry = locator.getRegistry();
+    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
+    this.locator = locator;
     
-    // Listen for damage to trigger flashes
     GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
         const entity = this.registry.getEntity(p.id);
         if (entity) {
             const render = entity.getComponent<RenderData>(ComponentType.Render);
             if (render) {
-                // Flash White
-                render.r = 2.0; // Overdrive for bloom
+                render.r = 2.0; 
                 render.g = 2.0;
                 render.b = 2.0;
             }
@@ -13838,18 +13924,70 @@ export class RenderSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const renderables = this.registry.query({ all: [ComponentType.Render] });
 
+    let interactState = 'IDLE';
+    try {
+        const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
+        interactState = interact.repairState;
+    } catch {}
+
+    const isDead = this.gameSystem.playerHealth <= 0;
+
     for (const entity of renderables) {
         if (!entity.active) continue;
+        
         const render = entity.getComponent<RenderData>(ComponentType.Render);
+        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+        
         if (!render) continue;
 
-        // Color Decay Logic (Return to Base)
-        if (render.r > render.baseR || render.g > render.baseG || render.b > render.baseB) {
-            render.r = this.lerp(render.r, render.baseR, delta * this.FLASH_DECAY);
-            render.g = this.lerp(render.g, render.baseG, delta * this.FLASH_DECAY);
-            render.b = this.lerp(render.b, render.baseB, delta * this.FLASH_DECAY);
+        // --- 1. PLAYER VISUALS ---
+        const isPlayer = entity.hasTag(Tag.PLAYER) && (!identity || identity.variant === 'PLAYER');
+        
+        if (isPlayer) {
+            this.updatePlayerVisuals(render, delta, interactState, isDead);
+        }
+
+        // --- 2. ENEMY/GENERIC FLASH DECAY ---
+        else {
+            if (render.r > render.baseR || render.g > render.baseG || render.b > render.baseB) {
+                render.r = this.lerp(render.r, render.baseR, delta * this.FLASH_DECAY);
+                render.g = this.lerp(render.g, render.baseG, delta * this.FLASH_DECAY);
+                render.b = this.lerp(render.b, render.baseB, delta * this.FLASH_DECAY);
+            }
         }
     }
+  }
+
+  private updatePlayerVisuals(render: RenderData, delta: number, interactState: string, isDead: boolean) {
+      let targetCol = COL_BASE;
+      let spinSpeed = 0.02; // IDLE
+
+      if (isDead) {
+          targetCol = COL_DEAD;
+          if (interactState === 'REBOOTING') {
+              targetCol = COL_REBOOT;
+              spinSpeed = -0.3; 
+          } else {
+              spinSpeed = 1.5; 
+          }
+      } else {
+          if (interactState === 'HEALING') {
+              targetCol = COL_REPAIR;
+              spinSpeed = -0.24;
+          } else if (interactState === 'REBOOTING') {
+              targetCol = COL_REBOOT;
+              spinSpeed = -0.24;
+          }
+      }
+
+      this.tempColor.setRGB(render.r, render.g, render.b);
+      this.tempColor.lerp(targetCol, delta * 3.0);
+      render.r = this.tempColor.r;
+      render.g = this.tempColor.g;
+      render.b = this.tempColor.b;
+      
+      render.visualRotation += spinSpeed;
+      render.visualScale = 1.0;
   }
 
   private lerp(start: number, end: number, t: number) {
@@ -14213,152 +14351,41 @@ export * from './WaveSystem';
 
 
 =====================================
-FILE: ./src/sys/systems/GameStateSystem.ts
+FILE: ./src/sys/systems/ProgressionSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
-import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, IServiceLocator, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useStore } from '@/sys/state/global/useStore'; 
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { RenderData } from '@/sys/data/RenderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Tag } from '@/engine/ecs/types';
-import * as THREE from 'three';
+import { PLAYER_CONFIG } from '@/sys/config/PlayerConfig';
 
-// Constants for World Colors
-const COL_SAFE = new THREE.Color("#003300"); // Dark Green
-const COL_WARN = new THREE.Color("#4d3300"); // Dark Yellow
-const COL_CRIT = new THREE.Color("#4d0000"); // Dark Red
-const COL_SBX  = new THREE.Color("#001a33"); // Sandbox Blue
-
-export class GameStateSystem implements IGameStateSystem {
-  public playerHealth: number = PLAYER_CONFIG.maxHealth;
-  public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
-  public playerRebootProgress: number = 0;
-  
+export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
   public xp: number = 0;
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
-
   public activeUpgrades: Record<string, number> = {
     'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
-  public isGameOver: boolean = false;
-  
-  private heartbeatTimer: number = 0;
-  private panelSystem!: IPanelSystem;
-  private registry!: IEntityRegistry;
-  
-  // Reusable lerp helpers
-  private targetColor = new THREE.Color();
-  private currentColor = new THREE.Color();
+  private events!: IGameEventService;
 
   setup(locator: IServiceLocator): void {
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.registry = locator.getRegistry();
-    this.reset();
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.events = locator.getGameEventBus();
+    
+    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+        this.addScore(1);
+        this.addXp(10);
+    });
+
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
     });
-  }
-
-  update(delta: number, time: number): void {
-      if (this.isGameOver) return;
-
-      const integrity = this.panelSystem.systemIntegrity;
-      
-      // --- HEARTBEAT LOGIC ---
-      if (integrity < 30 && integrity > 0) {
-          this.heartbeatTimer -= delta;
-          if (this.heartbeatTimer <= 0) {
-              const urgency = 1.0 - (integrity / 30);
-              AudioSystem.playSound('loop_warning');
-              GameEventBus.emit(GameEvents.HEARTBEAT, { urgency });
-              this.heartbeatTimer = 1.4 - (urgency * 1.05); 
-          }
-      } else {
-          this.heartbeatTimer = 0;
-      }
-
-      // --- WORLD VISUAL UPDATE (ECS Driven) ---
-      const worldEntities = this.registry.getByTag(Tag.WORLD);
-      for (const world of worldEntities) {
-          const render = world.getComponent<RenderData>(ComponentType.Render);
-          if (render) {
-              const bootState = useStore.getState().bootState;
-              
-              if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
-              else if (integrity < 30) this.targetColor.copy(COL_CRIT);
-              else if (integrity < 60) this.targetColor.copy(COL_WARN);
-              else this.targetColor.copy(COL_SAFE);
-
-              // Smooth Lerp
-              this.currentColor.setRGB(render.r, render.g, render.b);
-              this.currentColor.lerp(this.targetColor, delta * 3.0);
-              
-              render.r = this.currentColor.r;
-              render.g = this.currentColor.g;
-              render.b = this.currentColor.b;
-              
-              // Scroll Speed (Visual Rotation used as Z-Scroll Offset)
-              // This drives the matrix grid scrolling in the shader
-              // 0.5 is base speed
-              render.visualRotation += 0.5 * delta; 
-          }
-      }
-  }
-
-  teardown(): void {}
-
-  public reset() {
-    this.playerHealth = this.maxPlayerHealth;
-    this.playerRebootProgress = 0;
-    this.score = 0;
-    this.xp = 0;
-    this.level = 1;
-    this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
-    this.upgradePoints = 0;
-    this.isGameOver = false;
-    this.activeUpgrades = { 
-        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
-        'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
-    };
-  }
-
-  public applyUpgrade(option: string) {
-      if (this.upgradePoints > 0) {
-          this.upgradePoints--;
-          if (option === 'PURGE' || option === 'RESTORE') return;
-          if (option === 'DAEMON') {
-              GameEventBus.emit(GameEvents.SPAWN_DAEMON, null);
-              return; 
-          }
-          this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
-          if (option === 'REPAIR_NANITES') this.healPlayer(this.maxPlayerHealth * 0.2);
-      }
-  }
-
-  public damagePlayer(amount: number) {
-    if (this.isGameOver) return;
-    const { godMode } = useStore.getState().debugFlags;
-    if (godMode) return;
     
-    if (this.playerHealth > 0) {
-        this.playerHealth = Math.max(0, this.playerHealth - amount);
-        if (this.playerHealth <= 0) AudioSystem.playSound('fx_player_death');
-    } else {
-        this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
-    }
+    this.reset();
   }
 
-  public healPlayer(amount: number) {
-    this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
-  }
+  update(delta: number, time: number): void {}
 
   public addScore(amount: number) {
     this.score += amount;
@@ -14371,25 +14398,157 @@ export class GameStateSystem implements IGameStateSystem {
         this.level++;
         this.upgradePoints++;
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
-        GameEventBus.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
+        this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
     }
   }
 
-  public tickReboot(amount: number) {
-    if (this.playerHealth > 0) return;
-    this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+  public applyUpgrade(option: string) {
+      if (this.upgradePoints > 0) {
+          this.upgradePoints--;
+          if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') return;
+          this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
+      }
+  }
+
+  public reset() {
+      this.score = 0;
+      this.xp = 0;
+      this.level = 1;
+      this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
+      this.upgradePoints = 0;
+      this.activeUpgrades = { 
+        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
+        'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
+      };
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
+FILE: ./src/sys/systems/GameStateSystem.ts
+=====================================
+import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { useStore } from '@/sys/state/global/useStore'; 
+import { RenderData } from '@/sys/data/RenderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Tag } from '@/engine/ecs/types';
+import * as THREE from 'three';
+
+// Sub-Systems (Injected)
+import { HealthSystem } from './HealthSystem';
+import { ProgressionSystem } from './ProgressionSystem';
+
+const COL_SAFE = new THREE.Color("#003300"); 
+const COL_WARN = new THREE.Color("#4d3300"); 
+const COL_CRIT = new THREE.Color("#4d0000"); 
+const COL_SBX  = new THREE.Color("#001a33"); 
+
+export class GameStateSystem implements IGameStateSystem {
+  private healthSys!: HealthSystem;
+  private progSys!: ProgressionSystem;
+  private panelSystem!: IPanelSystem;
+  private registry!: IEntityRegistry;
+  private events!: IGameEventService;
+  private audio!: IAudioService;
+  
+  private heartbeatTimer: number = 0;
+  private targetColor = new THREE.Color();
+  private currentColor = new THREE.Color();
+
+  setup(locator: IServiceLocator): void {
+    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+    this.registry = locator.getRegistry();
+    this.events = locator.getGameEventBus();
+    this.audio = locator.getAudioService();
     
-    if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth; 
-        this.playerRebootProgress = 0;
-        AudioSystem.playSound('fx_reboot_success'); 
-    }
+    this.healthSys = locator.get<HealthSystem>('HealthSystem');
+    this.progSys = locator.get<ProgressionSystem>('ProgressionSystem');
+    
+    // Wire up special upgrade cases
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'REPAIR_NANITES') {
+            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.2);
+        } else if (p.option === 'DAEMON') {
+            this.events.emit(GameEvents.SPAWN_DAEMON, null);
+        }
+    });
   }
 
-  public decayReboot(amount: number) {
-      if (this.playerHealth > 0) return; 
-      this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
+  update(delta: number, time: number): void {
+      if (this.isGameOver) return;
+
+      const integrity = this.panelSystem.systemIntegrity;
+      
+      // Heartbeat Logic
+      if (integrity < 30 && integrity > 0) {
+          this.heartbeatTimer -= delta;
+          if (this.heartbeatTimer <= 0) {
+              const urgency = 1.0 - (integrity / 30);
+              this.audio.playSound('loop_warning');
+              this.events.emit(GameEvents.HEARTBEAT, { urgency });
+              this.heartbeatTimer = 1.4 - (urgency * 1.05); 
+          }
+      } else {
+          this.heartbeatTimer = 0;
+      }
+
+      // World Visuals (Atmosphere)
+      this.updateAtmosphere(delta, integrity);
   }
+
+  private updateAtmosphere(delta: number, integrity: number) {
+      const worldEntities = this.registry.getByTag(Tag.WORLD);
+      for (const world of worldEntities) {
+          const render = world.getComponent<RenderData>(ComponentType.Render);
+          if (render) {
+              const bootState = useStore.getState().bootState;
+              
+              if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
+              else if (integrity < 30) this.targetColor.copy(COL_CRIT);
+              else if (integrity < 60) this.targetColor.copy(COL_WARN);
+              else this.targetColor.copy(COL_SAFE);
+
+              this.currentColor.setRGB(render.r, render.g, render.b);
+              this.currentColor.lerp(this.targetColor, delta * 3.0);
+              
+              render.r = this.currentColor.r;
+              render.g = this.currentColor.g;
+              render.b = this.currentColor.b;
+              render.visualRotation += 0.5 * delta; 
+          }
+      }
+  }
+
+  teardown(): void {
+      this.healthSys.reset();
+      this.progSys.reset();
+  }
+
+  // --- PROXY METHODS (For IGameStateSystem compatibility) ---
+  
+  get playerHealth() { return this.healthSys.playerHealth; }
+  get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
+  get playerRebootProgress() { return this.healthSys.playerRebootProgress; }
+  get isGameOver() { return this.healthSys.isGameOver; }
+  set isGameOver(v: boolean) { this.healthSys.isGameOver = v; }
+
+  get score() { return this.progSys.score; }
+  get xp() { return this.progSys.xp; }
+  get level() { return this.progSys.level; }
+  get xpToNextLevel() { return this.progSys.xpToNextLevel; }
+  get upgradePoints() { return this.progSys.upgradePoints; }
+  get activeUpgrades() { return this.progSys.activeUpgrades; }
+
+  damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
+  healPlayer(amount: number) { this.healthSys.healPlayer(amount); }
+  tickReboot(amount: number) { this.healthSys.tickReboot(amount); }
+  decayReboot(amount: number) { this.healthSys.decayReboot(amount); }
+  
+  addScore(amount: number) { this.progSys.addScore(amount); }
+  addXp(amount: number) { this.progSys.addXp(amount); }
 }
 
 
@@ -15350,48 +15509,67 @@ import { HealthData } from '@/sys/data/HealthData';
 import { IdentityData } from '@/sys/data/IdentityData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TransformData } from '@/sys/data/TransformData';
+import { CombatData } from '@/sys/data/CombatData';
 import { EnemyTypes } from '@/sys/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
+const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
+
+// Helper to determine death FX based on enemy type
+// In the future, this could be a 'VisualData' component property
+const getExplosionType = (variant: string, angle?: boolean) => {
+    switch (variant) {
+        case EnemyTypes.KAMIKAZE: return angle ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
+        case EnemyTypes.HUNTER: return angle ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
+        default: return angle ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+    }
+};
 
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
+  // Special Handling for Daemon (Shields/States)
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
   }
 
   const eId = getId(enemy);
+  const combat = getCombat(enemy);
   const pos = getPos(enemy);
   const pPos = getPos(player);
   const x = pos ? pos.x : 0;
 
-  // Calculate Impact Angle: Vector from Player -> Enemy (Force Direction)
+  // 1. Calculate Damage (Data Driven)
+  // Default to 1 if no combat component found
+  const damage = combat ? combat.damage : 1;
+
+  // 2. Calculate Impact Angle
   let angle = 0;
   if (pos && pPos) {
       angle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x);
   }
-  // To spray "Away" from impact (exit wound), we pass Angle + PI to the VFX system?
-  // Wait, VFXSystem adds PI to its input.
-  // We want particles to fly ALONG the force vector (Player->Enemy).
-  // So we should pass Angle + PI, so that (Angle + PI) + PI = Angle.
   const sprayAngle = angle + Math.PI;
 
-  if (eId?.variant === EnemyTypes.KAMIKAZE) {
-      ctx.damagePlayer(3); 
-      ctx.addTrauma(0.5); 
-      ctx.destroyEntity(enemy, 'EXPLOSION_RED', sprayAngle);
-      ctx.playSpatialAudio('fx_impact_heavy', x);
-  } else {
-      ctx.damagePlayer(1);
-      ctx.addTrauma(0.2); 
-      ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE', sprayAngle);
-      ctx.playSpatialAudio('fx_impact_light', x);
-  }
+  // 3. Apply Damage
+  ctx.damagePlayer(damage);
+  
+  // 4. Resolve Entity Death
+  const variant = eId?.variant || 'UNKNOWN';
+  const fx = getExplosionType(variant, true);
+  
+  // Dynamic Trauma based on damage severity
+  const trauma = damage >= 3 ? 0.5 : 0.2;
+  ctx.addTrauma(trauma);
+
+  ctx.destroyEntity(enemy, fx, sprayAngle);
+  
+  // Audio based on damage severity
+  const audio = damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light';
+  ctx.playSpatialAudio(audio, x);
 };
 
 export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatContext) => {
@@ -15402,19 +15580,20 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
       return;
   }
 
+  const combat = getCombat(bullet);
   const pos = getPos(bullet);
   const x = pos ? pos.x : 0;
 
-  ctx.damagePlayer(3);
+  const damage = combat ? combat.damage : 1;
+
+  ctx.damagePlayer(damage);
   ctx.destroyEntity(bullet, 'IMPACT_RED');
   ctx.playSpatialAudio('fx_impact_heavy', x);
 };
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
-  // Pass the bullet's travel direction for "blow through" effect
   const bPos = getPos(bullet);
   const sprayAngle = bPos ? bPos.rotation + Math.PI : 0;
-  
   handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx, sprayAngle);
 };
 
@@ -15429,10 +15608,12 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const pos = getPos(attacker);
   const x = pos ? pos.x : 0;
 
-  let incomingDamage = fixedDamage || 1; 
+  // Use fixed damage if provided (e.g. from bullet hit which has no combat comp sometimes?), 
+  // otherwise read from attacker.
+  let incomingDamage = fixedDamage || 1;
   if (!fixedDamage) {
-      const id = getId(attacker);
-      if (id?.variant === EnemyTypes.KAMIKAZE) incomingDamage = 3;
+      const combat = getCombat(attacker);
+      if (combat) incomingDamage = combat.damage;
   }
 
   const shield = state.data.shieldHP || 0;
@@ -15463,13 +15644,15 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
 function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext, sprayAngle?: number) {
   const hpA = getHp(a);
   const hpB = getHp(b);
+  const cA = getCombat(a);
+  const cB = getCombat(b);
 
-  const valA = hpA ? hpA.current : 1;
-  const valB = hpB ? hpB.current : 1;
-  const impact = Math.min(valA, valB);
+  // Damage logic: A deals damage to B, B deals damage to A
+  const dmgA = cA ? cA.damage : 1;
+  const dmgB = cB ? cB.damage : 1;
 
-  if (hpA) hpA.current = Math.max(0, hpA.current - impact);
-  if (hpB) hpB.current = Math.max(0, hpB.current - impact);
+  if (hpA) hpA.current = Math.max(0, hpA.current - dmgB);
+  if (hpB) hpB.current = Math.max(0, hpB.current - dmgA);
 
   const pos = getPos(a);
   const x = pos ? pos.x : 0;
@@ -15482,7 +15665,7 @@ function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext
       soundKey = 'fx_impact_light';
   }
   if (hpB && hpB.current <= 0) {
-      ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); // B usually bullet, spray not critical here
+      ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); 
       soundKey = 'fx_impact_light';
   }
   
@@ -16140,6 +16323,9 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from '@/sys/services/EntitySpawner';
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
+import { GameEventService } from '@/engine/signals/GameEventBus';
+import { FastEventService, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 
 // Systems
 import { TimeSystem } from '@/sys/systems/TimeSystem';
@@ -16157,22 +16343,25 @@ import { GameStateSystem } from '@/sys/systems/GameStateSystem';
 import { RenderSystem } from '@/sys/systems/RenderSystem';
 import { ProjectileSystem } from '@/sys/systems/ProjectileSystem';
 
-import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/sys/data/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private registry!: EntityRegistry;
+    private events!: IGameEventService;
+    private fastEvents!: IFastEventService;
+    private audio!: IAudioService;
 
     setup(locator: ServiceLocator) {
         this.registry = locator.getRegistry() as EntityRegistry;
+        this.events = locator.getGameEventBus();
+        this.fastEvents = locator.getFastEventBus();
+        this.audio = locator.getAudioService();
         
-        GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+        this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
             const entity = this.registry.getEntity(p.id);
             if (entity && entity.active) {
                 this.kill(entity);
@@ -16188,22 +16377,24 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
             const id = FX_IDS['EXPLOSION_PURPLE'];
-            FastEventBus.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
-            AudioSystem.playSound('fx_impact_light');
+            this.fastEvents.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
+            this.audio.playSound('fx_impact_light');
         }
         this.registry.destroyEntity(entity.id);
     }
 }
 
 export const MobileBootstrapper = () => {
-  ServiceLocator.reset();
-
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
+
+  try { ServiceLocator.getAudioService(); } catch { ServiceLocator.register('AudioService', new AudioServiceImpl()); }
+  try { ServiceLocator.getGameEventBus(); } catch { ServiceLocator.register('GameEventService', new GameEventService()); }
+  try { ServiceLocator.getFastEventBus(); } catch { ServiceLocator.register('FastEventService', new FastEventService()); }
 
   registerAllBehaviors();
   registerAllAssets();
@@ -16250,7 +16441,7 @@ export const MobileBootstrapper = () => {
 =====================================
 FILE: ./src/sys/services/ComponentBuilder.ts
 =====================================
-import { ComponentPoolManager } from '@/engine/ecs/ComponentPoolManager';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
@@ -16264,69 +16455,78 @@ import { TargetData } from '@/sys/data/TargetData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
 import { RenderData } from '@/sys/data/RenderData';
 import { ProjectileData } from '@/sys/data/ProjectileData';
-import { Component } from '@/engine/ecs/Component';
 
-type ComponentFactory = (data: any) => Component;
+// --- REGISTRATION ---
+const reg = ComponentRegistry;
 
-const get = <T extends Component>(type: ComponentType, factory: () => T, reset: (c: T) => void): T => {
-    const pooled = ComponentPoolManager.acquire<T>(type);
-    if (pooled) {
-        reset(pooled);
-        return pooled;
+reg.register(ComponentType.Transform, 
+    () => new TransformData(), 
+    (c, d) => c.reset(d.x, d.y, d.rotation, d.scale)
+);
+
+reg.register(ComponentType.Motion, 
+    () => new MotionData(), 
+    (c, d) => c.reset(d.vx, d.vy, d.friction, d.angularVelocity)
+);
+
+reg.register(ComponentType.Health, 
+    () => new HealthData(100), 
+    (c, d) => c.reset(d.max, d.invincibilityTime)
+);
+
+reg.register(ComponentType.Identity, 
+    () => new IdentityData(''), 
+    (c, d) => c.reset(d.variant)
+);
+
+reg.register(ComponentType.Lifetime, 
+    () => new LifetimeData(0, 0), 
+    (c, d) => c.reset(d.remaining, d.total || d.remaining)
+);
+
+reg.register(ComponentType.Combat, 
+    () => new CombatData(0), 
+    (c, d) => c.reset(d.damage, d.cooldown, d.range)
+);
+
+reg.register(ComponentType.State, 
+    () => new AIStateData(), 
+    (c, d) => c.reset(d.current, d.timers, d.data)
+);
+
+reg.register(ComponentType.Collider, 
+    () => new ColliderData(0, 0, 0), 
+    (c, d) => c.reset(d.radius, d.layer, d.mask)
+);
+
+reg.register(ComponentType.Target, 
+    () => new TargetData(), 
+    (c, d) => c.reset(d.id, d.type, d.x, d.y, d.locked)
+);
+
+reg.register(ComponentType.Orbital, 
+    () => new OrbitalData(), 
+    (c, d) => c.reset(d.parentId, d.radius, d.speed, d.angle, d.active)
+);
+
+reg.register(ComponentType.Render, 
+    () => new RenderData(), 
+    (c, d) => c.reset(d.visualRotation, d.visualScale, d.r, d.g, d.b, d.opacity)
+);
+
+reg.register(ComponentType.Projectile, 
+    () => new ProjectileData(), 
+    (c, d) => c.reset(d.configId, d.state, d.ownerId)
+);
+
+// --- FACADE ---
+// Export a Proxy that mimics the old { Type: Factory } object structure
+// This allows EntitySpawner to remain unchanged for now.
+export const ComponentBuilder = new Proxy({}, {
+    get: (target, prop) => {
+        return (data: any) => ComponentRegistry.build(prop as ComponentType, data || {});
     }
-    return factory();
-};
-
-export const ComponentBuilder: Record<string, ComponentFactory> = {
-  [ComponentType.Transform]: (data) => get(ComponentType.Transform, 
-      () => new TransformData(data.x, data.y, data.rotation, data.scale),
-      (c) => c.reset(data.x || 0, data.y || 0, data.rotation || 0, data.scale || 1)
-  ),
-  [ComponentType.Motion]: (data) => get(ComponentType.Motion,
-      () => new MotionData(data.vx, data.vy, data.friction, data.angularVelocity),
-      (c) => c.reset(data.vx || 0, data.vy || 0, data.friction || 0, data.angularVelocity || 0)
-  ),
-  [ComponentType.Health]: (data) => get(ComponentType.Health,
-      () => new HealthData(data.max, data.invincibilityTime),
-      (c) => c.reset(data.max, data.invincibilityTime || 0)
-  ),
-  [ComponentType.Identity]: (data) => get(ComponentType.Identity,
-      () => new IdentityData(data.variant),
-      (c) => c.reset(data.variant)
-  ),
-  [ComponentType.Lifetime]: (data) => get(ComponentType.Lifetime,
-      () => new LifetimeData(data.remaining, data.total || data.remaining),
-      (c) => c.reset(data.remaining, data.total || data.remaining)
-  ),
-  [ComponentType.Combat]: (data) => get(ComponentType.Combat,
-      () => new CombatData(data.damage, data.cooldown, data.range),
-      (c) => c.reset(data.damage, data.cooldown || 0, data.range || 0)
-  ),
-  [ComponentType.State]: (data) => get(ComponentType.State,
-      () => new AIStateData(data.current, data.timers, data.data),
-      (c) => c.reset(data.current, data.timers || {}, data.data || {})
-  ),
-  [ComponentType.Collider]: (data) => get(ComponentType.Collider,
-      () => new ColliderData(data.radius, data.layer, data.mask),
-      (c) => c.reset(data.radius, data.layer, data.mask)
-  ),
-  [ComponentType.Target]: (data) => get(ComponentType.Target,
-      () => new TargetData(data.id, data.type, data.x, data.y, data.locked),
-      (c) => c.reset(data.id, data.type, data.x, data.y, data.locked)
-  ),
-  [ComponentType.Orbital]: (data) => get(ComponentType.Orbital,
-      () => new OrbitalData(data.parentId, data.radius, data.speed, data.angle, data.active),
-      (c) => c.reset(data.parentId, data.radius, data.speed, data.angle, data.active)
-  ),
-  [ComponentType.Render]: (data) => get(ComponentType.Render,
-      () => new RenderData(data.visualRotation, data.visualScale, data.r, data.g, data.b, data.opacity),
-      (c) => c.reset(data.visualRotation || 0, data.visualScale || 1.0, data.r ?? 1, data.g ?? 1, data.b ?? 1, data.opacity ?? 1.0)
-  ),
-  [ComponentType.Projectile]: (data) => get(ComponentType.Projectile,
-      () => new ProjectileData(data.configId, data.state, data.ownerId),
-      (c) => c.reset(data.configId || 'PLAYER_STANDARD', data.state || 'FLIGHT', data.ownerId || -1)
-  )
-};
+}) as Record<string, (data: any) => any>;
 
 
 =====================================
@@ -16471,10 +16671,11 @@ import { PanelRegistrySystem } from '@/sys/systems/PanelRegistrySystem';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
+import { GameEventService } from '@/engine/signals/GameEventBus';
+import { FastEventService } from '@/engine/signals/FastEventBus';
 
 export const GameBootstrapper = () => {
-  ServiceLocator.reset();
-
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
@@ -16482,6 +16683,17 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  // Lazy Load Checks
+  try { ServiceLocator.getAudioService(); } 
+  catch { ServiceLocator.register('AudioService', new AudioServiceImpl()); }
+
+  try { ServiceLocator.getGameEventBus(); } 
+  catch { ServiceLocator.register('GameEventService', new GameEventService()); }
+
+  try { ServiceLocator.getFastEventBus(); } 
+  catch { ServiceLocator.register('FastEventService', new FastEventService()); }
+
+  // Setup
   registerAllBehaviors();
   registerAllAssets();
 
@@ -16781,74 +16993,58 @@ export class EntitySpawner implements IEntitySpawner {
 =====================================
 FILE: ./src/sys/services/ServiceLocator.ts
 =====================================
-import { IServiceLocator, IGameSystem, IAudioService, IInputService, IEntityRegistry, IEntitySpawner, IParticleSystem } from '@/engine/interfaces';
+import { 
+  IServiceLocator, 
+  IGameSystem, 
+  IAudioService, 
+  IInputService, 
+  IEntityRegistry, 
+  IEntitySpawner, 
+  IParticleSystem,
+  IGameEventService,
+  IFastEventService
+} from '@/engine/interfaces';
 import { ConfigService } from '@/sys/services/ConfigService';
 
 class ServiceLocatorImpl implements IServiceLocator {
-  private systems = new Map<string, IGameSystem>();
-  private audioService?: IAudioService;
-  private inputService?: IInputService;
-  private registry?: IEntityRegistry;
-  private spawner?: IEntitySpawner;
-  private particleSystem?: IParticleSystem;
+  private services = new Map<string, any>();
 
-  public getSystem<T extends IGameSystem>(id: string): T {
-    const sys = this.systems.get(id);
-    if (!sys) throw new Error(`System not registered: ${id}`);
-    return sys as T;
+  public register<T>(id: string, instance: T): void {
+    if (this.services.has(id)) {
+      console.warn(`[ServiceLocator] Overwriting service: ${id}`);
+    }
+    this.services.set(id, instance);
   }
 
-  public registerSystem(id: string, system: IGameSystem): void {
-    this.systems.set(id, system);
-    if (id === 'InputSystem') this.inputService = system as unknown as IInputService;
-    if (id === 'ParticleSystem') this.particleSystem = system as unknown as IParticleSystem;
+  public get<T>(id: string): T {
+    const service = this.services.get(id);
+    if (!service) {
+      throw new Error(`[ServiceLocator] Service not found: ${id}`);
+    }
+    return service as T;
   }
 
-  public registerRegistry(registry: IEntityRegistry) {
-      this.registry = registry;
-  }
-
-  public registerSpawner(spawner: IEntitySpawner) {
-      this.spawner = spawner;
-  }
-
-  public getAudioService(): IAudioService {
-    return { playSound: () => {}, playMusic: () => {}, setVolume: () => {} }; 
-  }
-
-  public getInputService(): IInputService {
-    if (!this.inputService) throw new Error("InputService not registered");
-    return this.inputService;
-  }
-  
-  public getRegistry(): IEntityRegistry {
-      if (!this.registry) throw new Error("Registry not registered");
-      return this.registry;
-  }
-
-  public getSpawner(): IEntitySpawner {
-      if (!this.spawner) throw new Error("Spawner not registered");
-      return this.spawner;
-  }
-
-  public getParticleSystem(): IParticleSystem {
-      if (!this.particleSystem) throw new Error("ParticleSystem not registered");
-      return this.particleSystem;
-  }
-
-  public getConfigService() {
-      return ConfigService;
-  }
-  
   public reset(): void {
-    this.systems.clear();
-    this.audioService = undefined;
-    this.inputService = undefined;
-    this.registry = undefined;
-    this.spawner = undefined;
-    this.particleSystem = undefined;
-    ConfigService.reset(); 
+    this.services.clear();
+    ConfigService.reset();
   }
+
+  public getGameEventBus(): IGameEventService { return this.get<IGameEventService>('GameEventService'); }
+  public getFastEventBus(): IFastEventService { return this.get<IFastEventService>('FastEventService'); }
+  
+  public getAudioService(): IAudioService { return this.get<IAudioService>('AudioService'); }
+  public getInputService(): IInputService { return this.get<IInputService>('InputSystem'); }
+  public getParticleSystem(): IParticleSystem { return this.get<IParticleSystem>('ParticleSystem'); }
+  
+  public getRegistry(): IEntityRegistry { return this.get<IEntityRegistry>('EntityRegistry'); }
+  public getSpawner(): IEntitySpawner { return this.get<IEntitySpawner>('EntitySpawner'); }
+  public getConfigService() { return ConfigService; }
+
+  // Legacy Helpers
+  public registerSystem(id: string, system: IGameSystem) { this.register(id, system); }
+  public getSystem<T extends IGameSystem>(id: string): T { return this.get<T>(id); }
+  public registerRegistry(r: IEntityRegistry) { this.register('EntityRegistry', r); }
+  public registerSpawner(s: IEntitySpawner) { this.register('EntitySpawner', s); }
 }
 
 export const ServiceLocator = new ServiceLocatorImpl();
@@ -17212,13 +17408,13 @@ export interface GameEventPayloads {
 FILE: ./src/engine/signals/GameEventBus.ts
 =====================================
 import { GameEvents, GameEventPayloads } from './GameEvents';
+import { IGameEventService } from '@/engine/interfaces';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 
 type Handler<T extends GameEvents> = (payload: GameEventPayloads[T]) => void;
 
-class GameEventBusController {
-  // Use a mapped type for strict safety
+export class GameEventService implements IGameEventService {
   private listeners: { [K in GameEvents]?: Handler<K>[] } = {};
-  
   private history: { event: string; payload: any; timestamp: number }[] = [];
   private readonly MAX_HISTORY = 50;
 
@@ -17226,7 +17422,6 @@ class GameEventBusController {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
-    // Force cast to generic array to satisfy TS compiler index signature
     (this.listeners[event] as Handler<T>[]).push(handler);
 
     return () => {
@@ -17236,13 +17431,11 @@ class GameEventBusController {
   }
 
   public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void {
-    // 1. Log History (Debug only)
     if (process.env.NODE_ENV === 'development') {
         this.history.push({ event, payload, timestamp: Date.now() });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
-    // 2. Dispatch
     const handlers = this.listeners[event];
     if (handlers) {
         handlers.forEach(handler => handler(payload));
@@ -17255,12 +17448,42 @@ class GameEventBusController {
   }
 }
 
-export const GameEventBus = new GameEventBusController();
+/**
+ * STATIC FACADE (Compatibility Adapter)
+ * Routes calls to the ServiceLocator's registered EventService.
+ */
+class GameEventBusFacade {
+  private get service(): IGameEventService {
+    try {
+        return ServiceLocator.getGameEventBus();
+    } catch {
+        // Lazy-load if accessed before Engine Boot
+        const impl = new GameEventService();
+        ServiceLocator.register('GameEventService', impl);
+        return impl;
+    }
+  }
+
+  public subscribe<T extends GameEvents>(event: T, handler: Handler<T>) { 
+      return this.service.subscribe(event, handler); 
+  }
+  
+  public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]) { 
+      this.service.emit(event, payload); 
+  }
+  
+  public clear() { this.service.clear(); }
+}
+
+export const GameEventBus = new GameEventBusFacade();
 
 
 =====================================
 FILE: ./src/engine/signals/FastEventBus.ts
 =====================================
+import { IFastEventService } from '@/engine/interfaces';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+
 const BUFFER_SIZE = 2048; 
 const MASK = BUFFER_SIZE - 1;
 const STRIDE = 5; 
@@ -17272,7 +17495,6 @@ export const FastEvents = {
 } as const;
 
 export const FX_IDS: Record<string, number> = {
-  // VISUALS
   'EXPLOSION_PURPLE': 1,
   'EXPLOSION_YELLOW': 2,
   'EXPLOSION_RED': 3,
@@ -17284,13 +17506,9 @@ export const FX_IDS: Record<string, number> = {
   'REBOOT_HEAL': 9,
   'PURGE_BLAST': 10,
   'ENGINE_FLARE': 11,
-  
-  // NEW DIRECTIONAL VARIANTS
   'EXPLOSION_PURPLE_DIR': 12,
   'EXPLOSION_YELLOW_DIR': 13,
   'EXPLOSION_RED_DIR': 14,
-  
-  // AUDIO
   'FX_PLAYER_FIRE': 50,
   'FX_IMPACT_HEAVY': 51,
   'FX_IMPACT_LIGHT': 52
@@ -17301,7 +17519,7 @@ export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
   return acc;
 }, {} as Record<number, string>);
 
-class FastEventBusController {
+export class FastEventService implements IFastEventService {
   private buffer = new Float32Array(BUFFER_SIZE * STRIDE);
   private writeCursor = 0;
 
@@ -17330,7 +17548,28 @@ class FastEventBusController {
   public getCursor() { return this.writeCursor; }
 }
 
-export const FastEventBus = new FastEventBusController();
+/**
+ * STATIC FACADE (Compatibility Adapter)
+ */
+class FastEventBusFacade {
+  private get service(): IFastEventService {
+    try {
+        return ServiceLocator.getFastEventBus();
+    } catch {
+        const impl = new FastEventService();
+        ServiceLocator.register('FastEventService', impl);
+        return impl;
+    }
+  }
+
+  public emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number) { 
+      this.service.emit(eventId, a1, a2, a3, a4); 
+  }
+  public readEvents(cursor: number, handler: any) { return this.service.readEvents(cursor, handler); }
+  public getCursor() { return this.service.getCursor(); }
+}
+
+export const FastEventBus = new FastEventBusFacade();
 
 
 =====================================
@@ -17547,6 +17786,57 @@ FILE: ./src/engine/ecs/Constants.ts
 export const MAX_ENTITIES = 10000; // Cap for static memory allocation
 export const SPATIAL_GRID_SIZE = 4096; // Power of 2 for bitwise masking
 export const SPATIAL_CELL_SIZE = 4; // World Units
+
+
+=====================================
+FILE: ./src/engine/ecs/ComponentRegistry.ts
+=====================================
+import { Component } from './Component';
+import { ComponentType } from './ComponentType';
+import { ComponentPoolManager } from './ComponentPoolManager';
+
+type ComponentFactory = (data: any) => Component;
+type ComponentReset = (component: Component, data: any) => void;
+
+class ComponentRegistryController {
+  private factories = new Map<string, ComponentFactory>();
+  private resets = new Map<string, ComponentReset>();
+
+  public register<T extends Component>(
+      type: ComponentType, 
+      factory: () => T, 
+      reset: (c: T, data: any) => void
+  ) {
+      this.factories.set(type, (data) => {
+          const comp = factory();
+          // Initial hydration
+          reset(comp, data); 
+          return comp;
+      });
+      this.resets.set(type, (c, data) => reset(c as T, data));
+  }
+
+  public build(type: ComponentType, data: any): Component {
+      const resetFn = this.resets.get(type);
+      const factoryFn = this.factories.get(type);
+
+      if (!resetFn || !factoryFn) {
+          throw new Error(`[ComponentRegistry] Unknown component type: ${type}`);
+      }
+
+      // Try Pool
+      const pooled = ComponentPoolManager.acquire(type);
+      if (pooled) {
+          resetFn(pooled, data);
+          return pooled;
+      }
+
+      // Create New
+      return factoryFn(data);
+  }
+}
+
+export const ComponentRegistry = new ComponentRegistryController();
 
 
 =====================================
@@ -18145,103 +18435,11 @@ export const domRectToWorldRect = (rect: { x: number, y: number, width: number, 
 
 
 =====================================
-FILE: ./src/engine/audio/AudioUtils.ts
-=====================================
-import { MouseEvent as ReactMouseEvent } from 'react';
-
-/**
- * Calculates stereo pan value (-1.0 to 1.0) based on mouse X position.
- * Handles both React Synthetic Events and Native DOM Events.
- */
-export const getPan = (e: ReactMouseEvent | MouseEvent | TouchEvent): number => {
-  if (typeof window === 'undefined') return 0;
-  
-  let clientX = 0;
-  
-  if ('touches' in e && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-  } else if ('clientX' in e) {
-      clientX = (e as MouseEvent).clientX;
-  } else {
-      return 0;
-  }
-
-  const width = window.innerWidth;
-  if (width === 0) return 0;
-
-  // Normalize: 0 to 1
-  const normalized = clientX / width;
-  
-  // Map: -1 to 1
-  const pan = (normalized * 2) - 1;
-  
-  // Clamp for safety
-  return Math.max(-1, Math.min(1, pan));
-};
-
-
-=====================================
-FILE: ./src/engine/audio/AudioMath.ts
-=====================================
-/**
- * AUDIO MATH LIBRARY
- */
-
-export const getAmbienceFilterHz = (val: number): number => {
-  return 300 * Math.pow(10, (val - 0.5) * 2);
-};
-
-export const getAmbiencePanFreq = (val: number): number => {
-  return 0.05 * Math.pow(20, (val - 0.5) * 2);
-};
-
-export const getAmbienceModFreq = (val: number): number => {
-  return 0.2 * Math.pow(30, (val - 0.5) * 2);
-};
-
-export const getAmbienceModDepth = (val: number): number => {
-  return 10 * Math.pow(20, (val - 0.5) * 2);
-};
-
-export const getAmbienceStereoGain = (val: number): number => {
-  return Math.pow(val, 3) * 0.8;
-};
-
-export const getAmbienceDistortion = (val: number): number => {
-  return val * 400;
-};
-
-/**
- * Generates a synthetic impulse response for reverb.
- * Creates a "Metallic/Digital" decay sound.
- */
-export const generateImpulseResponse = (ctx: AudioContext, duration: number = 2.0, decay: number = 2.0, reverse: boolean = false): AudioBuffer => {
-  const sampleRate = ctx.sampleRate;
-  const length = sampleRate * duration;
-  const impulse = ctx.createBuffer(2, length, sampleRate);
-  
-  const left = impulse.getChannelData(0);
-  const right = impulse.getChannelData(1);
-
-  for (let i = 0; i < length; i++) {
-    const n = reverse ? length - i : i;
-    // Exponential decay
-    const e = Math.pow(1 - n / length, decay);
-    
-    // Noise burst
-    left[i] = (Math.random() * 2 - 1) * e;
-    right[i] = (Math.random() * 2 - 1) * e;
-  }
-
-  return impulse;
-};
-
-
-=====================================
-FILE: ./src/engine/audio/AudioSystem.ts
+FILE: ./src/engine/audio/AudioService.ts
 =====================================
 import { useStore } from '@/sys/state/global/useStore';
 import { AUDIO_CONFIG } from '@/sys/config/AudioConfig';
+import { IAudioService } from '@/engine/interfaces';
 
 // Modules
 import { AudioContextManager } from './modules/AudioContextManager';
@@ -18249,7 +18447,7 @@ import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
 
-class AudioSystemController {
+export class AudioServiceImpl implements IAudioService {
   private ctxManager = new AudioContextManager();
   private mixer = new AudioMixer(this.ctxManager);
   private bank = new SoundBank();
@@ -18258,7 +18456,6 @@ class AudioSystemController {
   private hasInteracted = false; 
   
   private musicElement: HTMLAudioElement | null = null;
-  
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceKey: string | null = null;
 
@@ -18277,7 +18474,7 @@ class AudioSystemController {
     this.setupGlobalInteraction();
 
     this.isReady = true;
-    console.log('[AudioSystem] Modules Initialized & Ready.');
+    console.log('[AudioService] Modules Initialized & Ready.');
   }
 
   private async generateAllSounds() {
@@ -18412,11 +18609,19 @@ class AudioSystemController {
           this.currentAmbienceNode = null;
           this.currentAmbienceKey = null;
       }
-      
-      // Note: Transient SFX nodes stop themselves naturally.
   }
 
-  // Aliases
+  // --- COMPATIBILITY / HELPERS ---
+  
+  public playMusic(key: string) {
+      // Legacy compat, for now just calls startMusic if it's the main track
+      this.startMusic();
+  }
+  
+  public setVolume(volume: number) {
+      // Legacy compat, does nothing as we use updateVolumes() now
+  }
+
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 
@@ -18424,7 +18629,147 @@ class AudioSystemController {
   public playRebootZap() { this.playSound('loop_reboot'); }
 }
 
-export const AudioSystem = new AudioSystemController();
+
+=====================================
+FILE: ./src/engine/audio/AudioUtils.ts
+=====================================
+import { MouseEvent as ReactMouseEvent } from 'react';
+
+/**
+ * Calculates stereo pan value (-1.0 to 1.0) based on mouse X position.
+ * Handles both React Synthetic Events and Native DOM Events.
+ */
+export const getPan = (e: ReactMouseEvent | MouseEvent | TouchEvent): number => {
+  if (typeof window === 'undefined') return 0;
+  
+  let clientX = 0;
+  
+  if ('touches' in e && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+  } else if ('clientX' in e) {
+      clientX = (e as MouseEvent).clientX;
+  } else {
+      return 0;
+  }
+
+  const width = window.innerWidth;
+  if (width === 0) return 0;
+
+  // Normalize: 0 to 1
+  const normalized = clientX / width;
+  
+  // Map: -1 to 1
+  const pan = (normalized * 2) - 1;
+  
+  // Clamp for safety
+  return Math.max(-1, Math.min(1, pan));
+};
+
+
+=====================================
+FILE: ./src/engine/audio/AudioMath.ts
+=====================================
+/**
+ * AUDIO MATH LIBRARY
+ */
+
+export const getAmbienceFilterHz = (val: number): number => {
+  return 300 * Math.pow(10, (val - 0.5) * 2);
+};
+
+export const getAmbiencePanFreq = (val: number): number => {
+  return 0.05 * Math.pow(20, (val - 0.5) * 2);
+};
+
+export const getAmbienceModFreq = (val: number): number => {
+  return 0.2 * Math.pow(30, (val - 0.5) * 2);
+};
+
+export const getAmbienceModDepth = (val: number): number => {
+  return 10 * Math.pow(20, (val - 0.5) * 2);
+};
+
+export const getAmbienceStereoGain = (val: number): number => {
+  return Math.pow(val, 3) * 0.8;
+};
+
+export const getAmbienceDistortion = (val: number): number => {
+  return val * 400;
+};
+
+/**
+ * Generates a synthetic impulse response for reverb.
+ * Creates a "Metallic/Digital" decay sound.
+ */
+export const generateImpulseResponse = (ctx: AudioContext, duration: number = 2.0, decay: number = 2.0, reverse: boolean = false): AudioBuffer => {
+  const sampleRate = ctx.sampleRate;
+  const length = sampleRate * duration;
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+  
+  const left = impulse.getChannelData(0);
+  const right = impulse.getChannelData(1);
+
+  for (let i = 0; i < length; i++) {
+    const n = reverse ? length - i : i;
+    // Exponential decay
+    const e = Math.pow(1 - n / length, decay);
+    
+    // Noise burst
+    left[i] = (Math.random() * 2 - 1) * e;
+    right[i] = (Math.random() * 2 - 1) * e;
+  }
+
+  return impulse;
+};
+
+
+=====================================
+FILE: ./src/engine/audio/AudioSystem.ts
+=====================================
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+import { IAudioService } from '@/engine/interfaces';
+import { AudioServiceImpl } from './AudioService';
+
+/**
+ * STATIC FACADE FOR AUDIO SERVICE
+ * Routes calls to the registered IAudioService.
+ * Auto-registers a default implementation if none exists.
+ */
+class AudioSystemFacade implements IAudioService {
+  
+  private get service(): IAudioService {
+    try {
+      return ServiceLocator.getAudioService();
+    } catch (e) {
+      // Lazy Initialization: If not found, create and register it globally
+      const impl = new AudioServiceImpl();
+      ServiceLocator.register('AudioService', impl);
+      return impl;
+    }
+  }
+
+  public async init() { return this.service.init(); }
+  public startMusic() { this.service.startMusic(); }
+  public stopAll() { this.service.stopAll(); }
+  public updateVolumes() { this.service.updateVolumes(); }
+  
+  public playSound(key: string, pan?: number) { this.service.playSound(key, pan); }
+  public playAmbience(key: string) { this.service.playAmbience(key); }
+  public playMusic(key: string) { this.service.playMusic(key); }
+  
+  public setVolume(volume: number) { this.service.setVolume(volume); }
+  public duckMusic(intensity: number, duration: number) { this.service.duckMusic(intensity, duration); }
+  public getFrequencyData(array: Uint8Array) { this.service.getFrequencyData(array); }
+  
+  // Helpers
+  public playClick(pan?: number) { this.service.playClick(pan); }
+  public playHover(pan?: number) { this.service.playHover(pan); }
+  public playBootSequence() { this.service.playBootSequence(); }
+  public playDrillSound() { this.service.playDrillSound(); }
+  public playRebootZap() { this.service.playRebootZap(); }
+}
+
+export const AudioSystem = new AudioSystemFacade();
 
 
 =====================================
@@ -18465,33 +18810,38 @@ export const useAudioVisualizer = (fftSize: number = 32) => {
 =====================================
 FILE: ./src/engine/audio/AudioDirector.ts
 =====================================
-import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, IServiceLocator, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from './AudioSystem';
-import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
   private readCursor = 0;
   private panelSystem!: IPanelSystem;
+  private events!: IGameEventService;
+  private fastEvents!: IFastEventService;
+  private audio!: IAudioService;
   
   setup(locator: IServiceLocator): void {
     this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.readCursor = FastEventBus.getCursor();
+    this.events = locator.getGameEventBus();
+    this.fastEvents = locator.getFastEventBus();
+    this.audio = locator.getAudioService();
+    
+    this.readCursor = this.fastEvents.getCursor();
     this.setupEventListeners();
   }
 
   update(delta: number, time: number): void {
     this.logTimer += delta;
 
-    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
             
             if (this.logTimer > 1.0) {
-                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+                this.events.emit(GameEvents.LOG_DEBUG, { 
                     msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
                     source: 'AudioDirector' 
                 });
@@ -18501,47 +18851,47 @@ export class AudioDirector implements IGameSystem {
             if (key) {
                 const audioKey = key.toLowerCase();
                 const pan = this.calculatePan(a2); 
-                AudioSystem.playSound(audioKey, pan);
+                this.audio.playSound(audioKey, pan);
             }
         }
     });
   }
 
   private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        AudioSystem.playSound('fx_impact_heavy', 0);
-        AudioSystem.duckMusic(0.7, 1.0);
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        this.audio.playSound('fx_impact_heavy', 0);
+        this.audio.duckMusic(0.7, 1.0);
     });
 
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
+    this.events.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
         const pan = this.calculatePan(p.x);
-        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy', pan);
-        else AudioSystem.playSound('fx_impact_light', pan);
+        if (p.type === 'kamikaze') this.audio.playSound('fx_impact_heavy', pan);
+        else this.audio.playSound('fx_impact_light', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const pan = this.getPanelPan(p.id);
-        AudioSystem.playSound('loop_heal', pan);
+        this.audio.playSound('loop_heal', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : this.getPanelPan(p.id);
-        AudioSystem.playSound('fx_reboot_success', pan);
+        this.audio.playSound('fx_reboot_success', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         const pan = this.getPanelPan(p.id);
-        AudioSystem.playSound('fx_impact_heavy', pan); 
-        AudioSystem.duckMusic(0.8, 1.5);
+        this.audio.playSound('fx_impact_heavy', pan); 
+        this.audio.duckMusic(0.8, 1.5);
     });
 
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        AudioSystem.playSound('fx_impact_heavy');
-        AudioSystem.duckMusic(1.0, 3.0);
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.audio.playSound('fx_impact_heavy');
+        this.audio.duckMusic(1.0, 3.0);
     });
 
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => {
-        AudioSystem.playSound('fx_level_up');
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+        this.audio.playSound('fx_level_up');
     });
   }
 
@@ -18996,13 +19346,13 @@ export class StateMachine {
 =====================================
 FILE: ./src/engine/interfaces.ts
 =====================================
-import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
+import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -19011,15 +19361,33 @@ export interface IGameSystem {
 }
 
 export interface IServiceLocator {
-  getSystem<T extends IGameSystem>(id: string): T;
-  registerSystem(id: string, system: IGameSystem): void;
+  register<T>(id: string, instance: T): void;
+  get<T>(id: string): T;
   
+  getGameEventBus(): IGameEventService;
+  getFastEventBus(): IFastEventService;
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
+  
+  // Legacy Adapter
+  getSystem<T extends IGameSystem>(id: string): T;
+  registerSystem(id: string, system: IGameSystem): void;
+}
+
+export interface IGameEventService {
+  subscribe<T extends GameEvents>(event: T, handler: (payload: GameEventPayloads[T]) => void): () => void;
+  emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void;
+  clear(): void;
+}
+
+export interface IFastEventService {
+  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
+  readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number;
+  getCursor(): number;
 }
 
 export interface IEntityRegistry {
@@ -19031,6 +19399,7 @@ export interface IEntityRegistry {
   query(def: QueryDef): Iterable<Entity>;
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
+  updateCache(entity: Entity): void; 
 }
 
 export interface IEntitySpawner {
@@ -19042,9 +19411,21 @@ export interface IEntitySpawner {
 }
 
 export interface IAudioService {
-  playSound(key: string, volume?: number): void;
+  init(): Promise<void>;
+  startMusic(): void;
+  stopAll(): void;
+  updateVolumes(): void;
+  playSound(key: string, pan?: number): void;
+  playAmbience(key: string): void;
   playMusic(key: string): void;
   setVolume(volume: number): void;
+  duckMusic(intensity: number, duration: number): void;
+  getFrequencyData(array: Uint8Array): void;
+  playClick(pan?: number): void;
+  playHover(pan?: number): void;
+  playBootSequence(): void;
+  playDrillSound(): void;
+  playRebootZap(): void;
 }
 
 export interface IInputService {

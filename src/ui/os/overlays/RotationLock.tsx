@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Smartphone, RotateCcw } from 'lucide-react';
-import { useStore } from '@/sys/state/global/useStore';
+import { useStore } from '@/game/state/global/useStore';
 
 export const RotationLock = () => {
   const { bootState } = useStore();

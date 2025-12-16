@@ -1,0 +1,92 @@
+import { IServiceLocator, IPanelSystem } from '@/core/interfaces';
+import { GameEventBus } from '@/core/signals/GameEventBus';
+import { GameEvents } from '@/core/signals/GameEvents';
+import { AudioSystem } from '@/core/audio/AudioSystem';
+import { WorldRect } from '@/core/math/ViewportHelper';
+
+// Services (We still use singleton services for DOM/Structure internals, 
+// but access to them is now strictly gated through this System instance)
+import { DOMSpatialService } from '@/game/services/DOMSpatialService';
+import { StructureHealthService } from '@/game/services/StructureHealthService';
+
+export class PanelRegistrySystem implements IPanelSystem {
+  
+  public get systemIntegrity() {
+      return StructureHealthService.systemIntegrity;
+  }
+
+  setup(locator: IServiceLocator): void {
+    StructureHealthService.reset();
+    DOMSpatialService.refreshAll();
+    
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'RESTORE') {
+            const restoredCount = StructureHealthService.restoreAll();
+            
+            if (restoredCount > 0) {
+                GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
+                AudioSystem.playSound('fx_reboot_success'); 
+            }
+        }
+    });
+  }
+
+  update(delta: number, time: number): void {
+  }
+
+  teardown(): void {}
+
+  public register(id: string, element: HTMLElement) {
+      DOMSpatialService.register(id, element);
+      StructureHealthService.register(id);
+  }
+
+  public unregister(id: string) {
+      DOMSpatialService.unregister(id);
+      StructureHealthService.unregister(id);
+  }
+
+  public refreshSingle(id: string) {
+      DOMSpatialService.refreshSingle(id);
+  }
+
+  public refreshAll() {
+      DOMSpatialService.refreshAll();
+  }
+
+  public damagePanel(id: string, amount: number) {
+      StructureHealthService.damage(id, amount);
+  }
+
+  public healPanel(id: string, amount: number, sourceX?: number) {
+      StructureHealthService.heal(id, amount, sourceX);
+  }
+  
+  public decayPanel(id: string, amount: number) {
+      StructureHealthService.decay(id, amount);
+  }
+
+  public destroyAll() {
+      StructureHealthService.destroyAll();
+  }
+
+  public getPanelRect(id: string): WorldRect | undefined {
+      return DOMSpatialService.getRect(id);
+  }
+
+  public getPanelState(id: string) {
+      return StructureHealthService.getState(id);
+  }
+  
+  public getAllPanels() {
+      const results = [];
+      const rects = DOMSpatialService.getAllRects();
+      const states = StructureHealthService.getAllStates();
+      
+      for(const [id, rect] of rects) {
+          const state = states.get(id) || { health: 0, isDestroyed: true };
+          results.push({ ...rect, ...state });
+      }
+      return results;
+  }
+}

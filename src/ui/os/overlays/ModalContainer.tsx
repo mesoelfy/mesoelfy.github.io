@@ -1,5 +1,5 @@
-import { useStore } from '@/sys/state/global/useStore';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useStore } from '@/game/state/global/useStore';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 

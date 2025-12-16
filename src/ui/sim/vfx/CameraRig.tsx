@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { ShakeSystem } from '@/sys/systems/ShakeSystem';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { ShakeSystem } from '@/game/systems/ShakeSystem';
 
 export const CameraRig = () => {
   const { camera } = useThree();

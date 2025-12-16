@@ -6,7 +6,7 @@ import { RenderPass } from 'three-stdlib';
 import { UnrealBloomPass } from 'three-stdlib';
 import { AfterimagePass } from 'three-stdlib';
 import { ShaderPass } from 'three-stdlib';
-import { useStore } from '@/sys/state/global/useStore';
+import { useStore } from '@/game/state/global/useStore';
 
 // Register external passes
 extend({ RenderPass, UnrealBloomPass, AfterimagePass, ShaderPass });

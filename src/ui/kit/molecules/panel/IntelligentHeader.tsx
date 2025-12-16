@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from '@/sys/state/game/useGameStore';
+import { useGameStore } from '@/game/state/game/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { AudioSystem } from '@/core/audio/AudioSystem';
 
 interface IntelligentHeaderProps {
   title: string;

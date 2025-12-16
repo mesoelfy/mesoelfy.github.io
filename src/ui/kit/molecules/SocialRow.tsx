@@ -1,8 +1,8 @@
 import { Twitter, Youtube, Github, Video, Crosshair, Image as ImageIcon, AlertTriangle } from 'lucide-react';
-import socials from '@/sys/config/static/socials.json';
+import socials from '@/game/config/static/socials.json';
 import { useAudio } from '@/ui/hooks/useAudio';
-import { getPan } from '@/engine/audio/AudioUtils';
-import { useGameStore } from '@/sys/state/game/useGameStore';
+import { getPan } from '@/core/audio/AudioUtils';
+import { useGameStore } from '@/game/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 const IconMap: Record<string, any> = {

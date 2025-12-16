@@ -2,10 +2,10 @@ import { Grid } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/sys/services/ServiceLocator';
-import { Tag } from '@/engine/ecs/types';
-import { RenderData } from '@/sys/data/RenderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { Tag } from '@/core/ecs/types';
+import { RenderData } from '@/game/data/RenderData';
+import { ComponentType } from '@/core/ecs/ComponentType';
 
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);
