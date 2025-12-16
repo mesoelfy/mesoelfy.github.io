@@ -75,11 +75,8 @@ export class PlayerSystem implements IGameSystem {
   teardown(): void {}
 
   private setupListeners() {
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-      this.gameSystem.addScore(1);
-      this.gameSystem.addXp(10);
-    });
-
+    // REMOVED: Scoring logic. Handled by ProgressionSystem.
+    
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') {
             this.triggerPurge();

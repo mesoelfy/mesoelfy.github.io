@@ -5,7 +5,9 @@ import {
   IInputService, 
   IEntityRegistry, 
   IEntitySpawner, 
-  IParticleSystem 
+  IParticleSystem,
+  IGameEventService,
+  IFastEventService
 } from '@/engine/interfaces';
 import { ConfigService } from '@/sys/services/ConfigService';
 
@@ -32,46 +34,22 @@ class ServiceLocatorImpl implements IServiceLocator {
     ConfigService.reset();
   }
 
-  public registerSystem(id: string, system: IGameSystem): void {
-    this.register(id, system);
-  }
+  public getGameEventBus(): IGameEventService { return this.get<IGameEventService>('GameEventService'); }
+  public getFastEventBus(): IFastEventService { return this.get<IFastEventService>('FastEventService'); }
+  
+  public getAudioService(): IAudioService { return this.get<IAudioService>('AudioService'); }
+  public getInputService(): IInputService { return this.get<IInputService>('InputSystem'); }
+  public getParticleSystem(): IParticleSystem { return this.get<IParticleSystem>('ParticleSystem'); }
+  
+  public getRegistry(): IEntityRegistry { return this.get<IEntityRegistry>('EntityRegistry'); }
+  public getSpawner(): IEntitySpawner { return this.get<IEntitySpawner>('EntitySpawner'); }
+  public getConfigService() { return ConfigService; }
 
-  public getSystem<T extends IGameSystem>(id: string): T {
-    return this.get<T>(id);
-  }
-
-  public registerRegistry(registry: IEntityRegistry) {
-    this.register('EntityRegistry', registry);
-  }
-
-  public getRegistry(): IEntityRegistry {
-    return this.get<IEntityRegistry>('EntityRegistry');
-  }
-
-  public registerSpawner(spawner: IEntitySpawner) {
-    this.register('EntitySpawner', spawner);
-  }
-
-  public getSpawner(): IEntitySpawner {
-    return this.get<IEntitySpawner>('EntitySpawner');
-  }
-
-  public getInputService(): IInputService {
-    return this.get<IInputService>('InputSystem');
-  }
-
-  public getParticleSystem(): IParticleSystem {
-    return this.get<IParticleSystem>('ParticleSystem');
-  }
-
-  public getAudioService(): IAudioService {
-    // Phase 2 Update: Return the registered AudioService
-    return this.get<IAudioService>('AudioService');
-  }
-
-  public getConfigService() {
-    return ConfigService;
-  }
+  // Legacy Helpers
+  public registerSystem(id: string, system: IGameSystem) { this.register(id, system); }
+  public getSystem<T extends IGameSystem>(id: string): T { return this.get<T>(id); }
+  public registerRegistry(r: IEntityRegistry) { this.register('EntityRegistry', r); }
+  public registerSpawner(s: IEntitySpawner) { this.register('EntitySpawner', s); }
 }
 
 export const ServiceLocator = new ServiceLocatorImpl();

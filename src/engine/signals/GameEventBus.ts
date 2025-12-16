@@ -1,11 +1,11 @@
 import { GameEvents, GameEventPayloads } from './GameEvents';
+import { IGameEventService } from '@/engine/interfaces';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
 
 type Handler<T extends GameEvents> = (payload: GameEventPayloads[T]) => void;
 
-class GameEventBusController {
-  // Use a mapped type for strict safety
+export class GameEventService implements IGameEventService {
   private listeners: { [K in GameEvents]?: Handler<K>[] } = {};
-  
   private history: { event: string; payload: any; timestamp: number }[] = [];
   private readonly MAX_HISTORY = 50;
 
@@ -13,7 +13,6 @@ class GameEventBusController {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
-    // Force cast to generic array to satisfy TS compiler index signature
     (this.listeners[event] as Handler<T>[]).push(handler);
 
     return () => {
@@ -23,13 +22,11 @@ class GameEventBusController {
   }
 
   public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void {
-    // 1. Log History (Debug only)
     if (process.env.NODE_ENV === 'development') {
         this.history.push({ event, payload, timestamp: Date.now() });
         if (this.history.length > this.MAX_HISTORY) this.history.shift();
     }
 
-    // 2. Dispatch
     const handlers = this.listeners[event];
     if (handlers) {
         handlers.forEach(handler => handler(payload));
@@ -42,4 +39,31 @@ class GameEventBusController {
   }
 }
 
-export const GameEventBus = new GameEventBusController();
+/**
+ * STATIC FACADE (Compatibility Adapter)
+ * Routes calls to the ServiceLocator's registered EventService.
+ */
+class GameEventBusFacade {
+  private get service(): IGameEventService {
+    try {
+        return ServiceLocator.getGameEventBus();
+    } catch {
+        // Lazy-load if accessed before Engine Boot
+        const impl = new GameEventService();
+        ServiceLocator.register('GameEventService', impl);
+        return impl;
+    }
+  }
+
+  public subscribe<T extends GameEvents>(event: T, handler: Handler<T>) { 
+      return this.service.subscribe(event, handler); 
+  }
+  
+  public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]) { 
+      this.service.emit(event, payload); 
+  }
+  
+  public clear() { this.service.clear(); }
+}
+
+export const GameEventBus = new GameEventBusFacade();

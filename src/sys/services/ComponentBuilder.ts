@@ -1,4 +1,4 @@
-import { ComponentPoolManager } from '@/engine/ecs/ComponentPoolManager';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/sys/data/TransformData';
 import { MotionData } from '@/sys/data/MotionData';
@@ -12,66 +12,75 @@ import { TargetData } from '@/sys/data/TargetData';
 import { OrbitalData } from '@/sys/data/OrbitalData';
 import { RenderData } from '@/sys/data/RenderData';
 import { ProjectileData } from '@/sys/data/ProjectileData';
-import { Component } from '@/engine/ecs/Component';
 
-type ComponentFactory = (data: any) => Component;
+// --- REGISTRATION ---
+const reg = ComponentRegistry;
 
-const get = <T extends Component>(type: ComponentType, factory: () => T, reset: (c: T) => void): T => {
-    const pooled = ComponentPoolManager.acquire<T>(type);
-    if (pooled) {
-        reset(pooled);
-        return pooled;
+reg.register(ComponentType.Transform, 
+    () => new TransformData(), 
+    (c, d) => c.reset(d.x, d.y, d.rotation, d.scale)
+);
+
+reg.register(ComponentType.Motion, 
+    () => new MotionData(), 
+    (c, d) => c.reset(d.vx, d.vy, d.friction, d.angularVelocity)
+);
+
+reg.register(ComponentType.Health, 
+    () => new HealthData(100), 
+    (c, d) => c.reset(d.max, d.invincibilityTime)
+);
+
+reg.register(ComponentType.Identity, 
+    () => new IdentityData(''), 
+    (c, d) => c.reset(d.variant)
+);
+
+reg.register(ComponentType.Lifetime, 
+    () => new LifetimeData(0, 0), 
+    (c, d) => c.reset(d.remaining, d.total || d.remaining)
+);
+
+reg.register(ComponentType.Combat, 
+    () => new CombatData(0), 
+    (c, d) => c.reset(d.damage, d.cooldown, d.range)
+);
+
+reg.register(ComponentType.State, 
+    () => new AIStateData(), 
+    (c, d) => c.reset(d.current, d.timers, d.data)
+);
+
+reg.register(ComponentType.Collider, 
+    () => new ColliderData(0, 0, 0), 
+    (c, d) => c.reset(d.radius, d.layer, d.mask)
+);
+
+reg.register(ComponentType.Target, 
+    () => new TargetData(), 
+    (c, d) => c.reset(d.id, d.type, d.x, d.y, d.locked)
+);
+
+reg.register(ComponentType.Orbital, 
+    () => new OrbitalData(), 
+    (c, d) => c.reset(d.parentId, d.radius, d.speed, d.angle, d.active)
+);
+
+reg.register(ComponentType.Render, 
+    () => new RenderData(), 
+    (c, d) => c.reset(d.visualRotation, d.visualScale, d.r, d.g, d.b, d.opacity)
+);
+
+reg.register(ComponentType.Projectile, 
+    () => new ProjectileData(), 
+    (c, d) => c.reset(d.configId, d.state, d.ownerId)
+);
+
+// --- FACADE ---
+// Export a Proxy that mimics the old { Type: Factory } object structure
+// This allows EntitySpawner to remain unchanged for now.
+export const ComponentBuilder = new Proxy({}, {
+    get: (target, prop) => {
+        return (data: any) => ComponentRegistry.build(prop as ComponentType, data || {});
     }
-    return factory();
-};
-
-export const ComponentBuilder: Record<string, ComponentFactory> = {
-  [ComponentType.Transform]: (data) => get(ComponentType.Transform, 
-      () => new TransformData(data.x, data.y, data.rotation, data.scale),
-      (c) => c.reset(data.x || 0, data.y || 0, data.rotation || 0, data.scale || 1)
-  ),
-  [ComponentType.Motion]: (data) => get(ComponentType.Motion,
-      () => new MotionData(data.vx, data.vy, data.friction, data.angularVelocity),
-      (c) => c.reset(data.vx || 0, data.vy || 0, data.friction || 0, data.angularVelocity || 0)
-  ),
-  [ComponentType.Health]: (data) => get(ComponentType.Health,
-      () => new HealthData(data.max, data.invincibilityTime),
-      (c) => c.reset(data.max, data.invincibilityTime || 0)
-  ),
-  [ComponentType.Identity]: (data) => get(ComponentType.Identity,
-      () => new IdentityData(data.variant),
-      (c) => c.reset(data.variant)
-  ),
-  [ComponentType.Lifetime]: (data) => get(ComponentType.Lifetime,
-      () => new LifetimeData(data.remaining, data.total || data.remaining),
-      (c) => c.reset(data.remaining, data.total || data.remaining)
-  ),
-  [ComponentType.Combat]: (data) => get(ComponentType.Combat,
-      () => new CombatData(data.damage, data.cooldown, data.range),
-      (c) => c.reset(data.damage, data.cooldown || 0, data.range || 0)
-  ),
-  [ComponentType.State]: (data) => get(ComponentType.State,
-      () => new AIStateData(data.current, data.timers, data.data),
-      (c) => c.reset(data.current, data.timers || {}, data.data || {})
-  ),
-  [ComponentType.Collider]: (data) => get(ComponentType.Collider,
-      () => new ColliderData(data.radius, data.layer, data.mask),
-      (c) => c.reset(data.radius, data.layer, data.mask)
-  ),
-  [ComponentType.Target]: (data) => get(ComponentType.Target,
-      () => new TargetData(data.id, data.type, data.x, data.y, data.locked),
-      (c) => c.reset(data.id, data.type, data.x, data.y, data.locked)
-  ),
-  [ComponentType.Orbital]: (data) => get(ComponentType.Orbital,
-      () => new OrbitalData(data.parentId, data.radius, data.speed, data.angle, data.active),
-      (c) => c.reset(data.parentId, data.radius, data.speed, data.angle, data.active)
-  ),
-  [ComponentType.Render]: (data) => get(ComponentType.Render,
-      () => new RenderData(data.visualRotation, data.visualScale, data.r, data.g, data.b, data.opacity),
-      (c) => c.reset(data.visualRotation || 0, data.visualScale || 1.0, data.r ?? 1, data.g ?? 1, data.b ?? 1, data.opacity ?? 1.0)
-  ),
-  [ComponentType.Projectile]: (data) => get(ComponentType.Projectile,
-      () => new ProjectileData(data.configId, data.state, data.ownerId),
-      (c) => c.reset(data.configId || 'PLAYER_STANDARD', data.state || 'FLIGHT', data.ownerId || -1)
-  )
-};
+}) as Record<string, (data: any) => any>;

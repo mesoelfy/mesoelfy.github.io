@@ -1,3 +1,6 @@
+import { IFastEventService } from '@/engine/interfaces';
+import { ServiceLocator } from '@/sys/services/ServiceLocator';
+
 const BUFFER_SIZE = 2048; 
 const MASK = BUFFER_SIZE - 1;
 const STRIDE = 5; 
@@ -9,7 +12,6 @@ export const FastEvents = {
 } as const;
 
 export const FX_IDS: Record<string, number> = {
-  // VISUALS
   'EXPLOSION_PURPLE': 1,
   'EXPLOSION_YELLOW': 2,
   'EXPLOSION_RED': 3,
@@ -21,13 +23,9 @@ export const FX_IDS: Record<string, number> = {
   'REBOOT_HEAL': 9,
   'PURGE_BLAST': 10,
   'ENGINE_FLARE': 11,
-  
-  // NEW DIRECTIONAL VARIANTS
   'EXPLOSION_PURPLE_DIR': 12,
   'EXPLOSION_YELLOW_DIR': 13,
   'EXPLOSION_RED_DIR': 14,
-  
-  // AUDIO
   'FX_PLAYER_FIRE': 50,
   'FX_IMPACT_HEAVY': 51,
   'FX_IMPACT_LIGHT': 52
@@ -38,7 +36,7 @@ export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
   return acc;
 }, {} as Record<number, string>);
 
-class FastEventBusController {
+export class FastEventService implements IFastEventService {
   private buffer = new Float32Array(BUFFER_SIZE * STRIDE);
   private writeCursor = 0;
 
@@ -67,4 +65,25 @@ class FastEventBusController {
   public getCursor() { return this.writeCursor; }
 }
 
-export const FastEventBus = new FastEventBusController();
+/**
+ * STATIC FACADE (Compatibility Adapter)
+ */
+class FastEventBusFacade {
+  private get service(): IFastEventService {
+    try {
+        return ServiceLocator.getFastEventBus();
+    } catch {
+        const impl = new FastEventService();
+        ServiceLocator.register('FastEventService', impl);
+        return impl;
+    }
+  }
+
+  public emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number) { 
+      this.service.emit(eventId, a1, a2, a3, a4); 
+  }
+  public readEvents(cursor: number, handler: any) { return this.service.readEvents(cursor, handler); }
+  public getCursor() { return this.service.getCursor(); }
+}
+
+export const FastEventBus = new FastEventBusFacade();

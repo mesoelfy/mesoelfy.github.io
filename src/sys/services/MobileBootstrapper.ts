@@ -5,6 +5,8 @@ import { EntitySpawner } from '@/sys/services/EntitySpawner';
 import { registerAllBehaviors } from '@/sys/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
+import { GameEventService } from '@/engine/signals/GameEventBus';
+import { FastEventService, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 
 // Systems
 import { TimeSystem } from '@/sys/systems/TimeSystem';
@@ -22,22 +24,25 @@ import { GameStateSystem } from '@/sys/systems/GameStateSystem';
 import { RenderSystem } from '@/sys/systems/RenderSystem';
 import { ProjectileSystem } from '@/sys/systems/ProjectileSystem';
 
-import { IGameSystem, ICombatSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/sys/data/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private registry!: EntityRegistry;
+    private events!: IGameEventService;
+    private fastEvents!: IFastEventService;
+    private audio!: IAudioService;
 
     setup(locator: ServiceLocator) {
         this.registry = locator.getRegistry() as EntityRegistry;
+        this.events = locator.getGameEventBus();
+        this.fastEvents = locator.getFastEventBus();
+        this.audio = locator.getAudioService();
         
-        GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+        this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
             const entity = this.registry.getEntity(p.id);
             if (entity && entity.active) {
                 this.kill(entity);
@@ -53,15 +58,14 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
             const id = FX_IDS['EXPLOSION_PURPLE'];
-            FastEventBus.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
-            AudioSystem.playSound('fx_impact_light');
+            this.fastEvents.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
+            this.audio.playSound('fx_impact_light');
         }
         this.registry.destroyEntity(entity.id);
     }
 }
 
 export const MobileBootstrapper = () => {
-  // No full reset to preserve Audio
   const registry = new EntityRegistry();
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
@@ -69,11 +73,9 @@ export const MobileBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  try {
-      ServiceLocator.getAudioService();
-  } catch {
-      ServiceLocator.register('AudioService', new AudioServiceImpl());
-  }
+  try { ServiceLocator.getAudioService(); } catch { ServiceLocator.register('AudioService', new AudioServiceImpl()); }
+  try { ServiceLocator.getGameEventBus(); } catch { ServiceLocator.register('GameEventService', new GameEventService()); }
+  try { ServiceLocator.getFastEventBus(); } catch { ServiceLocator.register('FastEventService', new FastEventService()); }
 
   registerAllBehaviors();
   registerAllAssets();

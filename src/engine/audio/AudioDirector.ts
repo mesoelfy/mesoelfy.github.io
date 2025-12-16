@@ -1,30 +1,35 @@
-import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, IServiceLocator, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from './AudioSystem';
-import { FastEventBus, FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
   private readCursor = 0;
   private panelSystem!: IPanelSystem;
+  private events!: IGameEventService;
+  private fastEvents!: IFastEventService;
+  private audio!: IAudioService;
   
   setup(locator: IServiceLocator): void {
     this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.readCursor = FastEventBus.getCursor();
+    this.events = locator.getGameEventBus();
+    this.fastEvents = locator.getFastEventBus();
+    this.audio = locator.getAudioService();
+    
+    this.readCursor = this.fastEvents.getCursor();
     this.setupEventListeners();
   }
 
   update(delta: number, time: number): void {
     this.logTimer += delta;
 
-    this.readCursor = FastEventBus.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
             
             if (this.logTimer > 1.0) {
-                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
+                this.events.emit(GameEvents.LOG_DEBUG, { 
                     msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
                     source: 'AudioDirector' 
                 });
@@ -34,47 +39,47 @@ export class AudioDirector implements IGameSystem {
             if (key) {
                 const audioKey = key.toLowerCase();
                 const pan = this.calculatePan(a2); 
-                AudioSystem.playSound(audioKey, pan);
+                this.audio.playSound(audioKey, pan);
             }
         }
     });
   }
 
   private setupEventListeners() {
-    GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        AudioSystem.playSound('fx_impact_heavy', 0);
-        AudioSystem.duckMusic(0.7, 1.0);
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        this.audio.playSound('fx_impact_heavy', 0);
+        this.audio.duckMusic(0.7, 1.0);
     });
 
-    GameEventBus.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
+    this.events.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
         const pan = this.calculatePan(p.x);
-        if (p.type === 'kamikaze') AudioSystem.playSound('fx_impact_heavy', pan);
-        else AudioSystem.playSound('fx_impact_light', pan);
+        if (p.type === 'kamikaze') this.audio.playSound('fx_impact_heavy', pan);
+        else this.audio.playSound('fx_impact_light', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const pan = this.getPanelPan(p.id);
-        AudioSystem.playSound('loop_heal', pan);
+        this.audio.playSound('loop_heal', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : this.getPanelPan(p.id);
-        AudioSystem.playSound('fx_reboot_success', pan);
+        this.audio.playSound('fx_reboot_success', pan);
     });
 
-    GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         const pan = this.getPanelPan(p.id);
-        AudioSystem.playSound('fx_impact_heavy', pan); 
-        AudioSystem.duckMusic(0.8, 1.5);
+        this.audio.playSound('fx_impact_heavy', pan); 
+        this.audio.duckMusic(0.8, 1.5);
     });
 
-    GameEventBus.subscribe(GameEvents.GAME_OVER, () => {
-        AudioSystem.playSound('fx_impact_heavy');
-        AudioSystem.duckMusic(1.0, 3.0);
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.audio.playSound('fx_impact_heavy');
+        this.audio.duckMusic(1.0, 3.0);
     });
 
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, () => {
-        AudioSystem.playSound('fx_level_up');
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+        this.audio.playSound('fx_level_up');
     });
   }
 

@@ -4,6 +4,7 @@ import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
+import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 
 export interface IGameSystem {
   setup(locator: IServiceLocator): void;
@@ -15,15 +16,30 @@ export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
   
-  // Legacy Helpers
-  getSystem<T extends IGameSystem>(id: string): T;
-  registerSystem(id: string, system: IGameSystem): void;
+  getGameEventBus(): IGameEventService;
+  getFastEventBus(): IFastEventService;
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
+  
+  // Legacy Adapter
+  getSystem<T extends IGameSystem>(id: string): T;
+  registerSystem(id: string, system: IGameSystem): void;
+}
+
+export interface IGameEventService {
+  subscribe<T extends GameEvents>(event: T, handler: (payload: GameEventPayloads[T]) => void): () => void;
+  emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void;
+  clear(): void;
+}
+
+export interface IFastEventService {
+  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
+  readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number;
+  getCursor(): number;
 }
 
 export interface IEntityRegistry {
@@ -51,16 +67,12 @@ export interface IAudioService {
   startMusic(): void;
   stopAll(): void;
   updateVolumes(): void;
-  
   playSound(key: string, pan?: number): void;
   playAmbience(key: string): void;
-  playMusic(key: string): void; // Kept for compat, though we use startMusic() mostly
-  
-  setVolume(volume: number): void; // Legacy single setter
+  playMusic(key: string): void;
+  setVolume(volume: number): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
-  
-  // Helpers
   playClick(pan?: number): void;
   playHover(pan?: number): void;
   playBootSequence(): void;
