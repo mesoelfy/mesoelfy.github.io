@@ -646,11 +646,11 @@ After getting in red critical health, MESOELFY_OS health bar retains its glow fr
 
 - player and crusor should turn red briefly when damaged
 
-background motion grid not the right colors. Give codebase from older to fix.
+
 
 should I do this?
     Audio Pipeline: Move Audio definitions to a JSON manifest similar to Archetypes.
 
 
 
-    Is there anywhere else in the codebase I should be using Behavior Trees, (small, reusable blocks/nodes)?
+   

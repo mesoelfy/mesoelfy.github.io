@@ -1,130 +1,54 @@
 import { Entity } from '@/core/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { TransformData } from '@/game/data/TransformData';
-import { AIStateData } from '@/game/data/AIStateData';
-import { TargetData } from '@/game/data/TargetData';
-import { OrbitalData } from '@/game/data/OrbitalData';
-import { RenderData } from '@/game/data/RenderData';
-import { ComponentType } from '@/core/ecs/ComponentType';
+import { Sequence, Parallel, MemSequence } from '@/core/ai/behavior/composites';
+import { Succeeder } from '@/core/ai/behavior/decorators';
+import { Wait } from '@/game/ai/nodes/actions';
+import { SpawnPhase } from '@/game/ai/nodes/logic';
+import { OrbitControl, ChargeMechanic, FireDaemonShot, HasTargetLock } from '@/game/ai/nodes/daemonNodes';
 
-const getPos = (e: Entity) => e.requireComponent<TransformData>(ComponentType.Transform);
-const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.State);
-const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
-const getOrbital = (e: Entity) => e.requireComponent<OrbitalData>(ComponentType.Orbital);
-const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
+let treeRoot: any = null;
 
-// Rotation Smoothing
-const TURN_SPEED = 5.0;
+const getDaemonTree = (config: any) => {
+    if (treeRoot) return treeRoot;
+
+    // --- BEHAVIOR ARCHITECTURE ---
+    // 1. Always Orbit (Parallel)
+    // 2. Logic Loop (MemSequence):
+    //    a. Charge (Squish -> Unsquish handled by Actor reading chargeProgress)
+    //    b. Acquire Target
+    //    c. Fire (Reset chargeProgress -> Squish)
+    
+    const combatCycle = new MemSequence([
+        // Phase 1: Charge Up (2.0s)
+        // This gradually sets AIStateData.data.chargeProgress from 0 to 1
+        new ChargeMechanic(2.0),
+
+        // Phase 2: Wait for Target
+        // If no enemy is near, it stays fully charged (Unsquished)
+        new HasTargetLock(),
+
+        // Phase 3: Attack
+        // Fires projectile at target and resets chargeProgress to 0 immediately
+        new FireDaemonShot(35.0, 20),
+        
+        // Phase 4: Brief Recovery
+        new Wait(0.5)
+    ], 'daemon_cycle');
+
+    treeRoot = new Sequence([
+        new SpawnPhase(1.0),
+        new Parallel([
+            new OrbitControl(true), // Always orbit player
+            combatCycle
+        ])
+    ]);
+
+    return treeRoot;
+};
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    const pos = getPos(e);
-    const state = getState(e);
-    const target = getTarget(e);
-    const orbital = getOrbital(e);
-    const render = getRender(e);
-
-    // --- 1. INITIALIZATION ---
-    if (state.current === 'SPAWN' || state.current === 'IDLE') {
-        state.current = 'ORBIT';
-        state.data.chargeProgress = 0;
-        state.data.lastFireTime = -10.0; // Ready to fire eventually
-    }
-
-    // --- 2. STATE MACHINE ---
-    
-    // >> ORBIT: Passive
-    if (state.current === 'ORBIT') {
-        orbital.active = true;
-        // Start charging immediately
-        state.current = 'CHARGING';
-        state.data.chargeProgress = 0;
-    }
-
-    // >> CHARGING: Accumulate Power
-    else if (state.current === 'CHARGING') {
-        orbital.active = true;
-        // Charge over 1.5 seconds
-        state.data.chargeProgress += ctx.delta / 1.5; 
-        
-        if (state.data.chargeProgress >= 1.0) {
-            state.data.chargeProgress = 1.0;
-            state.current = 'READY';
-            ctx.playSound('ui_optimal', pos.x);
-        }
-    }
-
-    // >> READY: Tracking Target
-    else if (state.current === 'READY') {
-        orbital.active = true;
-        if (target.id === 'ENEMY_LOCKED') {
-            state.current = 'FIRE';
-        }
-    }
-
-    // >> FIRE: Launch
-    else if (state.current === 'FIRE') {
-        orbital.active = false; // Stop moving to stabilize shot
-
-        // Target Vector
-        const dx = target.x - pos.x;
-        const dy = target.y - pos.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const dirX = dist > 0 ? dx/dist : 1;
-        const dirY = dist > 0 ? dy/dist : 0;
-
-        // SPAWN THE PROJECTILE NOW
-        const bullet = ctx.spawnProjectile(
-            pos.x + (dirX * 0.5), 
-            pos.y + (dirY * 0.5), 
-            dirX * 35, 
-            dirY * 35, 
-            20, 
-            'DAEMON_ORB', 
-            e.id as number
-        );
-
-        ctx.spawnFX('IMPACT_WHITE', pos.x, pos.y);
-        ctx.playSound('fx_teleport', pos.x);
-
-        // Record timestamp for Renderer to trigger recoil
-        state.data.lastFireTime = ctx.time;
-        state.data.chargeProgress = 0;
-
-        state.current = 'COOLDOWN';
-        state.timers.action = 0.5; // Short cooldown
-    }
-
-    // >> COOLDOWN: Recover
-    else if (state.current === 'COOLDOWN') {
-        orbital.active = true;
-        state.timers.action -= ctx.delta;
-        if (state.timers.action <= 0) {
-            state.current = 'ORBIT';
-        }
-    }
-
-    // --- 3. AIMING ---
-    let targetAngle = 0;
-    
-    if (state.current === 'FIRE' || state.current === 'READY') {
-        // Face Enemy
-        const dx = target.x - pos.x;
-        const dy = target.y - pos.y;
-        targetAngle = Math.atan2(dy, dx);
-    } else {
-        // Face center (Player) roughly
-        targetAngle = Math.atan2(-pos.y, -pos.x);
-    }
-
-    // Shortest angle interpolation
-    let diff = targetAngle - pos.rotation;
-    while (diff > Math.PI) diff -= Math.PI * 2;
-    while (diff < -Math.PI) diff += Math.PI * 2;
-    
-    pos.rotation += diff * TURN_SPEED * ctx.delta;
-    
-    // Pass spin to renderer via visualRotation
-    render.visualRotation += ctx.delta * 2.0;
+    const tree = getDaemonTree(null);
+    tree.tick(e, ctx);
   }
 };
