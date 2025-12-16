@@ -6,18 +6,9 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/sys/data/TransformData';
 import { AIStateData } from '@/sys/data/AIStateData';
 import { TargetData } from '@/sys/data/TargetData';
-import { RenderData } from '@/sys/data/RenderData';
 import { ConfigService } from '@/sys/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { GAME_THEME } from '@/ui/sim/config/theme';
-import * as THREE from 'three';
-
-// Helpers
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -26,8 +17,6 @@ export class PlayerSystem implements IGameSystem {
   private spawner!: IEntitySpawner;
   private locator!: IServiceLocator;
   private config!: typeof ConfigService;
-  
-  private tempColor = new THREE.Color();
 
   setup(locator: IServiceLocator): void {
     this.locator = locator;
@@ -40,16 +29,15 @@ export class PlayerSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // 1. Get Player
     let playerEntity = null;
     for (const p of this.registry.getByTag(Tag.PLAYER)) {
         playerEntity = p;
         break;
     }
-    
     if (!playerEntity) return;
 
-    // --- VISUAL STATE ---
-    const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+    // 2. Input -> Transform Logic
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const cursor = this.locator.getInputService().getCursor();
 
@@ -58,51 +46,10 @@ export class PlayerSystem implements IGameSystem {
         transform.y = cursor.y;
     }
 
-    if (render) {
-        let targetCol = COL_BASE;
-        
-        // SPIN LOGIC: (+) = CW, (-) = CCW
-        let spinSpeed = 0.02; // IDLE: Slow Clockwise
-        
-        let interactState = 'IDLE';
-        try {
-            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
-            interactState = interact.repairState;
-        } catch {}
-
-        if (this.gameSystem.playerHealth <= 0) {
-            targetCol = COL_DEAD;
-            if (interactState === 'REBOOTING') {
-                targetCol = COL_REBOOT;
-                spinSpeed = -0.3; // REBOOTING (DEAD): CCW
-            } else {
-                spinSpeed = 1.5; // DEAD: Fast CW
-            }
-        } else {
-            if (interactState === 'HEALING') {
-                targetCol = COL_REPAIR;
-                spinSpeed = -0.24; // HEALING: CCW
-            } else if (interactState === 'REBOOTING') {
-                targetCol = COL_REBOOT;
-                spinSpeed = -0.24; // REBOOTING: CCW
-            }
-        }
-
-        this.tempColor.setRGB(render.r, render.g, render.b);
-        this.tempColor.lerp(targetCol, delta * 3.0);
-        render.r = this.tempColor.r;
-        render.g = this.tempColor.g;
-        render.b = this.tempColor.b;
-        
-        // Accumulate rotation
-        render.visualRotation += spinSpeed;
-        
-        render.visualScale = 1.0;
-    }
-
+    // 3. Game Over Check
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // --- LOGIC ---
+    // 4. State Management
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         try {
@@ -113,6 +60,7 @@ export class PlayerSystem implements IGameSystem {
         }
     }
 
+    // 5. Firing Logic
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;

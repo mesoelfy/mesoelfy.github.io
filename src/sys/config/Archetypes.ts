@@ -29,6 +29,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
     tags: [Tag.PLAYER],
     components: [
+      { type: ComponentType.Identity, data: { variant: 'PLAYER' } }, // FIXED: Added Identity
       { type: ComponentType.Transform, data: { x: 0, y: 0, rotation: 0, scale: 1 } },
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
@@ -54,7 +55,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER_PROJECTILE, 
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
       }},
-      // RenderData and ProjectileData are set dynamically by Spawner based on Config
       { type: ComponentType.Render, data: { visualScale: 1.0 } },
       { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } }
     ]
