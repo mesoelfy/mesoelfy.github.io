@@ -1,21 +1,16 @@
-import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class TargetingSystem implements IGameSystem {
-  private registry!: EntityRegistry;
-  private locator!: IServiceLocator;
-  private panelSystem!: IPanelSystem;
   private playerCache: { x: number, y: number } | null = null;
 
-  setup(locator: IServiceLocator): void {
-    this.registry = locator.getRegistry() as EntityRegistry;
-    this.locator = locator;
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-  }
+  constructor(
+    private registry: IEntityRegistry,
+    private panelSystem: IPanelSystem
+  ) {}
 
   update(delta: number, time: number): void {
     this.updatePlayerCache();

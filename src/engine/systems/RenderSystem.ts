@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -8,25 +8,20 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import * as THREE from 'three';
 
-// Helpers
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 
 export class RenderSystem implements IGameSystem {
-  private registry!: IEntityRegistry;
-  private gameSystem!: IGameStateSystem;
-  private locator!: IServiceLocator;
   private tempColor = new THREE.Color();
-  
   private readonly FLASH_DECAY = 5.0; 
 
-  setup(locator: IServiceLocator): void {
-    this.registry = locator.getRegistry();
-    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
-    this.locator = locator;
-    
+  constructor(
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem
+  ) {
     GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
         const entity = this.registry.getEntity(p.id);
         if (entity) {
@@ -43,12 +38,7 @@ export class RenderSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const renderables = this.registry.query({ all: [ComponentType.Render] });
 
-    let interactState = 'IDLE';
-    try {
-        const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
-        interactState = interact.repairState;
-    } catch {}
-
+    const interactState = this.interactionSystem.repairState;
     const isDead = this.gameSystem.playerHealth <= 0;
 
     for (const entity of renderables) {
@@ -59,14 +49,11 @@ export class RenderSystem implements IGameSystem {
         
         if (!render) continue;
 
-        // --- 1. PLAYER VISUALS ---
         const isPlayer = entity.hasTag(Tag.PLAYER) && (!identity || identity.variant === 'PLAYER');
         
         if (isPlayer) {
             this.updatePlayerVisuals(render, delta, interactState, isDead);
         }
-
-        // --- 2. ENEMY/GENERIC FLASH DECAY ---
         else {
             if (render.r > render.baseR || render.g > render.baseG || render.b > render.baseB) {
                 render.r = this.lerp(render.r, render.baseR, delta * this.FLASH_DECAY);

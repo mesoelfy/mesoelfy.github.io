@@ -1,11 +1,6 @@
-import { IServiceLocator, IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { WorldRect } from '@/engine/math/ViewportHelper';
-
-// Services (We still use singleton services for DOM/Structure internals, 
-// but access to them is now strictly gated through this System instance)
 import { DOMSpatialService } from '@/engine/services/DOMSpatialService';
 import { StructureHealthService } from '@/engine/services/StructureHealthService';
 
@@ -15,17 +10,20 @@ export class PanelRegistrySystem implements IPanelSystem {
       return StructureHealthService.systemIntegrity;
   }
 
-  setup(locator: IServiceLocator): void {
+  constructor(
+    private events: IGameEventService,
+    private audio: IAudioService
+  ) {
     StructureHealthService.reset();
     DOMSpatialService.refreshAll();
     
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = StructureHealthService.restoreAll();
             
             if (restoredCount > 0) {
-                GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
-                AudioSystem.playSound('fx_reboot_success'); 
+                this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
+                this.audio.playSound('fx_reboot_success'); 
             }
         }
     });
@@ -46,13 +44,8 @@ export class PanelRegistrySystem implements IPanelSystem {
       StructureHealthService.unregister(id);
   }
 
-  public refreshSingle(id: string) {
-      DOMSpatialService.refreshSingle(id);
-  }
-
-  public refreshAll() {
-      DOMSpatialService.refreshAll();
-  }
+  public refreshAll() { DOMSpatialService.refreshAll(); }
+  public refreshSingle(id: string) { DOMSpatialService.refreshSingle(id); }
 
   public damagePanel(id: string, amount: number) {
       StructureHealthService.damage(id, amount);
@@ -66,9 +59,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       StructureHealthService.decay(id, amount);
   }
 
-  public destroyAll() {
-      StructureHealthService.destroyAll();
-  }
+  public destroyAll() { StructureHealthService.destroyAll(); }
 
   public getPanelRect(id: string): WorldRect | undefined {
       return DOMSpatialService.getRect(id);

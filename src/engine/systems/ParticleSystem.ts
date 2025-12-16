@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IParticleSystem } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
 import * as THREE from 'three';
 
 const MAX_PARTICLES = 2000;
@@ -14,7 +14,7 @@ export class ParticleSystem implements IParticleSystem {
   public life = new Float32Array(MAX_PARTICLES);
   public maxLife = new Float32Array(MAX_PARTICLES);
   public size = new Float32Array(MAX_PARTICLES);
-  public shape = new Float32Array(MAX_PARTICLES); // NEW: 0=Square, 1=Teardrop
+  public shape = new Float32Array(MAX_PARTICLES); // 0=Square, 1=Teardrop
   
   public r = new Float32Array(MAX_PARTICLES);
   public g = new Float32Array(MAX_PARTICLES);
@@ -23,7 +23,7 @@ export class ParticleSystem implements IParticleSystem {
   // Helper for hex parsing
   private tempColor = new THREE.Color();
 
-  setup(locator: IServiceLocator): void {
+  constructor() {
     this.count = 0;
   }
 

@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IGameStateSystem, IPanelSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IGameStateSystem, IPanelSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/engine/state/global/useStore'; 
 import { RenderData } from '@/engine/ecs/components/RenderData';
@@ -6,37 +6,27 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
-// Sub-Systems
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
 
-// COLOR PALETTE (NEON BOOSTED)
-const COL_SAFE = new THREE.Color("#00FF41"); // Matrix Green
-const COL_WARN = new THREE.Color("#FFD700"); // Gold/Amber
-const COL_CRIT = new THREE.Color("#FF003C"); // Critical Red
-const COL_SBX  = new THREE.Color("#00FFFF"); // Cyan
+const COL_SAFE = new THREE.Color("#00FF41");
+const COL_WARN = new THREE.Color("#FFD700");
+const COL_CRIT = new THREE.Color("#FF003C");
+const COL_SBX  = new THREE.Color("#00FFFF");
 
 export class GameStateSystem implements IGameStateSystem {
-  private healthSys!: HealthSystem;
-  private progSys!: ProgressionSystem;
-  private panelSystem!: IPanelSystem;
-  private registry!: IEntityRegistry;
-  private events!: IGameEventService;
-  private audio!: IAudioService;
-  
   private heartbeatTimer: number = 0;
   private targetColor = new THREE.Color();
   private currentColor = new THREE.Color();
 
-  setup(locator: IServiceLocator): void {
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.registry = locator.getRegistry();
-    this.events = locator.getGameEventBus();
-    this.audio = locator.getAudioService();
-    
-    this.healthSys = locator.get<HealthSystem>('HealthSystem');
-    this.progSys = locator.get<ProgressionSystem>('ProgressionSystem');
-    
+  constructor(
+    private healthSys: HealthSystem,
+    private progSys: ProgressionSystem,
+    private panelSystem: IPanelSystem,
+    private registry: IEntityRegistry,
+    private events: IGameEventService,
+    private audio: IAudioService
+  ) {
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
             this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.2);
@@ -51,7 +41,6 @@ export class GameStateSystem implements IGameStateSystem {
 
       const integrity = this.panelSystem.systemIntegrity;
       
-      // Heartbeat
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -80,7 +69,6 @@ export class GameStateSystem implements IGameStateSystem {
               else if (integrity < 60) this.targetColor.copy(COL_WARN);
               else this.targetColor.copy(COL_SAFE);
 
-              // Smooth Interpolation
               this.currentColor.setRGB(render.r, render.g, render.b);
               this.currentColor.lerp(this.targetColor, delta * 2.0);
               
@@ -88,7 +76,6 @@ export class GameStateSystem implements IGameStateSystem {
               render.g = this.currentColor.g;
               render.b = this.currentColor.b;
               
-              // Scrolling
               render.visualRotation += 0.5 * delta; 
           }
       }
@@ -99,7 +86,6 @@ export class GameStateSystem implements IGameStateSystem {
       this.progSys.reset();
   }
 
-  // Proxies
   get playerHealth() { return this.healthSys.playerHealth; }
   get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
   get playerRebootProgress() { return this.healthSys.playerRebootProgress; }

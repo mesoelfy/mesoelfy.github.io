@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
@@ -9,24 +9,20 @@ export class HealthSystem implements IGameSystem {
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
 
-  private events!: IGameEventService;
-  private audio!: IAudioService;
-  private panelSystem!: IPanelSystem;
-
-  setup(locator: IServiceLocator): void {
-    this.events = locator.getGameEventBus();
-    this.audio = locator.getAudioService();
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+  constructor(
+    private events: IGameEventService,
+    private audio: IAudioService,
+    private panelSystem: IPanelSystem
+  ) {
     this.reset();
   }
 
   update(delta: number, time: number): void {
     if (this.isGameOver) return;
     
-    // Check Panel Integrity for Game Over
     if (this.panelSystem.systemIntegrity <= 0) {
         this.isGameOver = true;
-        this.events.emit(GameEvents.GAME_OVER, { score: 0 }); // Score handled elsewhere
+        this.events.emit(GameEvents.GAME_OVER, { score: 0 });
         this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
     }
   }

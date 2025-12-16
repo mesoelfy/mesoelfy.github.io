@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IPhysicsSystem, ICombatSystem } from '@/engine/interfaces';
+import { IGameSystem, IPhysicsSystem, ICombatSystem, IEntityRegistry } from '@/engine/interfaces';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
@@ -8,17 +8,14 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 const MAX_COLLISION_RESULTS = 128;
 
 export class CollisionSystem implements IGameSystem {
-  private physicsSystem!: IPhysicsSystem;
-  private registry!: EntityRegistry;
-  private combatSystem!: ICombatSystem;
   private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
   private handledPairs = new Set<number>(); 
 
-  setup(locator: IServiceLocator): void {
-    this.physicsSystem = locator.getSystem<IPhysicsSystem>('PhysicsSystem');
-    this.combatSystem = locator.getSystem<ICombatSystem>('CombatSystem');
-    this.registry = locator.getRegistry() as EntityRegistry;
-  }
+  constructor(
+    private physicsSystem: IPhysicsSystem,
+    private combatSystem: ICombatSystem,
+    private registry: IEntityRegistry
+  ) {}
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;

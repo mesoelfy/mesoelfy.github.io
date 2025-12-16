@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
@@ -12,17 +12,16 @@ interface WaveDef {
 }
 
 export class WaveSystem implements IGameSystem {
-  private spawner!: IEntitySpawner;
-  private panelSystem!: IPanelSystem;
   private waveTime = 0;
   private currentWaveIndex = 0;
   private spawnQueue: { type: string, time: number }[] = [];
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
 
-  setup(locator: IServiceLocator): void {
-    this.spawner = locator.getSpawner();
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+  constructor(
+    private spawner: IEntitySpawner,
+    private panelSystem: IPanelSystem
+  ) {
     this.reset();
   }
 
@@ -96,7 +95,6 @@ export class WaveSystem implements IGameSystem {
   }
 
   private queueSpawns(wave: WaveDef) {
-    // Increase count on subsequent loops to ramp difficulty
     const count = wave.count + (this.loopCount * 2);
     for (let i = 0; i < count; i++) {
         this.spawnQueue.push({

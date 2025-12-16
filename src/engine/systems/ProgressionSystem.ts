@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 
@@ -13,11 +13,7 @@ export class ProgressionSystem implements IGameSystem {
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
-  private events!: IGameEventService;
-
-  setup(locator: IServiceLocator): void {
-    this.events = locator.getGameEventBus();
-    
+  constructor(private events: IGameEventService) {
     this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
         this.addScore(1);
         this.addXp(10);

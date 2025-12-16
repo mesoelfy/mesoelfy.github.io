@@ -1,36 +1,34 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IInteractionSystem, IInputService, IEntityRegistry } from '@/engine/interfaces';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculatePlayerShots, ShotDef } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 
 export class PlayerSystem implements IGameSystem {
   private lastFireTime = 0;
-  private gameSystem!: IGameStateSystem;
-  private registry!: EntityRegistry;
-  private spawner!: IEntitySpawner;
-  private locator!: IServiceLocator;
-  private config!: typeof ConfigService;
 
-  setup(locator: IServiceLocator): void {
-    this.locator = locator;
-    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
-    this.registry = locator.getRegistry() as EntityRegistry;
-    this.spawner = locator.getSpawner();
-    this.config = locator.getConfigService();
-    
-    this.setupListeners();
+  constructor(
+    private input: IInputService,
+    private spawner: IEntitySpawner,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem,
+    private registry: IEntityRegistry,
+    private config: typeof ConfigService
+  ) {
+    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this.triggerPurge();
+        }
+    });
   }
 
   update(delta: number, time: number): void {
-    // 1. Get Player
     let playerEntity = null;
     for (const p of this.registry.getByTag(Tag.PLAYER)) {
         playerEntity = p;
@@ -38,30 +36,21 @@ export class PlayerSystem implements IGameSystem {
     }
     if (!playerEntity) return;
 
-    // 2. Input -> Transform Logic
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-    const cursor = this.locator.getInputService().getCursor();
+    const cursor = this.input.getCursor();
 
     if (transform) {
         transform.x = cursor.x;
         transform.y = cursor.y;
     }
 
-    // 3. Game Over Check
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
-    // 4. State Management
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
-        try {
-            const interact = this.locator.getSystem<IInteractionSystem>('InteractionSystem');
-            stateComp.current = interact.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
-        } catch {
-            stateComp.current = 'ACTIVE';
-        }
+        stateComp.current = this.interactionSystem.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
     }
 
-    // 5. Firing Logic
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
         const overclock = upgrades['OVERCLOCK'] || 0;
@@ -75,16 +64,8 @@ export class PlayerSystem implements IGameSystem {
 
   teardown(): void {}
 
-  private setupListeners() {
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.triggerPurge();
-        }
-    });
-  }
-
   private triggerPurge() {
-      const cursor = this.locator.getInputService().getCursor();
+      const cursor = this.input.getCursor();
       const count = 360; 
       const speed = 45;  
       const damage = 100;
@@ -109,7 +90,6 @@ export class PlayerSystem implements IGameSystem {
   }
 
   private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>) {
-    // 1. Find Target
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
     const RANGE = 14; 
@@ -135,17 +115,14 @@ export class PlayerSystem implements IGameSystem {
 
     if (!targetEnemy) return;
 
-    // 2. Get Target Position
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     
-    // 3. Delegate Calculation
     const shots = calculatePlayerShots(
         { x: playerTransform.x, y: playerTransform.y },
         { x: tPos.x, y: tPos.y },
         upgrades
     );
 
-    // 4. Spawn
     shots.forEach(shot => {
         const bullet = this.spawner.spawnBullet(
             shot.x, shot.y, 

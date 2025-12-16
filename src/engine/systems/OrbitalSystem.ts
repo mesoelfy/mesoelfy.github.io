@@ -1,16 +1,11 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class OrbitalSystem implements IGameSystem {
-  private registry!: EntityRegistry;
-
-  setup(locator: IServiceLocator): void {
-    this.registry = locator.getRegistry() as EntityRegistry;
-  }
+  constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     const orbitals = this.registry.getAll();

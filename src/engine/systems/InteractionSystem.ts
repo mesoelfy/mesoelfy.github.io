@@ -1,4 +1,4 @@
-import { IInteractionSystem, IServiceLocator, IEntitySpawner, IGameStateSystem, IPanelSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
@@ -11,17 +11,13 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
-  private locator!: IServiceLocator;
-  private spawner!: IEntitySpawner;
-  private gameSystem!: IGameStateSystem; 
-  private panelSystem!: IPanelSystem;
 
-  setup(locator: IServiceLocator): void {
-    this.locator = locator;
-    this.spawner = locator.getSpawner();
-    this.gameSystem = locator.getSystem<IGameStateSystem>('GameStateSystem');
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-  }
+  constructor(
+    private input: IInputService,
+    private spawner: IEntitySpawner,
+    private gameSystem: IGameStateSystem,
+    private panelSystem: IPanelSystem
+  ) {}
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
@@ -29,7 +25,7 @@ export class InteractionSystem implements IInteractionSystem {
     
     if (this.gameSystem.isGameOver) return; 
     
-    const cursor = this.locator.getInputService().getCursor();
+    const cursor = this.input.getCursor();
     
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);

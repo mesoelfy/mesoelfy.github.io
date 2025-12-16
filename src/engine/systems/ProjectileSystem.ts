@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
@@ -7,11 +7,7 @@ import { RenderData } from '@/engine/ecs/components/RenderData';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class ProjectileSystem implements IGameSystem {
-  private registry!: IEntityRegistry;
-
-  setup(locator: IServiceLocator): void {
-    this.registry = locator.getRegistry();
-  }
+  constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     const entities = this.registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });

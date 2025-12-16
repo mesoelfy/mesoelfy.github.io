@@ -1,14 +1,11 @@
-import { IGameSystem, IServiceLocator, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem } from '@/engine/interfaces';
 
 export class StructureSystem implements IGameSystem {
-  private panelSystem!: IPanelSystem;
   private decayTimer = 0;
   private readonly DECAY_INTERVAL = 0.1; 
   private readonly DECAY_AMOUNT = 2; 
 
-  setup(locator: IServiceLocator): void {
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-  }
+  constructor(private panelSystem: IPanelSystem) {}
 
   update(delta: number, time: number): void {
     this.decayTimer += delta;

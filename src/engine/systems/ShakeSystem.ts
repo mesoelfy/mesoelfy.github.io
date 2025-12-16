@@ -1,5 +1,4 @@
-import { IGameSystem, IServiceLocator } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { noise } from '@/engine/math/Noise';
 import { useStore } from '@/engine/state/global/useStore';
@@ -19,9 +18,9 @@ export class ShakeSystem implements IGameSystem {
   
   private cleanupListeners: (() => void) | null = null;
 
-  setup(locator: IServiceLocator): void {
-    const unsub1 = GameEventBus.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
-    const unsub2 = GameEventBus.subscribe(GameEvents.PLAYER_HIT, (p) => {
+  constructor(private events: IGameEventService) {
+    const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
+    const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const amount = p.damage > 10 ? 0.45 : 0.2;
         this.addTrauma(amount);
     });

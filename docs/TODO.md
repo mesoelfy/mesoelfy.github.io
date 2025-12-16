@@ -653,4 +653,4 @@ should I do this?
 
 
 
-   
+   Frame and text not turning purple when rebooting.
