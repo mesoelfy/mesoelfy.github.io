@@ -7,6 +7,7 @@ import { TransformData } from '@/sys/data/TransformData';
 import { RenderData } from '@/sys/data/RenderData';
 import { useStore } from '@/sys/state/global/useStore';
 import { useGameStore } from '@/sys/state/game/useGameStore';
+import { IInteractionSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
@@ -15,7 +16,7 @@ const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
-// Helper to generate the Star-Ring (6 points, twisted buzz-saw style)
+// Helper to generate the Star-Ring (4 points, twisted buzz-saw style)
 const createStarRingGeo = () => {
     const points = 4;
     const outerRadius = 0.65;
@@ -32,29 +33,21 @@ const createStarRingGeo = () => {
     // 1. Define Outer Saw
     for (let i = 0; i < points; i++) {
         const theta = i * step;
-        
-        // Tip (Twisted forward)
         const tipA = theta - twistAngle;
         if (i === 0) shape.moveTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
         else shape.lineTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
-        
-        // Valley (Centered)
         const midTheta = theta + halfStep;
         const rValley = outerRadius * (1.0 - indentFactor);
         shape.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
     }
 
-    // 2. Define Inner Hole (Slightly less twisted to create blade thickness)
+    // 2. Define Inner Hole
     const hole = new THREE.Path();
     for (let i = 0; i < points; i++) {
         const theta = i * step;
-        
-        // Inner Tip (Partial twist for structure)
         const tipA = theta - (twistAngle * 0.5);
         if (i === 0) hole.moveTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
         else hole.lineTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
-        
-        // Inner Valley
         const midTheta = theta + halfStep;
         const rValley = innerRadius * (1.0 - indentFactor);
         hole.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
@@ -79,6 +72,7 @@ const techGlowShader = {
     uniform vec3 uColor;
     uniform float uOpacity;
     uniform float uTime;
+    uniform float uEnergy; // 0.0 (Idle) -> 1.0 (Healing/Active)
     varying vec2 vUv;
 
     void main() {
@@ -86,19 +80,34 @@ const techGlowShader = {
       vec2 pos = vUv - center;
       
       float angle = atan(pos.y, pos.x);
-      float warble = 0.005 * sin(angle * 10.0 + uTime * 2.0);
+      // Warble increases slightly with Energy to look "unstable"
+      float warble = (0.005 + 0.01 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
       float dist = length(pos) + warble;
       
+      // Base soft glow circle
       float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
       alpha = pow(alpha, 3.5); 
       
-      // Structure Rings
-      float rings = 0.7 + 0.3 * sin(dist * 80.0 - uTime * 1.0);
+      // --- DYNAMIC RINGS ---
+      // Idle: Freq 80.0 (Tight, small rings)
+      // Active: Freq 30.0 (Wide, big waves)
+      float freq = mix(80.0, 30.0, uEnergy);
       
-      // Radial Scanlines
+      // Idle: Speed 1.0
+      // Active: Speed 5.0 (Fast pulse)
+      float speed = 1.0 + (uEnergy * 4.0);
+      
+      float rings = 0.6 + 0.4 * sin(dist * freq - uTime * speed);
+      
+      // Radial Scanlines (Subtle texture)
       float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
       
+      // Combine
       float finalAlpha = alpha * rings * scan * uOpacity;
+      
+      // Boost Brightness/Bloom based on Energy
+      finalAlpha *= (1.0 + uEnergy * 2.0);
+
       if (finalAlpha < 0.01) discard;
 
       gl_FragColor = vec4(uColor, finalAlpha);
@@ -138,6 +147,7 @@ export const PlayerActor = () => {
   const { introDone } = useStore(); 
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
+  const currentEnergy = useRef(0.0);
 
   const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
       vertexShader: techGlowShader.vertex,
@@ -145,7 +155,8 @@ export const PlayerActor = () => {
       uniforms: {
           uColor: { value: new THREE.Color(GAME_THEME.turret.glow) },
           uOpacity: { value: 0.6 },
-          uTime: { value: 0.0 }
+          uTime: { value: 0.0 },
+          uEnergy: { value: 0.0 }
       },
       transparent: true,
       depthWrite: false,
@@ -176,8 +187,23 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
-    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    // --- INTERACTION / ENERGY LOGIC ---
+    let interactState = 'IDLE';
+    try {
+        const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
+        if (interact) interactState = interact.repairState;
+    } catch {}
 
+    // Target Energy: 1.0 if healing/rebooting, 0.0 if idle
+    const targetEnergy = (interactState === 'HEALING' || interactState === 'REBOOTING') ? 1.0 : 0.0;
+    
+    // UPDATED: Increased lerp speed from 4.0 to 15.0 for snappy "Instant" feel
+    currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * 15.0);
+
+    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+    ambientMaterial.uniforms.uEnergy.value = currentEnergy.current;
+
+    // --- ECS SYNC ---
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -236,7 +262,6 @@ export const PlayerActor = () => {
       </mesh>
 
       {/* Spinning Buzz-Saw Reticle */}
-      {/* 6 segments = 6 teeth. Rotated PI/12 to align nicely. */}
       <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}>
         <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
       </mesh>

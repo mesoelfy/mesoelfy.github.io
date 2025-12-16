@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 15 15:57:21 CST 2025
+Generated on: Mon Dec 15 19:25:45 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -7042,7 +7042,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Box, PlayCircle, Crosshair, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 
 const MODELS = [
-  { id: 'PLAYER', label: 'PLAYER_SHIP', desc: 'Mesos Class Interceptor.', color: 'text-primary-green' },
+  // REMOVED: PLAYER_SHIP (No 3D model)
   { id: EnemyTypes.DAEMON, label: 'DAEMON_CORE', desc: 'Defensive Subroutine.', color: 'text-latent-purple' },
   { id: EnemyTypes.DRILLER, label: 'DRILLER_DRONE', desc: 'Standard Melee Unit.', color: 'text-service-cyan' },
   { id: EnemyTypes.KAMIKAZE, label: 'KAMIKAZE_UNIT', desc: 'Volatile Payload.', color: 'text-critical-red' },
@@ -9430,7 +9430,7 @@ export const ParticleActor = () => {
       }
   }, []);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (!meshRef.current) return;
 
     let sys: ParticleSystem | null = null;
@@ -9454,7 +9454,13 @@ export const ParticleActor = () => {
         const baseSize = sys.size[i];
         const shape = sys.shape[i];
         
-        dummy.position.set(x, y, 6.0);
+        // Z-DEPTH FIX: 
+        // Driller is at Z=5.0. 
+        // We alternate particles between Z=3.5 (Behind) and Z=6.5 (In Front).
+        // This creates volume and prevents the "X-Ray" look where all sparks appear inside the mesh.
+        const zDepth = (i % 2 === 0) ? 3.5 : 6.5;
+        
+        dummy.position.set(x, y, zDepth);
         
         const speedSq = vx*vx + vy*vy;
         const speed = Math.sqrt(speedSq);
@@ -9471,10 +9477,16 @@ export const ParticleActor = () => {
             
             dummy.scale.set(scaleX, scaleY, 1);
 
-            // OFFSET LOGIC:
-            // Shift the center forward by half the length so the "tail" sits at the original (x,y).
-            // This prevents sparks from appearing "behind" the spawn point (inside walls).
-            const shift = scaleX * 0.03;
+            // OVERSHOOT FIX: Pivot Correction
+            // The geometry (Plane) is 0.3 units wide and centered at (0,0).
+            // When we stretch it to 'scaleX', it grows in both directions (-X and +X).
+            // This causes the "tail" to push backward past the spawn point (into the wall).
+            // We calculate the actual visual length and shift the center FORWARD by half that length.
+            // This pins the tail to the origin.
+            
+            const visualLength = 0.3 * scaleX; 
+            const shift = visualLength * 0.5;
+
             dummy.position.x += Math.cos(angle) * shift;
             dummy.position.y += Math.sin(angle) * shift;
 
@@ -9541,7 +9553,7 @@ export const HunterActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/PlayerActor.tsx
 =====================================
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { ServiceLocator } from '@/sys/services/ServiceLocator';
@@ -9553,33 +9565,174 @@ import { useGameStore } from '@/sys/state/game/useGameStore';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
-const aliveGeo = new THREE.CircleGeometry(0.1, 16);
+// --- GEOMETRY GENERATION ---
+const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
+const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
+
+// Helper to generate the Star-Ring (4 points, twisted buzz-saw style)
+const createStarRingGeo = () => {
+    const points = 4;
+    const outerRadius = 0.65;
+    const innerRadius = 0.35;
+    const indentFactor = 0.60; 
+    
+    // TWIST: Shifts the tip angle relative to the base to create "teeth"
+    const twistAngle = 0.55; 
+
+    const shape = new THREE.Shape();
+    const step = (Math.PI * 2) / points;
+    const halfStep = step / 2;
+
+    // 1. Define Outer Saw
+    for (let i = 0; i < points; i++) {
+        const theta = i * step;
+        
+        // Tip (Twisted forward)
+        const tipA = theta - twistAngle;
+        if (i === 0) shape.moveTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
+        else shape.lineTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
+        
+        // Valley (Centered)
+        const midTheta = theta + halfStep;
+        const rValley = outerRadius * (1.0 - indentFactor);
+        shape.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
+    }
+
+    // 2. Define Inner Hole (Slightly less twisted to create blade thickness)
+    const hole = new THREE.Path();
+    for (let i = 0; i < points; i++) {
+        const theta = i * step;
+        
+        // Inner Tip (Partial twist for structure)
+        const tipA = theta - (twistAngle * 0.5);
+        if (i === 0) hole.moveTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
+        else hole.lineTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
+        
+        // Inner Valley
+        const midTheta = theta + halfStep;
+        const rValley = innerRadius * (1.0 - indentFactor);
+        hole.lineTo(Math.cos(midTheta) * rValley, Math.sin(midTheta) * rValley);
+    }
+    
+    shape.holes.push(hole);
+    return new THREE.ShapeGeometry(shape);
+};
+
+const reticleGeo = createStarRingGeo();
+
+// --- SHADER: COMPLEX TECH GLOW (Ambient Layer) ---
+const techGlowShader = {
+  vertex: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragment: `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    uniform float uTime;
+    varying vec2 vUv;
+
+    void main() {
+      vec2 center = vec2(0.5);
+      vec2 pos = vUv - center;
+      
+      float angle = atan(pos.y, pos.x);
+      float warble = 0.005 * sin(angle * 10.0 + uTime * 2.0);
+      float dist = length(pos) + warble;
+      
+      float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+      alpha = pow(alpha, 3.5); 
+      
+      // Structure Rings
+      float rings = 0.7 + 0.3 * sin(dist * 80.0 - uTime * 1.0);
+      
+      // Radial Scanlines
+      float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
+      
+      float finalAlpha = alpha * rings * scan * uOpacity;
+      if (finalAlpha < 0.01) discard;
+
+      gl_FragColor = vec4(uColor, finalAlpha);
+    }
+  `
+};
+
+// --- SHADER: SIMPLE SOFT CIRCLE (Backing Layer) ---
+const softCircleShader = {
+  vertex: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragment: `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main() {
+      float dist = distance(vUv, vec2(0.5));
+      float alpha = 1.0 - smoothstep(0.25, 0.5, dist); 
+      if (alpha < 0.01) discard;
+      gl_FragColor = vec4(uColor, alpha * uOpacity);
+    }
+  `
+};
 
 export const PlayerActor = () => {
-  const groupRef = useRef<THREE.Group>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
-  const glowRef = useRef<THREE.Sprite>(null);
+  const containerRef = useRef<THREE.Group>(null);
+  const centerDotRef = useRef<THREE.Mesh>(null);
+  const reticleRef = useRef<THREE.Mesh>(null);
+  const backingCircleRef = useRef<THREE.Mesh>(null);
+  const ambientGlowRef = useRef<THREE.Mesh>(null);
   
   const { introDone } = useStore(); 
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
 
-  useFrame((state, delta) => {
-    if (!groupRef.current) return;
+  const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
+      vertexShader: techGlowShader.vertex,
+      fragmentShader: techGlowShader.fragment,
+      uniforms: {
+          uColor: { value: new THREE.Color(GAME_THEME.turret.glow) },
+          uOpacity: { value: 0.6 },
+          uTime: { value: 0.0 }
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+  }), []);
 
-    // --- INTRO FADE ---
+  const backingMaterial = useMemo(() => new THREE.ShaderMaterial({
+      vertexShader: softCircleShader.vertex,
+      fragmentShader: softCircleShader.fragment,
+      uniforms: {
+          uColor: { value: new THREE.Color(GAME_THEME.turret.glow) },
+          uOpacity: { value: 0.5 }
+      },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.NormalBlending 
+  }), []);
+
+  useFrame((state, delta) => {
+    if (!containerRef.current) return;
+
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
     if (animScale.current < 0.01) {
-        groupRef.current.visible = false;
+        containerRef.current.visible = false;
         return;
     }
-    groupRef.current.visible = true;
+    containerRef.current.visible = true;
 
-    // --- ECS READ ---
+    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
+
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -9591,63 +9744,61 @@ export const PlayerActor = () => {
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
-    const isDead = useGameStore.getState().playerHealth <= 0; // Keeping this check for Geo Swap
+    const isDead = useGameStore.getState().playerHealth <= 0; 
 
     if (transform) {
-        groupRef.current.position.set(transform.x, transform.y, 0);
+        containerRef.current.position.set(transform.x, transform.y, 0);
     }
 
-    if (render && ringRef.current && coreRef.current && glowRef.current) {
-        // Visual Rotation (Spin)
-        // We accumulate on Z.
-        ringRef.current.rotation.z = render.visualRotation;
+    if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
+        reticleRef.current.rotation.z = -render.visualRotation;
         
-        // Color
         tempColor.current.setRGB(render.r, render.g, render.b);
-        ringRef.current.material.color.copy(tempColor.current);
-        coreRef.current.material.color.copy(tempColor.current);
-        glowRef.current.material.color.copy(tempColor.current);
+        
+        (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
+        ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
+        backingMaterial.uniforms.uColor.value.copy(tempColor.current);
 
-        // Scale
         const scale = render.visualScale * animScale.current;
-        groupRef.current.scale.setScalar(scale);
+        containerRef.current.scale.setScalar(scale);
 
-        // Geo Swap
         if (isDead) {
-            ringRef.current.visible = false;
-            glowRef.current.visible = false;
-            coreRef.current.geometry = deadGeo;
-            coreRef.current.material.wireframe = true; 
-            coreRef.current.rotation.z = render.visualRotation; // Dead spin
+            reticleRef.current.visible = false;
+            ambientGlowRef.current.visible = false;
+            backingCircleRef.current!.visible = false;
+            
+            centerDotRef.current.geometry = deadGeo;
+            (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = true; 
+            centerDotRef.current.rotation.z = -render.visualRotation; 
         } else {
-            ringRef.current.visible = true;
-            glowRef.current.visible = true;
-            coreRef.current.geometry = aliveGeo;
-            coreRef.current.material.wireframe = false;
+            reticleRef.current.visible = true;
+            ambientGlowRef.current.visible = true;
+            backingCircleRef.current!.visible = true;
+            
+            centerDotRef.current.geometry = centerGeo;
+            (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = false;
         }
     }
   });
 
   return (
-    <group ref={groupRef}>
-      <mesh ref={coreRef}>
+    <group ref={containerRef}>
+      <mesh ref={centerDotRef} renderOrder={3}>
         <bufferGeometry />
         <meshBasicMaterial color={GAME_THEME.turret.base} />
       </mesh>
 
-      <mesh ref={ringRef} rotation={[0, 0, Math.PI / 4]}>
-        <ringGeometry args={[0.4, 0.45, 4]} /> 
+      {/* Spinning Buzz-Saw Reticle */}
+      {/* 6 segments = 6 teeth. Rotated PI/12 to align nicely. */}
+      <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}>
         <meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} />
       </mesh>
 
-      <sprite ref={glowRef} scale={[2, 2, 1]}>
-        <spriteMaterial 
-          color={GAME_THEME.turret.glow} 
-          transparent 
-          opacity={0.3}
-          blending={THREE.AdditiveBlending}
-        />
-      </sprite>
+      <mesh ref={backingCircleRef} material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3, 1.3, 1]} renderOrder={1} />
+
+      <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6, 6, 1]} renderOrder={0} />
     </group>
   );
 };
@@ -11283,6 +11434,7 @@ export interface VFXRecipe {
   spread?: number;
   size?: [number, number];
   shape?: number; // 0=Square, 1=Teardrop
+  omniChance?: number; // 0.0 - 1.0: Chance for a particle to be Backblast
 }
 
 const PALETTE_PURPLE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
@@ -11291,18 +11443,46 @@ const PALETTE_RED = ['#FF003C', '#FF4D6D', '#800010'];
 const PALETTE_CYAN = ['#00F0FF', '#008ba3', '#FFFFFF'];
 
 export const VFX_RECIPES: Record<string, VFXRecipe> = {
-  // --- EXPLOSIONS ---
-  'EXPLOSION_PURPLE': { pattern: 'RADIAL', colors: PALETTE_PURPLE, count: [10, 15], speed: [5, 12], life: [0.5, 0.8] },
+  // --- EXPLOSIONS (RADIAL) ---
+  'EXPLOSION_PURPLE': { pattern: 'RADIAL', colors: PALETTE_PURPLE, count: [15, 25], speed: [5, 10], life: [0.5, 0.8] },
   'EXPLOSION_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [12, 18], speed: [8, 15], life: [0.4, 0.7] },
   'EXPLOSION_RED':    { pattern: 'RADIAL', colors: PALETTE_RED, count: [15, 25], speed: [10, 20], life: [0.6, 1.0] },
   
+  // --- EXPLOSIONS (DIRECTIONAL HYBRID) ---
+  'EXPLOSION_PURPLE_DIR': { 
+      pattern: 'DIRECTIONAL', 
+      colors: PALETTE_PURPLE, 
+      count: [20, 30], 
+      speed: [5, 10], 
+      life: [0.5, 0.9],
+      spread: 1.6,
+      omniChance: 0.15   // Reduced to 15% (Half of 30%)
+  },
+  'EXPLOSION_YELLOW_DIR': { 
+      pattern: 'DIRECTIONAL', 
+      colors: PALETTE_YELLOW, 
+      count: [15, 25], 
+      speed: [10, 18], 
+      life: [0.4, 0.8],
+      spread: 1.6,
+      omniChance: 0.15
+  },
+  'EXPLOSION_RED_DIR': { 
+      pattern: 'DIRECTIONAL', 
+      colors: PALETTE_RED, 
+      count: [20, 35], 
+      speed: [12, 22], 
+      life: [0.6, 1.0],
+      spread: 1.6,
+      omniChance: 0.15 
+  },
+
   // --- IMPACTS ---
   'IMPACT_WHITE': { pattern: 'RADIAL', colors: ['#FFFFFF'], count: [3, 5], speed: [2, 5], life: [0.1, 0.2] },
   'IMPACT_RED':   { pattern: 'RADIAL', colors: PALETTE_RED, count: [4, 7], speed: [3, 8], life: [0.2, 0.4] },
   'CLASH_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
 
-  // --- DIRECTIONAL ---
-  // UPDATED: Added shape: 1 (Teardrop)
+  // --- DIRECTIONAL (PURE) ---
   'DRILL_SPARKS':  { 
       pattern: 'DIRECTIONAL', 
       colors: PALETTE_PURPLE, 
@@ -11316,7 +11496,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
   
   'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: PALETTE_YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
   
-  'LASER_SIGHT': { 
+  'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
     colors: ['#F7D277', '#FFFFFF'], 
     count: [3, 5], 
@@ -12924,22 +13104,38 @@ export class VFXSystem implements IGameSystem {
           let vx = 0;
           let vy = 0;
 
+          const isBackblast = recipe.omniChance && Math.random() < recipe.omniChance;
+          const isDirectional = recipe.pattern === 'DIRECTIONAL';
+          
+          // SPEED: 50% power for backblast
+          const finalSpeed = (isDirectional && isBackblast) ? speed * 0.5 : speed;
+          
+          // LIFE: 20% faster death (0.8x life) for backblast
+          const finalLife = (isDirectional && isBackblast) ? life * 0.8 : life;
+
           if (recipe.pattern === 'RADIAL') {
               const a = Math.random() * Math.PI * 2;
-              vx = Math.cos(a) * speed;
-              vy = Math.sin(a) * speed;
+              vx = Math.cos(a) * finalSpeed;
+              vy = Math.sin(a) * finalSpeed;
           } 
-          else if (recipe.pattern === 'DIRECTIONAL') {
-              const baseDir = angle + Math.PI; 
-              const spread = recipe.spread || 0.5;
-              const a = baseDir + (Math.random() - 0.5) * spread;
-              vx = Math.cos(a) * speed;
-              vy = Math.sin(a) * speed;
+          else if (isDirectional) {
+              let dir = angle + Math.PI; 
+              let spread = recipe.spread || 0.5;
+
+              if (isBackblast) {
+                  // Flip to Entry Wound side
+                  dir += Math.PI; 
+                  // Wide spray for backblast
+                  spread *= 1.5; 
+              }
+
+              const a = dir + (Math.random() - 0.5) * spread;
+              vx = Math.cos(a) * finalSpeed;
+              vy = Math.sin(a) * finalSpeed;
           }
 
-          // Pass shape from recipe (default 0)
           const shape = recipe.shape || 0;
-          this.particleSystem.spawn(x, y, color, vx, vy, life, size, shape);
+          this.particleSystem.spawn(x, y, color, vx, vy, finalLife, size, shape);
       }
   }
 
@@ -13182,7 +13378,9 @@ export class PlayerSystem implements IGameSystem {
 
     if (render) {
         let targetCol = COL_BASE;
-        let spinSpeed = -0.02;
+        
+        // SPIN LOGIC: (+) = CW, (-) = CCW
+        let spinSpeed = 0.02; // IDLE: Slow Clockwise
         
         let interactState = 'IDLE';
         try {
@@ -13194,18 +13392,17 @@ export class PlayerSystem implements IGameSystem {
             targetCol = COL_DEAD;
             if (interactState === 'REBOOTING') {
                 targetCol = COL_REBOOT;
-                spinSpeed = -10.0;
+                spinSpeed = -0.3; // REBOOTING (DEAD): CCW
             } else {
-                spinSpeed = 1.5;
+                spinSpeed = 1.5; // DEAD: Fast CW
             }
         } else {
             if (interactState === 'HEALING') {
                 targetCol = COL_REPAIR;
-                spinSpeed = 0.4;
+                spinSpeed = -0.24; // HEALING: CCW
             } else if (interactState === 'REBOOTING') {
-                // FIXED: Added missing Purple state check
                 targetCol = COL_REBOOT;
-                spinSpeed = -0.4;
+                spinSpeed = -0.24; // REBOOTING: CCW
             }
         }
 
@@ -13214,9 +13411,10 @@ export class PlayerSystem implements IGameSystem {
         render.r = this.tempColor.r;
         render.g = this.tempColor.g;
         render.b = this.tempColor.b;
+        
+        // Accumulate rotation
         render.visualRotation += spinSpeed;
         
-        // FIXED: Removed visualScale pulsing on interaction to keep reticle stable
         render.visualScale = 1.0;
     }
 
@@ -13745,7 +13943,7 @@ export class CombatSystem implements IGameSystem {
               this.gameSystem.damagePlayer(amount);
               GameEventBus.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
-          destroyEntity: (entity, fx) => this.destroyEntity(entity, fx),
+          destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y);
@@ -13768,7 +13966,7 @@ export class CombatSystem implements IGameSystem {
       handler(a, b, context);
   }
 
-  private destroyEntity(entity: Entity, fx?: string) {
+  private destroyEntity(entity: Entity, fx?: string, impactAngle?: number) {
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
       
@@ -13788,11 +13986,22 @@ export class CombatSystem implements IGameSystem {
       
       if (fx && transform) {
           let finalFX = fx;
-          if (identity?.variant === EnemyTypes.HUNTER) finalFX = 'EXPLOSION_YELLOW';
-          if (identity?.variant === EnemyTypes.KAMIKAZE) finalFX = 'EXPLOSION_RED';
+          let angleToUse = impactAngle || 0;
+          
+          if (identity?.variant === EnemyTypes.HUNTER) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
+          }
+          else if (identity?.variant === EnemyTypes.KAMIKAZE) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
+          }
+          else if (identity?.variant === EnemyTypes.DRILLER) {
+              finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+          }
           
           const id = FX_IDS[finalFX];
-          if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y);
+          if (id) {
+              FastEventBus.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y, angleToUse);
+          }
       }
   }
 
@@ -15137,17 +15346,29 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
 
   const eId = getId(enemy);
   const pos = getPos(enemy);
+  const pPos = getPos(player);
   const x = pos ? pos.x : 0;
+
+  // Calculate Impact Angle: Vector from Player -> Enemy (Force Direction)
+  let angle = 0;
+  if (pos && pPos) {
+      angle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x);
+  }
+  // To spray "Away" from impact (exit wound), we pass Angle + PI to the VFX system?
+  // Wait, VFXSystem adds PI to its input.
+  // We want particles to fly ALONG the force vector (Player->Enemy).
+  // So we should pass Angle + PI, so that (Angle + PI) + PI = Angle.
+  const sprayAngle = angle + Math.PI;
 
   if (eId?.variant === EnemyTypes.KAMIKAZE) {
       ctx.damagePlayer(3); 
       ctx.addTrauma(0.5); 
-      ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+      ctx.destroyEntity(enemy, 'EXPLOSION_RED', sprayAngle);
       ctx.playSpatialAudio('fx_impact_heavy', x);
   } else {
       ctx.damagePlayer(1);
       ctx.addTrauma(0.2); 
-      ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE');
+      ctx.destroyEntity(enemy, 'EXPLOSION_PURPLE', sprayAngle);
       ctx.playSpatialAudio('fx_impact_light', x);
   }
 };
@@ -15169,7 +15390,11 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
 };
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
-  handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx);
+  // Pass the bullet's travel direction for "blow through" effect
+  const bPos = getPos(bullet);
+  const sprayAngle = bPos ? bPos.rotation + Math.PI : 0;
+  
+  handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx, sprayAngle);
 };
 
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
@@ -15214,7 +15439,7 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   ctx.playSpatialAudio('fx_impact_light', x);
 }
 
-function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext) {
+function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext, sprayAngle?: number) {
   const hpA = getHp(a);
   const hpB = getHp(b);
 
@@ -15232,11 +15457,11 @@ function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext
   let soundKey = '';
 
   if (hpA && hpA.current <= 0) {
-      ctx.destroyEntity(a, 'IMPACT_WHITE');
+      ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle);
       soundKey = 'fx_impact_light';
   }
   if (hpB && hpB.current <= 0) {
-      ctx.destroyEntity(b, 'IMPACT_WHITE');
+      ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); // B usually bullet, spray not critical here
       soundKey = 'fx_impact_light';
   }
   
@@ -15285,10 +15510,11 @@ import { Entity } from '@/engine/ecs/Entity';
 
 export interface CombatContext {
   damagePlayer: (amount: number) => void;
-  destroyEntity: (entity: Entity, fx?: string) => void;
+  // Updated: Accept optional impactAngle for directional spray
+  destroyEntity: (entity: Entity, fx?: string, impactAngle?: number) => void;
   spawnFX: (type: string, x: number, y: number) => void;
   playAudio: (key: string) => void;
-  playSpatialAudio: (key: string, x: number) => void; // NEW
+  playSpatialAudio: (key: string, x: number) => void;
   addTrauma: (amount: number) => void;
 }
 
@@ -15375,8 +15601,9 @@ const getState = (e: Entity) => e.requireComponent<AIStateData>(ComponentType.St
 const getTarget = (e: Entity) => e.requireComponent<TargetData>(ComponentType.Target);
 const getRender = (e: Entity) => e.requireComponent<RenderData>(ComponentType.Render);
 
-const EXHAUST_OFFSET_DIST = 1.0;
-const EXHAUST_CONE_ANGLE = 0.5;
+// REFINED: User requested values
+const EXHAUST_OFFSET_DIST = 0.2;
+const EXHAUST_CONE_ANGLE = 0.15;
 const EXHAUST_DENSITY = 2;
 
 export const HunterLogic: EnemyLogic = {
@@ -15427,7 +15654,7 @@ export const HunterLogic: EnemyLogic = {
         for (let i = 0; i < EXHAUST_DENSITY; i++) {
             const spread = (Math.random() - 0.5) * EXHAUST_CONE_ANGLE;
             const thrustAngle = rearAngle + spread;
-            const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.5);
+            const spawnDist = EXHAUST_OFFSET_DIST + (Math.random() * 0.1); 
             const px = pos.x + Math.cos(thrustAngle) * spawnDist;
             const py = pos.y + Math.sin(thrustAngle) * spawnDist;
             const thrustSpeed = 20.0 + (Math.random() * 10.0);
@@ -17035,7 +17262,12 @@ export const FX_IDS: Record<string, number> = {
   'HUNTER_RECOIL': 8,
   'REBOOT_HEAL': 9,
   'PURGE_BLAST': 10,
-  'LASER_SIGHT': 11, // Added
+  'ENGINE_FLARE': 11,
+  
+  // NEW DIRECTIONAL VARIANTS
+  'EXPLOSION_PURPLE_DIR': 12,
+  'EXPLOSION_YELLOW_DIR': 13,
+  'EXPLOSION_RED_DIR': 14,
   
   // AUDIO
   'FX_PLAYER_FIRE': 50,
