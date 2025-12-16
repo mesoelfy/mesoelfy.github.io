@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Crosshair } from 'lucide-react';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 export const ActionButton = () => {
   const [pressed, setPressed] = useState(false);

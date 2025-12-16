@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
-import { GameEventBus } from '@/core/signals/GameEventBus';
-import { GameEvents } from '@/core/signals/GameEvents';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameStore } from '@/game/state/game/useGameStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 const IDLE_MESSAGES = [

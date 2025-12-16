@@ -1,5 +1,5 @@
-import { useStore } from '@/game/state/global/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useStore } from '@/engine/state/global/useStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Settings, Volume2, Monitor, Cpu } from 'lucide-react';
 import { clsx } from 'clsx';

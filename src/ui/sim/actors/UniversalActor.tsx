@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
-import { ARCHETYPES } from '@/game/config/Archetypes';
-import { ComponentType } from '@/core/ecs/ComponentType';
-import { RenderData } from '@/game/data/RenderData';
-import { Tag } from '@/core/ecs/types';
+import { ARCHETYPES } from '@/engine/config/Archetypes';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
 interface RenderGroup {

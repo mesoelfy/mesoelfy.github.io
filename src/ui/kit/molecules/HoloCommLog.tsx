@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ExternalLink, Radio, WifiOff, BatteryWarning, SignalHigh } from 'lucide-react';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { useStore } from '@/game/state/global/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { clsx } from 'clsx';
 import { useHoloCycler } from '@/ui/kit/hooks/useHoloCycler';
 

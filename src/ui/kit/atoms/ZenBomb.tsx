@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bomb, Skull } from 'lucide-react';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState } from 'react';
 
 export const ZenBomb = () => {

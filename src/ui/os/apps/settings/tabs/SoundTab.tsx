@@ -1,4 +1,4 @@
-import { useStore } from '@/game/state/global/useStore';
+import { useStore } from '@/engine/state/global/useStore';
 import { RangeSlider } from '../components/RangeSlider';
 import { RotateCcw, Activity, Volume2, VolumeX, Waves, Music, Zap, ZapOff, Wind, Mic2 } from 'lucide-react';
 import { useAudio } from '@/ui/hooks/useAudio';
@@ -9,7 +9,7 @@ import {
   getAmbienceModFreq, 
   getAmbienceModDepth, 
   getAmbienceStereoGain 
-} from '@/core/audio/AudioMath';
+} from '@/engine/audio/AudioMath';
 
 const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff, audio }: any) => {
   const Icon = isActive ? IconOn : (IconOff || IconOn);

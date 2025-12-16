@@ -1,5 +1,5 @@
 import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
-import identity from '@/game/config/static/identity.json';
+import identity from '@/engine/config/static/identity.json';
 import { StatsRadar } from '@/ui/kit/atoms/StatsRadar';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { motion } from 'framer-motion';

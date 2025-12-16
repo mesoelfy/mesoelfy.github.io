@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '@/game/state/global/useStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useStore } from '@/engine/state/global/useStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 export const GlobalBackdrop = () => {
   const { activeModal, isDebugOpen, isDebugMinimized, closeModal, toggleDebugMenu } = useStore();

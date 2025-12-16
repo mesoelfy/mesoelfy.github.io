@@ -1,12 +1,12 @@
 import { Play, Sparkles, Trash2, Skull, RefreshCw, Crown, Ghost, Shield, Crosshair } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { IPanelSystem } from '@/core/interfaces';
-import { GameEventBus } from '@/core/signals/GameEventBus';
-import { GameEvents } from '@/core/signals/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 interface OverridesTabProps {
   closeDebug: () => void;

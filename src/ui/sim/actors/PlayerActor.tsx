@@ -1,14 +1,14 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { Tag } from '@/core/ecs/types';
-import { TransformData } from '@/game/data/TransformData';
-import { RenderData } from '@/game/data/RenderData';
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { IInteractionSystem } from '@/core/interfaces';
-import { ComponentType } from '@/core/ecs/ComponentType';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { Tag } from '@/engine/ecs/types';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { IInteractionSystem } from '@/engine/interfaces';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 import * as THREE from 'three';
 
 // --- GEOMETRY GENERATION ---

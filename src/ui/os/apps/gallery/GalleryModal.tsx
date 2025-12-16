@@ -1,5 +1,5 @@
 import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
-import gallery from '@/game/config/static/gallery.json';
+import gallery from '@/engine/config/static/gallery.json';
 import { ExternalLink, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 

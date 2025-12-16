@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useStore } from '@/game/state/global/useStore';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { TimeSystem } from '@/game/systems/TimeSystem';
+import { useStore } from '@/engine/state/global/useStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { Terminal, Box, Activity, Shield, MinusSquare, X, Play, PauseCircle, Power } from 'lucide-react';
 import { clsx } from 'clsx';
-import { GameEventBus } from '@/core/signals/GameEventBus';
-import { GameEvents } from '@/core/signals/GameEvents';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 
 import { OverridesTab } from './tabs/OverridesTab';

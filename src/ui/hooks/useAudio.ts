@@ -1,6 +1,6 @@
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { IAudioService } from '@/core/interfaces';
-import { AudioServiceImpl } from '@/core/audio/AudioService';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IAudioService } from '@/engine/interfaces';
+import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { useMemo } from 'react';
 
 export const useAudio = (): IAudioService => {

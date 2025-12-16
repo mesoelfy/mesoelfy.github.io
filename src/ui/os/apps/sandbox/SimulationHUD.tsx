@@ -1,4 +1,4 @@
-import { useStore } from '@/game/state/global/useStore';
+import { useStore } from '@/engine/state/global/useStore';
 import { HoloLayout } from './layout/HoloLayout';
 import { AudioMatrix } from './AudioMatrix';
 import { ArenaLab } from './ArenaLab';

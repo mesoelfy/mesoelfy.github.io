@@ -1,7 +1,7 @@
-import { useStore } from '@/game/state/global/useStore';
-import { EnemyTypes } from '@/game/config/Identifiers';
+import { useStore } from '@/engine/state/global/useStore';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 import { clsx } from 'clsx';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Box, PlayCircle, Crosshair, ChevronRight, Fingerprint, Activity } from 'lucide-react';
 
 const MODELS = [

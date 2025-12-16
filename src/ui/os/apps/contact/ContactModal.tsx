@@ -2,7 +2,7 @@ import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import { Send, Terminal, Signal, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { clsx } from 'clsx';
 
 export const ContactModal = () => {

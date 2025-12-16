@@ -1,7 +1,7 @@
 'use client';
 
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import { SceneCanvas } from '@/ui/sim/SceneCanvas';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { SocialRow } from '@/ui/kit/molecules/SocialRow';
@@ -18,7 +18,7 @@ import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
 import { MobileExperience } from '@/ui/os/apps/mobile/MobileExperience'; 
 import { GameOverlay } from '@/ui/sim/GameCanvas';
-import { AudioSystem } from '@/core/audio/AudioSystem';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomCursor } from '@/ui/kit/atoms/CustomCursor';

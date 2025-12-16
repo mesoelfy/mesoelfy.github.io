@@ -1,14 +1,14 @@
 import { useRef, useLayoutEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { TransformData } from '@/game/data/TransformData';
-import { RenderData } from '@/game/data/RenderData';
-import { ProjectileData } from '@/game/data/ProjectileData';
-import { MotionData } from '@/game/data/MotionData';
-import { ComponentType } from '@/core/ecs/ComponentType';
-import { PROJECTILE_CONFIG, GeometryType } from '@/game/config/ProjectileConfig';
-import { applyRotation } from '@/core/math/RenderUtils';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
+import { MotionData } from '@/engine/ecs/components/MotionData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PROJECTILE_CONFIG, GeometryType } from '@/engine/config/ProjectileConfig';
+import { applyRotation } from '@/engine/math/RenderUtils';
 
 const MAX_PER_TYPE = 1000;
 const tempObj = new THREE.Object3D();

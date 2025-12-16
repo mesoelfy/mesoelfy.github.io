@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
-import { addBarycentricCoordinates, createHunterSpear } from '@/core/math/GeometryUtils';
-import { MODEL_CONFIG } from '@/game/config/ModelConfig';
+import { addBarycentricCoordinates, createHunterSpear } from '@/engine/math/GeometryUtils';
+import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { GAME_THEME } from '../config/theme';
 
 const SHADER_LIB = {

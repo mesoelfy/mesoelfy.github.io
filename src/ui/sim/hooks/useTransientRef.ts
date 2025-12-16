@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { TransientDOMService } from '@/game/services/TransientDOMService';
+import { TransientDOMService } from '@/engine/services/TransientDOMService';
 
 /**
  * Registers a DOM element to the TransientDOMService via a Callback Ref.

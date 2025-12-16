@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/game/config/TextAssets';
-import { GameEventBus } from '@/core/signals/GameEventBus';
-import { GameEvents } from '@/core/signals/GameEvents';
+import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/engine/config/TextAssets';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { BOOT_KEYS } from './metaConstants';
 
 // Hooks

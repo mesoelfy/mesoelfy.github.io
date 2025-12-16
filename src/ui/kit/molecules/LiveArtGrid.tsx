@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { AudioSystem } from '@/core/audio/AudioSystem';
-import { getPan } from '@/core/audio/AudioUtils';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 

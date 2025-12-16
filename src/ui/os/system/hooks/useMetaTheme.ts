@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import { COLORS } from '../metaConstants';
 
 export const useMetaTheme = () => {

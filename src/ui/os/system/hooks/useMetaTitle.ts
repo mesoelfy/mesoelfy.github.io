@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '@/game/state/global/useStore';
-import { useGameStore } from '@/game/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export const useMetaTitle = (bootKey: string) => {
   const { bootState, isSimulationPaused, isBreaching } = useStore();

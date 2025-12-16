@@ -2,12 +2,12 @@ import { Grid } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { useGameStore } from '@/game/state/game/useGameStore';
-import { useStore } from '@/game/state/global/useStore';
-import { ServiceLocator } from '@/game/services/ServiceLocator';
-import { Tag } from '@/core/ecs/types';
-import { RenderData } from '@/game/data/RenderData';
-import { ComponentType } from '@/core/ecs/ComponentType';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { Tag } from '@/engine/ecs/types';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const MatrixGrid = () => {
   const groupRef = useRef<THREE.Group>(null);

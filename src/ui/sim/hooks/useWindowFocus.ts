@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useStore } from '@/game/state/global/useStore';
+import { useStore } from '@/engine/state/global/useStore';
 
 /**
  * Handles Global Window Focus/Blur events to pause/resume the simulation.

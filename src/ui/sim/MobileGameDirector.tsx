@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { MobileBootstrapper } from '@/game/services/MobileBootstrapper';
-import { GameEngineCore } from '@/game/services/GameEngine';
+import { MobileBootstrapper } from '@/engine/services/MobileBootstrapper';
+import { GameEngineCore } from '@/engine/services/GameEngine';
 
 export const MobileGameDirector = () => {
   const { viewport, size } = useThree();

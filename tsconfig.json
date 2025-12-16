@@ -23,10 +23,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/core/*": ["./src/core/*"],
-      "@/game/*": ["./src/game/*"],
-      "@/ui/*": ["./src/ui/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/engine/*": [
+        "./src/engine/*"
+      ],
+      "@/ui/*": [
+        "./src/ui/*"
+      ]
     }
   },
   "include": [

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import { useAudio } from '@/ui/hooks/useAudio';
-import { getPan } from '@/core/audio/AudioUtils';
+import { getPan } from '@/engine/audio/AudioUtils';
 import { useRef, useState, useEffect } from 'react';
 
 interface RangeSliderProps {
