@@ -15,6 +15,18 @@ export class HealthSystem implements IGameSystem {
     private panelSystem: IPanelSystem
   ) {
     this.reset();
+    
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        this.damagePlayer(p.damage);
+    });
+
+    this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => {
+        this.tickReboot(p.amount);
+    });
+
+    this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => {
+        this.decayReboot(p.amount);
+    });
   }
 
   update(delta: number, time: number): void {

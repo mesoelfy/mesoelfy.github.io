@@ -1,4 +1,4 @@
-import { IGameSystem, IGameStateSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
@@ -12,7 +12,6 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class CombatSystem implements IGameSystem {
   constructor(
-    private gameSystem: IGameStateSystem,
     private registry: IEntityRegistry,
     private events: IGameEventService,
     private fastEvents: IFastEventService,
@@ -36,7 +35,7 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              this.gameSystem.damagePlayer(amount);
+              // DECOUPLED: Only emit event. HealthSystem handles the logic.
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),

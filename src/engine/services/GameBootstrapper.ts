@@ -78,7 +78,6 @@ export const GameBootstrapper = () => {
   engine.registerSystem(inputSystem);
   engine.registerSystem(physicsSystem);
 
-  // --- INJECTED SYSTEMS ---
   const healthSystem = new HealthSystem(eventService, audioService, panelSystem);
   const progressionSystem = new ProgressionSystem(eventService);
   const gameStateSystem = new GameStateSystem(
@@ -96,7 +95,7 @@ export const GameBootstrapper = () => {
   const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
 
   const projectileSystem = new ProjectileSystem(registry);
-  const combatSystem = new CombatSystem(gameStateSystem, registry, eventService, fastEventService, audioService);
+  const combatSystem = new CombatSystem(registry, eventService, fastEventService, audioService);
   const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
   const targetingSystem = new TargetingSystem(registry, panelSystem);
@@ -104,7 +103,8 @@ export const GameBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
 
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem);
+  // UPDATED: InteractionSystem now gets eventService
+  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
   const playerSystem = new PlayerSystem(inputSystem, spawner, gameStateSystem, interactionSystem, registry, ConfigService);
 
@@ -113,7 +113,6 @@ export const GameBootstrapper = () => {
   const uiSyncSystem = new UISyncSystem(gameStateSystem, interactionSystem, panelSystem);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);
 
-  // Register for Locator (Legacy Bridge & UI Access)
   ServiceLocator.registerSystem('HealthSystem', healthSystem);
   ServiceLocator.registerSystem('ProgressionSystem', progressionSystem);
   ServiceLocator.registerSystem('GameStateSystem', gameStateSystem);
@@ -122,8 +121,6 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerSystem('ShakeSystem', shakeSystem);
   ServiceLocator.registerSystem('InteractionSystem', interactionSystem);
 
-  // Register to Engine (Order matters)
-  // 1. Logic
   engine.registerSystem(healthSystem);
   engine.registerSystem(progressionSystem);
   engine.registerSystem(gameStateSystem);
@@ -138,23 +135,19 @@ export const GameBootstrapper = () => {
   engine.registerSystem(behaviorSystem);
   engine.registerSystem(interactionSystem);
 
-  // 2. Physics/Combat
   engine.registerSystem(projectileSystem);
   engine.registerSystem(collisionSystem);
   engine.registerSystem(combatSystem);
   engine.registerSystem(lifeCycleSystem);
 
-  // 3. Visuals/Audio
   engine.registerSystem(particleSystem);
   engine.registerSystem(shakeSystem);
   engine.registerSystem(renderSystem);
   engine.registerSystem(vfxSystem);
   engine.registerSystem(audioDirector);
   
-  // 4. UI
   engine.registerSystem(uiSyncSystem);
 
-  // Remove setup(locator) calls as dependencies are now injected!
   engine.setup(ServiceLocator);
   
   spawner.spawnPlayer();

@@ -98,7 +98,7 @@ export const MobileBootstrapper = () => {
 
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
-  const inputSystem = new InputSystem(); // Needed for InteractionSystem type signature
+  const inputSystem = new InputSystem(); 
 
   const healthSystem = new HealthSystem(eventService, audioService, panelSystem);
   const progressionSystem = new ProgressionSystem(eventService);
@@ -119,8 +119,8 @@ export const MobileBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
   
-  // Mobile needs minimal interaction system for healing checks if we enable it later
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem);
+  // UPDATED: Added eventService
+  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);

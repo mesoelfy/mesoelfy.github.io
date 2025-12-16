@@ -1,5 +1,4 @@
-import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -16,7 +15,8 @@ export class InteractionSystem implements IInteractionSystem {
     private input: IInputService,
     private spawner: IEntitySpawner,
     private gameSystem: IGameStateSystem,
-    private panelSystem: IPanelSystem
+    private panelSystem: IPanelSystem,
+    private events: IGameEventService
   ) {}
 
   update(delta: number, time: number): void {
@@ -27,10 +27,13 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.input.getCursor();
     
+    // We still read from gameSystem for state check (Decoupled READ)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
+        
+        // If not actively rebooting, decay progress
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
-            this.gameSystem.decayReboot(delta * 15);
+            this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
         }
         return; 
     }
@@ -54,7 +57,9 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.gameSystem.tickReboot(4.0); 
+            // DECOUPLED WRITE: Emit event instead of calling method
+            this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
+            
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
 
@@ -78,13 +83,16 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
+            // Panel System handles its own logic, but we could eventually event-ize this too.
+            // For now, PanelSystem is a core injected dependency, so calling it is "okay" 
+            // but effectively we are telling it to heal.
             this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
             if (p.isDestroyed) {
                 AudioSystem.playSound('loop_reboot');
             } else {
-                GameEventBus.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
+                this.events.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
             }
 
             if (Math.random() > 0.3) {

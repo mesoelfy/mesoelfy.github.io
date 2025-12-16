@@ -21,7 +21,9 @@ export enum GameEvents {
   SPAWN_DAEMON = 'SPAWN_DAEMON',
   HEARTBEAT = 'HEARTBEAT',
   LOG_DEBUG = 'LOG_DEBUG',
-  BOOT_LOG = 'BOOT_LOG'
+  BOOT_LOG = 'BOOT_LOG',
+  PLAYER_REBOOT_TICK = 'PLAYER_REBOOT_TICK',   // NEW
+  PLAYER_REBOOT_DECAY = 'PLAYER_REBOOT_DECAY' // NEW
 }
 
 export type FXVariant = 
@@ -44,7 +46,7 @@ export interface GameEventPayloads {
   [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
   [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number };
   [GameEvents.PANEL_HEALED]: { id: string; amount: number };
-  [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; // ADDED optional X
+  [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; 
   [GameEvents.PANEL_DESTROYED]: { id: string };
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };
@@ -59,4 +61,6 @@ export interface GameEventPayloads {
   [GameEvents.HEARTBEAT]: { urgency: number };
   [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
   [GameEvents.BOOT_LOG]: { message: string };
+  [GameEvents.PLAYER_REBOOT_TICK]: { amount: number };   // NEW
+  [GameEvents.PLAYER_REBOOT_DECAY]: { amount: number }; // NEW
 }
