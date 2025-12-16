@@ -9,13 +9,16 @@ export const CustomCursor = () => {
   const [isClicking, setIsClicking] = useState(false);
   const [isOnScrollbar, setIsOnScrollbar] = useState(false);
   
-  const { bootState, activeModal, isDebugOpen } = useStore();
+  const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
   
   // UPDATED: Treat mobile_lockdown as an active game state for cursor purposes
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   
-  const showCustomCursor = (!isGameActive || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
+  // LOGIC FIX: Explicitly hide during breach transition
+  const showCustomCursor = 
+    ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') 
+    && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -52,7 +55,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen]);
+  }, [isGameActive, isMenuOpen, isBreaching]);
 
   return (
     <>

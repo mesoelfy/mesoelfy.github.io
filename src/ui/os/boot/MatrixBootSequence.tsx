@@ -29,7 +29,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const mainStackRef = useRef<HTMLDivElement>(null);
   
   const device = useDeviceType();
-  const { setBootState, setIntroDone } = useStore();
+  const { setBootState, setIntroDone, setInitialClickPos } = useStore();
 
   const { 
     step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
@@ -45,7 +45,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [showGpuPanel]);
 
-  const handleWrapperClick = () => {
+  const handleWrapperClick = (e: React.MouseEvent) => {
+      // Capture click position for seamless cursor transition
+      setInitialClickPos({ x: e.clientX, y: e.clientY });
+
       if (device === 'mobile') {
           AudioSystem.init();
           AudioSystem.playSound('ui_error');
@@ -62,9 +65,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
       className={clsx(
-          "fixed inset-0 z-[100] font-mono outline-none cursor-auto bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-          // UPDATED: Force hidden overflow when breaching starts to prevent scrollbar flash
-          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
+          "fixed inset-0 z-[100] font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+          // CURSOR FIX: Explicitly hide system cursor during breach to prevent white arrow flash
+          isBreaching ? "overflow-hidden cursor-none" : "overflow-y-auto overflow-x-auto cursor-auto"
       )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />

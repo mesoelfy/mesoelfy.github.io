@@ -7,12 +7,15 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { useStore } from '@/engine/state/global/useStore';
 
-// OPTIMIZATION: Memoize to prevent re-initialization on parent re-renders
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   const isMobileRef = useRef(false);
+  
+  // REACTIVE STATE: We listen to this
+  const initialClickPos = useStore(state => state.initialClickPos);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -28,12 +31,7 @@ export const GameDirector = memo(() => {
 
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    try {
-        const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-        input.updateBounds(viewport.width, viewport.height);
-    } catch {}
-    
-    // Panel Refresh Loop (10Hz) - Now using ServiceLocator
+    // Panel Refresh Loop (10Hz)
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
@@ -60,6 +58,26 @@ export const GameDirector = memo(() => {
       engineRef.current = null;
     };
   }, []); 
+
+  // --- NEW: Position Seeding Effect ---
+  // Runs whenever initialClickPos changes (i.e. when button is clicked)
+  useEffect(() => {
+      if (!initialClickPos || isMobileRef.current || !engineRef.current) return;
+
+      try {
+          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
+          input.updateBounds(viewport.width, viewport.height);
+          
+          // Screen (Pixels) -> World (Units)
+          // X: (clientX / width) * vpW - (vpW/2)
+          // Y: -((clientY / height) * vpH - (vpH/2))  <-- Flip Y
+          
+          const wx = (initialClickPos.x / size.width) * viewport.width - (viewport.width / 2);
+          const wy = -((initialClickPos.y / size.height) * viewport.height - (viewport.height / 2));
+          
+          input.updateCursor(wx, wy);
+      } catch {}
+  }, [initialClickPos, viewport, size]);
 
   // Handle Resize updates
   useEffect(() => {

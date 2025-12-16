@@ -64,7 +64,7 @@ interface DebugFlags {
 }
 
 interface AppState {
-  sessionId: number; // NEW: Triggers Engine Re-mount
+  sessionId: number; 
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
@@ -72,6 +72,7 @@ interface AppState {
   hoveredItem: string | null;
   
   isSimulationPaused: boolean;
+  initialClickPos: { x: number, y: number } | null; // NEW: Track init click
   
   sandboxView: SandboxView;
   
@@ -117,6 +118,7 @@ interface AppState {
   resetDebugFlags: () => void;
   
   setSimulationPaused: (paused: boolean) => void;
+  setInitialClickPos: (pos: { x: number, y: number } | null) => void; // NEW
 }
 
 export const useStore = create<AppState>()(
@@ -130,6 +132,7 @@ export const useStore = create<AppState>()(
       hoveredItem: null,
       
       isSimulationPaused: false,
+      initialClickPos: null,
       
       sandboxView: 'audio',
       galleryTarget: EnemyTypes.DRILLER,
@@ -173,16 +176,11 @@ export const useStore = create<AppState>()(
       setHovered: (item) => set({ hoveredItem: item }),
       
       resetApplication: () => {
-          // Stop Audio
           AudioSystem.stopAll();
-          
-          // Reset Game Logic State
           useGameStore.getState().stopGame();
           useGameStore.getState().resetGame(); 
-          
-          // Reset UI State
           set(state => ({
-              sessionId: state.sessionId + 1, // Increment ID to force remount
+              sessionId: state.sessionId + 1,
               bootState: 'standby',
               introDone: false,
               isBreaching: false,
@@ -192,7 +190,8 @@ export const useStore = create<AppState>()(
               sandboxView: 'audio',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
-              isSimulationPaused: false
+              isSimulationPaused: false,
+              initialClickPos: null
           }));
       },
       
@@ -242,7 +241,8 @@ export const useStore = create<AppState>()(
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
       }),
       
-      setSimulationPaused: (paused) => set({ isSimulationPaused: paused })
+      setSimulationPaused: (paused) => set({ isSimulationPaused: paused }),
+      setInitialClickPos: (pos) => set({ initialClickPos: pos })
     }),
     {
       name: 'mesoelfy-ui-settings-v3',

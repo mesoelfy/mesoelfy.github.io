@@ -44,7 +44,7 @@ export default function Home() {
     isDebugOpen, 
     isDebugMinimized,
     setSimulationPaused,
-    sessionId // NEW
+    sessionId 
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
@@ -153,7 +153,6 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
-        {/* WEBGLErrorBoundary and Scene Canvas are keyed by sessionId to force recreation on reset */}
         <WebGLErrorBoundary key={sessionId}>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             
@@ -211,8 +210,8 @@ export default function Home() {
                             visible: { 
                                 opacity: 1, 
                                 transition: { 
-                                staggerChildren: 0.3,
-                                delayChildren: 0.2 
+                                staggerChildren: 0.05, // FIXED: Fast stagger
+                                delayChildren: 0.0    // FIXED: Instant start
                                 } 
                             }
                             }}

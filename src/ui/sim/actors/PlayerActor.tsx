@@ -137,7 +137,7 @@ const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
-const COL_HIT = new THREE.Color('#FF003C'); // Bright Red for Hit
+const COL_HIT = new THREE.Color('#FF003C'); 
 
 export const PlayerActor = () => {
   const containerRef = useRef<THREE.Group>(null);
@@ -148,9 +148,12 @@ export const PlayerActor = () => {
   
   const { introDone } = useStore(); 
   const animScale = useRef(0);
-  const tempColor = useRef(new THREE.Color());
+  
+  // FIX: Initialize to Green to prevent white flash on load
+  const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
+  
   const currentEnergy = useRef(0.0);
-  const hitFlash = useRef(0.0); // 0.0 to 1.0
+  const hitFlash = useRef(0.0); 
 
   const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
       vertexShader: techGlowShader.vertex,
@@ -178,10 +181,9 @@ export const PlayerActor = () => {
       blending: THREE.NormalBlending 
   }), []);
 
-  // --- EVENT LISTENERS ---
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
-          hitFlash.current = 1.0; // Trigger flash
+          hitFlash.current = 1.0; 
       });
       return unsub;
   }, []);
@@ -198,12 +200,10 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
-    // --- DECAY FLASH ---
     if (hitFlash.current > 0) {
         hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     }
 
-    // --- INTERACTION LOGIC ---
     let interactState = 'IDLE';
     try {
         const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
@@ -213,17 +213,14 @@ export const PlayerActor = () => {
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     const targetEnergy = isActive ? 1.0 : 0.0;
     
-    // Asymmetric Fade for Energy
     const lerpSpeed = isActive ? 12.0 : 3.0;
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * lerpSpeed);
 
-    // Apply Flash boost to energy (makes it pulse violently on hit)
     const effectiveEnergy = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
     ambientMaterial.uniforms.uEnergy.value = effectiveEnergy;
 
-    // --- ECS SYNC ---
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -244,18 +241,14 @@ export const PlayerActor = () => {
     if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
         reticleRef.current.rotation.z = -render.visualRotation;
         
-        // --- COLOR LOGIC ---
         let targetColor = COL_BASE;
         if (isDead) targetColor = COL_DEAD;
         else if (interactState === 'HEALING') targetColor = COL_REPAIR;
         else if (interactState === 'REBOOTING') targetColor = COL_REBOOT;
 
-        // Base Interpolation
-        // FIX: Accessing .current on Ref
-        tempColor.current.setRGB(render.r, render.g, render.b); // Start with ECS driven color
-        tempColor.current.lerp(targetColor, 0.2); // Smooth toward state color
+        tempColor.current.setRGB(render.r, render.g, render.b);
+        tempColor.current.lerp(targetColor, 0.2); 
 
-        // FLASH OVERRIDE
         if (hitFlash.current > 0.01) {
             tempColor.current.lerp(COL_HIT, hitFlash.current);
         }
