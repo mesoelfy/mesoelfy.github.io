@@ -2,7 +2,6 @@ import { StateCreator } from 'zustand';
 import { GameState } from '../useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 
-// SYNCED CONSTANT: 100
 const MAX_PANEL_HEALTH = 100;
 
 export interface UISlice {
@@ -14,6 +13,8 @@ export interface UISlice {
   unregisterPanel: (id: string) => void;
   
   syncPanels: (panelsData: Record<string, any>) => void;
+  setInteractionTarget: (id: string | null) => void; // NEW
+  
   healPanel: (id: string, amount: number) => void;
   damagePanel: (id: string, amount: number) => void;
   
@@ -43,6 +44,8 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       }
       return { panels: merged };
   }),
+
+  setInteractionTarget: (id) => set({ interactionTarget: id }),
 
   healPanel: () => {}, 
   damagePanel: () => {}, 

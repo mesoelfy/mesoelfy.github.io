@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -24,7 +24,6 @@ export class GameEngineCore implements IGameSystem {
   setup(locator: IServiceLocator): void {
     this.locator = locator;
     // LEGACY SETUP SUPPORT
-    // We call setup() only on systems that still have it.
     this.systems.forEach(sys => {
         if (sys.setup) {
             sys.setup(locator);
@@ -44,14 +43,15 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // TODO: Phase 3 - Decouple this GameState check from generic Engine
     let isGameOver = false;
     let timeScale = 1.0;
 
     try {
         const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
+        const panelSys = this.locator.getSystem<IPanelSystem>('PanelRegistrySystem');
         
-        if (gameStore.isPlaying && gameStore.systemIntegrity <= 0) {
+        // CRITICAL FIX: Check REAL integrity from PanelSystem, not the Store
+        if (gameStore.isPlaying && panelSys.systemIntegrity <= 0) {
             gameStore.stopGame();
             GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
             gameSys.isGameOver = true; 

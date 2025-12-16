@@ -31,10 +31,10 @@ export const ZenBomb = () => {
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
           
           onClick={handleClick}
-          // Z-30 is correct (behind Header z-40)
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center group cursor-pointer"
+          // UPDATED: Z-120 to sit above System Failure Screens (Z-100)
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-pointer"
         >
-          {/* CONNECTOR LINE: Increased width and opacity for visibility */}
+          {/* CONNECTOR LINE */}
           <motion.div 
             initial={{ height: 0 }}
             animate={{ height: 160 }} 

@@ -33,8 +33,16 @@ export class UISyncSystem implements IGameSystem {
     if (store.score !== gs.score) store.setScore(gs.score);
     if (store.playerHealth !== gs.playerHealth) store.setPlayerHealth(gs.playerHealth);
     if (store.playerRebootProgress !== gs.playerRebootProgress) store.setPlayerRebootProgress(gs.playerRebootProgress);
-    if (Math.abs(store.systemIntegrity - this.panelSystem.systemIntegrity) > 1.0) {
-        store.setSystemIntegrity(this.panelSystem.systemIntegrity);
+    
+    // CRITICAL FIX: Always sync if engine is at 0, or if difference is significant
+    const engineIntegrity = this.panelSystem.systemIntegrity;
+    if (engineIntegrity <= 0 || Math.abs(store.systemIntegrity - engineIntegrity) > 1.0) {
+        store.setSystemIntegrity(engineIntegrity);
+    }
+
+    // Sync Interaction Target
+    if (store.interactionTarget !== this.interactionSystem.hoveringPanelId) {
+        store.setInteractionTarget(this.interactionSystem.hoveringPanelId);
     }
 
     if (store.xp !== gs.xp || store.level !== gs.level || store.upgradePoints !== gs.upgradePoints) {

@@ -653,5 +653,6 @@ should I do this?
 
 
 
-   Frame and text not turning purple when rebooting. (and rebooting purple flavor text bottom right of rebooting bar isn't appearing. Is the code there for it? Just answer the question, don't write code)
-   Bomb purge not appearing in game over state
+
+
+
