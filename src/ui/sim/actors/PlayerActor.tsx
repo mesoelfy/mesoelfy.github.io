@@ -15,12 +15,14 @@ const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
-// Helper to generate the Star-Ring (12 points, pulled in valleys)
+// Helper to generate the Star-Ring (6 points, pulled in valleys)
 const createStarRingGeo = () => {
-    const points = 12;
-    const outerRadius = 0.45;
-    const innerRadius = 0.40;
-    const indentFactor = 0.12; // How much to pull the valleys in (12%)
+    const points = 6;
+    const outerRadius = 0.50;
+    const innerRadius = 0.30;
+    
+    // SHARPENING: How much to pull the valleys in.
+    const indentFactor = 0.60; 
 
     const shape = new THREE.Shape();
     const step = (Math.PI * 2) / points;
@@ -30,7 +32,7 @@ const createStarRingGeo = () => {
     for (let i = 0; i < points; i++) {
         const theta = i * step;
         
-        // Tip (The original 12 points)
+        // Tip (The original points)
         if (i === 0) shape.moveTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
         else shape.lineTo(Math.cos(theta) * outerRadius, Math.sin(theta) * outerRadius);
         
