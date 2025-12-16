@@ -48,6 +48,19 @@ const pulseVariants = {
     }
 };
 
+// --- CIRCUIT LOCK OVERLAY (INNER) ---
+// REVERTED: Kept at 0.6s (Fast Flash)
+const CircuitLockOverlay = () => {
+    return (
+        <motion.div 
+            className="absolute inset-0 pointer-events-none z-[60] border-2 border-white/50 bg-primary-green/20 shadow-[inset_0_0_20px_#78F654]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+    );
+};
+
 interface GlassPanelProps {
   children: ReactNode;
   className?: string;
@@ -83,7 +96,10 @@ export const GlassPanel = ({
   const isDamaged = !isDestroyed && health < maxHealth;
 
   const [showReboot, setShowReboot] = useReactState(false);
+  const [showCircuitLock, setShowCircuitLock] = useReactState(false);
+  
   const prevDestroyed = useReactRef(isDestroyed);
+  const prevHealth = useReactRef(health);
   
   const shakeControls = useAnimation();
   const heartbeatControls = useHeartbeat(); 
@@ -98,6 +114,7 @@ export const GlassPanel = ({
       }
   }, [isGameOver, shakeControls]);
 
+  // REBOOT LOGIC
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
@@ -106,6 +123,17 @@ export const GlassPanel = ({
     }
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
+
+  // HEAL COMPLETE LOGIC
+  useReactEffect(() => {
+      if (prevHealth.current < maxHealth && health >= maxHealth && !isDestroyed && !isGameOver) {
+          setShowCircuitLock(true);
+          // Timer matches the OUTER glow duration (1.2s) from Tailwind
+          const timer = setTimeout(() => setShowCircuitLock(false), 1200); 
+          return () => clearTimeout(timer);
+      }
+      prevHealth.current = health;
+  }, [health, maxHealth, isDestroyed, isGameOver]);
 
   // SHAKE LISTENER
   useReactEffect(() => {
@@ -123,7 +151,13 @@ export const GlassPanel = ({
   }, [gameId, shakeControls]);
 
   let borderColor = "border-primary-green-dim/30";
-  if (isDestroyed) {
+  
+  // Outer Glow Logic
+  if (showCircuitLock) {
+      // Handled by animate-restore-flash
+      borderColor = "border-primary-green"; 
+  }
+  else if (isDestroyed) {
       borderColor = isInteracting 
         ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" 
         : "border-critical-red animate-pulse"; 
@@ -146,6 +180,8 @@ export const GlassPanel = ({
         "border",
         borderColor, 
         "rounded-sm",
+        // Apply keyframe animation class for the outer glow flash (1.2s)
+        showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300",
         className
       )}
     >
@@ -198,6 +234,7 @@ export const GlassPanel = ({
 
         <AnimatePresence>
             {showReboot && <RebootOverlay key="reboot" />}
+            {showCircuitLock && <CircuitLockOverlay key="lock" />}
         </AnimatePresence>
         
         {isGameOver && (

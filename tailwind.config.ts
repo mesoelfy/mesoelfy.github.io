@@ -7,67 +7,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- SEMANTIC PALETTE ---
-        
-        // The core system color (Safe, Online, Active)
         'primary-green': {
           light: '#7FF65F',
           DEFAULT: 'rgba(96, 196, 68, 1)',
           dim: '#1bb930ff',
           dark: '#217e10ff',
         },
-        
-        // Lore, Regeneration, Special Enemies
         'latent-purple': {
           light: '#BC86BA',
           DEFAULT: '#9E4EA5',
           dim: '#822B8A',
           deep: '#350E3A',
         },
-        
-        // Repair, Friendly AI, Constructive
         'service-cyan': {
           DEFAULT: '#00F0FF', 
           dim: '#008ba3',
         },
-        
-        // Warnings, Highlights, Interaction Focus
         'alert-yellow': {
           DEFAULT: '#eae747ff',
         },
-        
-        // Critical Failure, Enemies, Destruction
         'critical-red': {
           DEFAULT: '#FF003C', 
         },
-        
-        // Backgrounds and Structures
         'muted-gray': '#27282A',
         'void-black': '#050505',
-        
-        // --- LEGACY GAME TOKENS (Keep for Logic/Canvas referencing if needed) ---
-        game: {
-          turret: {
-            base: '#78F654',
-            glow: '#C2FE9A',
-          },
-          bullet: {
-            plasma: '#FFFFFF', 
-            trail: '#78F654',
-          },
-          enemy: {
-            seeker: '#9E4EA5',
-            eater: '#FF003C',
-            boss: '#F7D277',
-          },
-          hud: {
-            text: '#78F654',
-            warning: '#FF003C',
-          },
-          vfx: {
-            spark: '#FFFFFF',
-            damage: '#FF003C',
-          }
+        'game': {
+          turret: { base: '#78F654', glow: '#C2FE9A' },
+          bullet: { plasma: '#FFFFFF', trail: '#78F654' },
+          enemy: { seeker: '#9E4EA5', eater: '#FF003C', boss: '#F7D277' },
+          hud: { text: '#78F654', warning: '#FF003C' },
+          vfx: { spark: '#FFFFFF', damage: '#FF003C' }
         }
       },
       fontFamily: {
@@ -81,6 +50,8 @@ const config: Config = {
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
+        // UPDATED: Duration 1.2s
+        'restore-flash': 'restore-flash 1.2s ease-out forwards',
       },
       keyframes: {
         'spin-diamond': {
@@ -100,6 +71,12 @@ const config: Config = {
           '0%, 30%': { opacity: '1' }, 
           '50%': { opacity: '0' },     
           '100%': { opacity: '1' },    
+        },
+        'restore-flash': {
+          '0%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' },
+          // Keyframe adjusted to snap on quickly (5%) then fade out long
+          '5%': { boxShadow: '0 0 15px rgba(96, 196, 68, 1)', borderColor: '#78F654' },
+          '100%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' }
         }
       }
     },
