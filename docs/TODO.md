@@ -1,3 +1,7 @@
+README description
+    a custom, data-oriented game engine in TypeScript on top of React.
+
+
 # MESOELFY_OS // REFACTOR ROADMAP
 
 
@@ -632,7 +636,7 @@ velocity-based deformation
 Z-Axis (Forward): Scales up with speed.
 X/Y-Axis (Thickness): Scales down slightly to preserve "volume"
 
-I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked? - - - new videos coming in you can see the edges... take another long look at this section and ask for the logic.
+I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked? - - - new videos coming in you can see the edges... take another long look at this section and ask for the logic. - the frame for each slot (green/yellow on hover - is partially obscured)
 
 VFX config - laser sight should be exhaust right?
 

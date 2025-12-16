@@ -13,7 +13,10 @@ class TransformStoreController {
     }
     
     if (this.nextIndex >= MAX_ENTITIES) {
-      console.warn('[TransformStore] Buffer overflow!');
+      // SAFETY: Return 0 (dummy slot) to prevent TypedArray crash.
+      // In a real scenario, we might want to recycle the oldest entity, 
+      // but preventing the crash is priority #1.
+      console.error('[TransformStore] CRITICAL: Entity limit reached! Increase MAX_ENTITIES.');
       return 0; 
     }
 

@@ -1,11 +1,11 @@
 import { IGameSystem, IPhysicsSystem, ICombatSystem, IEntityRegistry } from '@/engine/interfaces';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
-const MAX_COLLISION_RESULTS = 128;
+// SCALING FIX: Increased buffer to handle massive overlaps (e.g. Nukes)
+const MAX_COLLISION_RESULTS = 1024;
 
 export class CollisionSystem implements IGameSystem {
   private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
