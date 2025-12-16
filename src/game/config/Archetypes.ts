@@ -29,7 +29,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
     tags: [Tag.PLAYER],
     components: [
-      { type: ComponentType.Identity, data: { variant: 'PLAYER' } }, // FIXED: Added Identity
+      { type: ComponentType.Identity, data: { variant: 'PLAYER' } },
       { type: ComponentType.Transform, data: { x: 0, y: 0, rotation: 0, scale: 1 } },
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
@@ -39,9 +39,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0 } }
+      { type: ComponentType.Render, data: { visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },
+  // Bullets don't strictly use UniversalActor yet (they have ProjectileRenderer), 
+  // but we can add data for future proofing.
   [ArchetypeIDs.BULLET_PLAYER]: {
     tags: [Tag.BULLET, Tag.PLAYER],
     components: [
@@ -87,7 +89,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
-      { type: ComponentType.Render, data: { ...DRILLER_COLOR } }
+      { type: ComponentType.Render, data: { ...DRILLER_COLOR, geometryId: 'GEO_DRILLER', materialId: 'MAT_ENEMY_BASE' } }
     ]
   },
   [ArchetypeIDs.KAMIKAZE]: {
@@ -101,7 +103,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...KAMIKAZE_COLOR } }
+      { type: ComponentType.Render, data: { ...KAMIKAZE_COLOR, geometryId: 'GEO_KAMIKAZE', materialId: 'MAT_ENEMY_BASE' } }
     ]
   },
   [ArchetypeIDs.HUNTER]: {
@@ -115,7 +117,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...HUNTER_COLOR } }
+      { type: ComponentType.Render, data: { ...HUNTER_COLOR, geometryId: 'GEO_HUNTER', materialId: 'MAT_ENEMY_BASE' } }
     ]
   },
   [ArchetypeIDs.DAEMON]: {
@@ -128,7 +130,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.State, data: { current: 'ORBIT' } },
-      { type: ComponentType.Render, data: { ...DAEMON_COLOR } }
+      { type: ComponentType.Render, data: { ...DAEMON_COLOR, geometryId: 'GEO_DAEMON', materialId: 'MAT_ENEMY_BASE' } }
     ]
   }
 };

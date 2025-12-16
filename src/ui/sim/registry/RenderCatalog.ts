@@ -1,29 +1,24 @@
 import { RenderRegistry } from './RenderRegistry';
 
-// Core Actors
+// Core Actors (Still specialized)
 import { PlayerActor } from '../actors/PlayerActor';
 import { ParticleActor } from '../actors/ParticleActor';
-
-// Unified 3D Renderer
 import { ProjectileRenderer } from '../actors/ProjectileRenderer';
-
-// Enemies
-import { DrillerActor } from '../actors/DrillerActor';
-import { KamikazeActor } from '../actors/KamikazeActor';
-import { HunterActor } from '../actors/HunterActor';
 import { DaemonActor } from '../actors/DaemonActor';
 
+// The New Generic System
+import { UniversalActor } from '../actors/UniversalActor';
+
 export const registerAllRenderers = () => {
+  // 1. Specialized Renderers
   RenderRegistry.register(PlayerActor);
   RenderRegistry.register(ParticleActor);
-  
-  // The new 3D system
   RenderRegistry.register(ProjectileRenderer);
+  RenderRegistry.register(DaemonActor); // Daemon is complex (shield/orbit), keeping specialized for now
   
-  RenderRegistry.register(DrillerActor);
-  RenderRegistry.register(KamikazeActor);
-  RenderRegistry.register(HunterActor);
-  RenderRegistry.register(DaemonActor);
+  // 2. Generic Enemy Renderer
+  // Replaces DrillerActor, KamikazeActor, HunterActor
+  RenderRegistry.register(UniversalActor);
   
   console.log('[RenderCatalog] Visual Components Registered.');
 };

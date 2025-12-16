@@ -13,7 +13,6 @@ import { OrbitalData } from '@/game/data/OrbitalData';
 import { RenderData } from '@/game/data/RenderData';
 import { ProjectileData } from '@/game/data/ProjectileData';
 
-// --- REGISTRATION ---
 const reg = ComponentRegistry;
 
 reg.register(ComponentType.Transform, 
@@ -66,9 +65,14 @@ reg.register(ComponentType.Orbital,
     (c, d) => c.reset(d.parentId, d.radius, d.speed, d.angle, d.active)
 );
 
+// UPDATED: Now accepts geometryId and materialId
 reg.register(ComponentType.Render, 
     () => new RenderData(), 
-    (c, d) => c.reset(d.visualRotation, d.visualScale, d.r, d.g, d.b, d.opacity)
+    (c, d) => c.reset(
+        d.geometryId, d.materialId, 
+        d.visualRotation, d.visualScale, 
+        d.r, d.g, d.b, d.opacity
+    )
 );
 
 reg.register(ComponentType.Projectile, 
@@ -76,9 +80,6 @@ reg.register(ComponentType.Projectile,
     (c, d) => c.reset(d.configId, d.state, d.ownerId)
 );
 
-// --- FACADE ---
-// Export a Proxy that mimics the old { Type: Factory } object structure
-// This allows EntitySpawner to remain unchanged for now.
 export const ComponentBuilder = new Proxy({}, {
     get: (target, prop) => {
         return (data: any) => ComponentRegistry.build(prop as ComponentType, data || {});
