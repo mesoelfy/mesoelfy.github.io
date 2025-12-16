@@ -14,6 +14,9 @@ export interface ShotDef {
   isHoming: boolean;
 }
 
+// VISUAL TWEAK: Push bullets out so they don't clip the player mesh when stretched
+const MUZZLE_OFFSET = 1.2; 
+
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
@@ -49,9 +52,14 @@ export const calculatePlayerShots = (
 
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
+      
+      // Offset spawn point along the firing vector
+      const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+      const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+
       shots.push({
-          x: origin.x,
-          y: origin.y,
+          x: spawnX,
+          y: spawnY,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           damage,
@@ -64,9 +72,13 @@ export const calculatePlayerShots = (
   // 5. Generate Backdoor (Rear Shot)
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
+      
+      const spawnX = origin.x + Math.cos(rearAngle) * MUZZLE_OFFSET;
+      const spawnY = origin.y + Math.sin(rearAngle) * MUZZLE_OFFSET;
+
       shots.push({
-          x: origin.x,
-          y: origin.y,
+          x: spawnX,
+          y: spawnY,
           vx: Math.cos(rearAngle) * speed,
           vy: Math.sin(rearAngle) * speed,
           damage,
@@ -84,9 +96,13 @@ export const calculatePlayerShots = (
       
       for(let i=0; i<snifferLevel; i++) {
           const angle = angleOffset + (i * angleStep);
+          
+          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+
           shots.push({
-              x: origin.x,
-              y: origin.y,
+              x: spawnX,
+              y: spawnY,
               vx: Math.cos(angle) * speed,
               vy: Math.sin(angle) * speed,
               damage,
