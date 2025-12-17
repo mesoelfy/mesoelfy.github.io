@@ -3,7 +3,6 @@ import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransformData } from '@/engine/ecs/components/TransformData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformStore } from '@/engine/ecs/TransformStore';
@@ -81,7 +80,7 @@ export const InstancedActor = ({
 
       tempObj.position.set(x, y, z);
       
-      // 2. Render Overrides (The core change)
+      // 2. Render Overrides
       const render = entity.getComponent<RenderData>(ComponentType.Render);
       
       let finalScale = scale;
@@ -90,21 +89,17 @@ export const InstancedActor = ({
       if (render) {
           finalScale *= render.visualScale;
           visualRot = render.visualRotation;
-          
-          // Apply Color from RenderData
           tempColor.setRGB(render.r, render.g, render.b);
       } else {
-          // Fallback Color
-          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
-          if (identity) tempColor.set(identity.variant); // Legacy support
-          else tempColor.copy(defaultColor);
+          // STRICT MODE: If no RenderData, revert to default white
+          tempColor.copy(defaultColor);
       }
 
       // Apply Rotations (Model Spin + World Aim)
       applyRotation(tempObj, visualRot, rot);
       tempObj.scale.setScalar(finalScale);
 
-      // 3. Custom Logic (Optional Override)
+      // 3. Custom Logic
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }

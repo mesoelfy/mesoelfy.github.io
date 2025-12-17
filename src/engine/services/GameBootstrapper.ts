@@ -91,6 +91,7 @@ export const GameBootstrapper = () => {
   
   const particleSystem = new ParticleSystem();
   const shakeSystem = new ShakeSystem(eventService);
+  // NEW: Constructor Injection for AudioDirector
   const audioDirector = new AudioDirector(panelSystem, eventService, fastEventService, audioService);
   const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
 
@@ -103,7 +104,6 @@ export const GameBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
 
-  // UPDATED: InteractionSystem now gets eventService
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
   const playerSystem = new PlayerSystem(inputSystem, spawner, gameStateSystem, interactionSystem, registry, ConfigService);

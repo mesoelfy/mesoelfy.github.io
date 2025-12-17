@@ -1,9 +1,8 @@
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class MobileWaveSystem implements IGameSystem {
-  private spawner!: IEntitySpawner;
   private time = 0;
   private nextSpawn = 0;
   
@@ -12,9 +11,7 @@ export class MobileWaveSystem implements IGameSystem {
   private readonly MIN_INTERVAL = 0.4;
   private readonly RAMP_DURATION = 60.0;
 
-  setup(locator: IServiceLocator): void {
-    this.spawner = locator.getSpawner();
-  }
+  constructor(private spawner: IEntitySpawner) {}
 
   update(delta: number, time: number): void {
     this.time += delta;
@@ -35,7 +32,6 @@ export class MobileWaveSystem implements IGameSystem {
       const pad = 3.0; // Spawn further out
       
       // RESTRICT TO TOP AND BOTTOM ONLY
-      // This gives the player more reaction time and prevents thumb occlusion
       const isTop = Math.random() > 0.5;
       
       let x = (Math.random() - 0.5) * (width * 0.6); // Keep them somewhat central horizontally

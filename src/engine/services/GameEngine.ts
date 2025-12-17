@@ -21,14 +21,9 @@ export class GameEngineCore implements IGameSystem {
       this.registry = registry;
   }
 
+  // Locator is now optional/stored but setup is removed
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    // LEGACY SETUP SUPPORT
-    this.systems.forEach(sys => {
-        if (sys.setup) {
-            sys.setup(locator);
-        }
-    });
   }
 
   public registerSystem(system: IGameSystem) {

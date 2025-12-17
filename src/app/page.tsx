@@ -48,7 +48,6 @@ export default function Home() {
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
-  const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
@@ -133,12 +132,6 @@ export default function Home() {
       startGame();
     }, 200);
   };
-
-  useEffect(() => {
-    if (bootState !== 'active') return;
-    const interval = setInterval(recalcIntegrity, 500);
-    return () => clearInterval(interval);
-  }, [bootState, recalcIntegrity]);
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 

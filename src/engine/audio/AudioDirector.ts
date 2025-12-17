@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -6,17 +6,13 @@ import { ViewportHelper } from '@/engine/math/ViewportHelper';
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
   private readCursor = 0;
-  private panelSystem!: IPanelSystem;
-  private events!: IGameEventService;
-  private fastEvents!: IFastEventService;
-  private audio!: IAudioService;
   
-  setup(locator: IServiceLocator): void {
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.events = locator.getGameEventBus();
-    this.fastEvents = locator.getFastEventBus();
-    this.audio = locator.getAudioService();
-    
+  constructor(
+    private panelSystem: IPanelSystem,
+    private events: IGameEventService,
+    private fastEvents: IFastEventService,
+    private audio: IAudioService
+  ) {
     this.readCursor = this.fastEvents.getCursor();
     this.setupEventListeners();
   }
@@ -29,10 +25,7 @@ export class AudioDirector implements IGameSystem {
             const key = FX_ID_MAP[a1];
             
             if (this.logTimer > 1.0) {
-                this.events.emit(GameEvents.LOG_DEBUG, { 
-                    msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
-                    source: 'AudioDirector' 
-                });
+                // this.events.emit(GameEvents.LOG_DEBUG, ...); // Optional logging
                 this.logTimer = 0;
             }
 

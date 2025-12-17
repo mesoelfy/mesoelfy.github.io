@@ -172,17 +172,6 @@ export class AudioServiceImpl implements IAudioService {
       }
   }
 
-  // --- COMPATIBILITY / HELPERS ---
-  
-  public playMusic(key: string) {
-      // Legacy compat, for now just calls startMusic if it's the main track
-      this.startMusic();
-  }
-  
-  public setVolume(volume: number) {
-      // Legacy compat, does nothing as we use updateVolumes() now
-  }
-
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 

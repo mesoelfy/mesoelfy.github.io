@@ -119,7 +119,6 @@ export const MobileBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
   
-  // UPDATED: Added eventService
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
@@ -130,7 +129,8 @@ export const MobileBootstrapper = () => {
       { id: 'PhysicsSystem', sys: physicsSystem },
       { id: 'StructureSystem', sys: structureSystem },
       { id: 'GameStateSystem', sys: gameStateSystem },
-      { id: 'MobileWaveSystem', sys: new MobileWaveSystem() },
+      // NEW: MobileWaveSystem now takes spawner in constructor
+      { id: 'MobileWaveSystem', sys: new MobileWaveSystem(spawner) },
       { id: 'TargetingSystem', sys: targetingSystem },
       { id: 'BehaviorSystem', sys: behaviorSystem },
       { id: 'ParticleSystem', sys: particleSystem },

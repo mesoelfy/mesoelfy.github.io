@@ -10,7 +10,6 @@ export type GameState = CombatSlice & ProgressionSlice & UISlice & {
   resetGame: () => void;
   startGame: () => void;
   stopGame: () => void;
-  recalculateIntegrity: () => void; // Deprecated but kept for type safety until fully removed
 };
 
 export const useGameStore = create<GameState>()(
@@ -34,9 +33,6 @@ export const useGameStore = create<GameState>()(
           get().resetProgressionState();
           get().resetUIState();
       },
-
-      // No-op (Logic moved to StructureHealthService)
-      recalculateIntegrity: () => {},
     }),
     {
       name: 'mesoelfy-os-storage-v3', 

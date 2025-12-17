@@ -7,9 +7,6 @@ import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 
 export interface IGameSystem {
-  // DEPRECATED: Moving to Constructor Injection.
-  setup?(locator: IServiceLocator): void;
-  
   update(delta: number, time: number): void;
   teardown(): void;
 }
@@ -71,8 +68,6 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: string, pan?: number): void;
   playAmbience(key: string): void;
-  playMusic(key: string): void;
-  setVolume(volume: number): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;
@@ -140,7 +135,7 @@ export interface IPanelSystem extends IGameSystem {
   unregister(id: string): void;
   refreshAll(): void;
   refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number, silent?: boolean): void; // UPDATED
+  damagePanel(id: string, amount: number, silent?: boolean): void;
   healPanel(id: string, amount: number, sourceX?: number): void;
   decayPanel(id: string, amount: number): void;
   destroyAll(): void;
