@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Waves, Zap, RefreshCcw } from 'lucide-react';
+import { Atom, Zap, RefreshCcw } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 
 const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
-  { id: 'TRAIL', label: 'BUFFER_TRAIL', icon: Waves },
 ];
 
 export const VisualLab = () => {
