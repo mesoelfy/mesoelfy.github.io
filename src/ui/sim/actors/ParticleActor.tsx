@@ -8,6 +8,9 @@ import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
 
+// UPDATED: Must match ParticleSystem.ts
+const MAX_PARTICLES = 20000;
+
 export const ParticleActor = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
@@ -17,10 +20,9 @@ export const ParticleActor = () => {
   // Setup Attributes
   useLayoutEffect(() => {
       if (meshRef.current) {
-          const max = 2000;
           meshRef.current.geometry.setAttribute(
               'shapeID', 
-              new THREE.InstancedBufferAttribute(new Float32Array(max), 1)
+              new THREE.InstancedBufferAttribute(new Float32Array(MAX_PARTICLES), 1)
           );
       }
   }, []);
@@ -73,12 +75,6 @@ export const ParticleActor = () => {
             dummy.scale.set(scaleX, scaleY, 1);
 
             // OVERSHOOT FIX: Pivot Correction
-            // The geometry (Plane) is 0.3 units wide and centered at (0,0).
-            // When we stretch it to 'scaleX', it grows in both directions (-X and +X).
-            // This causes the "tail" to push backward past the spawn point (into the wall).
-            // We calculate the actual visual length and shift the center FORWARD by half that length.
-            // This pins the tail to the origin.
-            
             const visualLength = 0.3 * scaleX; 
             const shift = visualLength * 0.5;
 
@@ -108,7 +104,7 @@ export const ParticleActor = () => {
   return (
     <instancedMesh 
       ref={meshRef} 
-      args={[geometry, material, 2000]} 
+      args={[geometry, material, MAX_PARTICLES]} 
       frustumCulled={false}
     />
   );

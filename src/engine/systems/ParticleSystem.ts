@@ -1,7 +1,8 @@
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
 import * as THREE from 'three';
 
-const MAX_PARTICLES = 2000;
+// UPDATED: Increased capacity to prevent starvation during chaotic scenes
+const MAX_PARTICLES = 20000;
 
 export class ParticleSystem implements IParticleSystem {
   public count = 0;
@@ -55,7 +56,7 @@ export class ParticleSystem implements IParticleSystem {
       colorHex: string, 
       vx: number, vy: number, 
       life: number, 
-      size: number = 1.0,
+      size: number = 1.0, 
       shape: number = 0
   ) {
     if (this.count >= MAX_PARTICLES) return;
