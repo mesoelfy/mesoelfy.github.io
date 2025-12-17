@@ -137,36 +137,39 @@ function handleMassExchange(a: Entity, b: Entity, defaultFX: string, ctx: Combat
   if (hpA) hpA.current = Math.max(0, hpA.current - dmgB);
   if (hpB) hpB.current = Math.max(0, hpB.current - dmgA);
 
-  const pos = getPos(a);
-  const x = pos ? pos.x : 0;
+  const posA = getPos(a);
+  const posB = getPos(b);
+  const x = posA ? posA.x : 0;
   
-  if (pos) {
+  if (posA) {
       let spawnedCustom = false;
       
       // If defaultFX is white (standard hit), try to override with B's color (Attacker)
-      if (defaultFX === 'IMPACT_WHITE') {
+      if (defaultFX === 'IMPACT_WHITE' && posB) {
           const bRender = b.getComponent<RenderData>(ComponentType.Render);
           if (bRender) {
-              // Normalize color (Assume values might be high like 4.0 from bloom)
               const maxC = Math.max(bRender.r, bRender.g, bRender.b, 1.0);
               const r = bRender.r / maxC;
               const g = bRender.g / maxC;
               const b = bRender.b / maxC;
               
-              ctx.spawnImpact(pos.x, pos.y, r, g, b);
+              // Calculate Ricochet Angle (Vector from A to B)
+              const angle = Math.atan2(posB.y - posA.y, posB.x - posA.x);
+              
+              ctx.spawnImpact(posA.x, posA.y, r, g, b, angle);
               spawnedCustom = true;
           }
       } 
       
       if (!spawnedCustom) {
-          ctx.spawnFX(defaultFX, pos.x, pos.y);
+          ctx.spawnFX(defaultFX, posA.x, posA.y);
       }
   }
 
   let soundKey = '';
 
   if (hpA && hpA.current <= 0) {
-      ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); // Death effect always white transition or specialized? Left as is.
+      ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle);
       soundKey = 'fx_impact_light';
   }
   if (hpB && hpB.current <= 0) {

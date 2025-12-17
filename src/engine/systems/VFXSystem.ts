@@ -28,7 +28,8 @@ export class VFXSystem implements IGameSystem {
             this.addTrauma(a1);
         }
         else if (id === FastEvents.SPAWN_IMPACT) {
-            this.spawnDynamicImpact(a1, a2, a3); // x, y, packedColor
+            // a1=x, a2=y, a3=packedColor, a4=angle
+            this.spawnDynamicImpact(a1, a2, a3, a4); 
         }
     });
   }
@@ -56,24 +57,37 @@ export class VFXSystem implements IGameSystem {
     });
   }
 
-  private spawnDynamicImpact(x: number, y: number, packedColor: number) {
+  private spawnDynamicImpact(x: number, y: number, packedColor: number, impactAngle: number) {
       // Unpack Color
       const r = ((packedColor >> 16) & 255) / 255;
       const g = ((packedColor >> 8) & 255) / 255;
       const b = (packedColor & 255) / 255;
       
-      // Convert to Hex String for ParticleSystem
       const toHex = (n: number) => Math.floor(n * 255).toString(16).padStart(2, '0');
       const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
       
-      // Mimic IMPACT_WHITE recipe params
-      const count = this.randomRange(3, 5);
+      const count = this.randomRange(4, 8);
+      
       for(let i=0; i<count; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = this.randomRange(2, 5);
+          // --- RICOCHET LOGIC ---
+          // Instead of spraying back along the impactAngle (normal), 
+          // we force a deflection to the sides to create a "Splash" or "V" shape.
+          
+          // Determine side: Left or Right of the normal
+          const side = Math.random() > 0.5 ? 1 : -1;
+          
+          // Offset: 0.6 rad (~35deg) to 1.8 rad (~100deg) from the normal.
+          // This leaves the direct center clear (no sparks flying straight back at player).
+          const deflection = 0.6 + (Math.random() * 1.2);
+          const angle = impactAngle + (side * deflection);
+          
+          // High speed for "shard" feel
+          const speed = this.randomRange(6, 14); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
-          const life = this.randomRange(0.1, 0.2);
+          
+          // Short life for snappy impact
+          const life = this.randomRange(0.1, 0.25);
           
           this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
       }
@@ -142,7 +156,5 @@ export class VFXSystem implements IGameSystem {
       this.shakeSystem.addTrauma(amount);
   }
 
-  private triggerHitStop(duration: number) {
-      // HitStop logic can be re-enabled here if needed
-  }
+  private triggerHitStop(duration: number) {}
 }

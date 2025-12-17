@@ -42,17 +42,17 @@ export class CombatSystem implements IGameSystem {
               const id = FX_IDS[type];
               if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x, y);
           },
-          spawnImpact: (x, y, r, g, b) => {
+          spawnImpact: (x, y, r, g, b, angle) => {
               // Clamp inputs to 0-1
               const cr = Math.min(1, Math.max(0, r));
               const cg = Math.min(1, Math.max(0, g));
               const cb = Math.min(1, Math.max(0, b));
               
               // Pack 0-255 ints into one float
-              // Bitwise: R | G | B
               const packed = (Math.floor(cr * 255) << 16) | (Math.floor(cg * 255) << 8) | Math.floor(cb * 255);
               
-              this.fastEvents.emit(FastEvents.SPAWN_IMPACT, x, y, packed);
+              // Pass angle as the 4th argument
+              this.fastEvents.emit(FastEvents.SPAWN_IMPACT, x, y, packed, angle);
           },
           playAudio: (key) => this.audio.playSound(key),
           playSpatialAudio: (key, x) => {
