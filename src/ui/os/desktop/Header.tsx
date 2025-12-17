@@ -39,6 +39,25 @@ const ToggleBtn = ({ active, onClick, children, color, audio }: any) => (
   </button>
 );
 
+const barVariants = {
+  idle: {
+    filter: "none", // Hard reset
+    transition: { duration: 0.2 }
+  },
+  heartbeat: {
+    filter: [
+      "brightness(1) drop-shadow(0 0 0px #FF003C)", 
+      "brightness(2) drop-shadow(0 0 10px #FF003C)", 
+      "brightness(1) drop-shadow(0 0 0px #FF003C)"
+    ],
+    transition: { 
+      duration: 0.8, 
+      times: [0, 0.04, 1], 
+      ease: "easeOut" 
+    }
+  }
+};
+
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   const audio = useAudio();
@@ -62,7 +81,18 @@ export const Header = () => {
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       <div className="flex items-center gap-4">
-        <motion.span animate={isCritical ? heartbeatControls : undefined} variants={{ heartbeat: { scale: [1, 1.05, 1], textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } } }} className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}>
+        <motion.span 
+            animate={isCritical ? heartbeatControls : "idle"} 
+            variants={{ 
+                idle: { scale: 1, textShadow: "0 0 0px transparent" },
+                heartbeat: { 
+                    scale: [1, 1.05, 1], 
+                    textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], 
+                    transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
+                } 
+            }} 
+            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
+        >
           MESOELFY_OS
         </motion.span>
         {mounted && (
@@ -90,8 +120,23 @@ export const Header = () => {
       </div>
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <motion.div className="h-full" initial={{ width: "100%" }} animate={{ width: `${systemIntegrity}%` }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}>
-              <motion.div animate={isCritical ? heartbeatControls : undefined} variants={{ heartbeat: { filter: ["brightness(1) drop-shadow(0 0 0px #FF003C)", "brightness(2) drop-shadow(0 0 10px #FF003C)", "brightness(1) drop-shadow(0 0 0px #FF003C"], transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } } }} className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green")} />
+          <motion.div 
+            className="h-full" 
+            initial={{ width: "100%" }} 
+            animate={{ width: `${systemIntegrity}%` }} 
+            transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+          >
+              <motion.div 
+                // CRITICAL FIX: The 'key' prop forces React to remount this element when state changes.
+                // This guarantees all previous styles (sticky filters) are destroyed.
+                key={isCritical ? "critical-bar" : "normal-bar"}
+                animate={isCritical ? heartbeatControls : "idle"} 
+                variants={barVariants}
+                className={clsx(
+                    "w-full h-full shadow-[0_0_10px_currentColor]", 
+                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                )} 
+              />
           </motion.div>
         </div>
       )}

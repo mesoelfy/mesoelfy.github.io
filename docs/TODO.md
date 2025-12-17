@@ -674,3 +674,15 @@ scrolling text should change directions when rebooting
 identity core regen boundaries are too wide
 
 
+Is there audio crackling after a few minutes?
+
+
+The Base (Solid Color):
+What it is: The actual width of the bar (backgroundColor).
+Behavior: Turns RED when critical.
+The Aura (Static Glow):
+What it is: A standard CSS box-shadow that makes the bar look neon.
+Behavior: Turns RED when critical.
+The Pulse (The Heartbeat):
+What it is: A CSS filter: drop-shadow(...) + brightness(...) animation driven by Framer Motion.
+The Issue: This layer adds a secondary, blurry red shadow on top of everything. When you heal, Framer Motion tries to "smoothly transition" this filter to none. During that transition (or if it gets stuck), that red blurry shadow sits on top of your green bar, creating a muddy "tint."
