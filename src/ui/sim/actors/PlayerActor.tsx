@@ -138,6 +138,7 @@ const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C'); 
+const COL_RETICLE_HEAL = new THREE.Color('#257171'); // Dark Cyan/Teal for Reticle
 
 export const PlayerActor = () => {
   const containerRef = useRef<THREE.Group>(null);
@@ -151,6 +152,7 @@ export const PlayerActor = () => {
   
   // FIX: Initialize to Green to prevent white flash on load
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
+  const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
@@ -246,14 +248,26 @@ export const PlayerActor = () => {
         else if (interactState === 'HEALING') targetColor = COL_REPAIR;
         else if (interactState === 'REBOOTING') targetColor = COL_REBOOT;
 
+        // 1. Update Main Cursor Color (Interpolate towards State Color)
         tempColor.current.setRGB(render.r, render.g, render.b);
         tempColor.current.lerp(targetColor, 0.2); 
 
+        // 2. Update Reticle Color (Divergent for Healing)
+        if (interactState === 'HEALING' && !isDead) {
+            reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
+        } else {
+            // Otherwise sync with the main cursor color
+            reticleColor.current.lerp(tempColor.current, 0.2);
+        }
+
+        // 3. Apply Hit Flash (Override both)
         if (hitFlash.current > 0.01) {
             tempColor.current.lerp(COL_HIT, hitFlash.current);
+            reticleColor.current.lerp(COL_HIT, hitFlash.current);
         }
         
-        (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        // 4. Apply to Materials
+        (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
