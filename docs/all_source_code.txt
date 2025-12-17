@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Dec 17 11:45:42 CST 2025
+Generated on: Wed Dec 17 12:07:47 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -75,7 +75,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── PlayerConfig.ts
 │   │   │   ├── ProjectileConfig.ts
 │   │   │   ├── SoundMetadata.ts
-│   │   │   ├── SystemManifest.ts
 │   │   │   ├── TextAssets.ts
 │   │   │   ├── VFXConfig.ts
 │   │   │   ├── WaveConfig.ts
@@ -136,7 +135,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GeometryUtils.ts
 │   │   │   ├── Noise.ts
 │   │   │   ├── RenderUtils.ts
-│   │   │   ├── TextureGen.ts
 │   │   │   ├── ViewportHelper.ts
 │   │   │   └── coords.ts
 │   │   ├── services
@@ -318,8 +316,7 @@ PROJECT DIRECTORY STRUCTURE:
 │           │   ├── useTransientRef.ts
 │           │   └── useWindowFocus.ts
 │           ├── props
-│           │   ├── MiniCrystalCanvas.tsx
-│           │   └── SoulCrystal.tsx
+│           │   └── MiniCrystalCanvas.tsx
 │           ├── registry
 │           │   ├── RenderCatalog.ts
 │           │   └── RenderRegistry.ts
@@ -332,7 +329,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-75 directories, 249 files
+75 directories, 246 files
 
 =====================================
 FILE: ./next.config.js
@@ -8986,48 +8983,6 @@ export const MiniCrystalCanvas = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/props/SoulCrystal.tsx
-=====================================
-import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Float, MeshDistortMaterial } from '@react-three/drei';
-import * as THREE from 'three';
-
-export const SoulCrystal = () => {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (meshRef.current) {
-      const t = state.clock.getElapsedTime();
-      meshRef.current.rotation.y = t * 0.5;
-      meshRef.current.rotation.z = t * 0.2;
-    }
-  });
-
-  return (
-    <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-      <mesh ref={meshRef} scale={1.5}>
-        <octahedronGeometry args={[1, 0]} />
-        <MeshDistortMaterial
-          color="#00ff41"
-          emissive="#003300"
-          roughness={0}
-          metalness={1}
-          distort={0.4}
-          speed={2}
-          wireframe
-        />
-      </mesh>
-      <mesh scale={0.8}>
-        <octahedronGeometry args={[1, 0]} />
-        <meshBasicMaterial color="#ccffcc" transparent opacity={0.5} />
-      </mesh>
-    </Float>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/sim/RenderDirector.tsx
 =====================================
 import { useEffect, useState } from 'react';
@@ -10330,7 +10285,6 @@ import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransformData } from '@/engine/ecs/components/TransformData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformStore } from '@/engine/ecs/TransformStore';
@@ -10408,7 +10362,7 @@ export const InstancedActor = ({
 
       tempObj.position.set(x, y, z);
       
-      // 2. Render Overrides (The core change)
+      // 2. Render Overrides
       const render = entity.getComponent<RenderData>(ComponentType.Render);
       
       let finalScale = scale;
@@ -10417,21 +10371,17 @@ export const InstancedActor = ({
       if (render) {
           finalScale *= render.visualScale;
           visualRot = render.visualRotation;
-          
-          // Apply Color from RenderData
           tempColor.setRGB(render.r, render.g, render.b);
       } else {
-          // Fallback Color
-          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
-          if (identity) tempColor.set(identity.variant); // Legacy support
-          else tempColor.copy(defaultColor);
+          // STRICT MODE: If no RenderData, revert to default white
+          tempColor.copy(defaultColor);
       }
 
       // Apply Rotations (Model Spin + World Aim)
       applyRotation(tempObj, visualRot, rot);
       tempObj.scale.setScalar(finalScale);
 
-      // 3. Custom Logic (Optional Override)
+      // 3. Custom Logic
       if (updateEntity) {
         updateEntity(entity, tempObj, tempColor, delta);
       }
@@ -11077,7 +11027,6 @@ export default function Home() {
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
-  const recalcIntegrity = useGameStore(s => s.recalculateIntegrity);
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
@@ -11162,12 +11111,6 @@ export default function Home() {
       startGame();
     }, 200);
   };
-
-  useEffect(() => {
-    if (bootState !== 'active') return;
-    const interval = setInterval(recalcIntegrity, 500);
-    return () => clearInterval(interval);
-  }, [bootState, recalcIntegrity]);
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
@@ -12213,95 +12156,6 @@ export const WorldConfig = {
     maxAccumulator: 0.1 // Prevent "Spiral of Death" if CPU lags hard
   }
 };
-
-
-=====================================
-FILE: ./src/engine/config/SystemManifest.ts
-=====================================
-import { IGameSystem } from '@/engine/interfaces';
-
-// Core Systems
-import { TimeSystem } from '@/engine/systems/TimeSystem';
-import { InputSystem } from '@/engine/systems/InputSystem';
-import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
-import { AudioDirector } from '@/engine/audio/AudioDirector';
-
-// Game Systems
-import { GameStateSystem } from '@/engine/systems/GameStateSystem';
-import { UISyncSystem } from '@/engine/systems/UISyncSystem';
-import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
-import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
-import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
-import { CollisionSystem } from '@/engine/systems/CollisionSystem';
-import { CombatSystem } from '@/engine/systems/CombatSystem';
-import { WaveSystem } from '@/engine/systems/WaveSystem';
-import { PlayerSystem } from '@/engine/systems/PlayerSystem';
-import { InteractionSystem } from '@/engine/systems/InteractionSystem';
-import { StructureSystem } from '@/engine/systems/StructureSystem'; 
-import { TargetingSystem } from '@/engine/systems/TargetingSystem';
-import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
-import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { RenderSystem } from '@/engine/systems/RenderSystem';
-import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
-import { ShakeSystem } from '@/engine/systems/ShakeSystem';
-import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { ParticleSystem } from '@/engine/systems/ParticleSystem';
-import { HealthSystem } from '@/engine/systems/HealthSystem';
-import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
-
-type SystemFactory = () => IGameSystem;
-
-interface SystemDef {
-  id: string;
-  factory: SystemFactory;
-}
-
-// Helper to create factory from Class
-// Note: PhysicsSystem requires arguments now, so it shouldn't be in the generic manifest factory list
-// We will handle core systems manually in GameBootstrapper
-const useClass = (ClassRef: new () => IGameSystem): SystemFactory => () => new ClassRef();
-
-export const SYSTEM_MANIFEST: SystemDef[] = [
-  // Core / Input (Still included here for reference, but skipped by Bootstrapper)
-  // { id: 'TimeSystem',       factory: useClass(TimeSystem) },
-  // { id: 'InputSystem',      factory: useClass(InputSystem) },
-  // { id: 'PhysicsSystem',    factory: useClass(PhysicsSystem) },
-  
-  { id: 'PanelRegistrySystem', factory: useClass(PanelRegistrySystem) },
-  
-  // Logic Core (Order Matters)
-  { id: 'HealthSystem',     factory: useClass(HealthSystem) },
-  { id: 'ProgressionSystem', factory: useClass(ProgressionSystem) },
-  { id: 'GameStateSystem',  factory: useClass(GameStateSystem) }, 
-  
-  { id: 'InteractionSystem', factory: useClass(InteractionSystem) },
-  { id: 'StructureSystem',  factory: useClass(StructureSystem) },
-  { id: 'WaveSystem',       factory: useClass(WaveSystem) },
-
-  { id: 'ParticleSystem',   factory: useClass(ParticleSystem) },
-
-  // Entity Behavior
-  { id: 'TargetingSystem',  factory: useClass(TargetingSystem) },
-  { id: 'OrbitalSystem',    factory: useClass(OrbitalSystem) },
-  { id: 'PlayerSystem',     factory: useClass(PlayerSystem) },
-  { id: 'BehaviorSystem',   factory: useClass(BehaviorSystem) },
-  { id: 'GuidanceSystem',   factory: useClass(GuidanceSystem) },
-
-  // Physics & Collision
-  { id: 'ProjectileSystem', factory: useClass(ProjectileSystem) },
-  { id: 'CollisionSystem',  factory: useClass(CollisionSystem) },
-  
-  // Resolution
-  { id: 'CombatSystem',     factory: useClass(CombatSystem) },
-  { id: 'LifeCycleSystem',  factory: useClass(LifeCycleSystem) }, 
-  
-  // Visuals
-  { id: 'RenderSystem',     factory: useClass(RenderSystem) },
-  { id: 'VFXSystem',        factory: useClass(VFXSystem) },
-  { id: 'AudioDirectorSystem', factory: useClass(AudioDirector) },
-  { id: 'ShakeSystem',      factory: useClass(ShakeSystem) },
-  { id: 'UISyncSystem',     factory: useClass(UISyncSystem) },
-];
 
 
 =====================================
@@ -13757,7 +13611,6 @@ export type GameState = CombatSlice & ProgressionSlice & UISlice & {
   resetGame: () => void;
   startGame: () => void;
   stopGame: () => void;
-  recalculateIntegrity: () => void; // Deprecated but kept for type safety until fully removed
 };
 
 export const useGameStore = create<GameState>()(
@@ -13781,9 +13634,6 @@ export const useGameStore = create<GameState>()(
           get().resetProgressionState();
           get().resetUIState();
       },
-
-      // No-op (Logic moved to StructureHealthService)
-      recalculateIntegrity: () => {},
     }),
     {
       name: 'mesoelfy-os-storage-v3', 
@@ -14081,31 +13931,6 @@ export const applyRotation = (obj: THREE.Object3D, spin: number, aim: number) =>
   qAim.multiply(qSpin);
   
   obj.quaternion.copy(qAim);
-};
-
-
-=====================================
-FILE: ./src/engine/math/TextureGen.ts
-=====================================
-import * as THREE from 'three';
-
-// 1. Soft Glow (Particles)
-export const createGlowTexture = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d')!;
-  
-  const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, 64, 64);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  return texture;
 };
 
 
@@ -14498,17 +14323,6 @@ export class AudioServiceImpl implements IAudioService {
       }
   }
 
-  // --- COMPATIBILITY / HELPERS ---
-  
-  public playMusic(key: string) {
-      // Legacy compat, for now just calls startMusic if it's the main track
-      this.startMusic();
-  }
-  
-  public setVolume(volume: number) {
-      // Legacy compat, does nothing as we use updateVolumes() now
-  }
-
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 
@@ -14617,18 +14431,13 @@ import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { IAudioService } from '@/engine/interfaces';
 import { AudioServiceImpl } from './AudioService';
 
-/**
- * STATIC FACADE FOR AUDIO SERVICE
- * Routes calls to the registered IAudioService.
- * Auto-registers a default implementation if none exists.
- */
 class AudioSystemFacade implements IAudioService {
   
   private get service(): IAudioService {
     try {
       return ServiceLocator.getAudioService();
     } catch (e) {
-      // Lazy Initialization: If not found, create and register it globally
+      // Lazy Initialization
       const impl = new AudioServiceImpl();
       ServiceLocator.register('AudioService', impl);
       return impl;
@@ -14642,13 +14451,9 @@ class AudioSystemFacade implements IAudioService {
   
   public playSound(key: string, pan?: number) { this.service.playSound(key, pan); }
   public playAmbience(key: string) { this.service.playAmbience(key); }
-  public playMusic(key: string) { this.service.playMusic(key); }
-  
-  public setVolume(volume: number) { this.service.setVolume(volume); }
   public duckMusic(intensity: number, duration: number) { this.service.duckMusic(intensity, duration); }
   public getFrequencyData(array: Uint8Array) { this.service.getFrequencyData(array); }
   
-  // Helpers
   public playClick(pan?: number) { this.service.playClick(pan); }
   public playHover(pan?: number) { this.service.playHover(pan); }
   public playBootSequence() { this.service.playBootSequence(); }
@@ -14697,7 +14502,7 @@ export const useAudioVisualizer = (fftSize: number = 32) => {
 =====================================
 FILE: ./src/engine/audio/AudioDirector.ts
 =====================================
-import { IGameSystem, IServiceLocator, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -14705,17 +14510,13 @@ import { ViewportHelper } from '@/engine/math/ViewportHelper';
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
   private readCursor = 0;
-  private panelSystem!: IPanelSystem;
-  private events!: IGameEventService;
-  private fastEvents!: IFastEventService;
-  private audio!: IAudioService;
   
-  setup(locator: IServiceLocator): void {
-    this.panelSystem = locator.getSystem<IPanelSystem>('PanelRegistrySystem');
-    this.events = locator.getGameEventBus();
-    this.fastEvents = locator.getFastEventBus();
-    this.audio = locator.getAudioService();
-    
+  constructor(
+    private panelSystem: IPanelSystem,
+    private events: IGameEventService,
+    private fastEvents: IFastEventService,
+    private audio: IAudioService
+  ) {
     this.readCursor = this.fastEvents.getCursor();
     this.setupEventListeners();
   }
@@ -14728,10 +14529,7 @@ export class AudioDirector implements IGameSystem {
             const key = FX_ID_MAP[a1];
             
             if (this.logTimer > 1.0) {
-                this.events.emit(GameEvents.LOG_DEBUG, { 
-                    msg: `RECV SOUND ID: ${a1} -> KEY: ${key}`, 
-                    source: 'AudioDirector' 
-                });
+                // this.events.emit(GameEvents.LOG_DEBUG, ...); // Optional logging
                 this.logTimer = 0;
             }
 
@@ -17840,12 +17638,11 @@ export class GameStateSystem implements IGameStateSystem {
 =====================================
 FILE: ./src/engine/systems/MobileWaveSystem.ts
 =====================================
-import { IGameSystem, IServiceLocator, IEntitySpawner } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class MobileWaveSystem implements IGameSystem {
-  private spawner!: IEntitySpawner;
   private time = 0;
   private nextSpawn = 0;
   
@@ -17854,9 +17651,7 @@ export class MobileWaveSystem implements IGameSystem {
   private readonly MIN_INTERVAL = 0.4;
   private readonly RAMP_DURATION = 60.0;
 
-  setup(locator: IServiceLocator): void {
-    this.spawner = locator.getSpawner();
-  }
+  constructor(private spawner: IEntitySpawner) {}
 
   update(delta: number, time: number): void {
     this.time += delta;
@@ -17877,7 +17672,6 @@ export class MobileWaveSystem implements IGameSystem {
       const pad = 3.0; // Spawn further out
       
       // RESTRICT TO TOP AND BOTTOM ONLY
-      // This gives the player more reaction time and prevents thumb occlusion
       const isTop = Math.random() > 0.5;
       
       let x = (Math.random() - 0.5) * (width * 0.6); // Keep them somewhat central horizontally
@@ -19336,7 +19130,6 @@ export const MobileBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
   
-  // UPDATED: Added eventService
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
@@ -19347,7 +19140,8 @@ export const MobileBootstrapper = () => {
       { id: 'PhysicsSystem', sys: physicsSystem },
       { id: 'StructureSystem', sys: structureSystem },
       { id: 'GameStateSystem', sys: gameStateSystem },
-      { id: 'MobileWaveSystem', sys: new MobileWaveSystem() },
+      // NEW: MobileWaveSystem now takes spawner in constructor
+      { id: 'MobileWaveSystem', sys: new MobileWaveSystem(spawner) },
       { id: 'TargetingSystem', sys: targetingSystem },
       { id: 'BehaviorSystem', sys: behaviorSystem },
       { id: 'ParticleSystem', sys: particleSystem },
@@ -19695,6 +19489,7 @@ export const GameBootstrapper = () => {
   
   const particleSystem = new ParticleSystem();
   const shakeSystem = new ShakeSystem(eventService);
+  // NEW: Constructor Injection for AudioDirector
   const audioDirector = new AudioDirector(panelSystem, eventService, fastEventService, audioService);
   const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
 
@@ -19707,7 +19502,6 @@ export const GameBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
 
-  // UPDATED: InteractionSystem now gets eventService
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
   const playerSystem = new PlayerSystem(inputSystem, spawner, gameStateSystem, interactionSystem, registry, ConfigService);
@@ -20101,14 +19895,9 @@ export class GameEngineCore implements IGameSystem {
       this.registry = registry;
   }
 
+  // Locator is now optional/stored but setup is removed
   setup(locator: IServiceLocator): void {
     this.locator = locator;
-    // LEGACY SETUP SUPPORT
-    this.systems.forEach(sys => {
-        if (sys.setup) {
-            sys.setup(locator);
-        }
-    });
   }
 
   public registerSystem(system: IGameSystem) {
@@ -20209,9 +19998,6 @@ import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 
 export interface IGameSystem {
-  // DEPRECATED: Moving to Constructor Injection.
-  setup?(locator: IServiceLocator): void;
-  
   update(delta: number, time: number): void;
   teardown(): void;
 }
@@ -20273,8 +20059,6 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: string, pan?: number): void;
   playAmbience(key: string): void;
-  playMusic(key: string): void;
-  setVolume(volume: number): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;
@@ -20342,7 +20126,7 @@ export interface IPanelSystem extends IGameSystem {
   unregister(id: string): void;
   refreshAll(): void;
   refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number, silent?: boolean): void; // UPDATED
+  damagePanel(id: string, amount: number, silent?: boolean): void;
   healPanel(id: string, amount: number, sourceX?: number): void;
   decayPanel(id: string, amount: number): void;
   destroyAll(): void;

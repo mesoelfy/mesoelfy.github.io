@@ -1,4 +1,4 @@
-import { GameEvents as NewGameEvents } from '@/engine/signals/GameEvents';
+import { GameEvents as Events } from '@/engine/signals/GameEvents';
 
 export const EnemyTypes = {
   DRILLER: 'driller',
@@ -16,4 +16,6 @@ export const ArchetypeIDs = {
 
 export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
 export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs] | string;
-export const GameEvents = NewGameEvents;
+
+// Direct re-export for cleaner imports
+export const GameEvents = Events;

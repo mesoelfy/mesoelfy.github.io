@@ -18,7 +18,6 @@ import { clsx } from 'clsx';
 const MOBILE_PANEL_HP = 100;
 
 const SocialPanelWrapper = () => {
-    // Note: No more 5000HP hack. We rely on the standard 100HP config.
     return (
         <div className="w-full max-w-sm pointer-events-auto">
             <GlassPanel title="SOCIAL_UPLINK" gameId="social" className="bg-black/90" maxHealth={MOBILE_PANEL_HP}>

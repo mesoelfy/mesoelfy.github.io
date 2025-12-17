@@ -11,7 +11,6 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
-  private locator!: IServiceLocator;
   public registry: IEntityRegistry; 
   
   private accumulator: number = 0;
@@ -21,9 +20,9 @@ export class GameEngineCore implements IGameSystem {
       this.registry = registry;
   }
 
-  // Locator is now optional/stored but setup is removed
+  // Locator is stored for potential late-binding, but systems are now fully initialized via constructor
   setup(locator: IServiceLocator): void {
-    this.locator = locator;
+    // No-op for now, kept if engine needs direct access later
   }
 
   public registerSystem(system: IGameSystem) {
@@ -42,10 +41,9 @@ export class GameEngineCore implements IGameSystem {
     let timeScale = 1.0;
 
     try {
-        const gameSys = this.locator.getSystem<GameStateSystem>('GameStateSystem');
-        const panelSys = this.locator.getSystem<IPanelSystem>('PanelRegistrySystem');
+        const gameSys = ServiceLocator.getSystem<GameStateSystem>('GameStateSystem');
+        const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
         
-        // CRITICAL FIX: Check REAL integrity from PanelSystem, not the Store
         if (gameStore.isPlaying && panelSys.systemIntegrity <= 0) {
             gameStore.stopGame();
             GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
@@ -60,7 +58,7 @@ export class GameEngineCore implements IGameSystem {
     } catch {}
 
     try {
-        const timeSys = this.locator.getSystem<TimeSystem>('TimeSystem');
+        const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
         timeSys.tickRealTime(renderDelta);
         if (timeSys.isFrozen()) timeScale = 0.0;
         else timeScale = timeSys.timeScale;
@@ -104,9 +102,12 @@ export class GameEngineCore implements IGameSystem {
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
     try {
-        const panelSys = this.locator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
-        panelSys.refreshAll();
-    } catch (e) {
-    }
+        // Safe refresh attempt
+        const panelSys = ServiceLocator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
+        if (panelSys) panelSys.refreshAll();
+    } catch {}
   }
 }
+// Local import for ServiceLocator to avoid circular dependency issues in some bundlers,
+// though usually we inject it. Here we use the global instance for the static helpers inside update().
+import { ServiceLocator } from './ServiceLocator';

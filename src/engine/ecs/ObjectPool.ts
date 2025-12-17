@@ -14,7 +14,6 @@ export class ObjectPool<T> {
   }
 
   private expand(amount: number) {
-    // console.log(`[ObjectPool] Expanding by ${amount}. Total: ${this._totalCreated + amount}`);
     for (let i = 0; i < amount; i++) {
       this.available.push(this.factory());
     }
@@ -23,7 +22,7 @@ export class ObjectPool<T> {
 
   public acquire(): T {
     if (this.available.length === 0) {
-      // Dynamic expansion: Double current size or add 50, whichever is safer
+      // Dynamic expansion: Double current size or add 50
       const expandAmount = Math.max(50, Math.floor(this._totalCreated * 0.5)); 
       this.expand(expandAmount);
     }
@@ -34,12 +33,6 @@ export class ObjectPool<T> {
   }
 
   public release(item: T) {
-    // Optimization: In production, skip the .includes check for speed.
-    // In dev, it saves sanity.
-    // this.available.push(item);
-    
-    // Check duplication only if pool is small-ish to avoid O(N) lag? 
-    // Actually, EntityRegistry manages active vs inactive, so we trust it.
     this.available.push(item);
   }
 

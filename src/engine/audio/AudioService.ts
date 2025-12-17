@@ -172,6 +172,7 @@ export class AudioServiceImpl implements IAudioService {
       }
   }
 
+  // --- HELPERS ---
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 

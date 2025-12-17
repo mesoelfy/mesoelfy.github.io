@@ -9,7 +9,6 @@ export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
   private registry: EntityRegistry;
 
-  // INJECTION: We now require the Registry in the constructor
   constructor(registry: IEntityRegistry) {
     this.spatialGrid = new SpatialGrid();
     this.registry = registry as EntityRegistry;
