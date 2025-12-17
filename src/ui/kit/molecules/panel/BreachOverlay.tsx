@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform, useAnimationFrame } from 'framer-motion';
 import { ChevronUp, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useRef } from 'react';
 
 const TEXT = "SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED // ";
 const REPEAT_COUNT = 8; 
@@ -8,12 +9,39 @@ const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
 
 const HazardStrip = ({ direction, isSecondary, isActive, index }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean, index: number }) => {
   const staggerOffset = ((index * 23) % 80) - 40; 
+  
+  // We track position manually to allow seamless reversal
+  const x = useMotionValue(0); 
+  
+  // Configuration
+  // TUNED: 0.4 (Secondary) and 0.7 (Main)
+  const baseSpeed = isSecondary ? 0.4 : 0.7; 
+  
+  useAnimationFrame((time, delta) => {
+    // Determine velocity:
+    // 1. Base Speed
+    // 2. Original Direction (Row Alternation)
+    // 3. Active State Reversal (Flip if repairing)
+    const velocity = baseSpeed * direction * (isActive ? -1 : 1);
+    
+    // Calculate movement for this frame (delta is in ms)
+    const moveAmount = velocity * (delta / 1000);
+    
+    let newX = x.get() + moveAmount;
+
+    // Infinite Loop Logic (0% to -25%)
+    if (newX > 0) newX -= 25;
+    if (newX < -25) newX += 25;
+
+    x.set(newX);
+  });
 
   return (
     <div 
         className={clsx(
             "flex relative overflow-visible w-full select-none transition-opacity duration-500",
-            isSecondary ? "opacity-10" : "opacity-30" 
+            // Note: Use opacity-[0.XX] for custom values if standard classes (10, 20, 30) don't fit.
+            isSecondary ? "opacity-10" : "opacity-20" 
         )}
         style={{ transform: `translateX(${staggerOffset}%)` }}
     >
@@ -22,8 +50,7 @@ const HazardStrip = ({ direction, isSecondary, isActive, index }: { direction: 1
           "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
           isActive ? "text-latent-purple" : "text-critical-red"
         )}
-        animate={{ x: direction === 1 ? ["-25%", "0%"] : ["0%", "-25%"] }}
-        transition={{ duration: isSecondary ? 80 : 50, ease: "linear", repeat: Infinity }}
+        style={{ x: useTransform(x, v => `${v}%`) }}
       >
         <span className="shrink-0 px-4">{FULL_TEXT}</span>
       </motion.div>

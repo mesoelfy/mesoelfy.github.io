@@ -664,7 +664,7 @@ Can we force the iframe'd youtube video to start paused and then turn on after a
 
 Healing sound needs to be different from rebooting sound.
 
-SYSTEM RESTORED banner stuff should be blue instead of green. - - - and health of rebooted panel should be 30%
+
 
 
 
