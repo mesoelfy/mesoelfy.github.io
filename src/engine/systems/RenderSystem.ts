@@ -6,6 +6,7 @@ import { Tag } from '@/engine/ecs/types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { GAME_THEME } from '@/ui/sim/config/theme';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -36,6 +37,9 @@ export class RenderSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // NEW: Update Global Shader Uniforms
+    MaterialFactory.updateUniforms(time);
+
     const renderables = this.registry.query({ all: [ComponentType.Render] });
 
     const interactState = this.interactionSystem.repairState;
