@@ -66,7 +66,7 @@ export class VFXSystem implements IGameSystem {
       const toHex = (n: number) => Math.floor(n * 255).toString(16).padStart(2, '0');
       const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
       
-      const count = this.randomRange(4, 8);
+      const count = this.randomRange(2, 3);
       
       for(let i=0; i<count; i++) {
           // --- RICOCHET LOGIC ---
@@ -80,7 +80,7 @@ export class VFXSystem implements IGameSystem {
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
-          const life = this.randomRange(0.6, 1.0);
+          const life = this.randomRange(0.1, 0.3);
           
           this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
       }
