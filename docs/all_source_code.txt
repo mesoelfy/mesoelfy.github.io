@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Tue Dec 16 17:23:11 CST 2025
+Generated on: Wed Dec 17 10:01:21 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -3352,12 +3352,21 @@ export const GlassPanel = ({
 
   // HEAL COMPLETE LOGIC
   useReactEffect(() => {
+      // 1. Rising Edge (Healed to Full)
       if (prevHealth.current < maxHealth && health >= maxHealth && !isDestroyed && !isGameOver) {
           setShowCircuitLock(true);
           // Timer matches the OUTER glow duration (1.2s) from Tailwind
           const timer = setTimeout(() => setShowCircuitLock(false), 1200); 
+          prevHealth.current = health;
           return () => clearTimeout(timer);
       }
+      
+      // 2. Falling Edge (Took Damage or destroyed)
+      // FIX: Reset animation state immediately so it can trigger again next heal
+      if (health < maxHealth || isDestroyed || isGameOver) {
+          setShowCircuitLock(false);
+      }
+
       prevHealth.current = health;
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
@@ -9774,6 +9783,7 @@ const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C'); 
+const COL_RETICLE_HEAL = new THREE.Color('#257171'); // Dark Cyan/Teal for Reticle
 
 export const PlayerActor = () => {
   const containerRef = useRef<THREE.Group>(null);
@@ -9787,6 +9797,7 @@ export const PlayerActor = () => {
   
   // FIX: Initialize to Green to prevent white flash on load
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
+  const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
@@ -9882,14 +9893,26 @@ export const PlayerActor = () => {
         else if (interactState === 'HEALING') targetColor = COL_REPAIR;
         else if (interactState === 'REBOOTING') targetColor = COL_REBOOT;
 
+        // 1. Update Main Cursor Color (Interpolate towards State Color)
         tempColor.current.setRGB(render.r, render.g, render.b);
         tempColor.current.lerp(targetColor, 0.2); 
 
+        // 2. Update Reticle Color (Divergent for Healing)
+        if (interactState === 'HEALING' && !isDead) {
+            reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
+        } else {
+            // Otherwise sync with the main cursor color
+            reticleColor.current.lerp(tempColor.current, 0.2);
+        }
+
+        // 3. Apply Hit Flash (Override both)
         if (hitFlash.current > 0.01) {
             tempColor.current.lerp(COL_HIT, hitFlash.current);
+            reticleColor.current.lerp(COL_HIT, hitFlash.current);
         }
         
-        (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        // 4. Apply to Materials
+        (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
@@ -10113,14 +10136,11 @@ export const ProjectileRenderer = () => {
         // --- ROTATION ---
         const spin = r ? r.visualRotation : 0;
         
-        // FIX: Removed manual alignOffset. applyRotation handles Y-Up -> X-Forward.
-        // Special case: Rings (Torus) are Z-up/flat. We might want to rotate them differently,
-        // but for now let's trust the standard logic for bullets.
         applyRotation(tempObj, spin, t.rotation);
 
         // --- SQUASH & STRETCH ---
-        let stretchY = 1.0; // Y is the Forward axis for Cylinders/Cones
-        let squashXZ = 1.0; // X/Z is thickness
+        let stretchY = 1.0; 
+        let squashXZ = 1.0; 
 
         if (m) {
             const speedSq = m.vx*m.vx + m.vy*m.vy;
@@ -10141,7 +10161,12 @@ export const ProjectileRenderer = () => {
         );
 
         // --- COLOR ---
-        tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
+        // UPDATED: Prefer RenderData (dynamic) color, fallback to Config (static) color
+        if (r) {
+            tempColor.setRGB(r.r, r.g, r.b);
+        } else {
+            tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
+        }
         
         tempObj.updateMatrix();
         mesh.setMatrixAt(index, tempObj.matrix);
@@ -11755,17 +11780,16 @@ export const getUnlistedSounds = () => {
 FILE: ./src/engine/config/static/waves.json
 =====================================
 [
-  { "at": 0,     "type": "driller", "count": 3, "interval": 0.1 }, 
-  { "at": 2,     "type": "hunter",  "count": 1, "interval": 0 },   
-  { "at": 5,     "type": "driller", "count": 5, "interval": 0.5 }, 
-  { "at": 8,     "type": "kamikaze", "count": 2, "interval": 1.0 },
-  { "at": 12,    "type": "driller", "count": 8, "interval": 0.2 }, 
-  { "at": 15,    "type": "hunter",  "count": 2, "interval": 2.0 }, 
-  { "at": 20,    "type": "kamikaze", "count": 5, "interval": 0.5 },
-  { "at": 25,    "type": "hunter",  "count": 3, "interval": 1.0 },
-  { "at": 35,    "type": "driller", "count": 10, "interval": 0.1 },
-  { "at": 40,    "type": "kamikaze", "count": 5, "interval": 0.3 },
-  { "at": 50,    "type": "hunter",  "count": 5, "interval": 1.5 }
+  { "at": 0,     "type": "driller", "count": 4, "interval": 0.1 },
+  { "at": 1.5,   "type": "hunter",  "count": 2, "interval": 0.2 },
+  { "at": 3.5,   "type": "driller", "count": 8, "interval": 0.15 },
+  { "at": 5.5,   "type": "kamikaze", "count": 4, "interval": 0.5 },
+  { "at": 8.0,   "type": "driller", "count": 12, "interval": 0.1 },
+  { "at": 10.5,  "type": "hunter",  "count": 4, "interval": 0.8 },
+  { "at": 14.0,  "type": "kamikaze", "count": 6, "interval": 0.3 },
+  { "at": 18.0,  "type": "driller", "count": 15, "interval": 0.05 },
+  { "at": 22.0,  "type": "hunter",  "count": 5, "interval": 0.5 },
+  { "at": 26.0,  "type": "kamikaze", "count": 8, "interval": 0.2 }
 ]
 
 
@@ -12456,6 +12480,7 @@ export const FastEvents = {
   SPAWN_FX: 1,
   TRAUMA: 2,
   PLAY_SOUND: 3,
+  SPAWN_IMPACT: 4, // NEW: For dynamic colored impacts
 } as const;
 
 export const FX_IDS: Record<string, number> = {
@@ -16417,6 +16442,10 @@ export class VFXSystem implements IGameSystem {
         else if (id === FastEvents.TRAUMA) {
             this.addTrauma(a1);
         }
+        else if (id === FastEvents.SPAWN_IMPACT) {
+            // a1=x, a2=y, a3=packedColor, a4=angle
+            this.spawnDynamicImpact(a1, a2, a3, a4); 
+        }
     });
   }
 
@@ -16441,6 +16470,35 @@ export class VFXSystem implements IGameSystem {
     this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.executeRecipe('PURGE_BLAST', 0, 0);
     });
+  }
+
+  private spawnDynamicImpact(x: number, y: number, packedColor: number, impactAngle: number) {
+      // Unpack Color
+      const r = ((packedColor >> 16) & 255) / 255;
+      const g = ((packedColor >> 8) & 255) / 255;
+      const b = (packedColor & 255) / 255;
+      
+      const toHex = (n: number) => Math.floor(n * 255).toString(16).padStart(2, '0');
+      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+      
+      const count = this.randomRange(2, 3);
+      
+      for(let i=0; i<count; i++) {
+          // --- RICOCHET LOGIC ---
+          const side = Math.random() > 0.5 ? 1 : -1;
+          const deflection = 0.6 + (Math.random() * 1.2);
+          const angle = impactAngle + (side * deflection);
+          
+          // KAMIKAZE PHYSICS PROFILE:
+          // High Speed (10-22) + Long Life (0.6-1.0)
+          // This allows Friction (0.95) to stop them mid-air before they die.
+          const speed = this.randomRange(10, 22); 
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+          const life = this.randomRange(0.1, 0.3);
+          
+          this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
+      }
   }
 
   private executeRecipe(key: string, x: number, y: number, angle: number = 0) {
@@ -16506,15 +16564,7 @@ export class VFXSystem implements IGameSystem {
       this.shakeSystem.addTrauma(amount);
   }
 
-  private triggerHitStop(duration: number) {
-      // TimeSystem handles its own singleton state in this version, 
-      // or we could inject TimeSystem too. For now we assume TimeSystem logic
-      // is handled via store or direct access, but the original code used ServiceLocator.
-      // Since we don't have TimeSystem injected yet, we'll skip the hitstop
-      // or we can add TimeSystem to constructor?
-      // Let's add TimeSystem to constructor in next pass if critical.
-      // For now, let's keep it safe.
-  }
+  private triggerHitStop(duration: number) {}
 }
 
 
@@ -16677,6 +16727,7 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -16731,7 +16782,9 @@ export class PlayerSystem implements IGameSystem {
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
-            this.attemptAutoFire(time, transform, upgrades);
+            // PASS RenderData for color extraction
+            const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+            this.attemptAutoFire(time, transform, upgrades, render);
         }
     }
   }
@@ -16763,7 +16816,12 @@ export class PlayerSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>) {
+  private attemptAutoFire(
+      time: number, 
+      playerTransform: TransformData, 
+      upgrades: Record<string, number>,
+      playerRender?: RenderData
+  ) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
     const RANGE = 14; 
@@ -16806,6 +16864,18 @@ export class PlayerSystem implements IGameSystem {
             shot.damage, 
             shot.configId
         );
+
+        // --- NEW: Sync Projectile Color to Player State ---
+        // We multiply by 4.0 to ensure the Neon HDR glow is maintained
+        if (playerRender) {
+            const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
+            if (bRender) {
+                const BLOOM_BOOST = 4.0; 
+                bRender.r = playerRender.r * BLOOM_BOOST;
+                bRender.g = playerRender.g * BLOOM_BOOST;
+                bRender.b = playerRender.b * BLOOM_BOOST;
+            }
+        }
 
         if (shot.isHoming) {
             bullet.addComponent(new TargetData(null, 'ENEMY'));
@@ -17231,13 +17301,24 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              // DECOUPLED: Only emit event. HealthSystem handles the logic.
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
               const id = FX_IDS[type];
               if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x, y);
+          },
+          spawnImpact: (x, y, r, g, b, angle) => {
+              // Clamp inputs to 0-1
+              const cr = Math.min(1, Math.max(0, r));
+              const cg = Math.min(1, Math.max(0, g));
+              const cb = Math.min(1, Math.max(0, b));
+              
+              // Pack 0-255 ints into one float
+              const packed = (Math.floor(cr * 255) << 16) | (Math.floor(cg * 255) << 8) | Math.floor(cb * 255);
+              
+              // Pass angle as the 4th argument
+              this.fastEvents.emit(FastEvents.SPAWN_IMPACT, x, y, packed, angle);
           },
           playAudio: (key) => this.audio.playSound(key),
           playSpatialAudio: (key, x) => {
@@ -18425,6 +18506,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -18433,8 +18515,6 @@ const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
 
-// Helper to determine death FX based on enemy type
-// In the future, this could be a 'VisualData' component property
 const getExplosionType = (variant: string, angle?: boolean) => {
     switch (variant) {
         case EnemyTypes.KAMIKAZE: return angle ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
@@ -18446,7 +18526,6 @@ const getExplosionType = (variant: string, angle?: boolean) => {
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // Special Handling for Daemon (Shields/States)
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
@@ -18458,31 +18537,24 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   const pPos = getPos(player);
   const x = pos ? pos.x : 0;
 
-  // 1. Calculate Damage (Data Driven)
-  // Default to 1 if no combat component found
   const damage = combat ? combat.damage : 1;
 
-  // 2. Calculate Impact Angle
   let angle = 0;
   if (pos && pPos) {
       angle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x);
   }
   const sprayAngle = angle + Math.PI;
 
-  // 3. Apply Damage
   ctx.damagePlayer(damage);
   
-  // 4. Resolve Entity Death
   const variant = eId?.variant || 'UNKNOWN';
   const fx = getExplosionType(variant, true);
   
-  // Dynamic Trauma based on damage severity
   const trauma = damage >= 3 ? 0.5 : 0.2;
   ctx.addTrauma(trauma);
 
   ctx.destroyEntity(enemy, fx, sprayAngle);
   
-  // Audio based on damage severity
   const audio = damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light';
   ctx.playSpatialAudio(audio, x);
 };
@@ -18523,8 +18595,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const pos = getPos(attacker);
   const x = pos ? pos.x : 0;
 
-  // Use fixed damage if provided (e.g. from bullet hit which has no combat comp sometimes?), 
-  // otherwise read from attacker.
   let incomingDamage = fixedDamage || 1;
   if (!fixedDamage) {
       const combat = getCombat(attacker);
@@ -18556,22 +18626,46 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   ctx.playSpatialAudio('fx_impact_light', x);
 }
 
-function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext, sprayAngle?: number) {
+function handleMassExchange(a: Entity, b: Entity, defaultFX: string, ctx: CombatContext, sprayAngle?: number) {
   const hpA = getHp(a);
   const hpB = getHp(b);
   const cA = getCombat(a);
   const cB = getCombat(b);
 
-  // Damage logic: A deals damage to B, B deals damage to A
   const dmgA = cA ? cA.damage : 1;
   const dmgB = cB ? cB.damage : 1;
 
   if (hpA) hpA.current = Math.max(0, hpA.current - dmgB);
   if (hpB) hpB.current = Math.max(0, hpB.current - dmgA);
 
-  const pos = getPos(a);
-  const x = pos ? pos.x : 0;
-  if (pos) ctx.spawnFX(fx, pos.x, pos.y);
+  const posA = getPos(a);
+  const posB = getPos(b);
+  const x = posA ? posA.x : 0;
+  
+  if (posA) {
+      let spawnedCustom = false;
+      
+      // If defaultFX is white (standard hit), try to override with B's color (Attacker)
+      if (defaultFX === 'IMPACT_WHITE' && posB) {
+          const bRender = b.getComponent<RenderData>(ComponentType.Render);
+          if (bRender) {
+              const maxC = Math.max(bRender.r, bRender.g, bRender.b, 1.0);
+              const r = bRender.r / maxC;
+              const g = bRender.g / maxC;
+              const b = bRender.b / maxC;
+              
+              // Calculate Ricochet Angle (Vector from A to B)
+              const angle = Math.atan2(posB.y - posA.y, posB.x - posA.x);
+              
+              ctx.spawnImpact(posA.x, posA.y, r, g, b, angle);
+              spawnedCustom = true;
+          }
+      } 
+      
+      if (!spawnedCustom) {
+          ctx.spawnFX(defaultFX, posA.x, posA.y);
+      }
+  }
 
   let soundKey = '';
 
@@ -18629,9 +18723,10 @@ import { Entity } from '@/engine/ecs/Entity';
 
 export interface CombatContext {
   damagePlayer: (amount: number) => void;
-  // Updated: Accept optional impactAngle for directional spray
   destroyEntity: (entity: Entity, fx?: string, impactAngle?: number) => void;
   spawnFX: (type: string, x: number, y: number) => void;
+  // UPDATED: Added angle parameter (optional, defaults to 0)
+  spawnImpact: (x: number, y: number, r: number, g: number, b: number, angle: number) => void;
   playAudio: (key: string) => void;
   playSpatialAudio: (key: string, x: number) => void;
   addTrauma: (amount: number) => void;
@@ -19816,6 +19911,7 @@ import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -19840,7 +19936,6 @@ export class EntitySpawner implements IEntitySpawner {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
             // CRITICAL FIX: Deep clone the blueprint data to prevent shared state refs
-            // simple JSON clone is sufficient for our data structures
             const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
             const runtimeData = overrides[compDef.type] || {};
             
@@ -19855,8 +19950,6 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
-  // ... (Keep remaining methods: spawnPlayer, spawnEnemy, spawnBullet, spawnParticle as is)
-  
   public spawnPlayer(): Entity {
     return this.spawn(ArchetypeIDs.PLAYER);
   }
@@ -19878,13 +19971,23 @@ export class EntitySpawner implements IEntitySpawner {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     
+    // Look up default config color to initialize RenderData
+    const config = PROJECTILE_CONFIG[projectileId];
+    const color = config ? config.color : [1, 1, 1];
+
     return this.spawn(id, {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Render]: { visualScale: 1.0, visualRotation: 0, geometryId: 'GEO_BULLET' },
+        // Initialize RenderData with the Projectile's native neon color
+        [ComponentType.Render]: { 
+            visualScale: 1.0, 
+            visualRotation: 0, 
+            geometryId: 'GEO_BULLET',
+            r: color[0], g: color[1], b: color[2]
+        },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT' }
     });
   }

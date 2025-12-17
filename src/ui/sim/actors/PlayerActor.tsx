@@ -15,7 +15,6 @@ import * as THREE from 'three';
 
 // --- GEOMETRY GENERATION ---
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
-const deadGeo = new THREE.CircleGeometry(0.12, 3); 
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 
 const createStarRingGeo = () => {
@@ -136,7 +135,8 @@ const softCircleShader = {
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
+const COL_DEAD = new THREE.Color('#FF003C');      // Bright Red (Glow/Dot)
+const COL_DEAD_DARK = new THREE.Color('#76000C'); // Dark Red (Reticle Contrast)
 const COL_HIT = new THREE.Color('#FF003C'); 
 const COL_RETICLE_HEAL = new THREE.Color('#257171'); // Dark Cyan/Teal for Reticle
 
@@ -150,7 +150,7 @@ export const PlayerActor = () => {
   const { introDone } = useStore(); 
   const animScale = useRef(0);
   
-  // FIX: Initialize to Green to prevent white flash on load
+  // Initialize colors
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   
@@ -193,6 +193,7 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
 
+    // Intro Scale Logic
     const targetScale = introDone ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
@@ -202,10 +203,12 @@ export const PlayerActor = () => {
     }
     containerRef.current.visible = true;
 
+    // Hit Flash Decay
     if (hitFlash.current > 0) {
         hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     }
 
+    // Interaction State Check
     let interactState = 'IDLE';
     try {
         const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
@@ -213,16 +216,17 @@ export const PlayerActor = () => {
     } catch {}
 
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
-    const targetEnergy = isActive ? 1.0 : 0.0;
     
+    // Energy Level (Visual Intensity)
+    const targetEnergy = isActive ? 1.0 : 0.0;
     const lerpSpeed = isActive ? 12.0 : 3.0;
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, targetEnergy, delta * lerpSpeed);
-
     const effectiveEnergy = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
     ambientMaterial.uniforms.uEnergy.value = effectiveEnergy;
 
+    // Fetch ECS Data
     let playerEntity;
     try {
         const registry = ServiceLocator.getRegistry();
@@ -241,26 +245,42 @@ export const PlayerActor = () => {
     }
 
     if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
-        reticleRef.current.rotation.z = -render.visualRotation;
         
+        // --- ROTATION LOGIC ---
+        if (isDead && interactState !== 'REBOOTING') {
+            // LOCK ROTATION: Fixed "X" or "+" position when totally dead/inactive
+            reticleRef.current.rotation.z = Math.PI * 0.25; 
+        } else {
+            // Spin normally (Active, Healing, or Rebooting)
+            reticleRef.current.rotation.z = -render.visualRotation;
+        }
+        
+        // --- COLOR LOGIC ---
         let targetColor = COL_BASE;
-        if (isDead) targetColor = COL_DEAD;
-        else if (interactState === 'HEALING') targetColor = COL_REPAIR;
-        else if (interactState === 'REBOOTING') targetColor = COL_REBOOT;
 
-        // 1. Update Main Cursor Color (Interpolate towards State Color)
-        tempColor.current.setRGB(render.r, render.g, render.b);
+        if (isDead) {
+            // Main Glow stays Bright Red
+            targetColor = COL_DEAD; 
+        } else if (interactState === 'HEALING') {
+            targetColor = COL_REPAIR;
+        } else if (interactState === 'REBOOTING') {
+            targetColor = COL_REBOOT;
+        }
+
+        // 1. Interpolate Main Color (Glow/Backing/Dot)
         tempColor.current.lerp(targetColor, 0.2); 
 
-        // 2. Update Reticle Color (Divergent for Healing)
-        if (interactState === 'HEALING' && !isDead) {
+        // 2. Interpolate Reticle Color
+        if (isDead) {
+            // Dark Red for Reticle when Dead (for contrast)
+            reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
+        } else if (interactState === 'HEALING' && !isDead) {
             reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
         } else {
-            // Otherwise sync with the main cursor color
             reticleColor.current.lerp(tempColor.current, 0.2);
         }
 
-        // 3. Apply Hit Flash (Override both)
+        // 3. Apply Hit Flash Override (Flash Bright Red)
         if (hitFlash.current > 0.01) {
             tempColor.current.lerp(COL_HIT, hitFlash.current);
             reticleColor.current.lerp(COL_HIT, hitFlash.current);
@@ -273,25 +293,17 @@ export const PlayerActor = () => {
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
         backingMaterial.uniforms.uColor.value.copy(tempColor.current);
 
+        // --- SCALE & VISIBILITY ---
         const scale = render.visualScale * animScale.current;
         containerRef.current.scale.setScalar(scale);
 
-        if (isDead) {
-            reticleRef.current.visible = false;
-            ambientGlowRef.current.visible = false;
-            backingCircleRef.current!.visible = false;
-            
-            centerDotRef.current.geometry = deadGeo;
-            (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = true; 
-            centerDotRef.current.rotation.z = -render.visualRotation; 
-        } else {
-            reticleRef.current.visible = true;
-            ambientGlowRef.current.visible = true;
-            backingCircleRef.current!.visible = true;
-            
-            centerDotRef.current.geometry = centerGeo;
-            (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = false;
-        }
+        // Ensure all parts are visible
+        reticleRef.current.visible = true;
+        ambientGlowRef.current.visible = true;
+        backingCircleRef.current!.visible = true;
+        
+        centerDotRef.current.geometry = centerGeo;
+        (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDead; 
     }
   });
 
