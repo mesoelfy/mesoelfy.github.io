@@ -3,6 +3,7 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -57,7 +58,9 @@ export class PlayerSystem implements IGameSystem {
         const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
 
         if (time > this.lastFireTime + currentFireRate) {
-            this.attemptAutoFire(time, transform, upgrades);
+            // PASS RenderData for color extraction
+            const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+            this.attemptAutoFire(time, transform, upgrades, render);
         }
     }
   }
@@ -89,7 +92,12 @@ export class PlayerSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>) {
+  private attemptAutoFire(
+      time: number, 
+      playerTransform: TransformData, 
+      upgrades: Record<string, number>,
+      playerRender?: RenderData
+  ) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity;
     const RANGE = 14; 
@@ -132,6 +140,18 @@ export class PlayerSystem implements IGameSystem {
             shot.damage, 
             shot.configId
         );
+
+        // --- NEW: Sync Projectile Color to Player State ---
+        // We multiply by 4.0 to ensure the Neon HDR glow is maintained
+        if (playerRender) {
+            const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
+            if (bRender) {
+                const BLOOM_BOOST = 4.0; 
+                bRender.r = playerRender.r * BLOOM_BOOST;
+                bRender.g = playerRender.g * BLOOM_BOOST;
+                bRender.b = playerRender.b * BLOOM_BOOST;
+            }
+        }
 
         if (shot.isHoming) {
             bullet.addComponent(new TargetData(null, 'ENEMY'));

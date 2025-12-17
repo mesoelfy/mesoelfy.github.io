@@ -6,6 +6,7 @@ import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -30,7 +31,6 @@ export class EntitySpawner implements IEntitySpawner {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
             // CRITICAL FIX: Deep clone the blueprint data to prevent shared state refs
-            // simple JSON clone is sufficient for our data structures
             const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
             const runtimeData = overrides[compDef.type] || {};
             
@@ -45,8 +45,6 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
-  // ... (Keep remaining methods: spawnPlayer, spawnEnemy, spawnBullet, spawnParticle as is)
-  
   public spawnPlayer(): Entity {
     return this.spawn(ArchetypeIDs.PLAYER);
   }
@@ -68,13 +66,23 @@ export class EntitySpawner implements IEntitySpawner {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     
+    // Look up default config color to initialize RenderData
+    const config = PROJECTILE_CONFIG[projectileId];
+    const color = config ? config.color : [1, 1, 1];
+
     return this.spawn(id, {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Render]: { visualScale: 1.0, visualRotation: 0, geometryId: 'GEO_BULLET' },
+        // Initialize RenderData with the Projectile's native neon color
+        [ComponentType.Render]: { 
+            visualScale: 1.0, 
+            visualRotation: 0, 
+            geometryId: 'GEO_BULLET',
+            r: color[0], g: color[1], b: color[2]
+        },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT' }
     });
   }

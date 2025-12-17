@@ -95,14 +95,11 @@ export const ProjectileRenderer = () => {
         // --- ROTATION ---
         const spin = r ? r.visualRotation : 0;
         
-        // FIX: Removed manual alignOffset. applyRotation handles Y-Up -> X-Forward.
-        // Special case: Rings (Torus) are Z-up/flat. We might want to rotate them differently,
-        // but for now let's trust the standard logic for bullets.
         applyRotation(tempObj, spin, t.rotation);
 
         // --- SQUASH & STRETCH ---
-        let stretchY = 1.0; // Y is the Forward axis for Cylinders/Cones
-        let squashXZ = 1.0; // X/Z is thickness
+        let stretchY = 1.0; 
+        let squashXZ = 1.0; 
 
         if (m) {
             const speedSq = m.vx*m.vx + m.vy*m.vy;
@@ -123,7 +120,12 @@ export const ProjectileRenderer = () => {
         );
 
         // --- COLOR ---
-        tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
+        // UPDATED: Prefer RenderData (dynamic) color, fallback to Config (static) color
+        if (r) {
+            tempColor.setRGB(r.r, r.g, r.b);
+        } else {
+            tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
+        }
         
         tempObj.updateMatrix();
         mesh.setMatrixAt(index, tempObj.matrix);
