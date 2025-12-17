@@ -1,6 +1,9 @@
 import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useMultiTransientRef } from '@/ui/sim/hooks/useMultiTransientRef';
+import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
+import { useMemo } from 'react';
 
 interface VitalsRingProps {
   health: number;
@@ -13,8 +16,15 @@ interface VitalsRingProps {
 }
 
 export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, rebootProgress }: VitalsRingProps) => {
-  const hpPercent = Math.max(0, (health / maxHealth) * 100);
-  const xpPercent = xpToNext > 0 ? Math.min(100, (xp / xpToNext) * 100) : 0;
+  // Memoize configs to prevent re-registration
+  const rootConfigs = useMemo(() => [
+      { id: 'hp-progress', type: 'css-var' as const },
+      { id: 'xp-progress', type: 'css-var' as const },
+      { id: 'hp-color', type: 'css-var' as const }
+  ], []);
+
+  const rootRef = useMultiTransientRef(rootConfigs);
+  const levelRef = useTransientRef('player-lvl-text', 'text');
 
   const size = 160; 
   const center = size / 2;
@@ -24,16 +34,26 @@ export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, reb
   const circHp = 2 * Math.PI * radiusHp;
   const circXp = 2 * Math.PI * radiusXp;
 
-  const displayHpPercent = isDead ? rebootProgress : hpPercent;
-  const displayHpColor = isDead ? "#eae747" : (hpPercent < 30 ? "#FF003C" : "#78F654"); 
-  const offsetHp = circHp - (displayHpPercent / 100 * circHp);
-  const offsetXp = circXp - (xpPercent / 100 * circXp);
+  const initialHp = maxHealth > 0 ? health / maxHealth : 0;
+  const initialXp = xpToNext > 0 ? (xp / xpToNext) : 0;
+  const initialColor = initialHp < 0.3 ? '#FF003C' : '#78F654';
 
   return (
-    <div className="relative w-40 h-40 shrink-0 group mb-1"> 
+    <div 
+        ref={rootRef}
+        className="relative w-40 h-40 shrink-0 group mb-1"
+        style={{
+            '--hp-max': circHp,
+            '--xp-max': circXp,
+            '--hp-progress': initialHp,
+            '--xp-progress': initialXp,
+            '--hp-color': initialColor
+        } as React.CSSProperties}
+    > 
         <div className={clsx("absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle", isDead ? "opacity-60 grayscale" : "opacity-100")}>
            <MiniCrystalCanvas />
         </div>
+        
         {isDead && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                 {rebootProgress > 0 ? (
@@ -49,14 +69,42 @@ export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, reb
                 )}
             </div>
         )}
+
         <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" viewBox={`0 0 ${size} ${size}`}>
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
-          <circle cx={center} cy={center} r={radiusHp} stroke={displayHpColor} strokeWidth={stroke} fill="transparent" strokeDasharray={circHp} strokeDashoffset={offsetHp} strokeLinecap="round" transform={`rotate(-90 ${center} ${center})`} className="transition-all duration-300 ease-out" />
-          <circle cx={center} cy={center} r={radiusXp} stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" strokeDasharray={circXp} strokeDashoffset={offsetXp} strokeLinecap="round" transform={`rotate(-90 ${center} ${center})`} className="transition-all duration-500 ease-out" />
+          
+          <circle 
+            cx={center} cy={center} r={radiusHp} 
+            strokeWidth={stroke} fill="transparent" 
+            strokeDasharray={circHp} 
+            strokeLinecap="round" 
+            transform={`rotate(-90 ${center} ${center})`} 
+            className="transition-colors duration-200"
+            style={{
+                stroke: 'var(--hp-color)',
+                strokeDashoffset: 'calc(var(--hp-max) * (1 - var(--hp-progress)))',
+                transition: 'stroke-dashoffset 0.1s linear'
+            }}
+          />
+          
+          <circle 
+            cx={center} cy={center} r={radiusXp} 
+            stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 
+            strokeDasharray={circXp} 
+            strokeLinecap="round" 
+            transform={`rotate(-90 ${center} ${center})`} 
+            style={{
+                strokeDashoffset: 'calc(var(--xp-max) * (1 - var(--xp-progress)))',
+                transition: 'stroke-dashoffset 0.1s linear'
+            }}
+          />
+          
           <defs><path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /></defs>
           <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
-              <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">LVL_{level.toString().padStart(2, '0')}</textPath>
+              <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
+                  <tspan ref={levelRef}>LVL_{level.toString().padStart(2, '0')}</tspan>
+              </textPath>
           </text>
         </svg>
     </div>

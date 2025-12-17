@@ -669,3 +669,6 @@ SYSTEM RESTORED banner stuff should be blue instead of green. - - - and health o
 
 
 The “ding” when a panel is healed 100% doesn’t appear to be properly stereo panning for me. I’d like it to pan based on the player mouse position.
+
+scrolling text should change directions when rebooting
+identity core regen boundaries are too wide
