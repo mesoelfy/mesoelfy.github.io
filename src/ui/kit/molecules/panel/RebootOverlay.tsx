@@ -15,14 +15,13 @@ export const RebootOverlay = () => (
         exit={{ 
             scaleY: 0, 
             opacity: 0,
-            // Collapses quickly AFTER icon starts leaving
             transition: { delay: 0.1, duration: 0.2, ease: "easeIn" } 
         }}
         transition={{ type: "spring", stiffness: 250, damping: 25 }}
-        className="flex flex-col items-center gap-2 border-y-2 border-primary-green bg-primary-green/10 w-full py-4 relative overflow-hidden origin-center"
+        className="flex flex-col items-center gap-2 border-y-2 border-service-cyan bg-service-cyan/10 w-full py-4 relative overflow-hidden origin-center"
     >
       <motion.div 
-        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-primary-green/20 to-transparent"
+        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-service-cyan/20 to-transparent"
         animate={{ top: ["-100%", "100%"] }}
         transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
       />
@@ -39,7 +38,7 @@ export const RebootOverlay = () => (
           }}
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
-            <Power className="text-primary-green w-8 h-8 md:w-10 md:h-10" />
+            <Power className="text-service-cyan w-8 h-8 md:w-10 md:h-10" />
         </motion.div>
 
         <div className="flex flex-col overflow-hidden">
@@ -49,7 +48,7 @@ export const RebootOverlay = () => (
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: 0.1 } }} 
                 transition={{ delay: 0.1 }}
-                className="text-2xl md:text-3xl font-header font-black text-primary-green tracking-widest italic"
+                className="text-2xl md:text-3xl font-header font-black text-service-cyan tracking-widest italic drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]"
             >
                 SYSTEM
             </motion.span>
@@ -58,7 +57,7 @@ export const RebootOverlay = () => (
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: 0.1 } }}
                 transition={{ delay: 0.2 }}
-                className="text-xs md:text-sm font-mono font-bold text-primary-green-dim tracking-[0.3em]"
+                className="text-xs md:text-sm font-mono font-bold text-service-cyan/80 tracking-[0.3em]"
             >
                 RESTORED
             </motion.span>

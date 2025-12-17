@@ -55,10 +55,15 @@ class StructureHealthServiceController {
     const state = this.states.get(id);
     if (!state) return;
     const wasDestroyed = state.isDestroyed;
+    
+    // Cap healing at Max
     state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
+    
+    // If we just revived it
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        state.health = MAX_PANEL_HEALTH * 0.5;
+        // UPDATED: Reboot penalty set to 30% health
+        state.health = MAX_PANEL_HEALTH * 0.3;
         GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
@@ -76,7 +81,8 @@ class StructureHealthServiceController {
       for (const [id, state] of this.states) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
-              state.health = MAX_PANEL_HEALTH * 0.5;
+              // UPDATED: Reboot penalty set to 30% health
+              state.health = MAX_PANEL_HEALTH * 0.3;
               GameEventBus.emit(GameEvents.PANEL_RESTORED, { id });
               restored++;
           } else if (state.health < MAX_PANEL_HEALTH) {
