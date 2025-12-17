@@ -3,15 +3,17 @@ import { HoloLayout } from './layout/HoloLayout';
 import { AudioMatrix } from './AudioMatrix';
 import { ArenaLab } from './ArenaLab';
 import { ModelInspector } from './ModelInspector';
+import { VisualLab } from './visuals/VisualLab';
 
 export const SimulationHUD = () => {
   const { sandboxView } = useStore();
 
   return (
     <HoloLayout>
+        {sandboxView === 'lab' && <VisualLab />}
         {sandboxView === 'audio' && <AudioMatrix />}
         
-        {/* Arena is an Overlay on top of the canvas, so we render it transparently */}
+        {/* Arena is an Overlay on top of the canvas */}
         {sandboxView === 'arena' && (
             <div className="h-full flex items-start justify-end pointer-events-none">
                 <ArenaLab />

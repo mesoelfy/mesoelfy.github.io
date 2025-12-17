@@ -52,7 +52,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
 type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
-type SandboxView = 'arena' | 'gallery' | 'audio';
+export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
 
 interface DebugFlags {
@@ -72,7 +72,7 @@ interface AppState {
   hoveredItem: string | null;
   
   isSimulationPaused: boolean;
-  initialClickPos: { x: number, y: number } | null; // NEW: Track init click
+  initialClickPos: { x: number, y: number } | null;
   
   sandboxView: SandboxView;
   
@@ -118,7 +118,7 @@ interface AppState {
   resetDebugFlags: () => void;
   
   setSimulationPaused: (paused: boolean) => void;
-  setInitialClickPos: (pos: { x: number, y: number } | null) => void; // NEW
+  setInitialClickPos: (pos: { x: number, y: number } | null) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -134,7 +134,7 @@ export const useStore = create<AppState>()(
       isSimulationPaused: false,
       initialClickPos: null,
       
-      sandboxView: 'audio',
+      sandboxView: 'lab', // Default to Lab
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
       
@@ -187,7 +187,7 @@ export const useStore = create<AppState>()(
               activeModal: 'none',
               isDebugOpen: false,
               isDebugMinimized: false,
-              sandboxView: 'audio',
+              sandboxView: 'lab',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
               isSimulationPaused: false,

@@ -1,21 +1,21 @@
 import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Speaker, Crosshair, ScanEye } from 'lucide-react';
+import { Speaker, Crosshair, ScanEye, FlaskConical } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 
-type View = 'audio' | 'arena' | 'gallery';
+export type SandboxView = 'lab' | 'audio' | 'arena' | 'gallery';
 
 export const HoloNav = () => {
   const { sandboxView, setSandboxView } = useStore();
 
-  const handleNav = (view: View) => {
+  const handleNav = (view: SandboxView) => {
     if (sandboxView === view) return;
     setSandboxView(view);
     AudioSystem.playSound('ui_click');
   };
 
-  const NavItem = ({ id, label, icon: Icon }: { id: View, label: string, icon: any }) => {
+  const NavItem = ({ id, label, icon: Icon }: { id: SandboxView, label: string, icon: any }) => {
     const isActive = sandboxView === id;
     
     return (
@@ -29,7 +29,6 @@ export const HoloNav = () => {
             : "border-transparent text-service-cyan/60 hover:text-service-cyan hover:bg-service-cyan/5"
         )}
       >
-        {/* Background Slide */}
         {isActive && (
             <motion.div 
                 layoutId="holo-nav-bg"
@@ -39,7 +38,6 @@ export const HoloNav = () => {
             />
         )}
         
-        {/* Scanline Effect on Hover (Inactive) */}
         {!isActive && (
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-service-cyan/10 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-500" />
         )}
@@ -54,6 +52,7 @@ export const HoloNav = () => {
 
   return (
     <div className="flex h-full items-end pt-2">
+      <NavItem id="lab" label="VISUAL_LAB" icon={FlaskConical} />
       <NavItem id="audio" label="AUDIO_MATRIX" icon={Speaker} />
       <NavItem id="arena" label="COMBAT_SIM" icon={Crosshair} />
       <NavItem id="gallery" label="MODEL_INSPECTOR" icon={ScanEye} />
