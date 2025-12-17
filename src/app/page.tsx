@@ -30,6 +30,7 @@ import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop';
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
 import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
+import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -44,6 +45,7 @@ export default function Home() {
     isDebugOpen, 
     isDebugMinimized,
     setSimulationPaused,
+    sandboxView,
     sessionId 
   } = useStore(); 
   
@@ -54,6 +56,9 @@ export default function Home() {
   const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
+
+  // Show background for Lab and Audio modes only
+  const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -146,6 +151,20 @@ export default function Home() {
 
       <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
         
+        {/* --- SANDBOX BACKGROUND LAYER (Z-50) --- */}
+        <AnimatePresence>
+            {showHoloBackground && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <HoloBackground />
+                </motion.div>
+            )}
+        </AnimatePresence>
+
         <WebGLErrorBoundary key={sessionId}>
             <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
             

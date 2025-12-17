@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { GameDirector } from './GameDirector';
 import { CameraRig } from './vfx/CameraRig';
 import { GalleryStage } from './stages/GalleryStage';
+import { LabStage } from './stages/LabStage';
 import { RenderDirector } from './RenderDirector';
 import { VirtualJoystick } from '@/ui/kit/atoms/VirtualJoystick';
 import { ActionButton } from '@/ui/kit/atoms/ActionButton';
@@ -14,6 +15,8 @@ import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
+  const isLab = bootState === 'sandbox' && sandboxView === 'lab';
+  
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
@@ -42,8 +45,12 @@ export const GameOverlay = () => {
     <>
         <div className="fixed inset-0 z-[60] w-full h-full pointer-events-none overflow-hidden">
           <Canvas
-            orthographic={!isGallery}
-            camera={isGallery ? { position: [5, 5, 10], fov: 45 } : { zoom: 40, position: [0, 0, 100] }}
+            orthographic={!isGallery && !isLab}
+            camera={
+                isGallery ? { position: [5, 5, 10], fov: 45 } : 
+                isLab ? { position: [0, 0, 10], fov: 50 } :
+                { zoom: 40, position: [0, 0, 100] }
+            }
             gl={{ 
               alpha: true, 
               antialias: true,
@@ -53,7 +60,9 @@ export const GameOverlay = () => {
             eventSource={document.body}
             eventPrefix="client"
           >
-            {isGallery ? (
+            {isLab ? (
+                <LabStage />
+            ) : isGallery ? (
                 <GalleryStage />
             ) : (
                 <>
@@ -65,7 +74,7 @@ export const GameOverlay = () => {
           </Canvas>
         </div>
         
-        {isMobile && !isGallery && (
+        {isMobile && !isGallery && !isLab && (
             <>
                 <VirtualJoystick />
                 <ActionButton />

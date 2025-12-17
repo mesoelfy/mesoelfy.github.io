@@ -54,6 +54,7 @@ type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
 type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
+export type LabExperiment = 'NONE' | 'GLITCH' | 'TRAIL';
 
 interface DebugFlags {
   godMode: boolean;
@@ -75,6 +76,7 @@ interface AppState {
   initialClickPos: { x: number, y: number } | null;
   
   sandboxView: SandboxView;
+  labExperiment: LabExperiment; // NEW
   
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
@@ -92,6 +94,8 @@ interface AppState {
   startBreach: () => void;
   
   setSandboxView: (view: SandboxView) => void;
+  setLabExperiment: (exp: LabExperiment) => void; // NEW
+  
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   
@@ -134,7 +138,9 @@ export const useStore = create<AppState>()(
       isSimulationPaused: false,
       initialClickPos: null,
       
-      sandboxView: 'lab', // Default to Lab
+      sandboxView: 'lab',
+      labExperiment: 'NONE',
+      
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
       
@@ -161,6 +167,8 @@ export const useStore = create<AppState>()(
       startBreach: () => set({ isBreaching: true }),
       
       setSandboxView: (view) => set({ sandboxView: view }),
+      setLabExperiment: (exp) => set({ labExperiment: exp }),
+      
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       setGalleryAction: (action) => set({ galleryAction: action }),
       
@@ -188,6 +196,7 @@ export const useStore = create<AppState>()(
               isDebugOpen: false,
               isDebugMinimized: false,
               sandboxView: 'lab',
+              labExperiment: 'NONE',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
               isSimulationPaused: false,
