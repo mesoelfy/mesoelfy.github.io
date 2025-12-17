@@ -27,6 +27,9 @@ export class VFXSystem implements IGameSystem {
         else if (id === FastEvents.TRAUMA) {
             this.addTrauma(a1);
         }
+        else if (id === FastEvents.SPAWN_IMPACT) {
+            this.spawnDynamicImpact(a1, a2, a3); // x, y, packedColor
+        }
     });
   }
 
@@ -51,6 +54,29 @@ export class VFXSystem implements IGameSystem {
     this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.executeRecipe('PURGE_BLAST', 0, 0);
     });
+  }
+
+  private spawnDynamicImpact(x: number, y: number, packedColor: number) {
+      // Unpack Color
+      const r = ((packedColor >> 16) & 255) / 255;
+      const g = ((packedColor >> 8) & 255) / 255;
+      const b = (packedColor & 255) / 255;
+      
+      // Convert to Hex String for ParticleSystem
+      const toHex = (n: number) => Math.floor(n * 255).toString(16).padStart(2, '0');
+      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+      
+      // Mimic IMPACT_WHITE recipe params
+      const count = this.randomRange(3, 5);
+      for(let i=0; i<count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = this.randomRange(2, 5);
+          const vx = Math.cos(angle) * speed;
+          const vy = Math.sin(angle) * speed;
+          const life = this.randomRange(0.1, 0.2);
+          
+          this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
+      }
   }
 
   private executeRecipe(key: string, x: number, y: number, angle: number = 0) {
@@ -117,12 +143,6 @@ export class VFXSystem implements IGameSystem {
   }
 
   private triggerHitStop(duration: number) {
-      // TimeSystem handles its own singleton state in this version, 
-      // or we could inject TimeSystem too. For now we assume TimeSystem logic
-      // is handled via store or direct access, but the original code used ServiceLocator.
-      // Since we don't have TimeSystem injected yet, we'll skip the hitstop
-      // or we can add TimeSystem to constructor?
-      // Let's add TimeSystem to constructor in next pass if critical.
-      // For now, let's keep it safe.
+      // HitStop logic can be re-enabled here if needed
   }
 }

@@ -9,6 +9,7 @@ export const FastEvents = {
   SPAWN_FX: 1,
   TRAUMA: 2,
   PLAY_SOUND: 3,
+  SPAWN_IMPACT: 4, // NEW: For dynamic colored impacts
 } as const;
 
 export const FX_IDS: Record<string, number> = {

@@ -5,6 +5,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -13,8 +14,6 @@ const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
 
-// Helper to determine death FX based on enemy type
-// In the future, this could be a 'VisualData' component property
 const getExplosionType = (variant: string, angle?: boolean) => {
     switch (variant) {
         case EnemyTypes.KAMIKAZE: return angle ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
@@ -26,7 +25,6 @@ const getExplosionType = (variant: string, angle?: boolean) => {
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   
-  // Special Handling for Daemon (Shields/States)
   if (pId?.variant === EnemyTypes.DAEMON) {
       resolveDaemonCollision(player, enemy, ctx);
       return;
@@ -38,31 +36,24 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   const pPos = getPos(player);
   const x = pos ? pos.x : 0;
 
-  // 1. Calculate Damage (Data Driven)
-  // Default to 1 if no combat component found
   const damage = combat ? combat.damage : 1;
 
-  // 2. Calculate Impact Angle
   let angle = 0;
   if (pos && pPos) {
       angle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x);
   }
   const sprayAngle = angle + Math.PI;
 
-  // 3. Apply Damage
   ctx.damagePlayer(damage);
   
-  // 4. Resolve Entity Death
   const variant = eId?.variant || 'UNKNOWN';
   const fx = getExplosionType(variant, true);
   
-  // Dynamic Trauma based on damage severity
   const trauma = damage >= 3 ? 0.5 : 0.2;
   ctx.addTrauma(trauma);
 
   ctx.destroyEntity(enemy, fx, sprayAngle);
   
-  // Audio based on damage severity
   const audio = damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light';
   ctx.playSpatialAudio(audio, x);
 };
@@ -103,8 +94,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const pos = getPos(attacker);
   const x = pos ? pos.x : 0;
 
-  // Use fixed damage if provided (e.g. from bullet hit which has no combat comp sometimes?), 
-  // otherwise read from attacker.
   let incomingDamage = fixedDamage || 1;
   if (!fixedDamage) {
       const combat = getCombat(attacker);
@@ -136,13 +125,12 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   ctx.playSpatialAudio('fx_impact_light', x);
 }
 
-function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext, sprayAngle?: number) {
+function handleMassExchange(a: Entity, b: Entity, defaultFX: string, ctx: CombatContext, sprayAngle?: number) {
   const hpA = getHp(a);
   const hpB = getHp(b);
   const cA = getCombat(a);
   const cB = getCombat(b);
 
-  // Damage logic: A deals damage to B, B deals damage to A
   const dmgA = cA ? cA.damage : 1;
   const dmgB = cB ? cB.damage : 1;
 
@@ -151,12 +139,34 @@ function handleMassExchange(a: Entity, b: Entity, fx: string, ctx: CombatContext
 
   const pos = getPos(a);
   const x = pos ? pos.x : 0;
-  if (pos) ctx.spawnFX(fx, pos.x, pos.y);
+  
+  if (pos) {
+      let spawnedCustom = false;
+      
+      // If defaultFX is white (standard hit), try to override with B's color (Attacker)
+      if (defaultFX === 'IMPACT_WHITE') {
+          const bRender = b.getComponent<RenderData>(ComponentType.Render);
+          if (bRender) {
+              // Normalize color (Assume values might be high like 4.0 from bloom)
+              const maxC = Math.max(bRender.r, bRender.g, bRender.b, 1.0);
+              const r = bRender.r / maxC;
+              const g = bRender.g / maxC;
+              const b = bRender.b / maxC;
+              
+              ctx.spawnImpact(pos.x, pos.y, r, g, b);
+              spawnedCustom = true;
+          }
+      } 
+      
+      if (!spawnedCustom) {
+          ctx.spawnFX(defaultFX, pos.x, pos.y);
+      }
+  }
 
   let soundKey = '';
 
   if (hpA && hpA.current <= 0) {
-      ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle);
+      ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); // Death effect always white transition or specialized? Left as is.
       soundKey = 'fx_impact_light';
   }
   if (hpB && hpB.current <= 0) {
