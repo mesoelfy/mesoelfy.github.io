@@ -1,8 +1,6 @@
 import { useStore } from '@/engine/state/global/useStore';
 import { AUDIO_CONFIG } from '@/engine/config/AudioConfig';
 import { IAudioService } from '@/engine/interfaces';
-
-// Modules
 import { AudioContextManager } from './modules/AudioContextManager';
 import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
@@ -12,20 +10,14 @@ export class AudioServiceImpl implements IAudioService {
   private ctxManager = new AudioContextManager();
   private mixer = new AudioMixer(this.ctxManager);
   private bank = new SoundBank();
-  
   public isReady = false;
   private hasInteracted = false; 
-  
   private musicElement: HTMLAudioElement | null = null;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceKey: string | null = null;
 
   public async init() {
-    if (this.isReady) {
-        this.ctxManager.resume();
-        return;
-    }
-
+    if (this.isReady) { this.ctxManager.resume(); return; }
     const ctx = this.ctxManager.init();
     if (!ctx) return;
 
@@ -33,9 +25,7 @@ export class AudioServiceImpl implements IAudioService {
     this.updateVolumes();
     await this.generateAllSounds();
     this.setupGlobalInteraction();
-
     this.isReady = true;
-    console.log('[AudioService] Modules Initialized & Ready.');
   }
 
   private async generateAllSounds() {
@@ -52,10 +42,7 @@ export class AudioServiceImpl implements IAudioService {
           if (this.hasInteracted) return;
           this.hasInteracted = true; 
           this.ctxManager.resume();
-          
-          if (!this.currentAmbienceKey) {
-              this.playAmbience('ambience_core');
-          }
+          if (!this.currentAmbienceKey) this.playAmbience('ambience_core');
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
       };
@@ -64,115 +51,69 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public updateVolumes() {
-      const settings = useStore.getState().audioSettings;
-      this.mixer.updateVolumes(settings);
+      this.mixer.updateVolumes(useStore.getState().audioSettings);
   }
 
   public playSound(key: string, pan: number = 0) {
       const ctx = this.ctxManager.ctx;
-      if (!ctx || !this.mixer.sfxGain) return;
-
       const buffer = this.bank.get(key);
       const recipe = AUDIO_CONFIG[key];
-      
-      if (!buffer || !recipe) return;
+      if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      
-      if (recipe.pitchVariance > 0) {
-          const detune = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
-          source.detune.value = detune;
-      }
-
+      if (recipe.pitchVariance > 0) source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
       const panner = ctx.createStereoPanner();
-      let safePan = Number.isFinite(pan) ? pan : 0;
-      safePan = Math.max(-1, Math.min(1, safePan));
-      panner.pan.value = safePan;
+      panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
 
       source.connect(panner);
       panner.connect(this.mixer.sfxGain);
-      
       source.start();
   }
 
   public playAmbience(key: string) {
       const ctx = this.ctxManager.ctx;
-      if (!ctx || !this.mixer.ambienceGain) return;
-      
-      if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
+      if (!ctx || !this.mixer.ambienceGain || (this.currentAmbienceKey === key && this.currentAmbienceNode)) return;
 
       if (this.currentAmbienceNode) {
-          const oldNode = this.currentAmbienceNode;
-          try { oldNode.stop(ctx.currentTime + 0.5); } catch {}
+          try { this.currentAmbienceNode.stop(ctx.currentTime + 0.5); } catch {}
           this.currentAmbienceNode = null;
       }
-
       const buffer = this.bank.get(key);
       if (!buffer) return;
 
       const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      
+      source.buffer = buffer; source.loop = true;
       const fadeGain = ctx.createGain();
       fadeGain.gain.setValueAtTime(0, ctx.currentTime);
       fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
-
-      source.connect(fadeGain);
-      fadeGain.connect(this.mixer.ambienceGain); 
+      source.connect(fadeGain); fadeGain.connect(this.mixer.ambienceGain); 
       source.start();
-      
-      this.currentAmbienceNode = source;
-      this.currentAmbienceKey = key;
+      this.currentAmbienceNode = source; this.currentAmbienceKey = key;
   }
 
   public startMusic() {
     this.ctxManager.resume();
-    if (this.isReady) {
-        this.playAmbience('ambience_core');
-    }
+    if (this.isReady) this.playAmbience('ambience_core');
     if (!this.musicElement) this.setupMusic();
-    if (this.musicElement) {
-        this.musicElement.currentTime = 0; // Restart
-        this.musicElement.play().catch(() => {});
-    }
+    if (this.musicElement) { this.musicElement.currentTime = 0; this.musicElement.play().catch(() => {}); }
   }
 
   private setupMusic() {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.musicGain || this.musicElement) return;
-    
     this.musicElement = new Audio('/assets/audio/bg_music_placeholder.mp3');
-    this.musicElement.loop = true;
-    this.musicElement.crossOrigin = "anonymous";
-    
-    const source = ctx.createMediaElementSource(this.musicElement);
-    source.connect(this.mixer.musicGain);
+    this.musicElement.loop = true; this.musicElement.crossOrigin = "anonymous";
+    ctx.createMediaElementSource(this.musicElement).connect(this.mixer.musicGain);
   }
   
-  public duckMusic(intensity: number, duration: number) {
-      this.mixer.duckMusic(intensity, duration);
-  }
-
-  public getFrequencyData(array: Uint8Array) {
-      this.mixer.getByteFrequencyData(array);
-  }
-
+  public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
+  public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
   public stopAll() {
-      if (this.musicElement) {
-          this.musicElement.pause();
-          this.musicElement.currentTime = 0;
-      }
-      
-      if (this.currentAmbienceNode) {
-          try { this.currentAmbienceNode.stop(); } catch {}
-          this.currentAmbienceNode = null;
-          this.currentAmbienceKey = null;
-      }
+      if (this.musicElement) { this.musicElement.pause(); this.musicElement.currentTime = 0; }
+      if (this.currentAmbienceNode) { try { this.currentAmbienceNode.stop(); } catch {} this.currentAmbienceNode = null; this.currentAmbienceKey = null; }
   }
 
-  // --- HELPERS ---
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
   public playHover(pan: number = 0) { this.playSound('ui_hover', pan); }
   public playBootSequence() { this.playSound('fx_boot_sequence'); } 

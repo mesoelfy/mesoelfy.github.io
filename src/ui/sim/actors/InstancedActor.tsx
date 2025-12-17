@@ -27,21 +27,9 @@ interface InstancedActorProps {
   z?: number;
 }
 
-export const InstancedActor = ({ 
-  tag, 
-  geometry, 
-  material, 
-  maxCount, 
-  updateEntity, 
-  filter, 
-  baseColor = '#FFFFFF',
-  interactive = false,
-  z = 0
-}: InstancedActorProps) => {
+export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity, filter, baseColor = '#FFFFFF', interactive = false, z = 0 }: InstancedActorProps) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const instanceMap = useMemo(() => new Int32Array(maxCount).fill(-1), [maxCount]);
-  
-  // Pre-parse base color
   const defaultColor = useMemo(() => new THREE.Color(baseColor), [baseColor]);
 
   useLayoutEffect(() => {
@@ -52,7 +40,6 @@ export const InstancedActor = ({
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
-
     let registry;
     try { registry = ServiceLocator.getRegistry(); } catch { return; }
 
@@ -66,12 +53,8 @@ export const InstancedActor = ({
 
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       if (!transform) continue;
+      if (interactive) instanceMap[count] = entity.id as number;
 
-      if (interactive) {
-          instanceMap[count] = entity.id as number;
-      }
-
-      // 1. Base Transform
       const idx = transform.index * STRIDE;
       const x = transformData[idx];
       const y = transformData[idx + 1];
@@ -79,10 +62,7 @@ export const InstancedActor = ({
       const scale = transformData[idx + 3];
 
       tempObj.position.set(x, y, z);
-      
-      // 2. Render Overrides
       const render = entity.getComponent<RenderData>(ComponentType.Render);
-      
       let finalScale = scale;
       let visualRot = 0;
 
@@ -91,26 +71,17 @@ export const InstancedActor = ({
           visualRot = render.visualRotation;
           tempColor.setRGB(render.r, render.g, render.b);
       } else {
-          // STRICT MODE: If no RenderData, revert to default white
           tempColor.copy(defaultColor);
       }
 
-      // Apply Rotations (Model Spin + World Aim)
       applyRotation(tempObj, visualRot, rot);
       tempObj.scale.setScalar(finalScale);
 
-      // 3. Custom Logic
-      if (updateEntity) {
-        updateEntity(entity, tempObj, tempColor, delta);
-      }
+      if (updateEntity) updateEntity(entity, tempObj, tempColor, delta);
 
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
-      
-      if (meshRef.current.instanceColor) {
-        meshRef.current.setColorAt(count, tempColor);
-      }
-      
+      if (meshRef.current.instanceColor) meshRef.current.setColorAt(count, tempColor);
       count++;
     }
 
@@ -122,15 +93,8 @@ export const InstancedActor = ({
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
       if (!interactive || e.instanceId === undefined) return;
       e.stopPropagation();
-      
       const entityId = instanceMap[e.instanceId];
-      if (entityId !== -1) {
-          GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { 
-              id: entityId, 
-              damage: 9999, 
-              type: 'TAP' 
-          });
-      }
+      if (entityId !== -1) GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: entityId, damage: 9999, type: 'TAP' });
   };
 
   return (

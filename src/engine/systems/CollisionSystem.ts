@@ -4,7 +4,6 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
-// SCALING FIX: Increased buffer to handle massive overlaps (e.g. Nukes)
 const MAX_COLLISION_RESULTS = 1024;
 
 export class CollisionSystem implements IGameSystem {
@@ -20,17 +19,13 @@ export class CollisionSystem implements IGameSystem {
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
     const collidables = this.registry.query({ all: [ComponentType.Collider, ComponentType.Transform] });
-    
     this.handledPairs.clear();
 
     for (const entity of collidables) {
         if (!entity.active) continue;
-
         const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
-        if (!collider || collider.mask === 0) continue;
-
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        if (!transform) continue;
+        if (!collider || collider.mask === 0 || !transform) continue;
 
         const state = entity.getComponent<AIStateData>(ComponentType.State);
         if (state && state.current === 'SPAWN') continue;
@@ -39,15 +34,11 @@ export class CollisionSystem implements IGameSystem {
 
         for (let i = 0; i < count; i++) {
             const otherId = this.queryBuffer[i];
-            
             if (otherId === entity.id) continue;
 
             const idA = entity.id as number;
             const idB = otherId;
-            const minId = idA < idB ? idA : idB;
-            const maxId = idA < idB ? idB : idA;
-            const pairKey = (minId << 16) | maxId;
-
+            const pairKey = (Math.min(idA, idB) << 16) | Math.max(idA, idB);
             if (this.handledPairs.has(pairKey)) continue;
             this.handledPairs.add(pairKey);
 
@@ -66,10 +57,9 @@ export class CollisionSystem implements IGameSystem {
 
             const dx = transform.x - otherTransform.x;
             const dy = transform.y - otherTransform.y;
-            const distSq = dx * dx + dy * dy;
             const radiusSum = collider.radius + otherCollider.radius;
 
-            if (distSq < radiusSum * radiusSum) {
+            if (dx * dx + dy * dy < radiusSum * radiusSum) {
                 this.combatSystem.resolveCollision(entity, other);
             }
         }

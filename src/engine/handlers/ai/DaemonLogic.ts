@@ -1,44 +1,26 @@
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { Sequence, Parallel, MemSequence } from '@/engine/ai/behavior/composites';
-import { Succeeder } from '@/engine/ai/behavior/decorators';
 import { Wait } from '@/engine/ai/nodes/actions';
 import { SpawnPhase } from '@/engine/ai/nodes/logic';
 import { OrbitControl, ChargeMechanic, FireDaemonShot, HasTargetLock } from '@/engine/ai/nodes/daemonNodes';
 
 let treeRoot: any = null;
 
-const getDaemonTree = (config: any) => {
+const getDaemonTree = () => {
     if (treeRoot) return treeRoot;
 
-    // --- BEHAVIOR ARCHITECTURE ---
-    // 1. Always Orbit (Parallel)
-    // 2. Logic Loop (MemSequence):
-    //    a. Charge (Squish -> Unsquish handled by Actor reading chargeProgress)
-    //    b. Acquire Target
-    //    c. Fire (Reset chargeProgress -> Squish)
-    
     const combatCycle = new MemSequence([
-        // Phase 1: Charge Up (2.0s)
-        // This gradually sets AIStateData.data.chargeProgress from 0 to 1
         new ChargeMechanic(2.0),
-
-        // Phase 2: Wait for Target
-        // If no enemy is near, it stays fully charged (Unsquished)
         new HasTargetLock(),
-
-        // Phase 3: Attack
-        // Fires projectile at target and resets chargeProgress to 0 immediately
         new FireDaemonShot(35.0, 20),
-        
-        // Phase 4: Brief Recovery
         new Wait(0.5)
     ], 'daemon_cycle');
 
     treeRoot = new Sequence([
         new SpawnPhase(1.0),
         new Parallel([
-            new OrbitControl(true), // Always orbit player
+            new OrbitControl(true),
             combatCycle
         ])
     ]);
@@ -48,7 +30,7 @@ const getDaemonTree = (config: any) => {
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    const tree = getDaemonTree(null);
+    const tree = getDaemonTree();
     tree.tick(e, ctx);
   }
 };

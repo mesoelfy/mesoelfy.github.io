@@ -18,7 +18,6 @@ export const GameOverlay = () => {
   const [mounted, setMounted] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
 
-  // 1. Initialize Assets IMMEDIATELY before Canvas can mount
   useLayoutEffect(() => {
       registerAllAssets();
       setAssetsReady(true);
@@ -58,10 +57,7 @@ export const GameOverlay = () => {
                 <GalleryStage />
             ) : (
                 <>
-                    {/* Logic Core */}
                     <GameDirector />
-                    
-                    {/* Visuals */}
                     <CameraRig />
                     <RenderDirector />
                 </>
@@ -69,7 +65,6 @@ export const GameOverlay = () => {
           </Canvas>
         </div>
         
-        {/* Mobile Controls Layer */}
         {isMobile && !isGallery && (
             <>
                 <VirtualJoystick />

@@ -13,8 +13,6 @@ export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
   const isMobileRef = useRef(false);
-  
-  // REACTIVE STATE: We listen to this
   const initialClickPos = useStore(state => state.initialClickPos);
 
   useEffect(() => {
@@ -28,10 +26,8 @@ export const GameDirector = memo(() => {
 
     const engine = GameBootstrapper();
     engineRef.current = engine;
-
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // Panel Refresh Loop (10Hz)
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
@@ -45,7 +41,6 @@ export const GameDirector = memo(() => {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
             panelSys.refreshAll();
         } catch {}
-        
         initialPolls++;
         if (initialPolls > 20) clearInterval(fastPoll); 
     }, 100);
@@ -59,27 +54,17 @@ export const GameDirector = memo(() => {
     };
   }, []); 
 
-  // --- NEW: Position Seeding Effect ---
-  // Runs whenever initialClickPos changes (i.e. when button is clicked)
   useEffect(() => {
       if (!initialClickPos || isMobileRef.current || !engineRef.current) return;
-
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
           input.updateBounds(viewport.width, viewport.height);
-          
-          // Screen (Pixels) -> World (Units)
-          // X: (clientX / width) * vpW - (vpW/2)
-          // Y: -((clientY / height) * vpH - (vpH/2))  <-- Flip Y
-          
           const wx = (initialClickPos.x / size.width) * viewport.width - (viewport.width / 2);
           const wy = -((initialClickPos.y / size.height) * viewport.height - (viewport.height / 2));
-          
           input.updateCursor(wx, wy);
       } catch {}
   }, [initialClickPos, viewport, size]);
 
-  // Handle Resize updates
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.updateViewport(viewport.width, viewport.height, size.width, size.height);
@@ -90,7 +75,6 @@ export const GameDirector = memo(() => {
     }
   }, [viewport, size]);
 
-  // Main Loop
   useFrame((state, delta) => {
     if (engineRef.current) {
       try {
@@ -103,10 +87,7 @@ export const GameDirector = memo(() => {
           engineRef.current.update(delta, state.clock.elapsedTime);
       } catch (e: any) {
           console.error("Game Loop Critical Failure:", e);
-          GameEventBus.emit(GameEvents.LOG_DEBUG, { 
-              msg: `CRITICAL LOOP FAIL: ${e.message}`, 
-              source: 'GameDirector' 
-          });
+          GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `CRITICAL LOOP FAIL: ${e.message}`, source: 'GameDirector' });
       }
     }
   });

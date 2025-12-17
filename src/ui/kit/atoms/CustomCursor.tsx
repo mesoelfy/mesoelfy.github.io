@@ -11,33 +11,22 @@ export const CustomCursor = () => {
   
   const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
   
-  // UPDATED: Treat mobile_lockdown as an active game state for cursor purposes
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
-  
-  // LOGIC FIX: Explicitly hide during breach transition
-  const showCustomCursor = 
-    ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') 
-    && !isOnScrollbar;
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
-      
       const target = e.target as HTMLElement;
-      const isInteractive = target.closest('button, a, input, label, [data-interactive="true"]');
-      setIsHovering(!!isInteractive);
+      setIsHovering(!!target.closest('button, a, input, label, [data-interactive="true"]'));
 
-      const isRightEdge = e.clientX >= window.innerWidth - 14;
-      const isBottomEdge = e.clientY >= window.innerHeight - 14;
-      const onScroll = isRightEdge || isBottomEdge;
+      const onScroll = e.clientX >= window.innerWidth - 14 || e.clientY >= window.innerHeight - 14;
       setIsOnScrollbar(onScroll);
 
       if (onScroll) {
           document.body.style.setProperty('cursor', 'auto', 'important');
       } else {
-          // Hide system cursor if we are showing custom one
-          // For mobile lockdown, we ALWAYS want to hide system cursor and show ours
           document.body.style.setProperty('cursor', 'none', 'important');
       }
     };

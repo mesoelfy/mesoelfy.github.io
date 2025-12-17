@@ -50,7 +50,6 @@ const config: Config = {
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
-        // UPDATED: Duration 1.2s
         'restore-flash': 'restore-flash 1.2s ease-out forwards',
       },
       keyframes: {
@@ -74,7 +73,6 @@ const config: Config = {
         },
         'restore-flash': {
           '0%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' },
-          // Keyframe adjusted to snap on quickly (5%) then fade out long
           '5%': { boxShadow: '0 0 15px rgba(96, 196, 68, 1)', borderColor: '#78F654' },
           '100%': { boxShadow: '0 0 0px transparent', borderColor: 'rgba(96, 196, 68, 0.3)' }
         }

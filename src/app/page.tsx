@@ -203,8 +203,8 @@ export default function Home() {
                             visible: { 
                                 opacity: 1, 
                                 transition: { 
-                                staggerChildren: 0.05, // FIXED: Fast stagger
-                                delayChildren: 0.0    // FIXED: Instant start
+                                staggerChildren: 0.05,
+                                delayChildren: 0.0
                                 } 
                             }
                             }}

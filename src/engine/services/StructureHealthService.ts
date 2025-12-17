@@ -35,28 +35,18 @@ class StructureHealthServiceController {
 
   public damage(id: string, amount: number, silent: boolean = false) {
     if (useStore.getState().debugFlags.panelGodMode) return;
-
     const state = this.states.get(id);
     if (!state || state.isDestroyed) return;
-
     state.health = Math.max(0, state.health - amount);
-
     if (state.health <= 0) {
         state.isDestroyed = true;
         state.health = 0;
-        
         if (!silent) {
             GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
             GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
         }
-    } else {
-        if (!silent) {
-            GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
-                id, 
-                amount, 
-                currentHealth: state.health 
-            });
-        }
+    } else if (!silent) {
+        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
     }
     this.calculateIntegrity();
   }
@@ -64,14 +54,11 @@ class StructureHealthServiceController {
   public heal(id: string, amount: number, sourceX?: number) {
     const state = this.states.get(id);
     if (!state) return;
-
     const wasDestroyed = state.isDestroyed;
     state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
-
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
         state.health = MAX_PANEL_HEALTH * 0.5;
-        
         GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
@@ -119,13 +106,8 @@ class StructureHealthServiceController {
     this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
   }
 
-  public getState(id: string) {
-      return this.states.get(id);
-  }
-
-  public getAllStates() {
-      return this.states;
-  }
+  public getState(id: string) { return this.states.get(id); }
+  public getAllStates() { return this.states; }
 }
 
 export const StructureHealthService = new StructureHealthServiceController();

@@ -6,12 +6,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 const IconMap: Record<string, any> = {
-  twitter: Twitter,
-  youtube: Youtube,
-  github: Github,
-  video: Video,
-  crosshair: Crosshair,
-  image: ImageIcon,
+  twitter: Twitter, youtube: Youtube, github: Github, video: Video, crosshair: Crosshair, image: ImageIcon,
 };
 
 interface SocialRowProps {
@@ -32,13 +27,11 @@ export const SocialRow = ({ layout = 'grid' }: SocialRowProps) => {
       {socials.map((social, idx) => {
         const Icon = isDestroyed ? AlertTriangle : (IconMap[social.icon] || Crosshair);
         const isGlitch = isDestroyed && (idx % 2 === 0);
-        
         return (
           <a
             key={social.name}
             href={isDestroyed ? undefined : social.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            target="_blank" rel="noopener noreferrer"
             onMouseEnter={(e) => !isDestroyed && audio.playHover(getPan(e))} 
             onClick={(e) => !isDestroyed && audio.playClick(getPan(e))}
             className={clsx(

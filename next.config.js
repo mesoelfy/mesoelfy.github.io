@@ -14,19 +14,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // ENGINE OPTIMIZATION:
-  // We disable Strict Mode because the Game Engine manages its own lifecycle.
-  // Double-invoking mount/unmount in Dev causes AudioContext and WebGL context thrashing.
   reactStrictMode: false,
   transpilePackages: ['three'],
-  
-  // Disable Indicators
   devIndicators: false,
-
   env: {
     NEXT_PUBLIC_COMMIT_HASH: commitHash,
   },
-  
   typescript: {
     ignoreBuildErrors: true,
   },

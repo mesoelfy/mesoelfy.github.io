@@ -8,7 +8,6 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
-
 import { RebootOverlay } from '@/ui/kit/molecules/panel/RebootOverlay';
 import { IntelligentHeader } from '@/ui/kit/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/kit/molecules/panel/BreachOverlay';
@@ -19,20 +18,12 @@ const DEFAULT_MAX_HEALTH = 100;
 
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    transition: { duration: 0.5, ease: "easeOut" }
-  },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
   shattered: (custom: number) => ({
     y: 350 + (custom * 50),
     opacity: 0.8,
     rotate: custom * 15,
-    transition: { 
-        duration: 1.5, 
-        ease: "anticipate",
-        delay: Math.abs(custom) * 0.1 
-    }
+    transition: { duration: 1.5, ease: "anticipate", delay: Math.abs(custom) * 0.1 }
   })
 };
 
@@ -40,26 +31,18 @@ const pulseVariants = {
     heartbeat: {
         opacity: [0, 0.6, 0],
         scale: [1, 1.005, 1], 
-        transition: { 
-            duration: 0.8, 
-            times: [0, 0.04, 1], 
-            ease: "easeOut" 
-        }
+        transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" }
     }
 };
 
-// --- CIRCUIT LOCK OVERLAY (INNER) ---
-// REVERTED: Kept at 0.6s (Fast Flash)
-const CircuitLockOverlay = () => {
-    return (
-        <motion.div 
-            className="absolute inset-0 pointer-events-none z-[60] border-2 border-white/50 bg-primary-green/20 shadow-[inset_0_0_20px_#78F654]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-        />
-    );
-};
+const CircuitLockOverlay = () => (
+    <motion.div 
+        className="absolute inset-0 pointer-events-none z-[60] border-2 border-white/50 bg-primary-green/20 shadow-[inset_0_0_20px_#78F654]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+    />
+);
 
 interface GlassPanelProps {
   children: ReactNode;
@@ -69,13 +52,7 @@ interface GlassPanelProps {
   maxHealth?: number; 
 }
 
-export const GlassPanel = ({ 
-  children, 
-  className, 
-  title, 
-  gameId, 
-  maxHealth = DEFAULT_MAX_HEALTH 
-}: GlassPanelProps) => {
+export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
@@ -83,16 +60,11 @@ export const GlassPanel = ({
   const isInteracting = !!(gameId && interactionTarget === gameId);
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
-
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
   
   const health = panelState ? panelState.health : maxHealth;
   const isDestroyed = panelState ? panelState.isDestroyed : false;
-  
-  let rawPercent = (health / maxHealth) * 100;
-  if (!Number.isFinite(rawPercent) || isNaN(rawPercent)) rawPercent = 0;
-  const healthPercent = Math.max(0, Math.min(100, rawPercent));
-  
+  const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
   const isDamaged = !isDestroyed && health < maxHealth;
 
   const [showReboot, setShowReboot] = useReactState(false);
@@ -107,14 +79,9 @@ export const GlassPanel = ({
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
   useReactEffect(() => {
-      if (isGameOver) {
-          shakeControls.start("shattered");
-      } else {
-          shakeControls.start("visible");
-      }
+      isGameOver ? shakeControls.start("shattered") : shakeControls.start("visible");
   }, [isGameOver, shakeControls]);
 
-  // REBOOT LOGIC
   useReactEffect(() => {
     if (prevDestroyed.current && !isDestroyed && !isGameOver) {
         setShowReboot(true);
@@ -124,57 +91,31 @@ export const GlassPanel = ({
     prevDestroyed.current = isDestroyed;
   }, [isDestroyed, isGameOver]);
 
-  // HEAL COMPLETE LOGIC
   useReactEffect(() => {
-      // 1. Rising Edge (Healed to Full)
       if (prevHealth.current < maxHealth && health >= maxHealth && !isDestroyed && !isGameOver) {
           setShowCircuitLock(true);
-          // Timer matches the OUTER glow duration (1.2s) from Tailwind
           const timer = setTimeout(() => setShowCircuitLock(false), 1200); 
           prevHealth.current = health;
           return () => clearTimeout(timer);
       }
-      
-      // 2. Falling Edge (Took Damage or destroyed)
-      // FIX: Reset animation state immediately so it can trigger again next heal
-      if (health < maxHealth || isDestroyed || isGameOver) {
-          setShowCircuitLock(false);
-      }
-
+      if (health < maxHealth || isDestroyed || isGameOver) setShowCircuitLock(false);
       prevHealth.current = health;
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
-  // SHAKE LISTENER
   useReactEffect(() => {
       if (!gameId) return;
-      
-      const unsub = GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+      return GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
-              shakeControls.start({
-                  x: [0, -5, 5, -5, 5, 0],
-                  transition: { duration: 0.1 }
-              });
+              shakeControls.start({ x: [0, -5, 5, -5, 5, 0], transition: { duration: 0.1 } });
           }
       });
-      return unsub;
   }, [gameId, shakeControls]);
 
   let borderColor = "border-primary-green-dim/30";
-  
-  // Outer Glow Logic
-  if (showCircuitLock) {
-      // Handled by animate-restore-flash
-      borderColor = "border-primary-green"; 
-  }
-  else if (isDestroyed) {
-      borderColor = isInteracting 
-        ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" 
-        : "border-critical-red animate-pulse"; 
-  }
+  if (showCircuitLock) borderColor = "border-primary-green"; 
+  else if (isDestroyed) borderColor = isInteracting ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "border-critical-red animate-pulse"; 
   else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
-
-  const bgClass = isDestroyed ? "bg-black/20" : "bg-black";
 
   return (
     <motion.div 
@@ -185,17 +126,13 @@ export const GlassPanel = ({
       custom={randSeed}
       className={clsx(
         "relative overflow-hidden flex flex-col group",
-        bgClass, 
-        "border",
-        borderColor, 
-        "rounded-sm",
-        // Apply keyframe animation class for the outer glow flash (1.2s)
+        isDestroyed ? "bg-black/20" : "bg-black", 
+        "border", borderColor, "rounded-sm",
         showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300",
         className
       )}
     >
       <DotGridBackground className="top-8" />
-
       <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
       
       {isCriticalGlobal && (
@@ -209,12 +146,8 @@ export const GlassPanel = ({
 
       {title && (
           <IntelligentHeader 
-            title={title} 
-            health={health} 
-            maxHealth={maxHealth} 
-            isDestroyed={isDestroyed} 
-            isGameOver={isGameOver}
-            gameId={gameId}
+            title={title} health={health} maxHealth={maxHealth} 
+            isDestroyed={isDestroyed} isGameOver={isGameOver} gameId={gameId}
           />
       )}
 
@@ -224,28 +157,21 @@ export const GlassPanel = ({
                 <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
             </SafePanelContent>
         )}
-
         <div className={clsx("flex-1 min-h-0 flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
             {children}
-            
             {isDestroyed && !isGameOver && (
                 <SafePanelContent fallbackId={`breach-${gameId}`}>
                     <BreachOverlay 
-                        progress={healthPercent} 
-                        isVideo={gameId === 'video'} 
-                        showInteractive={true} 
-                        isRepairing={isInteracting}
-                        panelId={gameId} 
+                        progress={healthPercent} isVideo={gameId === 'video'} 
+                        showInteractive={true} isRepairing={isInteracting} panelId={gameId} 
                     />
                 </SafePanelContent>
             )}
         </div>
-
         <AnimatePresence>
             {showReboot && <RebootOverlay key="reboot" />}
             {showCircuitLock && <CircuitLockOverlay key="lock" />}
         </AnimatePresence>
-        
         {isGameOver && (
             <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
                 <Skull className="text-critical-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />

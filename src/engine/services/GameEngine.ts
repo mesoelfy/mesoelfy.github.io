@@ -8,11 +8,11 @@ import { WorldConfig } from '@/engine/config/WorldConfig';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { ServiceLocator } from './ServiceLocator';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
   public registry: IEntityRegistry; 
-  
   private accumulator: number = 0;
   private simulationTime: number = 0;
 
@@ -20,10 +20,7 @@ export class GameEngineCore implements IGameSystem {
       this.registry = registry;
   }
 
-  // Locator is stored for potential late-binding, but systems are now fully initialized via constructor
-  setup(locator: IServiceLocator): void {
-    // No-op for now, kept if engine needs direct access later
-  }
+  setup(locator: IServiceLocator): void {}
 
   public registerSystem(system: IGameSystem) {
     this.systems.push(system);
@@ -36,9 +33,6 @@ export class GameEngineCore implements IGameSystem {
     if (store.bootState === 'standby') return;
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
-
-    let isGameOver = false;
-    let timeScale = 1.0;
 
     try {
         const gameSys = ServiceLocator.getSystem<GameStateSystem>('GameStateSystem');
@@ -54,9 +48,9 @@ export class GameEngineCore implements IGameSystem {
         if (!gameStore.isPlaying) {
             gameSys.isGameOver = true;
         }
-        isGameOver = gameSys.isGameOver;
     } catch {}
 
+    let timeScale = 1.0;
     try {
         const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
         timeSys.tickRealTime(renderDelta);
@@ -64,9 +58,7 @@ export class GameEngineCore implements IGameSystem {
         else timeScale = timeSys.timeScale;
     } catch {}
 
-    const debugScale = store.debugFlags.timeScale;
-    const effectiveDelta = renderDelta * timeScale * debugScale;
-    
+    const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
     this.accumulator += effectiveDelta;
 
     if (this.accumulator > WorldConfig.time.maxAccumulator) {
@@ -102,12 +94,8 @@ export class GameEngineCore implements IGameSystem {
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
     try {
-        // Safe refresh attempt
         const panelSys = ServiceLocator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
         if (panelSys) panelSys.refreshAll();
     } catch {}
   }
 }
-// Local import for ServiceLocator to avoid circular dependency issues in some bundlers,
-// though usually we inject it. Here we use the global instance for the static helpers inside update().
-import { ServiceLocator } from './ServiceLocator';

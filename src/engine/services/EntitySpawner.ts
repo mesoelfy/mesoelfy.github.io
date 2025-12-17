@@ -23,20 +23,15 @@ export class EntitySpawner implements IEntitySpawner {
     }
 
     const e = this.registry.createEntity();
-    
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
     for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
-            // CRITICAL FIX: Deep clone the blueprint data to prevent shared state refs
             const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
             const runtimeData = overrides[compDef.type] || {};
-            
-            // Merge runtime overrides on top of cloned blueprint
             const mergedData = { ...blueprintData, ...runtimeData };
-            
             e.addComponent(builder(mergedData));
         }
     }
@@ -50,23 +45,12 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
-    return this.spawn(type, {
-        [ComponentType.Transform]: { x, y }
-    });
+    return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(
-      x: number, y: number, 
-      vx: number, vy: number, 
-      isEnemy: boolean, 
-      life: number,
-      damage: number = 1,
-      projectileId: string = 'PLAYER_STANDARD'
-  ): Entity {
+  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD'): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
-    
-    // Look up default config color to initialize RenderData
     const config = PROJECTILE_CONFIG[projectileId];
     const color = config ? config.color : [1, 1, 1];
 
@@ -76,7 +60,6 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        // Initialize RenderData with the Projectile's native neon color
         [ComponentType.Render]: { 
             visualScale: 1.0, 
             visualRotation: 0, 
@@ -90,12 +73,10 @@ export class EntitySpawner implements IEntitySpawner {
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: number = 0): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
-    
     e.addComponent(ComponentBuilder[ComponentType.Transform]({ x, y, scale: size }));
     e.addComponent(ComponentBuilder[ComponentType.Motion]({ vx, vy, friction: 0.05 }));
     e.addComponent(ComponentBuilder[ComponentType.Lifetime]({ remaining: life, total: life }));
     e.addComponent(ComponentBuilder[ComponentType.Identity]({ variant: color }));
-    
     this.registry.updateCache(e);
   }
 }

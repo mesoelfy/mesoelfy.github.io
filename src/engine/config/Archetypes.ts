@@ -18,7 +18,7 @@ const DRILLER_COLOR = parseHex(GAME_THEME.enemy.muncher);
 const KAMIKAZE_COLOR = parseHex(GAME_THEME.enemy.kamikaze);
 const HUNTER_COLOR = parseHex(GAME_THEME.enemy.hunter);
 const DAEMON_COLOR = parseHex('#00F0FF');
-const PLAYER_COLOR = parseHex(GAME_THEME.turret.base); // NEW: Explicit Player Green
+const PLAYER_COLOR = parseHex(GAME_THEME.turret.base);
 
 export interface EntityBlueprint {
   tags: Tag[];
@@ -39,7 +39,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      // UPDATED: Injected PLAYER_COLOR to prevent white flash on spawn
       { type: ComponentType.Render, data: { ...PLAYER_COLOR, visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },

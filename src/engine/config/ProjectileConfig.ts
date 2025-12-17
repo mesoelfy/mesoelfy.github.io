@@ -63,10 +63,9 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
     scale: [0.3, 1.0, 0.3],
     spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
   },
-  // CHANGED: Blue color (#0088FF)
   'DAEMON_ORB': {
     geometry: 'SPHERE',
-    color: neon('#0088FF', 5.0), // Deep Neon Blue
+    color: neon('#0088FF', 5.0), 
     scale: [0.5, 0.5, 0.5],
     spinSpeed: 1.0, pulseSpeed: 4.0, faceVelocity: false
   }

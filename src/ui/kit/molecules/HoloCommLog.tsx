@@ -7,13 +7,9 @@ import { getPan } from '@/engine/audio/AudioUtils';
 import { clsx } from 'clsx';
 import { useHoloCycler } from '@/ui/kit/hooks/useHoloCycler';
 
-// --- SUB-COMPONENTS ---
-
 const StaticOverlay = ({ label, icon: Icon, color = "text-primary-green", animate = false }: any) => (
   <div className="absolute inset-0 z-[50] bg-black flex flex-col items-center justify-center overflow-hidden w-full h-full">
-    {/* Noise Texture */}
     <div className="absolute inset-0 bg-[url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif')] opacity-20 bg-cover mix-blend-screen pointer-events-none" />
-    
     <div className={clsx("relative z-10 font-mono text-[10px] bg-black/80 px-2 py-1 flex items-center gap-2 border border-current", color, animate && "animate-pulse")}>
         <Icon size={12} />
         <span>{label}</span>
@@ -21,23 +17,12 @@ const StaticOverlay = ({ label, icon: Icon, color = "text-primary-green", animat
   </div>
 );
 
-const VideoSlot = ({ 
-  slotIndex, 
-  canMount 
-}: { 
-  slotIndex: number, 
-  canMount: boolean 
-}) => {
+const VideoSlot = ({ slotIndex, canMount }: { slotIndex: number, canMount: boolean }) => {
   const panelState = useGameStore((state) => state.panels['video']);
   const isDead = panelState ? (panelState.isDestroyed || panelState.health <= 0) : false;
-  
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isPotato = graphicsMode === 'POTATO';
-  
-  // Hook manages the playlist logic
   const { videoId, isMasked } = useHoloCycler(slotIndex, canMount && !isDead && !isPotato);
-
-  // --- RENDER LOGIC ---
 
   if (isDead) {
       return (
@@ -46,7 +31,6 @@ const VideoSlot = ({
         </div>
       );
   }
-
   if (isPotato) {
       return (
         <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-alert-yellow/30 bg-black">
@@ -54,14 +38,10 @@ const VideoSlot = ({
         </div>
       );
   }
-
-  // Not ready to mount yet (Cascade delay or Boot sequence)
   if (!canMount) {
       return (
         <div className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green/20 bg-black">
-            <div className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-primary-green/30 animate-pulse">
-                INITIALIZING...
-            </div>
+            <div className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-primary-green/30 animate-pulse">INITIALIZING...</div>
         </div>
       );
   }
@@ -71,29 +51,13 @@ const VideoSlot = ({
         className="relative w-full aspect-video min-h-[140px] md:min-h-0 border border-primary-green-dim/30 bg-black overflow-hidden group/video hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.3)] transition-all"
         onMouseEnter={(e) => AudioSystem.playHover(getPan(e))}
     >
-        {/* IFRAME LAYER: Only renders if we have a video ID */}
         {videoId && (
             <div className="absolute inset-0 z-10">
-                <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} 
-                    title={`HOLO_COMM_${slotIndex}`} 
-                    frameBorder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    className="w-full h-full object-cover grayscale pointer-events-none"
-                />
+                <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0&modestbranding=1&loop=1&playlist=${videoId}&vq=small`} title={`HOLO_COMM_${slotIndex}`} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" className="w-full h-full object-cover grayscale pointer-events-none" />
             </div>
         )}
-
-        {/* SCANLINE OVERLAY (Always on top of video) */}
         <div className="absolute inset-0 z-30 pointer-events-none bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px]" />
-        
-        {/* INTERACTION MASK */}
-        <div className={clsx(
-            "absolute inset-0 z-40 transition-all duration-500 flex items-center justify-center pointer-events-none",
-            isMasked ? "opacity-100 bg-black" : "opacity-0 group-hover/video:opacity-100 bg-black/40"
-        )}>
+        <div className={clsx("absolute inset-0 z-40 transition-all duration-500 flex items-center justify-center pointer-events-none", isMasked ? "opacity-100 bg-black" : "opacity-0 group-hover/video:opacity-100 bg-black/40")}>
              {isMasked ? (
                 <div className="flex flex-col items-center">
                     <Radio className="text-primary-green animate-pulse w-6 h-6 mb-2" />
@@ -101,23 +65,11 @@ const VideoSlot = ({
                 </div>
              ) : (
                  <div className="flex items-center gap-2 text-alert-yellow font-mono font-bold bg-black/80 px-3 py-1 border border-alert-yellow rounded-sm pointer-events-auto">
-                    <span>OPEN_SOURCE</span>
-                    <ExternalLink size={12} />
+                    <span>OPEN_SOURCE</span><ExternalLink size={12} />
                  </div>
              )}
         </div>
-        
-        {/* CLICK TARGET */}
-        <a 
-            href={`https://www.youtube.com/watch?v=${videoId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute inset-0 z-50 cursor-pointer"
-            aria-label="Watch on YouTube"
-            onClick={(e) => AudioSystem.playClick(getPan(e))}
-        />
-
-        {/* HUD OVERLAY */}
+        <a href={`https://www.youtube.com/watch?v=${videoId}`} target="_blank" rel="noopener noreferrer" className="absolute inset-0 z-50 cursor-pointer" aria-label="Watch on YouTube" onClick={(e) => AudioSystem.playClick(getPan(e))} />
         <div className="absolute bottom-1 right-1 z-[60] text-[8px] text-primary-green font-mono bg-black/80 px-1 pointer-events-none group-hover/video:text-alert-yellow transition-colors flex items-center gap-1">
              <SignalHigh size={8} /> CAM_0{slotIndex + 1}
         </div>
@@ -125,29 +77,16 @@ const VideoSlot = ({
   );
 };
 
-// --- MAIN COMPONENT ---
-
 export const HoloCommLog = () => {
   const { bootState } = useStore();
-  const [mountStage, setMountStage] = useState(0); // 0, 1, 2, 3
+  const [mountStage, setMountStage] = useState(0);
 
-  // CASCADE MOUNT LOGIC
   useEffect(() => {
-      if (bootState !== 'active') {
-          setMountStage(0);
-          return;
-      }
-
-      // Stagger mounting: 0ms -> Slot 1, 800ms -> Slot 2, 1600ms -> Slot 3
+      if (bootState !== 'active') { setMountStage(0); return; }
       const t1 = setTimeout(() => setMountStage(1), 100);
       const t2 = setTimeout(() => setMountStage(2), 900);
       const t3 = setTimeout(() => setMountStage(3), 1700);
-
-      return () => {
-          clearTimeout(t1);
-          clearTimeout(t2);
-          clearTimeout(t3);
-      };
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [bootState]);
 
   return (

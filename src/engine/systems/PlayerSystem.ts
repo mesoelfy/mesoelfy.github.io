@@ -23,142 +23,72 @@ export class PlayerSystem implements IGameSystem {
     private config: typeof ConfigService
   ) {
     GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.triggerPurge();
-        }
+        if (p.option === 'PURGE') this.triggerPurge();
     });
   }
 
   update(delta: number, time: number): void {
     let playerEntity = null;
-    for (const p of this.registry.getByTag(Tag.PLAYER)) {
-        playerEntity = p;
-        break;
-    }
+    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
     if (!playerEntity) return;
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const cursor = this.input.getCursor();
-
-    if (transform) {
-        transform.x = cursor.x;
-        transform.y = cursor.y;
-    }
-
+    if (transform) { transform.x = cursor.x; transform.y = cursor.y; }
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
-    if (stateComp) {
-        stateComp.current = this.interactionSystem.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
-    }
+    if (stateComp) stateComp.current = this.interactionSystem.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
 
     if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
         const upgrades = this.gameSystem.activeUpgrades;
-        const overclock = upgrades['OVERCLOCK'] || 0;
-        const currentFireRate = this.config.player.fireRate / Math.pow(1.5, overclock);
-
+        const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
         if (time > this.lastFireTime + currentFireRate) {
-            // PASS RenderData for color extraction
-            const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
-            this.attemptAutoFire(time, transform, upgrades, render);
+            this.attemptAutoFire(time, transform!, upgrades, playerEntity.getComponent<RenderData>(ComponentType.Render));
         }
     }
   }
-
-  teardown(): void {}
 
   private triggerPurge() {
       const cursor = this.input.getCursor();
-      const count = 360; 
-      const speed = 45;  
-      const damage = 100;
-
+      const count = 360; const speed = 45; const damage = 100;
       FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
       GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
-
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          const vx = Math.cos(angle) * speed;
-          const vy = Math.sin(angle) * speed;
-          
-          this.spawner.spawnBullet(
-              cursor.x, cursor.y, 
-              vx, vy, 
-              false, 
-              2.0,   
-              damage, 
-              'PLAYER_PURGE'
-          );
+          this.spawner.spawnBullet(cursor.x, cursor.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
       }
   }
 
-  private attemptAutoFire(
-      time: number, 
-      playerTransform: TransformData, 
-      upgrades: Record<string, number>,
-      playerRender?: RenderData
-  ) {
+  private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>, playerRender?: RenderData) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
-    let nearestDist = Infinity;
-    const RANGE = 14; 
-    let targetEnemy: any = null;
-
+    let nearestDist = Infinity; let targetEnemy = null;
     for (const e of enemies) {
-      if (!e.active) continue;
-      if (e.hasTag(Tag.BULLET)) continue;
-
+      if (!e.active || e.hasTag(Tag.BULLET)) continue;
       const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === 'SPAWN') continue;
-
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      const dx = t.x - playerTransform.x;
-      const dy = t.y - playerTransform.y;
-      const dist = dx*dx + dy*dy; 
-      if (dist < (RANGE * RANGE) && dist < nearestDist) {
-          nearestDist = dist;
-          targetEnemy = e;
-      }
+      const dist = (t.x - playerTransform.x)**2 + (t.y - playerTransform.y)**2; 
+      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
     }
-
     if (!targetEnemy) return;
 
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-    
-    const shots = calculatePlayerShots(
-        { x: playerTransform.x, y: playerTransform.y },
-        { x: tPos.x, y: tPos.y },
-        upgrades
-    );
+    const shots = calculatePlayerShots({ x: playerTransform.x, y: playerTransform.y }, { x: tPos.x, y: tPos.y }, upgrades);
 
     shots.forEach(shot => {
-        const bullet = this.spawner.spawnBullet(
-            shot.x, shot.y, 
-            shot.vx, shot.vy, 
-            false, 
-            shot.life, 
-            shot.damage, 
-            shot.configId
-        );
-
-        // --- NEW: Sync Projectile Color to Player State ---
-        // We multiply by 4.0 to ensure the Neon HDR glow is maintained
+        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, false, shot.life, shot.damage, shot.configId);
         if (playerRender) {
             const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
-            if (bRender) {
-                const BLOOM_BOOST = 4.0; 
-                bRender.r = playerRender.r * BLOOM_BOOST;
-                bRender.g = playerRender.g * BLOOM_BOOST;
-                bRender.b = playerRender.b * BLOOM_BOOST;
-            }
+            if (bRender) { bRender.r = playerRender.r * 4; bRender.g = playerRender.g * 4; bRender.b = playerRender.b * 4; }
         }
-
-        if (shot.isHoming) {
-            bullet.addComponent(new TargetData(null, 'ENEMY'));
-        }
+        if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
     FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], playerTransform.x);
     this.lastFireTime = time;
   }
+
+  teardown(): void {}
 }

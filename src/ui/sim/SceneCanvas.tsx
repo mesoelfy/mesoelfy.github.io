@@ -21,12 +21,8 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />
-        
         <MatrixGrid />
-        
-        {/* OPTIMIZATION: Removed pointLight. Use unlit materials/shaders. */}
         <ambientLight intensity={0.2} />
-        
         <Suspense fallback={null}>
            {children}
         </Suspense>

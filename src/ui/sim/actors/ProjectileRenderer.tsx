@@ -13,14 +13,7 @@ import { applyRotation } from '@/engine/math/RenderUtils';
 const MAX_PER_TYPE = 1000;
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
-
-// Reusable Material
-const neonMaterial = new THREE.MeshBasicMaterial({ 
-    color: 0xffffff,
-    toneMapped: false 
-});
-
-// Stretch Config
+const neonMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
 const STRETCH_FACTOR = 0.08; 
 const SQUASH_FACTOR = 0.04;
 const MAX_STRETCH = 4.0;
@@ -43,105 +36,55 @@ export const ProjectileRenderer = () => {
   }), []);
 
   useLayoutEffect(() => {
-      const refs = [sphereRef, capsuleRef, diamondRef, pyramidRef, ringRef, arrowRef];
-      refs.forEach(ref => {
-          if (ref.current) {
-              ref.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PER_TYPE * 3), 3);
-          }
+      [sphereRef, capsuleRef, diamondRef, pyramidRef, ringRef, arrowRef].forEach(ref => {
+          if (ref.current) ref.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PER_TYPE * 3), 3);
       });
   }, []);
 
-  useFrame((state, delta) => {
+  useFrame(() => {
     let registry;
     try { registry = ServiceLocator.getRegistry(); } catch { return; }
-
-    const counts: Record<GeometryType, number> = {
-        SPHERE: 0, CAPSULE: 0, DIAMOND: 0, PYRAMID: 0, RING: 0, ARROW: 0
-    };
-
-    const refs: Record<GeometryType, THREE.InstancedMesh | null> = {
-        SPHERE: sphereRef.current,
-        CAPSULE: capsuleRef.current,
-        DIAMOND: diamondRef.current,
-        PYRAMID: pyramidRef.current,
-        RING: ringRef.current,
-        ARROW: arrowRef.current
-    };
-
+    const counts: Record<GeometryType, number> = { SPHERE: 0, CAPSULE: 0, DIAMOND: 0, PYRAMID: 0, RING: 0, ARROW: 0 };
+    const refs: Record<GeometryType, THREE.InstancedMesh | null> = { SPHERE: sphereRef.current, CAPSULE: capsuleRef.current, DIAMOND: diamondRef.current, PYRAMID: pyramidRef.current, RING: ringRef.current, ARROW: arrowRef.current };
     const entities = registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });
 
     for (const entity of entities) {
         if (!entity.active) continue;
-
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         const p = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const r = entity.getComponent<RenderData>(ComponentType.Render);
         const m = entity.getComponent<MotionData>(ComponentType.Motion);
-
         if (!t || !p) continue;
-
         const config = PROJECTILE_CONFIG[p.configId];
         if (!config) continue;
 
-        const geoType = config.geometry;
-        const mesh = refs[geoType];
-        const index = counts[geoType];
-
+        const mesh = refs[config.geometry];
+        const index = counts[config.geometry];
         if (!mesh || index >= MAX_PER_TYPE) continue;
 
-        // --- POSITION ---
         tempObj.position.set(t.x, t.y, 0);
+        applyRotation(tempObj, r ? r.visualRotation : 0, t.rotation);
 
-        // --- ROTATION ---
-        const spin = r ? r.visualRotation : 0;
-        
-        applyRotation(tempObj, spin, t.rotation);
-
-        // --- SQUASH & STRETCH ---
-        let stretchY = 1.0; 
-        let squashXZ = 1.0; 
-
+        let stretchY = 1.0; let squashXZ = 1.0; 
         if (m) {
-            const speedSq = m.vx*m.vx + m.vy*m.vy;
-            if (speedSq > 1.0) {
-                const speed = Math.sqrt(speedSq);
-                stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR));
-                squashXZ = Math.max(0.4, 1.0 - (speed * SQUASH_FACTOR));
-            }
+            const speed = Math.sqrt(m.vx*m.vx + m.vy*m.vy);
+            if (speed > 1.0) { stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR)); squashXZ = Math.max(0.4, 1.0 - (speed * SQUASH_FACTOR)); }
         }
-
-        // --- SCALE ---
         const vScale = r?.visualScale || 1.0;
-        
-        tempObj.scale.set(
-            config.scale[0] * t.scale * vScale * squashXZ, // Thickness
-            config.scale[1] * t.scale * vScale * stretchY, // Length (Forward)
-            config.scale[2] * t.scale * vScale * squashXZ  // Thickness
-        );
+        tempObj.scale.set(config.scale[0] * t.scale * vScale * squashXZ, config.scale[1] * t.scale * vScale * stretchY, config.scale[2] * t.scale * vScale * squashXZ);
 
-        // --- COLOR ---
-        // UPDATED: Prefer RenderData (dynamic) color, fallback to Config (static) color
-        if (r) {
-            tempColor.setRGB(r.r, r.g, r.b);
-        } else {
-            tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
-        }
+        if (r) tempColor.setRGB(r.r, r.g, r.b);
+        else tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
         
         tempObj.updateMatrix();
         mesh.setMatrixAt(index, tempObj.matrix);
         mesh.setColorAt(index, tempColor);
-
-        counts[geoType]++;
+        counts[config.geometry]++;
     }
 
-    Object.keys(refs).forEach((key) => {
-        const k = key as GeometryType;
-        const mesh = refs[k];
-        if (mesh) {
-            mesh.count = counts[k];
-            if (mesh.instanceMatrix) mesh.instanceMatrix.needsUpdate = true;
-            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-        }
+    Object.keys(refs).forEach((k) => {
+        const mesh = refs[k as GeometryType];
+        if (mesh) { mesh.count = counts[k as GeometryType]; if (mesh.instanceMatrix) mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; }
     });
   });
 
