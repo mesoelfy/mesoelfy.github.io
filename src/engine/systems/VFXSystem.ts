@@ -70,24 +70,17 @@ export class VFXSystem implements IGameSystem {
       
       for(let i=0; i<count; i++) {
           // --- RICOCHET LOGIC ---
-          // Instead of spraying back along the impactAngle (normal), 
-          // we force a deflection to the sides to create a "Splash" or "V" shape.
-          
-          // Determine side: Left or Right of the normal
           const side = Math.random() > 0.5 ? 1 : -1;
-          
-          // Offset: 0.6 rad (~35deg) to 1.8 rad (~100deg) from the normal.
-          // This leaves the direct center clear (no sparks flying straight back at player).
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
-          // High speed for "shard" feel
-          const speed = this.randomRange(6, 14); 
+          // KAMIKAZE PHYSICS PROFILE:
+          // High Speed (10-22) + Long Life (0.6-1.0)
+          // This allows Friction (0.95) to stop them mid-air before they die.
+          const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
-          
-          // Short life for snappy impact
-          const life = this.randomRange(0.1, 0.25);
+          const life = this.randomRange(0.6, 1.0);
           
           this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
       }
