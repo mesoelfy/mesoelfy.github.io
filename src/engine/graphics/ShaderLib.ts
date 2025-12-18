@@ -45,10 +45,22 @@ export const ShaderLib = {
         void main() {
           float width = 1.5;
           float edge = edgeFactor(vBarycentric, width);
+          
+          // Base Glow from Barycentric
           float glow = pow(1.0 - edge, 0.4);
+          
           vec3 coreColor = vColor;
-          vec3 edgeColor = mix(vColor, vec3(1.0), 0.8);
-          gl_FragColor = vec4(mix(coreColor, edgeColor, glow), 1.0);
+          
+          // Determine intensity of the incoming color
+          float intensity = max(max(vColor.r, vColor.g), vColor.b);
+          
+          // If intensity is high (Hit Flash), reduce white mixing to keep it saturated Red
+          float whiteMix = 0.8 * (1.0 - smoothstep(1.0, 3.0, intensity));
+          
+          vec3 edgeColor = mix(vColor, vec3(1.0), whiteMix);
+          vec3 finalColor = mix(coreColor, edgeColor, glow);
+
+          gl_FragColor = vec4(finalColor, 1.0);
         }
       `
     },
@@ -114,14 +126,12 @@ export const ShaderLib = {
     },
 
     playerAmbient: {
-      // Removed 'varying vec2 vUv;' as it is provided by vertexHeader
       vertex: `
         void main() { 
           vUv = uv; 
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
         }
       `,
-      // Removed 'varying vec2 vUv;' as it is provided by fragmentHeader
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; uniform float uEnergy;
         
@@ -143,14 +153,12 @@ export const ShaderLib = {
     },
 
     playerBacking: {
-      // Removed 'varying vec2 vUv;'
       vertex: `
         void main() { 
           vUv = uv; 
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
         }
       `,
-      // Removed 'varying vec2 vUv;'
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; 
         void main() { 
@@ -163,15 +171,12 @@ export const ShaderLib = {
     },
 
     galleryBody: {
-      // Removed 'attribute vec3 barycentric;' and 'varying vec3 vBarycentric;'
-      // They are provided by vertexHeader
       vertex: `
         void main() {
           vBarycentric = barycentric;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-      // Removed 'varying vec3 vBarycentric;'
       fragment: `
         uniform vec3 uColor;
         uniform float uGlow;

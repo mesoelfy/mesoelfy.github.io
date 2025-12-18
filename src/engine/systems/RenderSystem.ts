@@ -15,9 +15,12 @@ const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 
+// High Intensity Red for Damage Flash
+const FLASH_COLOR = { r: 3.0, g: 0.0, b: 0.2 }; 
+
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
-  private readonly FLASH_DECAY = 5.0; 
+  private readonly FLASH_DECAY = 8.0; // Fast decay for snappy feel
   private reader: EventReader;
 
   constructor(
@@ -34,14 +37,11 @@ export class RenderSystem implements IGameSystem {
     // Process Hit Flashes
     this.reader.process((id, a1) => {
         if (id === FastEvents.ENEMY_DAMAGED) {
-            // a1 = entityID
             const entity = this.registry.getEntity(a1);
             if (entity) {
                 const render = entity.getComponent<RenderData>(ComponentType.Render);
                 if (render) {
-                    render.r = 2.0; 
-                    render.g = 2.0;
-                    render.b = 2.0;
+                    render.flash = 1.0; // Trigger Flash
                 }
             }
         }
@@ -65,10 +65,27 @@ export class RenderSystem implements IGameSystem {
             this.updatePlayerVisuals(render, delta, interactState, isDead);
         }
         else {
-            if (render.r > render.baseR || render.g > render.baseG || render.b > render.baseB) {
-                render.r = this.lerp(render.r, render.baseR, delta * this.FLASH_DECAY);
-                render.g = this.lerp(render.g, render.baseG, delta * this.FLASH_DECAY);
-                render.b = this.lerp(render.b, render.baseB, delta * this.FLASH_DECAY);
+            // --- ENEMY FLASH LOGIC ---
+            if (render.flash > 0) {
+                // Decay
+                render.flash = Math.max(0, render.flash - (delta * this.FLASH_DECAY));
+                
+                // Mix: Base -> Flash Color
+                // We use quadratic easing (t*t) for the mix to keep it red longer before fading
+                const t = render.flash;
+                
+                render.r = this.lerp(render.baseR, FLASH_COLOR.r, t);
+                render.g = this.lerp(render.baseG, FLASH_COLOR.g, t);
+                render.b = this.lerp(render.baseB, FLASH_COLOR.b, t);
+                
+                // Pop scale slightly on hit
+                render.visualScale = 1.0 + (t * 0.2); 
+            } else {
+                // Reset to base if not flashing (optimization)
+                if (render.r !== render.baseR) render.r = render.baseR;
+                if (render.g !== render.baseG) render.g = render.baseG;
+                if (render.b !== render.baseB) render.b = render.baseB;
+                if (render.visualScale !== 1.0) render.visualScale = 1.0;
             }
         }
     }
@@ -107,7 +124,7 @@ export class RenderSystem implements IGameSystem {
   }
 
   private lerp(start: number, end: number, t: number) {
-      return start * (1 - t) + end * t;
+      return start + (end - start) * t;
   }
 
   teardown(): void {}

@@ -15,7 +15,8 @@ export class RenderData extends Component {
     public opacity: number = 1.0,
     public baseR: number = 1,
     public baseG: number = 1,
-    public baseB: number = 1
+    public baseB: number = 1,
+    public flash: number = 0 // 0.0 to 1.0
   ) {
     super();
   }
@@ -29,6 +30,7 @@ export class RenderData extends Component {
     this.g = data.g ?? 1;
     this.b = data.b ?? 1;
     this.opacity = data.opacity ?? 1.0;
+    this.flash = 0;
     
     // Automatically set base color to initial color
     this.baseR = this.r;
