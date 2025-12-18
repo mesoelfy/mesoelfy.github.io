@@ -9,10 +9,10 @@ export class TransformData extends Component {
   
   public index: number;
 
-  constructor(x: number = 0, y: number = 0, rotation: number = 0, scale: number = 1) {
+  constructor() {
     super();
     this.index = TransformStore.alloc();
-    this.set(x, y, rotation, scale);
+    this.set(0, 0, 0, 1);
   }
 
   get x(): number { return TransformStore.data[this.index * STRIDE]; }
@@ -35,8 +35,13 @@ export class TransformData extends Component {
     TransformStore.data[i + 3] = scale;
   }
 
-  public reset(x: number = 0, y: number = 0, rotation: number = 0, scale: number = 1) {
-    this.set(x, y, rotation, scale);
+  public reset(data: Partial<{ x: number, y: number, rotation: number, scale: number }>) {
+    this.set(
+        data.x ?? 0, 
+        data.y ?? 0, 
+        data.rotation ?? 0, 
+        data.scale ?? 1
+    );
     return this;
   }
 }

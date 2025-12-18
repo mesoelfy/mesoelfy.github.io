@@ -8,16 +8,16 @@ export class AIStateData extends Component {
     public current: string = 'IDLE',
     public timers: Record<string, number> = {},
     public data: Record<string, any> = {},
-    public treeState: any = null // Stores running node indices for BTs
+    public treeState: any = null
   ) {
     super();
   }
 
-  public reset(current: string = 'IDLE', timers: Record<string, number> = {}, data: Record<string, any> = {}, treeState: any = null) {
-    this.current = current;
-    this.timers = timers;
-    this.data = data;
-    this.treeState = treeState;
+  public reset(data: Partial<AIStateData>) {
+    this.current = data.current ?? 'IDLE';
+    this.timers = data.timers ?? {};
+    this.data = data.data ?? {};
+    this.treeState = data.treeState ?? null;
     return this;
   }
   

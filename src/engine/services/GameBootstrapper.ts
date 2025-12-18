@@ -4,9 +4,10 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from '@/engine/services/EntitySpawner';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
+import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
 import { Tag } from '@/engine/ecs/types';
-import { ComponentBuilder } from './ComponentBuilder';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
@@ -44,7 +45,6 @@ export const GameBootstrapper = () => {
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
-  // Legacy Locator for React components that haven't migrated yet
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
@@ -60,6 +60,8 @@ export const GameBootstrapper = () => {
   try { audioService = ServiceLocator.getAudioService(); } 
   catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
 
+  // --- REGISTRATIONS ---
+  registerAllComponents(); // New Catalog
   registerAllBehaviors();
   registerAllAssets();
 
@@ -94,8 +96,7 @@ export const GameBootstrapper = () => {
   const structure = new StructureSystem(panelSystem);
   const render = new RenderSystem(registry, gameStateSystem, interaction);
 
-  // --- DEPENDENCY INJECTION ---
-  // We explicitly inject the core systems into the Engine
+  // Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
 
   const systemMap = {
@@ -129,7 +130,7 @@ export const GameBootstrapper = () => {
 
   const world = registry.createEntity();
   world.addTag(Tag.WORLD);
-  world.addComponent(ComponentBuilder[ComponentType.Render]({ r: 0, g: 0.2, b: 0, visualScale: 1.0, visualRotation: 0 }));
+  world.addComponent(ComponentRegistry.create(ComponentType.Render, { r: 0, g: 0.2, b: 0, visualScale: 1.0, visualRotation: 0 }));
   registry.updateCache(world);
 
   return engine;

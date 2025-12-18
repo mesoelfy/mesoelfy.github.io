@@ -13,11 +13,11 @@ export class MotionData extends Component {
     super();
   }
 
-  public reset(vx: number = 0, vy: number = 0, friction: number = 0, angularVelocity: number = 0) {
-    this.vx = vx;
-    this.vy = vy;
-    this.friction = friction;
-    this.angularVelocity = angularVelocity;
+  public reset(data: Partial<MotionData>) {
+    this.vx = data.vx ?? 0;
+    this.vy = data.vy ?? 0;
+    this.friction = data.friction ?? 0;
+    this.angularVelocity = data.angularVelocity ?? 0;
     return this;
   }
 }

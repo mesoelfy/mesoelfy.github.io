@@ -4,6 +4,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from '@/engine/services/EntitySpawner';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
+import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
@@ -89,12 +90,18 @@ export const MobileBootstrapper = () => {
   try { fastEventService = ServiceLocator.getFastEventBus(); } 
   catch { fastEventService = new FastEventService(); ServiceLocator.register('FastEventService', fastEventService); }
 
+  // --- REGISTRATIONS ---
+  registerAllComponents();
   registerAllBehaviors();
   registerAllAssets();
 
   const panelSystem = new PanelRegistrySystem(eventService, audioService);
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
-  engine.registerSystem(panelSystem);
+  
+  // Explicit Injection for Mobile too
+  // Mobile uses reduced system set, so we inject partially nulls if needed, 
+  // or just skip injecting if GameEngine handles nulls (it does).
+  // engine.injectCoreSystems(panelSystem, null, null); 
 
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
@@ -129,7 +136,6 @@ export const MobileBootstrapper = () => {
       { id: 'PhysicsSystem', sys: physicsSystem },
       { id: 'StructureSystem', sys: structureSystem },
       { id: 'GameStateSystem', sys: gameStateSystem },
-      // NEW: MobileWaveSystem now takes spawner in constructor
       { id: 'MobileWaveSystem', sys: new MobileWaveSystem(spawner) },
       { id: 'TargetingSystem', sys: targetingSystem },
       { id: 'BehaviorSystem', sys: behaviorSystem },

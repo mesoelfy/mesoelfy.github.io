@@ -16,12 +16,12 @@ export class TargetData extends Component {
     super();
   }
 
-  public reset(id: string | null = null, type: TargetType = 'PLAYER', x: number = 0, y: number = 0, locked: boolean = false) {
-    this.id = id;
-    this.type = type;
-    this.x = x;
-    this.y = y;
-    this.locked = locked;
+  public reset(data: Partial<TargetData>) {
+    this.id = data.id ?? null;
+    this.type = data.type ?? 'PLAYER';
+    this.x = data.x ?? 0;
+    this.y = data.y ?? 0;
+    this.locked = data.locked ?? false;
     return this;
   }
 }

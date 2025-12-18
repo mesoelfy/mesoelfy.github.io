@@ -20,27 +20,20 @@ export class RenderData extends Component {
     super();
   }
 
-  public reset(
-    geometryId: string = 'DEFAULT_GEO',
-    materialId: string = 'DEFAULT_MAT',
-    visualRotation: number = 0, 
-    visualScale: number = 1.0, 
-    r: number = 1, 
-    g: number = 1, 
-    b: number = 1, 
-    opacity: number = 1.0
-  ) {
-    this.geometryId = geometryId;
-    this.materialId = materialId;
-    this.visualRotation = visualRotation;
-    this.visualScale = visualScale;
-    this.r = r;
-    this.g = g;
-    this.b = b;
-    this.opacity = opacity;
-    this.baseR = r;
-    this.baseG = g;
-    this.baseB = b;
+  public reset(data: Partial<RenderData>) {
+    this.geometryId = data.geometryId ?? 'DEFAULT_GEO';
+    this.materialId = data.materialId ?? 'DEFAULT_MAT';
+    this.visualRotation = data.visualRotation ?? 0;
+    this.visualScale = data.visualScale ?? 1.0;
+    this.r = data.r ?? 1;
+    this.g = data.g ?? 1;
+    this.b = data.b ?? 1;
+    this.opacity = data.opacity ?? 1.0;
+    
+    // Automatically set base color to initial color
+    this.baseR = this.r;
+    this.baseG = this.g;
+    this.baseB = this.b;
     return this;
   }
   

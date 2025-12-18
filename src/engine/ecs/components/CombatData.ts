@@ -5,17 +5,17 @@ export class CombatData extends Component {
   readonly _type = ComponentType.Combat;
 
   constructor(
-    public damage: number,
+    public damage: number = 0,
     public cooldown: number = 0,
     public range: number = 0
   ) {
     super();
   }
 
-  public reset(damage: number, cooldown: number = 0, range: number = 0) {
-    this.damage = damage;
-    this.cooldown = cooldown;
-    this.range = range;
+  public reset(data: Partial<CombatData>) {
+    this.damage = data.damage ?? 0;
+    this.cooldown = data.cooldown ?? 0;
+    this.range = data.range ?? 0;
     return this;
   }
 }

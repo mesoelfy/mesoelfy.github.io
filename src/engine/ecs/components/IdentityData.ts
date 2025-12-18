@@ -4,12 +4,12 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 export class IdentityData extends Component {
   readonly _type = ComponentType.Identity;
 
-  constructor(public variant: string) {
+  constructor(public variant: string = '') {
     super();
   }
 
-  public reset(variant: string) {
-    this.variant = variant;
+  public reset(data: Partial<IdentityData>) {
+    this.variant = data.variant ?? '';
     return this;
   }
 }

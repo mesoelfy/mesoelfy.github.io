@@ -7,17 +7,17 @@ export class ProjectileData extends Component {
   readonly _type = ComponentType.Projectile;
 
   constructor(
-    public configId: string = 'DEFAULT', // Key into ProjectileConfig
+    public configId: string = 'DEFAULT', 
     public state: ProjectileState = 'FLIGHT',
     public ownerId: number = -1
   ) {
     super();
   }
 
-  public reset(configId: string = 'DEFAULT', state: ProjectileState = 'FLIGHT', ownerId: number = -1) {
-    this.configId = configId;
-    this.state = state;
-    this.ownerId = ownerId;
+  public reset(data: Partial<ProjectileData>) {
+    this.configId = data.configId ?? 'DEFAULT';
+    this.state = data.state ?? 'FLIGHT';
+    this.ownerId = data.ownerId ?? -1;
     return this;
   }
 }

@@ -5,15 +5,15 @@ export class HealthData extends Component {
   readonly _type = ComponentType.Health;
   public current: number;
 
-  constructor(public max: number, public invincibilityTime: number = 0) {
+  constructor(public max: number = 100, public invincibilityTime: number = 0) {
     super();
     this.current = max;
   }
 
-  public reset(max: number, invincibilityTime: number = 0) {
-    this.max = max;
-    this.current = max;
-    this.invincibilityTime = invincibilityTime;
+  public reset(data: Partial<HealthData>) {
+    this.max = data.max ?? 100;
+    this.current = this.max;
+    this.invincibilityTime = data.invincibilityTime ?? 0;
     return this;
   }
 }

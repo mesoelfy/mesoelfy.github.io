@@ -2,8 +2,8 @@ import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { ARCHETYPES, EntityBlueprint } from '@/engine/config/Archetypes';
-import { ComponentBuilder } from './ComponentBuilder';
+import { ARCHETYPES } from '@/engine/config/Archetypes';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
@@ -28,18 +28,17 @@ export class EntitySpawner implements IEntitySpawner {
 
     // 1. Core Component Hydration
     for (const compDef of blueprint.components) {
-        const builder = ComponentBuilder[compDef.type];
-        if (builder) {
-            const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
-            const runtimeData = overrides[compDef.type] || {};
-            const mergedData = { ...blueprintData, ...runtimeData };
-            e.addComponent(builder(mergedData));
-        }
+        const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
+        const runtimeData = overrides[compDef.type] || {};
+        const mergedData = { ...blueprintData, ...runtimeData };
+        
+        const component = ComponentRegistry.create(compDef.type, mergedData);
+        e.addComponent(component);
     }
 
     // 2. Automated Visual/Asset Linking
     if (blueprint.assets) {
-        const render = e.getComponent<any>(ComponentType.Render);
+        const render: any = e.getComponent(ComponentType.Render);
         if (render) {
             render.geometryId = blueprint.assets.geometry;
             render.materialId = blueprint.assets.material;
@@ -84,10 +83,10 @@ export class EntitySpawner implements IEntitySpawner {
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: number = 0): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
-    e.addComponent(ComponentBuilder[ComponentType.Transform]({ x, y, scale: size }));
-    e.addComponent(ComponentBuilder[ComponentType.Motion]({ vx, vy, friction: 0.05 }));
-    e.addComponent(ComponentBuilder[ComponentType.Lifetime]({ remaining: life, total: life }));
-    e.addComponent(ComponentBuilder[ComponentType.Identity]({ variant: color }));
+    e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
+    e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
+    e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
+    e.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: color }));
     this.registry.updateCache(e);
   }
 }

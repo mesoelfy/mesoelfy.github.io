@@ -14,12 +14,12 @@ export class OrbitalData extends Component {
     super();
   }
 
-  public reset(parentId: number | null = null, radius: number = 3.0, speed: number = 2.0, angle: number = 0, active: boolean = true) {
-    this.parentId = parentId;
-    this.radius = radius;
-    this.speed = speed;
-    this.angle = angle;
-    this.active = active;
+  public reset(data: Partial<OrbitalData>) {
+    this.parentId = data.parentId ?? null;
+    this.radius = data.radius ?? 3.0;
+    this.speed = data.speed ?? 2.0;
+    this.angle = data.angle ?? 0;
+    this.active = data.active ?? true;
     return this;
   }
 }

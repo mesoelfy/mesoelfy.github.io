@@ -2,44 +2,30 @@ import { Component } from './Component';
 import { ComponentType } from './ComponentType';
 import { ComponentPoolManager } from './ComponentPoolManager';
 
-type ComponentFactory = (data: any) => Component;
-type ComponentReset = (component: Component, data: any) => void;
+type ComponentConstructor = new () => Component;
 
 class ComponentRegistryController {
-  private factories = new Map<string, ComponentFactory>();
-  private resets = new Map<string, ComponentReset>();
+  private classes = new Map<ComponentType, ComponentConstructor>();
 
-  public register<T extends Component>(
-      type: ComponentType, 
-      factory: () => T, 
-      reset: (c: T, data: any) => void
-  ) {
-      this.factories.set(type, (data) => {
-          const comp = factory();
-          // Initial hydration
-          reset(comp, data); 
-          return comp;
-      });
-      this.resets.set(type, (c, data) => reset(c as T, data));
+  public register(type: ComponentType, cls: ComponentConstructor) {
+    this.classes.set(type, cls);
   }
 
-  public build(type: ComponentType, data: any): Component {
-      const resetFn = this.resets.get(type);
-      const factoryFn = this.factories.get(type);
+  public create(type: ComponentType, data: any = {}): Component {
+    const Cls = this.classes.get(type);
+    if (!Cls) {
+        throw new Error(`[ComponentRegistry] Unknown component type: ${type}`);
+    }
 
-      if (!resetFn || !factoryFn) {
-          throw new Error(`[ComponentRegistry] Unknown component type: ${type}`);
-      }
-
-      // Try Pool
-      const pooled = ComponentPoolManager.acquire(type);
-      if (pooled) {
-          resetFn(pooled, data);
-          return pooled;
-      }
-
-      // Create New
-      return factoryFn(data);
+    // Try Pool or Instantiate
+    const component = ComponentPoolManager.acquire(type) || new Cls();
+    
+    // Generic Hydration: Assumes 'reset' accepts a data object
+    if ('reset' in component && typeof (component as any).reset === 'function') {
+        (component as any).reset(data);
+    }
+    
+    return component;
   }
 }
 
