@@ -665,16 +665,7 @@ Healing sound needs to be different from rebooting sound.
 
 identity core regen boundaries are too wide
 
+intro background dots not going right up to header
 
 
 
-
-The Base (Solid Color):
-What it is: The actual width of the bar (backgroundColor).
-Behavior: Turns RED when critical.
-The Aura (Static Glow):
-What it is: A standard CSS box-shadow that makes the bar look neon.
-Behavior: Turns RED when critical.
-The Pulse (The Heartbeat):
-What it is: A CSS filter: drop-shadow(...) + brightness(...) animation driven by Framer Motion.
-The Issue: This layer adds a secondary, blurry red shadow on top of everything. When you heal, Framer Motion tries to "smoothly transition" this filter to none. During that transition (or if it gets stuck), that red blurry shadow sits on top of your green bar, creating a muddy "tint."

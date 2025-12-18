@@ -1,28 +1,30 @@
+import { PALETTE } from '@/engine/config/Palette';
+
 export const GAME_THEME = {
   turret: {
-    base: '#78F654',
-    glow: '#C2FE9A',
-    repair: '#00F0FF',
+    base: PALETTE.GREEN.PRIMARY,
+    glow: PALETTE.GREEN.GLOW,
+    repair: PALETTE.CYAN.PRIMARY,
   },
   bullet: {
-    plasma: '#FFFFFF',
-    trail: '#78F654',
-    hunter: '#F7D277', 
+    plasma: PALETTE.MONO.WHITE,
+    trail: PALETTE.GREEN.PRIMARY,
+    hunter: PALETTE.YELLOW.SOFT, 
   },
   enemy: {
-    muncher: '#9E4EA5',
-    kamikaze: '#FF003C',
-    hunter: '#F7D277',
-    charge: '#FFFFFF',  
+    muncher: PALETTE.PURPLE.PRIMARY,
+    kamikaze: PALETTE.RED.CRITICAL,
+    hunter: PALETTE.YELLOW.SOFT,
+    charge: PALETTE.MONO.WHITE,  
   },
   hud: {
-    text: '#78F654',
-    warning: '#FF003C',
+    text: PALETTE.GREEN.PRIMARY,
+    warning: PALETTE.RED.CRITICAL,
   },
   vfx: {
-    spark: '#FFFFFF',
-    damage: '#FF003C',
-    heal: '#00F0FF',
-    clash: '#F7D277',
+    spark: PALETTE.MONO.WHITE,
+    damage: PALETTE.RED.CRITICAL,
+    heal: PALETTE.CYAN.PRIMARY,
+    clash: PALETTE.YELLOW.SOFT,
   }
 };

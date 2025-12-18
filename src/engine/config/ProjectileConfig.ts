@@ -1,3 +1,5 @@
+import { PALETTE } from './Palette';
+
 export const ProjectileGeometry = {
   SPHERE: 'SPHERE',
   CAPSULE: 'CAPSULE',
@@ -29,25 +31,25 @@ const neon = (hex: string, intensity: number): [number, number, number] => {
 export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   'PLAYER_STANDARD': {
     geometry: 'CAPSULE',
-    color: neon('#78F654', 4.0),
+    color: neon(PALETTE.GREEN.PRIMARY, 4.0),
     scale: [0.15, 0.6, 0.15],
     spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
   },
   'PLAYER_FORK': {
     geometry: 'PYRAMID',
-    color: neon('#F7D277', 3.0),
+    color: neon(PALETTE.YELLOW.SOFT, 3.0),
     scale: [0.4, 0.4, 0.4],
     spinSpeed: 5.0, pulseSpeed: 0, faceVelocity: true
   },
   'PLAYER_SNIFFER': {
     geometry: 'DIAMOND',
-    color: neon('#00F0FF', 5.0),
+    color: neon(PALETTE.CYAN.PRIMARY, 5.0),
     scale: [0.3, 0.3, 0.3],
     spinSpeed: 15.0, pulseSpeed: 0, faceVelocity: false
   },
   'PLAYER_BACKDOOR': {
     geometry: 'RING',
-    color: neon('#FF4D6D', 3.0),
+    color: neon(PALETTE.RED.LIGHT, 3.0),
     scale: [0.4, 0.4, 0.4],
     spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
   },
@@ -59,7 +61,7 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   },
   'ENEMY_HUNTER': {
     geometry: 'ARROW',
-    color: neon('#FF8C00', 6.0),
+    color: neon(PALETTE.YELLOW.ORANGE, 6.0),
     scale: [0.3, 1.0, 0.3],
     spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
   },

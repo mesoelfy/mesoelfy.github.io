@@ -11,6 +11,8 @@ import { IInteractionSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import * as THREE from 'three';
 
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
@@ -49,33 +51,6 @@ const createStarRingGeo = () => {
 
 const reticleGeo = createStarRingGeo();
 
-const techGlowShader = {
-  vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragment: `
-    uniform vec3 uColor; uniform float uOpacity; uniform float uTime; uniform float uEnergy;
-    varying vec2 vUv;
-    void main() {
-      vec2 pos = vUv - 0.5;
-      float angle = atan(pos.y, pos.x);
-      float warble = (0.005 + 0.015 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
-      float dist = length(pos) + warble;
-      float alphaBase = pow(1.0 - smoothstep(0.0, 0.5, dist), 3.5);
-      float ringsIdle = 0.6 + 0.4 * sin(dist * 80.0 - uTime * 1.5);
-      float ringsActive = 0.5 + 0.5 * sin(dist * 30.0 - uTime * 8.0);
-      float ringMix = mix(ringsIdle, ringsActive, uEnergy);
-      float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
-      float finalAlpha = alphaBase * ringMix * scan * uOpacity * (1.0 + (uEnergy * 2.5));
-      if (finalAlpha < 0.01) discard;
-      gl_FragColor = vec4(uColor, finalAlpha);
-    }
-  `
-};
-
-const softCircleShader = {
-  vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragment: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main() { float dist = distance(vUv, vec2(0.5)); float alpha = 1.0 - smoothstep(0.25, 0.5, dist); if (alpha < 0.01) discard; gl_FragColor = vec4(uColor, alpha * uOpacity); }`
-};
-
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
@@ -97,17 +72,30 @@ export const PlayerActor = () => {
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
 
-  const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: techGlowShader.vertex, fragmentShader: techGlowShader.fragment,
-      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, uOpacity: { value: 0.6 }, uTime: { value: 0.0 }, uEnergy: { value: 0.0 } },
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
-  }), []);
+  const ambientMaterial = useMemo(() => {
+      const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
+          ...ShaderLib.presets.playerAmbient,
+          uniforms: { 
+              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              uOpacity: { value: 0.6 }, 
+              uEnergy: { value: 0.0 } 
+          }
+      });
+      mat.blending = THREE.AdditiveBlending;
+      return mat;
+  }, []);
 
-  const backingMaterial = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: softCircleShader.vertex, fragmentShader: softCircleShader.fragment,
-      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, uOpacity: { value: 0.5 } },
-      transparent: true, depthWrite: false, blending: THREE.NormalBlending 
-  }), []);
+  const backingMaterial = useMemo(() => {
+      const mat = MaterialFactory.create('MAT_PLAYER_BACKING', {
+          ...ShaderLib.presets.playerBacking,
+          uniforms: { 
+              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              uOpacity: { value: 0.5 } 
+          }
+      });
+      mat.blending = THREE.NormalBlending;
+      return mat;
+  }, []);
 
   useEffect(() => { return GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }); }, []);
 
@@ -124,8 +112,9 @@ export const PlayerActor = () => {
     try { const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem'); if (interact) interactState = interact.repairState; } catch {}
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
-    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
-    ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
+    
+    // Note: uTime is updated globally by RenderSystem via MaterialFactory.updateUniforms()
+    if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     let playerEntity;
     try { const registry = ServiceLocator.getRegistry(); for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; } } catch { return; }
@@ -149,8 +138,10 @@ export const PlayerActor = () => {
         if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
         backingMaterial.uniforms.uColor.value.copy(tempColor.current);
+        
         containerRef.current.scale.setScalar(render.visualScale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDead; 

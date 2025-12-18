@@ -10,33 +10,7 @@ import {
   getAmbienceModDepth, 
   getAmbienceStereoGain 
 } from '@/engine/audio/AudioMath';
-
-const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff, audio }: any) => {
-  const Icon = isActive ? IconOn : (IconOff || IconOn);
-  
-  return (
-    <button
-      onClick={(e) => { onClick(); audio.playClick(); }}
-      onMouseEnter={() => audio.playHover()}
-      className={clsx(
-        "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
-        isActive 
-          ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
-          : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
-      )}
-    >
-      {isActive && (
-         <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
-      )}
-      <Icon 
-        size={16} 
-        strokeWidth={1.5}
-        className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} 
-      />
-      <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
-    </button>
-  );
-};
+import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 
 export const SoundTab = () => {
   const { 
@@ -82,10 +56,10 @@ export const SoundTab = () => {
                   
                   <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
                       <div className="grid grid-cols-4 gap-2 relative z-10">
-                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} audio={audio} />
-                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} audio={audio} />
-                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} audio={audio} />
-                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} audio={audio} />
+                          <ToggleButton variant="panel" label="MAIN" active={audioSettings.master} onClick={toggleMaster} icon={Volume2} iconOff={VolumeX} />
+                          <ToggleButton variant="panel" label="MUSIC" active={audioSettings.music} onClick={toggleMusic} icon={Music} />
+                          <ToggleButton variant="panel" label="SFX" active={audioSettings.sfx} onClick={toggleSfx} icon={Zap} iconOff={ZapOff} />
+                          <ToggleButton variant="panel" label="AMB" active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} />
                       </div>
 
                       <div className="space-y-5 relative z-10">

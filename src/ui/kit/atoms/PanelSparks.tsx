@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { COLOR_SETS } from '@/engine/config/Palette';
 
 interface Particle {
   x: number;
@@ -22,7 +23,6 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     const canvas = canvasRef.current;
     if (!canvas || !canvas.parentElement) return;
     
-    // Safety check: Don't initialize if container is collapsed
     const width = canvas.parentElement.clientWidth;
     const height = canvas.parentElement.clientHeight;
     
@@ -38,9 +38,9 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     let animationFrameId: number;
     let isActive = true;
 
-    const COLORS = ['#FF003C', '#CC0020', '#800010', '#FF4466'];
+    // Use Palette Colors
+    const COLORS = COLOR_SETS.RED;
     
-    // REVERTED: Back to 500 as requested
     const PARTICLE_COUNT = 500; 
     
     try {
@@ -74,7 +74,6 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
             });
         }
     } catch (e) {
-        console.error("Error creating particles", e);
         return;
     }
 

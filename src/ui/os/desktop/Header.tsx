@@ -8,6 +8,7 @@ import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
+import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -24,24 +25,9 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const ToggleBtn = ({ active, onClick, children, color, audio }: any) => (
-  <button 
-    onClick={(e) => { onClick(); audio.playClick(getPan(e)); }}
-    onMouseEnter={(e) => audio.playHover(getPan(e))}
-    className={clsx(
-      "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
-      active 
-        ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color}`
-        : `${color} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
-    )}
-  >
-    {children}
-  </button>
-);
-
 const barVariants = {
   idle: {
-    filter: "none", // Hard reset
+    filter: "none", 
     transition: { duration: 0.2 }
   },
   heartbeat: {
@@ -107,12 +93,16 @@ export const Header = () => {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
-            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} audio={audio}><Wind size={14} /></ToggleBtn>
-            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} audio={audio}><span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span></ToggleBtn>
-            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor} audio={audio}>{audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}</ToggleBtn>
+            <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
+            <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
+            <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
+            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor} audio={audio}>{audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}</ToggleBtn>
+            
+            <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
+            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            
             <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5", statusColor)}>
                 <Settings size={14} className="animate-spin-slow" />
             </button>
@@ -127,8 +117,6 @@ export const Header = () => {
             transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
           >
               <motion.div 
-                // CRITICAL FIX: The 'key' prop forces React to remount this element when state changes.
-                // This guarantees all previous styles (sticky filters) are destroyed.
                 key={isCritical ? "critical-bar" : "normal-bar"}
                 animate={isCritical ? heartbeatControls : "idle"} 
                 variants={barVariants}
