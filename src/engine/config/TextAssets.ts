@@ -11,22 +11,20 @@ export const ASCII_TITLE = `
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
 `;
 
-// Used for the Browser Console (NFO/Keygen Style - Safe for DevTools)
+// Stylized Header for Console
 export const ASCII_CONSOLE = `
    __  __  ____  ____  ____  ____  __    ____  _  _ 
   (  \\/  )(  __)/ ___)/  _ \\(  __)(  )  (  __)( \\/ )
    )    (  ) _) \\___ \\  (_) )) _) / (_/\\ ) _)  \\  / 
   (_/\\/\\_)(____)(____/\\____/(____)\\____/(_)    (__) 
-          >> LATENT SPACE BANDIT // VER 2.0 <<
 `;
 
-export const CONSOLE_STYLE = `
-  color: #78F654;
-  background-color: #050505;
-  font-family: "Courier New", monospace;
-  font-weight: bold;
-  font-size: 10px;
-  line-height: 12px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-`;
+const BASE_STYLE = 'font-family: "Courier New", monospace; font-weight: bold; font-size: 10px; line-height: 12px;';
+
+export const CONSOLE_STYLES = {
+  GREEN:  `${BASE_STYLE} color: #78F654; background: #050505;`,
+  PURPLE: `${BASE_STYLE} color: #9E4EA5; background: #050505;`,
+  CYAN:   `${BASE_STYLE} color: #00F0FF; background: #050505;`,
+  TAG:    `font-family: monospace; font-size: 9px; background: #9E4EA5; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`,
+  STATUS: `font-family: monospace; font-size: 9px; background: #78F654; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`
+};

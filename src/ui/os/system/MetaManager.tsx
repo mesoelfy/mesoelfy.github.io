@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/engine/config/TextAssets';
+import { ASCII_CONSOLE, CONSOLE_STYLES } from '@/engine/config/TextAssets';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { BOOT_KEYS } from './metaConstants';
@@ -17,11 +17,26 @@ export const MetaManager = () => {
   useEffect(() => {
     if (window.hasLoggedIdentity) return;
     
-    // 1. Initialize Log Scrubber
     initializeConsoleScrubber();
 
-    // 2. Print Identity
-    console.log(`%c${ASCII_CONSOLE.replace(/^\n/, '')}\n// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.`, CONSOLE_STYLE);
+    const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'DEV_NODE';
+
+    console.log(
+      `%c${ASCII_CONSOLE}%c\n` +
+      ` %c STATUS %c ONLINE %c  ` +
+      ` %c KERNEL %c R3F_V9 %c ` +
+      ` %c NODE %c ${commitHash} %c\n\n` +
+      `%c// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.\n` +
+      `%c// LATENT_SPACE_BANDIT // IDENTITY_VERIFIED\n`,
+      CONSOLE_STYLES.GREEN,  // ASCII
+      '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', // Status Pill
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Kernel Pill
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Node Pill
+      CONSOLE_STYLES.GREEN,  // Message 1
+      CONSOLE_STYLES.CYAN    // Message 2
+    );
+
     (window as any).hasLoggedIdentity = true;
   }, []);
 
