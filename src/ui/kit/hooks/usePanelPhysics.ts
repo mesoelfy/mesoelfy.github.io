@@ -3,12 +3,16 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { GameEvents } from '@/engine/signals/GameEvents';
 
 // Tweakables
-const STRESS_ADD = 0.5; // Slightly reduced per-hit so 1 driller isn't too crazy
-const MAX_STRESS = 3.0; // NEW: Cap allows "Overdrive" shaking for swarms
+const STRESS_ADD = 0.5;
+const MAX_STRESS = 3.0; 
 const STRESS_DECAY = 0.9; 
-const JITTER_SCALE = 3.0; // Base pixel multiplier
+const JITTER_SCALE = 3.0; 
 
-export const usePanelPhysics = (panelId: string, domRef: React.RefObject<HTMLElement>) => {
+export const usePanelPhysics = (
+    panelId: string, 
+    domRef: React.RefObject<HTMLElement>,
+    isActive: boolean
+) => {
   const { events } = useGameContext();
   
   const physics = useRef({
@@ -23,14 +27,17 @@ export const usePanelPhysics = (panelId: string, domRef: React.RefObject<HTMLEle
     // 1. Event Listener
     const unsub = events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
         if (p.id !== panelId) return;
-        
-        // Add Stress (Stacking)
-        // Allows multiple enemies to push stress well beyond 1.0
         physics.current.stress = Math.min(MAX_STRESS, physics.current.stress + STRESS_ADD);
     });
 
     // 2. Physics Loop
     const loop = () => {
+        // If inactive (Game Over), stop fighting Framer Motion
+        if (!isActive) {
+            frameId.current = requestAnimationFrame(loop);
+            return;
+        }
+
         const p = physics.current;
         
         if (p.stress > 0.01) {
@@ -39,9 +46,7 @@ export const usePanelPhysics = (panelId: string, domRef: React.RefObject<HTMLEle
             if (p.stress < 0.01) p.stress = 0;
 
             // Calculate Jitter
-            // The more stress, the wider the range
             const currentScale = JITTER_SCALE * p.stress;
-            
             const jx = (Math.random() - 0.5) * currentScale;
             const jy = (Math.random() - 0.5) * currentScale;
             
@@ -65,5 +70,5 @@ export const usePanelPhysics = (panelId: string, domRef: React.RefObject<HTMLEle
         unsub();
         cancelAnimationFrame(frameId.current);
     };
-  }, [panelId, events]);
+  }, [panelId, events, isActive]); // Re-run if active state changes
 };

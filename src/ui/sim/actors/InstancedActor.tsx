@@ -5,7 +5,6 @@ import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { Entity } from '@/engine/ecs/Entity';
-import { TransformStore } from '@/engine/ecs/TransformStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -13,7 +12,6 @@ import { applyRotation } from '@/engine/math/RenderUtils';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
-const STRIDE = 4;
 const SPAWN_Y_OFFSET = 3.5;
 
 interface InstancedActorProps {
@@ -51,7 +49,6 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
 
     const entities = registry.getByTag(tag);
     let count = 0;
-    const transformData = TransformStore.data;
     
     const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
 
@@ -61,13 +58,11 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
 
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       if (!transform) continue;
+      
       if (interactive) instanceMap[count] = entity.id as number;
 
-      const idx = transform.index * STRIDE;
-      const x = transformData[idx];
-      const y = transformData[idx + 1];
-      const rot = transformData[idx + 2];
-      const scale = transformData[idx + 3];
+      // Direct property access (Simpler than previous TransformStore lookup)
+      const { x, y, rotation, scale } = transform;
 
       tempObj.position.set(x, y, z);
       
@@ -100,7 +95,7 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
           tempColor.copy(defaultColor);
       }
 
-      applyRotation(tempObj, visualRot, rot);
+      applyRotation(tempObj, visualRot, rotation);
       tempObj.scale.setScalar(finalScale);
 
       if (updateEntity) updateEntity(entity, tempObj, tempColor, delta);

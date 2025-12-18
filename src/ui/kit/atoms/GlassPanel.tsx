@@ -11,7 +11,7 @@ import { IntelligentHeader } from '@/ui/kit/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/kit/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
-import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics'; // NEW HOOK
+import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -56,13 +56,15 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
-  // Use new Physics Hook if gameId exists
+  const isGameOver = Math.floor(systemIntegrity) <= 0;
+
+  // Use new Physics Hook if gameId exists. 
+  // IMPORTANT: Disable physics loop when game is over so Framer Motion can take over the transform.
   if (gameId && registryRef) {
-      usePanelPhysics(gameId, registryRef);
+      usePanelPhysics(gameId, registryRef, !isGameOver);
   }
   
   const isInteracting = !!(gameId && interactionTarget === gameId);
-  const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
   const panelState = useGameStore((state) => gameId ? state.panels[gameId] : null);
   
