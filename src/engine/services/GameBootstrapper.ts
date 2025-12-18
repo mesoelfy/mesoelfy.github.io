@@ -19,6 +19,7 @@ import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
 import { GameStateSystem } from '@/engine/systems/GameStateSystem';
+import { AtmosphereSystem } from '@/engine/systems/AtmosphereSystem';
 import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
@@ -47,7 +48,6 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  // 1. Establish Core Services First
   let eventBus;
   try { eventBus = ServiceLocator.getGameEventBus(); } 
   catch { eventBus = new GameEventService(); ServiceLocator.register('GameEventService', eventBus); }
@@ -63,14 +63,16 @@ export const GameBootstrapper = () => {
   registerAllBehaviors();
   registerAllAssets();
 
-  // 2. Initialize Logic Systems
   const timeSystem = new TimeSystem();
   const inputSystem = new InputSystem();
   const physicsSystem = new PhysicsSystem(registry);
   const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
   const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
   const progressionSystem = new ProgressionSystem(eventBus);
-  const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, registry, eventBus, audioService);
+  
+  const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
+  const atmosphere = new AtmosphereSystem(panelSystem, registry);
+  
   const particles = new ParticleSystem();
   const shake = new ShakeSystem(eventBus);
   const audioDirector = new AudioDirector(panelSystem, eventBus, fastBus, audioService);
@@ -93,7 +95,6 @@ export const GameBootstrapper = () => {
   const uiSync = new UISyncSystem(gameStateSystem, interaction, panelSystem);
   const render = new RenderSystem(registry, gameStateSystem, interaction);
 
-  // 3. Register for ServiceLocator Access (Crucial for PlayerActor.tsx)
   const systemMap = {
     TimeSystem: timeSystem,
     InputSystem: inputSystem,
@@ -102,17 +103,17 @@ export const GameBootstrapper = () => {
     HealthSystem: healthSystem,
     ProgressionSystem: progressionSystem,
     GameStateSystem: gameStateSystem,
-    InteractionSystem: interaction, // REGISTERED
+    AtmosphereSystem: atmosphere,
+    InteractionSystem: interaction,
     CombatSystem: combat,
     ParticleSystem: particles,
     ShakeSystem: shake
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
-  // 4. Register to Engine Loop
   const systemOrder = [
     panelSystem, timeSystem, inputSystem, physicsSystem,
-    healthSystem, progressionSystem, gameStateSystem,
+    healthSystem, progressionSystem, gameStateSystem, atmosphere,
     waves, structure, targeting, orbital, guidance,
     movement, weapons, behavior, interaction,
     projectile, collision, combat, lifeCycle,

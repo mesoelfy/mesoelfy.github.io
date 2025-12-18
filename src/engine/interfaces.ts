@@ -14,7 +14,6 @@ export interface IGameSystem {
 export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
-  
   getGameEventBus(): IGameEventService;
   getFastEventBus(): IFastEventService;
   getAudioService(): IAudioService;
@@ -23,8 +22,6 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
-  
-  // Legacy Adapter
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
 }
@@ -40,6 +37,35 @@ export interface IFastEventService {
   readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number;
   getCursor(): number;
 }
+
+// --- SEGREGATED STATE INTERFACES ---
+
+export interface IVitalsRead {
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  isGameOver: boolean;
+}
+
+export interface IProgressionRead {
+  score: number;
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  upgradePoints: number;
+  activeUpgrades: Record<string, number>;
+}
+
+export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
+  damagePlayer(amount: number): void;
+  healPlayer(amount: number): void;
+  addScore(amount: number): void;
+  addXp(amount: number): void;
+  tickReboot(amount: number): void;
+  decayReboot(amount: number): void;
+}
+
+// --- END SEGREGATED INTERFACES ---
 
 export interface IEntityRegistry {
   createEntity(): Entity;
@@ -57,7 +83,7 @@ export interface IEntitySpawner {
   spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
-  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
+  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, projectileId?: string, ownerId?: number): Entity;
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
 }
 
@@ -87,13 +113,7 @@ export interface IInputService {
 export interface IParticleSystem extends IGameSystem {
   spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
   getCount(): number;
-  getData(): {
-    x: Float32Array;
-    y: Float32Array;
-    life: Float32Array;
-    maxLife: Float32Array;
-    color: Float32Array; 
-  };
+  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; color: Float32Array; };
 }
 
 export interface IPhysicsSystem extends IGameSystem {
@@ -107,26 +127,6 @@ export interface ICombatSystem extends IGameSystem {
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: string | null;
-}
-
-export interface IGameStateSystem extends IGameSystem {
-  playerHealth: number;
-  maxPlayerHealth: number;
-  playerRebootProgress: number;
-  score: number;
-  xp: number;
-  level: number;
-  xpToNextLevel: number;
-  upgradePoints: number;
-  activeUpgrades: Record<string, number>;
-  isGameOver: boolean;
-  
-  damagePlayer(amount: number): void;
-  healPlayer(amount: number): void;
-  addScore(amount: number): void;
-  addXp(amount: number): void;
-  tickReboot(amount: number): void;
-  decayReboot(amount: number): void;
 }
 
 export interface IPanelSystem extends IGameSystem {
