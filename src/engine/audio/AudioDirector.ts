@@ -3,6 +3,7 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, FX_ID_MAP, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { EventReader } from '@/engine/signals/EventReader';
+import { AudioKey } from '@/engine/config/AssetKeys';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
@@ -26,7 +27,8 @@ export class AudioDirector implements IGameSystem {
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
             if (key) {
-                this.audio.playSound(key.toLowerCase(), this.calculatePan(a2));
+                // Key from map is uppercase 'FX_FOO', audio config is 'fx_foo'
+                this.audio.playSound(key.toLowerCase() as AudioKey, this.calculatePan(a2));
             }
         }
         

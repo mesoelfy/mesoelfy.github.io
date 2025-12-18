@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { GeometryKey, MaterialKey } from '@/engine/config/AssetKeys';
+
+export type AssetKey = GeometryKey | MaterialKey | string;
 
 class AssetServiceController {
   private cache = new Map<string, any>();
@@ -20,11 +23,11 @@ class AssetServiceController {
     }
   }
 
-  public registerGenerator(key: string, generator: () => any) {
+  public registerGenerator(key: AssetKey, generator: () => any) {
     this.generators.set(key, generator);
   }
 
-  public get<T>(key: string): T {
+  public get<T>(key: AssetKey): T {
     if (this.cache.has(key)) {
       return this.cache.get(key) as T;
     }
@@ -39,7 +42,7 @@ class AssetServiceController {
     return asset as T;
   }
 
-  public generateAsyncGeometry(key: string, taskName: string, placeholderGeo: THREE.BufferGeometry) {
+  public generateAsyncGeometry(key: GeometryKey, taskName: string, placeholderGeo: THREE.BufferGeometry) {
     if (this.cache.has(key)) return; 
 
     this.cache.set(key, placeholderGeo);

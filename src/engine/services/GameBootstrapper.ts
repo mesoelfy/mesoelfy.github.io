@@ -49,6 +49,9 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  // --- PERSISTENT SERVICES (Singletons) ---
+  // These survive game restarts to prevent memory leaks and overwrites
+
   let eventBus;
   try { eventBus = ServiceLocator.getGameEventBus(); } 
   catch { eventBus = new GameEventService(); ServiceLocator.register('GameEventService', eventBus); }
@@ -61,14 +64,15 @@ export const GameBootstrapper = () => {
   try { audioService = ServiceLocator.getAudioService(); } 
   catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
 
+  let inputSystem;
+  try { inputSystem = ServiceLocator.getInputService(); }
+  catch { inputSystem = new InputSystem(); ServiceLocator.register('InputSystem', inputSystem); }
+
   // --- REGISTRATIONS ---
   registerAllComponents();
   registerAllBehaviors();
   registerAllAssets();
 
-  const timeSystem = new TimeSystem();
-  const inputSystem = new InputSystem();
-  const physicsSystem = new PhysicsSystem(registry);
   const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
   const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
   const progressionSystem = new ProgressionSystem(eventBus);
@@ -76,6 +80,8 @@ export const GameBootstrapper = () => {
   const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
   const atmosphere = new AtmosphereSystem(panelSystem, registry);
   
+  const timeSystem = new TimeSystem();
+  const physicsSystem = new PhysicsSystem(registry);
   const particles = new ParticleSystem();
   const shake = new ShakeSystem(eventBus);
   const audioDirector = new AudioDirector(panelSystem, eventBus, fastBus, audioService);
@@ -102,7 +108,6 @@ export const GameBootstrapper = () => {
 
   const systemMap = {
     TimeSystem: timeSystem,
-    InputSystem: inputSystem,
     PhysicsSystem: physicsSystem,
     PanelRegistrySystem: panelSystem,
     HealthSystem: healthSystem,
@@ -120,7 +125,7 @@ export const GameBootstrapper = () => {
   
   // 1. INPUT
   engine.registerSystem(timeSystem, SystemPhase.INPUT);
-  engine.registerSystem(inputSystem, SystemPhase.INPUT);
+  engine.registerSystem(inputSystem as any, SystemPhase.INPUT); // Cast as it's reused
   engine.registerSystem(interaction, SystemPhase.INPUT);
   engine.registerSystem(movement, SystemPhase.INPUT);
   

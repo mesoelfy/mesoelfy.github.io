@@ -5,6 +5,7 @@ import { AudioContextManager } from './modules/AudioContextManager';
 import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
+import { AudioKey } from '@/engine/config/AssetKeys';
 
 export class AudioServiceImpl implements IAudioService {
   private ctxManager = new AudioContextManager();
@@ -14,7 +15,6 @@ export class AudioServiceImpl implements IAudioService {
   private hasInteracted = false; 
   private musicElement: HTMLAudioElement | null = null;
   
-  // FIX: Track both Source AND Gain to prevent GC hiccups
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
@@ -57,7 +57,7 @@ export class AudioServiceImpl implements IAudioService {
       this.mixer.updateVolumes(useStore.getState().audioSettings);
   }
 
-  public playSound(key: string, pan: number = 0) {
+  public playSound(key: AudioKey, pan: number = 0) {
       const ctx = this.ctxManager.ctx;
       const buffer = this.bank.get(key);
       const recipe = AUDIO_CONFIG[key];
@@ -74,20 +74,16 @@ export class AudioServiceImpl implements IAudioService {
       source.start();
   }
 
-  public playAmbience(key: string) {
+  public playAmbience(key: AudioKey) {
       const ctx = this.ctxManager.ctx;
       if (!ctx || !this.mixer.ambienceGain || (this.currentAmbienceKey === key && this.currentAmbienceNode)) return;
 
-      // Cleanup previous
       if (this.currentAmbienceNode) {
           try { 
               this.currentAmbienceNode.stop(ctx.currentTime + 0.5); 
-              // Disconnect old gain after fade out to be safe? 
-              // We rely on WebAudio auto-cleanup for disconnected nodes, 
-              // but we drop our reference here.
           } catch {}
           this.currentAmbienceNode = null;
-          this.currentAmbienceGain = null; // Drop ref
+          this.currentAmbienceGain = null;
       }
 
       const buffer = this.bank.get(key);
@@ -105,7 +101,6 @@ export class AudioServiceImpl implements IAudioService {
       fadeGain.connect(this.mixer.ambienceGain); 
       source.start();
       
-      // Store references to prevent GC
       this.currentAmbienceNode = source; 
       this.currentAmbienceGain = fadeGain; 
       this.currentAmbienceKey = key;

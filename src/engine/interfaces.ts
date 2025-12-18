@@ -5,6 +5,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
+import { AudioKey, VFXKey, GeometryKey, MaterialKey } from '@/engine/config/AssetKeys';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -101,8 +102,8 @@ export interface IAudioService {
   startMusic(): void;
   stopAll(): void;
   updateVolumes(): void;
-  playSound(key: string, pan?: number): void;
-  playAmbience(key: string): void;
+  playSound(key: AudioKey, pan?: number): void;
+  playAmbience(key: AudioKey): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;

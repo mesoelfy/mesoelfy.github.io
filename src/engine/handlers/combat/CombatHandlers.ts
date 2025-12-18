@@ -8,6 +8,7 @@ import { CombatData } from '@/engine/ecs/components/CombatData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { VFXKey } from '@/engine/config/AssetKeys';
 
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
@@ -22,9 +23,9 @@ const THEME_MAP: Record<string, string> = {
     [EnemyTypes.DAEMON]: 'PURPLE',
 };
 
-const getExplosionKey = (variant: string, directional: boolean) => {
+const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
     const theme = THEME_MAP[variant] || 'PURPLE';
-    return directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`;
+    return (directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`) as VFXKey;
 };
 
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
@@ -119,11 +120,11 @@ function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: 
 
   if (hpA) {
       hpA.current = Math.max(0, hpA.current - dmgB);
-      if (hpA.current > 0) ctx.flashEntity(a.id as number); // TRIGGER FLASH
+      if (hpA.current > 0) ctx.flashEntity(a.id as number); 
   }
   if (hpB) {
       hpB.current = Math.max(0, hpB.current - dmgA);
-      if (hpB.current > 0) ctx.flashEntity(b.id as number); // TRIGGER FLASH
+      if (hpB.current > 0) ctx.flashEntity(b.id as number); 
   }
 
   const posA = getPos(a);
