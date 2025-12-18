@@ -642,17 +642,6 @@ X/Y-Axis (Thickness): Scales down slightly to preserve "volume"
 
 I could see the third video already loaded but the was still being obscured. the stagger of loading is being faked? - - - new videos coming in you can see the edges... take another long look at this section and ask for the logic. - the frame for each slot (green/yellow on hover - is partially obscured)
 
-VFX config - laser sight should be exhaust right?
-
-
-
-
-
-
-should I do this?
-    Audio Pipeline: Move Audio definitions to a JSON manifest similar to Archetypes.
-
-
 
 Can we force the iframe'd youtube video to start paused and then turn on after a set timer?
 

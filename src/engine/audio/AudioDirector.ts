@@ -1,6 +1,6 @@
 import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_ID_MAP, FX_IDS, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class AudioDirector implements IGameSystem {
@@ -21,34 +21,42 @@ export class AudioDirector implements IGameSystem {
     this.logTimer += delta;
 
     this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+        // 1. Explicit Play Sound Command
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
-            
-            if (this.logTimer > 1.0) {
-                // this.events.emit(GameEvents.LOG_DEBUG, ...); // Optional logging
-                this.logTimer = 0;
-            }
-
             if (key) {
-                const audioKey = key.toLowerCase();
-                const pan = this.calculatePan(a2); 
-                this.audio.playSound(audioKey, pan);
+                this.audio.playSound(key.toLowerCase(), this.calculatePan(a2));
             }
+        }
+        
+        // 2. Player Fired (Previously implicit or via separate mechanism)
+        else if (id === FastEvents.PLAYER_FIRED) {
+            // a1 = x
+            this.audio.playSound('fx_player_fire', this.calculatePan(a1));
+        }
+
+        // 3. Enemy Destroyed
+        else if (id === FastEvents.ENEMY_DESTROYED) {
+            // a2=x, a4=typeId
+            const pan = this.calculatePan(a2);
+            // Kamikaze (ID 2) gets heavy impact
+            if (a4 === ENEMY_ID_MAP['kamikaze']) {
+                this.audio.playSound('fx_impact_heavy', pan);
+            } else {
+                this.audio.playSound('fx_impact_light', pan);
+            }
+        }
+
+        // 4. Player Hit
+        else if (id === FastEvents.PLAYER_HIT) {
+            this.audio.playSound('fx_impact_heavy', 0);
+            this.audio.duckMusic(0.7, 1.0);
         }
     });
   }
 
   private setupEventListeners() {
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        this.audio.playSound('fx_impact_heavy', 0);
-        this.audio.duckMusic(0.7, 1.0);
-    });
-
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        const pan = this.calculatePan(p.x);
-        if (p.type === 'kamikaze') this.audio.playSound('fx_impact_heavy', pan);
-        else this.audio.playSound('fx_impact_light', pan);
-    });
+    // Only keeping UI/Panel events here. Combat events migrated to FastBus.
 
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const pan = this.getPanelPan(p.id);

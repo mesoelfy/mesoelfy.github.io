@@ -9,14 +9,12 @@ import { RenderData } from '@/engine/ecs/components/RenderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
-// --- ACCESSORS ---
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
 const getRender = (e: Entity) => e.getComponent<RenderData>(ComponentType.Render);
 
-// --- CONFIG ---
 const THEME_MAP: Record<string, string> = {
     [EnemyTypes.KAMIKAZE]: 'RED',
     [EnemyTypes.HUNTER]: 'YELLOW',
@@ -29,13 +27,6 @@ const getExplosionKey = (variant: string, directional: boolean) => {
     return directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`;
 };
 
-// --- VISUAL STRATEGIES ---
-
-/**
- * Decides how to render an impact based on the entity causing it.
- * If 'overrideFX' is provided, it forces a specific VFX recipe.
- * Otherwise, it attempts to generate a dynamic colored impact from RenderData.
- */
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) {
         ctx.spawnFX(overrideFX, x, y);
@@ -44,16 +35,12 @@ const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: numbe
 
     const render = getRender(source);
     if (render) {
-        // Dynamic Impact: Extract color from entity (Bullet/Enemy)
-        const maxC = Math.max(render.r, render.g, render.b, 1.0); // Normalize brightness
+        const maxC = Math.max(render.r, render.g, render.b, 1.0); 
         ctx.spawnImpact(x, y, render.r / maxC, render.g / maxC, render.b / maxC, angle);
     } else {
-        // Fallback
         ctx.spawnFX('IMPACT_WHITE', x, y);
     }
 };
-
-// --- HANDLERS ---
 
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
@@ -85,18 +72,16 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const damage = combat ? combat.damage : 1;
 
   ctx.damagePlayer(damage);
-  ctx.destroyEntity(bullet, 'IMPACT_RED'); // Player hit is always RED warning
+  ctx.destroyEntity(bullet, 'IMPACT_RED'); 
   ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
 };
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   const bPos = getPos(bullet);
-  // Default behavior: Bullet creates a dynamic impact based on its own color
   handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
-  // Override: Clashes always use the specific yellow spark effect
   handleMassExchange(bulletA, bulletB, ctx, 'CLASH_YELLOW');
 };
 
@@ -127,34 +112,28 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
 }
 
-/**
- * Handles mutual damage and visual feedback.
- * @param a Entity A
- * @param b Entity B (The source of impact usually, e.g., the bullet)
- * @param ctx Context
- * @param forceFX Optional override for the impact visual (e.g. 'CLASH_YELLOW')
- * @param sprayAngle Optional angle for directional debris
- */
 function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: string, sprayAngle?: number) {
   const hpA = getHp(a); const hpB = getHp(b);
   const cA = getCombat(a); const cB = getCombat(b);
   const dmgA = cA ? cA.damage : 1; const dmgB = cB ? cB.damage : 1;
 
-  // 1. Apply Damage
-  if (hpA) hpA.current = Math.max(0, hpA.current - dmgB);
-  if (hpB) hpB.current = Math.max(0, hpB.current - dmgA);
+  if (hpA) {
+      hpA.current = Math.max(0, hpA.current - dmgB);
+      if (hpA.current > 0) ctx.flashEntity(a.id as number); // TRIGGER FLASH
+  }
+  if (hpB) {
+      hpB.current = Math.max(0, hpB.current - dmgA);
+      if (hpB.current > 0) ctx.flashEntity(b.id as number); // TRIGGER FLASH
+  }
 
-  // 2. Resolve Visuals (Impact on A from B)
   const posA = getPos(a);
   const posB = getPos(b);
   
   if (posA) {
       const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0;
-      // We use 'b' (the bullet) to determine the color of the impact on 'a' (the enemy)
       resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX);
   }
 
-  // 3. Destroy if Dead
   let soundKey = '';
   if (hpA && hpA.current <= 0) { ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
   if (hpB && hpB.current <= 0) { ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }

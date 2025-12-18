@@ -1,6 +1,8 @@
-import { IGameSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -13,11 +15,12 @@ export class ProgressionSystem implements IGameSystem {
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
+  private fastEvents: IFastEventService;
+  private readCursor = 0;
+
   constructor(private events: IGameEventService) {
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-        this.addScore(1);
-        this.addXp(10);
-    });
+    this.fastEvents = ServiceLocator.getFastEventBus();
+    this.readCursor = this.fastEvents.getCursor();
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
@@ -26,7 +29,18 @@ export class ProgressionSystem implements IGameSystem {
     this.reset();
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+          if (id === FastEvents.ENEMY_DESTROYED) {
+              // a1=id, a2=x, a3=y, a4=typeId
+              this.addScore(1);
+              this.addXp(10);
+              
+              // We could reverse map ENEMY_ID_MAP to get string type if needed for specific logic
+              // but for generic score it's not needed.
+          }
+      });
+  }
 
   public addScore(amount: number) {
     this.score += amount;
@@ -61,6 +75,7 @@ export class ProgressionSystem implements IGameSystem {
         'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
+      this.readCursor = this.fastEvents ? this.fastEvents.getCursor() : 0;
   }
 
   teardown(): void {}

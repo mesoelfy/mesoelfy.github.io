@@ -1,12 +1,12 @@
-import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem, IFastEventService } from '@/engine/interfaces';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { FastEvents } from '@/engine/signals/FastEventBus';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -17,31 +17,38 @@ const COL_DEAD = new THREE.Color('#FF003C');
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
   private readonly FLASH_DECAY = 5.0; 
+  private fastEvents: IFastEventService;
+  private readCursor = 0;
 
   constructor(
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private interactionSystem: IInteractionSystem
   ) {
-    GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const render = entity.getComponent<RenderData>(ComponentType.Render);
-            if (render) {
-                render.r = 2.0; 
-                render.g = 2.0;
-                render.b = 2.0;
-            }
-        }
-    });
+    this.fastEvents = ServiceLocator.getFastEventBus();
+    this.readCursor = this.fastEvents.getCursor();
   }
 
   update(delta: number, time: number): void {
-    // NEW: Update Global Shader Uniforms
     MaterialFactory.updateUniforms(time);
 
-    const renderables = this.registry.query({ all: [ComponentType.Render] });
+    // Process Hit Flashes
+    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1) => {
+        if (id === FastEvents.ENEMY_DAMAGED) {
+            // a1 = entityID
+            const entity = this.registry.getEntity(a1);
+            if (entity) {
+                const render = entity.getComponent<RenderData>(ComponentType.Render);
+                if (render) {
+                    render.r = 2.0; 
+                    render.g = 2.0;
+                    render.b = 2.0;
+                }
+            }
+        }
+    });
 
+    const renderables = this.registry.query({ all: [ComponentType.Render] });
     const interactState = this.interactionSystem.repairState;
     const isDead = this.gameSystem.playerHealth <= 0;
 
@@ -70,7 +77,7 @@ export class RenderSystem implements IGameSystem {
 
   private updatePlayerVisuals(render: RenderData, delta: number, interactState: string, isDead: boolean) {
       let targetCol = COL_BASE;
-      let spinSpeed = 0.02; // IDLE
+      let spinSpeed = 0.02; 
 
       if (isDead) {
           targetCol = COL_DEAD;

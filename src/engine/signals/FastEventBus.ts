@@ -1,7 +1,8 @@
 import { IFastEventService } from '@/engine/interfaces';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 
-const BUFFER_SIZE = 2048; 
+const BUFFER_SIZE = 4096; // Doubled buffer size for safety with high traffic
 const MASK = BUFFER_SIZE - 1;
 const STRIDE = 5; 
 
@@ -9,7 +10,13 @@ export const FastEvents = {
   SPAWN_FX: 1,
   TRAUMA: 2,
   PLAY_SOUND: 3,
-  SPAWN_IMPACT: 4, // NEW: For dynamic colored impacts
+  SPAWN_IMPACT: 4,
+  // --- NEW EVENTS ---
+  PLAYER_FIRED: 10,
+  PLAYER_HIT: 11,
+  ENEMY_DAMAGED: 12,
+  ENEMY_DESTROYED: 13,
+  PROJECTILE_CLASH: 14
 } as const;
 
 export const FX_IDS: Record<string, number> = {
@@ -32,17 +39,29 @@ export const FX_IDS: Record<string, number> = {
   'FX_IMPACT_LIGHT': 52
 };
 
+// Reverse map for FX
 export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
   acc[v] = k;
   return acc;
 }, {} as Record<number, string>);
+
+// Map Enemy Strings to Integers for the Buffer
+export const ENEMY_ID_MAP: Record<string, number> = {
+  [EnemyTypes.DRILLER]: 1,
+  [EnemyTypes.KAMIKAZE]: 2,
+  [EnemyTypes.HUNTER]: 3,
+  [EnemyTypes.DAEMON]: 4,
+  'UNKNOWN': 0
+};
 
 export class FastEventService implements IFastEventService {
   private buffer = new Float32Array(BUFFER_SIZE * STRIDE);
   private writeCursor = 0;
 
   public emit(eventId: number, arg1: number = 0, arg2: number = 0, arg3: number = 0, arg4: number = 0) {
-    if (isNaN(arg1)) return;
+    // Safety check for NaN to prevent logic bomb downstream
+    if (Number.isNaN(arg1)) arg1 = 0;
+    
     const ptr = (this.writeCursor & MASK) * STRIDE;
     this.buffer[ptr] = eventId;
     this.buffer[ptr + 1] = arg1;
@@ -54,7 +73,12 @@ export class FastEventService implements IFastEventService {
 
   public readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number {
     let current = fromCursor;
-    if (this.writeCursor - current > BUFFER_SIZE) current = this.writeCursor - BUFFER_SIZE;
+    // If reader fell too far behind, jump ahead to prevent reading wrapped/stale data incorrectly
+    // (Though simple ring buffer reading usually handles wrap, jumping ensures we don't process > buffer size)
+    if (this.writeCursor - current > BUFFER_SIZE) {
+        current = this.writeCursor - BUFFER_SIZE;
+    }
+    
     while (current < this.writeCursor) {
       const ptr = (current & MASK) * STRIDE;
       handler(this.buffer[ptr], this.buffer[ptr + 1], this.buffer[ptr + 2], this.buffer[ptr + 3], this.buffer[ptr + 4]);
@@ -66,9 +90,6 @@ export class FastEventService implements IFastEventService {
   public getCursor() { return this.writeCursor; }
 }
 
-/**
- * STATIC FACADE (Compatibility Adapter)
- */
 class FastEventBusFacade {
   private get service(): IFastEventService {
     try {

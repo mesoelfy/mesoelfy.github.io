@@ -53,7 +53,7 @@ export class PlayerSystem implements IGameSystem {
       const cursor = this.input.getCursor();
       const count = 360; const speed = 45; const damage = 100;
       FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
-      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
+      FastEventBus.emit(FastEvents.TRAUMA, 1.0); 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
           this.spawner.spawnBullet(cursor.x, cursor.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
@@ -86,7 +86,10 @@ export class PlayerSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], playerTransform.x);
+    // MIGRATED: Fast Event
+    FastEventBus.emit(FastEvents.PLAYER_FIRED, playerTransform.x, playerTransform.y);
+    // Note: AudioDirector will pick this up via FX_PLAYER_FIRE mapping
+    
     this.lastFireTime = time;
   }
 
