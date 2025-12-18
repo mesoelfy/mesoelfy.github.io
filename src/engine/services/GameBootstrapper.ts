@@ -44,6 +44,7 @@ export const GameBootstrapper = () => {
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
+  // Legacy Locator for React components that haven't migrated yet
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
@@ -92,6 +93,10 @@ export const GameBootstrapper = () => {
   const waves = new WaveSystem(spawner, panelSystem);
   const structure = new StructureSystem(panelSystem);
   const render = new RenderSystem(registry, gameStateSystem, interaction);
+
+  // --- DEPENDENCY INJECTION ---
+  // We explicitly inject the core systems into the Engine
+  engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
 
   const systemMap = {
     TimeSystem: timeSystem,

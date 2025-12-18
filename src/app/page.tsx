@@ -31,6 +31,7 @@ import { MetaManager } from '@/ui/os/system/MetaManager';
 import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
+import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -57,7 +58,6 @@ export default function Home() {
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
-  // Show background for Lab and Audio modes only
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
@@ -141,129 +141,131 @@ export default function Home() {
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
-    <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
-      
-      <MetaManager />
-      {!isMobileLockdown && <RotationLock />}
-      <CustomCursor />
-      <GlobalBackdrop />
-      <DebugOverlay />
-
-      <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
+    <GameProvider>
+      <div id="global-app-root" className="relative w-full h-screen overflow-hidden cursor-none bg-black">
         
-        {/* --- SANDBOX BACKGROUND LAYER (Z-50) --- */}
-        <AnimatePresence>
-            {showHoloBackground && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <HoloBackground />
-                </motion.div>
-            )}
-        </AnimatePresence>
+        <MetaManager />
+        {!isMobileLockdown && <RotationLock />}
+        <CustomCursor />
+        <GlobalBackdrop />
+        <DebugOverlay />
 
-        <WebGLErrorBoundary key={sessionId}>
-            <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
-            
-            {!isMobileLockdown && (
-                <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
-                    <GameOverlay />
-                </div>
-            )}
-        </WebGLErrorBoundary>
+        <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
+          
+          {/* --- SANDBOX BACKGROUND LAYER (Z-50) --- */}
+          <AnimatePresence>
+              {showHoloBackground && (
+                  <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                  >
+                      <HoloBackground />
+                  </motion.div>
+              )}
+          </AnimatePresence>
 
-        {isSandbox && <SimulationHUD />}
-
-        {!isSandbox && !isMobileLockdown && (
-            <>
-                <AboutModal />
-                <FeedModal />
-                <GalleryModal />
-                <ContactModal />
-                <SettingsModal />
-                <ZenBomb />
-            </>
-        )}
-
-        {bootState === 'standby' && (
-          <MatrixBootSequence 
-             onComplete={handleBootComplete} 
-             onBreachStart={handleBreachStart} 
-          />
-        )}
-
-        {isMobileLockdown && <MobileExperience />}
-
-        {!isSandbox && !isMobileLockdown && (
-            <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <Header />
-
-              <div className="flex-1 min-h-0 relative w-full overflow-hidden">
-                <div 
-                    className="w-full origin-top transition-transform duration-300 ease-out"
-                    style={{ 
-                        transform: `scale(${dashboardScale})`,
-                        marginBottom: `-${(1 - dashboardScale) * 100}%` 
-                    }}
-                >
-                    <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
-                    <AnimatePresence>
-                        {!isZenMode && (
-                        <motion.div 
-                            className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
-                            initial="hidden"
-                            animate="visible"
-                            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
-                            variants={{
-                            hidden: { opacity: 0 },
-                            visible: { 
-                                opacity: 1, 
-                                transition: { 
-                                staggerChildren: 0.05,
-                                delayChildren: 0.0
-                                } 
-                            }
-                            }}
-                        >
-                            <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                            <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
-                                <IdentityHUD />
-                            </GlassPanel>
-
-                            <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
-                                <SocialRow />
-                            </GlassPanel>
-                            </div>
-
-                            <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                            <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
-                                <FeedAccessTerminal />
-                            </GlassPanel>
-
-                            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
-                                <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
-                                <LiveArtGrid />
-                                </GlassPanel>
-
-                                <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
-                                <HoloCommLog />
-                                </GlassPanel>
-                            </div>
-                            </div>
-                        </motion.div>
-                        )}
-                    </AnimatePresence>
-                    </div>
-                </div>
-              </div>
+          <WebGLErrorBoundary key={sessionId}>
+              <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
               
-              <Footer />
-            </div>
-        )}
-      </main>
-    </div>
+              {!isMobileLockdown && (
+                  <div className={clsx("absolute inset-0 z-[60] transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
+                      <GameOverlay />
+                  </div>
+              )}
+          </WebGLErrorBoundary>
+
+          {isSandbox && <SimulationHUD />}
+
+          {!isSandbox && !isMobileLockdown && (
+              <>
+                  <AboutModal />
+                  <FeedModal />
+                  <GalleryModal />
+                  <ContactModal />
+                  <SettingsModal />
+                  <ZenBomb />
+              </>
+          )}
+
+          {bootState === 'standby' && (
+            <MatrixBootSequence 
+               onComplete={handleBootComplete} 
+               onBreachStart={handleBreachStart} 
+            />
+          )}
+
+          {isMobileLockdown && <MobileExperience />}
+
+          {!isSandbox && !isMobileLockdown && (
+              <div className={`relative z-10 flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                <Header />
+
+                <div className="flex-1 min-h-0 relative w-full overflow-hidden">
+                  <div 
+                      className="w-full origin-top transition-transform duration-300 ease-out"
+                      style={{ 
+                          transform: `scale(${dashboardScale})`,
+                          marginBottom: `-${(1 - dashboardScale) * 100}%` 
+                      }}
+                  >
+                      <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
+                      <AnimatePresence>
+                          {!isZenMode && (
+                          <motion.div 
+                              className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
+                              initial="hidden"
+                              animate="visible"
+                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                              variants={{
+                              hidden: { opacity: 0 },
+                              visible: { 
+                                  opacity: 1, 
+                                  transition: { 
+                                  staggerChildren: 0.05,
+                                  delayChildren: 0.0
+                                  } 
+                              }
+                              }}
+                          >
+                              <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
+                              <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId="identity">
+                                  <IdentityHUD />
+                              </GlassPanel>
+
+                              <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId="social">
+                                  <SocialRow />
+                              </GlassPanel>
+                              </div>
+
+                              <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
+                              <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId="feed">
+                                  <FeedAccessTerminal />
+                              </GlassPanel>
+
+                              <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
+                                  <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId="art">
+                                  <LiveArtGrid />
+                                  </GlassPanel>
+
+                                  <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId="video">
+                                  <HoloCommLog />
+                                  </GlassPanel>
+                              </div>
+                              </div>
+                          </motion.div>
+                          )}
+                      </AnimatePresence>
+                      </div>
+                  </div>
+                </div>
+                
+                <Footer />
+              </div>
+          )}
+        </main>
+      </div>
+    </GameProvider>
   );
 }

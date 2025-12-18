@@ -1,14 +1,11 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem, IGameStateSystem } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem'; 
-import { GameStateSystem } from '@/engine/systems/GameStateSystem';
 import { WorldConfig } from '@/engine/config/WorldConfig';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { ServiceLocator } from './ServiceLocator';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[] = [];
@@ -16,11 +13,25 @@ export class GameEngineCore implements IGameSystem {
   private accumulator: number = 0;
   private simulationTime: number = 0;
 
+  // Core System References (Injected)
+  private panelSystem: IPanelSystem | null = null;
+  private gameSystem: IGameStateSystem | null = null;
+  private timeSystem: TimeSystem | null = null;
+
   constructor(registry: IEntityRegistry) {
       this.registry = registry;
   }
 
-  setup(locator: IServiceLocator): void {}
+  // Dependency Injection Point
+  public injectCoreSystems(panel: IPanelSystem, game: IGameStateSystem, time: TimeSystem) {
+      this.panelSystem = panel;
+      this.gameSystem = game;
+      this.timeSystem = time;
+  }
+
+  setup(locator: IServiceLocator): void {
+      // Legacy compatibility if needed, but we prefer explicit injection above
+  }
 
   public registerSystem(system: IGameSystem) {
     this.systems.push(system);
@@ -30,53 +41,51 @@ export class GameEngineCore implements IGameSystem {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
+    // 1. Global Pause Checks
     if (store.bootState === 'standby') return;
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    try {
-        const gameSys = ServiceLocator.getSystem<GameStateSystem>('GameStateSystem');
-        const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-        
-        if (gameStore.isPlaying && panelSys.systemIntegrity <= 0) {
+    // 2. Game Over Logic
+    // We use the injected references instead of the ServiceLocator
+    if (this.gameSystem && this.panelSystem) {
+        if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
             gameStore.stopGame();
             GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
-            gameSys.isGameOver = true; 
+            this.gameSystem.isGameOver = true; 
             return;
         }
 
         if (!gameStore.isPlaying) {
-            gameSys.isGameOver = true;
+            this.gameSystem.isGameOver = true;
         }
-    } catch {}
+    }
 
+    // 3. Time Management
     let timeScale = 1.0;
-    try {
-        const timeSys = ServiceLocator.getSystem<TimeSystem>('TimeSystem');
-        timeSys.tickRealTime(renderDelta);
-        if (timeSys.isFrozen()) timeScale = 0.0;
-        else timeScale = timeSys.timeScale;
-    } catch {}
+    if (this.timeSystem) {
+        this.timeSystem.tickRealTime(renderDelta);
+        if (this.timeSystem.isFrozen()) timeScale = 0.0;
+        else timeScale = this.timeSystem.timeScale;
+    }
 
     const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
     this.accumulator += effectiveDelta;
 
+    // 4. Spiral of Death Protection
     if (this.accumulator > WorldConfig.time.maxAccumulator) {
         this.accumulator = WorldConfig.time.maxAccumulator;
     }
 
     const fixedStep = WorldConfig.time.fixedDelta;
 
+    // 5. Fixed Timestep Loop
     while (this.accumulator >= fixedStep) {
         for (const sys of this.systems) {
             try {
                 sys.update(fixedStep, this.simulationTime);
             } catch (e: any) {
                 console.error("System Update Error:", e);
-                GameEventBus.emit(GameEvents.LOG_DEBUG, { 
-                    msg: `CRASH IN SYSTEM: ${e.message}`, 
-                    source: 'GameEngine' 
-                });
             }
         }
         this.simulationTime += fixedStep;
@@ -89,13 +98,15 @@ export class GameEngineCore implements IGameSystem {
       sys.teardown();
     }
     this.systems = [];
+    this.panelSystem = null;
+    this.gameSystem = null;
+    this.timeSystem = null;
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
-    try {
-        const panelSys = ServiceLocator.getSystem<PanelRegistrySystem>('PanelRegistrySystem');
-        if (panelSys) panelSys.refreshAll();
-    } catch {}
+    if (this.panelSystem) {
+        this.panelSystem.refreshAll();
+    }
   }
 }
