@@ -42,12 +42,15 @@ export class BehaviorSystem implements IGameSystem {
       spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
           let bullet;
           if (damage) {
+              // Explicit damage passed (e.g. Daemon)
               const finalConfig = configId || 'DAEMON_ORB';
               bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
+              // Default Enemy Shot (Hunter)
               const finalConfig = configId || 'ENEMY_HUNTER';
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 10, finalConfig);
+              // NERF: Reduced damage from 10 to 4
+              bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 4, finalConfig);
           }
 
           if (ownerId !== undefined) {
