@@ -18,17 +18,41 @@ interface RenderGroup {
 export const UniversalActor = () => {
   const groups = useMemo(() => {
     const uniqueGroups = new Map<string, RenderGroup>();
+
     Object.values(ARCHETYPES).forEach(blueprint => {
+      // 1. Only process Enemy tags
       if (!blueprint.tags.includes(Tag.ENEMY)) return;
-      const renderDef = blueprint.components.find(c => c.type === ComponentType.Render);
-      if (!renderDef || !renderDef.data) return;
-      const { geometryId, materialId } = renderDef.data;
+
+      // 2. Resolve IDs (Check new 'assets' field, then fallback to component data)
+      let geometryId = blueprint.assets?.geometry;
+      let materialId = blueprint.assets?.material;
+
+      if (!geometryId || !materialId) {
+          const renderDef = blueprint.components.find(c => c.type === ComponentType.Render);
+          if (renderDef?.data) {
+              geometryId = geometryId || renderDef.data.geometryId;
+              materialId = materialId || renderDef.data.materialId;
+          }
+      }
+
       if (!geometryId || !materialId) return;
+
       const key = `${geometryId}|${materialId}`;
       if (!uniqueGroups.has(key)) {
-        try { uniqueGroups.set(key, { key, geometryId, materialId, geometry: AssetService.get(geometryId), material: AssetService.get(materialId) }); } catch {}
+        try { 
+            uniqueGroups.set(key, { 
+                key, 
+                geometryId, 
+                materialId, 
+                geometry: AssetService.get(geometryId), 
+                material: AssetService.get(materialId) 
+            }); 
+        } catch (e) {
+            console.warn(`[UniversalActor] Failed to load assets for group: ${key}`, e);
+        }
       }
     });
+
     return Array.from(uniqueGroups.values());
   }, []);
 
@@ -36,8 +60,16 @@ export const UniversalActor = () => {
     <>
       {groups.map(group => (
         <InstancedActor
-          key={group.key} tag={Tag.ENEMY} geometry={group.geometry} material={group.material} maxCount={500}
-          filter={(entity) => { const render = entity.getComponent<RenderData>(ComponentType.Render); return render?.geometryId === group.geometryId && render?.materialId === group.materialId; }}
+          key={group.key} 
+          tag={Tag.ENEMY} 
+          geometry={group.geometry} 
+          material={group.material} 
+          maxCount={500}
+          interactive={true}
+          filter={(entity) => { 
+              const render = entity.getComponent<RenderData>(ComponentType.Render); 
+              return render?.geometryId === group.geometryId && render?.materialId === group.materialId; 
+          }}
         />
       ))}
     </>

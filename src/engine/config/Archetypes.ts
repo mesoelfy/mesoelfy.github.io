@@ -14,19 +14,20 @@ const parseHex = (hex: string) => {
     };
 };
 
-const DRILLER_COLOR = parseHex(GAME_THEME.enemy.muncher);
-const KAMIKAZE_COLOR = parseHex(GAME_THEME.enemy.kamikaze);
-const HUNTER_COLOR = parseHex(GAME_THEME.enemy.hunter);
-const DAEMON_COLOR = parseHex('#00F0FF');
-const PLAYER_COLOR = parseHex(GAME_THEME.turret.base);
-
 export interface EntityBlueprint {
+  id: string;
   tags: Tag[];
+  aiLogic?: string;
+  assets?: {
+      geometry: string;
+      material: string;
+  };
   components: { type: ComponentType; data?: any }[];
 }
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
+    id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
     components: [
       { type: ComponentType.Identity, data: { variant: 'PLAYER' } },
@@ -39,10 +40,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { ...PLAYER_COLOR, visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.turret.base), visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
+    id: ArchetypeIDs.BULLET_PLAYER,
     tags: [Tag.BULLET, Tag.PLAYER],
     components: [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -60,6 +62,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     ]
   },
   [ArchetypeIDs.BULLET_ENEMY]: {
+    id: ArchetypeIDs.BULLET_ENEMY,
     tags: [Tag.BULLET, Tag.ENEMY],
     components: [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -77,7 +80,10 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     ]
   },
   [ArchetypeIDs.DRILLER]: {
+    id: ArchetypeIDs.DRILLER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'driller',
+    assets: { geometry: 'GEO_DRILLER', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -87,11 +93,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
-      { type: ComponentType.Render, data: { ...DRILLER_COLOR, geometryId: 'GEO_DRILLER', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.muncher) } }
     ]
   },
   [ArchetypeIDs.KAMIKAZE]: {
+    id: ArchetypeIDs.KAMIKAZE,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'kamikaze',
+    assets: { geometry: 'GEO_KAMIKAZE', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -101,11 +110,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...KAMIKAZE_COLOR, geometryId: 'GEO_KAMIKAZE', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.kamikaze) } }
     ]
   },
   [ArchetypeIDs.HUNTER]: {
+    id: ArchetypeIDs.HUNTER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'hunter',
+    assets: { geometry: 'GEO_HUNTER', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -115,11 +127,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...HUNTER_COLOR, geometryId: 'GEO_HUNTER', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.hunter) } }
     ]
   },
   [ArchetypeIDs.DAEMON]: {
+    id: ArchetypeIDs.DAEMON,
     tags: [Tag.PLAYER],
+    aiLogic: 'daemon',
+    assets: { geometry: 'GEO_DAEMON', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DAEMON } },
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -128,7 +143,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.State, data: { current: 'ORBIT' } },
-      { type: ComponentType.Render, data: { ...DAEMON_COLOR, geometryId: 'GEO_DAEMON', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex('#00F0FF') } }
     ]
   }
 };

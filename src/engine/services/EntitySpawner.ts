@@ -2,7 +2,7 @@ import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { ARCHETYPES } from '@/engine/config/Archetypes';
+import { ARCHETYPES, EntityBlueprint } from '@/engine/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -26,6 +26,7 @@ export class EntitySpawner implements IEntitySpawner {
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
+    // 1. Core Component Hydration
     for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
@@ -33,6 +34,15 @@ export class EntitySpawner implements IEntitySpawner {
             const runtimeData = overrides[compDef.type] || {};
             const mergedData = { ...blueprintData, ...runtimeData };
             e.addComponent(builder(mergedData));
+        }
+    }
+
+    // 2. Automated Visual/Asset Linking
+    if (blueprint.assets) {
+        const render = e.getComponent<any>(ComponentType.Render);
+        if (render) {
+            render.geometryId = blueprint.assets.geometry;
+            render.materialId = blueprint.assets.material;
         }
     }
 
@@ -48,13 +58,13 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD'): Entity {
+  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD', ownerId?: number): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     const color = config ? config.color : [1, 1, 1];
 
-    return this.spawn(id, {
+    const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
@@ -62,12 +72,13 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Render]: { 
             visualScale: 1.0, 
-            visualRotation: 0, 
             geometryId: 'GEO_BULLET',
             r: color[0], g: color[1], b: color[2]
         },
-        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT' }
-    });
+        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+    };
+
+    return this.spawn(id, overrides);
   }
 
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: number = 0): void {
