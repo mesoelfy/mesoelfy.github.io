@@ -22,8 +22,8 @@ export enum GameEvents {
   HEARTBEAT = 'HEARTBEAT',
   LOG_DEBUG = 'LOG_DEBUG',
   BOOT_LOG = 'BOOT_LOG',
-  PLAYER_REBOOT_TICK = 'PLAYER_REBOOT_TICK',   // NEW
-  PLAYER_REBOOT_DECAY = 'PLAYER_REBOOT_DECAY' // NEW
+  PLAYER_REBOOT_TICK = 'PLAYER_REBOOT_TICK',
+  PLAYER_REBOOT_DECAY = 'PLAYER_REBOOT_DECAY'
 }
 
 export type FXVariant = 
@@ -35,7 +35,13 @@ export type FXVariant =
   | 'IMPACT_YELLOW'
   | 'DRILL_SPARKS'
   | 'HUNTER_RECOIL'
-  | 'CLASH_YELLOW';
+  | 'CLASH_YELLOW'
+  | 'REBOOT_HEAL'
+  | 'PURGE_BLAST'
+  | 'ENGINE_FLARE'
+  | 'EXPLOSION_PURPLE_DIR'
+  | 'EXPLOSION_YELLOW_DIR'
+  | 'EXPLOSION_RED_DIR';
 
 export interface GameEventPayloads {
   [GameEvents.PLAYER_FIRED]: { x: number; y: number };
@@ -44,7 +50,8 @@ export interface GameEventPayloads {
   [GameEvents.ENEMY_DAMAGED]: { id: number; damage: number; type: string };
   [GameEvents.ENEMY_DESTROYED]: { id: number; type: string; x: number; y: number };
   [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
-  [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number };
+  // UPDATED: Added source coordinates
+  [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number; sourceX?: number; sourceY?: number };
   [GameEvents.PANEL_HEALED]: { id: string; amount: number };
   [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; 
   [GameEvents.PANEL_DESTROYED]: { id: string };
@@ -61,6 +68,6 @@ export interface GameEventPayloads {
   [GameEvents.HEARTBEAT]: { urgency: number };
   [GameEvents.LOG_DEBUG]: { msg: string; source?: string };
   [GameEvents.BOOT_LOG]: { message: string };
-  [GameEvents.PLAYER_REBOOT_TICK]: { amount: number };   // NEW
-  [GameEvents.PLAYER_REBOOT_DECAY]: { amount: number }; // NEW
+  [GameEvents.PLAYER_REBOOT_TICK]: { amount: number };
+  [GameEvents.PLAYER_REBOOT_DECAY]: { amount: number };
 }

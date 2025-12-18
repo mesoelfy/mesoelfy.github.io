@@ -14,7 +14,9 @@ const computeBarycentric = (positionCount: number) => {
 const generateHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.2;
+  
+  // Adjusted Length: 1.2 -> 1.25 (+4%)
+  const length = 1.25;
   const wingWidth = 0.4;
   const wingThickness = 0.05;
 

@@ -67,7 +67,8 @@ export class BehaviorSystem implements IGameSystem {
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
       },
-      damagePanel: (id, amount) => this.panelSystem.damagePanel(id, amount),
+      // UPDATED: Passing Through Coordinates
+      damagePanel: (id, amount, sx, sy) => this.panelSystem.damagePanel(id, amount, false, sx, sy),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
           const pan = x !== undefined && halfWidth > 0 

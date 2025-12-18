@@ -11,9 +11,9 @@ export const CollisionLayers = {
 export const PhysicsConfig = {
   HITBOX: {
     PLAYER: 0.6,
-    DRILLER: 0.5,
-    KAMIKAZE: 0.6,
-    HUNTER: 0.7,
+    DRILLER: 0.4, // Reduced (was 0.5)
+    KAMIKAZE: 0.7, // Increased (was 0.6)
+    HUNTER: 0.74, 
     BULLET: 0.25,
     HUNTER_BULLET: 0.4
   },

@@ -47,8 +47,8 @@ export class PanelRegistrySystem implements IPanelSystem {
   public refreshAll() { DOMSpatialService.refreshAll(); }
   public refreshSingle(id: string) { DOMSpatialService.refreshSingle(id); }
 
-  public damagePanel(id: string, amount: number, silent: boolean = false) {
-      StructureHealthService.damage(id, amount, silent);
+  public damagePanel(id: string, amount: number, silent: boolean = false, sourceX?: number, sourceY?: number) {
+      StructureHealthService.damage(id, amount, silent, sourceX, sourceY);
   }
 
   public healPanel(id: string, amount: number, sourceX?: number) {

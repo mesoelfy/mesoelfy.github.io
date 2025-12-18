@@ -35,7 +35,8 @@ class StructureHealthServiceController {
     this.syncAllPanelsToStore();
   }
 
-  public damage(id: string, amount: number, silent: boolean = false) {
+  // UPDATED: Added source coordinates
+  public damage(id: string, amount: number, silent: boolean = false, sourceX?: number, sourceY?: number) {
     if (useStore.getState().debugFlags.panelGodMode) return;
     const state = this.states.get(id);
     if (!state || state.isDestroyed) return;
@@ -44,14 +45,20 @@ class StructureHealthServiceController {
     if (state.health <= 0) {
         state.isDestroyed = true;
         state.health = 0;
-        this.syncPanelToStore(id); // State Change -> Sync
+        this.syncPanelToStore(id);
         
         if (!silent) {
             GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
             GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
         }
     } else if (!silent) {
-        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
+        GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
+            id, 
+            amount, 
+            currentHealth: state.health,
+            sourceX,
+            sourceY
+        });
         this.syncPanelToStore(id);
     }
     this.calculateIntegrity();
@@ -117,7 +124,6 @@ class StructureHealthServiceController {
     }
     const newIntegrity = max > 0 ? (current / max) * 100 : 100;
     
-    // Critical fix: Force sync if we drop below 1% to ensure UI catches Game Over
     const shouldSync = 
         Math.abs(this.systemIntegrity - newIntegrity) > 1.0 || 
         (newIntegrity <= 1.0 && this.systemIntegrity > 1.0) ||

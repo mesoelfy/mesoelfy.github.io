@@ -21,7 +21,10 @@ export interface AIContext {
   spawnParticle: (x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number) => void;
   
   playSound: (key: AudioKey, x?: number) => void;
-  damagePanel: (id: string, amount: number) => void;
+  
+  // UPDATED: Now accepts source coordinates
+  damagePanel: (id: string, amount: number, sourceX?: number, sourceY?: number) => void;
+  
   getPanelRect: (id: string) => WorldRect | undefined;
   getUpgradeLevel: (key: string) => number;
   

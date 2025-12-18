@@ -3,8 +3,6 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/ui/sim/hooks/usePanelRegistry';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useGameContext } from '@/engine/state/GameContext'; // UPDATED
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
@@ -13,6 +11,7 @@ import { IntelligentHeader } from '@/ui/kit/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/kit/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
+import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics'; // NEW HOOK
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -57,8 +56,10 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
-  // Use Context Events
-  const { events } = useGameContext();
+  // Use new Physics Hook if gameId exists
+  if (gameId && registryRef) {
+      usePanelPhysics(gameId, registryRef);
+  }
   
   const isInteracting = !!(gameId && interactionTarget === gameId);
   const isGameOver = Math.floor(systemIntegrity) <= 0;
@@ -104,17 +105,6 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
       if (health < maxHealth || isDestroyed || isGameOver) setShowCircuitLock(false);
       prevHealth.current = health;
   }, [health, maxHealth, isDestroyed, isGameOver]);
-
-  // Hook into Context Events
-  useReactEffect(() => {
-      if (!gameId) return;
-      return events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
-          if (p.id === gameId) {
-              // Trigger Shake
-              shakeControls.start({ x: [0, -5, 5, -5, 5, 0], transition: { duration: 0.1 } });
-          }
-      });
-  }, [gameId, shakeControls, events]);
 
   let borderColor = "border-primary-green-dim/30";
   if (showCircuitLock) borderColor = "border-primary-green"; 

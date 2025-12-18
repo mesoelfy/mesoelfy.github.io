@@ -13,7 +13,6 @@ export const registerAllAssets = () => {
   });
 
   AssetService.registerGenerator('MAT_PARTICLE', () => {
-    // Particles need specific blending
     const mat = MaterialFactory.create('MAT_PARTICLE', ShaderLib.presets.particle);
     mat.blending = THREE.AdditiveBlending;
     mat.depthWrite = false;
@@ -30,7 +29,10 @@ export const registerAllAssets = () => {
 
   // Procedural Geometries
   AssetService.registerGenerator('GEO_DRILLER', () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  AssetService.registerGenerator('GEO_KAMIKAZE', () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(0.6, 0)));
+  
+  // UPDATED: Now uses MODEL_CONFIG
+  AssetService.registerGenerator('GEO_KAMIKAZE', () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
+  
   AssetService.registerGenerator('GEO_DAEMON', () => new THREE.OctahedronGeometry(0.6, 0));
   AssetService.registerGenerator('GEO_PARTICLE', () => new THREE.PlaneGeometry(0.3, 0.3));
   AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6));

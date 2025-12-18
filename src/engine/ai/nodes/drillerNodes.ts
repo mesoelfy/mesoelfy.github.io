@@ -67,7 +67,8 @@ export class DrillAttack extends BTNode {
         const damage = combat ? combat.damage : 1;
         
         if (target.type === 'PANEL' && target.id) {
-            context.damagePanel(target.id, damage);
+            // UPDATED: Pass transform coordinates as source
+            context.damagePanel(target.id, damage, transform.x, transform.y);
             state.timers.drillDmg = this.interval;
         } else {
             state.timers.drillDmg = this.interval;

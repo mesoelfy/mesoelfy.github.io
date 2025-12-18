@@ -65,7 +65,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       colors: COLOR_SETS.PURPLE, 
       count: [3, 6], 
       speed: [10, 10], 
-      life: [0.2, 0.4], 
+      life: [0.1, 0.2], // Reduced by 50% (Was 0.2, 0.4)
       spread: 0.7, 
       size: [0.5, 0.5],
       shape: 1 
