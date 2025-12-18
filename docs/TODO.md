@@ -627,6 +627,8 @@ Refactoring prompts:
     - What in the architecture relies on tight coupling?
     - Where is re "Tech Debt" accumulating?
     - Please audit the obvious and not obvious ways I could better use SOLID and other good practices then layout a step-by-step PHASE-based remediation protocol to refactor the code base into a healthier, more readable, cleaner architecture.
+    - Configuration should just be data, not repeated logic. (logic is scattered and repetitive (WET: Write Everything Twice))
+    - magic strings
 
 
 
@@ -642,7 +644,6 @@ I could see the third video already loaded but the was still being obscured. the
 
 VFX config - laser sight should be exhaust right?
 
-three explosion types (PURPLE, YELLOW, RED). - - - could probably consolidate this better using SOLID right?
 
 
 
