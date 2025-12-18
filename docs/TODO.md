@@ -645,17 +645,11 @@ VFX config - laser sight should be exhaust right?
 three explosion types (PURPLE, YELLOW, RED). - - - could probably consolidate this better using SOLID right?
 
 
-After getting in red critical health, MESOELFY_OS health bar retains its glow from red status and that should go away after leaving red status.
-
-
-
 
 
 
 should I do this?
     Audio Pipeline: Move Audio definitions to a JSON manifest similar to Archetypes.
-
-
 
 
 
@@ -668,13 +662,10 @@ Healing sound needs to be different from rebooting sound.
 
 
 
-The “ding” when a panel is healed 100% doesn’t appear to be properly stereo panning for me. I’d like it to pan based on the player mouse position.
-
-scrolling text should change directions when rebooting
 identity core regen boundaries are too wide
 
 
-Is there audio crackling after a few minutes?
+
 
 
 The Base (Solid Color):

@@ -4,6 +4,9 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 interface IntelligentHeaderProps {
   title: string;
@@ -24,11 +27,30 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
   useEffect(() => {
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
-      AudioSystem.playSound('ui_optimal'); 
+      
+      // Calculate Stereo Pan based on Panel Position
+      let pan = 0;
+      if (gameId) {
+          try {
+              const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+              const rect = panels.getPanelRect(gameId);
+              if (rect) {
+                  const halfWidth = ViewportHelper.viewport.width / 2;
+                  if (halfWidth > 0) {
+                      // Normalize world X (-width/2 to width/2) to -1.0 to 1.0
+                      pan = Math.max(-1, Math.min(1, rect.x / halfWidth));
+                  }
+              }
+          } catch (e) {
+              // Engine system not ready or available, fallback to center pan
+          }
+      }
+
+      AudioSystem.playSound('ui_optimal', pan); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
-  }, [health, showOptimal, maxHealth]);
+  }, [health, showOptimal, maxHealth, gameId]);
 
   let mainColor = "text-primary-green";
   let statusText = "SECURE";

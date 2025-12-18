@@ -13,7 +13,10 @@ export class AudioServiceImpl implements IAudioService {
   public isReady = false;
   private hasInteracted = false; 
   private musicElement: HTMLAudioElement | null = null;
+  
+  // FIX: Track both Source AND Gain to prevent GC hiccups
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
+  private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
 
   public async init() {
@@ -75,21 +78,37 @@ export class AudioServiceImpl implements IAudioService {
       const ctx = this.ctxManager.ctx;
       if (!ctx || !this.mixer.ambienceGain || (this.currentAmbienceKey === key && this.currentAmbienceNode)) return;
 
+      // Cleanup previous
       if (this.currentAmbienceNode) {
-          try { this.currentAmbienceNode.stop(ctx.currentTime + 0.5); } catch {}
+          try { 
+              this.currentAmbienceNode.stop(ctx.currentTime + 0.5); 
+              // Disconnect old gain after fade out to be safe? 
+              // We rely on WebAudio auto-cleanup for disconnected nodes, 
+              // but we drop our reference here.
+          } catch {}
           this.currentAmbienceNode = null;
+          this.currentAmbienceGain = null; // Drop ref
       }
+
       const buffer = this.bank.get(key);
       if (!buffer) return;
 
       const source = ctx.createBufferSource();
-      source.buffer = buffer; source.loop = true;
+      source.buffer = buffer; 
+      source.loop = true;
+      
       const fadeGain = ctx.createGain();
       fadeGain.gain.setValueAtTime(0, ctx.currentTime);
       fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
-      source.connect(fadeGain); fadeGain.connect(this.mixer.ambienceGain); 
+      
+      source.connect(fadeGain); 
+      fadeGain.connect(this.mixer.ambienceGain); 
       source.start();
-      this.currentAmbienceNode = source; this.currentAmbienceKey = key;
+      
+      // Store references to prevent GC
+      this.currentAmbienceNode = source; 
+      this.currentAmbienceGain = fadeGain; 
+      this.currentAmbienceKey = key;
   }
 
   public startMusic() {
@@ -109,9 +128,15 @@ export class AudioServiceImpl implements IAudioService {
   
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
+  
   public stopAll() {
       if (this.musicElement) { this.musicElement.pause(); this.musicElement.currentTime = 0; }
-      if (this.currentAmbienceNode) { try { this.currentAmbienceNode.stop(); } catch {} this.currentAmbienceNode = null; this.currentAmbienceKey = null; }
+      if (this.currentAmbienceNode) { 
+          try { this.currentAmbienceNode.stop(); } catch {} 
+          this.currentAmbienceNode = null; 
+          this.currentAmbienceGain = null;
+          this.currentAmbienceKey = null; 
+      }
   }
 
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
