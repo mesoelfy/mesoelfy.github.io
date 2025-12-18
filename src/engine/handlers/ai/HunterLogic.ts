@@ -11,7 +11,9 @@ const getHunterTree = () => {
     if (treeRoot) return treeRoot;
 
     const tacticalLoop = new MemSequence([
-        new HoverDrift(8.0, 16.0, 2.0),
+        // INCREASED RANGE: 10-18 units (was 8-16)
+        // FASTER REPOSITION: 1.5s (was 2.0s)
+        new HoverDrift(10.0, 18.0, 1.5),
         new FaceTarget(),
         
         new Parallel([
@@ -20,7 +22,9 @@ const getHunterTree = () => {
         ]),
         
         new FireProjectile(40.0, 'ENEMY_HUNTER'),
-        new Wait(1.0)
+        
+        // FASTER FIRE RATE: Reduced cooldown to 0.6s (was 1.0s)
+        new Wait(0.6)
     ], 'hunter_tactics');
 
     treeRoot = new Sequence([

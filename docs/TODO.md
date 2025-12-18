@@ -522,12 +522,9 @@ it's a different game? What if you could collapse panels so it is just the heade
     - how expensive is it to render our 3D enemy models? What other kinds of 3D shapes do you know how to render besides basic shapes with more sides? Can you make models that look like fighter space ships?
 
 
-    - Panel being healed ding doesn't sound like it is coming from player mouse location. Feels like it is mostly centered.
-
-
 
  
-
+Daemon ability comes from a boss who shoots giant balls that even kill its own units. Would be a fun one to kill a bunch of allies just for the fun of it.
 
     - need sound effect for hunter charging then releasing projectile
 
@@ -602,21 +599,8 @@ Browsers are single-threaded yes? What optimizations do you see available to run
 
 
 
-
-
-
-
-
-
-
-
 Phase 3 Limitation: Trails are hard. They require history.
 Solution: Disable Trails for now (Comment out ProjectileTrailsActor in RenderCatalog.ts). We will rebuild them purely visually later using GPU particles.
-
-
-
-
-        **!!!** FastEventBus using a Float32Array ring buffer is a brilliant optimization for FX/Audio triggers. You should migrate more logic to this pattern.
 
 
 

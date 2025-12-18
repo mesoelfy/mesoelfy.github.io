@@ -7,11 +7,10 @@ export interface SoundMeta {
   label: string;
   description: string;
   category: SoundCategory;
-  usage: string; // "Wired to..." description
+  usage: string;
 }
 
 export const SOUND_METADATA: Record<string, SoundMeta> = {
-  // --- UI ---
   'ui_click': { key: 'ui_click', label: 'Click', description: 'Standard interaction', category: 'UI', usage: 'Buttons, Toggles' },
   'ui_hover': { key: 'ui_hover', label: 'Hover', description: 'High frequency blip', category: 'UI', usage: 'Pointer over interactive elements' },
   'ui_menu_open': { key: 'ui_menu_open', label: 'Menu Open', description: 'Ascending slide', category: 'UI', usage: 'Modal/Debug open' },
@@ -20,7 +19,6 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'ui_error': { key: 'ui_error', label: 'Error', description: 'Negative buzz', category: 'UI', usage: 'Settings: Potato, Mobile Rejection' },
   'ui_chirp': { key: 'ui_chirp', label: 'Chirp', description: 'Data process sound', category: 'UI', usage: 'Mobile Scan Step' },
 
-  // --- COMBAT ---
   'fx_player_fire': { key: 'fx_player_fire', label: 'Plasma Shot', description: 'Player primary fire', category: 'COMBAT', usage: 'PlayerSystem: Auto-fire' },
   'fx_enemy_fire': { key: 'fx_enemy_fire', label: 'Enemy Shot', description: 'Enemy return fire', category: 'COMBAT', usage: 'Unused (Enemies currently silent on fire)' },
   'fx_impact_light': { key: 'fx_impact_light', label: 'Light Hit', description: 'Small explosion', category: 'COMBAT', usage: 'Enemy death (Small), Mobile Tap Kill' },
@@ -30,15 +28,15 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'fx_level_up': { key: 'fx_level_up', label: 'Level Up', description: 'Ascending chord', category: 'COMBAT', usage: 'Upgrade Menu Open' },
   'fx_reboot_success': { key: 'fx_reboot_success', label: 'Reboot', description: 'System restore chime', category: 'COMBAT', usage: 'Player/Panel Revival' },
   'fx_teleport': { key: 'fx_teleport', label: 'Teleport', description: 'Phase shift', category: 'COMBAT', usage: 'Unused' },
+  
+  'fx_exhaust_sizzle': { key: 'fx_exhaust_sizzle', label: 'Sizzle', description: 'Burning fuse', category: 'COMBAT', usage: 'Hunter: Exhaust trail' },
 
-  // --- LOOPS ---
   'loop_heal': { key: 'loop_heal', label: 'Repair Loop', description: 'Healing hum', category: 'AMBIENCE', usage: 'InteractionSystem: Healing Panel' },
   'loop_reboot': { key: 'loop_reboot', label: 'Reboot Loop', description: 'Power build-up', category: 'AMBIENCE', usage: 'InteractionSystem: Rebooting Panel' },
   'loop_warning': { key: 'loop_warning', label: 'Low Health', description: 'Heartbeat alarm', category: 'AMBIENCE', usage: 'GameState: Health < 30%' },
   'loop_drill': { key: 'loop_drill', label: 'Drill Grind', description: 'Mechanical grinding', category: 'COMBAT', usage: 'DrillerLogic: Contact with Panel' },
   'ambience_core': { key: 'ambience_core', label: 'Core Hum', description: 'Background Brown Noise', category: 'AMBIENCE', usage: 'Global Background Track' },
 
-  // --- UNUSED / PROTOTYPES (The "Synth Lab") ---
   'syn_fm_scream': { key: 'syn_fm_scream', label: 'FM Scream', description: 'Aggressive mod', category: 'UNUSED', usage: 'Prototype' },
   'syn_data_burst': { key: 'syn_data_burst', label: 'Data Burst', description: 'Square wave packet', category: 'UNUSED', usage: 'Prototype' },
   'syn_bass_drop': { key: 'syn_bass_drop', label: 'Bass Drop', description: 'Sub frequency dive', category: 'UNUSED', usage: 'Prototype' },
@@ -59,7 +57,6 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'syn_static_wash': { key: 'syn_static_wash', label: 'Wash', description: 'Ocean-like noise', category: 'UNUSED', usage: 'Prototype' },
 };
 
-// Validation Helper: Ensure no keys in AUDIO_CONFIG are missing from Metadata
 export const getUnlistedSounds = () => {
     const configKeys = Object.keys(AUDIO_CONFIG);
     const metaKeys = Object.keys(SOUND_METADATA);

@@ -39,6 +39,17 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'fx_level_up': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
   'fx_reboot_success': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.3, volume: 0.3, pitchVariance: 0, attack: 0.01, tremolo: { rate: 10, depth: 1.0, wave: 'square' } },
   'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
+  // NEW: Roman Candle Effect
+  'fx_exhaust_sizzle': { 
+      type: 'noise', 
+      frequency: [0, 0], 
+      filter: [4000, 2000], 
+      duration: 0.3, 
+      volume: 0.1, 
+      pitchVariance: 0, 
+      distortion: 10,
+      tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' } 
+  },
   'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
   'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },

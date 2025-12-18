@@ -18,7 +18,6 @@ export class HoverDrift extends BTNode {
 
     if (!transform || !motion || !target || !state) return NodeState.FAILURE;
 
-    // Fix: Ensure undefined properties are handled
     if (!state.timers) state.timers = {};
     if (!state.data) state.data = {};
 
@@ -39,7 +38,6 @@ export class HoverDrift extends BTNode {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     
-    // SAFETY: Prevent NaN
     if (dist < 0.001) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -127,14 +125,22 @@ export class FireProjectile extends BTNode {
 export class ExhaustFX extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    if (!transform) return NodeState.FAILURE;
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
+    if (!transform || !state) return NodeState.FAILURE;
 
-    // Config for Continuous Stream
+    // 1. Audio: "Sizzle" Loop (Throttled)
+    // Plays a 0.3s sound every 0.15s to overlap slightly and sound continuous
+    if (!state.timers.sizzle || state.timers.sizzle <= 0) {
+        context.playSound('fx_exhaust_sizzle', transform.x);
+        state.timers.sizzle = 0.15;
+    } else {
+        state.timers.sizzle -= context.delta;
+    }
+
+    // 2. Visuals: Particle Stream
     const rearAngle = transform.rotation + Math.PI;
     const offset = 0.5;
     const spreadAngle = 0.2; 
-    
-    // Multiple particles per tick for dense trail
     const density = 2; 
 
     for (let i = 0; i < density; i++) {
@@ -148,7 +154,6 @@ export class ExhaustFX extends BTNode {
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
         
-        // Shape 1 = Teardrop
         context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0);
     }
 
