@@ -6,9 +6,11 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 
 export class DrillAttack extends BTNode {
-  private readonly TIP_OFFSET = 0.4; 
+  // Dynamic calculation based on model height to ensure tip touches wall exactly
+  private readonly TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
 
   constructor(private interval: number) { super(); }
 
@@ -37,6 +39,7 @@ export class DrillAttack extends BTNode {
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx*dx + dy*dy);
 
+    // Snap to wall
     if (dist > 0.001) {
         const normX = dx / dist;
         const normY = dy / dist;

@@ -9,6 +9,16 @@ const dummy = new THREE.Object3D();
 const color = new THREE.Color();
 const MAX_PARTICLES = 20000;
 
+// Deterministic random to prevent jittering Z every frame, 
+// since we rebuild particles every frame based on index.
+const getZDepth = (index: number) => {
+    // Hashes index to float between -2.0 and 2.0
+    // This distributes particles in volume "around" the z=0 plane.
+    const h = (index * 9301 + 49297) % 233280;
+    const norm = h / 233280; // 0..1
+    return (norm * 4.0) - 2.0; 
+};
+
 export const ParticleActor = () => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => AssetService.get<THREE.BufferGeometry>('GEO_PARTICLE'), []);
@@ -33,7 +43,9 @@ export const ParticleActor = () => {
         const x = sys.x[i]; const y = sys.y[i]; const vx = sys.vx[i]; const vy = sys.vy[i];
         const life = sys.life[i]; const maxLife = sys.maxLife[i];
         const baseSize = sys.size[i]; const shape = sys.shape[i];
-        const zDepth = (i % 2 === 0) ? 3.5 : 6.5;
+        
+        // Volumetric Z-distribution
+        const zDepth = getZDepth(i);
         
         dummy.position.set(x, y, zDepth);
         const speedSq = vx*vx + vy*vy;
