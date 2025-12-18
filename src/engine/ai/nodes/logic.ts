@@ -12,30 +12,57 @@ export class SpawnPhase extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     const render = entity.getComponent<RenderData>(ComponentType.Render);
     
-    if (!state) return NodeState.SUCCESS; // Skip if no state
+    if (!state) return NodeState.SUCCESS;
 
-    // Initialize timer if missing
     if (state.timers.spawn === undefined) {
         state.timers.spawn = this.duration;
         state.current = 'SPAWN';
+        if (render) {
+            render.spawnProgress = 0.0;
+            render.visualRotation = Math.random() * Math.PI * 2; // Random start angle
+        }
     }
 
     if (state.timers.spawn > 0) {
         state.timers.spawn -= context.delta;
         
-        // Visual Scale Effect (Pop in)
         if (render) {
-            const progress = 1.0 - (state.timers.spawn / this.duration);
-            render.visualScale = Math.pow(progress, 2);
+            // Normalized Time (0.0 to 1.0)
+            const t = 1.0 - (state.timers.spawn / this.duration);
+            
+            // 1. DISSOLVE PROGRESS (Linear is fine, InstancedActor curves the position)
+            render.spawnProgress = Math.max(0, Math.min(1, t));
+            
+            // 2. ELASTIC SCALE POP
+            // Grow 0 -> 1.0 -> 1.2 -> 1.0
+            if (t < 0.8) {
+                // Growth Phase
+                render.visualScale = t / 0.8; 
+            } else {
+                // Elastic Snap Phase (0.8 to 1.0)
+                const popT = (t - 0.8) / 0.2; // 0 to 1
+                // Parabolic arc: Starts 1.0, peaks 1.2, ends 1.0
+                // simple sine hump
+                render.visualScale = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
+            }
+
+            // 3. SPIN EFFECT
+            // Fast spin that decays
+            render.visualRotation += (1.0 - t) * 15.0 * context.delta;
         }
 
         return NodeState.RUNNING;
     }
 
-    // Done spawning
+    // COMPLETION
     if (state.current === 'SPAWN') {
         state.current = 'ACTIVE';
-        if (render) render.visualScale = 1.0;
+        if (render) {
+            render.spawnProgress = 1.0;
+            render.visualScale = 1.0;
+            // IGNITION FLASH: Set flash to 0.6 (White-Hot) to signal "I'm ready"
+            render.flash = 0.6; 
+        }
     }
 
     return NodeState.SUCCESS;

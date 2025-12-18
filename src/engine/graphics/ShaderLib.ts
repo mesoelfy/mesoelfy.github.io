@@ -11,11 +11,13 @@ export const ShaderLib = {
       attribute vec3 instanceColor;
       #endif
       attribute vec3 barycentric;
+      attribute float spawnProgress;
       
       varying vec3 vColor;
       varying vec3 vBarycentric;
       varying vec2 vUv;
       varying vec3 vPos;
+      varying float vSpawn;
       
       uniform float uTime;
     `,
@@ -25,6 +27,7 @@ export const ShaderLib = {
       varying vec3 vBarycentric;
       varying vec2 vUv;
       varying vec3 vPos;
+      varying float vSpawn;
       
       uniform float uTime;
     `,
@@ -38,27 +41,46 @@ export const ShaderLib = {
           vBarycentric = barycentric;
           vUv = uv;
           vPos = position;
+          vSpawn = spawnProgress;
+          
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
         }
       `,
       fragment: `
         void main() {
-          float width = 1.5;
-          float edge = edgeFactor(vBarycentric, width);
+          // --- SPAWN DISSOLVE LOGIC ---
+          float noise = snoise(vPos * 3.0 + vec3(0.0, uTime * 0.5, 0.0)) * 0.5 + 0.5;
+          float threshold = (1.0 - vSpawn) * 1.4 - 0.2;
           
-          // Base Glow from Barycentric
-          float glow = pow(1.0 - edge, 0.4);
+          if (noise < threshold) discard;
+
+          float edgeWidth = 0.1;
+          float burn = smoothstep(threshold, threshold + edgeWidth, noise);
+          float edgeIntensity = 1.0 - burn; 
+          
+          // --- COLOR LOGIC ---
+          float width = 1.5;
+          float wireEdge = edgeFactor(vBarycentric, width);
+          
+          // 'glow' represents how close we are to the wireframe line (1.0 = on line, 0.0 = face center)
+          float glow = pow(1.0 - wireEdge, 0.4);
           
           vec3 coreColor = vColor;
-          
-          // Determine intensity of the incoming color
           float intensity = max(max(vColor.r, vColor.g), vColor.b);
           
-          // If intensity is high (Hit Flash), reduce white mixing to keep it saturated Red
-          float whiteMix = 0.8 * (1.0 - smoothstep(1.0, 3.0, intensity));
+          // Determine if we are in "High Intensity" (Flash) mode
+          // 0.0 = Normal, 1.0 = Flash
+          float isFlash = smoothstep(1.0, 3.0, intensity);
           
-          vec3 edgeColor = mix(vColor, vec3(1.0), whiteMix);
-          vec3 finalColor = mix(coreColor, edgeColor, glow);
+          // Normal: Edges are White. Flash: Edges are colored (to prevent pink/pastel look).
+          vec3 wireColor = mix(vec3(1.0), vColor, isFlash);
+          
+          // Mix: Face -> Wireframe
+          vec3 finalColor = mix(coreColor, wireColor, glow);
+
+          // Apply Burn Edge (Blue/White Dissolve Line)
+          vec3 burnColor = vec3(0.8, 1.0, 1.0) * 4.0; 
+          finalColor += burnColor * edgeIntensity;
 
           gl_FragColor = vec4(finalColor, 1.0);
         }

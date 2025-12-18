@@ -15,6 +15,9 @@ const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const STRIDE = 4;
 
+// Visual tweak: How far below the grid they start
+const SPAWN_Y_OFFSET = 3.5;
+
 interface InstancedActorProps {
   tag: string;
   geometry: THREE.BufferGeometry;
@@ -35,6 +38,11 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
   useLayoutEffect(() => {
     if (meshRef.current) {
         meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
+        
+        meshRef.current.geometry.setAttribute(
+            'spawnProgress', 
+            new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1)
+        );
     }
   }, [maxCount]);
 
@@ -46,6 +54,8 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
     const entities = registry.getByTag(tag);
     let count = 0;
     const transformData = TransformStore.data;
+    
+    const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
 
     for (const entity of entities) {
       if (count >= maxCount) break;
@@ -61,15 +71,35 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
       const rot = transformData[idx + 2];
       const scale = transformData[idx + 3];
 
+      // Base Position
       tempObj.position.set(x, y, z);
+      
       const render = entity.getComponent<RenderData>(ComponentType.Render);
       let finalScale = scale;
       let visualRot = 0;
+      let spawnVal = 1.0;
 
       if (render) {
           finalScale *= render.visualScale;
           visualRot = render.visualRotation;
           tempColor.setRGB(render.r, render.g, render.b);
+          spawnVal = render.spawnProgress;
+
+          // --- VISUAL OFFSET LOGIC ---
+          // If spawning, rise from below
+          if (spawnVal < 1.0) {
+              // Cubic Ease Out for Position: Make it arrive smoothly
+              // t goes 0 -> 1
+              // We want offset to go -3.0 -> 0
+              const t = spawnVal;
+              const ease = 1 - Math.pow(1 - t, 3); // Cubic Ease Out
+              
+              // Apply Inverse: Start low, move to 0
+              // When t=0 (start), offset = -SPAWN_Y_OFFSET
+              // When t=1 (end), offset = 0
+              const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
+              tempObj.position.y += yOffset;
+          }
       } else {
           tempColor.copy(defaultColor);
       }
@@ -82,12 +112,16 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
       tempObj.updateMatrix();
       meshRef.current.setMatrixAt(count, tempObj.matrix);
       if (meshRef.current.instanceColor) meshRef.current.setColorAt(count, tempColor);
+      
+      spawnAttr.setX(count, spawnVal);
+      
       count++;
     }
 
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
+    spawnAttr.needsUpdate = true;
   });
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
