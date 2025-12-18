@@ -139,9 +139,9 @@ export const MobileBootstrapper = () => {
     HealthSystem: healthSystem,
     ProgressionSystem: progressionSystem,
     GameStateSystem: gameStateSystem,
-    InteractionSystem: interaction,
+    InteractionSystem: interactionSystem,
     ParticleSystem: particleSystem,
-    ShakeSystem: shake
+    ShakeSystem: shakeSystem
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
@@ -150,21 +150,21 @@ export const MobileBootstrapper = () => {
   // INPUT
   engine.registerSystem(timeSystem, SystemPhase.INPUT);
   engine.registerSystem(inputSystem, SystemPhase.INPUT);
-  engine.registerSystem(interaction, SystemPhase.INPUT);
+  engine.registerSystem(interactionSystem, SystemPhase.INPUT);
   
   // LOGIC
   engine.registerSystem(panelSystem, SystemPhase.LOGIC);
   engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
-  engine.registerSystem(targeting, SystemPhase.LOGIC);
+  engine.registerSystem(targetingSystem, SystemPhase.LOGIC);
   engine.registerSystem(waveSystem, SystemPhase.LOGIC);
-  engine.registerSystem(structure, SystemPhase.LOGIC);
-  engine.registerSystem(behavior, SystemPhase.LOGIC);
+  engine.registerSystem(structureSystem, SystemPhase.LOGIC);
+  engine.registerSystem(behaviorSystem, SystemPhase.LOGIC);
   
   // PHYSICS
   engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(orbital, SystemPhase.PHYSICS);
-  engine.registerSystem(guidance, SystemPhase.PHYSICS);
-  engine.registerSystem(projectile, SystemPhase.PHYSICS);
+  engine.registerSystem(orbitalSystem, SystemPhase.PHYSICS);
+  engine.registerSystem(guidanceSystem, SystemPhase.PHYSICS);
+  engine.registerSystem(projectileSystem, SystemPhase.PHYSICS);
   
   // COLLISION (Mobile uses specialized combat)
   engine.registerSystem(mobileCombatSystem, SystemPhase.COLLISION);
@@ -172,7 +172,7 @@ export const MobileBootstrapper = () => {
   // STATE
   engine.registerSystem(healthSystem, SystemPhase.STATE);
   engine.registerSystem(progressionSystem, SystemPhase.STATE);
-  engine.registerSystem(lifeCycle, SystemPhase.STATE);
+  engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
   
   // RENDER
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
