@@ -8,6 +8,7 @@ import { useMetaUrl } from './hooks/useMetaUrl';
 import { useMetaTitle } from './hooks/useMetaTitle';
 import { useMetaTheme } from './hooks/useMetaTheme';
 import { useWindowFocus } from '@/ui/sim/hooks/useWindowFocus';
+import { initializeConsoleScrubber } from './ConsoleScrubber';
 
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
@@ -15,6 +16,11 @@ export const MetaManager = () => {
 
   useEffect(() => {
     if (window.hasLoggedIdentity) return;
+    
+    // 1. Initialize Log Scrubber
+    initializeConsoleScrubber();
+
+    // 2. Print Identity
     console.log(`%c${ASCII_CONSOLE.replace(/^\n/, '')}\n// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.`, CONSOLE_STYLE);
     (window as any).hasLoggedIdentity = true;
   }, []);
