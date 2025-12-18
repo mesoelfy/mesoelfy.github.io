@@ -46,7 +46,10 @@ export class InteractionSystem implements IInteractionSystem {
   private handleRevival(cursor: {x: number, y: number}, time: number) {
     const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
-    const padding = 2.0; 
+    
+    // FIXED: Reduced padding from 2.0 (80px) to 0.1 (4px) to prevent overlap with Social Panel
+    const padding = 0.1; 
+    
     const isHovering = 
         cursor.x >= rect.left - padding && 
         cursor.x <= rect.right + padding && 
@@ -57,7 +60,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DECOUPLED WRITE: Emit event instead of calling method
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
             
             this.lastRepairTime = time;
@@ -83,9 +85,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // Panel System handles its own logic, but we could eventually event-ize this too.
-            // For now, PanelSystem is a core injected dependency, so calling it is "okay" 
-            // but effectively we are telling it to heal.
             this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
