@@ -1,10 +1,11 @@
-import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents } from '@/engine/signals/FastEventBus';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransientDOMService } from '@/engine/services/TransientDOMService';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { EventReader } from '@/engine/signals/EventReader';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -17,12 +18,10 @@ export class ProgressionSystem implements IGameSystem {
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
-  private fastEvents: IFastEventService;
-  private readCursor = 0;
+  private reader: EventReader;
 
   constructor(private events: IGameEventService) {
-    this.fastEvents = ServiceLocator.getFastEventBus();
-    this.readCursor = this.fastEvents.getCursor();
+    this.reader = new EventReader(ServiceLocator.getFastEventBus());
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
@@ -32,7 +31,7 @@ export class ProgressionSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-      this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+      this.reader.process((id, a1, a2, a3, a4) => {
           if (id === FastEvents.ENEMY_DESTROYED) {
               // a1=id, a2=x, a3=y, a4=typeId
               this.addScore(1);
@@ -43,12 +42,7 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    // PUSH: Visual Update (Zero React Render)
     TransientDOMService.update('score-display', this.score.toString().padStart(4, '0'));
-    
-    // PUSH: Store Update (Lazy - only if needed, or we can just do it on Game Over)
-    // We update store occasionally if we want the UI to persist on pause, 
-    // but for performance, we can skip frame-by-frame store updates.
   }
 
   public addXp(amount: number) {
@@ -59,14 +53,10 @@ export class ProgressionSystem implements IGameSystem {
         this.upgradePoints++;
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
-        // PUSH: Global Events
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
-        
-        // PUSH: Store Update (Low Frequency - Safe)
         this.syncStore();
     }
     
-    // PUSH: Visual Update
     const xpPercent = this.xpToNextLevel > 0 ? (this.xp / this.xpToNextLevel) : 0;
     TransientDOMService.update('xp-progress', xpPercent);
   }
@@ -75,7 +65,7 @@ export class ProgressionSystem implements IGameSystem {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
-              this.syncStore(); // Sync points reduction
+              this.syncStore(); 
               return;
           }
           this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
@@ -84,7 +74,6 @@ export class ProgressionSystem implements IGameSystem {
   }
 
   private syncStore() {
-      // Direct store update for React UI (Upgrades menu, etc)
       useGameStore.getState().setProgressionData({
           xp: this.xp,
           level: this.level,
@@ -103,9 +92,7 @@ export class ProgressionSystem implements IGameSystem {
         'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
-      this.readCursor = this.fastEvents ? this.fastEvents.getCursor() : 0;
       
-      // Reset Visuals
       TransientDOMService.update('score-display', "0000");
       TransientDOMService.update('xp-progress', 0);
       TransientDOMService.update('player-lvl-text', "LVL_01");

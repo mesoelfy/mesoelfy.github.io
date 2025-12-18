@@ -4,22 +4,23 @@ import { ShakeSystem } from './ShakeSystem';
 import { VFX_RECIPES } from '@/engine/config/VFXConfig';
 import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { useStore } from '@/engine/state/global/useStore';
+import { EventReader } from '@/engine/signals/EventReader';
 
 export class VFXSystem implements IGameSystem {
-  private readCursor = 0;
+  private reader: EventReader;
 
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
     private events: IGameEventService,
-    private fastEvents: IFastEventService
+    fastEvents: IFastEventService
   ) {
-    this.readCursor = this.fastEvents.getCursor();
+    this.reader = new EventReader(fastEvents);
     this.setupListeners();
   }
 
   update(delta: number, time: number): void {
-    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+    this.reader.process((id, a1, a2, a3, a4) => {
         if (id === FastEvents.SPAWN_FX) {
             const key = FX_ID_MAP[a1];
             if (key) this.executeRecipe(key, a2, a3, a4);
@@ -58,7 +59,6 @@ export class VFXSystem implements IGameSystem {
   }
 
   private spawnDynamicImpact(x: number, y: number, packedColor: number, impactAngle: number) {
-      // Unpack Color
       const r = ((packedColor >> 16) & 255) / 255;
       const g = ((packedColor >> 8) & 255) / 255;
       const b = (packedColor & 255) / 255;
@@ -69,14 +69,10 @@ export class VFXSystem implements IGameSystem {
       const count = this.randomRange(2, 3);
       
       for(let i=0; i<count; i++) {
-          // --- RICOCHET LOGIC ---
           const side = Math.random() > 0.5 ? 1 : -1;
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
-          // KAMIKAZE PHYSICS PROFILE:
-          // High Speed (10-22) + Long Life (0.6-1.0)
-          // This allows Friction (0.95) to stop them mid-air before they die.
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;

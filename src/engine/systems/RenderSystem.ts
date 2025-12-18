@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -7,6 +7,7 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { EventReader } from '@/engine/signals/EventReader';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -17,23 +18,21 @@ const COL_DEAD = new THREE.Color('#FF003C');
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
   private readonly FLASH_DECAY = 5.0; 
-  private fastEvents: IFastEventService;
-  private readCursor = 0;
+  private reader: EventReader;
 
   constructor(
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private interactionSystem: IInteractionSystem
   ) {
-    this.fastEvents = ServiceLocator.getFastEventBus();
-    this.readCursor = this.fastEvents.getCursor();
+    this.reader = new EventReader(ServiceLocator.getFastEventBus());
   }
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
 
     // Process Hit Flashes
-    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1) => {
+    this.reader.process((id, a1) => {
         if (id === FastEvents.ENEMY_DAMAGED) {
             // a1 = entityID
             const entity = this.registry.getEntity(a1);

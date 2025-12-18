@@ -1,26 +1,27 @@
 import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, FX_ID_MAP, FX_IDS, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_ID_MAP, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { EventReader } from '@/engine/signals/EventReader';
 
 export class AudioDirector implements IGameSystem {
   private logTimer = 0;
-  private readCursor = 0;
+  private reader: EventReader;
   
   constructor(
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    fastEvents: IFastEventService,
     private audio: IAudioService
   ) {
-    this.readCursor = this.fastEvents.getCursor();
+    this.reader = new EventReader(fastEvents);
     this.setupEventListeners();
   }
 
   update(delta: number, time: number): void {
     this.logTimer += delta;
 
-    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+    this.reader.process((id, a1, a2, a3, a4) => {
         // 1. Explicit Play Sound Command
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
@@ -29,7 +30,7 @@ export class AudioDirector implements IGameSystem {
             }
         }
         
-        // 2. Player Fired (Previously implicit or via separate mechanism)
+        // 2. Player Fired
         else if (id === FastEvents.PLAYER_FIRED) {
             // a1 = x
             this.audio.playSound('fx_player_fire', this.calculatePan(a1));
@@ -39,7 +40,6 @@ export class AudioDirector implements IGameSystem {
         else if (id === FastEvents.ENEMY_DESTROYED) {
             // a2=x, a4=typeId
             const pan = this.calculatePan(a2);
-            // Kamikaze (ID 2) gets heavy impact
             if (a4 === ENEMY_ID_MAP['kamikaze']) {
                 this.audio.playSound('fx_impact_heavy', pan);
             } else {
@@ -56,8 +56,6 @@ export class AudioDirector implements IGameSystem {
   }
 
   private setupEventListeners() {
-    // Only keeping UI/Panel events here. Combat events migrated to FastBus.
-
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const pan = this.getPanelPan(p.id);
         this.audio.playSound('loop_heal', pan);
