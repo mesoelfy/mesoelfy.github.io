@@ -1,19 +1,18 @@
-import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { CollisionMatrix } from '@/engine/handlers/combat/CollisionMatrix';
 import { CombatContext } from '@/engine/handlers/combat/types';
-import { FastEvents, FX_IDS, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService,
-    private fastEvents: IFastEventService,
     private audio: IAudioService
   ) {}
 
@@ -34,35 +33,27 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              this.fastEvents.emit(FastEvents.PLAYER_HIT, amount);
+              this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
-              const id = FX_IDS[type];
-              if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x, y);
+              this.events.emit(GameEvents.SPAWN_FX, { type, x, y });
           },
           spawnImpact: (x, y, r, g, b, angle) => {
-              const cr = Math.min(1, Math.max(0, r));
-              const cg = Math.min(1, Math.max(0, g));
-              const cb = Math.min(1, Math.max(0, b));
-              const packed = (Math.floor(cr * 255) << 16) | (Math.floor(cg * 255) << 8) | Math.floor(cb * 255);
-              this.fastEvents.emit(FastEvents.SPAWN_IMPACT, x, y, packed, angle);
+              // Convert RGB normalized (0-1) to Hex String
+              const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
+              const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+              this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
           playAudio: (key) => this.audio.playSound(key),
           playSpatialAudio: (key, x) => {
-              const idKey = key.toUpperCase();
-              const soundId = FX_IDS[idKey];
-              if (soundId) {
-                  this.fastEvents.emit(FastEvents.PLAY_SOUND, soundId, x);
-              } else {
-                  this.audio.playSound(key);
-              }
+              this.events.emit(GameEvents.PLAY_SOUND, { key: key.toLowerCase(), x });
           },
           addTrauma: (amount) => {
-              this.fastEvents.emit(FastEvents.TRAUMA, amount);
+              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
           },
           flashEntity: (id) => {
-              this.fastEvents.emit(FastEvents.ENEMY_DAMAGED, id);
+              this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
           }
       };
 
@@ -76,8 +67,12 @@ export class CombatSystem implements IGameSystem {
       if (identity && transform) {
           const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
           if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
-              const typeId = ENEMY_ID_MAP[identity.variant] || 0;
-              this.fastEvents.emit(FastEvents.ENEMY_DESTROYED, entity.id as number, transform.x, transform.y, typeId);
+              this.events.emit(GameEvents.ENEMY_DESTROYED, { 
+                  id: entity.id as number, 
+                  x: transform.x, 
+                  y: transform.y, 
+                  type: identity.variant 
+              });
           }
       }
 
@@ -97,10 +92,7 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          const id = FX_IDS[finalFX];
-          if (id) {
-              this.fastEvents.emit(FastEvents.SPAWN_FX, id, transform.x, transform.y, angleToUse);
-          }
+          this.events.emit(GameEvents.SPAWN_FX, { type: finalFX, x: transform.x, y: transform.y, angle: angleToUse });
       }
   }
 

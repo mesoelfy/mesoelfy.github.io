@@ -8,7 +8,6 @@ import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
-import { FastEventService } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { SystemPhase } from '@/engine/interfaces';
 
@@ -34,18 +33,16 @@ import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
 import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 
-import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, ICombatSystem, IGameEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 
 class MobileCombatSystem implements IGameSystem, ICombatSystem {
     constructor(
         private registry: IEntityRegistry,
         private events: IGameEventService,
-        private fastEvents: IFastEventService,
         private audio: IAudioService
     ) {
         this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
@@ -63,8 +60,7 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private kill(entity: Entity) {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
-            const id = FX_IDS['EXPLOSION_PURPLE'];
-            this.fastEvents.emit(FastEvents.SPAWN_FX, id, t.x, t.y);
+            this.events.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: t.x, y: t.y });
             this.audio.playSound('fx_impact_light');
         }
         this.registry.destroyEntity(entity.id);
@@ -87,10 +83,6 @@ export const MobileBootstrapper = () => {
   try { eventService = ServiceLocator.getGameEventBus(); } 
   catch { eventService = new GameEventService(); ServiceLocator.register('GameEventService', eventService); }
 
-  let fastEventService;
-  try { fastEventService = ServiceLocator.getFastEventBus(); } 
-  catch { fastEventService = new FastEventService(); ServiceLocator.register('FastEventService', fastEventService); }
-
   // --- REGISTRATIONS ---
   registerAllComponents();
   registerAllBehaviors();
@@ -111,10 +103,10 @@ export const MobileBootstrapper = () => {
   
   const particleSystem = new ParticleSystem();
   const shakeSystem = new ShakeSystem(eventService);
-  const audioDirector = new AudioDirector(panelSystem, eventService, fastEventService, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
+  const audioDirector = new AudioDirector(panelSystem, eventService, audioService);
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService);
   
-  const mobileCombatSystem = new MobileCombatSystem(registry, eventService, fastEventService, audioService);
+  const mobileCombatSystem = new MobileCombatSystem(registry, eventService, audioService);
   const projectileSystem = new ProjectileSystem(registry);
   
   const targetingSystem = new TargetingSystem(registry, panelSystem);
@@ -124,8 +116,8 @@ export const MobileBootstrapper = () => {
   
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
   const structureSystem = new StructureSystem(panelSystem);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventService);
+  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventService);
   const waveSystem = new MobileWaveSystem(spawner);
 
   // Injection

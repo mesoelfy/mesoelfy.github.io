@@ -1,55 +1,47 @@
-import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
 import { VFX_RECIPES } from '@/engine/config/VFXConfig';
-import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
 import { useStore } from '@/engine/state/global/useStore';
-import { EventReader } from '@/engine/signals/EventReader';
 
 export class VFXSystem implements IGameSystem {
-  private reader: EventReader;
-
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
-    private events: IGameEventService,
-    fastEvents: IFastEventService
+    private events: IGameEventService
   ) {
-    this.reader = new EventReader(fastEvents);
     this.setupListeners();
   }
 
-  update(delta: number, time: number): void {
-    this.reader.process((id, a1, a2, a3, a4) => {
-        if (id === FastEvents.SPAWN_FX) {
-            const key = FX_ID_MAP[a1];
-            if (key) this.executeRecipe(key, a2, a3, a4);
-        }
-        else if (id === FastEvents.TRAUMA) {
-            this.addTrauma(a1);
-        }
-        else if (id === FastEvents.SPAWN_IMPACT) {
-            // a1=x, a2=y, a3=packedColor, a4=angle
-            this.spawnDynamicImpact(a1, a2, a3, a4); 
-        }
-    });
-  }
+  update(delta: number, time: number): void {}
 
   teardown(): void {}
 
   private setupListeners() {
+    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
+        this.executeRecipe(p.type, p.x, p.y, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
+        this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => {
+        this.shakeSystem.addTrauma(p.amount);
+    });
+
+    // Game Logic Triggers
     this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const isBig = p.damage > 10;
-        if (isBig) this.triggerHitStop(0.05);
+        if (p.damage > 10) this.triggerHitStop(0.05);
     });
 
     this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.addTrauma(0.75); 
+        this.shakeSystem.addTrauma(0.75); 
         this.triggerHitStop(0.1); 
     });
 
     this.events.subscribe(GameEvents.GAME_OVER, () => {
-        this.addTrauma(1.0);
+        this.shakeSystem.addTrauma(1.0);
         this.triggerHitStop(0.5); 
     });
     
@@ -58,14 +50,7 @@ export class VFXSystem implements IGameSystem {
     });
   }
 
-  private spawnDynamicImpact(x: number, y: number, packedColor: number, impactAngle: number) {
-      const r = ((packedColor >> 16) & 255) / 255;
-      const g = ((packedColor >> 8) & 255) / 255;
-      const b = (packedColor & 255) / 255;
-      
-      const toHex = (n: number) => Math.floor(n * 255).toString(16).padStart(2, '0');
-      const hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-      
+  private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
       const count = this.randomRange(2, 3);
       
       for(let i=0; i<count; i++) {
@@ -78,7 +63,7 @@ export class VFXSystem implements IGameSystem {
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          this.particleSystem.spawn(x, y, hex, vx, vy, life, 1.0); 
+          this.particleSystem.spawn(x, y, hexColor, vx, vy, life, 1.0); 
       }
   }
 
@@ -139,10 +124,6 @@ export class VFXSystem implements IGameSystem {
 
   private randomRange(min: number, max: number) {
       return min + Math.random() * (max - min);
-  }
-
-  private addTrauma(amount: number) {
-      this.shakeSystem.addTrauma(amount);
   }
 
   private triggerHitStop(duration: number) {}

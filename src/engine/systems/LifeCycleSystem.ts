@@ -4,9 +4,9 @@ import { HealthData } from '@/engine/ecs/components/HealthData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
-import { FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Tag } from '@/engine/ecs/types';
 
 export class LifeCycleSystem implements IGameSystem {
   constructor(
@@ -14,7 +14,7 @@ export class LifeCycleSystem implements IGameSystem {
     private events: IGameEventService
   ) {
     this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        this.registry.clear();
+        this.purgeHostiles();
     });
   }
 
@@ -50,13 +50,25 @@ export class LifeCycleSystem implements IGameSystem {
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
              
-             // Emitting SPAWN_FX via normal event bus for VFXSystem to pick up
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
           
           this.registry.destroyEntity(entity.id);
       }
     }
+  }
+
+  private purgeHostiles() {
+      // Destroy everything EXCEPT the player
+      // This keeps the reticle moving and the camera logic working
+      const allEntities = this.registry.getAll();
+      for (const entity of allEntities) {
+          if (!entity.hasTag(Tag.PLAYER)) {
+              // Optional: Spawn disappearing FX for enemies?
+              // For now, just silent wipe to be instant
+              this.registry.destroyEntity(entity.id);
+          }
+      }
   }
 
   teardown(): void {}

@@ -18,7 +18,6 @@ export class HoverDrift extends BTNode {
 
     if (!transform || !motion || !target || !state) return NodeState.FAILURE;
 
-    // --- STUN LOGIC ---
     if (state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
@@ -80,11 +79,6 @@ export class FaceTarget extends BTNode {
 
     if (!transform || !target) return NodeState.FAILURE;
 
-    // We let them rotate even if stunned? 
-    // No, freeze rotation too for "Impact Feel"
-    // But since FaceTarget sets Success instantly, we skip this logic for now or implement rotation logic elsewhere.
-    // For now, let's keep rotation active during stun to prevent weird snapping.
-
     if (motion) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -127,7 +121,8 @@ export class FireProjectile extends BTNode {
         motion.vy = -dirY * 5.0;
     }
 
-    context.spawnLaunchSparks(transform.x + dirX, transform.y + dirY, transform.rotation);
+    // UPDATED: Unified API
+    context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
 
     return NodeState.SUCCESS;
   }

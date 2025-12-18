@@ -5,7 +5,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
-import { AudioKey, VFXKey, GeometryKey, MaterialKey } from '@/engine/config/AssetKeys';
+import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -25,7 +25,6 @@ export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
   getGameEventBus(): IGameEventService;
-  getFastEventBus(): IFastEventService;
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
@@ -41,14 +40,6 @@ export interface IGameEventService {
   emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void;
   clear(): void;
 }
-
-export interface IFastEventService {
-  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
-  readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number;
-  getCursor(): number;
-}
-
-// --- SEGREGATED STATE INTERFACES ---
 
 export interface IVitalsRead {
   playerHealth: number;
@@ -74,8 +65,6 @@ export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgression
   tickReboot(amount: number): void;
   decayReboot(amount: number): void;
 }
-
-// --- END SEGREGATED INTERFACES ---
 
 export interface IEntityRegistry {
   createEntity(): Entity;
@@ -145,7 +134,7 @@ export interface IPanelSystem extends IGameSystem {
   unregister(id: string): void;
   refreshAll(): void;
   refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number, silent?: boolean): void;
+  damagePanel(id: string, amount: number, silent?: boolean, sourceX?: number, sourceY?: number): void;
   healPanel(id: string, amount: number, sourceX?: number): void;
   decayPanel(id: string, amount: number): void;
   destroyAll(): void;

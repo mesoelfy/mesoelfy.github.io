@@ -1,12 +1,9 @@
-import { IGameSystem, IGameEventService, IAudioService, IPanelSystem, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
-import { FastEvents } from '@/engine/signals/FastEventBus';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransientDOMService } from '@/engine/services/TransientDOMService';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { EventReader } from '@/engine/signals/EventReader';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -14,34 +11,21 @@ export class HealthSystem implements IGameSystem {
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
   
-  private reader: EventReader;
-
   constructor(
     private events: IGameEventService,
     private audio: IAudioService,
     private panelSystem: IPanelSystem
   ) {
-    this.reader = new EventReader(ServiceLocator.getFastEventBus());
     this.reset();
     
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => {
-        this.tickReboot(p.amount);
-    });
-
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => {
-        this.decayReboot(p.amount);
+    this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => this.tickReboot(p.amount));
+    this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount));
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        this.damagePlayer(p.damage);
     });
   }
 
   update(delta: number, time: number): void {
-    // Process Fast Events via Reader
-    this.reader.process((id, a1) => {
-        if (id === FastEvents.PLAYER_HIT) {
-            this.damagePlayer(a1); // a1 = damage amount
-            this.events.emit(GameEvents.PLAYER_HIT, { damage: a1 });
-        }
-    });
-
     if (this.isGameOver) return;
     
     if (this.panelSystem.systemIntegrity <= 0) {

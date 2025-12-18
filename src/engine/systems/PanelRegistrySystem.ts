@@ -17,29 +17,30 @@ export class PanelRegistrySystem implements IPanelSystem {
   ) {
     DOMSpatialService.refreshAll();
     
+    // Listen for Upgrade Selection
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = useGameStore.getState().restoreAllPanels();
-            
             if (restoredCount > 0) {
                 this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
                 this.audio.playSound('fx_reboot_success'); 
             }
         }
     });
+
+    // Listen for Zen Mode (Purge)
+    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        // Destroy all panels to match the "Purge" aesthetic (System wiped)
+        this.destroyAll();
+    });
   }
 
-  update(delta: number, time: number): void {
-      // Logic handled via events/store actions
-  }
+  update(delta: number, time: number): void {}
 
   teardown(): void {}
 
   public register(id: string, element: HTMLElement) {
       DOMSpatialService.register(id, element);
-      // The store handles the logical registration
-      // But we call registerPanel here to ensure the store knows about the DOM element's existence if needed,
-      // although React usually handles that. This call primarily resets the health data in the store.
       useGameStore.getState().registerPanel(id, element);
   }
 

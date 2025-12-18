@@ -641,3 +641,6 @@ it appears that I'm seeing some white particles from an enemy when it dies? Am I
 slots within a green health panel like IMG_XX can be targeted by a new driller type. if it gets destroyed, it does a certain percentage amount of damage to the entire panel. It can't be brought back online until the panel is restored to 100%. If a unit like the weaver is damaging a slot, the "muncher" will look for its own nearest slot that is still at 100%.
 
 BURROWER (goes inside)
+
+relabel motion grid
+fix red game over OS and grid state

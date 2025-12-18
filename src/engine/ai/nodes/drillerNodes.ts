@@ -9,7 +9,6 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 
 export class DrillAttack extends BTNode {
-  // Dynamic calculation based on model height to ensure tip touches wall exactly
   private readonly TIP_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
 
   constructor(private interval: number) { super(); }
@@ -39,7 +38,6 @@ export class DrillAttack extends BTNode {
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx*dx + dy*dy);
 
-    // Snap to wall
     if (dist > 0.001) {
         const normX = dx / dist;
         const normY = dy / dist;
@@ -54,7 +52,8 @@ export class DrillAttack extends BTNode {
         motion.vy = 0;
     }
 
-    context.spawnDrillSparks(destX, destY, transform.rotation);
+    // UPDATED: Using unified spawnFX
+    context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
 
     if (!state.timers.drillAudio || state.timers.drillAudio <= 0) {
         context.playSound('loop_drill', transform.x);
@@ -67,7 +66,6 @@ export class DrillAttack extends BTNode {
         const damage = combat ? combat.damage : 1;
         
         if (target.type === 'PANEL' && target.id) {
-            // UPDATED: Pass transform coordinates as source
             context.damagePanel(target.id, damage, transform.x, transform.y);
             state.timers.drillDmg = this.interval;
         } else {

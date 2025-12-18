@@ -1,11 +1,8 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents } from '@/engine/signals/FastEventBus';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { TransientDOMService } from '@/engine/services/TransientDOMService';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { EventReader } from '@/engine/signals/EventReader';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -18,27 +15,20 @@ export class ProgressionSystem implements IGameSystem {
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
-  private reader: EventReader;
-
   constructor(private events: IGameEventService) {
-    this.reader = new EventReader(ServiceLocator.getFastEventBus());
-
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
+    });
+    
+    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+        this.addScore(1);
+        this.addXp(10);
     });
     
     this.reset();
   }
 
-  update(delta: number, time: number): void {
-      this.reader.process((id, a1, a2, a3, a4) => {
-          if (id === FastEvents.ENEMY_DESTROYED) {
-              // a1=id, a2=x, a3=y, a4=typeId
-              this.addScore(1);
-              this.addXp(10);
-          }
-      });
-  }
+  update(delta: number, time: number): void {}
 
   public addScore(amount: number) {
     this.score += amount;

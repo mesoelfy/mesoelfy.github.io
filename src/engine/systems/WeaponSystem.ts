@@ -2,11 +2,9 @@ import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEv
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 
@@ -55,8 +53,9 @@ export class WeaponSystem implements IGameSystem {
       if (!t) return;
 
       const count = 360; const speed = 45; const damage = 100;
-      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], t.x, t.y);
-      FastEventBus.emit(FastEvents.TRAUMA, 1.0); 
+      
+      this.events.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: t.x, y: t.y });
+      this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -92,7 +91,7 @@ export class WeaponSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    FastEventBus.emit(FastEvents.PLAYER_FIRED, pPos.x, pPos.y);
+    this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y });
     this.lastFireTime = time;
   }
 

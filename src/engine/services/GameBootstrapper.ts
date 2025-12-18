@@ -11,7 +11,6 @@ import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
-import { FastEventService } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { SystemPhase } from '@/engine/interfaces';
 
@@ -49,16 +48,9 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
-  // --- PERSISTENT SERVICES (Singletons) ---
-  // These survive game restarts to prevent memory leaks and overwrites
-
   let eventBus;
   try { eventBus = ServiceLocator.getGameEventBus(); } 
   catch { eventBus = new GameEventService(); ServiceLocator.register('GameEventService', eventBus); }
-
-  let fastBus;
-  try { fastBus = ServiceLocator.getFastEventBus(); } 
-  catch { fastBus = new FastEventService(); ServiceLocator.register('FastEventService', fastBus); }
 
   let audioService;
   try { audioService = ServiceLocator.getAudioService(); } 
@@ -84,16 +76,16 @@ export const GameBootstrapper = () => {
   const physicsSystem = new PhysicsSystem(registry);
   const particles = new ParticleSystem();
   const shake = new ShakeSystem(eventBus);
-  const audioDirector = new AudioDirector(panelSystem, eventBus, fastBus, audioService);
-  const vfx = new VFXSystem(particles, shake, eventBus, fastBus);
+  const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
+  const vfx = new VFXSystem(particles, shake, eventBus);
 
   const interaction = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const movement = new PlayerMovementSystem(inputSystem, registry, interaction, gameStateSystem);
   const weapons = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
-  const behavior = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particles, audioService);
+  const behavior = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particles, audioService, eventBus);
   const targeting = new TargetingSystem(registry, panelSystem);
   const projectile = new ProjectileSystem(registry);
-  const combat = new CombatSystem(registry, eventBus, fastBus, audioService);
+  const combat = new CombatSystem(registry, eventBus, audioService);
   const collision = new CollisionSystem(physicsSystem, combat, registry);
   
   const orbital = new OrbitalSystem(registry);
@@ -101,7 +93,7 @@ export const GameBootstrapper = () => {
   const lifeCycle = new LifeCycleSystem(registry, eventBus);
   const waves = new WaveSystem(spawner, panelSystem);
   const structure = new StructureSystem(panelSystem);
-  const render = new RenderSystem(registry, gameStateSystem, interaction);
+  const render = new RenderSystem(registry, gameStateSystem, interaction, eventBus);
 
   // Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -125,7 +117,7 @@ export const GameBootstrapper = () => {
   
   // 1. INPUT
   engine.registerSystem(timeSystem, SystemPhase.INPUT);
-  engine.registerSystem(inputSystem as any, SystemPhase.INPUT); // Cast as it's reused
+  engine.registerSystem(inputSystem as any, SystemPhase.INPUT); 
   engine.registerSystem(interaction, SystemPhase.INPUT);
   engine.registerSystem(movement, SystemPhase.INPUT);
   
@@ -148,7 +140,7 @@ export const GameBootstrapper = () => {
   engine.registerSystem(collision, SystemPhase.COLLISION);
   engine.registerSystem(combat, SystemPhase.COLLISION);
   
-  // 5. STATE (Post-Collision processing)
+  // 5. STATE
   engine.registerSystem(healthSystem, SystemPhase.STATE);
   engine.registerSystem(progressionSystem, SystemPhase.STATE);
   engine.registerSystem(lifeCycle, SystemPhase.STATE);

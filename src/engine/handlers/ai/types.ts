@@ -15,14 +15,11 @@ export interface AIContext {
       ownerId?: number
   ) => Entity;
 
-  spawnDrillSparks: (x: number, y: number, angle: number) => void; 
-  spawnLaunchSparks: (x: number, y: number, angle: number) => void; 
-  spawnFX: (type: VFXKey, x: number, y: number) => void;
+  // Unified FX Spawner
+  spawnFX: (type: VFXKey, x: number, y: number, angle?: number) => void;
   spawnParticle: (x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number) => void;
   
   playSound: (key: AudioKey, x?: number) => void;
-  
-  // UPDATED: Now accepts source coordinates
   damagePanel: (id: string, amount: number, sourceX?: number, sourceY?: number) => void;
   
   getPanelRect: (id: string) => WorldRect | undefined;

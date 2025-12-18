@@ -1,13 +1,11 @@
-import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService } from '@/engine/interfaces';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
-import { GameEventBus } from '@/engine/signals/GameEventBus'; 
 import { GameEvents } from '@/engine/signals/GameEvents'; 
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
@@ -20,9 +18,10 @@ export class BehaviorSystem implements IGameSystem {
     private config: typeof ConfigService,
     private panelSystem: IPanelSystem,
     private particleSystem: IParticleSystem,
-    private audio: IAudioService
+    private audio: IAudioService,
+    private events: IGameEventService
   ) {
-    GameEventBus.subscribe(GameEvents.SPAWN_DAEMON, () => {
+    events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
         const orbital = e.getComponent<OrbitalData>(ComponentType.Orbital);
         if (orbital) {
@@ -58,16 +57,12 @@ export class BehaviorSystem implements IGameSystem {
 
           return bullet;
       },
-      spawnDrillSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['DRILL_SPARKS'], x, y, angle),
-      spawnLaunchSparks: (x, y, angle) => FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['HUNTER_RECOIL'], x, y, angle),
-      spawnFX: (type, x, y) => {
-          const id = FX_IDS[type];
-          if (id) FastEventBus.emit(FastEvents.SPAWN_FX, id, x, y, 0);
+      spawnFX: (type, x, y, angle) => {
+          this.events.emit(GameEvents.SPAWN_FX, { type, x, y, angle });
       },
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
       },
-      // UPDATED: Passing Through Coordinates
       damagePanel: (id, amount, sx, sy) => this.panelSystem.damagePanel(id, amount, false, sx, sy),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
