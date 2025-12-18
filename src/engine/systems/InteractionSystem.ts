@@ -1,6 +1,7 @@
 import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -10,6 +11,9 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
+  
+  // Track previous ID to prevent store thrashing
+  private previousHoverId: string | null = null;
 
   constructor(
     private input: IInputService,
@@ -23,31 +27,42 @@ export class InteractionSystem implements IInteractionSystem {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
     
-    if (this.gameSystem.isGameOver) return; 
+    if (this.gameSystem.isGameOver) {
+        this.syncInteractionState();
+        return; 
+    }
     
     const cursor = this.input.getCursor();
     
-    // We still read from gameSystem for state check (Decoupled READ)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
         
-        // If not actively rebooting, decay progress
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
             this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
         }
-        return; 
+    } else {
+        this.handlePanelRepair(cursor, time);
     }
 
-    this.handlePanelRepair(cursor, time);
+    this.syncInteractionState();
   }
 
-  teardown(): void {}
+  private syncInteractionState() {
+      // Only push to store if the target actually changed
+      if (this.hoveringPanelId !== this.previousHoverId) {
+          useGameStore.getState().setInteractionTarget(this.hoveringPanelId);
+          this.previousHoverId = this.hoveringPanelId;
+      }
+  }
+
+  teardown(): void {
+      useGameStore.getState().setInteractionTarget(null);
+  }
 
   private handleRevival(cursor: {x: number, y: number}, time: number) {
     const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
     
-    // FIXED: Reduced padding from 2.0 (80px) to 0.1 (4px) to prevent overlap with Social Panel
     const padding = 0.1; 
     
     const isHovering = 
