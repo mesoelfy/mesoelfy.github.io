@@ -16,11 +16,12 @@ const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 
 // High Intensity Red for Damage Flash
-const FLASH_COLOR = { r: 3.0, g: 0.0, b: 0.2 }; 
+const FLASH_COLOR = { r: 4.0, g: 0.0, b: 0.2 }; 
 
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
-  private readonly FLASH_DECAY = 8.0; // Fast decay for snappy feel
+  // Slightly slower decay to allow the 2-stage animation to be seen
+  private readonly FLASH_DECAY = 6.0; 
   private reader: EventReader;
 
   constructor(
@@ -65,23 +66,49 @@ export class RenderSystem implements IGameSystem {
             this.updatePlayerVisuals(render, delta, interactState, isDead);
         }
         else {
-            // --- ENEMY FLASH LOGIC ---
+            // --- ENEMY 2-STAGE FLASH LOGIC ---
             if (render.flash > 0) {
-                // Decay
                 render.flash = Math.max(0, render.flash - (delta * this.FLASH_DECAY));
                 
-                // Mix: Base -> Flash Color
-                // We use quadratic easing (t*t) for the mix to keep it red longer before fading
-                const t = render.flash;
+                // Calculate "Heated Base" (Bright + Desaturated)
+                // We add 0.5 to RGB to tint it white, and multiply base by 2.0 for intensity
+                const heatR = (render.baseR * 2.0) + 0.5;
+                const heatG = (render.baseG * 2.0) + 0.5;
+                const heatB = (render.baseB * 2.0) + 0.5;
+
+                let targetR, targetG, targetB;
+
+                // Split the flash timeline into two halves
+                if (render.flash > 0.4) {
+                    // STAGE 1: Transition from RED -> HEATED BASE
+                    // Normalize 0.4..1.0 range to 0.0..1.0
+                    const t = (render.flash - 0.4) / 0.6;
+                    // Ease out to make the Red punchy
+                    const ease = t * (2 - t); 
+                    
+                    targetR = this.lerp(heatR, FLASH_COLOR.r, ease);
+                    targetG = this.lerp(heatG, FLASH_COLOR.g, ease);
+                    targetB = this.lerp(heatB, FLASH_COLOR.b, ease);
+                } else {
+                    // STAGE 2: Transition from HEATED BASE -> NORMAL BASE
+                    // Normalize 0.0..0.4 range to 0.0..1.0
+                    const t = render.flash / 0.4;
+                    // Ease in to settle smoothly
+                    const ease = t * t; 
+
+                    targetR = this.lerp(render.baseR, heatR, ease);
+                    targetG = this.lerp(render.baseG, heatG, ease);
+                    targetB = this.lerp(render.baseB, heatB, ease);
+                }
                 
-                render.r = this.lerp(render.baseR, FLASH_COLOR.r, t);
-                render.g = this.lerp(render.baseG, FLASH_COLOR.g, t);
-                render.b = this.lerp(render.baseB, FLASH_COLOR.b, t);
+                render.r = targetR;
+                render.g = targetG;
+                render.b = targetB;
                 
-                // Pop scale slightly on hit
-                render.visualScale = 1.0 + (t * 0.2); 
+                // Pop scale 
+                render.visualScale = 1.0 + (render.flash * 0.25); 
             } else {
-                // Reset to base if not flashing (optimization)
+                // Optimization: Lock to base if idle
                 if (render.r !== render.baseR) render.r = render.baseR;
                 if (render.g !== render.baseG) render.g = render.baseG;
                 if (render.b !== render.baseB) render.b = render.baseB;
