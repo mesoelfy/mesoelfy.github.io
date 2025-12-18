@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { ReactNode, useEffect as useReactEffect, useState as useReactState, useRef as useReactRef } from 'react';
 import { usePanelRegistry } from '@/ui/sim/hooks/usePanelRegistry';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { useGameContext } from '@/engine/state/GameContext'; // UPDATED
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { Skull } from 'lucide-react';
 import { PanelSparks } from './PanelSparks';
@@ -57,6 +57,9 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
+  // Use Context Events
+  const { events } = useGameContext();
+  
   const isInteracting = !!(gameId && interactionTarget === gameId);
   const isGameOver = Math.floor(systemIntegrity) <= 0;
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
@@ -102,14 +105,16 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
       prevHealth.current = health;
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
+  // Hook into Context Events
   useReactEffect(() => {
       if (!gameId) return;
-      return GameEventBus.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+      return events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
           if (p.id === gameId) {
+              // Trigger Shake
               shakeControls.start({ x: [0, -5, 5, -5, 5, 0], transition: { duration: 0.1 } });
           }
       });
-  }, [gameId, shakeControls]);
+  }, [gameId, shakeControls, events]);
 
   let borderColor = "border-primary-green-dim/30";
   if (showCircuitLock) borderColor = "border-primary-green"; 

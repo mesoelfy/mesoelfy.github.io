@@ -495,17 +495,12 @@ HOW TO VIBE CODE (make it a taller tab in settings) [mac and pc]
 
 can we implement a "zoomed" magnifying glass view under the action button?
 
-launched bullet should have some squash and stretch to it instead of perfect circle chape.
 
-scroll bar should disappear after leaving intro - - - have modal pop up asking user to  - -- - if user is zoomed more than 100%, briefly pause with an arrow pointing where the Chrome magnifying glass is saying game works best at 100% or less defualt zoom)
+
  
 - add enemies that go after individual slots within a panel.
 
-- Mobile mode - - - hold up, you inspired me.
 
-Your first step looks great.
-
-Since we are approaching the gameplay differently, what if the user could still see 
 
 
 it's a different game? What if you could collapse panels so it is just the headers, and that's how you protect panels. But baddies will still get inside and you have to open them to squish them? It can be our new enemy type we haven't introduced yet.
@@ -642,3 +637,7 @@ Update custom debug console to direct users to pressing F12 with some nice graph
 Can we have some constantly moving graphic design like we have for the mobile section?
 
 it appears that I'm seeing some white particles from an enemy when it dies? Am I assessing that correctly?
+
+slots within a green health panel like IMG_XX can be targeted by a new driller type. if it gets destroyed, it does a certain percentage amount of damage to the entire panel. It can't be brought back online until the panel is restored to 100%. If a unit like the weaver is damaging a slot, the "muncher" will look for its own nearest slot that is still at 100%.
+
+BURROWER (goes inside)

@@ -26,6 +26,7 @@ export class TargetingSystem implements IGameSystem {
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
         if (!transform) continue;
 
+        // 1. UPDATE EXISTING LOCK
         if (target.locked && target.id) {
             if (target.type === 'PANEL') {
                 const panel = this.panelSystem.getPanelState(target.id);
@@ -35,12 +36,14 @@ export class TargetingSystem implements IGameSystem {
                 } else {
                     const rect = this.panelSystem.getPanelRect(target.id);
                     if (rect) {
-                        target.x = rect.x;
-                        target.y = rect.y;
+                        // CLAMP TO EDGE: Drillers want to go to the surface, not the center
+                        target.x = Math.max(rect.left, Math.min(transform.x, rect.right));
+                        target.y = Math.max(rect.bottom, Math.min(transform.y, rect.top));
                     }
                 }
             }
             else if (target.type === 'ENEMY') {
+                // Enemies don't typically track other enemies persistently in this game logic yet
                 target.locked = false; 
             }
             else if (target.type === 'PLAYER' && this.playerCache) {
@@ -51,21 +54,25 @@ export class TargetingSystem implements IGameSystem {
             if (target.locked) continue; 
         }
 
+        // 2. ACQUIRE NEW TARGET
         if (target.type === 'PLAYER') {
             if (this.playerCache) {
                 target.x = this.playerCache.x;
                 target.y = this.playerCache.y;
                 target.id = 'PLAYER';
+                // Player target is implicitly "locked" as it updates every frame above
             }
         }
         else if (target.type === 'PANEL') {
             const bestPanel = this.findNearestPanel(transform.x, transform.y);
             if (bestPanel) {
                 target.id = bestPanel.id;
-                target.x = bestPanel.x;
-                target.y = bestPanel.y;
+                // Initial Clamp
+                target.x = Math.max(bestPanel.left, Math.min(transform.x, bestPanel.right));
+                target.y = Math.max(bestPanel.bottom, Math.min(transform.y, bestPanel.top));
                 target.locked = true; 
             } else {
+                // Fallback to Player if no panels alive (rare)
                 if (this.playerCache) {
                     target.x = this.playerCache.x;
                     target.y = this.playerCache.y;
@@ -105,9 +112,15 @@ export class TargetingSystem implements IGameSystem {
 
       for (const p of panels) {
           if (p.isDestroyed) continue;
-          const dx = p.x - x;
-          const dy = p.y - y;
+          
+          // Calculate distance to the NEAREST POINT on the rect, not center
+          const clampedX = Math.max(p.left, Math.min(x, p.right));
+          const clampedY = Math.max(p.bottom, Math.min(y, p.top));
+          
+          const dx = clampedX - x;
+          const dy = clampedY - y;
           const distSq = dx*dx + dy*dy;
+          
           if (distSq < minDist) {
               minDist = distSq;
               nearest = p;

@@ -1,34 +1,33 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { IAudioService, IInputService } from '@/engine/interfaces';
+import { IAudioService, IInputService, IGameEventService } from '@/engine/interfaces';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { InputSystem } from '@/engine/systems/InputSystem';
+import { GameEventService } from '@/engine/signals/GameEventBus';
 
 interface GameContextProps {
   audio: IAudioService;
   input: IInputService;
+  events: IGameEventService;
 }
 
 // Default mock to prevent crash if accessed outside provider
 const defaultContext: GameContextProps = {
   audio: new AudioServiceImpl(),
-  input: new InputSystem() 
+  input: new InputSystem(),
+  events: new GameEventService()
 };
 
 const GameContext = createContext<GameContextProps>(defaultContext);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  // In a real scenario, these might be passed in props or instantiated here.
-  // For now, we bridge the ServiceLocator to the Context.
-  // This ensures that even if components use hooks, they get the singleton.
-  
   let audio: IAudioService;
   let input: IInputService;
+  let events: IGameEventService;
 
   try {
       audio = ServiceLocator.getAudioService();
   } catch {
-      // Fallback if not initialized yet (should rarely happen with this flow)
       const impl = new AudioServiceImpl();
       ServiceLocator.register('AudioService', impl);
       audio = impl;
@@ -42,8 +41,16 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       input = impl;
   }
 
+  try {
+      events = ServiceLocator.getGameEventBus();
+  } catch {
+      const impl = new GameEventService();
+      ServiceLocator.register('GameEventService', impl);
+      events = impl;
+  }
+
   return (
-    <GameContext.Provider value={{ audio, input }}>
+    <GameContext.Provider value={{ audio, input, events }}>
       {children}
     </GameContext.Provider>
   );
