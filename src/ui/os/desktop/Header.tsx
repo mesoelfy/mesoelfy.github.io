@@ -1,14 +1,14 @@
 import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
+import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -49,8 +49,12 @@ export const Header = () => {
   const audio = useAudio();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
-  const scoreRef = useTransientRef('score-display', 'text');
   const [mounted, setMounted] = useState(false);
+
+  // Register Score Element
+  const scoreRef = useCallback((node: HTMLSpanElement | null) => {
+      HUDGlobals.bindScore(node);
+  }, []);
 
   useEffect(() => setMounted(true), []);
 

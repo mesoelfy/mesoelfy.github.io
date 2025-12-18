@@ -2,7 +2,7 @@ import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/e
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
-import { TransientDOMService } from '@/engine/services/TransientDOMService';
+import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class HealthSystem implements IGameSystem {
@@ -84,14 +84,13 @@ export class HealthSystem implements IGameSystem {
 
   private updateVisuals() {
       const hpPercent = this.playerHealth / this.maxPlayerHealth;
-      TransientDOMService.update('hp-progress', hpPercent);
-      
       let hpColor = '#78F654'; 
       if (hpPercent < 0.3) hpColor = '#FF003C'; 
       else if (hpPercent < 0.6) hpColor = '#eae747'; 
       if (this.playerHealth <= 0) hpColor = '#eae747';
 
-      TransientDOMService.update('hp-color', hpColor);
+      // Direct HUD Update
+      HUDGlobals.updateHealth(hpPercent, hpColor);
   }
 
   public reset() {

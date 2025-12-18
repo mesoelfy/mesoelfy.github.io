@@ -1,9 +1,8 @@
 import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useMultiTransientRef } from '@/ui/sim/hooks/useMultiTransientRef';
-import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
-import { useMemo } from 'react';
+import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
+import { useCallback } from 'react';
 
 interface VitalsRingProps {
   health: number;
@@ -16,15 +15,16 @@ interface VitalsRingProps {
 }
 
 export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, rebootProgress }: VitalsRingProps) => {
-  // Memoize configs to prevent re-registration
-  const rootConfigs = useMemo(() => [
-      { id: 'hp-progress', type: 'css-var' as const },
-      { id: 'xp-progress', type: 'css-var' as const },
-      { id: 'hp-color', type: 'css-var' as const }
-  ], []);
+  
+  // Register Container for CSS Vars
+  const rootRef = useCallback((node: HTMLDivElement | null) => {
+      HUDGlobals.bindVitals(node);
+  }, []);
 
-  const rootRef = useMultiTransientRef(rootConfigs);
-  const levelRef = useTransientRef('player-lvl-text', 'text');
+  // Register Level Text SVG Element
+  const levelRef = useCallback((node: SVGTSpanElement | null) => {
+      HUDGlobals.bindLevelText(node);
+  }, []);
 
   const size = 160; 
   const center = size / 2;
@@ -74,6 +74,7 @@ export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, reb
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
           
+          {/* HP RING */}
           <circle 
             cx={center} cy={center} r={radiusHp} 
             strokeWidth={stroke} fill="transparent" 
@@ -88,6 +89,7 @@ export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, reb
             }}
           />
           
+          {/* XP RING */}
           <circle 
             cx={center} cy={center} r={radiusXp} 
             stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 

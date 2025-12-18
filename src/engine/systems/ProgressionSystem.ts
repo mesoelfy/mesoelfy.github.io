@@ -1,7 +1,7 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { TransientDOMService } from '@/engine/services/TransientDOMService';
+import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class ProgressionSystem implements IGameSystem {
@@ -32,7 +32,8 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    TransientDOMService.update('score-display', this.score.toString().padStart(4, '0'));
+    // Direct HUD Update
+    HUDGlobals.updateScore(this.score);
   }
 
   public addXp(amount: number) {
@@ -44,11 +45,12 @@ export class ProgressionSystem implements IGameSystem {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
+        HUDGlobals.updateLevel(this.level);
         this.syncStore();
     }
     
     const xpPercent = this.xpToNextLevel > 0 ? (this.xp / this.xpToNextLevel) : 0;
-    TransientDOMService.update('xp-progress', xpPercent);
+    HUDGlobals.updateXP(xpPercent);
   }
 
   public applyUpgrade(option: string) {
@@ -83,9 +85,10 @@ export class ProgressionSystem implements IGameSystem {
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
       
-      TransientDOMService.update('score-display', "0000");
-      TransientDOMService.update('xp-progress', 0);
-      TransientDOMService.update('player-lvl-text', "LVL_01");
+      // Reset Visuals
+      HUDGlobals.updateScore(0);
+      HUDGlobals.updateXP(0);
+      HUDGlobals.updateLevel(1);
   }
 
   teardown(): void {}

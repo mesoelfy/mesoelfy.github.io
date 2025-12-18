@@ -643,4 +643,4 @@ slots within a green health panel like IMG_XX can be targeted by a new driller t
 BURROWER (goes inside)
 
 relabel motion grid
-fix red game over OS and grid state
+fix red game over OS and grid state / tied to Zen mode interfering?
