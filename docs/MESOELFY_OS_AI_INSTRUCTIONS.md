@@ -26,6 +26,12 @@ Don't repeat information from previous commits. Each new commit is for the new p
 6.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
 7. **WAIT** Don't provide code until user asks for it. You should articulate with text what you'd like to do so the user can confirm what needs to be done.
 
+
+***MISC***
+User has Three.js and React DevTools extensions installed which can be used to help isolate any issues.
+
+
+
 Working directory:
 stevencasteel@Stevens-Mac-mini mesoelfy-site % 
 

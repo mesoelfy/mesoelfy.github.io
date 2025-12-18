@@ -38,7 +38,6 @@ import { RenderSystem } from '@/engine/systems/RenderSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
-import { UISyncSystem } from '@/engine/systems/UISyncSystem';
 
 export const GameBootstrapper = () => {
   const registry = new EntityRegistry();
@@ -92,7 +91,6 @@ export const GameBootstrapper = () => {
   const lifeCycle = new LifeCycleSystem(registry, eventBus);
   const waves = new WaveSystem(spawner, panelSystem);
   const structure = new StructureSystem(panelSystem);
-  const uiSync = new UISyncSystem(gameStateSystem, interaction, panelSystem);
   const render = new RenderSystem(registry, gameStateSystem, interaction);
 
   const systemMap = {
@@ -117,8 +115,7 @@ export const GameBootstrapper = () => {
     waves, structure, targeting, orbital, guidance,
     movement, weapons, behavior, interaction,
     projectile, collision, combat, lifeCycle,
-    particles, shake, render, vfx, audioDirector,
-    uiSync
+    particles, shake, render, vfx, audioDirector
   ];
   systemOrder.forEach(sys => engine.registerSystem(sys));
 

@@ -4,6 +4,8 @@ import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
 import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { TransientDOMService } from '@/engine/services/TransientDOMService';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -37,7 +39,6 @@ export class HealthSystem implements IGameSystem {
     this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1) => {
         if (id === FastEvents.PLAYER_HIT) {
             this.damagePlayer(a1); // a1 = damage amount
-            // Re-emit slow event for UI/Logs
             this.events.emit(GameEvents.PLAYER_HIT, { damage: a1 });
         }
     });
@@ -48,6 +49,9 @@ export class HealthSystem implements IGameSystem {
         this.isGameOver = true;
         this.events.emit(GameEvents.GAME_OVER, { score: 0 });
         this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
+        
+        // Sync final state to React
+        useGameStore.setState({ systemIntegrity: 0 });
     }
   }
 
@@ -58,7 +62,12 @@ export class HealthSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        if (this.playerHealth <= 0) this.audio.playSound('fx_player_death');
+        this.updateVisuals();
+        
+        if (this.playerHealth <= 0) {
+            this.audio.playSound('fx_player_death');
+            useGameStore.setState({ playerHealth: 0 }); // Trigger React "Dead" state once
+        }
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
@@ -66,22 +75,44 @@ export class HealthSystem implements IGameSystem {
 
   public healPlayer(amount: number) {
     this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
+    this.updateVisuals();
+    // If we revived from 0, notify store
+    if (this.playerHealth > 0 && useGameStore.getState().playerHealth <= 0) {
+        useGameStore.setState({ playerHealth: this.playerHealth });
+    }
   }
 
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
+    useGameStore.setState({ playerRebootProgress: this.playerRebootProgress }); // Sync for UI feedback
     
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
-        this.audio.playSound('fx_reboot_success'); 
+        this.audio.playSound('fx_reboot_success');
+        this.updateVisuals();
+        useGameStore.setState({ playerHealth: this.playerHealth, playerRebootProgress: 0 });
     }
   }
 
   public decayReboot(amount: number) {
       if (this.playerHealth > 0) return; 
       this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
+      // Optional: Throttle this sync if it causes lag, but reboot decay is visual
+      if (Math.random() > 0.5) useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
+  }
+
+  private updateVisuals() {
+      const hpPercent = this.playerHealth / this.maxPlayerHealth;
+      TransientDOMService.update('hp-progress', hpPercent);
+      
+      let hpColor = '#78F654'; 
+      if (hpPercent < 0.3) hpColor = '#FF003C'; 
+      else if (hpPercent < 0.6) hpColor = '#eae747'; 
+      if (this.playerHealth <= 0) hpColor = '#eae747'; // Reboot indicator
+
+      TransientDOMService.update('hp-color', hpColor);
   }
 
   public reset() {
@@ -89,6 +120,14 @@ export class HealthSystem implements IGameSystem {
       this.playerRebootProgress = 0;
       this.isGameOver = false;
       this.readCursor = this.fastEvents ? this.fastEvents.getCursor() : 0;
+      this.updateVisuals();
+      
+      // Reset React Store State
+      useGameStore.setState({ 
+          playerHealth: this.maxPlayerHealth,
+          playerRebootProgress: 0,
+          systemIntegrity: 100 
+      });
   }
 
   teardown(): void {}

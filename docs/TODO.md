@@ -613,6 +613,7 @@ Refactoring prompts:
     - Please audit the obvious and not obvious ways I could better use SOLID and other good practices then layout a step-by-step PHASE-based remediation protocol to refactor the code base into a healthier, more readable, cleaner architecture.
     - Configuration should just be data, not repeated logic. (logic is scattered and repetitive (WET: Write Everything Twice))
     - magic strings
+    - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
 
 
 
@@ -633,12 +634,11 @@ Can we force the iframe'd youtube video to start paused and then turn on after a
 Healing sound needs to be different from rebooting sound.
 
 
+Do hunters and kamikaze have a white hit-flash?
+    red-to-light-enemy-color hit flash.
 
+Update custom debug console to direct users to pressing F12 with some nice graphic design.
 
+Can we have some constantly moving graphic design like we have for the mobile section?
 
-identity core regen boundaries are too wide
-
-intro background dots not going right up to header
-
-
-
+it appears that I'm seeing some white particles from an enemy when it dies? Am I assessing that correctly?

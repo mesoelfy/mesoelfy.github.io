@@ -1,6 +1,7 @@
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -31,6 +32,7 @@ class StructureHealthServiceController {
         state.isDestroyed = false;
     }
     this.calculateIntegrity();
+    this.syncAllPanelsToStore();
   }
 
   public damage(id: string, amount: number, silent: boolean = false) {
@@ -38,15 +40,19 @@ class StructureHealthServiceController {
     const state = this.states.get(id);
     if (!state || state.isDestroyed) return;
     state.health = Math.max(0, state.health - amount);
+    
     if (state.health <= 0) {
         state.isDestroyed = true;
         state.health = 0;
+        this.syncPanelToStore(id); // State Change -> Sync
+        
         if (!silent) {
             GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
             GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR LOST: ${id}`, source: 'StructureService' });
         }
     } else if (!silent) {
         GameEventBus.emit(GameEvents.PANEL_DAMAGED, { id, amount, currentHealth: state.health });
+        this.syncPanelToStore(id);
     }
     this.calculateIntegrity();
   }
@@ -56,17 +62,16 @@ class StructureHealthServiceController {
     if (!state) return;
     const wasDestroyed = state.isDestroyed;
     
-    // Cap healing at Max
     state.health = Math.min(MAX_PANEL_HEALTH, state.health + amount);
     
-    // If we just revived it
     if (wasDestroyed && state.health >= MAX_PANEL_HEALTH) {
         state.isDestroyed = false;
-        // UPDATED: Reboot penalty set to 30% health
         state.health = MAX_PANEL_HEALTH * 0.3;
         GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
         GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'StructureService' });
     }
+    
+    this.syncPanelToStore(id);
     this.calculateIntegrity();
   }
 
@@ -81,7 +86,6 @@ class StructureHealthServiceController {
       for (const [id, state] of this.states) {
           if (state.isDestroyed) {
               state.isDestroyed = false;
-              // UPDATED: Reboot penalty set to 30% health
               state.health = MAX_PANEL_HEALTH * 0.3;
               GameEventBus.emit(GameEvents.PANEL_RESTORED, { id });
               restored++;
@@ -90,6 +94,7 @@ class StructureHealthServiceController {
           }
       }
       this.calculateIntegrity();
+      this.syncAllPanelsToStore();
       return restored;
   }
 
@@ -100,6 +105,7 @@ class StructureHealthServiceController {
           GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id });
       }
       this.calculateIntegrity();
+      this.syncAllPanelsToStore();
   }
 
   private calculateIntegrity() {
@@ -109,7 +115,37 @@ class StructureHealthServiceController {
         max += MAX_PANEL_HEALTH;
         if (!state.isDestroyed) current += state.health;
     }
-    this.systemIntegrity = max > 0 ? (current / max) * 100 : 100;
+    const newIntegrity = max > 0 ? (current / max) * 100 : 100;
+    
+    // Critical fix: Force sync if we drop below 1% to ensure UI catches Game Over
+    const shouldSync = 
+        Math.abs(this.systemIntegrity - newIntegrity) > 1.0 || 
+        (newIntegrity <= 1.0 && this.systemIntegrity > 1.0) ||
+        newIntegrity === 0;
+
+    if (shouldSync) {
+        this.systemIntegrity = newIntegrity;
+        useGameStore.getState().setSystemIntegrity(this.systemIntegrity);
+    } else {
+        this.systemIntegrity = newIntegrity;
+    }
+  }
+
+  private syncPanelToStore(id: string) {
+      const state = this.states.get(id);
+      if (state) {
+          useGameStore.getState().syncPanels({ 
+              [id]: { id, health: state.health, isDestroyed: state.isDestroyed } 
+          });
+      }
+  }
+
+  private syncAllPanelsToStore() {
+      const payload: Record<string, any> = {};
+      for (const [id, state] of this.states) {
+          payload[id] = { id, health: state.health, isDestroyed: state.isDestroyed };
+      }
+      useGameStore.getState().syncPanels(payload);
   }
 
   public getState(id: string) { return this.states.get(id); }

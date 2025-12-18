@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Dec 17 17:43:09 CST 2025
+Generated on: Thu Dec 18 12:01:29 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -71,6 +71,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── AudioConfig.ts
 │   │   │   ├── Identifiers.ts
 │   │   │   ├── ModelConfig.ts
+│   │   │   ├── Palette.ts
 │   │   │   ├── PhysicsConfig.ts
 │   │   │   ├── PlayerConfig.ts
 │   │   │   ├── ProjectileConfig.ts
@@ -170,6 +171,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── global
 │   │   │       └── useStore.ts
 │   │   ├── systems
+│   │   │   ├── AtmosphereSystem.ts
 │   │   │   ├── AudioDirector.ts
 │   │   │   ├── BehaviorSystem.ts
 │   │   │   ├── CollisionSystem.ts
@@ -185,7 +187,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── PanelRegistrySystem.ts
 │   │   │   ├── ParticleSystem.ts
 │   │   │   ├── PhysicsSystem.ts
-│   │   │   ├── PlayerSystem.ts
+│   │   │   ├── PlayerMovementSystem.ts
 │   │   │   ├── ProgressionSystem.ts
 │   │   │   ├── ProjectileSystem.ts
 │   │   │   ├── RenderSystem.ts
@@ -196,6 +198,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── UISyncSystem.ts
 │   │   │   ├── VFXSystem.ts
 │   │   │   ├── WaveSystem.ts
+│   │   │   ├── WeaponSystem.ts
 │   │   │   └── index.ts
 │   │   └── types
 │   │       └── game.types.ts
@@ -214,6 +217,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   ├── PanelSparks.tsx
 │       │   │   ├── SafePanelContent.tsx
 │       │   │   ├── StatsRadar.tsx
+│       │   │   ├── ToggleButton.tsx
 │       │   │   ├── VirtualJoystick.tsx
 │       │   │   ├── VitalsRing.tsx
 │       │   │   └── ZenBomb.tsx
@@ -294,6 +298,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   ├── ModalContainer.tsx
 │       │   │   └── RotationLock.tsx
 │       │   └── system
+│       │       ├── ConsoleScrubber.ts
 │       │       ├── MetaManager.tsx
 │       │       ├── faviconGenerator.ts
 │       │       ├── hooks
@@ -344,7 +349,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-80 directories, 256 files
+80 directories, 261 files
 
 =====================================
 FILE: ./next.config.js
@@ -412,6 +417,12 @@ Don't repeat information from previous commits. Each new commit is for the new p
 
 6.  **Lean Ship:** Keep dependencies low. Prefer procedural generation (shaders/math) over large assets.
 7. **WAIT** Don't provide code until user asks for it. You should articulate with text what you'd like to do so the user can confirm what needs to be done.
+
+
+***MISC***
+User has Three.js and React DevTools extensions installed which can be used to help isolate any issues.
+
+
 
 Working directory:
 stevencasteel@Stevens-Mac-mini mesoelfy-site % 
@@ -1558,6 +1569,9 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 interface IntelligentHeaderProps {
   title: string;
@@ -1578,11 +1592,30 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
   useEffect(() => {
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
-      AudioSystem.playSound('ui_optimal'); 
+      
+      // Calculate Stereo Pan based on Panel Position
+      let pan = 0;
+      if (gameId) {
+          try {
+              const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+              const rect = panels.getPanelRect(gameId);
+              if (rect) {
+                  const halfWidth = ViewportHelper.viewport.width / 2;
+                  if (halfWidth > 0) {
+                      // Normalize world X (-width/2 to width/2) to -1.0 to 1.0
+                      pan = Math.max(-1, Math.min(1, rect.x / halfWidth));
+                  }
+              }
+          } catch (e) {
+              // Engine system not ready or available, fallback to center pan
+          }
+      }
+
+      AudioSystem.playSound('ui_optimal', pan); 
       const timer = setTimeout(() => setShowOptimal(false), 1500);
       return () => clearTimeout(timer);
     }
-  }, [health, showOptimal, maxHealth]);
+  }, [health, showOptimal, maxHealth, gameId]);
 
   let mainColor = "text-primary-green";
   let statusText = "SECURE";
@@ -2865,9 +2898,89 @@ export const GraphicsToggle = ({ layout = 'horizontal' }: Props) => {
 
 
 =====================================
+FILE: ./src/ui/kit/atoms/ToggleButton.tsx
+=====================================
+import { clsx } from 'clsx';
+import { useAudio } from '@/ui/hooks/useAudio';
+import { getPan } from '@/engine/audio/AudioUtils';
+
+interface ToggleButtonProps {
+  label?: string;
+  icon: any;
+  iconOff?: any;
+  active: boolean;
+  onClick: () => void;
+  variant?: 'icon' | 'panel'; // icon = Header style, panel = SoundTab style
+  color?: string; // Optional text color override
+}
+
+export const ToggleButton = ({ 
+  label, 
+  icon: IconOn, 
+  iconOff: IconOff, 
+  active, 
+  onClick, 
+  variant = 'icon',
+  color
+}: ToggleButtonProps) => {
+  const audio = useAudio();
+  const Icon = active ? IconOn : (IconOff || IconOn);
+
+  const handleClick = (e: React.MouseEvent) => {
+      onClick();
+      audio.playClick(getPan(e));
+  };
+
+  if (variant === 'panel') {
+      return (
+        <button
+          onClick={handleClick}
+          onMouseEnter={(e) => audio.playHover(getPan(e))}
+          className={clsx(
+            "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
+            active 
+              ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
+              : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
+          )}
+        >
+          {active && (
+             <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
+          )}
+          <Icon 
+            size={16} 
+            strokeWidth={1.5}
+            className={clsx("mb-1 transition-transform", active ? "scale-110" : "opacity-50")} 
+          />
+          {label && <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>}
+        </button>
+      );
+  }
+
+  // Variant 'icon' (Header)
+  return (
+    <button 
+      onClick={handleClick}
+      onMouseEnter={(e) => audio.playHover(getPan(e))}
+      className={clsx(
+        "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
+        active 
+          ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color || ''}`
+          : `${color || ''} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
+      )}
+    >
+      <div className={clsx(active ? "" : "opacity-50")}>
+          {label ? <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">{label}</span> : <Icon size={14} />}
+      </div>
+    </button>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/kit/atoms/PanelSparks.tsx
 =====================================
 import { useEffect, useRef } from 'react';
+import { COLOR_SETS } from '@/engine/config/Palette';
 
 interface Particle {
   x: number;
@@ -2891,7 +3004,6 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     const canvas = canvasRef.current;
     if (!canvas || !canvas.parentElement) return;
     
-    // Safety check: Don't initialize if container is collapsed
     const width = canvas.parentElement.clientWidth;
     const height = canvas.parentElement.clientHeight;
     
@@ -2907,9 +3019,9 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     let animationFrameId: number;
     let isActive = true;
 
-    const COLORS = ['#FF003C', '#CC0020', '#800010', '#FF4466'];
+    // Use Palette Colors
+    const COLORS = COLOR_SETS.RED;
     
-    // REVERTED: Back to 500 as requested
     const PARTICLE_COUNT = 500; 
     
     try {
@@ -2943,7 +3055,6 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
             });
         }
     } catch (e) {
-        console.error("Error creating particles", e);
         return;
     }
 
@@ -3461,9 +3572,10 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
+  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
     <motion.div 
-      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
+      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
         borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
         backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
@@ -3482,8 +3594,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            
-            {/* STEP 3: UNSAFE (RED SHIELD) */}
+            {/* STEP 3: UNSAFE */}
             {isUnsafe && (
                 <motion.div 
                     key="unsafe"
@@ -3496,7 +3607,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 4: BYPASSING (PURPLE CLOSED LOCK) */}
+            {/* STEP 4: BYPASSING */}
             {isBypass && (
                 <motion.div 
                     key="bypass"
@@ -3504,20 +3615,20 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                     animate={{ 
                         scale: [1, 1.1, 1], 
                         opacity: 1,
-                        x: [-1, 1, -1, 1, 0], // Shake
+                        x: [-1, 1, -1, 1, 0], 
                         filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
                     }} 
                     exit={{ scale: 0, transition: { duration: 0.1 } }}
                     transition={{ 
                         scale: { repeat: Infinity, duration: 0.5 },
-                        x: { repeat: Infinity, duration: 0.1 } // Fast shake
+                        x: { repeat: Infinity, duration: 0.1 } 
                     }}
                 >
                      <Lock size={18} className="text-latent-purple-light" />
                 </motion.div>
             )}
 
-            {/* STEP 5: DECRYPTED (GREEN OPEN LOCK) */}
+            {/* STEP 5: DECRYPTED */}
             {isDecrypted && (
                 <motion.div 
                     key="unlocked"
@@ -3538,7 +3649,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 6: CAUTION (SKULL) */}
+            {/* STEP 6: CAUTION */}
             {isCaution && (
                 <motion.div 
                     key="caution"
@@ -3558,7 +3669,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* LOADING SPINNER (STEPS 0-2) */}
+            {/* LOADING SPINNER */}
             {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"
@@ -3617,8 +3728,9 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       statusText = "HANDSHAKING...";
   }
 
+  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
-    <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300 ${bgClass}`}>
+    <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none relative z-20 transition-all duration-300 ${bgClass}`}>
       <div className="flex flex-col leading-none gap-1.5 mt-0.5">
           <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
             BOOT_LOADER.SYS
@@ -3628,22 +3740,19 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       
       <div className="flex gap-1 items-end h-3">
         {[0, 1, 2, 3].map(i => {
-           // --- STATIC COLORS ---
            let barClass = "bg-primary-green";
            if (isUnsafe) barClass = "bg-critical-red";
            else if (isBypass) barClass = "bg-latent-purple-light";
            else if (isCaution) barClass = "bg-alert-yellow";
 
-           // --- ANIMATION LOGIC ---
            const isPulseActive = isDecrypted || isCaution; 
            const pulseHex = isCaution ? "#eae747" : "#78F654";
 
            let animate = {};
            let transition = {};
-           let initialHeight = "0.125rem"; // Default tiny
+           let initialHeight = "0.125rem"; 
 
            if (isPulseActive) {
-               // 1. Decrypted/Caution Wave (Unchanged)
                initialHeight = "0.5rem";
                animate = {
                    height: ["0.25rem", "0.75rem", "0.25rem"],
@@ -3658,20 +3767,17 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
                    delay: i * 0.15 
                };
            } else if (isUnsafe) {
-               // 2. Unsafe: Slow Communicative Pulse (Fill/Unfill)
-               // All bars breathe together to signal a specific error code feel
                initialHeight = "0.25rem";
                animate = {
-                   height: ["0.25rem", "0.75rem", "0.25rem"], // Fill and Unfill
+                   height: ["0.25rem", "0.75rem", "0.25rem"], 
                    opacity: [0.5, 1.0, 0.5]
                };
                transition = {
-                   duration: 1.5, // Slow
+                   duration: 1.5, 
                    repeat: Infinity,
                    ease: "easeInOut"
                };
            } else if (isBypass) {
-               // 3. Bypass: Piston Effect
                const isEven = i % 2 === 0;
                initialHeight = isEven ? "0.75rem" : "0.5rem";
                animate = {
@@ -3685,17 +3791,14 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
                    ease: "easeInOut"
                };
            } else {
-               // 4. Handshake: Sequential Fill
-               // Strictly show bar based on step index (0, 1, 2)
                const isActive = step >= i; 
-               
                if (isActive) {
                    initialHeight = "0.5rem";
-                   animate = { opacity: [0.5, 1.0, 0.5] }; // Gentle breathe once active
+                   animate = { opacity: [0.5, 1.0, 0.5] }; 
                    transition = { duration: 2.0, repeat: Infinity, ease: "easeInOut" };
                } else {
                    initialHeight = "0.125rem";
-                   animate = { opacity: 0.2 }; // Dim inactive
+                   animate = { opacity: 0.2 }; 
                }
            }
 
@@ -3909,44 +4012,55 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
             </AnimatePresence>
 
             <div ref={mainStackRef} className="w-full lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
+                
+                {/* PANEL 1: BOOT LOADER */}
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
-                    <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
-                        <DotGridBackground /> 
-                        {logsToShow.map((line, i) => (
-                            <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-                        ))}
+                    
+                    {/* Body Wrapper: Holds Background & Content separated */}
+                    <div className="relative w-full flex-1">
+                        <DotGridBackground /> {/* Fills this wrapper edge-to-edge, below header */}
+                        <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                            {logsToShow.map((line, i) => (
+                                <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
+                            ))}
+                        </div>
                     </div>
                 </motion.div>
 
+                {/* PANEL 2: CORE PAYLOAD */}
                 <AnimatePresence>
                 {showPayloadWindow && (
                     <motion.div initial={{ y: 50, opacity: 0, height: 0 }} animate={{ y: 0, opacity: 1, height: "auto" }} transition={{ type: "spring", stiffness: 120, damping: 20 }} className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20">
-                    <CoreHeader step={step} />
-                    <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
-                        <DotGridBackground />
-                        <AsciiRenderer />
-                        {showWarningBox && (
-                        <motion.div 
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1, boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"] }}
-                            transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                            className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
-                        >
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
-                            <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                            <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
-                        </motion.div>
-                        )}
-                        {showButton && (
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
-                            <button onClick={handleWrapperClick} onMouseEnter={() => AudioSystem.playHover()} className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-pointer">
-                            <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                            <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">[ INITIALIZE_SYSTEM ]</span>
-                            </button>
-                        </motion.div>
-                        )}
-                    </div>
+                        <CoreHeader step={step} />
+                        
+                        {/* Body Wrapper */}
+                        <div className="relative w-full">
+                            <DotGridBackground /> {/* Fills this wrapper edge-to-edge */}
+                            <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
+                                <AsciiRenderer />
+                                {showWarningBox && (
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1, boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"] }}
+                                    transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
+                                    className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
+                                >
+                                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
+                                    <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
+                                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
+                                </motion.div>
+                                )}
+                                {showButton && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
+                                    <button onClick={handleWrapperClick} onMouseEnter={() => AudioSystem.playHover()} className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-pointer">
+                                    <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                                    <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">[ INITIALIZE_SYSTEM ]</span>
+                                    </button>
+                                </motion.div>
+                                )}
+                            </div>
+                        </div>
                     </motion.div>
                 )}
                 </AnimatePresence>
@@ -4519,6 +4633,7 @@ import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { useTransientRef } from '@/ui/sim/hooks/useTransientRef';
+import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -4535,20 +4650,24 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
   </div>
 );
 
-const ToggleBtn = ({ active, onClick, children, color, audio }: any) => (
-  <button 
-    onClick={(e) => { onClick(); audio.playClick(getPan(e)); }}
-    onMouseEnter={(e) => audio.playHover(getPan(e))}
-    className={clsx(
-      "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
-      active 
-        ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color}`
-        : `${color} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
-    )}
-  >
-    {children}
-  </button>
-);
+const barVariants = {
+  idle: {
+    filter: "none", 
+    transition: { duration: 0.2 }
+  },
+  heartbeat: {
+    filter: [
+      "brightness(1) drop-shadow(0 0 0px #FF003C)", 
+      "brightness(2) drop-shadow(0 0 10px #FF003C)", 
+      "brightness(1) drop-shadow(0 0 0px #FF003C)"
+    ],
+    transition: { 
+      duration: 0.8, 
+      times: [0, 0.04, 1], 
+      ease: "easeOut" 
+    }
+  }
+};
 
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
@@ -4573,7 +4692,18 @@ export const Header = () => {
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       <div className="flex items-center gap-4">
-        <motion.span animate={isCritical ? heartbeatControls : undefined} variants={{ heartbeat: { scale: [1, 1.05, 1], textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } } }} className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}>
+        <motion.span 
+            animate={isCritical ? heartbeatControls : "idle"} 
+            variants={{ 
+                idle: { scale: 1, textShadow: "0 0 0px transparent" },
+                heartbeat: { 
+                    scale: [1, 1.05, 1], 
+                    textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], 
+                    transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
+                } 
+            }} 
+            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
+        >
           MESOELFY_OS
         </motion.span>
         {mounted && (
@@ -4588,12 +4718,16 @@ export const Header = () => {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1 border-l border-white/10 pl-4">
-            <ToggleBtn active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} audio={audio}><Wind size={14} /></ToggleBtn>
-            <ToggleBtn active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} audio={audio}><span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">SFX</span></ToggleBtn>
-            <ToggleBtn active={audioSettings.music} onClick={toggleMusic} color={statusColor} audio={audio}>{audioSettings.music ? <Music size={14} /> : <Music size={14} className="opacity-50" />}</ToggleBtn>
+            <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
+            <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
+            <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
+            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <ToggleBtn active={audioSettings.master} onClick={toggleMaster} color={statusColor} audio={audio}>{audioSettings.master ? <Volume2 size={14} /> : <VolumeX size={14} />}</ToggleBtn>
+            
+            <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
+            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            
             <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5", statusColor)}>
                 <Settings size={14} className="animate-spin-slow" />
             </button>
@@ -4601,8 +4735,21 @@ export const Header = () => {
       </div>
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <motion.div className="h-full" initial={{ width: "100%" }} animate={{ width: `${systemIntegrity}%` }} transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}>
-              <motion.div animate={isCritical ? heartbeatControls : undefined} variants={{ heartbeat: { filter: ["brightness(1) drop-shadow(0 0 0px #FF003C)", "brightness(2) drop-shadow(0 0 10px #FF003C)", "brightness(1) drop-shadow(0 0 0px #FF003C"], transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } } }} className={clsx("w-full h-full shadow-[0_0_10px_currentColor]", isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green")} />
+          <motion.div 
+            className="h-full" 
+            initial={{ width: "100%" }} 
+            animate={{ width: `${systemIntegrity}%` }} 
+            transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+          >
+              <motion.div 
+                key={isCritical ? "critical-bar" : "normal-bar"}
+                animate={isCritical ? heartbeatControls : "idle"} 
+                variants={barVariants}
+                className={clsx(
+                    "w-full h-full shadow-[0_0_10px_currentColor]", 
+                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                )} 
+              />
           </motion.div>
         </div>
       )}
@@ -4618,13 +4765,15 @@ export const Header = () => {
 =====================================
 FILE: ./src/ui/os/system/metaConstants.ts
 =====================================
+import { PALETTE } from '@/engine/config/Palette';
+
 export const COLORS = {
-  GREEN: '#78F654',
-  YELLOW: '#F7D277',
-  RED: '#FF003C',
-  PURPLE: '#9E4EA5',
-  BLACK: '#000000',
-  WHITE: '#FFFFFF',
+  GREEN: PALETTE.GREEN.PRIMARY,
+  YELLOW: PALETTE.YELLOW.SOFT,
+  RED: PALETTE.RED.CRITICAL,
+  PURPLE: PALETTE.PURPLE.PRIMARY,
+  BLACK: PALETTE.MONO.BLACK,
+  WHITE: PALETTE.MONO.WHITE,
 };
 
 export const BOOT_KEYS: Record<string, string> = {
@@ -4775,7 +4924,7 @@ export const generatePausedIcon = (tick: boolean, colorHex: string) => { // UPDA
 FILE: ./src/ui/os/system/MetaManager.tsx
 =====================================
 import { useEffect, useState } from 'react';
-import { ASCII_CONSOLE, CONSOLE_STYLE } from '@/engine/config/TextAssets';
+import { ASCII_CONSOLE, CONSOLE_STYLES } from '@/engine/config/TextAssets';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { BOOT_KEYS } from './metaConstants';
@@ -4784,6 +4933,7 @@ import { useMetaUrl } from './hooks/useMetaUrl';
 import { useMetaTitle } from './hooks/useMetaTitle';
 import { useMetaTheme } from './hooks/useMetaTheme';
 import { useWindowFocus } from '@/ui/sim/hooks/useWindowFocus';
+import { initializeConsoleScrubber } from './ConsoleScrubber';
 
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
@@ -4791,7 +4941,27 @@ export const MetaManager = () => {
 
   useEffect(() => {
     if (window.hasLoggedIdentity) return;
-    console.log(`%c${ASCII_CONSOLE.replace(/^\n/, '')}\n// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.`, CONSOLE_STYLE);
+    
+    initializeConsoleScrubber();
+
+    const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'DEV_NODE';
+
+    console.log(
+      `%c${ASCII_CONSOLE}%c\n` +
+      ` %c STATUS %c ONLINE %c  ` +
+      ` %c KERNEL %c R3F_V9 %c ` +
+      ` %c NODE %c ${commitHash} %c\n\n` +
+      `%c// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.\n` +
+      `%c// LATENT_SPACE_BANDIT // IDENTITY_VERIFIED\n`,
+      CONSOLE_STYLES.GREEN,  // ASCII
+      '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', // Status Pill
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Kernel Pill
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Node Pill
+      CONSOLE_STYLES.GREEN,  // Message 1
+      CONSOLE_STYLES.CYAN    // Message 2
+    );
+
     (window as any).hasLoggedIdentity = true;
   }, []);
 
@@ -5032,6 +5202,49 @@ export const useMetaTheme = () => {
 
 
 =====================================
+FILE: ./src/ui/os/system/ConsoleScrubber.ts
+=====================================
+/**
+ * CONSOLE_SCRUBBER // NOISE_REDUCTION_PROTOCOL
+ * Silences common third-party noise (YouTube, Ad-Blockers) 
+ * to keep the kernel logs clean.
+ */
+export const initializeConsoleScrubber = () => {
+  if (typeof window === 'undefined') return;
+
+  const originalError = console.error;
+  const originalWarn = console.warn;
+
+  // Pattern match for junk logs
+  const JUNK_PATTERNS = [
+    'net::ERR_BLOCKED_BY_CLIENT',
+    'www-embed-player.js',
+    'base.js',
+    'Failed to load resource',
+    'YouTube'
+  ];
+
+  console.error = (...args: any[]) => {
+    const msg = args[0]?.toString() || '';
+    if (JUNK_PATTERNS.some(pattern => msg.includes(pattern))) {
+      return; // Packet Dropped
+    }
+    originalError.apply(console, args);
+  };
+
+  console.warn = (...args: any[]) => {
+    const msg = args[0]?.toString() || '';
+    if (JUNK_PATTERNS.some(pattern => msg.includes(pattern))) {
+      return; // Packet Dropped
+    }
+    originalWarn.apply(console, args);
+  };
+
+  console.log("%c// LOG_SCRUBBER: ACTIVE // NOISE_REDUCTION: ENABLED", "color: #78F654; font-weight: bold;");
+};
+
+
+=====================================
 FILE: ./src/ui/os/apps/settings/tabs/SoundTab.tsx
 =====================================
 import { useStore } from '@/engine/state/global/useStore';
@@ -5046,33 +5259,7 @@ import {
   getAmbienceModDepth, 
   getAmbienceStereoGain 
 } from '@/engine/audio/AudioMath';
-
-const ChannelToggle = ({ label, isActive, onClick, iconOn: IconOn, iconOff: IconOff, audio }: any) => {
-  const Icon = isActive ? IconOn : (IconOff || IconOn);
-  
-  return (
-    <button
-      onClick={(e) => { onClick(); audio.playClick(); }}
-      onMouseEnter={() => audio.playHover()}
-      className={clsx(
-        "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
-        isActive 
-          ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[inset_0_0_10px_rgba(120,246,84,0.1)]" 
-          : "bg-black/40 border-white/10 text-gray-500 hover:border-white/30 hover:text-gray-300"
-      )}
-    >
-      {isActive && (
-         <div className="absolute top-0 right-0 w-1.5 h-1.5 bg-primary-green shadow-[0_0_5px_#78F654]" />
-      )}
-      <Icon 
-        size={16} 
-        strokeWidth={1.5}
-        className={clsx("mb-1 transition-transform", isActive ? "scale-110" : "opacity-50")} 
-      />
-      <span className="text-[9px] font-bold font-mono tracking-widest">{label}</span>
-    </button>
-  );
-};
+import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 
 export const SoundTab = () => {
   const { 
@@ -5118,10 +5305,10 @@ export const SoundTab = () => {
                   
                   <div className="bg-black/40 p-4 border border-white/5 relative overflow-hidden flex flex-col gap-6">
                       <div className="grid grid-cols-4 gap-2 relative z-10">
-                          <ChannelToggle label="MAIN" isActive={audioSettings.master} onClick={toggleMaster} iconOn={Volume2} iconOff={VolumeX} audio={audio} />
-                          <ChannelToggle label="MUSIC" isActive={audioSettings.music} onClick={toggleMusic} iconOn={Music} audio={audio} />
-                          <ChannelToggle label="SFX" isActive={audioSettings.sfx} onClick={toggleSfx} iconOn={Zap} iconOff={ZapOff} audio={audio} />
-                          <ChannelToggle label="AMB" isActive={audioSettings.ambience} onClick={toggleAmbience} iconOn={Wind} audio={audio} />
+                          <ToggleButton variant="panel" label="MAIN" active={audioSettings.master} onClick={toggleMaster} icon={Volume2} iconOff={VolumeX} />
+                          <ToggleButton variant="panel" label="MUSIC" active={audioSettings.music} onClick={toggleMusic} icon={Music} />
+                          <ToggleButton variant="panel" label="SFX" active={audioSettings.sfx} onClick={toggleSfx} icon={Zap} iconOff={ZapOff} />
+                          <ToggleButton variant="panel" label="AMB" active={audioSettings.ambience} onClick={toggleAmbience} icon={Wind} />
                       </div>
 
                       <div className="space-y-5 relative z-10">
@@ -8098,32 +8285,34 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
 =====================================
 FILE: ./src/ui/sim/config/theme.ts
 =====================================
+import { PALETTE } from '@/engine/config/Palette';
+
 export const GAME_THEME = {
   turret: {
-    base: '#78F654',
-    glow: '#C2FE9A',
-    repair: '#00F0FF',
+    base: PALETTE.GREEN.PRIMARY,
+    glow: PALETTE.GREEN.GLOW,
+    repair: PALETTE.CYAN.PRIMARY,
   },
   bullet: {
-    plasma: '#FFFFFF',
-    trail: '#78F654',
-    hunter: '#F7D277', 
+    plasma: PALETTE.MONO.WHITE,
+    trail: PALETTE.GREEN.PRIMARY,
+    hunter: PALETTE.YELLOW.SOFT, 
   },
   enemy: {
-    muncher: '#9E4EA5',
-    kamikaze: '#FF003C',
-    hunter: '#F7D277',
-    charge: '#FFFFFF',  
+    muncher: PALETTE.PURPLE.PRIMARY,
+    kamikaze: PALETTE.RED.CRITICAL,
+    hunter: PALETTE.YELLOW.SOFT,
+    charge: PALETTE.MONO.WHITE,  
   },
   hud: {
-    text: '#78F654',
-    warning: '#FF003C',
+    text: PALETTE.GREEN.PRIMARY,
+    warning: PALETTE.RED.CRITICAL,
   },
   vfx: {
-    spark: '#FFFFFF',
-    damage: '#FF003C',
-    heal: '#00F0FF',
-    clash: '#F7D277',
+    spark: PALETTE.MONO.WHITE,
+    damage: PALETTE.RED.CRITICAL,
+    heal: PALETTE.CYAN.PRIMARY,
+    clash: PALETTE.YELLOW.SOFT,
   }
 };
 
@@ -8174,61 +8363,20 @@ export const LabStage = () => {
 FILE: ./src/ui/sim/stages/GalleryStage.tsx
 =====================================
 import { useMemo, useRef, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { AssetService } from '@/ui/sim/assets/AssetService';
-
-// --- SHADERS ---
-const bodyVertexShader = `
-  attribute vec3 barycentric;
-  varying vec3 vBarycentric;
-  void main() {
-    vBarycentric = barycentric;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const bodyFragmentShader = `
-  uniform vec3 uColor;
-  uniform float uGlow;
-  uniform float uDissolve;
-  varying vec3 vBarycentric;
-  
-  float edgeFactor(vec3 bary, float width) {
-    vec3 d = fwidth(bary);
-    vec3 a3 = smoothstep(vec3(0.0), d * width, bary);
-    return min(min(a3.x, a3.y), a3.z);
-  }
-
-  void main() {
-    if (uDissolve > 0.0) {
-        float stripes = sin(gl_FragCoord.y * 0.1 + gl_FragCoord.x * 0.1);
-        if (stripes < (uDissolve * 2.0 - 1.0)) discard;
-    }
-
-    float width = 1.0; 
-    float edge = edgeFactor(vBarycentric, width);
-    float glow = 1.0 - edge;
-    glow = pow(glow, 0.4) + uGlow; 
-    
-    vec3 coreColor = uColor;
-    vec3 edgeColor = vec3(1.0);
-    vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
-    finalColor += coreColor * uGlow * 0.5;
-
-    gl_FragColor = vec4(finalColor, 1.0);
-  }
-`;
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
 
 export const GalleryStage = () => {
   const { galleryTarget, galleryAction } = useStore();
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // Force re-render when target changes to ensure geometry swap
   const activeGeo = useMemo(() => {
       try {
           if (galleryTarget === 'PLAYER') return new THREE.ConeGeometry(0.5, 1.5, 3);
@@ -8240,25 +8388,21 @@ export const GalleryStage = () => {
           
           return AssetService.get<THREE.BufferGeometry>(key);
       } catch (e) {
-          console.warn("Asset Missing in Gallery:", galleryTarget);
           return new THREE.BoxGeometry(1,1,1);
       }
   }, [galleryTarget]);
 
-  const shaderMaterial = useMemo(() => new THREE.ShaderMaterial({
-    vertexShader: bodyVertexShader,
-    fragmentShader: bodyFragmentShader,
-    uniforms: {
-        uColor: { value: new THREE.Color('#FFFFFF') },
-        uGlow: { value: 0.0 },
-        uDissolve: { value: 0.0 }
-    },
-    side: THREE.DoubleSide,
-    transparent: true,
-    depthWrite: true,
-  }), []);
+  const shaderMaterial = useMemo(() => {
+      return MaterialFactory.create('MAT_GALLERY_BODY', {
+          ...ShaderLib.presets.galleryBody,
+          uniforms: {
+              uColor: { value: new THREE.Color('#FFFFFF') },
+              uGlow: { value: 0.0 },
+              uDissolve: { value: 0.0 }
+          }
+      });
+  }, []);
 
-  // Update geometry manually on ref when it changes (Mesh re-use safety)
   useEffect(() => {
       if (meshRef.current) {
           meshRef.current.geometry = activeGeo;
@@ -8268,19 +8412,20 @@ export const GalleryStage = () => {
   useFrame((state, delta) => {
     if (!meshRef.current) return;
 
+    // Manual update of factory uniforms since GalleryStage has its own lifecycle
+    MaterialFactory.updateUniforms(state.clock.elapsedTime);
+
     const time = state.clock.elapsedTime;
     let baseColor = new THREE.Color('#FFFFFF');
     let glow = 0.2;
     let dissolve = 0;
 
-    // Color Logic
     if (galleryTarget === EnemyTypes.DRILLER) baseColor.set(GAME_THEME.enemy.muncher);
     else if (galleryTarget === EnemyTypes.KAMIKAZE) baseColor.set(GAME_THEME.enemy.kamikaze);
     else if (galleryTarget === EnemyTypes.HUNTER) baseColor.set(GAME_THEME.enemy.hunter);
     else if (galleryTarget === EnemyTypes.DAEMON) baseColor.set('#00F0FF');
     else if (galleryTarget === 'PLAYER') baseColor.set(GAME_THEME.turret.base);
 
-    // Animation Logic
     meshRef.current.position.set(0, 0, 0);
     meshRef.current.scale.setScalar(1.0);
 
@@ -8300,7 +8445,6 @@ export const GalleryStage = () => {
         glow = 0.8;
     } 
     else {
-        // IDLE
         meshRef.current.rotation.y += delta * 0.5;
         meshRef.current.position.y = Math.sin(time) * 0.2;
     }
@@ -8981,6 +9125,8 @@ import { IInteractionSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import * as THREE from 'three';
 
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
@@ -9019,33 +9165,6 @@ const createStarRingGeo = () => {
 
 const reticleGeo = createStarRingGeo();
 
-const techGlowShader = {
-  vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragment: `
-    uniform vec3 uColor; uniform float uOpacity; uniform float uTime; uniform float uEnergy;
-    varying vec2 vUv;
-    void main() {
-      vec2 pos = vUv - 0.5;
-      float angle = atan(pos.y, pos.x);
-      float warble = (0.005 + 0.015 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
-      float dist = length(pos) + warble;
-      float alphaBase = pow(1.0 - smoothstep(0.0, 0.5, dist), 3.5);
-      float ringsIdle = 0.6 + 0.4 * sin(dist * 80.0 - uTime * 1.5);
-      float ringsActive = 0.5 + 0.5 * sin(dist * 30.0 - uTime * 8.0);
-      float ringMix = mix(ringsIdle, ringsActive, uEnergy);
-      float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
-      float finalAlpha = alphaBase * ringMix * scan * uOpacity * (1.0 + (uEnergy * 2.5));
-      if (finalAlpha < 0.01) discard;
-      gl_FragColor = vec4(uColor, finalAlpha);
-    }
-  `
-};
-
-const softCircleShader = {
-  vertex: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragment: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv; void main() { float dist = distance(vUv, vec2(0.5)); float alpha = 1.0 - smoothstep(0.25, 0.5, dist); if (alpha < 0.01) discard; gl_FragColor = vec4(uColor, alpha * uOpacity); }`
-};
-
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
@@ -9067,17 +9186,30 @@ export const PlayerActor = () => {
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
 
-  const ambientMaterial = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: techGlowShader.vertex, fragmentShader: techGlowShader.fragment,
-      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, uOpacity: { value: 0.6 }, uTime: { value: 0.0 }, uEnergy: { value: 0.0 } },
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
-  }), []);
+  const ambientMaterial = useMemo(() => {
+      const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
+          ...ShaderLib.presets.playerAmbient,
+          uniforms: { 
+              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              uOpacity: { value: 0.6 }, 
+              uEnergy: { value: 0.0 } 
+          }
+      });
+      mat.blending = THREE.AdditiveBlending;
+      return mat;
+  }, []);
 
-  const backingMaterial = useMemo(() => new THREE.ShaderMaterial({
-      vertexShader: softCircleShader.vertex, fragmentShader: softCircleShader.fragment,
-      uniforms: { uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, uOpacity: { value: 0.5 } },
-      transparent: true, depthWrite: false, blending: THREE.NormalBlending 
-  }), []);
+  const backingMaterial = useMemo(() => {
+      const mat = MaterialFactory.create('MAT_PLAYER_BACKING', {
+          ...ShaderLib.presets.playerBacking,
+          uniforms: { 
+              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              uOpacity: { value: 0.5 } 
+          }
+      });
+      mat.blending = THREE.NormalBlending;
+      return mat;
+  }, []);
 
   useEffect(() => { return GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }); }, []);
 
@@ -9094,8 +9226,9 @@ export const PlayerActor = () => {
     try { const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem'); if (interact) interactState = interact.repairState; } catch {}
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
-    ambientMaterial.uniforms.uTime.value = state.clock.elapsedTime;
-    ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
+    
+    // Note: uTime is updated globally by RenderSystem via MaterialFactory.updateUniforms()
+    if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     let playerEntity;
     try { const registry = ServiceLocator.getRegistry(); for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; } } catch { return; }
@@ -9119,8 +9252,10 @@ export const PlayerActor = () => {
         if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
         backingMaterial.uniforms.uColor.value.copy(tempColor.current);
+        
         containerRef.current.scale.setScalar(render.visualScale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDead; 
@@ -9161,17 +9296,41 @@ interface RenderGroup {
 export const UniversalActor = () => {
   const groups = useMemo(() => {
     const uniqueGroups = new Map<string, RenderGroup>();
+
     Object.values(ARCHETYPES).forEach(blueprint => {
+      // 1. Only process Enemy tags
       if (!blueprint.tags.includes(Tag.ENEMY)) return;
-      const renderDef = blueprint.components.find(c => c.type === ComponentType.Render);
-      if (!renderDef || !renderDef.data) return;
-      const { geometryId, materialId } = renderDef.data;
+
+      // 2. Resolve IDs (Check new 'assets' field, then fallback to component data)
+      let geometryId = blueprint.assets?.geometry;
+      let materialId = blueprint.assets?.material;
+
+      if (!geometryId || !materialId) {
+          const renderDef = blueprint.components.find(c => c.type === ComponentType.Render);
+          if (renderDef?.data) {
+              geometryId = geometryId || renderDef.data.geometryId;
+              materialId = materialId || renderDef.data.materialId;
+          }
+      }
+
       if (!geometryId || !materialId) return;
+
       const key = `${geometryId}|${materialId}`;
       if (!uniqueGroups.has(key)) {
-        try { uniqueGroups.set(key, { key, geometryId, materialId, geometry: AssetService.get(geometryId), material: AssetService.get(materialId) }); } catch {}
+        try { 
+            uniqueGroups.set(key, { 
+                key, 
+                geometryId, 
+                materialId, 
+                geometry: AssetService.get(geometryId), 
+                material: AssetService.get(materialId) 
+            }); 
+        } catch (e) {
+            console.warn(`[UniversalActor] Failed to load assets for group: ${key}`, e);
+        }
       }
     });
+
     return Array.from(uniqueGroups.values());
   }, []);
 
@@ -9179,8 +9338,16 @@ export const UniversalActor = () => {
     <>
       {groups.map(group => (
         <InstancedActor
-          key={group.key} tag={Tag.ENEMY} geometry={group.geometry} material={group.material} maxCount={500}
-          filter={(entity) => { const render = entity.getComponent<RenderData>(ComponentType.Render); return render?.geometryId === group.geometryId && render?.materialId === group.materialId; }}
+          key={group.key} 
+          tag={Tag.ENEMY} 
+          geometry={group.geometry} 
+          material={group.material} 
+          maxCount={500}
+          interactive={true}
+          filter={(entity) => { 
+              const render = entity.getComponent<RenderData>(ComponentType.Render); 
+              return render?.geometryId === group.geometryId && render?.materialId === group.materialId; 
+          }}
         />
       ))}
     </>
@@ -10383,6 +10550,8 @@ export const AI_CONFIG = {
 =====================================
 FILE: ./src/engine/config/ProjectileConfig.ts
 =====================================
+import { PALETTE } from './Palette';
+
 export const ProjectileGeometry = {
   SPHERE: 'SPHERE',
   CAPSULE: 'CAPSULE',
@@ -10414,25 +10583,25 @@ const neon = (hex: string, intensity: number): [number, number, number] => {
 export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   'PLAYER_STANDARD': {
     geometry: 'CAPSULE',
-    color: neon('#78F654', 4.0),
+    color: neon(PALETTE.GREEN.PRIMARY, 4.0),
     scale: [0.15, 0.6, 0.15],
     spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
   },
   'PLAYER_FORK': {
     geometry: 'PYRAMID',
-    color: neon('#F7D277', 3.0),
+    color: neon(PALETTE.YELLOW.SOFT, 3.0),
     scale: [0.4, 0.4, 0.4],
     spinSpeed: 5.0, pulseSpeed: 0, faceVelocity: true
   },
   'PLAYER_SNIFFER': {
     geometry: 'DIAMOND',
-    color: neon('#00F0FF', 5.0),
+    color: neon(PALETTE.CYAN.PRIMARY, 5.0),
     scale: [0.3, 0.3, 0.3],
     spinSpeed: 15.0, pulseSpeed: 0, faceVelocity: false
   },
   'PLAYER_BACKDOOR': {
     geometry: 'RING',
-    color: neon('#FF4D6D', 3.0),
+    color: neon(PALETTE.RED.LIGHT, 3.0),
     scale: [0.4, 0.4, 0.4],
     spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
   },
@@ -10444,7 +10613,7 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   },
   'ENEMY_HUNTER': {
     geometry: 'ARROW',
-    color: neon('#FF8C00', 6.0),
+    color: neon(PALETTE.YELLOW.ORANGE, 6.0),
     scale: [0.3, 1.0, 0.3],
     spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
   },
@@ -10496,6 +10665,8 @@ export const PLAYER_CONFIG = {
 =====================================
 FILE: ./src/engine/config/VFXConfig.ts
 =====================================
+import { COLOR_SETS } from './Palette';
+
 export type VFXPattern = 'RADIAL' | 'DIRECTIONAL';
 
 export interface VFXRecipe {
@@ -10510,48 +10681,55 @@ export interface VFXRecipe {
   omniChance?: number; 
 }
 
-const PALETTE_PURPLE = ['#9E4EA5', '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'];
-const PALETTE_YELLOW = ['#F7D277', '#FFE5A0', '#FFA500', '#FFFFFF'];
-const PALETTE_RED = ['#FF003C', '#FF4D6D', '#800010'];
-const PALETTE_CYAN = ['#00F0FF', '#008ba3', '#FFFFFF'];
-
-export const VFX_RECIPES: Record<string, VFXRecipe> = {
-  'EXPLOSION_PURPLE': { pattern: 'RADIAL', colors: PALETTE_PURPLE, count: [15, 25], speed: [5, 10], life: [0.5, 0.8] },
-  'EXPLOSION_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [12, 18], speed: [8, 15], life: [0.4, 0.7] },
-  'EXPLOSION_RED':    { pattern: 'RADIAL', colors: PALETTE_RED, count: [15, 25], speed: [10, 20], life: [0.6, 1.0] },
-  'EXPLOSION_PURPLE_DIR': { 
-      pattern: 'DIRECTIONAL', 
-      colors: PALETTE_PURPLE, 
-      count: [20, 30], 
-      speed: [5, 10], 
+// --- FACTORY ---
+const createExplosion = (
+    colors: string[], 
+    isDirectional: boolean,
+    counts: [number, number],
+    speeds: [number, number]
+): VFXRecipe => {
+  if (isDirectional) {
+    return {
+      pattern: 'DIRECTIONAL',
+      colors: colors,
+      count: counts,
+      speed: speeds,
       life: [0.5, 0.9],
       spread: 1.6,
-      omniChance: 0.15   
-  },
-  'EXPLOSION_YELLOW_DIR': { 
-      pattern: 'DIRECTIONAL', 
-      colors: PALETTE_YELLOW, 
-      count: [15, 25], 
-      speed: [10, 18], 
-      life: [0.4, 0.8],
-      spread: 1.6,
       omniChance: 0.15
-  },
-  'EXPLOSION_RED_DIR': { 
-      pattern: 'DIRECTIONAL', 
-      colors: PALETTE_RED, 
-      count: [20, 35], 
-      speed: [12, 22], 
-      life: [0.6, 1.0],
-      spread: 1.6,
-      omniChance: 0.15 
-  },
-  'IMPACT_WHITE': { pattern: 'RADIAL', colors: ['#FFFFFF'], count: [3, 5], speed: [2, 5], life: [0.1, 0.2] },
-  'IMPACT_RED':   { pattern: 'RADIAL', colors: PALETTE_RED, count: [4, 7], speed: [3, 8], life: [0.2, 0.4] },
-  'CLASH_YELLOW': { pattern: 'RADIAL', colors: PALETTE_YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
+    };
+  }
+  return {
+    pattern: 'RADIAL',
+    colors: colors,
+    count: [Math.floor(counts[0] * 0.75), Math.floor(counts[1] * 0.75)],
+    speed: speeds,
+    life: [0.4, 0.8]
+  };
+};
+
+// --- RECIPES ---
+export const VFX_RECIPES: Record<string, VFXRecipe> = {
+  // Driller: Medium Count, Medium Speed
+  'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
+  'EXPLOSION_PURPLE_DIR': createExplosion(COLOR_SETS.PURPLE, true,  [20, 30], [5, 10]),
+  
+  // Hunter: Lower Count, Higher Speed (Snappy)
+  'EXPLOSION_YELLOW':     createExplosion(COLOR_SETS.YELLOW, false, [15, 25], [10, 18]),
+  'EXPLOSION_YELLOW_DIR': createExplosion(COLOR_SETS.YELLOW, true,  [15, 25], [10, 18]),
+  
+  // Kamikaze: Max Count, Max Speed (Violent)
+  'EXPLOSION_RED':        createExplosion(COLOR_SETS.RED, false, [20, 35], [12, 22]),
+  'EXPLOSION_RED_DIR':    createExplosion(COLOR_SETS.RED, true,  [20, 35], [12, 22]),
+
+  // Custom / Unique FX
+  'IMPACT_WHITE': { pattern: 'RADIAL', colors: COLOR_SETS.WHITE, count: [3, 5], speed: [2, 5], life: [0.1, 0.2] },
+  'IMPACT_RED':   { pattern: 'RADIAL', colors: COLOR_SETS.RED, count: [4, 7], speed: [3, 8], life: [0.2, 0.4] },
+  'CLASH_YELLOW': { pattern: 'RADIAL', colors: COLOR_SETS.YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
+  
   'DRILL_SPARKS':  { 
       pattern: 'DIRECTIONAL', 
-      colors: PALETTE_PURPLE, 
+      colors: COLOR_SETS.PURPLE, 
       count: [3, 6], 
       speed: [10, 10], 
       life: [0.2, 0.4], 
@@ -10559,16 +10737,19 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       size: [0.5, 0.5],
       shape: 1 
   },
-  'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: PALETTE_YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
+  
+  'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: COLOR_SETS.YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
+  
   'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
-    colors: ['#F7D277', '#FFFFFF'], 
+    colors: [COLOR_SETS.YELLOW[0], COLOR_SETS.WHITE[0]], 
     count: [3, 5], 
     speed: [15, 25], 
     life: [0.1, 0.2], 
     spread: 0.05 
   },
-  'REBOOT_HEAL': { pattern: 'RADIAL', colors: PALETTE_CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
+  
+  'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
   'PURGE_BLAST': { pattern: 'RADIAL', colors: ['#FFFFFF', '#FF003C'], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };
 
@@ -10589,25 +10770,71 @@ export const ASCII_TITLE = `
        ░      ░  ░   ░  ░     ░ ░     ░  ░    ░  ░         ░ ░     
 `;
 
-// Used for the Browser Console (NFO/Keygen Style - Safe for DevTools)
+// Stylized Header for Console
 export const ASCII_CONSOLE = `
    __  __  ____  ____  ____  ____  __    ____  _  _ 
   (  \\/  )(  __)/ ___)/  _ \\(  __)(  )  (  __)( \\/ )
    )    (  ) _) \\___ \\  (_) )) _) / (_/\\ ) _)  \\  / 
   (_/\\/\\_)(____)(____/\\____/(____)\\____/(_)    (__) 
-          >> LATENT SPACE BANDIT // VER 2.0 <<
 `;
 
-export const CONSOLE_STYLE = `
-  color: #78F654;
-  background-color: #050505;
-  font-family: "Courier New", monospace;
-  font-weight: bold;
-  font-size: 10px;
-  line-height: 12px;
-  padding-top: 10px;
-  padding-bottom: 10px;
-`;
+const BASE_STYLE = 'font-family: "Courier New", monospace; font-weight: bold; font-size: 10px; line-height: 12px;';
+
+export const CONSOLE_STYLES = {
+  GREEN:  `${BASE_STYLE} color: #78F654; background: #050505;`,
+  PURPLE: `${BASE_STYLE} color: #9E4EA5; background: #050505;`,
+  CYAN:   `${BASE_STYLE} color: #00F0FF; background: #050505;`,
+  TAG:    `font-family: monospace; font-size: 9px; background: #9E4EA5; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`,
+  STATUS: `font-family: monospace; font-size: 9px; background: #78F654; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`
+};
+
+
+=====================================
+FILE: ./src/engine/config/Palette.ts
+=====================================
+export const PALETTE = {
+  // Core Identity
+  GREEN: {
+    PRIMARY: '#78F654',
+    DIM: '#1bb930',
+    DARK: '#217e10',
+    GLOW: '#C2FE9A'
+  },
+  PURPLE: {
+    PRIMARY: '#9E4EA5',
+    LIGHT: '#BC86BA',
+    DEEP: '#350E3A',
+    DIM: '#822B8A'
+  },
+  RED: {
+    CRITICAL: '#FF003C',
+    DIM: '#800010',
+    LIGHT: '#FF4D6D'
+  },
+  YELLOW: {
+    ALERT: '#eae747',
+    SOFT: '#F7D277',
+    ORANGE: '#FF8C00'
+  },
+  CYAN: {
+    PRIMARY: '#00F0FF',
+    DIM: '#008ba3'
+  },
+  MONO: {
+    BLACK: '#050505',
+    WHITE: '#FFFFFF',
+    GRAY: '#27282A'
+  }
+} as const;
+
+// Collections for Procedural Generation
+export const COLOR_SETS = {
+  PURPLE: [PALETTE.PURPLE.PRIMARY, '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'],
+  YELLOW: [PALETTE.YELLOW.SOFT, '#FFE5A0', '#FFA500', PALETTE.MONO.WHITE],
+  RED:    [PALETTE.RED.CRITICAL, PALETTE.RED.LIGHT, PALETTE.RED.DIM],
+  CYAN:   [PALETTE.CYAN.PRIMARY, PALETTE.CYAN.DIM, PALETTE.MONO.WHITE],
+  WHITE:  [PALETTE.MONO.WHITE]
+};
 
 
 =====================================
@@ -10622,11 +10849,10 @@ export interface SoundMeta {
   label: string;
   description: string;
   category: SoundCategory;
-  usage: string; // "Wired to..." description
+  usage: string;
 }
 
 export const SOUND_METADATA: Record<string, SoundMeta> = {
-  // --- UI ---
   'ui_click': { key: 'ui_click', label: 'Click', description: 'Standard interaction', category: 'UI', usage: 'Buttons, Toggles' },
   'ui_hover': { key: 'ui_hover', label: 'Hover', description: 'High frequency blip', category: 'UI', usage: 'Pointer over interactive elements' },
   'ui_menu_open': { key: 'ui_menu_open', label: 'Menu Open', description: 'Ascending slide', category: 'UI', usage: 'Modal/Debug open' },
@@ -10635,7 +10861,6 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'ui_error': { key: 'ui_error', label: 'Error', description: 'Negative buzz', category: 'UI', usage: 'Settings: Potato, Mobile Rejection' },
   'ui_chirp': { key: 'ui_chirp', label: 'Chirp', description: 'Data process sound', category: 'UI', usage: 'Mobile Scan Step' },
 
-  // --- COMBAT ---
   'fx_player_fire': { key: 'fx_player_fire', label: 'Plasma Shot', description: 'Player primary fire', category: 'COMBAT', usage: 'PlayerSystem: Auto-fire' },
   'fx_enemy_fire': { key: 'fx_enemy_fire', label: 'Enemy Shot', description: 'Enemy return fire', category: 'COMBAT', usage: 'Unused (Enemies currently silent on fire)' },
   'fx_impact_light': { key: 'fx_impact_light', label: 'Light Hit', description: 'Small explosion', category: 'COMBAT', usage: 'Enemy death (Small), Mobile Tap Kill' },
@@ -10645,15 +10870,15 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'fx_level_up': { key: 'fx_level_up', label: 'Level Up', description: 'Ascending chord', category: 'COMBAT', usage: 'Upgrade Menu Open' },
   'fx_reboot_success': { key: 'fx_reboot_success', label: 'Reboot', description: 'System restore chime', category: 'COMBAT', usage: 'Player/Panel Revival' },
   'fx_teleport': { key: 'fx_teleport', label: 'Teleport', description: 'Phase shift', category: 'COMBAT', usage: 'Unused' },
+  
+  'fx_exhaust_sizzle': { key: 'fx_exhaust_sizzle', label: 'Sizzle', description: 'Burning fuse', category: 'COMBAT', usage: 'Hunter: Exhaust trail' },
 
-  // --- LOOPS ---
   'loop_heal': { key: 'loop_heal', label: 'Repair Loop', description: 'Healing hum', category: 'AMBIENCE', usage: 'InteractionSystem: Healing Panel' },
   'loop_reboot': { key: 'loop_reboot', label: 'Reboot Loop', description: 'Power build-up', category: 'AMBIENCE', usage: 'InteractionSystem: Rebooting Panel' },
   'loop_warning': { key: 'loop_warning', label: 'Low Health', description: 'Heartbeat alarm', category: 'AMBIENCE', usage: 'GameState: Health < 30%' },
   'loop_drill': { key: 'loop_drill', label: 'Drill Grind', description: 'Mechanical grinding', category: 'COMBAT', usage: 'DrillerLogic: Contact with Panel' },
   'ambience_core': { key: 'ambience_core', label: 'Core Hum', description: 'Background Brown Noise', category: 'AMBIENCE', usage: 'Global Background Track' },
 
-  // --- UNUSED / PROTOTYPES (The "Synth Lab") ---
   'syn_fm_scream': { key: 'syn_fm_scream', label: 'FM Scream', description: 'Aggressive mod', category: 'UNUSED', usage: 'Prototype' },
   'syn_data_burst': { key: 'syn_data_burst', label: 'Data Burst', description: 'Square wave packet', category: 'UNUSED', usage: 'Prototype' },
   'syn_bass_drop': { key: 'syn_bass_drop', label: 'Bass Drop', description: 'Sub frequency dive', category: 'UNUSED', usage: 'Prototype' },
@@ -10674,7 +10899,6 @@ export const SOUND_METADATA: Record<string, SoundMeta> = {
   'syn_static_wash': { key: 'syn_static_wash', label: 'Wash', description: 'Ocean-like noise', category: 'UNUSED', usage: 'Prototype' },
 };
 
-// Validation Helper: Ensure no keys in AUDIO_CONFIG are missing from Metadata
 export const getUnlistedSounds = () => {
     const configKeys = Object.keys(AUDIO_CONFIG);
     const metaKeys = Object.keys(SOUND_METADATA);
@@ -10842,6 +11066,17 @@ export const AUDIO_CONFIG: Record<string, SoundRecipe> = {
   'fx_level_up': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0 },
   'fx_reboot_success': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.3, volume: 0.3, pitchVariance: 0, attack: 0.01, tremolo: { rate: 10, depth: 1.0, wave: 'square' } },
   'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0 },
+  // NEW: Roman Candle Effect
+  'fx_exhaust_sizzle': { 
+      type: 'noise', 
+      frequency: [0, 0], 
+      filter: [4000, 2000], 
+      duration: 0.3, 
+      volume: 0.1, 
+      pitchVariance: 0, 
+      distortion: 10,
+      tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' } 
+  },
   'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0 },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0 },
   'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 } },
@@ -10953,19 +11188,20 @@ const parseHex = (hex: string) => {
     };
 };
 
-const DRILLER_COLOR = parseHex(GAME_THEME.enemy.muncher);
-const KAMIKAZE_COLOR = parseHex(GAME_THEME.enemy.kamikaze);
-const HUNTER_COLOR = parseHex(GAME_THEME.enemy.hunter);
-const DAEMON_COLOR = parseHex('#00F0FF');
-const PLAYER_COLOR = parseHex(GAME_THEME.turret.base);
-
 export interface EntityBlueprint {
+  id: string;
   tags: Tag[];
+  aiLogic?: string;
+  assets?: {
+      geometry: string;
+      material: string;
+  };
   components: { type: ComponentType; data?: any }[];
 }
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
+    id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
     components: [
       { type: ComponentType.Identity, data: { variant: 'PLAYER' } },
@@ -10978,10 +11214,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { ...PLAYER_COLOR, visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.turret.base), visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
+    id: ArchetypeIDs.BULLET_PLAYER,
     tags: [Tag.BULLET, Tag.PLAYER],
     components: [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -10999,6 +11236,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     ]
   },
   [ArchetypeIDs.BULLET_ENEMY]: {
+    id: ArchetypeIDs.BULLET_ENEMY,
     tags: [Tag.BULLET, Tag.ENEMY],
     components: [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -11016,7 +11254,10 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     ]
   },
   [ArchetypeIDs.DRILLER]: {
+    id: ArchetypeIDs.DRILLER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'driller',
+    assets: { geometry: 'GEO_DRILLER', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11026,11 +11267,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
-      { type: ComponentType.Render, data: { ...DRILLER_COLOR, geometryId: 'GEO_DRILLER', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.muncher) } }
     ]
   },
   [ArchetypeIDs.KAMIKAZE]: {
+    id: ArchetypeIDs.KAMIKAZE,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'kamikaze',
+    assets: { geometry: 'GEO_KAMIKAZE', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11040,11 +11284,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...KAMIKAZE_COLOR, geometryId: 'GEO_KAMIKAZE', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.kamikaze) } }
     ]
   },
   [ArchetypeIDs.HUNTER]: {
+    id: ArchetypeIDs.HUNTER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
+    aiLogic: 'hunter',
+    assets: { geometry: 'GEO_HUNTER', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11054,11 +11301,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...HUNTER_COLOR, geometryId: 'GEO_HUNTER', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.hunter) } }
     ]
   },
   [ArchetypeIDs.DAEMON]: {
+    id: ArchetypeIDs.DAEMON,
     tags: [Tag.PLAYER],
+    aiLogic: 'daemon',
+    assets: { geometry: 'GEO_DAEMON', material: 'MAT_ENEMY_BASE' },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DAEMON } },
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -11067,7 +11317,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.State, data: { current: 'ORBIT' } },
-      { type: ComponentType.Render, data: { ...DAEMON_COLOR, geometryId: 'GEO_DAEMON', materialId: 'MAT_ENEMY_BASE' } }
+      { type: ComponentType.Render, data: { ...parseHex('#00F0FF') } }
     ]
   }
 };
@@ -11268,8 +11518,9 @@ FILE: ./src/engine/signals/FastEventBus.ts
 =====================================
 import { IFastEventService } from '@/engine/interfaces';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 
-const BUFFER_SIZE = 2048; 
+const BUFFER_SIZE = 4096; // Doubled buffer size for safety with high traffic
 const MASK = BUFFER_SIZE - 1;
 const STRIDE = 5; 
 
@@ -11277,7 +11528,13 @@ export const FastEvents = {
   SPAWN_FX: 1,
   TRAUMA: 2,
   PLAY_SOUND: 3,
-  SPAWN_IMPACT: 4, // NEW: For dynamic colored impacts
+  SPAWN_IMPACT: 4,
+  // --- NEW EVENTS ---
+  PLAYER_FIRED: 10,
+  PLAYER_HIT: 11,
+  ENEMY_DAMAGED: 12,
+  ENEMY_DESTROYED: 13,
+  PROJECTILE_CLASH: 14
 } as const;
 
 export const FX_IDS: Record<string, number> = {
@@ -11300,17 +11557,29 @@ export const FX_IDS: Record<string, number> = {
   'FX_IMPACT_LIGHT': 52
 };
 
+// Reverse map for FX
 export const FX_ID_MAP = Object.entries(FX_IDS).reduce((acc, [k, v]) => {
   acc[v] = k;
   return acc;
 }, {} as Record<number, string>);
+
+// Map Enemy Strings to Integers for the Buffer
+export const ENEMY_ID_MAP: Record<string, number> = {
+  [EnemyTypes.DRILLER]: 1,
+  [EnemyTypes.KAMIKAZE]: 2,
+  [EnemyTypes.HUNTER]: 3,
+  [EnemyTypes.DAEMON]: 4,
+  'UNKNOWN': 0
+};
 
 export class FastEventService implements IFastEventService {
   private buffer = new Float32Array(BUFFER_SIZE * STRIDE);
   private writeCursor = 0;
 
   public emit(eventId: number, arg1: number = 0, arg2: number = 0, arg3: number = 0, arg4: number = 0) {
-    if (isNaN(arg1)) return;
+    // Safety check for NaN to prevent logic bomb downstream
+    if (Number.isNaN(arg1)) arg1 = 0;
+    
     const ptr = (this.writeCursor & MASK) * STRIDE;
     this.buffer[ptr] = eventId;
     this.buffer[ptr + 1] = arg1;
@@ -11322,7 +11591,12 @@ export class FastEventService implements IFastEventService {
 
   public readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number {
     let current = fromCursor;
-    if (this.writeCursor - current > BUFFER_SIZE) current = this.writeCursor - BUFFER_SIZE;
+    // If reader fell too far behind, jump ahead to prevent reading wrapped/stale data incorrectly
+    // (Though simple ring buffer reading usually handles wrap, jumping ensures we don't process > buffer size)
+    if (this.writeCursor - current > BUFFER_SIZE) {
+        current = this.writeCursor - BUFFER_SIZE;
+    }
+    
     while (current < this.writeCursor) {
       const ptr = (current & MASK) * STRIDE;
       handler(this.buffer[ptr], this.buffer[ptr + 1], this.buffer[ptr + 2], this.buffer[ptr + 3], this.buffer[ptr + 4]);
@@ -11334,9 +11608,6 @@ export class FastEventService implements IFastEventService {
   public getCursor() { return this.writeCursor; }
 }
 
-/**
- * STATIC FACADE (Compatibility Adapter)
- */
 class FastEventBusFacade {
   private get service(): IFastEventService {
     try {
@@ -12952,8 +13223,10 @@ FILE: ./src/engine/math/GeometryUtils.ts
 =====================================
 import * as THREE from 'three';
 
-export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry, removeEdge: boolean = false) => {
-  const geometry = bufferGeometry.toNonIndexed();
+export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) => {
+  // Only convert if it's indexed to avoid Three.js console warnings
+  const geometry = bufferGeometry.index ? bufferGeometry.toNonIndexed() : bufferGeometry.clone();
+  
   const count = geometry.attributes.position.count;
   const centers = new Float32Array(count * 3);
 
@@ -12975,73 +13248,42 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry, 
   return geometry;
 };
 
-// NEW: Tri-Wing "Paper Airplane" Spear
 export const createHunterSpear = () => {
   const positions: number[] = [];
-  
-  // We build 3 "Wings" (thin triangles)
   const numWings = 3;
   const length = 1.2;
   const wingWidth = 0.4;
-  const wingThickness = 0.05; // Give it slight 3D thickness
+  const wingThickness = 0.05;
 
   for(let i=0; i<numWings; i++) {
       const angle = (i / numWings) * Math.PI * 2;
-      
-      // We build a triangle in the Y/X plane, then rotate it around Y
-      // Tip at (0, length/2, 0)
-      // Base Outer at (width, -length/2, 0)
-      // Base Inner at (0, -length/2, 0)
-      
       const tipY = length / 2;
       const baseY = -length / 2;
-      
-      // Define vertices for a "Thick" triangle (Wedge)
-      // P1: Tip
-      // P2: Base Outer Left
-      // P3: Base Outer Right
-      // P4: Base Center (Axis)
-      
-      // Let's manually push triangles for a "Fin"
-      // Fin stands on the +X axis
-      
       const pTip = [0, tipY, 0];
       const pBaseOut = [wingWidth, baseY, 0];
       const pBaseInBack = [0, baseY, -wingThickness];
       const pBaseInFront = [0, baseY, wingThickness];
       
-      // Helper to rotate point around Y axis
-      const rotateY = (p: number[], rad: number) => {
-          const x = p[0];
-          const z = p[2];
-          return [
-              x * Math.cos(rad) - z * Math.sin(rad),
-              p[1], // Y unchanged
-              x * Math.sin(rad) + z * Math.cos(rad)
-          ];
-      };
+      const rotateY = (p: number[], rad: number) => [
+          p[0] * Math.cos(rad) - p[2] * Math.sin(rad),
+          p[1],
+          p[0] * Math.sin(rad) + p[2] * Math.cos(rad)
+      ];
 
-      // Push Triangles
-      // 1. Face Front
       let v1 = rotateY(pTip, angle);
       let v2 = rotateY(pBaseOut, angle);
       let v3 = rotateY(pBaseInFront, angle);
       positions.push(...v1, ...v2, ...v3);
       
-      // 2. Face Back
       v1 = rotateY(pTip, angle);
       v2 = rotateY(pBaseInBack, angle);
       v3 = rotateY(pBaseOut, angle);
       positions.push(...v1, ...v2, ...v3);
-      
-      // 3. Base Cap (optional, but good for solidity)
-      // ... skipping for wireframe aesthetic
   }
   
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
-  
   return addBarycentricCoordinates(geometry);
 };
 
@@ -13100,7 +13342,10 @@ export class AudioServiceImpl implements IAudioService {
   public isReady = false;
   private hasInteracted = false; 
   private musicElement: HTMLAudioElement | null = null;
+  
+  // FIX: Track both Source AND Gain to prevent GC hiccups
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
+  private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
 
   public async init() {
@@ -13162,21 +13407,37 @@ export class AudioServiceImpl implements IAudioService {
       const ctx = this.ctxManager.ctx;
       if (!ctx || !this.mixer.ambienceGain || (this.currentAmbienceKey === key && this.currentAmbienceNode)) return;
 
+      // Cleanup previous
       if (this.currentAmbienceNode) {
-          try { this.currentAmbienceNode.stop(ctx.currentTime + 0.5); } catch {}
+          try { 
+              this.currentAmbienceNode.stop(ctx.currentTime + 0.5); 
+              // Disconnect old gain after fade out to be safe? 
+              // We rely on WebAudio auto-cleanup for disconnected nodes, 
+              // but we drop our reference here.
+          } catch {}
           this.currentAmbienceNode = null;
+          this.currentAmbienceGain = null; // Drop ref
       }
+
       const buffer = this.bank.get(key);
       if (!buffer) return;
 
       const source = ctx.createBufferSource();
-      source.buffer = buffer; source.loop = true;
+      source.buffer = buffer; 
+      source.loop = true;
+      
       const fadeGain = ctx.createGain();
       fadeGain.gain.setValueAtTime(0, ctx.currentTime);
       fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
-      source.connect(fadeGain); fadeGain.connect(this.mixer.ambienceGain); 
+      
+      source.connect(fadeGain); 
+      fadeGain.connect(this.mixer.ambienceGain); 
       source.start();
-      this.currentAmbienceNode = source; this.currentAmbienceKey = key;
+      
+      // Store references to prevent GC
+      this.currentAmbienceNode = source; 
+      this.currentAmbienceGain = fadeGain; 
+      this.currentAmbienceKey = key;
   }
 
   public startMusic() {
@@ -13196,9 +13457,15 @@ export class AudioServiceImpl implements IAudioService {
   
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
+  
   public stopAll() {
       if (this.musicElement) { this.musicElement.pause(); this.musicElement.currentTime = 0; }
-      if (this.currentAmbienceNode) { try { this.currentAmbienceNode.stop(); } catch {} this.currentAmbienceNode = null; this.currentAmbienceKey = null; }
+      if (this.currentAmbienceNode) { 
+          try { this.currentAmbienceNode.stop(); } catch {} 
+          this.currentAmbienceNode = null; 
+          this.currentAmbienceGain = null;
+          this.currentAmbienceKey = null; 
+      }
   }
 
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
@@ -13382,7 +13649,7 @@ FILE: ./src/engine/audio/AudioDirector.ts
 =====================================
 import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_ID_MAP, FX_IDS, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export class AudioDirector implements IGameSystem {
@@ -13403,34 +13670,42 @@ export class AudioDirector implements IGameSystem {
     this.logTimer += delta;
 
     this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+        // 1. Explicit Play Sound Command
         if (id === FastEvents.PLAY_SOUND) {
             const key = FX_ID_MAP[a1];
-            
-            if (this.logTimer > 1.0) {
-                // this.events.emit(GameEvents.LOG_DEBUG, ...); // Optional logging
-                this.logTimer = 0;
-            }
-
             if (key) {
-                const audioKey = key.toLowerCase();
-                const pan = this.calculatePan(a2); 
-                this.audio.playSound(audioKey, pan);
+                this.audio.playSound(key.toLowerCase(), this.calculatePan(a2));
             }
+        }
+        
+        // 2. Player Fired (Previously implicit or via separate mechanism)
+        else if (id === FastEvents.PLAYER_FIRED) {
+            // a1 = x
+            this.audio.playSound('fx_player_fire', this.calculatePan(a1));
+        }
+
+        // 3. Enemy Destroyed
+        else if (id === FastEvents.ENEMY_DESTROYED) {
+            // a2=x, a4=typeId
+            const pan = this.calculatePan(a2);
+            // Kamikaze (ID 2) gets heavy impact
+            if (a4 === ENEMY_ID_MAP['kamikaze']) {
+                this.audio.playSound('fx_impact_heavy', pan);
+            } else {
+                this.audio.playSound('fx_impact_light', pan);
+            }
+        }
+
+        // 4. Player Hit
+        else if (id === FastEvents.PLAYER_HIT) {
+            this.audio.playSound('fx_impact_heavy', 0);
+            this.audio.duckMusic(0.7, 1.0);
         }
     });
   }
 
   private setupEventListeners() {
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        this.audio.playSound('fx_impact_heavy', 0);
-        this.audio.duckMusic(0.7, 1.0);
-    });
-
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        const pan = this.calculatePan(p.x);
-        if (p.type === 'kamikaze') this.audio.playSound('fx_impact_heavy', pan);
-        else this.audio.playSound('fx_impact_light', pan);
-    });
+    // Only keeping UI/Panel events here. Combat events migrated to FastBus.
 
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const pan = this.getPanelPan(p.id);
@@ -14035,7 +14310,6 @@ export class HoverDrift extends BTNode {
 
     if (!transform || !motion || !target || !state) return NodeState.FAILURE;
 
-    // Fix: Ensure undefined properties are handled
     if (!state.timers) state.timers = {};
     if (!state.data) state.data = {};
 
@@ -14056,7 +14330,6 @@ export class HoverDrift extends BTNode {
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
     
-    // SAFETY: Prevent NaN
     if (dist < 0.001) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -14144,14 +14417,22 @@ export class FireProjectile extends BTNode {
 export class ExhaustFX extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    if (!transform) return NodeState.FAILURE;
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
+    if (!transform || !state) return NodeState.FAILURE;
 
-    // Config for Continuous Stream
+    // 1. Audio: "Sizzle" Loop (Throttled)
+    // Plays a 0.3s sound every 0.15s to overlap slightly and sound continuous
+    if (!state.timers.sizzle || state.timers.sizzle <= 0) {
+        context.playSound('fx_exhaust_sizzle', transform.x);
+        state.timers.sizzle = 0.15;
+    } else {
+        state.timers.sizzle -= context.delta;
+    }
+
+    // 2. Visuals: Particle Stream
     const rearAngle = transform.rotation + Math.PI;
     const offset = 0.5;
     const spreadAngle = 0.2; 
-    
-    // Multiple particles per tick for dense trail
     const density = 2; 
 
     for (let i = 0; i < density; i++) {
@@ -14165,7 +14446,6 @@ export class ExhaustFX extends BTNode {
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
         
-        // Shape 1 = Teardrop
         context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0);
     }
 
@@ -14742,12 +15022,10 @@ export const ShaderLib = {
 
         void main() {
           vUv = uv;
-          vColor = vec3(0.0, 1.0, 0.4); // Bright Green
+          vColor = vec3(0.0, 1.0, 0.4); 
           vBarycentric = barycentric;
-          vPos = position; // Pass raw position for scanlines
+          vPos = position; 
           
-          // Noise Displacement
-          // Use uTime to animate, uIntensity to control amount
           float noiseVal = snoise(vec3(position * uFrequency + uTime * uSpeed));
           vec3 displaced = position + normal * noiseVal * uIntensity;
           
@@ -14756,17 +15034,96 @@ export const ShaderLib = {
       `,
       fragment: `
         void main() {
-          // Increase width to ensure visibility on high-DPI screens
           float width = 1.0; 
           float edge = edgeFactor(vBarycentric, width);
-          
-          // Digital scanline effect
           float scan = sin(vPos.y * 20.0 - uTime * 5.0) * 0.5 + 0.5;
-          
-          // Base opacity (0.1) so object is always slightly visible, + wireframe (edge)
           float alpha = 0.1 + (1.0 - edge) * 0.9 + (scan * 0.3);
-          
           gl_FragColor = vec4(vColor, alpha);
+        }
+      `
+    },
+
+    playerAmbient: {
+      // Removed 'varying vec2 vUv;' as it is provided by vertexHeader
+      vertex: `
+        void main() { 
+          vUv = uv; 
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
+        }
+      `,
+      // Removed 'varying vec2 vUv;' as it is provided by fragmentHeader
+      fragment: `
+        uniform vec3 uColor; uniform float uOpacity; uniform float uEnergy;
+        
+        void main() {
+          vec2 pos = vUv - 0.5;
+          float angle = atan(pos.y, pos.x);
+          float warble = (0.005 + 0.015 * uEnergy) * sin(angle * 10.0 + uTime * 2.0);
+          float dist = length(pos) + warble;
+          float alphaBase = pow(1.0 - smoothstep(0.0, 0.5, dist), 3.5);
+          float ringsIdle = 0.6 + 0.4 * sin(dist * 80.0 - uTime * 1.5);
+          float ringsActive = 0.5 + 0.5 * sin(dist * 30.0 - uTime * 8.0);
+          float ringMix = mix(ringsIdle, ringsActive, uEnergy);
+          float scan = 0.85 + 0.15 * sin(dist * 150.0 - uTime * 5.0);
+          float finalAlpha = alphaBase * ringMix * scan * uOpacity * (1.0 + (uEnergy * 2.5));
+          if (finalAlpha < 0.01) discard;
+          gl_FragColor = vec4(uColor, finalAlpha);
+        }
+      `
+    },
+
+    playerBacking: {
+      // Removed 'varying vec2 vUv;'
+      vertex: `
+        void main() { 
+          vUv = uv; 
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
+        }
+      `,
+      // Removed 'varying vec2 vUv;'
+      fragment: `
+        uniform vec3 uColor; uniform float uOpacity; 
+        void main() { 
+          float dist = distance(vUv, vec2(0.5)); 
+          float alpha = 1.0 - smoothstep(0.25, 0.5, dist); 
+          if (alpha < 0.01) discard; 
+          gl_FragColor = vec4(uColor, alpha * uOpacity); 
+        }
+      `
+    },
+
+    galleryBody: {
+      // Removed 'attribute vec3 barycentric;' and 'varying vec3 vBarycentric;'
+      // They are provided by vertexHeader
+      vertex: `
+        void main() {
+          vBarycentric = barycentric;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      // Removed 'varying vec3 vBarycentric;'
+      fragment: `
+        uniform vec3 uColor;
+        uniform float uGlow;
+        uniform float uDissolve;
+        
+        void main() {
+          if (uDissolve > 0.0) {
+              float stripes = sin(gl_FragCoord.y * 0.1 + gl_FragCoord.x * 0.1);
+              if (stripes < (uDissolve * 2.0 - 1.0)) discard;
+          }
+
+          float width = 1.0; 
+          float edge = edgeFactor(vBarycentric, width);
+          float glow = 1.0 - edge;
+          glow = pow(glow, 0.4) + uGlow; 
+          
+          vec3 coreColor = uColor;
+          vec3 edgeColor = vec3(1.0);
+          vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
+          finalColor += coreColor * uGlow * 0.5;
+
+          gl_FragColor = vec4(finalColor, 1.0);
         }
       `
     }
@@ -15007,28 +15364,31 @@ export class CollisionSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/HealthSystem.ts
 =====================================
-import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IAudioService, IPanelSystem, IFastEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
+import { FastEvents } from '@/engine/signals/FastEventBus';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
+  
+  private fastEvents: IFastEventService;
+  private readCursor = 0;
 
   constructor(
     private events: IGameEventService,
     private audio: IAudioService,
     private panelSystem: IPanelSystem
   ) {
+    this.fastEvents = ServiceLocator.getFastEventBus();
+    this.readCursor = this.fastEvents.getCursor();
     this.reset();
     
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        this.damagePlayer(p.damage);
-    });
-
     this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => {
         this.tickReboot(p.amount);
     });
@@ -15039,6 +15399,15 @@ export class HealthSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // Process Fast Events
+    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1) => {
+        if (id === FastEvents.PLAYER_HIT) {
+            this.damagePlayer(a1); // a1 = damage amount
+            // Re-emit slow event for UI/Logs
+            this.events.emit(GameEvents.PLAYER_HIT, { damage: a1 });
+        }
+    });
+
     if (this.isGameOver) return;
     
     if (this.panelSystem.systemIntegrity <= 0) {
@@ -15085,6 +15454,64 @@ export class HealthSystem implements IGameSystem {
       this.playerHealth = this.maxPlayerHealth;
       this.playerRebootProgress = 0;
       this.isGameOver = false;
+      this.readCursor = this.fastEvents ? this.fastEvents.getCursor() : 0;
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
+FILE: ./src/engine/systems/AtmosphereSystem.ts
+=====================================
+import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
+import { useStore } from '@/engine/state/global/useStore'; 
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Tag } from '@/engine/ecs/types';
+import * as THREE from 'three';
+
+const COL_SAFE = new THREE.Color("#00FF41");
+const COL_WARN = new THREE.Color("#FFD700");
+const COL_CRIT = new THREE.Color("#FF003C");
+const COL_SBX  = new THREE.Color("#00FFFF");
+
+export class AtmosphereSystem implements IGameSystem {
+  private targetColor = new THREE.Color();
+  private currentColor = new THREE.Color();
+
+  constructor(
+    private panelSystem: IPanelSystem,
+    private registry: IEntityRegistry
+  ) {}
+
+  update(delta: number, time: number): void {
+    const integrity = this.panelSystem.systemIntegrity;
+    const worldEntities = this.registry.getByTag(Tag.WORLD);
+    
+    for (const world of worldEntities) {
+        const render = world.getComponent<RenderData>(ComponentType.Render);
+        if (render) {
+            const bootState = useStore.getState().bootState;
+            
+            // 1. Determine Target Color
+            if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
+            else if (integrity < 30) this.targetColor.copy(COL_CRIT);
+            else if (integrity < 60) this.targetColor.copy(COL_WARN);
+            else this.targetColor.copy(COL_SAFE);
+
+            // 2. Smooth Lerp
+            this.currentColor.setRGB(render.r, render.g, render.b);
+            this.currentColor.lerp(this.targetColor, delta * 2.0);
+            
+            render.r = this.currentColor.r;
+            render.g = this.currentColor.g;
+            render.b = this.currentColor.b;
+            
+            // 3. World Spin
+            render.visualRotation += 0.5 * delta; 
+        }
+    }
   }
 
   teardown(): void {}
@@ -15252,7 +15679,10 @@ export class InteractionSystem implements IInteractionSystem {
   private handleRevival(cursor: {x: number, y: number}, time: number) {
     const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
-    const padding = 2.0; 
+    
+    // FIXED: Reduced padding from 2.0 (80px) to 0.1 (4px) to prevent overlap with Social Panel
+    const padding = 0.1; 
+    
     const isHovering = 
         cursor.x >= rect.left - padding && 
         cursor.x <= rect.right + padding && 
@@ -15263,7 +15693,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // DECOUPLED WRITE: Emit event instead of calling method
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
             
             this.lastRepairTime = time;
@@ -15289,9 +15718,6 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
 
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            // Panel System handles its own logic, but we could eventually event-ize this too.
-            // For now, PanelSystem is a core injected dependency, so calling it is "okay" 
-            // but effectively we are telling it to heal.
             this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
             this.lastRepairTime = time;
             
@@ -15550,6 +15976,50 @@ export class VFXSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/PlayerMovementSystem.ts
+=====================================
+import { IGameSystem, IInputService, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { Tag } from '@/engine/ecs/types';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export class PlayerMovementSystem implements IGameSystem {
+  constructor(
+    private input: IInputService,
+    private registry: IEntityRegistry,
+    private interaction: IInteractionSystem,
+    private gameSystem: IGameStateSystem
+  ) {}
+
+  update(delta: number, time: number): void {
+    let playerEntity = null;
+    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
+    if (!playerEntity) return;
+
+    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+    const cursor = this.input.getCursor();
+    
+    // 1. Position Sync
+    if (transform) { 
+        transform.x = cursor.x; 
+        transform.y = cursor.y; 
+    }
+
+    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+
+    // 2. Logic State Sync
+    const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
+    if (stateComp) {
+        stateComp.current = this.interaction.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
+    }
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/engine/systems/StructureSystem.ts
 =====================================
 import { IGameSystem, IPanelSystem } from '@/engine/interfaces';
@@ -15702,105 +16172,6 @@ export class ParticleSystem implements IParticleSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/PlayerSystem.ts
-=====================================
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IInteractionSystem, IInputService, IEntityRegistry } from '@/engine/interfaces';
-import { Tag } from '@/engine/ecs/types';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { AIStateData } from '@/engine/ecs/components/AIStateData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { ConfigService } from '@/engine/services/ConfigService';
-import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
-
-export class PlayerSystem implements IGameSystem {
-  private lastFireTime = 0;
-
-  constructor(
-    private input: IInputService,
-    private spawner: IEntitySpawner,
-    private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem,
-    private registry: IEntityRegistry,
-    private config: typeof ConfigService
-  ) {
-    GameEventBus.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') this.triggerPurge();
-    });
-  }
-
-  update(delta: number, time: number): void {
-    let playerEntity = null;
-    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
-    if (!playerEntity) return;
-
-    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-    const cursor = this.input.getCursor();
-    if (transform) { transform.x = cursor.x; transform.y = cursor.y; }
-    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
-
-    const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
-    if (stateComp) stateComp.current = this.interactionSystem.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';
-
-    if (stateComp && (stateComp.current === 'ACTIVE' || stateComp.current === 'REBOOTING')) {
-        const upgrades = this.gameSystem.activeUpgrades;
-        const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
-        if (time > this.lastFireTime + currentFireRate) {
-            this.attemptAutoFire(time, transform!, upgrades, playerEntity.getComponent<RenderData>(ComponentType.Render));
-        }
-    }
-  }
-
-  private triggerPurge() {
-      const cursor = this.input.getCursor();
-      const count = 360; const speed = 45; const damage = 100;
-      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], cursor.x, cursor.y);
-      GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 }); 
-      for (let i = 0; i < count; i++) {
-          const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(cursor.x, cursor.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
-      }
-  }
-
-  private attemptAutoFire(time: number, playerTransform: TransformData, upgrades: Record<string, number>, playerRender?: RenderData) {
-    const enemies = this.registry.getByTag(Tag.ENEMY);
-    let nearestDist = Infinity; let targetEnemy = null;
-    for (const e of enemies) {
-      if (!e.active || e.hasTag(Tag.BULLET)) continue;
-      const state = e.getComponent<AIStateData>(ComponentType.State);
-      if (state && state.current === 'SPAWN') continue;
-      const t = e.getComponent<TransformData>(ComponentType.Transform);
-      if (!t) continue;
-      const dist = (t.x - playerTransform.x)**2 + (t.y - playerTransform.y)**2; 
-      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
-    }
-    if (!targetEnemy) return;
-
-    const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-    const shots = calculatePlayerShots({ x: playerTransform.x, y: playerTransform.y }, { x: tPos.x, y: tPos.y }, upgrades);
-
-    shots.forEach(shot => {
-        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, false, shot.life, shot.damage, shot.configId);
-        if (playerRender) {
-            const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
-            if (bRender) { bRender.r = playerRender.r * 4; bRender.g = playerRender.g * 4; bRender.b = playerRender.b * 4; }
-        }
-        if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
-    });
-
-    FastEventBus.emit(FastEvents.PLAY_SOUND, FX_IDS['FX_PLAYER_FIRE'], playerTransform.x);
-    this.lastFireTime = time;
-  }
-
-  teardown(): void {}
-}
-
-
-=====================================
 FILE: ./src/engine/systems/OrbitalSystem.ts
 =====================================
 import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
@@ -15924,6 +16295,113 @@ export class TimeSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/WeaponSystem.ts
+=====================================
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
+import { Tag } from '@/engine/ecs/types';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { TargetData } from '@/engine/ecs/components/TargetData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { ConfigService } from '@/engine/services/ConfigService';
+import { FastEventBus, FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
+
+export class WeaponSystem implements IGameSystem {
+  private lastFireTime = 0;
+  private unsubPurge: () => void;
+
+  constructor(
+    private spawner: IEntitySpawner,
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private events: IGameEventService,
+    private config: typeof ConfigService
+  ) {
+    this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') this.triggerPurge();
+    });
+  }
+
+  update(delta: number, time: number): void {
+    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+
+    let playerEntity = null;
+    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
+    if (!playerEntity) return;
+
+    const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
+    if (!stateComp || (stateComp.current !== 'ACTIVE' && stateComp.current !== 'REBOOTING')) return;
+
+    const upgrades = this.gameSystem.activeUpgrades;
+    const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
+
+    if (time > this.lastFireTime + currentFireRate) {
+        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+        const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+        if (transform) {
+            this.attemptAutoFire(time, transform, upgrades, render);
+        }
+    }
+  }
+
+  private triggerPurge() {
+      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
+      if (!player) return;
+      const t = player.getComponent<TransformData>(ComponentType.Transform);
+      if (!t) return;
+
+      const count = 360; const speed = 45; const damage = 100;
+      FastEventBus.emit(FastEvents.SPAWN_FX, FX_IDS['EXPLOSION_YELLOW'], t.x, t.y);
+      FastEventBus.emit(FastEvents.TRAUMA, 1.0); 
+
+      for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count;
+          this.spawner.spawnBullet(t.x, t.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
+      }
+  }
+
+  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderData) {
+    const enemies = this.registry.getByTag(Tag.ENEMY);
+    let nearestDist = Infinity; let targetEnemy = null;
+
+    for (const e of enemies) {
+      if (!e.active || e.hasTag(Tag.BULLET)) continue;
+      const state = e.getComponent<AIStateData>(ComponentType.State);
+      if (state && state.current === 'SPAWN') continue;
+      const t = e.getComponent<TransformData>(ComponentType.Transform);
+      if (!t) continue;
+      const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
+      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
+    }
+
+    if (!targetEnemy) return;
+
+    const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
+    const shots = calculatePlayerShots({ x: pPos.x, y: pPos.y }, { x: tPos.x, y: tPos.y }, upgrades);
+
+    shots.forEach(shot => {
+        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, false, shot.life, shot.damage, shot.configId);
+        if (pRender) {
+            const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
+            if (bRender) { bRender.r = pRender.r * 4; bRender.g = pRender.g * 4; bRender.b = pRender.b * 4; }
+        }
+        if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
+    });
+
+    FastEventBus.emit(FastEvents.PLAYER_FIRED, pPos.x, pPos.y);
+    this.lastFireTime = time;
+  }
+
+  teardown(): void {
+    this.unsubPurge();
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/systems/ShakeSystem.ts
 =====================================
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
@@ -16014,15 +16492,15 @@ export class ShakeSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/RenderSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem, IFastEventService } from '@/engine/interfaces';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { FastEvents } from '@/engine/signals/FastEventBus';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -16033,31 +16511,38 @@ const COL_DEAD = new THREE.Color('#FF003C');
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
   private readonly FLASH_DECAY = 5.0; 
+  private fastEvents: IFastEventService;
+  private readCursor = 0;
 
   constructor(
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private interactionSystem: IInteractionSystem
   ) {
-    GameEventBus.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const render = entity.getComponent<RenderData>(ComponentType.Render);
-            if (render) {
-                render.r = 2.0; 
-                render.g = 2.0;
-                render.b = 2.0;
-            }
-        }
-    });
+    this.fastEvents = ServiceLocator.getFastEventBus();
+    this.readCursor = this.fastEvents.getCursor();
   }
 
   update(delta: number, time: number): void {
-    // NEW: Update Global Shader Uniforms
     MaterialFactory.updateUniforms(time);
 
-    const renderables = this.registry.query({ all: [ComponentType.Render] });
+    // Process Hit Flashes
+    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1) => {
+        if (id === FastEvents.ENEMY_DAMAGED) {
+            // a1 = entityID
+            const entity = this.registry.getEntity(a1);
+            if (entity) {
+                const render = entity.getComponent<RenderData>(ComponentType.Render);
+                if (render) {
+                    render.r = 2.0; 
+                    render.g = 2.0;
+                    render.b = 2.0;
+                }
+            }
+        }
+    });
 
+    const renderables = this.registry.query({ all: [ComponentType.Render] });
     const interactState = this.interactionSystem.repairState;
     const isDead = this.gameSystem.playerHealth <= 0;
 
@@ -16086,7 +16571,7 @@ export class RenderSystem implements IGameSystem {
 
   private updatePlayerVisuals(render: RenderData, delta: number, interactState: string, isDead: boolean) {
       let targetCol = COL_BASE;
-      let spinSpeed = 0.02; // IDLE
+      let spinSpeed = 0.02; 
 
       if (isDead) {
           targetCol = COL_DEAD;
@@ -16183,14 +16668,13 @@ FILE: ./src/engine/systems/CombatSystem.ts
 import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { CollisionMatrix } from '@/engine/handlers/combat/CollisionMatrix';
 import { CombatContext } from '@/engine/handlers/combat/types';
-import { FastEvents, FX_IDS } from '@/engine/signals/FastEventBus';
+import { FastEvents, FX_IDS, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 
 export class CombatSystem implements IGameSystem {
   constructor(
@@ -16217,7 +16701,7 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
+              this.fastEvents.emit(FastEvents.PLAYER_HIT, amount);
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
@@ -16225,15 +16709,10 @@ export class CombatSystem implements IGameSystem {
               if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x, y);
           },
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Clamp inputs to 0-1
               const cr = Math.min(1, Math.max(0, r));
               const cg = Math.min(1, Math.max(0, g));
               const cb = Math.min(1, Math.max(0, b));
-              
-              // Pack 0-255 ints into one float
               const packed = (Math.floor(cr * 255) << 16) | (Math.floor(cg * 255) << 8) | Math.floor(cb * 255);
-              
-              // Pass angle as the 4th argument
               this.fastEvents.emit(FastEvents.SPAWN_IMPACT, x, y, packed, angle);
           },
           playAudio: (key) => this.audio.playSound(key),
@@ -16247,7 +16726,10 @@ export class CombatSystem implements IGameSystem {
               }
           },
           addTrauma: (amount) => {
-              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
+              this.fastEvents.emit(FastEvents.TRAUMA, amount);
+          },
+          flashEntity: (id) => {
+              this.fastEvents.emit(FastEvents.ENEMY_DAMAGED, id);
           }
       };
 
@@ -16261,12 +16743,8 @@ export class CombatSystem implements IGameSystem {
       if (identity && transform) {
           const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
           if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
-              this.events.emit(GameEvents.ENEMY_DESTROYED, { 
-                  id: entity.id as number, 
-                  type: identity.variant,
-                  x: transform.x,
-                  y: transform.y
-              });
+              const typeId = ENEMY_ID_MAP[identity.variant] || 0;
+              this.fastEvents.emit(FastEvents.ENEMY_DESTROYED, entity.id as number, transform.x, transform.y, typeId);
           }
       }
 
@@ -16561,9 +17039,11 @@ export * from './WaveSystem';
 =====================================
 FILE: ./src/engine/systems/ProgressionSystem.ts
 =====================================
-import { IGameSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents, ENEMY_ID_MAP } from '@/engine/signals/FastEventBus';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -16576,11 +17056,12 @@ export class ProgressionSystem implements IGameSystem {
     'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
   };
 
+  private fastEvents: IFastEventService;
+  private readCursor = 0;
+
   constructor(private events: IGameEventService) {
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
-        this.addScore(1);
-        this.addXp(10);
-    });
+    this.fastEvents = ServiceLocator.getFastEventBus();
+    this.readCursor = this.fastEvents.getCursor();
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option);
@@ -16589,7 +17070,18 @@ export class ProgressionSystem implements IGameSystem {
     this.reset();
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
+          if (id === FastEvents.ENEMY_DESTROYED) {
+              // a1=id, a2=x, a3=y, a4=typeId
+              this.addScore(1);
+              this.addXp(10);
+              
+              // We could reverse map ENEMY_ID_MAP to get string type if needed for specific logic
+              // but for generic score it's not needed.
+          }
+      });
+  }
 
   public addScore(amount: number) {
     this.score += amount;
@@ -16624,6 +17116,7 @@ export class ProgressionSystem implements IGameSystem {
         'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
+      this.readCursor = this.fastEvents ? this.fastEvents.getCursor() : 0;
   }
 
   teardown(): void {}
@@ -16633,32 +17126,18 @@ export class ProgressionSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/GameStateSystem.ts
 =====================================
-import { IGameSystem, IGameStateSystem, IPanelSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IGameStateSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useStore } from '@/engine/state/global/useStore'; 
-import { RenderData } from '@/engine/ecs/components/RenderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Tag } from '@/engine/ecs/types';
-import * as THREE from 'three';
-
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
 
-const COL_SAFE = new THREE.Color("#00FF41");
-const COL_WARN = new THREE.Color("#FFD700");
-const COL_CRIT = new THREE.Color("#FF003C");
-const COL_SBX  = new THREE.Color("#00FFFF");
-
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
-  private targetColor = new THREE.Color();
-  private currentColor = new THREE.Color();
 
   constructor(
     private healthSys: HealthSystem,
     private progSys: ProgressionSystem,
     private panelSystem: IPanelSystem,
-    private registry: IEntityRegistry,
     private events: IGameEventService,
     private audio: IAudioService
   ) {
@@ -16676,6 +17155,7 @@ export class GameStateSystem implements IGameStateSystem {
 
       const integrity = this.panelSystem.systemIntegrity;
       
+      // Process Low Health Heartbeat FX
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -16687,33 +17167,6 @@ export class GameStateSystem implements IGameStateSystem {
       } else {
           this.heartbeatTimer = 0;
       }
-
-      this.updateAtmosphere(delta, integrity);
-  }
-
-  private updateAtmosphere(delta: number, integrity: number) {
-      const worldEntities = this.registry.getByTag(Tag.WORLD);
-      
-      for (const world of worldEntities) {
-          const render = world.getComponent<RenderData>(ComponentType.Render);
-          if (render) {
-              const bootState = useStore.getState().bootState;
-              
-              if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
-              else if (integrity < 30) this.targetColor.copy(COL_CRIT);
-              else if (integrity < 60) this.targetColor.copy(COL_WARN);
-              else this.targetColor.copy(COL_SAFE);
-
-              this.currentColor.setRGB(render.r, render.g, render.b);
-              this.currentColor.lerp(this.targetColor, delta * 2.0);
-              
-              render.r = this.currentColor.r;
-              render.g = this.currentColor.g;
-              render.b = this.currentColor.b;
-              
-              render.visualRotation += 0.5 * delta; 
-          }
-      }
   }
 
   teardown(): void {
@@ -16721,12 +17174,14 @@ export class GameStateSystem implements IGameStateSystem {
       this.progSys.reset();
   }
 
+  // Bridged Vitals Properties
   get playerHealth() { return this.healthSys.playerHealth; }
   get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
   get playerRebootProgress() { return this.healthSys.playerRebootProgress; }
   get isGameOver() { return this.healthSys.isGameOver; }
   set isGameOver(v: boolean) { this.healthSys.isGameOver = v; }
 
+  // Bridged Progression Properties
   get score() { return this.progSys.score; }
   get xp() { return this.progSys.xp; }
   get level() { return this.progSys.level; }
@@ -16734,11 +17189,11 @@ export class GameStateSystem implements IGameStateSystem {
   get upgradePoints() { return this.progSys.upgradePoints; }
   get activeUpgrades() { return this.progSys.activeUpgrades; }
 
+  // Bridged Methods
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }
   tickReboot(amount: number) { this.healthSys.tickReboot(amount); }
   decayReboot(amount: number) { this.healthSys.decayReboot(amount); }
-  
   addScore(amount: number) { this.progSys.addScore(amount); }
   addXp(amount: number) { this.progSys.addXp(amount); }
 }
@@ -17425,12 +17880,32 @@ const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
+const getRender = (e: Entity) => e.getComponent<RenderData>(ComponentType.Render);
 
-const getExplosionType = (variant: string, angle?: boolean) => {
-    switch (variant) {
-        case EnemyTypes.KAMIKAZE: return angle ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
-        case EnemyTypes.HUNTER: return angle ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
-        default: return angle ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+const THEME_MAP: Record<string, string> = {
+    [EnemyTypes.KAMIKAZE]: 'RED',
+    [EnemyTypes.HUNTER]: 'YELLOW',
+    [EnemyTypes.DRILLER]: 'PURPLE',
+    [EnemyTypes.DAEMON]: 'PURPLE',
+};
+
+const getExplosionKey = (variant: string, directional: boolean) => {
+    const theme = THEME_MAP[variant] || 'PURPLE';
+    return directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`;
+};
+
+const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
+    if (overrideFX) {
+        ctx.spawnFX(overrideFX, x, y);
+        return;
+    }
+
+    const render = getRender(source);
+    if (render) {
+        const maxC = Math.max(render.r, render.g, render.b, 1.0); 
+        ctx.spawnImpact(x, y, render.r / maxC, render.g / maxC, render.b / maxC, angle);
+    } else {
+        ctx.spawnFX('IMPACT_WHITE', x, y);
     }
 };
 
@@ -17438,7 +17913,6 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   const pId = getId(player);
   if (pId?.variant === EnemyTypes.DAEMON) { resolveDaemonCollision(player, enemy, ctx); return; }
 
-  const eId = getId(enemy);
   const combat = getCombat(enemy);
   const pos = getPos(enemy);
   const pPos = getPos(player);
@@ -17449,7 +17923,10 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
 
   ctx.damagePlayer(damage);
   ctx.addTrauma(damage >= 3 ? 0.5 : 0.2);
-  ctx.destroyEntity(enemy, getExplosionType(eId?.variant || 'UNKNOWN', true), sprayAngle);
+  
+  const variant = getId(enemy)?.variant || 'UNKNOWN';
+  ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
+  
   ctx.playSpatialAudio(damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light', pos ? pos.x : 0);
 };
 
@@ -17462,22 +17939,23 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const damage = combat ? combat.damage : 1;
 
   ctx.damagePlayer(damage);
-  ctx.destroyEntity(bullet, 'IMPACT_RED');
+  ctx.destroyEntity(bullet, 'IMPACT_RED'); 
   ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
 };
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   const bPos = getPos(bullet);
-  handleMassExchange(enemy, bullet, 'IMPACT_WHITE', ctx, bPos ? bPos.rotation + Math.PI : 0);
+  handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 
 export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatContext) => {
-  handleMassExchange(bulletA, bulletB, 'CLASH_YELLOW', ctx);
+  handleMassExchange(bulletA, bulletB, ctx, 'CLASH_YELLOW');
 };
 
 function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatContext, fixedDamage?: number) {
   const state = daemon.getComponent<AIStateData>(ComponentType.State);
   if (!state) return;
+  
   const pos = getPos(attacker);
   const incomingDamage = fixedDamage || (getCombat(attacker)?.damage || 1);
   const shield = state.data.shieldHP || 0;
@@ -17486,40 +17964,47 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       if (shield > 0) {
           state.data.shieldHP = Math.max(0, shield - incomingDamage);
           state.data.wasHit = true; 
-          ctx.destroyEntity(attacker, attacker.hasTag('ENEMY') ? 'CLASH_YELLOW' : 'IMPACT_WHITE');
+          
+          const isEnemy = attacker.hasTag('ENEMY');
+          const fx = isEnemy ? 'CLASH_YELLOW' : 'IMPACT_WHITE';
+          
+          ctx.destroyEntity(attacker, fx);
           ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
           return;
       }
   }
-  ctx.destroyEntity(attacker, attacker.hasTag('ENEMY') ? 'EXPLOSION_RED' : 'IMPACT_RED');
+  
+  const isEnemy = attacker.hasTag('ENEMY');
+  ctx.destroyEntity(attacker, isEnemy ? 'EXPLOSION_RED' : 'IMPACT_RED');
   ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
 }
 
-function handleMassExchange(a: Entity, b: Entity, defaultFX: string, ctx: CombatContext, sprayAngle?: number) {
+function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: string, sprayAngle?: number) {
   const hpA = getHp(a); const hpB = getHp(b);
   const cA = getCombat(a); const cB = getCombat(b);
   const dmgA = cA ? cA.damage : 1; const dmgB = cB ? cB.damage : 1;
 
-  if (hpA) hpA.current = Math.max(0, hpA.current - dmgB);
-  if (hpB) hpB.current = Math.max(0, hpB.current - dmgA);
+  if (hpA) {
+      hpA.current = Math.max(0, hpA.current - dmgB);
+      if (hpA.current > 0) ctx.flashEntity(a.id as number); // TRIGGER FLASH
+  }
+  if (hpB) {
+      hpB.current = Math.max(0, hpB.current - dmgA);
+      if (hpB.current > 0) ctx.flashEntity(b.id as number); // TRIGGER FLASH
+  }
 
-  const posA = getPos(a); const posB = getPos(b);
+  const posA = getPos(a);
+  const posB = getPos(b);
+  
   if (posA) {
-      let spawnedCustom = false;
-      if (defaultFX === 'IMPACT_WHITE' && posB) {
-          const bRender = b.getComponent<RenderData>(ComponentType.Render);
-          if (bRender) {
-              const maxC = Math.max(bRender.r, bRender.g, bRender.b, 1.0);
-              ctx.spawnImpact(posA.x, posA.y, bRender.r / maxC, bRender.g / maxC, bRender.b / maxC, Math.atan2(posB.y - posA.y, posB.x - posA.x));
-              spawnedCustom = true;
-          }
-      } 
-      if (!spawnedCustom) ctx.spawnFX(defaultFX, posA.x, posA.y);
+      const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0;
+      resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX);
   }
 
   let soundKey = '';
   if (hpA && hpA.current <= 0) { ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
   if (hpB && hpB.current <= 0) { ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
+  
   if (soundKey) ctx.playSpatialAudio(soundKey, posA ? posA.x : 0);
 }
 
@@ -17567,11 +18052,12 @@ export interface CombatContext {
   damagePlayer: (amount: number) => void;
   destroyEntity: (entity: Entity, fx?: string, impactAngle?: number) => void;
   spawnFX: (type: string, x: number, y: number) => void;
-  // UPDATED: Added angle parameter (optional, defaults to 0)
   spawnImpact: (x: number, y: number, r: number, g: number, b: number, angle: number) => void;
   playAudio: (key: string) => void;
   playSpatialAudio: (key: string, x: number) => void;
   addTrauma: (amount: number) => void;
+  // NEW: Flash visual support
+  flashEntity: (id: number) => void;
 }
 
 export type CollisionHandler = (entityA: Entity, entityB: Entity, ctx: CombatContext) => void;
@@ -17751,7 +18237,9 @@ const getHunterTree = () => {
     if (treeRoot) return treeRoot;
 
     const tacticalLoop = new MemSequence([
-        new HoverDrift(8.0, 16.0, 2.0),
+        // INCREASED RANGE: 10-18 units (was 8-16)
+        // FASTER REPOSITION: 1.5s (was 2.0s)
+        new HoverDrift(10.0, 18.0, 1.5),
         new FaceTarget(),
         
         new Parallel([
@@ -17760,7 +18248,9 @@ const getHunterTree = () => {
         ]),
         
         new FireProjectile(40.0, 'ENEMY_HUNTER'),
-        new Wait(1.0)
+        
+        // FASTER FIRE RATE: Reduced cooldown to 0.6s (was 1.0s)
+        new Wait(0.6)
     ], 'hunter_tactics');
 
     treeRoot = new Sequence([
@@ -18423,18 +18913,18 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
-
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
 import { GameStateSystem } from '@/engine/systems/GameStateSystem';
-
+import { AtmosphereSystem } from '@/engine/systems/AtmosphereSystem';
 import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { PlayerSystem } from '@/engine/systems/PlayerSystem';
+import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
+import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
@@ -18455,17 +18945,17 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  let eventBus;
+  try { eventBus = ServiceLocator.getGameEventBus(); } 
+  catch { eventBus = new GameEventService(); ServiceLocator.register('GameEventService', eventBus); }
+
+  let fastBus;
+  try { fastBus = ServiceLocator.getFastEventBus(); } 
+  catch { fastBus = new FastEventService(); ServiceLocator.register('FastEventService', fastBus); }
+
   let audioService;
   try { audioService = ServiceLocator.getAudioService(); } 
   catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
-
-  let eventService;
-  try { eventService = ServiceLocator.getGameEventBus(); } 
-  catch { eventService = new GameEventService(); ServiceLocator.register('GameEventService', eventService); }
-
-  let fastEventService;
-  try { fastEventService = ServiceLocator.getFastEventBus(); } 
-  catch { fastEventService = new FastEventService(); ServiceLocator.register('FastEventService', fastEventService); }
 
   registerAllBehaviors();
   registerAllAssets();
@@ -18473,90 +18963,63 @@ export const GameBootstrapper = () => {
   const timeSystem = new TimeSystem();
   const inputSystem = new InputSystem();
   const physicsSystem = new PhysicsSystem(registry);
-  const panelSystem = new PanelRegistrySystem(eventService, audioService); 
-
-  ServiceLocator.registerSystem('TimeSystem', timeSystem);
-  ServiceLocator.registerSystem('InputSystem', inputSystem);
-  ServiceLocator.registerSystem('PhysicsSystem', physicsSystem);
-  ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
-
-  engine.registerSystem(panelSystem);
-  engine.registerSystem(timeSystem);
-  engine.registerSystem(inputSystem);
-  engine.registerSystem(physicsSystem);
-
-  const healthSystem = new HealthSystem(eventService, audioService, panelSystem);
-  const progressionSystem = new ProgressionSystem(eventService);
-  const gameStateSystem = new GameStateSystem(
-      healthSystem, 
-      progressionSystem, 
-      panelSystem, 
-      registry, 
-      eventService, 
-      audioService
-  );
+  const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
+  const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
+  const progressionSystem = new ProgressionSystem(eventBus);
   
-  const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventService);
-  // NEW: Constructor Injection for AudioDirector
-  const audioDirector = new AudioDirector(panelSystem, eventService, fastEventService, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
-
-  const projectileSystem = new ProjectileSystem(registry);
-  const combatSystem = new CombatSystem(registry, eventService, fastEventService, audioService);
-  const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
-
-  const targetingSystem = new TargetingSystem(registry, panelSystem);
-  const orbitalSystem = new OrbitalSystem(registry);
-  const guidanceSystem = new GuidanceSystem(registry);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
-
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
-  const playerSystem = new PlayerSystem(inputSystem, spawner, gameStateSystem, interactionSystem, registry, ConfigService);
-
-  const waveSystem = new WaveSystem(spawner, panelSystem);
-  const structureSystem = new StructureSystem(panelSystem);
-  const uiSyncSystem = new UISyncSystem(gameStateSystem, interactionSystem, panelSystem);
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);
-
-  ServiceLocator.registerSystem('HealthSystem', healthSystem);
-  ServiceLocator.registerSystem('ProgressionSystem', progressionSystem);
-  ServiceLocator.registerSystem('GameStateSystem', gameStateSystem);
-  ServiceLocator.registerSystem('CombatSystem', combatSystem);
-  ServiceLocator.registerSystem('ParticleSystem', particleSystem);
-  ServiceLocator.registerSystem('ShakeSystem', shakeSystem);
-  ServiceLocator.registerSystem('InteractionSystem', interactionSystem);
-
-  engine.registerSystem(healthSystem);
-  engine.registerSystem(progressionSystem);
-  engine.registerSystem(gameStateSystem);
+  const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
+  const atmosphere = new AtmosphereSystem(panelSystem, registry);
   
-  engine.registerSystem(waveSystem);
-  engine.registerSystem(structureSystem);
-  
-  engine.registerSystem(targetingSystem);
-  engine.registerSystem(orbitalSystem);
-  engine.registerSystem(guidanceSystem);
-  engine.registerSystem(playerSystem);
-  engine.registerSystem(behaviorSystem);
-  engine.registerSystem(interactionSystem);
+  const particles = new ParticleSystem();
+  const shake = new ShakeSystem(eventBus);
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastBus, audioService);
+  const vfx = new VFXSystem(particles, shake, eventBus, fastBus);
 
-  engine.registerSystem(projectileSystem);
-  engine.registerSystem(collisionSystem);
-  engine.registerSystem(combatSystem);
-  engine.registerSystem(lifeCycleSystem);
-
-  engine.registerSystem(particleSystem);
-  engine.registerSystem(shakeSystem);
-  engine.registerSystem(renderSystem);
-  engine.registerSystem(vfxSystem);
-  engine.registerSystem(audioDirector);
+  const interaction = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
+  const movement = new PlayerMovementSystem(inputSystem, registry, interaction, gameStateSystem);
+  const weapons = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+  const behavior = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particles, audioService);
+  const targeting = new TargetingSystem(registry, panelSystem);
+  const projectile = new ProjectileSystem(registry);
+  const combat = new CombatSystem(registry, eventBus, fastBus, audioService);
+  const collision = new CollisionSystem(physicsSystem, combat, registry);
   
-  engine.registerSystem(uiSyncSystem);
+  const orbital = new OrbitalSystem(registry);
+  const guidance = new GuidanceSystem(registry);
+  const lifeCycle = new LifeCycleSystem(registry, eventBus);
+  const waves = new WaveSystem(spawner, panelSystem);
+  const structure = new StructureSystem(panelSystem);
+  const uiSync = new UISyncSystem(gameStateSystem, interaction, panelSystem);
+  const render = new RenderSystem(registry, gameStateSystem, interaction);
+
+  const systemMap = {
+    TimeSystem: timeSystem,
+    InputSystem: inputSystem,
+    PhysicsSystem: physicsSystem,
+    PanelRegistrySystem: panelSystem,
+    HealthSystem: healthSystem,
+    ProgressionSystem: progressionSystem,
+    GameStateSystem: gameStateSystem,
+    AtmosphereSystem: atmosphere,
+    InteractionSystem: interaction,
+    CombatSystem: combat,
+    ParticleSystem: particles,
+    ShakeSystem: shake
+  };
+  Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
+
+  const systemOrder = [
+    panelSystem, timeSystem, inputSystem, physicsSystem,
+    healthSystem, progressionSystem, gameStateSystem, atmosphere,
+    waves, structure, targeting, orbital, guidance,
+    movement, weapons, behavior, interaction,
+    projectile, collision, combat, lifeCycle,
+    particles, shake, render, vfx, audioDirector,
+    uiSync
+  ];
+  systemOrder.forEach(sys => engine.registerSystem(sys));
 
   engine.setup(ServiceLocator);
-  
   spawner.spawnPlayer();
 
   const world = registry.createEntity();
@@ -18735,7 +19198,7 @@ import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { Tag } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { ARCHETYPES } from '@/engine/config/Archetypes';
+import { ARCHETYPES, EntityBlueprint } from '@/engine/config/Archetypes';
 import { ComponentBuilder } from './ComponentBuilder';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -18759,6 +19222,7 @@ export class EntitySpawner implements IEntitySpawner {
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
+    // 1. Core Component Hydration
     for (const compDef of blueprint.components) {
         const builder = ComponentBuilder[compDef.type];
         if (builder) {
@@ -18766,6 +19230,15 @@ export class EntitySpawner implements IEntitySpawner {
             const runtimeData = overrides[compDef.type] || {};
             const mergedData = { ...blueprintData, ...runtimeData };
             e.addComponent(builder(mergedData));
+        }
+    }
+
+    // 2. Automated Visual/Asset Linking
+    if (blueprint.assets) {
+        const render = e.getComponent<any>(ComponentType.Render);
+        if (render) {
+            render.geometryId = blueprint.assets.geometry;
+            render.materialId = blueprint.assets.material;
         }
     }
 
@@ -18781,13 +19254,13 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD'): Entity {
+  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD', ownerId?: number): Entity {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     const color = config ? config.color : [1, 1, 1];
 
-    return this.spawn(id, {
+    const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
@@ -18795,12 +19268,13 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Render]: { 
             visualScale: 1.0, 
-            visualRotation: 0, 
             geometryId: 'GEO_BULLET',
             r: color[0], g: color[1], b: color[2]
         },
-        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT' }
-    });
+        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+    };
+
+    return this.spawn(id, overrides);
   }
 
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: number = 0): void {
@@ -19000,7 +19474,6 @@ export interface IGameSystem {
 export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
-  
   getGameEventBus(): IGameEventService;
   getFastEventBus(): IFastEventService;
   getAudioService(): IAudioService;
@@ -19009,8 +19482,6 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
-  
-  // Legacy Adapter
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
 }
@@ -19026,6 +19497,35 @@ export interface IFastEventService {
   readEvents(fromCursor: number, handler: (eventId: number, a1: number, a2: number, a3: number, a4: number) => void): number;
   getCursor(): number;
 }
+
+// --- SEGREGATED STATE INTERFACES ---
+
+export interface IVitalsRead {
+  playerHealth: number;
+  maxPlayerHealth: number;
+  playerRebootProgress: number;
+  isGameOver: boolean;
+}
+
+export interface IProgressionRead {
+  score: number;
+  xp: number;
+  level: number;
+  xpToNextLevel: number;
+  upgradePoints: number;
+  activeUpgrades: Record<string, number>;
+}
+
+export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
+  damagePlayer(amount: number): void;
+  healPlayer(amount: number): void;
+  addScore(amount: number): void;
+  addXp(amount: number): void;
+  tickReboot(amount: number): void;
+  decayReboot(amount: number): void;
+}
+
+// --- END SEGREGATED INTERFACES ---
 
 export interface IEntityRegistry {
   createEntity(): Entity;
@@ -19043,7 +19543,7 @@ export interface IEntitySpawner {
   spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
-  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, widthMult?: number): Entity;
+  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, projectileId?: string, ownerId?: number): Entity;
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
 }
 
@@ -19073,13 +19573,7 @@ export interface IInputService {
 export interface IParticleSystem extends IGameSystem {
   spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
   getCount(): number;
-  getData(): {
-    x: Float32Array;
-    y: Float32Array;
-    life: Float32Array;
-    maxLife: Float32Array;
-    color: Float32Array; 
-  };
+  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; color: Float32Array; };
 }
 
 export interface IPhysicsSystem extends IGameSystem {
@@ -19093,26 +19587,6 @@ export interface ICombatSystem extends IGameSystem {
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: string | null;
-}
-
-export interface IGameStateSystem extends IGameSystem {
-  playerHealth: number;
-  maxPlayerHealth: number;
-  playerRebootProgress: number;
-  score: number;
-  xp: number;
-  level: number;
-  xpToNextLevel: number;
-  upgradePoints: number;
-  activeUpgrades: Record<string, number>;
-  isGameOver: boolean;
-  
-  damagePlayer(amount: number): void;
-  healPlayer(amount: number): void;
-  addScore(amount: number): void;
-  addXp(amount: number): void;
-  tickReboot(amount: number): void;
-  decayReboot(amount: number): void;
 }
 
 export interface IPanelSystem extends IGameSystem {
