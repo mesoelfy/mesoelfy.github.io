@@ -10,10 +10,14 @@ class CollisionMatrixController {
     this.register(CollisionLayers.PLAYER, CollisionLayers.ENEMY_PROJECTILE, Handlers.handlePlayerHit);
     this.register(CollisionLayers.ENEMY, CollisionLayers.PLAYER_PROJECTILE, Handlers.handleEnemyHit);
     this.register(CollisionLayers.PLAYER_PROJECTILE, CollisionLayers.ENEMY_PROJECTILE, Handlers.handleBulletClash);
+    
+    // NEW: Panel Collisions
+    this.register(CollisionLayers.ENEMY, CollisionLayers.PANEL, Handlers.handleEnemyPanelHit);
+    // Player vs Panel? Usually player flies over panels. 
+    // If we wanted player to bounce off panels, we'd add it here.
   }
 
   private getKey(layerA: number, layerB: number): string {
-    // Sort to ensure A:B is same as B:A
     return layerA < layerB ? `${layerA}:${layerB}` : `${layerB}:${layerA}`;
   }
 

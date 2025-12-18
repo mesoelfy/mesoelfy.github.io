@@ -629,8 +629,7 @@ Can we force the iframe'd youtube video to start paused and then turn on after a
 Healing sound needs to be different from rebooting sound.
 
 
-Do hunters and kamikaze have a white hit-flash?
-    red-to-light-enemy-color hit flash.
+
 
 Update custom debug console to direct users to pressing F12 with some nice graphic design.
 
@@ -644,3 +643,4 @@ BURROWER (goes inside)
 
 relabel motion grid
 fix red game over OS and grid state / tied to Zen mode interfering?
+

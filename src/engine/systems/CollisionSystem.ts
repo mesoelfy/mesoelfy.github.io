@@ -25,12 +25,19 @@ export class CollisionSystem implements IGameSystem {
         if (!entity.active) continue;
         const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+        
         if (!collider || collider.mask === 0 || !transform) continue;
 
+        // Skip spawning entities
         const state = entity.getComponent<AIStateData>(ComponentType.State);
         if (state && state.current === 'SPAWN') continue;
 
-        const count = spatial.query(transform.x, transform.y, collider.radius + 1.0, this.queryBuffer);
+        // Query radius: If box, use pythagoras of half-width/height to approximate radius for broadphase
+        const queryRad = collider.shape === 'BOX' 
+            ? Math.sqrt((collider.width/2)**2 + (collider.height/2)**2) + 1.0
+            : collider.radius + 1.0;
+
+        const count = spatial.query(transform.x, transform.y, queryRad, this.queryBuffer);
 
         for (let i = 0; i < count; i++) {
             const otherId = this.queryBuffer[i];
@@ -55,15 +62,57 @@ export class CollisionSystem implements IGameSystem {
             const otherTransform = other.getComponent<TransformData>(ComponentType.Transform);
             if (!otherTransform) continue;
 
-            const dx = transform.x - otherTransform.x;
-            const dy = transform.y - otherTransform.y;
-            const radiusSum = collider.radius + otherCollider.radius;
-
-            if (dx * dx + dy * dy < radiusSum * radiusSum) {
+            if (this.checkCollision(transform, collider, otherTransform, otherCollider)) {
                 this.combatSystem.resolveCollision(entity, other);
             }
         }
     }
+  }
+
+  private checkCollision(
+      tA: TransformData, cA: ColliderData, 
+      tB: TransformData, cB: ColliderData
+  ): boolean {
+      // 1. Circle vs Circle
+      if (cA.shape === 'CIRCLE' && cB.shape === 'CIRCLE') {
+          const dx = tA.x - tB.x;
+          const dy = tA.y - tB.y;
+          const rSum = cA.radius + cB.radius;
+          return (dx * dx + dy * dy) < (rSum * rSum);
+      }
+
+      // 2. Box vs Box (AABB)
+      if (cA.shape === 'BOX' && cB.shape === 'BOX') {
+          return (
+              Math.abs(tA.x - tB.x) * 2 < (cA.width + cB.width) &&
+              Math.abs(tA.y - tB.y) * 2 < (cA.height + cB.height)
+          );
+      }
+
+      // 3. Circle vs Box
+      const circle = cA.shape === 'CIRCLE' ? { t: tA, c: cA } : { t: tB, c: cB };
+      const box = cA.shape === 'BOX' ? { t: tA, c: cA } : { t: tB, c: cB };
+
+      // Find closest point on box to circle center
+      // t.x/y is box center.
+      const boxHalfW = box.c.width / 2;
+      const boxHalfH = box.c.height / 2;
+
+      const distX = Math.abs(circle.t.x - box.t.x);
+      const distY = Math.abs(circle.t.y - box.t.y);
+
+      // Broadphase check
+      if (distX > (boxHalfW + circle.c.radius)) return false;
+      if (distY > (boxHalfH + circle.c.radius)) return false;
+
+      // Inside check
+      if (distX <= boxHalfW) return true; 
+      if (distY <= boxHalfH) return true;
+
+      // Corner check
+      const dx = distX - boxHalfW;
+      const dy = distY - boxHalfH;
+      return (dx*dx + dy*dy <= (circle.c.radius * circle.c.radius));
   }
 
   teardown(): void {}
