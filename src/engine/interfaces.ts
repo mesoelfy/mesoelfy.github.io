@@ -6,6 +6,15 @@ import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 
+export enum SystemPhase {
+  INPUT = 0,
+  LOGIC = 1,
+  PHYSICS = 2,
+  COLLISION = 3,
+  STATE = 4,
+  RENDER = 5
+}
+
 export interface IGameSystem {
   update(delta: number, time: number): void;
   teardown(): void;

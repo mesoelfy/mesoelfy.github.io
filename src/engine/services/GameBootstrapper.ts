@@ -13,6 +13,7 @@ import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
 import { FastEventService } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
+import { SystemPhase } from '@/engine/interfaces';
 
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { InputSystem } from '@/engine/systems/InputSystem';
@@ -61,7 +62,7 @@ export const GameBootstrapper = () => {
   catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
 
   // --- REGISTRATIONS ---
-  registerAllComponents(); // New Catalog
+  registerAllComponents();
   registerAllBehaviors();
   registerAllAssets();
 
@@ -115,15 +116,45 @@ export const GameBootstrapper = () => {
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
-  const systemOrder = [
-    panelSystem, timeSystem, inputSystem, physicsSystem,
-    healthSystem, progressionSystem, gameStateSystem, atmosphere,
-    waves, structure, targeting, orbital, guidance,
-    movement, weapons, behavior, interaction,
-    projectile, collision, combat, lifeCycle,
-    particles, shake, render, vfx, audioDirector
-  ];
-  systemOrder.forEach(sys => engine.registerSystem(sys));
+  // --- PHASED REGISTRATION ---
+  
+  // 1. INPUT
+  engine.registerSystem(timeSystem, SystemPhase.INPUT);
+  engine.registerSystem(inputSystem, SystemPhase.INPUT);
+  engine.registerSystem(interaction, SystemPhase.INPUT);
+  engine.registerSystem(movement, SystemPhase.INPUT);
+  
+  // 2. LOGIC
+  engine.registerSystem(panelSystem, SystemPhase.LOGIC);
+  engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
+  engine.registerSystem(targeting, SystemPhase.LOGIC);
+  engine.registerSystem(waves, SystemPhase.LOGIC);
+  engine.registerSystem(structure, SystemPhase.LOGIC);
+  engine.registerSystem(behavior, SystemPhase.LOGIC);
+  engine.registerSystem(weapons, SystemPhase.LOGIC);
+  
+  // 3. PHYSICS
+  engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
+  engine.registerSystem(orbital, SystemPhase.PHYSICS);
+  engine.registerSystem(guidance, SystemPhase.PHYSICS);
+  engine.registerSystem(projectile, SystemPhase.PHYSICS);
+  
+  // 4. COLLISION
+  engine.registerSystem(collision, SystemPhase.COLLISION);
+  engine.registerSystem(combat, SystemPhase.COLLISION);
+  
+  // 5. STATE (Post-Collision processing)
+  engine.registerSystem(healthSystem, SystemPhase.STATE);
+  engine.registerSystem(progressionSystem, SystemPhase.STATE);
+  engine.registerSystem(lifeCycle, SystemPhase.STATE);
+  
+  // 6. RENDER
+  engine.registerSystem(render, SystemPhase.RENDER);
+  engine.registerSystem(particles, SystemPhase.RENDER);
+  engine.registerSystem(vfx, SystemPhase.RENDER);
+  engine.registerSystem(shake, SystemPhase.RENDER);
+  engine.registerSystem(atmosphere, SystemPhase.RENDER);
+  engine.registerSystem(audioDirector, SystemPhase.RENDER);
 
   engine.setup(ServiceLocator);
   spawner.spawnPlayer();

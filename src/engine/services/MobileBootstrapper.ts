@@ -10,6 +10,7 @@ import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
 import { FastEventService } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
+import { SystemPhase } from '@/engine/interfaces';
 
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
@@ -98,11 +99,6 @@ export const MobileBootstrapper = () => {
   const panelSystem = new PanelRegistrySystem(eventService, audioService);
   ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
   
-  // Explicit Injection for Mobile too
-  // Mobile uses reduced system set, so we inject partially nulls if needed, 
-  // or just skip injecting if GameEngine handles nulls (it does).
-  // engine.injectCoreSystems(panelSystem, null, null); 
-
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
   const inputSystem = new InputSystem(); 
@@ -130,29 +126,60 @@ export const MobileBootstrapper = () => {
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);
+  const waveSystem = new MobileWaveSystem(spawner);
 
-  const systems: { id: string, sys: any }[] = [
-      { id: 'TimeSystem', sys: timeSystem },
-      { id: 'PhysicsSystem', sys: physicsSystem },
-      { id: 'StructureSystem', sys: structureSystem },
-      { id: 'GameStateSystem', sys: gameStateSystem },
-      { id: 'MobileWaveSystem', sys: new MobileWaveSystem(spawner) },
-      { id: 'TargetingSystem', sys: targetingSystem },
-      { id: 'BehaviorSystem', sys: behaviorSystem },
-      { id: 'ParticleSystem', sys: particleSystem },
-      { id: 'ProjectileSystem', sys: projectileSystem },
-      { id: 'MobileCombatSystem', sys: mobileCombatSystem },
-      { id: 'LifeCycleSystem', sys: lifeCycleSystem },
-      { id: 'RenderSystem', sys: renderSystem },
-      { id: 'VFXSystem', sys: vfxSystem },
-      { id: 'AudioDirectorSystem', sys: audioDirector },
-      { id: 'ShakeSystem', sys: shakeSystem },
-  ];
+  // Injection
+  engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
 
-  systems.forEach(({ id, sys }) => {
-      ServiceLocator.registerSystem(id, sys);
-      engine.registerSystem(sys);
-  });
+  const systemMap = {
+    TimeSystem: timeSystem,
+    InputSystem: inputSystem,
+    PhysicsSystem: physicsSystem,
+    PanelRegistrySystem: panelSystem,
+    HealthSystem: healthSystem,
+    ProgressionSystem: progressionSystem,
+    GameStateSystem: gameStateSystem,
+    InteractionSystem: interaction,
+    ParticleSystem: particleSystem,
+    ShakeSystem: shake
+  };
+  Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
+
+  // --- PHASED REGISTRATION ---
+  
+  // INPUT
+  engine.registerSystem(timeSystem, SystemPhase.INPUT);
+  engine.registerSystem(inputSystem, SystemPhase.INPUT);
+  engine.registerSystem(interaction, SystemPhase.INPUT);
+  
+  // LOGIC
+  engine.registerSystem(panelSystem, SystemPhase.LOGIC);
+  engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
+  engine.registerSystem(targeting, SystemPhase.LOGIC);
+  engine.registerSystem(waveSystem, SystemPhase.LOGIC);
+  engine.registerSystem(structure, SystemPhase.LOGIC);
+  engine.registerSystem(behavior, SystemPhase.LOGIC);
+  
+  // PHYSICS
+  engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
+  engine.registerSystem(orbital, SystemPhase.PHYSICS);
+  engine.registerSystem(guidance, SystemPhase.PHYSICS);
+  engine.registerSystem(projectile, SystemPhase.PHYSICS);
+  
+  // COLLISION (Mobile uses specialized combat)
+  engine.registerSystem(mobileCombatSystem, SystemPhase.COLLISION);
+  
+  // STATE
+  engine.registerSystem(healthSystem, SystemPhase.STATE);
+  engine.registerSystem(progressionSystem, SystemPhase.STATE);
+  engine.registerSystem(lifeCycle, SystemPhase.STATE);
+  
+  // RENDER
+  engine.registerSystem(renderSystem, SystemPhase.RENDER);
+  engine.registerSystem(particleSystem, SystemPhase.RENDER);
+  engine.registerSystem(vfxSystem, SystemPhase.RENDER);
+  engine.registerSystem(shakeSystem, SystemPhase.RENDER);
+  engine.registerSystem(audioDirector, SystemPhase.RENDER);
 
   engine.setup(ServiceLocator);
   
