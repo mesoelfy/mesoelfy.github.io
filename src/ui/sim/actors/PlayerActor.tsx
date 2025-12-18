@@ -113,7 +113,6 @@ export const PlayerActor = () => {
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     
-    // Note: uTime is updated globally by RenderSystem via MaterialFactory.updateUniforms()
     if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     let playerEntity;
@@ -122,16 +121,21 @@ export const PlayerActor = () => {
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
-    const isDead = useGameStore.getState().playerHealth <= 0; 
+    
+    // Check BOTH Player Health AND System Integrity
+    const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
+    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
+    const isDeadState = isPlayerDead || isSystemFailure;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
     if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
-        if (isDead && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
+        if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
         else reticleRef.current.rotation.z = -render.visualRotation;
         
-        let targetColor = isDead ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+        let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
         tempColor.current.lerp(targetColor, 0.2); 
-        if (isDead) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
+        
+        if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
         else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
         else reticleColor.current.lerp(tempColor.current, 0.2);
 
@@ -144,7 +148,7 @@ export const PlayerActor = () => {
         
         containerRef.current.scale.setScalar(render.visualScale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
-        (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDead; 
+        (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }
   });
 
