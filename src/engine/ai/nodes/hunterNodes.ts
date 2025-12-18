@@ -18,6 +18,12 @@ export class HoverDrift extends BTNode {
 
     if (!transform || !motion || !target || !state) return NodeState.FAILURE;
 
+    // --- STUN LOGIC ---
+    if (state.stunTimer > 0) {
+        state.stunTimer -= context.delta;
+        return NodeState.RUNNING;
+    }
+
     if (!state.timers) state.timers = {};
     if (!state.data) state.data = {};
 
@@ -74,6 +80,11 @@ export class FaceTarget extends BTNode {
 
     if (!transform || !target) return NodeState.FAILURE;
 
+    // We let them rotate even if stunned? 
+    // No, freeze rotation too for "Impact Feel"
+    // But since FaceTarget sets Success instantly, we skip this logic for now or implement rotation logic elsewhere.
+    // For now, let's keep rotation active during stun to prevent weird snapping.
+
     if (motion) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -128,8 +139,6 @@ export class ExhaustFX extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!transform || !state) return NodeState.FAILURE;
 
-    // 1. Audio: "Sizzle" Loop (Throttled)
-    // Plays a 0.3s sound every 0.15s to overlap slightly and sound continuous
     if (!state.timers.sizzle || state.timers.sizzle <= 0) {
         context.playSound('fx_exhaust_sizzle', transform.x);
         state.timers.sizzle = 0.15;
@@ -137,7 +146,6 @@ export class ExhaustFX extends BTNode {
         state.timers.sizzle -= context.delta;
     }
 
-    // 2. Visuals: Particle Stream
     const rearAngle = transform.rotation + Math.PI;
     const offset = 0.5;
     const spreadAngle = 0.2; 

@@ -17,7 +17,8 @@ export class RenderData extends Component {
     public baseG: number = 1,
     public baseB: number = 1,
     public flash: number = 0,
-    public spawnProgress: number = 1.0 // 0.0 = Invisible, 1.0 = Fully Materialized
+    public spawnProgress: number = 1.0,
+    public shudder: number = 0 // NEW: Visual vibration intensity (0.0 - 1.0)
   ) {
     super();
   }
@@ -33,6 +34,7 @@ export class RenderData extends Component {
     this.opacity = data.opacity ?? 1.0;
     this.flash = 0;
     this.spawnProgress = data.spawnProgress ?? 1.0;
+    this.shudder = 0;
     
     this.baseR = this.r;
     this.baseG = this.g;

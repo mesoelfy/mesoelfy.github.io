@@ -15,13 +15,12 @@ const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
 
-// High Intensity Red for Damage Flash
 const FLASH_COLOR = { r: 4.0, g: 0.0, b: 0.2 }; 
 
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
-  // Slightly slower decay to allow the 2-stage animation to be seen
   private readonly FLASH_DECAY = 6.0; 
+  private readonly SHUDDER_DECAY = 15.0; // Fast vibrational decay
   private reader: EventReader;
 
   constructor(
@@ -35,14 +34,13 @@ export class RenderSystem implements IGameSystem {
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
 
-    // Process Hit Flashes
     this.reader.process((id, a1) => {
         if (id === FastEvents.ENEMY_DAMAGED) {
             const entity = this.registry.getEntity(a1);
             if (entity) {
                 const render = entity.getComponent<RenderData>(ComponentType.Render);
                 if (render) {
-                    render.flash = 1.0; // Trigger Flash
+                    render.flash = 1.0; 
                 }
             }
         }
@@ -66,34 +64,30 @@ export class RenderSystem implements IGameSystem {
             this.updatePlayerVisuals(render, delta, interactState, isDead);
         }
         else {
-            // --- ENEMY 2-STAGE FLASH LOGIC ---
+            // SHUDDER DECAY
+            if (render.shudder > 0) {
+                render.shudder = Math.max(0, render.shudder - (delta * this.SHUDDER_DECAY));
+            }
+
+            // ENEMY 2-STAGE FLASH LOGIC
             if (render.flash > 0) {
                 render.flash = Math.max(0, render.flash - (delta * this.FLASH_DECAY));
                 
-                // Calculate "Heated Base" (Bright + Desaturated)
-                // We add 0.5 to RGB to tint it white, and multiply base by 2.0 for intensity
                 const heatR = (render.baseR * 2.0) + 0.5;
                 const heatG = (render.baseG * 2.0) + 0.5;
                 const heatB = (render.baseB * 2.0) + 0.5;
 
                 let targetR, targetG, targetB;
 
-                // Split the flash timeline into two halves
                 if (render.flash > 0.4) {
-                    // STAGE 1: Transition from RED -> HEATED BASE
-                    // Normalize 0.4..1.0 range to 0.0..1.0
                     const t = (render.flash - 0.4) / 0.6;
-                    // Ease out to make the Red punchy
                     const ease = t * (2 - t); 
                     
                     targetR = this.lerp(heatR, FLASH_COLOR.r, ease);
                     targetG = this.lerp(heatG, FLASH_COLOR.g, ease);
                     targetB = this.lerp(heatB, FLASH_COLOR.b, ease);
                 } else {
-                    // STAGE 2: Transition from HEATED BASE -> NORMAL BASE
-                    // Normalize 0.0..0.4 range to 0.0..1.0
                     const t = render.flash / 0.4;
-                    // Ease in to settle smoothly
                     const ease = t * t; 
 
                     targetR = this.lerp(render.baseR, heatR, ease);
@@ -105,10 +99,8 @@ export class RenderSystem implements IGameSystem {
                 render.g = targetG;
                 render.b = targetB;
                 
-                // Pop scale 
                 render.visualScale = 1.0 + (render.flash * 0.25); 
             } else {
-                // Optimization: Lock to base if idle
                 if (render.r !== render.baseR) render.r = render.baseR;
                 if (render.g !== render.baseG) render.g = render.baseG;
                 if (render.b !== render.baseB) render.b = render.baseB;

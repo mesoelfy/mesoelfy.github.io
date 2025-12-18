@@ -6,6 +6,7 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
+import { MotionData } from '@/engine/ecs/components/MotionData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
@@ -15,6 +16,8 @@ const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
 const getRender = (e: Entity) => e.getComponent<RenderData>(ComponentType.Render);
+const getMotion = (e: Entity) => e.getComponent<MotionData>(ComponentType.Motion);
+const getAI = (e: Entity) => e.getComponent<AIStateData>(ComponentType.State);
 
 const THEME_MAP: Record<string, string> = {
     [EnemyTypes.KAMIKAZE]: 'RED',
@@ -30,7 +33,7 @@ const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
 
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) {
-        ctx.spawnFX(overrideFX, x, y);
+        ctx.spawnFX(overrideFX as VFXKey, x, y);
         return;
     }
 
@@ -40,6 +43,31 @@ const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: numbe
         ctx.spawnImpact(x, y, render.r / maxC, render.g / maxC, render.b / maxC, angle);
     } else {
         ctx.spawnFX('IMPACT_WHITE', x, y);
+    }
+};
+
+const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, force: number) => {
+    const motion = getMotion(entity);
+    const pos = getPos(entity);
+    const ai = getAI(entity);
+    const render = getRender(entity);
+
+    if (motion && pos && sourcePos) {
+        const dx = pos.x - sourcePos.x;
+        const dy = pos.y - sourcePos.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist > 0.001) {
+            // Apply Impulse
+            motion.vx += (dx / dist) * force;
+            motion.vy += (dy / dist) * force;
+            
+            // Trigger Micro-Stun (Stops AI overwriting velocity)
+            if (ai) ai.stunTimer = 0.15; // 150ms stun
+            
+            // Trigger Visual Shudder
+            if (render) render.shudder = 1.0;
+        }
     }
 };
 
@@ -79,6 +107,10 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   const bPos = getPos(bullet);
+  
+  // TUNED: Reduced force from 15.0 to 3.0 for subtle impact
+  applyKnockback(enemy, bPos, 3.0);
+  
   handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 

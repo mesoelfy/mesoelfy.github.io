@@ -5,6 +5,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class MoveToTarget extends BTNode {
@@ -14,8 +15,16 @@ export class MoveToTarget extends BTNode {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !motion || !target) return NodeState.FAILURE;
+
+    // --- STUN LOGIC ---
+    // If stunned, skip velocity update to let physics impulse take over
+    if (state && state.stunTimer > 0) {
+        state.stunTimer -= context.delta;
+        return NodeState.RUNNING;
+    }
 
     let tx = target.x;
     let ty = target.y;
@@ -56,10 +65,6 @@ export class Wait extends BTNode {
     const state = entity.getComponent<any>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
-    // Use a simpler check: if undefined or <= 0, start new wait
-    // But since this node might be polled repeatedly in a MemSequence, we need to be careful.
-    // MemSequence keeps us RUNNING.
-    
     if (state.timers.wait === undefined) {
         state.timers.wait = this.duration;
     }
@@ -67,7 +72,7 @@ export class Wait extends BTNode {
     state.timers.wait -= context.delta;
     
     if (state.timers.wait <= 0) {
-        state.timers.wait = undefined; // Cleanup for next usage
+        state.timers.wait = undefined; 
         return NodeState.SUCCESS;
     }
 

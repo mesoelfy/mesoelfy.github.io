@@ -8,7 +8,8 @@ export class AIStateData extends Component {
     public current: string = 'IDLE',
     public timers: Record<string, number> = {},
     public data: Record<string, any> = {},
-    public treeState: any = null
+    public treeState: any = null,
+    public stunTimer: number = 0 // NEW: Controls physics overrides
   ) {
     super();
   }
@@ -18,6 +19,7 @@ export class AIStateData extends Component {
     this.timers = data.timers ?? {};
     this.data = data.data ?? {};
     this.treeState = data.treeState ?? null;
+    this.stunTimer = data.stunTimer ?? 0;
     return this;
   }
   

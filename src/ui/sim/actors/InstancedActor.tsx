@@ -14,8 +14,6 @@ import { applyRotation } from '@/engine/math/RenderUtils';
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
 const STRIDE = 4;
-
-// Visual tweak: How far below the grid they start
 const SPAWN_Y_OFFSET = 3.5;
 
 interface InstancedActorProps {
@@ -71,7 +69,6 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
       const rot = transformData[idx + 2];
       const scale = transformData[idx + 3];
 
-      // Base Position
       tempObj.position.set(x, y, z);
       
       const render = entity.getComponent<RenderData>(ComponentType.Render);
@@ -86,19 +83,18 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
           spawnVal = render.spawnProgress;
 
           // --- VISUAL OFFSET LOGIC ---
-          // If spawning, rise from below
           if (spawnVal < 1.0) {
-              // Cubic Ease Out for Position: Make it arrive smoothly
-              // t goes 0 -> 1
-              // We want offset to go -3.0 -> 0
               const t = spawnVal;
-              const ease = 1 - Math.pow(1 - t, 3); // Cubic Ease Out
-              
-              // Apply Inverse: Start low, move to 0
-              // When t=0 (start), offset = -SPAWN_Y_OFFSET
-              // When t=1 (end), offset = 0
+              const ease = 1 - Math.pow(1 - t, 3); 
               const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
               tempObj.position.y += yOffset;
+          }
+
+          // --- SHUDDER LOGIC ---
+          if (render.shudder > 0) {
+              const shake = render.shudder * 0.2; 
+              tempObj.position.x += (Math.random() - 0.5) * shake;
+              tempObj.position.y += (Math.random() - 0.5) * shake;
           }
       } else {
           tempColor.copy(defaultColor);
