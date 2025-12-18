@@ -16,18 +16,17 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
-
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
 import { GameStateSystem } from '@/engine/systems/GameStateSystem';
-
 import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { PlayerSystem } from '@/engine/systems/PlayerSystem';
+import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
+import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
@@ -48,108 +47,81 @@ export const GameBootstrapper = () => {
   ServiceLocator.registerRegistry(registry);
   ServiceLocator.registerSpawner(spawner);
 
+  // 1. Establish Core Services First
+  let eventBus;
+  try { eventBus = ServiceLocator.getGameEventBus(); } 
+  catch { eventBus = new GameEventService(); ServiceLocator.register('GameEventService', eventBus); }
+
+  let fastBus;
+  try { fastBus = ServiceLocator.getFastEventBus(); } 
+  catch { fastBus = new FastEventService(); ServiceLocator.register('FastEventService', fastBus); }
+
   let audioService;
   try { audioService = ServiceLocator.getAudioService(); } 
   catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
 
-  let eventService;
-  try { eventService = ServiceLocator.getGameEventBus(); } 
-  catch { eventService = new GameEventService(); ServiceLocator.register('GameEventService', eventService); }
-
-  let fastEventService;
-  try { fastEventService = ServiceLocator.getFastEventBus(); } 
-  catch { fastEventService = new FastEventService(); ServiceLocator.register('FastEventService', fastEventService); }
-
   registerAllBehaviors();
   registerAllAssets();
 
+  // 2. Initialize Logic Systems
   const timeSystem = new TimeSystem();
   const inputSystem = new InputSystem();
   const physicsSystem = new PhysicsSystem(registry);
-  const panelSystem = new PanelRegistrySystem(eventService, audioService); 
+  const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
+  const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
+  const progressionSystem = new ProgressionSystem(eventBus);
+  const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, registry, eventBus, audioService);
+  const particles = new ParticleSystem();
+  const shake = new ShakeSystem(eventBus);
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastBus, audioService);
+  const vfx = new VFXSystem(particles, shake, eventBus, fastBus);
 
-  ServiceLocator.registerSystem('TimeSystem', timeSystem);
-  ServiceLocator.registerSystem('InputSystem', inputSystem);
-  ServiceLocator.registerSystem('PhysicsSystem', physicsSystem);
-  ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
-
-  engine.registerSystem(panelSystem);
-  engine.registerSystem(timeSystem);
-  engine.registerSystem(inputSystem);
-  engine.registerSystem(physicsSystem);
-
-  const healthSystem = new HealthSystem(eventService, audioService, panelSystem);
-  const progressionSystem = new ProgressionSystem(eventService);
-  const gameStateSystem = new GameStateSystem(
-      healthSystem, 
-      progressionSystem, 
-      panelSystem, 
-      registry, 
-      eventService, 
-      audioService
-  );
+  const interaction = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
+  const movement = new PlayerMovementSystem(inputSystem, registry, interaction, gameStateSystem);
+  const weapons = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+  const behavior = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particles, audioService);
+  const targeting = new TargetingSystem(registry, panelSystem);
+  const projectile = new ProjectileSystem(registry);
+  const combat = new CombatSystem(registry, eventBus, fastBus, audioService);
+  const collision = new CollisionSystem(physicsSystem, combat, registry);
   
-  const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventService);
-  // NEW: Constructor Injection for AudioDirector
-  const audioDirector = new AudioDirector(panelSystem, eventService, fastEventService, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService, fastEventService);
+  const orbital = new OrbitalSystem(registry);
+  const guidance = new GuidanceSystem(registry);
+  const lifeCycle = new LifeCycleSystem(registry, eventBus);
+  const waves = new WaveSystem(spawner, panelSystem);
+  const structure = new StructureSystem(panelSystem);
+  const uiSync = new UISyncSystem(gameStateSystem, interaction, panelSystem);
+  const render = new RenderSystem(registry, gameStateSystem, interaction);
 
-  const projectileSystem = new ProjectileSystem(registry);
-  const combatSystem = new CombatSystem(registry, eventService, fastEventService, audioService);
-  const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
+  // 3. Register for ServiceLocator Access (Crucial for PlayerActor.tsx)
+  const systemMap = {
+    TimeSystem: timeSystem,
+    InputSystem: inputSystem,
+    PhysicsSystem: physicsSystem,
+    PanelRegistrySystem: panelSystem,
+    HealthSystem: healthSystem,
+    ProgressionSystem: progressionSystem,
+    GameStateSystem: gameStateSystem,
+    InteractionSystem: interaction, // REGISTERED
+    CombatSystem: combat,
+    ParticleSystem: particles,
+    ShakeSystem: shake
+  };
+  Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
-  const targetingSystem = new TargetingSystem(registry, panelSystem);
-  const orbitalSystem = new OrbitalSystem(registry);
-  const guidanceSystem = new GuidanceSystem(registry);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
-
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService);
-  const playerSystem = new PlayerSystem(inputSystem, spawner, gameStateSystem, interactionSystem, registry, ConfigService);
-
-  const waveSystem = new WaveSystem(spawner, panelSystem);
-  const structureSystem = new StructureSystem(panelSystem);
-  const uiSyncSystem = new UISyncSystem(gameStateSystem, interactionSystem, panelSystem);
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem);
-
-  ServiceLocator.registerSystem('HealthSystem', healthSystem);
-  ServiceLocator.registerSystem('ProgressionSystem', progressionSystem);
-  ServiceLocator.registerSystem('GameStateSystem', gameStateSystem);
-  ServiceLocator.registerSystem('CombatSystem', combatSystem);
-  ServiceLocator.registerSystem('ParticleSystem', particleSystem);
-  ServiceLocator.registerSystem('ShakeSystem', shakeSystem);
-  ServiceLocator.registerSystem('InteractionSystem', interactionSystem);
-
-  engine.registerSystem(healthSystem);
-  engine.registerSystem(progressionSystem);
-  engine.registerSystem(gameStateSystem);
-  
-  engine.registerSystem(waveSystem);
-  engine.registerSystem(structureSystem);
-  
-  engine.registerSystem(targetingSystem);
-  engine.registerSystem(orbitalSystem);
-  engine.registerSystem(guidanceSystem);
-  engine.registerSystem(playerSystem);
-  engine.registerSystem(behaviorSystem);
-  engine.registerSystem(interactionSystem);
-
-  engine.registerSystem(projectileSystem);
-  engine.registerSystem(collisionSystem);
-  engine.registerSystem(combatSystem);
-  engine.registerSystem(lifeCycleSystem);
-
-  engine.registerSystem(particleSystem);
-  engine.registerSystem(shakeSystem);
-  engine.registerSystem(renderSystem);
-  engine.registerSystem(vfxSystem);
-  engine.registerSystem(audioDirector);
-  
-  engine.registerSystem(uiSyncSystem);
+  // 4. Register to Engine Loop
+  const systemOrder = [
+    panelSystem, timeSystem, inputSystem, physicsSystem,
+    healthSystem, progressionSystem, gameStateSystem,
+    waves, structure, targeting, orbital, guidance,
+    movement, weapons, behavior, interaction,
+    projectile, collision, combat, lifeCycle,
+    particles, shake, render, vfx, audioDirector,
+    uiSync
+  ];
+  systemOrder.forEach(sys => engine.registerSystem(sys));
 
   engine.setup(ServiceLocator);
-  
   spawner.spawnPlayer();
 
   const world = registry.createEntity();
