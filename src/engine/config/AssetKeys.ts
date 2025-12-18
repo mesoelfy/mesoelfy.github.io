@@ -1,11 +1,11 @@
-import { AUDIO_CONFIG } from './AudioConfig';
-import { VFX_RECIPES } from './VFXConfig';
+import { AUDIO_MANIFEST } from './assets/AudioManifest';
+import { VFX_MANIFEST } from './assets/VFXManifest';
 
-// 1. AUDIO KEYS (Derived from Config)
-export type AudioKey = keyof typeof AUDIO_CONFIG;
+// 1. AUDIO KEYS (Inferred)
+export type AudioKey = keyof typeof AUDIO_MANIFEST;
 
-// 2. VFX KEYS (Derived from Config)
-export type VFXKey = keyof typeof VFX_RECIPES;
+// 2. VFX KEYS (Inferred)
+export type VFXKey = keyof typeof VFX_MANIFEST;
 
 // 3. GEOMETRY KEYS (Manually Synced with AssetCatalog)
 export type GeometryKey = 

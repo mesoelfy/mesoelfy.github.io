@@ -1,21 +1,17 @@
-import { SoundRecipe } from '@/engine/config/AudioConfig';
+import { SoundDef } from '@/engine/config/assets/AudioManifest';
 
 export class AudioSynthesizer {
   
-  public static async generate(recipe: SoundRecipe): Promise<AudioBuffer | null> {
-    // Requires window to be present for OfflineAudioContext
+  public static async generate(recipe: SoundDef): Promise<AudioBuffer | null> {
     if (typeof window === 'undefined') return null;
 
-    // Standard AudioContext or Webkit prefix
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return null;
 
-    // Use OfflineContext for rendering
     const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
     if (!OfflineContextClass) return null;
 
     const sampleRate = 44100;
-    // Ensure integer length
     const length = Math.ceil(sampleRate * recipe.duration);
     
     if (length <= 0) return null;
@@ -27,11 +23,9 @@ export class AudioSynthesizer {
     
     const attack = recipe.attack || 0.005; 
     
-    // Envelope: Attack
     mainGain.gain.setValueAtTime(0, 0);
     mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
     
-    // Envelope: Decay/Sustain
     if (recipe.duration < 10.0) {
         mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
     } else {
@@ -40,7 +34,6 @@ export class AudioSynthesizer {
 
     let outputNode: AudioNode = mainGain;
 
-    // 1. Distortion
     if (recipe.distortion) {
         const shaper = offline.createWaveShaper();
         shaper.curve = this.makeDistortionCurve(recipe.distortion);
@@ -48,7 +41,6 @@ export class AudioSynthesizer {
         outputNode = shaper; 
     }
 
-    // 2. Tremolo
     if (recipe.tremolo) {
         const tremoloNode = offline.createGain();
         tremoloNode.connect(outputNode);
@@ -68,7 +60,6 @@ export class AudioSynthesizer {
         lfo.start();
     }
 
-    // 3. Source Generation
     if (recipe.type === 'oscillator') {
         const osc = offline.createOscillator();
         osc.type = recipe.wave || 'sine';

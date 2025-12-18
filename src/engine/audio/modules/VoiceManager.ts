@@ -2,20 +2,15 @@ import { AudioContextManager } from './AudioContextManager';
 import { SoundBank } from './SoundBank';
 import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
-import { AUDIO_CONFIG } from '@/engine/config/AudioConfig';
+import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 
-// Increased buffer to handle bullet hell density
 const MAX_POLYPHONY = 100;
 
 export class VoiceManager {
   private activeCount = 0;
-  
-  // Ambience State
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
-  
-  // Music State
   private musicElement: HTMLAudioElement | null = null;
 
   constructor(
@@ -25,32 +20,27 @@ export class VoiceManager {
   ) {}
 
   public playSFX(key: AudioKey, pan: number = 0) {
-    // 1. Polyphony Check
     if (this.activeCount >= MAX_POLYPHONY) return;
 
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
-    const recipe = AUDIO_CONFIG[key];
+    const recipe = AUDIO_MANIFEST[key];
     
     if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
-    // 2. Node Creation
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     
-    // Pitch Variance
     if (recipe.pitchVariance > 0) {
         source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
     }
 
-    // 3. Routing
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
 
     source.connect(panner);
     panner.connect(this.mixer.sfxGain);
 
-    // 4. Execution & Cleanup
     source.onended = () => {
         this.activeCount--;
     };
@@ -63,15 +53,11 @@ export class VoiceManager {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.ambienceGain) return;
     
-    // Dedup check
     if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
 
-    // Fade Out Old
     if (this.currentAmbienceNode && this.currentAmbienceGain) {
         const oldGain = this.currentAmbienceGain;
         const oldNode = this.currentAmbienceNode;
-        
-        // Ramp down
         try {
             oldGain.gain.cancelScheduledValues(ctx.currentTime);
             oldGain.gain.setValueAtTime(oldGain.gain.value, ctx.currentTime);
@@ -83,7 +69,6 @@ export class VoiceManager {
     const buffer = this.bank.get(key);
     if (!buffer) return;
 
-    // Create New
     const source = ctx.createBufferSource();
     source.buffer = buffer; 
     source.loop = true;

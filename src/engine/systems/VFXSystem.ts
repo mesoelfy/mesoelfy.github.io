@@ -1,7 +1,7 @@
 import { IGameSystem, IParticleSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ShakeSystem } from './ShakeSystem';
-import { VFX_RECIPES } from '@/engine/config/VFXConfig';
+import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
 
 export class VFXSystem implements IGameSystem {
@@ -30,7 +30,6 @@ export class VFXSystem implements IGameSystem {
         this.shakeSystem.addTrauma(p.amount);
     });
 
-    // Game Logic Triggers
     this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         if (p.damage > 10) this.triggerHitStop(0.05);
     });
@@ -68,7 +67,7 @@ export class VFXSystem implements IGameSystem {
   }
 
   private executeRecipe(key: string, x: number, y: number, angle: number = 0) {
-      const recipe = VFX_RECIPES[key];
+      const recipe = VFX_MANIFEST[key];
       if (!recipe) return;
 
       const graphicsMode = useStore.getState().graphicsMode;

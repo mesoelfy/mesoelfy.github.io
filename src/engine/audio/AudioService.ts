@@ -1,5 +1,5 @@
 import { useStore } from '@/engine/state/global/useStore';
-import { AUDIO_CONFIG } from '@/engine/config/AudioConfig';
+import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { IAudioService } from '@/engine/interfaces';
 import { AudioContextManager } from './modules/AudioContextManager';
 import { AudioSynthesizer } from './modules/AudioSynthesizer';
@@ -30,7 +30,7 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   private async generateAllSounds() {
-      const promises = Object.entries(AUDIO_CONFIG).map(([key, recipe]) => {
+      const promises = Object.entries(AUDIO_MANIFEST).map(([key, recipe]) => {
           return AudioSynthesizer.generate(recipe).then(buffer => {
               if (buffer) this.bank.add(key, buffer);
           });
@@ -43,7 +43,6 @@ export class AudioServiceImpl implements IAudioService {
           if (this.hasInteracted) return;
           this.hasInteracted = true; 
           this.ctxManager.resume();
-          // Auto-start core ambience on first interaction
           this.playAmbience('ambience_core');
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);

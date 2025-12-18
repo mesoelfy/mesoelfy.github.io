@@ -1,4 +1,4 @@
-import { COLOR_SETS } from './Palette';
+import { COLOR_SETS } from '../Palette';
 
 export type VFXPattern = 'RADIAL' | 'DIRECTIONAL';
 
@@ -41,8 +41,7 @@ const createExplosion = (
   };
 };
 
-// --- RECIPES ---
-export const VFX_RECIPES: Record<string, VFXRecipe> = {
+export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   // Driller: Medium Count, Medium Speed
   'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
   'EXPLOSION_PURPLE_DIR': createExplosion(COLOR_SETS.PURPLE, true,  [20, 30], [5, 10]),
@@ -65,7 +64,7 @@ export const VFX_RECIPES: Record<string, VFXRecipe> = {
       colors: COLOR_SETS.PURPLE, 
       count: [3, 6], 
       speed: [10, 10], 
-      life: [0.1, 0.2], // Reduced by 50% (Was 0.2, 0.4)
+      life: [0.1, 0.2], 
       spread: 0.7, 
       size: [0.5, 0.5],
       shape: 1 
