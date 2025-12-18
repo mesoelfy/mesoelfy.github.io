@@ -25,9 +25,10 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
+  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
     <motion.div 
-      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
+      className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
         borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
         backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
@@ -46,8 +47,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            
-            {/* STEP 3: UNSAFE (RED SHIELD) */}
+            {/* STEP 3: UNSAFE */}
             {isUnsafe && (
                 <motion.div 
                     key="unsafe"
@@ -60,7 +60,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 4: BYPASSING (PURPLE CLOSED LOCK) */}
+            {/* STEP 4: BYPASSING */}
             {isBypass && (
                 <motion.div 
                     key="bypass"
@@ -68,20 +68,20 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                     animate={{ 
                         scale: [1, 1.1, 1], 
                         opacity: 1,
-                        x: [-1, 1, -1, 1, 0], // Shake
+                        x: [-1, 1, -1, 1, 0], 
                         filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"]
                     }} 
                     exit={{ scale: 0, transition: { duration: 0.1 } }}
                     transition={{ 
                         scale: { repeat: Infinity, duration: 0.5 },
-                        x: { repeat: Infinity, duration: 0.1 } // Fast shake
+                        x: { repeat: Infinity, duration: 0.1 } 
                     }}
                 >
                      <Lock size={18} className="text-latent-purple-light" />
                 </motion.div>
             )}
 
-            {/* STEP 5: DECRYPTED (GREEN OPEN LOCK) */}
+            {/* STEP 5: DECRYPTED */}
             {isDecrypted && (
                 <motion.div 
                     key="unlocked"
@@ -102,7 +102,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 6: CAUTION (SKULL) */}
+            {/* STEP 6: CAUTION */}
             {isCaution && (
                 <motion.div 
                     key="caution"
@@ -122,7 +122,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* LOADING SPINNER (STEPS 0-2) */}
+            {/* LOADING SPINNER */}
             {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"

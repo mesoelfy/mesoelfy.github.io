@@ -35,8 +35,9 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       statusText = "HANDSHAKING...";
   }
 
+  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
-    <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 mb-2 select-none relative z-20 transition-all duration-300 ${bgClass}`}>
+    <div className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none relative z-20 transition-all duration-300 ${bgClass}`}>
       <div className="flex flex-col leading-none gap-1.5 mt-0.5">
           <span className={`text-[10px] font-mono tracking-widest uppercase ${color} transition-colors duration-300 font-bold`}>
             BOOT_LOADER.SYS
@@ -46,22 +47,19 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
       
       <div className="flex gap-1 items-end h-3">
         {[0, 1, 2, 3].map(i => {
-           // --- STATIC COLORS ---
            let barClass = "bg-primary-green";
            if (isUnsafe) barClass = "bg-critical-red";
            else if (isBypass) barClass = "bg-latent-purple-light";
            else if (isCaution) barClass = "bg-alert-yellow";
 
-           // --- ANIMATION LOGIC ---
            const isPulseActive = isDecrypted || isCaution; 
            const pulseHex = isCaution ? "#eae747" : "#78F654";
 
            let animate = {};
            let transition = {};
-           let initialHeight = "0.125rem"; // Default tiny
+           let initialHeight = "0.125rem"; 
 
            if (isPulseActive) {
-               // 1. Decrypted/Caution Wave (Unchanged)
                initialHeight = "0.5rem";
                animate = {
                    height: ["0.25rem", "0.75rem", "0.25rem"],
@@ -76,20 +74,17 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
                    delay: i * 0.15 
                };
            } else if (isUnsafe) {
-               // 2. Unsafe: Slow Communicative Pulse (Fill/Unfill)
-               // All bars breathe together to signal a specific error code feel
                initialHeight = "0.25rem";
                animate = {
-                   height: ["0.25rem", "0.75rem", "0.25rem"], // Fill and Unfill
+                   height: ["0.25rem", "0.75rem", "0.25rem"], 
                    opacity: [0.5, 1.0, 0.5]
                };
                transition = {
-                   duration: 1.5, // Slow
+                   duration: 1.5, 
                    repeat: Infinity,
                    ease: "easeInOut"
                };
            } else if (isBypass) {
-               // 3. Bypass: Piston Effect
                const isEven = i % 2 === 0;
                initialHeight = isEven ? "0.75rem" : "0.5rem";
                animate = {
@@ -103,17 +98,14 @@ export const BootHeader = ({ step }: BootHeaderProps) => {
                    ease: "easeInOut"
                };
            } else {
-               // 4. Handshake: Sequential Fill
-               // Strictly show bar based on step index (0, 1, 2)
                const isActive = step >= i; 
-               
                if (isActive) {
                    initialHeight = "0.5rem";
-                   animate = { opacity: [0.5, 1.0, 0.5] }; // Gentle breathe once active
+                   animate = { opacity: [0.5, 1.0, 0.5] }; 
                    transition = { duration: 2.0, repeat: Infinity, ease: "easeInOut" };
                } else {
                    initialHeight = "0.125rem";
-                   animate = { opacity: 0.2 }; // Dim inactive
+                   animate = { opacity: 0.2 }; 
                }
            }
 
