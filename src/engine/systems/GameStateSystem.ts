@@ -15,7 +15,9 @@ export class GameStateSystem implements IGameStateSystem {
   ) {
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
-            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.2);
+            // Buffed: Now heals 75% of max health
+            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
+            this.audio.playSound('ui_optimal');
         } else if (p.option === 'DAEMON') {
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
@@ -27,7 +29,6 @@ export class GameStateSystem implements IGameStateSystem {
 
       const integrity = this.panelSystem.systemIntegrity;
       
-      // Process Low Health Heartbeat FX
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -46,14 +47,12 @@ export class GameStateSystem implements IGameStateSystem {
       this.progSys.reset();
   }
 
-  // Bridged Vitals Properties
   get playerHealth() { return this.healthSys.playerHealth; }
   get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
   get playerRebootProgress() { return this.healthSys.playerRebootProgress; }
   get isGameOver() { return this.healthSys.isGameOver; }
   set isGameOver(v: boolean) { this.healthSys.isGameOver = v; }
 
-  // Bridged Progression Properties
   get score() { return this.progSys.score; }
   get xp() { return this.progSys.xp; }
   get level() { return this.progSys.level; }
@@ -61,7 +60,6 @@ export class GameStateSystem implements IGameStateSystem {
   get upgradePoints() { return this.progSys.upgradePoints; }
   get activeUpgrades() { return this.progSys.activeUpgrades; }
 
-  // Bridged Methods
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }
   tickReboot(amount: number) { this.healthSys.tickReboot(amount); }

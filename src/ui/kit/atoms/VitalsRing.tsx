@@ -4,60 +4,50 @@ import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 import { useRef, useState } from 'react';
 
-// Props serve as initial/fallback state
 interface VitalsRingProps {
   health: number;
   maxHealth: number;
-  xp: number;
-  xpToNext: number;
-  level: number;
   isDead: boolean;
-  rebootProgress: number;
+  level: number;
 }
 
 export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<SVGTSpanElement>(null);
   
-  // Local state only for critical UI changes (Death State) to allow re-render
-  // High freq health updates bypass this
   const [deadState, setDeadState] = useState(isDead);
   const [rebootState, setRebootState] = useState(0);
 
-  // STREAM BINDINGS
-  
-  // 1. Health
-  useGameStream('PLAYER_HEALTH', (hp) => {
-      if (hp <= 0 && !deadState) setDeadState(true);
-      if (hp > 0 && deadState) setDeadState(false);
-      
-      // Update CSS Vars directly
-      if (containerRef.current) {
-          // Assuming maxHealth is relatively static or we can fetch it too
-          // For simplicity we use the prop or assume 100 for percentage if simpler
-          // Better: Subscribe to max too
-          const ratio = Math.max(0, Math.min(1, hp / 100)); // Normalized roughly
-          containerRef.current.style.setProperty('--hp-progress', ratio.toString());
-          
-          let color = '#78F654';
-          if (ratio < 0.3) color = '#FF003C';
-          else if (ratio < 0.6) color = '#eae747';
-          containerRef.current.style.setProperty('--hp-color', color);
-      }
+  // Use refs to track values for ratio calculation across independent stream updates
+  const hpRef = useRef(health);
+  const maxHpRef = useRef(maxHealth);
+  const xpMaxRef = useRef(100);
+
+  const updateHPUI = () => {
+    if (!containerRef.current) return;
+    const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
+    containerRef.current.style.setProperty('--hp-progress', ratio.toString());
+    
+    // Dynamic Thresholds matching OS aesthetics
+    let color = '#78F654'; // GREEN
+    if (ratio < 0.3) color = '#FF003C';      // RED
+    else if (ratio < 0.6) color = '#eae747'; // YELLOW
+    
+    containerRef.current.style.setProperty('--hp-color', color);
+  };
+
+  useGameStream('PLAYER_MAX_HEALTH', (val) => {
+    maxHpRef.current = val;
+    updateHPUI();
   });
 
-  // 2. XP
-  useGameStream('XP', (val) => {
-      // We need XP_NEXT to calculate ratio. 
-      // In a real optimized scenario we'd calc the ratio in the System and stream 'XP_RATIO'.
-      // But let's just listen to XP_NEXT too or assume.
+  useGameStream('PLAYER_HEALTH', (hp) => {
+      hpRef.current = hp;
+      if (hp <= 0 && !deadState) setDeadState(true);
+      if (hp > 0 && deadState) setDeadState(false);
+      updateHPUI();
   });
-  
-  // Alternative: Listen to calculated ratio from system?
-  // Let's stick to updating CSS vars. 
-  // We need to know Max XP to update the ring correctly. 
-  // Let's use a small ref to hold max.
-  const xpMaxRef = useRef(100);
+
   useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
   
   useGameStream('XP', (v) => {
@@ -67,19 +57,16 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       }
   });
 
-  // 3. Level
   useGameStream('LEVEL', (lvl) => {
       if (levelRef.current) {
           levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
       }
   });
 
-  // 4. Reboot
   useGameStream('PLAYER_REBOOT', (val) => {
       setRebootState(val);
   });
 
-  // Constants
   const size = 160; 
   const center = size / 2;
   const radiusHp = 60;
@@ -124,7 +111,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
           
-          {/* HP RING */}
           <circle 
             cx={center} cy={center} r={radiusHp} 
             strokeWidth={stroke} fill="transparent" 
@@ -139,7 +125,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             }}
           />
           
-          {/* XP RING */}
           <circle 
             cx={center} cy={center} r={radiusXp} 
             stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 
