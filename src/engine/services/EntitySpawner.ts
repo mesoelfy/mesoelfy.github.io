@@ -8,6 +8,16 @@ import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
+// Map GeometryType to GeometryKey
+const GEO_MAP: Record<string, string> = {
+    'SPHERE': 'GEO_PRJ_SPHERE',
+    'CAPSULE': 'GEO_PRJ_CAPSULE',
+    'DIAMOND': 'GEO_PRJ_DIAMOND',
+    'PYRAMID': 'GEO_PRJ_PYRAMID',
+    'RING': 'GEO_PRJ_RING',
+    'ARROW': 'GEO_PRJ_ARROW'
+};
+
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
 
@@ -26,7 +36,6 @@ export class EntitySpawner implements IEntitySpawner {
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
-    // 1. Core Component Hydration
     for (const compDef of blueprint.components) {
         const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
         const runtimeData = overrides[compDef.type] || {};
@@ -36,7 +45,6 @@ export class EntitySpawner implements IEntitySpawner {
         e.addComponent(component);
     }
 
-    // 2. Automated Visual/Asset Linking
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.Render);
         if (render) {
@@ -54,6 +62,8 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
+    // Enemies generally rely on the geometry's native aspect ratio (1.0 scales), 
+    // unless defined otherwise in ARCHETYPES or MODEL_CONFIG.
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -61,7 +71,12 @@ export class EntitySpawner implements IEntitySpawner {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
+    
+    // Fallbacks
     const color = config ? config.color : [1, 1, 1];
+    const shape = config ? config.geometry : 'CAPSULE';
+    const geoId = GEO_MAP[shape] || 'GEO_PRJ_CAPSULE';
+    const s = config ? config.scale : [1,1,1]; // Get configured scale [x, y, z]
 
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
@@ -71,12 +86,18 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Render]: { 
             visualScale: 1.0, 
-            geometryId: 'GEO_BULLET',
-            r: color[0], g: color[1], b: color[2]
+            geometryId: geoId,
+            materialId: 'MAT_PROJECTILE',
+            r: color[0], g: color[1], b: color[2],
+            elasticity: 2.0, 
+            // INJECT CONFIG SCALES
+            baseScaleX: s[0],
+            baseScaleY: s[1],
+            baseScaleZ: s[2]
         },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
-
+    
     return this.spawn(id, overrides);
   }
 

@@ -648,3 +648,5 @@ fix red game over OS and grid state / tied to Zen mode interfering?
 Have hunter squish from front to back like a spring compressing while charging.
 
 reduce max screenshake threshold to be less intense.
+
+What is the incentive to keep all panels alive instead of just puppy guarding one? Maybe you only get your upgrades if in green status or 100%?

@@ -20,6 +20,9 @@ export const registerAllAssets = () => {
   });
 
   AssetService.registerGenerator('PLAYER_MAT', () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  
+  // Projectiles now use a shared basic neon material but colored via vertex attributes
+  AssetService.registerGenerator('MAT_PROJECTILE', () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
   // --- GEOMETRY ---
 
@@ -27,14 +30,21 @@ export const registerAllAssets = () => {
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
   AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
 
-  // Procedural Geometries
+  // Enemies
   AssetService.registerGenerator('GEO_DRILLER', () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  
-  // UPDATED: Now uses MODEL_CONFIG
   AssetService.registerGenerator('GEO_KAMIKAZE', () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
-  
   AssetService.registerGenerator('GEO_DAEMON', () => new THREE.OctahedronGeometry(0.6, 0));
+  
+  // Bullets
+  AssetService.registerGenerator('GEO_PRJ_SPHERE', () => new THREE.IcosahedronGeometry(1, 1));
+  AssetService.registerGenerator('GEO_PRJ_CAPSULE', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
+  AssetService.registerGenerator('GEO_PRJ_DIAMOND', () => new THREE.OctahedronGeometry(1, 0));
+  AssetService.registerGenerator('GEO_PRJ_PYRAMID', () => new THREE.TetrahedronGeometry(1, 0));
+  AssetService.registerGenerator('GEO_PRJ_RING', () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
+  AssetService.registerGenerator('GEO_PRJ_ARROW', () => new THREE.ConeGeometry(0.5, 1, 4));
+  
+  // Misc
   AssetService.registerGenerator('GEO_PARTICLE', () => new THREE.PlaneGeometry(0.3, 0.3));
-  AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6));
+  AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6)); // Legacy fallback
   AssetService.registerGenerator('PLAYER_GEO', () => new THREE.BoxGeometry(1, 1, 1));
 };
