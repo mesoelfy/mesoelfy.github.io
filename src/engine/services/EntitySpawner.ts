@@ -27,9 +27,7 @@ export class EntitySpawner implements IEntitySpawner {
 
   public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
-    if (!blueprint) {
-        return this.registry.createEntity();
-    }
+    if (!blueprint) return this.registry.createEntity();
 
     const e = this.registry.createEntity();
     blueprint.tags.forEach(tag => e.addTag(tag));
@@ -39,12 +37,9 @@ export class EntitySpawner implements IEntitySpawner {
         const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
         const runtimeData = overrides[compDef.type] || {};
         const mergedData = { ...blueprintData, ...runtimeData };
-        
-        const component = ComponentRegistry.create(compDef.type, mergedData);
-        e.addComponent(component);
+        e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
 
-    // Asset injection for RenderModel if not explicitly in components
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
@@ -57,10 +52,7 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
-  public spawnPlayer(): Entity {
-    return this.spawn(ArchetypeIDs.PLAYER);
-  }
-
+  public spawnPlayer(): Entity { return this.spawn(ArchetypeIDs.PLAYER); }
   public spawnEnemy(type: string, x: number, y: number): Entity {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
@@ -70,7 +62,6 @@ export class EntitySpawner implements IEntitySpawner {
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     
-    // Fallbacks
     const color = config ? config.color : [1, 1, 1];
     const shape = config ? config.geometry : 'CAPSULE';
     const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
@@ -82,8 +73,6 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        
-        // Split Render Data
         [ComponentType.RenderModel]: {
             geometryId: geoId,
             materialId: MATERIAL_IDS.PROJECTILE,
@@ -91,14 +80,9 @@ export class EntitySpawner implements IEntitySpawner {
         },
         [ComponentType.RenderTransform]: {
             scale: 1.0,
-            baseScaleX: s[0],
-            baseScaleY: s[1],
-            baseScaleZ: s[2]
+            baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: {
-            elasticity: 2.0 // Projectiles are stretchy
-        },
-        
+        [ComponentType.RenderEffect]: { elasticity: 2.0 },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     

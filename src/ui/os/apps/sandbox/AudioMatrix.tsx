@@ -9,7 +9,7 @@ const CATEGORIES = [
   { id: 'UI', label: 'SYSTEM_INTERFACE', icon: Monitor, color: 'text-service-cyan', border: 'border-service-cyan', bg: 'bg-service-cyan' },
   { id: 'COMBAT', label: 'COMBAT_PROTOCOL', icon: Activity, color: 'text-critical-red', border: 'border-critical-red', bg: 'bg-critical-red' },
   { id: 'AMBIENCE', label: 'ENVIRONMENTAL', icon: Radio, color: 'text-latent-purple', border: 'border-latent-purple', bg: 'bg-latent-purple' },
-  { id: 'UNUSED', label: 'SYNTH_ARCHIVE', icon: Database, color: 'text-primary-green', border: 'border-primary-green', bg: 'bg-primary-green' },
+  { id: 'LAB_RESOURCES', label: 'SYNTH_ARCHIVE', icon: Database, color: 'text-primary-green', border: 'border-primary-green', bg: 'bg-primary-green' },
 ];
 
 export const AudioMatrix = () => {
