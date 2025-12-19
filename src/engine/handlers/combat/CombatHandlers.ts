@@ -79,7 +79,11 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
 
   ctx.damagePlayer(damage);
-  ctx.addTrauma(damage >= 3 ? 0.5 : 0.2);
+  
+  // INCREASED CRASH TRAUMA
+  // Low damage (Driller): 0.3 (was 0.2) + 0.3 (Base) = 0.6 Total
+  // High damage (Kamikaze): 0.5 + 0.3 (Base) = 0.8 Total
+  ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
   
   const variant = getId(enemy)?.variant || 'UNKNOWN';
   ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
@@ -96,6 +100,11 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const damage = combat ? combat.damage : 1;
 
   ctx.damagePlayer(damage);
+  
+  // NEW: Add small trauma for projectiles
+  // Total: 0.1 (Here) + 0.3 (Base) + 0.1 (Bonus for > 5 dmg) = 0.5
+  ctx.addTrauma(0.1);
+
   ctx.destroyEntity(bullet, 'IMPACT_RED'); 
   ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
 };
@@ -110,28 +119,20 @@ export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatC
   handleMassExchange(bulletA, bulletB, ctx, 'CLASH_YELLOW');
 };
 
-// NEW: Handle Enemy hitting Panel
-// Previously done manually inside DrillerLogic / AI
 export const handleEnemyPanelHit = (enemy: Entity, panel: Entity, ctx: CombatContext) => {
-    // We only process if it's a "Crash" enemy like Kamikaze
-    // Drillers handle their own damage via AI logic (since they sit on the wall)
-    // But if a Hunter or Kamikaze flies into it:
-    
     const id = getId(enemy);
-    const pId = getId(panel); // Panel ID stored in Identity variant
+    const pId = getId(panel); 
     
     if (id?.variant === EnemyTypes.KAMIKAZE && pId) {
         const combat = getCombat(enemy);
         const dmg = combat ? combat.damage : 1;
         const pos = getPos(enemy);
         
-        ctx.damagePanel(pId.variant, dmg * 5, pos?.x, pos?.y); // Bonus damage vs structures
+        ctx.damagePanel(pId.variant, dmg * 5, pos?.x, pos?.y); 
         ctx.destroyEntity(enemy, 'EXPLOSION_RED');
         ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
         ctx.addTrauma(0.3);
     }
-    // Drillers/Hunters just bounce or slide? 
-    // For now, only Kamikaze explodes on contact.
 };
 
 function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatContext, fixedDamage?: number) {

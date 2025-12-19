@@ -9,9 +9,12 @@ export class ShakeSystem implements IGameSystem {
   public currentOffset = { x: 0, y: 0, r: 0 };
 
   private readonly DECAY_RATE = 2.0; 
-  private readonly MAX_OFFSET_X = 0.5; 
-  private readonly MAX_OFFSET_Y = 0.3; 
-  private readonly MAX_ROTATION = 0.04; 
+  
+  // REDUCED INTENSITY CONSTANTS (Maintained from previous step)
+  private readonly MAX_OFFSET_X = 0.2;  
+  private readonly MAX_OFFSET_Y = 0.12; 
+  private readonly MAX_ROTATION = 0.015; 
+  
   private readonly BASE_SPEED = 15.0; 
   private readonly TRAUMA_SPEED_BOOST = 65.0; 
   private readonly PIXELS_PER_UNIT = 40; 
@@ -24,7 +27,11 @@ export class ShakeSystem implements IGameSystem {
   ) {
     const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
     const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const amount = p.damage > 10 ? 0.45 : 0.2;
+        // INCREASED BASE SENSITIVITY
+        // Was: > 10 ? 0.45 : 0.2
+        // Now: > 5 ? 0.4 : 0.3
+        // This ensures even small hits (1-3 dmg) register a 0.3 baseline trauma
+        const amount = p.damage >= 5 ? 0.4 : 0.3;
         this.addTrauma(amount);
     });
     
