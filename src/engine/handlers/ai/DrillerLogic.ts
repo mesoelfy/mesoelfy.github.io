@@ -1,40 +1,48 @@
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { Sequence, Selector } from '@/engine/ai/behavior/composites';
-import { Succeeder } from '@/engine/ai/behavior/decorators';
-import { MoveToTarget, SpinVisual } from '@/engine/ai/nodes/actions';
-import { IsTargetInRange } from '@/engine/ai/nodes/conditions';
-import { DrillAttack } from '@/engine/ai/nodes/drillerNodes';
-import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
 
-const BASE_SPEED = 8;
+// CONFIGURATION (Data)
+const DRILLER_DEF: NodeDef = {
+  type: 'Sequence',
+  children: [
+    { type: 'SpawnPhase', args: [1.5] },
+    {
+      type: 'Sequence',
+      children: [
+        { 
+            type: 'Succeeder', 
+            children: [{ type: 'SpinVisual', args: [5.0] }] 
+        },
+        {
+          type: 'Selector',
+          children: [
+            {
+              type: 'Sequence',
+              children: [
+                { type: 'IsTargetInRange', args: [0.5] },
+                { 
+                    type: 'Succeeder', 
+                    children: [{ type: 'SpinVisual', args: [15.0] }] 
+                },
+                { type: 'DrillAttack', args: [0.2] }
+              ]
+            },
+            { type: 'MoveToTarget', args: [8] } // Base Speed
+          ]
+        }
+      ]
+    }
+  ]
+};
 
 let treeRoot: any = null;
 
-const getDrillerTree = () => {
-    if (treeRoot) return treeRoot;
-
-    treeRoot = new Sequence([
-        new SpawnPhase(1.5), 
-        
-        new Sequence([
-            new Succeeder(new SpinVisual(5.0)), 
-            new Selector([
-                new Sequence([
-                    new IsTargetInRange(0.5), 
-                    new Succeeder(new SpinVisual(15.0)), 
-                    new DrillAttack(0.2) // Interval only
-                ]),
-                new MoveToTarget(BASE_SPEED)
-            ])
-        ])
-    ]);
-    return treeRoot;
-};
-
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    const tree = getDrillerTree();
-    tree.tick(e, ctx);
+    if (!treeRoot) {
+        treeRoot = BehaviorTreeBuilder.build(DRILLER_DEF);
+    }
+    treeRoot.tick(e, ctx);
   }
 };

@@ -609,6 +609,7 @@ Refactoring prompts:
     - Configuration should just be data, not repeated logic. (logic is scattered and repetitive (WET: Write Everything Twice))
     - magic strings
     - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
+    - are there any legacy systems that need to be scrubbed?
 
 
 
