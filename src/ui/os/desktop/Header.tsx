@@ -1,14 +1,14 @@
 import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
-import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
+import { useGameStream, useStreamText } from '@/ui/hooks/useGameStream';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -26,41 +26,50 @@ const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, colo
 );
 
 const barVariants = {
-  idle: {
-    filter: "none", 
-    transition: { duration: 0.2 }
-  },
+  idle: { filter: "none", transition: { duration: 0.2 } },
   heartbeat: {
     filter: [
       "brightness(1) drop-shadow(0 0 0px #FF003C)", 
       "brightness(2) drop-shadow(0 0 10px #FF003C)", 
       "brightness(1) drop-shadow(0 0 0px #FF003C)"
     ],
-    transition: { 
-      duration: 0.8, 
-      times: [0, 0.04, 1], 
-      ease: "easeOut" 
-    }
+    transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" }
   }
 };
 
 export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   const audio = useAudio();
-  const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const isPlaying = useGameStore(state => state.isPlaying);
+  
+  // -- STREAM BINDINGS --
+  const scoreRef = useRef<HTMLSpanElement>(null);
+  const integrityRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const [integrityState, setIntegrityState] = useState(100);
+
+  useStreamText('SCORE', scoreRef, (v) => v.toString().padStart(4, '0'));
+  
+  useGameStream('SYSTEM_INTEGRITY', (val) => {
+      // Update Bar Width directly
+      if (barRef.current) {
+          barRef.current.style.width = `${val}%`;
+      }
+      // Update Text directly
+      if (integrityRef.current) {
+          integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
+      }
+      // Only re-render React if status tier changes to avoid churn
+      // This keeps the "colors" correct without re-rendering every frame for width
+      setIntegrityState(val);
+  });
+
   const [mounted, setMounted] = useState(false);
-
-  // Register Score Element
-  const scoreRef = useCallback((node: HTMLSpanElement | null) => {
-      HUDGlobals.bindScore(node);
-  }, []);
-
   useEffect(() => setMounted(true), []);
 
-  const isCritical = systemIntegrity < 30;
-  const isWarning = systemIntegrity < 60;
-  const isGameOver = systemIntegrity <= 0;
+  const isCritical = integrityState < 30;
+  const isWarning = integrityState < 60;
+  const isGameOver = integrityState <= 0;
   
   let statusColor = "text-primary-green";
   if (isCritical) statusColor = "text-critical-red";
@@ -114,12 +123,7 @@ export const Header = () => {
       </div>
       {!isGameOver && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <motion.div 
-            className="h-full" 
-            initial={{ width: "100%" }} 
-            animate={{ width: `${systemIntegrity}%` }} 
-            transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
-          >
+          <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
               <motion.div 
                 key={isCritical ? "critical-bar" : "normal-bar"}
                 animate={isCritical ? heartbeatControls : "idle"} 
@@ -129,12 +133,12 @@ export const Header = () => {
                     isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
                 )} 
               />
-          </motion.div>
+          </div>
         </div>
       )}
       <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim")}>
         <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
-        <span>OS_INTEGRITY: {Math.floor(systemIntegrity)}%</span>
+        <span ref={integrityRef}>OS_INTEGRITY: 100%</span>
       </div>
     </header>
   );

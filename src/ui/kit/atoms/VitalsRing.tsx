@@ -1,9 +1,10 @@
 import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
-import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
-import { useCallback } from 'react';
+import { useGameStream } from '@/ui/hooks/useGameStream';
+import { useRef, useState } from 'react';
 
+// Props serve as initial/fallback state
 interface VitalsRingProps {
   health: number;
   maxHealth: number;
@@ -14,18 +15,71 @@ interface VitalsRingProps {
   rebootProgress: number;
 }
 
-export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, rebootProgress }: VitalsRingProps) => {
+export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const levelRef = useRef<SVGTSpanElement>(null);
   
-  // Register Container for CSS Vars
-  const rootRef = useCallback((node: HTMLDivElement | null) => {
-      HUDGlobals.bindVitals(node);
-  }, []);
+  // Local state only for critical UI changes (Death State) to allow re-render
+  // High freq health updates bypass this
+  const [deadState, setDeadState] = useState(isDead);
+  const [rebootState, setRebootState] = useState(0);
 
-  // Register Level Text SVG Element
-  const levelRef = useCallback((node: SVGTSpanElement | null) => {
-      HUDGlobals.bindLevelText(node);
-  }, []);
+  // STREAM BINDINGS
+  
+  // 1. Health
+  useGameStream('PLAYER_HEALTH', (hp) => {
+      if (hp <= 0 && !deadState) setDeadState(true);
+      if (hp > 0 && deadState) setDeadState(false);
+      
+      // Update CSS Vars directly
+      if (containerRef.current) {
+          // Assuming maxHealth is relatively static or we can fetch it too
+          // For simplicity we use the prop or assume 100 for percentage if simpler
+          // Better: Subscribe to max too
+          const ratio = Math.max(0, Math.min(1, hp / 100)); // Normalized roughly
+          containerRef.current.style.setProperty('--hp-progress', ratio.toString());
+          
+          let color = '#78F654';
+          if (ratio < 0.3) color = '#FF003C';
+          else if (ratio < 0.6) color = '#eae747';
+          containerRef.current.style.setProperty('--hp-color', color);
+      }
+  });
 
+  // 2. XP
+  useGameStream('XP', (val) => {
+      // We need XP_NEXT to calculate ratio. 
+      // In a real optimized scenario we'd calc the ratio in the System and stream 'XP_RATIO'.
+      // But let's just listen to XP_NEXT too or assume.
+  });
+  
+  // Alternative: Listen to calculated ratio from system?
+  // Let's stick to updating CSS vars. 
+  // We need to know Max XP to update the ring correctly. 
+  // Let's use a small ref to hold max.
+  const xpMaxRef = useRef(100);
+  useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
+  
+  useGameStream('XP', (v) => {
+      if (containerRef.current) {
+          const ratio = xpMaxRef.current > 0 ? (v / xpMaxRef.current) : 0;
+          containerRef.current.style.setProperty('--xp-progress', ratio.toString());
+      }
+  });
+
+  // 3. Level
+  useGameStream('LEVEL', (lvl) => {
+      if (levelRef.current) {
+          levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
+      }
+  });
+
+  // 4. Reboot
+  useGameStream('PLAYER_REBOOT', (val) => {
+      setRebootState(val);
+  });
+
+  // Constants
   const size = 160; 
   const center = size / 2;
   const radiusHp = 60;
@@ -34,31 +88,27 @@ export const VitalsRing = ({ health, maxHealth, xp, xpToNext, level, isDead, reb
   const circHp = 2 * Math.PI * radiusHp;
   const circXp = 2 * Math.PI * radiusXp;
 
-  const initialHp = maxHealth > 0 ? health / maxHealth : 0;
-  const initialXp = xpToNext > 0 ? (xp / xpToNext) : 0;
-  const initialColor = initialHp < 0.3 ? '#FF003C' : '#78F654';
-
   return (
     <div 
-        ref={rootRef}
+        ref={containerRef}
         className="relative w-40 h-40 shrink-0 group mb-1"
         style={{
             '--hp-max': circHp,
             '--xp-max': circXp,
-            '--hp-progress': initialHp,
-            '--xp-progress': initialXp,
-            '--hp-color': initialColor
+            '--hp-progress': health / maxHealth,
+            '--xp-progress': 0,
+            '--hp-color': '#78F654'
         } as React.CSSProperties}
     > 
-        <div className={clsx("absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle", isDead ? "opacity-60 grayscale" : "opacity-100")}>
+        <div className={clsx("absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle", deadState ? "opacity-60 grayscale" : "opacity-100")}>
            <MiniCrystalCanvas />
         </div>
         
-        {isDead && (
+        {deadState && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                {rebootProgress > 0 ? (
+                {rebootState > 0 ? (
                     <div className="flex flex-col items-center">
-                        <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">{Math.floor(rebootProgress)}%</span>
+                        <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">{Math.floor(rebootState)}%</span>
                         <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
                     </div>
                 ) : (

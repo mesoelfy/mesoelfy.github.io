@@ -2,8 +2,8 @@ import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/e
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
-import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameStream } from '@/engine/state/GameStream';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -32,7 +32,10 @@ export class HealthSystem implements IGameSystem {
         this.isGameOver = true;
         this.events.emit(GameEvents.GAME_OVER, { score: 0 });
         this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
+        
+        // Sync final state to React for Game Over Screen
         useGameStore.setState({ systemIntegrity: 0 });
+        GameStream.set('SYSTEM_INTEGRITY', 0);
     }
   }
 
@@ -43,21 +46,29 @@ export class HealthSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        this.updateVisuals();
+        this.pushStream();
         
         if (this.playerHealth <= 0) {
             this.audio.playSound('fx_player_death');
+            // Sync death state to React once
             useGameStore.setState({ playerHealth: 0 }); 
         }
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
+        this.pushStream();
     }
   }
 
   public healPlayer(amount: number) {
+    const wasDead = this.playerHealth <= 0;
     this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
-    this.updateVisuals();
-    if (this.playerHealth > 0 && useGameStore.getState().playerHealth <= 0) {
+    this.pushStream();
+    
+    // Sync revival state to React once
+    if (!wasDead && this.playerHealth > 0) {
+       // Only if transitioning from dead to alive, but here we usually heal alive players
+    }
+    if (wasDead && this.playerHealth > 0) {
         useGameStore.setState({ playerHealth: this.playerHealth });
     }
   }
@@ -65,13 +76,15 @@ export class HealthSystem implements IGameSystem {
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
-    useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
+    this.pushStream();
     
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
         this.audio.playSound('fx_reboot_success');
-        this.updateVisuals();
+        this.pushStream();
+        
+        // React State Sync (Low Frequency)
         useGameStore.setState({ playerHealth: this.playerHealth, playerRebootProgress: 0 });
     }
   }
@@ -79,25 +92,20 @@ export class HealthSystem implements IGameSystem {
   public decayReboot(amount: number) {
       if (this.playerHealth > 0) return; 
       this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
-      if (Math.random() > 0.5) useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
+      if (Math.random() > 0.5) this.pushStream();
   }
 
-  private updateVisuals() {
-      const hpPercent = this.playerHealth / this.maxPlayerHealth;
-      let hpColor = '#78F654'; 
-      if (hpPercent < 0.3) hpColor = '#FF003C'; 
-      else if (hpPercent < 0.6) hpColor = '#eae747'; 
-      if (this.playerHealth <= 0) hpColor = '#eae747';
-
-      // Direct HUD Update
-      HUDGlobals.updateHealth(hpPercent, hpColor);
+  private pushStream() {
+      GameStream.set('PLAYER_HEALTH', this.playerHealth);
+      GameStream.set('PLAYER_MAX_HEALTH', this.maxPlayerHealth);
+      GameStream.set('PLAYER_REBOOT', this.playerRebootProgress);
   }
 
   public reset() {
       this.playerHealth = this.maxPlayerHealth;
       this.playerRebootProgress = 0;
       this.isGameOver = false;
-      this.updateVisuals();
+      this.pushStream();
       
       useGameStore.setState({ 
           playerHealth: this.maxPlayerHealth,

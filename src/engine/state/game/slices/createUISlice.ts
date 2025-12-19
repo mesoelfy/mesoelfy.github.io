@@ -3,6 +3,7 @@ import { GameState } from '../useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { GameStream } from '@/engine/state/GameStream';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -11,24 +12,18 @@ export interface UISlice {
   interactionTarget: string | null;
   availableUpgrades: UpgradeOption[];
 
-  // Core Registry
   registerPanel: (id: string, element: HTMLElement) => void;
   unregisterPanel: (id: string) => void;
-  
-  // Interaction
   setInteractionTarget: (id: string | null) => void;
   
-  // Logic (Moved from StructureHealthService)
   healPanel: (id: string, amount: number, sourceX?: number) => void;
   damagePanel: (id: string, amount: number, silent?: boolean, sourceX?: number, sourceY?: number) => void;
   decayPanel: (id: string, amount: number) => void;
   restoreAllPanels: () => number;
   destroyAllPanels: () => void;
-  
   resetUIState: () => void;
 }
 
-// Helper to calculate global integrity
 const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed: boolean }>) => {
     let current = 0;
     let max = 0;
@@ -42,6 +37,18 @@ const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed
     return max > 0 ? (current / max) * 100 : 100;
 };
 
+// Helper to push integrity to both Store (for React) and Stream (for HUD)
+const updateIntegrity = (state: GameState, panels: any) => {
+    const integrity = calculateIntegrity(panels);
+    // Write to Stream (Fast)
+    GameStream.set('SYSTEM_INTEGRITY', integrity);
+    
+    // Only write to React Store if it crosses a critical threshold (Optimization)
+    // Or if we need it for Game Over logic.
+    // For now, we keep writing it to Store but components should prefer Stream.
+    state.setSystemIntegrity(integrity);
+};
+
 export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get) => ({
   panels: {},
   interactionTarget: null,
@@ -49,7 +56,6 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
   registerPanel: (id, element) => {
       set((state) => {
-          // Preserve existing state if re-registering (React HMR safety)
           const existing = state.panels[id];
           const panels = { 
               ...state.panels, 
@@ -60,9 +66,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
                   isDestroyed: existing ? existing.isDestroyed : false 
               } 
           };
-          // Recalculate integrity immediately on registration
-          const integrity = calculateIntegrity(panels);
-          state.setSystemIntegrity(integrity);
+          updateIntegrity(state as GameState, panels);
           return { panels };
       });
   },
@@ -70,9 +74,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
   unregisterPanel: (id) => set((state) => {
       const next = { ...state.panels };
       delete next[id];
-      // Recalc integrity
-      const integrity = calculateIntegrity(next);
-      state.setSystemIntegrity(integrity);
+      updateIntegrity(state as GameState, next);
       return { panels: next };
   }),
 
@@ -91,7 +93,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
           newDestroyed = false;
-          newHealth = MAX_PANEL_HEALTH * 0.3; // Reboot penalty start
+          newHealth = MAX_PANEL_HEALTH * 0.3; 
           GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
           GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'UISlice' });
       } else if (!wasDestroyed) {
@@ -100,19 +102,13 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       set(s => {
           const nextPanels = { ...s.panels, [id]: { ...panel, health: newHealth, isDestroyed: newDestroyed } };
-          const integrity = calculateIntegrity(nextPanels);
-          s.setSystemIntegrity(integrity);
+          updateIntegrity(s as GameState, nextPanels);
           return { panels: nextPanels };
       });
   },
 
   damagePanel: (id, amount, silent = false, sourceX, sourceY) => {
       const state = get();
-      // Skip damage if God Mode
-      // Note: We access global store for debug flags, or pass it in. 
-      // For simplicity, we assume caller checks flags or we check directly if possible.
-      // Ideally, the System calling this checks flags.
-      
       const panel = state.panels[id];
       if (!panel || panel.isDestroyed) return;
 
@@ -134,8 +130,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       set(s => {
           const nextPanels = { ...s.panels, [id]: { ...panel, health: newHealth, isDestroyed: newDestroyed } };
-          const integrity = calculateIntegrity(nextPanels);
-          s.setSystemIntegrity(integrity);
+          updateIntegrity(s as GameState, nextPanels);
           return { panels: nextPanels };
       });
   },
@@ -169,9 +164,8 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           }
       }
 
-      const integrity = calculateIntegrity(nextPanels);
       set(s => {
-          s.setSystemIntegrity(integrity);
+          updateIntegrity(s as GameState, nextPanels);
           return { panels: nextPanels };
       });
       return restoredCount;
@@ -186,7 +180,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id: key });
       }
       set(s => {
-          s.setSystemIntegrity(0);
+          updateIntegrity(s as GameState, nextPanels);
           return { panels: nextPanels };
       });
   },
@@ -196,11 +190,8 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       const resetPanels = Object.fromEntries(
           Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
       );
-      set({ 
-          panels: resetPanels,
-          interactionTarget: null,
-          availableUpgrades: []
-      });
+      set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
+      GameStream.set('SYSTEM_INTEGRITY', 100);
       get().setSystemIntegrity(100);
   }
 });

@@ -1,7 +1,7 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { HUDGlobals } from '@/ui/os/system/HUDGlobals';
+import { GameStream } from '@/engine/state/GameStream';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class ProgressionSystem implements IGameSystem {
@@ -32,8 +32,7 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    // Direct HUD Update
-    HUDGlobals.updateScore(this.score);
+    GameStream.set('SCORE', this.score);
   }
 
   public addXp(amount: number) {
@@ -45,12 +44,12 @@ export class ProgressionSystem implements IGameSystem {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
-        HUDGlobals.updateLevel(this.level);
-        this.syncStore();
+        this.syncStore(); // Level up is rare, safe to sync to React
     }
     
-    const xpPercent = this.xpToNextLevel > 0 ? (this.xp / this.xpToNextLevel) : 0;
-    HUDGlobals.updateXP(xpPercent);
+    GameStream.set('XP', this.xp);
+    GameStream.set('XP_NEXT', this.xpToNextLevel);
+    GameStream.set('LEVEL', this.level);
   }
 
   public applyUpgrade(option: string) {
@@ -85,10 +84,10 @@ export class ProgressionSystem implements IGameSystem {
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
       
-      // Reset Visuals
-      HUDGlobals.updateScore(0);
-      HUDGlobals.updateXP(0);
-      HUDGlobals.updateLevel(1);
+      GameStream.set('SCORE', 0);
+      GameStream.set('XP', 0);
+      GameStream.set('XP_NEXT', this.xpToNextLevel);
+      GameStream.set('LEVEL', 1);
   }
 
   teardown(): void {}

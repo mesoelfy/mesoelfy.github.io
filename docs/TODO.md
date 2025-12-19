@@ -608,9 +608,8 @@ Refactoring prompts:
     - Please audit the obvious and not obvious ways I could better use SOLID and other good practices then layout a step-by-step PHASE-based remediation protocol to refactor the code base into a healthier, more readable, cleaner architecture.
     - Configuration should just be data, not repeated logic. (logic is scattered and repetitive (WET: Write Everything Twice))
     - magic strings
-    - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
     - are there any legacy systems that need to be scrubbed?
-
+    - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
 
 
 
@@ -650,3 +649,5 @@ Have hunter squish from front to back like a spring compressing while charging.
 
 
 What is the incentive to keep all panels alive instead of just puppy guarding one? Maybe you only get your upgrades if in green status or 100%?
+
+Have a notch/panel on the side of identity panel like a gear / slot for charging health?

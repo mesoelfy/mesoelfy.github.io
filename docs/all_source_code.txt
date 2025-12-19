@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 19 12:10:56 CST 2025
+Generated on: Fri Dec 19 13:14:54 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -40,6 +40,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   └── page.tsx
 │   ├── engine
 │   │   ├── ai
+│   │   │   ├── AIStateTypes.ts
 │   │   │   ├── BehaviorNodeRegistry.ts
 │   │   │   ├── BehaviorTreeBuilder.ts
 │   │   │   ├── StateMachine.ts
@@ -119,6 +120,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── graphics
 │   │   │   ├── MaterialFactory.ts
 │   │   │   ├── RenderBuffer.ts
+│   │   │   ├── RenderSchema.ts
 │   │   │   ├── ShaderLib.ts
 │   │   │   ├── glsl
 │   │   │   │   ├── math.ts
@@ -153,6 +155,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── coords.ts
 │   │   ├── services
 │   │   │   ├── ConfigService.ts
+│   │   │   ├── EngineFactory.ts
 │   │   │   ├── EntitySpawner.ts
 │   │   │   ├── GameBootstrapper.ts
 │   │   │   ├── GameEngine.ts
@@ -173,7 +176,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── global
 │   │   │       └── useStore.ts
 │   │   ├── systems
-│   │   │   ├── AtmosphereSystem.ts
 │   │   │   ├── AudioDirector.ts
 │   │   │   ├── BehaviorSystem.ts
 │   │   │   ├── CollisionSystem.ts
@@ -184,6 +186,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
 │   │   │   ├── LifeCycleSystem.ts
+│   │   │   ├── MobileCombatSystem.ts
 │   │   │   ├── MobileWaveSystem.ts
 │   │   │   ├── OrbitalSystem.ts
 │   │   │   ├── PanelRegistrySystem.ts
@@ -201,6 +204,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── VisualSystem.ts
 │   │   │   ├── WaveSystem.ts
 │   │   │   ├── WeaponSystem.ts
+│   │   │   ├── WorldSystem.ts
 │   │   │   └── index.ts
 │   │   └── types
 │   │       └── game.types.ts
@@ -351,7 +355,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-81 directories, 262 files
+81 directories, 266 files
 
 =====================================
 FILE: ./next.config.js
@@ -9493,7 +9497,8 @@ FILE: ./src/ui/sim/actors/InstancedActor.tsx
 import { useRef, useLayoutEffect } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
@@ -9510,7 +9515,6 @@ interface InstancedActorProps {
   maxCount: number;
   renderKey?: string; 
   interactive?: boolean; 
-  // Unused but kept for interface compatibility
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -9553,24 +9557,24 @@ export const InstancedActor = ({
         
         // POS
         tempObj.position.set(
-            buffer[offset + 0],
-            buffer[offset + 1],
-            buffer[offset + 2]
+            buffer[offset + RenderOffset.POSITION_X],
+            buffer[offset + RenderOffset.POSITION_Y],
+            buffer[offset + RenderOffset.POSITION_Z]
         );
 
         // QUAT
         tempObj.quaternion.set(
-            buffer[offset + 3],
-            buffer[offset + 4],
-            buffer[offset + 5],
-            buffer[offset + 6]
+            buffer[offset + RenderOffset.ROTATION_X],
+            buffer[offset + RenderOffset.ROTATION_Y],
+            buffer[offset + RenderOffset.ROTATION_Z],
+            buffer[offset + RenderOffset.ROTATION_W]
         );
 
         // SCALE
         tempObj.scale.set(
-            buffer[offset + 7],
-            buffer[offset + 8],
-            buffer[offset + 9]
+            buffer[offset + RenderOffset.SCALE_X],
+            buffer[offset + RenderOffset.SCALE_Y],
+            buffer[offset + RenderOffset.SCALE_Z]
         );
 
         tempObj.updateMatrix();
@@ -9578,14 +9582,14 @@ export const InstancedActor = ({
         
         // COLOR
         tempColor.setRGB(
-            buffer[offset + 10],
-            buffer[offset + 11],
-            buffer[offset + 12]
+            buffer[offset + RenderOffset.COLOR_R],
+            buffer[offset + RenderOffset.COLOR_G],
+            buffer[offset + RenderOffset.COLOR_B]
         );
         if (meshRef.current.instanceColor) meshRef.current.setColorAt(i, tempColor);
         
         // SPAWN
-        spawnAttr.setX(i, buffer[offset + 13]);
+        spawnAttr.setX(i, buffer[offset + RenderOffset.SPAWN_PROGRESS]);
     }
 
     meshRef.current.count = count;
@@ -9970,49 +9974,50 @@ import { addBarycentricCoordinates } from '@/engine/math/GeometryUtils';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
+import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
 export const registerAllAssets = () => {
   // --- MATERIALS ---
   
-  AssetService.registerGenerator('MAT_ENEMY_BASE', () => {
-    return MaterialFactory.create('MAT_ENEMY_BASE', ShaderLib.presets.enemy);
+  AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => {
+    return MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy);
   });
 
-  AssetService.registerGenerator('MAT_PARTICLE', () => {
-    const mat = MaterialFactory.create('MAT_PARTICLE', ShaderLib.presets.particle);
+  AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
+    const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
     mat.blending = THREE.AdditiveBlending;
     mat.depthWrite = false;
     return mat;
   });
 
-  AssetService.registerGenerator('PLAYER_MAT', () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
   // Projectiles now use a shared basic neon material but colored via vertex attributes
-  AssetService.registerGenerator('MAT_PROJECTILE', () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
   // --- GEOMETRY ---
 
   // Async Hunter Placeholder
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
-  AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
+  AssetService.generateAsyncGeometry(GEOMETRY_IDS.HUNTER, GEOMETRY_IDS.HUNTER, hunterPlaceholder);
 
   // Enemies
-  AssetService.registerGenerator('GEO_DRILLER', () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  AssetService.registerGenerator('GEO_KAMIKAZE', () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
-  AssetService.registerGenerator('GEO_DAEMON', () => new THREE.OctahedronGeometry(0.6, 0));
+  AssetService.registerGenerator(GEOMETRY_IDS.DRILLER, () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
+  AssetService.registerGenerator(GEOMETRY_IDS.KAMIKAZE, () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
+  AssetService.registerGenerator(GEOMETRY_IDS.DAEMON, () => new THREE.OctahedronGeometry(0.6, 0));
   
   // Bullets
-  AssetService.registerGenerator('GEO_PRJ_SPHERE', () => new THREE.IcosahedronGeometry(1, 1));
-  AssetService.registerGenerator('GEO_PRJ_CAPSULE', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
-  AssetService.registerGenerator('GEO_PRJ_DIAMOND', () => new THREE.OctahedronGeometry(1, 0));
-  AssetService.registerGenerator('GEO_PRJ_PYRAMID', () => new THREE.TetrahedronGeometry(1, 0));
-  AssetService.registerGenerator('GEO_PRJ_RING', () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
-  AssetService.registerGenerator('GEO_PRJ_ARROW', () => new THREE.ConeGeometry(0.5, 1, 4));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_SPHERE, () => new THREE.IcosahedronGeometry(1, 1));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CAPSULE, () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_DIAMOND, () => new THREE.OctahedronGeometry(1, 0));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_PYRAMID, () => new THREE.TetrahedronGeometry(1, 0));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_RING, () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
   
   // Misc
-  AssetService.registerGenerator('GEO_PARTICLE', () => new THREE.PlaneGeometry(0.3, 0.3));
-  AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6)); // Legacy fallback
-  AssetService.registerGenerator('PLAYER_GEO', () => new THREE.BoxGeometry(1, 1, 1));
+  AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
+  AssetService.registerGenerator(GEOMETRY_IDS.BULLET, () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6)); // Legacy fallback
+  AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
 };
 
 
@@ -10936,6 +10941,8 @@ import { ArchetypeIDs } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
+import { GEOMETRY_IDS, MATERIAL_IDS } from './AssetKeys';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 const parseHex = (hex: string) => {
     const c = parseInt(hex.replace('#', ''), 16);
@@ -10966,13 +10973,13 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Transform, data: { x: 0, y: 0, rotation: 0, scale: 1 } },
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
-      { type: ComponentType.State, data: { current: 'IDLE' } },
+      { type: ComponentType.State, data: { current: AI_STATE.IDLE } },
       { type: ComponentType.Collider, data: { 
           radius: PhysicsConfig.HITBOX.PLAYER, 
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.turret.base), visualScale: 1.0, geometryId: 'PLAYER_GEO', materialId: 'PLAYER_MAT' } }
+      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.turret.base), visualScale: 1.0, geometryId: GEOMETRY_IDS.PLAYER, materialId: MATERIAL_IDS.PLAYER } }
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
@@ -11015,7 +11022,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     id: ArchetypeIDs.DRILLER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     aiLogic: 'driller',
-    assets: { geometry: 'GEO_DRILLER', material: 'MAT_ENEMY_BASE' },
+    assets: { geometry: GEOMETRY_IDS.DRILLER, material: MATERIAL_IDS.ENEMY_BASE },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11023,7 +11030,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Combat, data: { damage: 1 } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
       { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.muncher) } }
     ]
@@ -11032,7 +11039,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     id: ArchetypeIDs.KAMIKAZE,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     aiLogic: 'kamikaze',
-    assets: { geometry: 'GEO_KAMIKAZE', material: 'MAT_ENEMY_BASE' },
+    assets: { geometry: GEOMETRY_IDS.KAMIKAZE, material: MATERIAL_IDS.ENEMY_BASE },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11040,7 +11047,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Combat, data: { damage: 3 } },
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
       { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.kamikaze) } }
     ]
@@ -11049,7 +11056,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     id: ArchetypeIDs.HUNTER,
     tags: [Tag.ENEMY, Tag.OBSTACLE],
     aiLogic: 'hunter',
-    assets: { geometry: 'GEO_HUNTER', material: 'MAT_ENEMY_BASE' },
+    assets: { geometry: GEOMETRY_IDS.HUNTER, material: MATERIAL_IDS.ENEMY_BASE },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
       { type: ComponentType.Transform, data: { scale: 1.0 } }, 
@@ -11057,7 +11064,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Combat, data: { damage: 10 } }, 
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: 'SPAWN', timers: { spawn: 1.5 } } },
+      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
       { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.hunter) } }
     ]
@@ -11066,7 +11073,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
     id: ArchetypeIDs.DAEMON,
     tags: [Tag.PLAYER],
     aiLogic: 'daemon',
-    assets: { geometry: 'GEO_DAEMON', material: 'MAT_ENEMY_BASE' },
+    assets: { geometry: GEOMETRY_IDS.DAEMON, material: MATERIAL_IDS.ENEMY_BASE },
     components: [
       { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DAEMON } },
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -11074,7 +11081,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } },
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
-      { type: ComponentType.State, data: { current: 'ORBIT' } },
+      { type: ComponentType.State, data: { current: AI_STATE.ORBIT } },
       { type: ComponentType.Render, data: { ...parseHex('#00F0FF') } }
     ]
   }
@@ -11087,35 +11094,44 @@ FILE: ./src/engine/config/AssetKeys.ts
 import { AUDIO_MANIFEST } from './assets/AudioManifest';
 import { VFX_MANIFEST } from './assets/VFXManifest';
 
+// --- GEOMETRY ---
+export const GEOMETRY_IDS = {
+  DRILLER: 'GEO_DRILLER',
+  KAMIKAZE: 'GEO_KAMIKAZE',
+  HUNTER: 'GEO_HUNTER',
+  DAEMON: 'GEO_DAEMON',
+  PARTICLE: 'GEO_PARTICLE',
+  BULLET: 'GEO_BULLET',
+  PLAYER: 'PLAYER_GEO',
+  PRJ_SPHERE: 'GEO_PRJ_SPHERE',
+  PRJ_CAPSULE: 'GEO_PRJ_CAPSULE',
+  PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
+  PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
+  PRJ_RING: 'GEO_PRJ_RING',
+  PRJ_ARROW: 'GEO_PRJ_ARROW',
+  DEFAULT: 'DEFAULT_GEO'
+} as const;
+
+export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
+
+// --- MATERIALS ---
+export const MATERIAL_IDS = {
+  ENEMY_BASE: 'MAT_ENEMY_BASE',
+  PARTICLE: 'MAT_PARTICLE',
+  PLAYER: 'PLAYER_MAT',
+  GLITCH: 'MAT_GLITCH',
+  PLAYER_AMBIENT: 'MAT_PLAYER_AMBIENT',
+  PLAYER_BACKING: 'MAT_PLAYER_BACKING',
+  GALLERY_BODY: 'MAT_GALLERY_BODY',
+  PROJECTILE: 'MAT_PROJECTILE',
+  DEFAULT: 'DEFAULT_MAT'
+} as const;
+
+export type MaterialKey = typeof MATERIAL_IDS[keyof typeof MATERIAL_IDS];
+
+// --- AUDIO & VFX (Derived from Manifests for now, but typed) ---
 export type AudioKey = keyof typeof AUDIO_MANIFEST;
 export type VFXKey = keyof typeof VFX_MANIFEST;
-
-export type GeometryKey = 
-  | 'GEO_DRILLER' 
-  | 'GEO_KAMIKAZE' 
-  | 'GEO_HUNTER' 
-  | 'GEO_DAEMON'
-  | 'GEO_PARTICLE' 
-  | 'GEO_BULLET' 
-  | 'PLAYER_GEO' 
-  | 'GEO_PRJ_SPHERE'
-  | 'GEO_PRJ_CAPSULE'
-  | 'GEO_PRJ_DIAMOND'
-  | 'GEO_PRJ_PYRAMID'
-  | 'GEO_PRJ_RING'
-  | 'GEO_PRJ_ARROW'
-  | 'DEFAULT_GEO';
-
-export type MaterialKey = 
-  | 'MAT_ENEMY_BASE' 
-  | 'MAT_PARTICLE' 
-  | 'PLAYER_MAT' 
-  | 'MAT_GLITCH'
-  | 'MAT_PLAYER_AMBIENT' 
-  | 'MAT_PLAYER_BACKING'
-  | 'MAT_GALLERY_BODY'
-  | 'MAT_PROJECTILE'
-  | 'DEFAULT_MAT';
 
 
 =====================================
@@ -12244,22 +12260,23 @@ FILE: ./src/engine/ecs/components/AIStateData.ts
 =====================================
 import { Component } from '@/engine/ecs/Component';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AIBehaviorState, AI_STATE } from '@/engine/ai/AIStateTypes';
 
 export class AIStateData extends Component {
   readonly _type = ComponentType.State;
 
   constructor(
-    public current: string = 'IDLE',
+    public current: AIBehaviorState = AI_STATE.IDLE,
     public timers: Record<string, number> = {},
     public data: Record<string, any> = {},
     public treeState: any = null,
-    public stunTimer: number = 0 // NEW: Controls physics overrides
+    public stunTimer: number = 0
   ) {
     super();
   }
 
   public reset(data: Partial<AIStateData>) {
-    this.current = data.current ?? 'IDLE';
+    this.current = data.current ?? AI_STATE.IDLE;
     this.timers = data.timers ?? {};
     this.data = data.data ?? {};
     this.treeState = data.treeState ?? null;
@@ -12267,7 +12284,7 @@ export class AIStateData extends Component {
     return this;
   }
   
-  public set(state: string) {
+  public set(state: AIBehaviorState) {
     this.current = state;
   }
 }
@@ -14894,6 +14911,7 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 // --- ACTIONS ---
 
@@ -14915,21 +14933,21 @@ export class ChargeMechanic extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
-    // Init
     if (typeof state.data.chargeProgress === 'undefined') {
         state.data.chargeProgress = 0;
     }
 
-    // Charge
     if (state.data.chargeProgress < 1.0) {
         state.data.chargeProgress += context.delta / this.duration;
         
         // Clamp
         if (state.data.chargeProgress >= 1.0) {
             state.data.chargeProgress = 1.0;
-            context.playSound('ui_optimal', 0); // Audio feedback when full
+            state.current = AI_STATE.READY;
+            context.playSound('ui_optimal', 0); 
             return NodeState.SUCCESS;
         }
+        state.current = AI_STATE.CHARGING;
         return NodeState.RUNNING;
     }
 
@@ -14947,12 +14965,10 @@ export class FireDaemonShot extends BTNode {
 
     if (!transform || !target || !state) return NodeState.FAILURE;
 
-    // Calculate Direction to Target
     const dx = target.x - transform.x;
     const dy = target.y - transform.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    // Default to forward if no target (safety)
     let dirX = 1, dirY = 0;
     
     if (dist > 0.001) {
@@ -14960,7 +14976,6 @@ export class FireDaemonShot extends BTNode {
         dirY = dy / dist;
     }
 
-    // Spawn
     context.spawnProjectile(
         transform.x + (dirX * 0.5), 
         transform.y + (dirY * 0.5), 
@@ -14971,13 +14986,12 @@ export class FireDaemonShot extends BTNode {
         entity.id as number
     );
 
-    // FX
     context.spawnFX('IMPACT_WHITE', transform.x, transform.y);
     context.playSound('fx_teleport', transform.x);
 
-    // Reset Charge
     state.data.chargeProgress = 0;
     state.data.lastFireTime = context.time;
+    state.current = AI_STATE.ORBIT;
 
     return NodeState.SUCCESS;
   }
@@ -14994,30 +15008,23 @@ export class DaemonAim extends BTNode {
 
     if (!transform || !target || !state || !render) return NodeState.FAILURE;
 
-    // 1. Determine Target Angle
     let targetAngle = 0;
     const isCharged = state.data.chargeProgress >= 1.0;
     const hasEnemy = target.id !== null && target.id !== undefined;
 
     if (isCharged && hasEnemy) {
-        // Face Enemy
         const dx = target.x - transform.x;
         const dy = target.y - transform.y;
         targetAngle = Math.atan2(dy, dx);
     } else {
-        // Face Player (Center 0,0 relative to self)
-        // Since Daemon orbits 0,0, facing center is just atan2(-y, -x)
         targetAngle = Math.atan2(-transform.y, -transform.x);
     }
 
-    // 2. Smooth Rotation
     let diff = targetAngle - transform.rotation;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     
     transform.rotation += diff * this.TURN_SPEED * context.delta;
-
-    // 3. Update Render Spin (Visual Flair)
     render.visualRotation += context.delta * 2.0;
 
     return NodeState.SUCCESS;
@@ -15029,7 +15036,6 @@ export class DaemonAim extends BTNode {
 export class HasTargetLock extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
-    // TargetingSystem sets id to 'ENEMY_LOCKED' when it finds a valid enemy
     if (target && target.id) {
         return NodeState.SUCCESS;
     }
@@ -15095,7 +15101,6 @@ export class DrillAttack extends BTNode {
         motion.vy = 0;
     }
 
-    // UPDATED: Using unified spawnFX
     context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
 
     if (!state.timers.drillAudio || state.timers.drillAudio <= 0) {
@@ -15174,6 +15179,7 @@ import { RenderData } from '@/engine/ecs/components/RenderData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 export class SpawnPhase extends BTNode {
   constructor(private duration: number) { super(); }
@@ -15188,37 +15194,26 @@ export class SpawnPhase extends BTNode {
 
     if (state.timers.spawn === undefined) {
         state.timers.spawn = this.duration;
-        state.current = 'SPAWN';
+        state.current = AI_STATE.SPAWN;
         if (render) {
             render.spawnProgress = 0.0;
-            // Initial random rotation, or face target immediately?
-            // Random feels more "chaotic materialize", but facing target feels "locked on".
-            // Let's rely on the update loop below to align them.
         }
     }
 
     if (state.timers.spawn > 0) {
         state.timers.spawn -= context.delta;
         
-        // --- ORIENTATION LOGIC ---
-        // Automatically face the target defined in TargetData
         if (transform && target) {
-            // Target coordinates are updated by TargetingSystem every frame (LOGIC phase)
-            // So this will track moving targets (Player) or static ones (Panel Edges)
             const dx = target.x - transform.x;
             const dy = target.y - transform.y;
-            // Only rotate if we have a valid vector
             if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
                 const targetAngle = Math.atan2(dy, dx);
-                // Lerp rotation for smoothness or snap? 
-                // Since they are spawning, snapping is fine, the spin effect covers it.
                 transform.rotation = targetAngle;
             }
         }
 
         if (render) {
             const t = 1.0 - (state.timers.spawn / this.duration);
-            
             render.spawnProgress = Math.max(0, Math.min(1, t));
             
             if (t < 0.8) {
@@ -15234,8 +15229,8 @@ export class SpawnPhase extends BTNode {
         return NodeState.RUNNING;
     }
 
-    if (state.current === 'SPAWN') {
-        state.current = 'ACTIVE';
+    if (state.current === AI_STATE.SPAWN) {
+        state.current = AI_STATE.ACTIVE;
         if (render) {
             render.spawnProgress = 1.0;
             render.visualScale = 1.0;
@@ -15344,6 +15339,26 @@ export class SpinVisual extends BTNode {
       return NodeState.SUCCESS;
   }
 }
+
+
+=====================================
+FILE: ./src/engine/ai/AIStateTypes.ts
+=====================================
+export const AI_STATE = {
+  IDLE: 'IDLE',
+  SPAWN: 'SPAWN',
+  ACTIVE: 'ACTIVE',
+  ATTACK: 'ATTACK',
+  ORBIT: 'ORBIT',
+  CHARGING: 'CHARGING',
+  READY: 'READY',
+  COOLDOWN: 'COOLDOWN',
+  REBOOTING: 'REBOOTING',
+  HEALING: 'HEALING',
+  FLIGHT: 'FLIGHT' // Projectiles
+} as const;
+
+export type AIBehaviorState = typeof AI_STATE[keyof typeof AI_STATE];
 
 
 =====================================
@@ -15531,17 +15546,8 @@ export class GPGPUManager {
 =====================================
 FILE: ./src/engine/graphics/RenderBuffer.ts
 =====================================
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Entity } from '@/engine/ecs/Entity';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RENDER_STRIDE } from './RenderSchema';
 
-// STRIDE: 14
-// 0,1,2: Position (x, y, z)
-// 3,4,5,6: Quaternion (x, y, z, w)
-// 7,8,9: Scale (x, y, z)
-// 10,11,12: Color (r, g, b)
-// 13: SpawnProgress
-export const RENDER_STRIDE = 14;
 const DEFAULT_CAPACITY = 2000;
 
 export interface RenderGroup {
@@ -15582,6 +15588,7 @@ class RenderBufferService {
 }
 
 export const RenderBuffer = new RenderBufferService();
+export { RENDER_STRIDE };
 
 
 =====================================
@@ -15815,6 +15822,29 @@ export const ShaderLib = {
     }
   }
 };
+
+
+=====================================
+FILE: ./src/engine/graphics/RenderSchema.ts
+=====================================
+export const RenderOffset = {
+  POSITION_X: 0,
+  POSITION_Y: 1,
+  POSITION_Z: 2,
+  ROTATION_X: 3,
+  ROTATION_Y: 4,
+  ROTATION_Z: 5,
+  ROTATION_W: 6,
+  SCALE_X: 7,
+  SCALE_Y: 8,
+  SCALE_Z: 9,
+  COLOR_R: 10,
+  COLOR_G: 11,
+  COLOR_B: 12,
+  SPAWN_PROGRESS: 13
+} as const;
+
+export const RENDER_STRIDE = 14;
 
 
 =====================================
@@ -16212,69 +16242,18 @@ export class HealthSystem implements IGameSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/AtmosphereSystem.ts
-=====================================
-import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
-import { useStore } from '@/engine/state/global/useStore'; 
-import { RenderData } from '@/engine/ecs/components/RenderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Tag } from '@/engine/ecs/types';
-import * as THREE from 'three';
-
-const COL_SAFE = new THREE.Color("#00FF41");
-const COL_WARN = new THREE.Color("#FFD700");
-const COL_CRIT = new THREE.Color("#FF003C");
-const COL_SBX  = new THREE.Color("#00FFFF");
-
-export class AtmosphereSystem implements IGameSystem {
-  private targetColor = new THREE.Color();
-  private currentColor = new THREE.Color();
-
-  constructor(
-    private panelSystem: IPanelSystem,
-    private registry: IEntityRegistry
-  ) {}
-
-  update(delta: number, time: number): void {
-    const integrity = this.panelSystem.systemIntegrity;
-    const worldEntities = this.registry.getByTag(Tag.WORLD);
-    
-    for (const world of worldEntities) {
-        const render = world.getComponent<RenderData>(ComponentType.Render);
-        if (render) {
-            const bootState = useStore.getState().bootState;
-            
-            // 1. Determine Target Color
-            if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
-            else if (integrity < 30) this.targetColor.copy(COL_CRIT);
-            else if (integrity < 60) this.targetColor.copy(COL_WARN);
-            else this.targetColor.copy(COL_SAFE);
-
-            // 2. Smooth Lerp
-            this.currentColor.setRGB(render.r, render.g, render.b);
-            this.currentColor.lerp(this.targetColor, delta * 2.0);
-            
-            render.r = this.currentColor.r;
-            render.g = this.currentColor.g;
-            render.b = this.currentColor.b;
-            
-            // 3. World Spin
-            render.visualRotation += 0.5 * delta; 
-        }
-    }
-  }
-
-  teardown(): void {}
-}
-
-
-=====================================
 FILE: ./src/engine/systems/InteractionSystem.ts
 =====================================
-import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService } from '@/engine/interfaces';
+import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { Tag } from '@/engine/ecs/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -16284,9 +16263,9 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
-  
-  // Track previous ID to prevent store thrashing
   private previousHoverId: string | null = null;
+  
+  private registry: IEntityRegistry;
 
   constructor(
     private input: IInputService,
@@ -16294,7 +16273,10 @@ export class InteractionSystem implements IInteractionSystem {
     private gameSystem: IGameStateSystem,
     private panelSystem: IPanelSystem,
     private events: IGameEventService
-  ) {}
+  ) {
+      // Lazy grab registry to avoid circular dependency in factory order if passed directly (though factory usually handles this)
+      this.registry = ServiceLocator.getRegistry();
+  }
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
@@ -16321,7 +16303,6 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private syncInteractionState() {
-      // Only push to store if the target actually changed
       if (this.hoveringPanelId !== this.previousHoverId) {
           useGameStore.getState().setInteractionTarget(this.hoveringPanelId);
           this.previousHoverId = this.hoveringPanelId;
@@ -16333,11 +16314,13 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handleRevival(cursor: {x: number, y: number}, time: number) {
+    // Special case: Player Revival still checks the 'identity' panel explicitly
+    // Ideally this should also be ECS, but 'identity' is a specific panel ID.
+    // We can look it up via ECS.
     const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
     
     const padding = 0.1; 
-    
     const isHovering = 
         cursor.x >= rect.left - padding && 
         cursor.x <= rect.right + padding && 
@@ -16349,49 +16332,70 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
-            
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
-
-            if (Math.random() > 0.3) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 2;
-                this.spawner.spawnParticle(cursor.x, cursor.y, '#9E4EA5', Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
-            }
+            this.spawnRepairParticles(cursor, '#9E4EA5');
         }
     }
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panels = this.panelSystem.getAllPanels();
-    for (const p of panels) {
-      if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
-        this.hoveringPanelId = p.id;
+    // ECS Query: Find all OBSTACLES (Panels)
+    const panels = this.registry.getByTag(Tag.OBSTACLE);
+
+    for (const entity of panels) {
+        if (!entity.active) continue;
+
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
+        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+
+        if (!transform || !collider || !identity) continue;
+
+        // Perform AABB Check (Mouse vs Panel)
+        const halfW = collider.width / 2;
+        const halfH = collider.height / 2;
         
-        if (!p.isDestroyed && p.health >= 100) continue;
+        const inX = cursor.x >= transform.x - halfW && cursor.x <= transform.x + halfW;
+        const inY = cursor.y >= transform.y - halfH && cursor.y <= transform.y + halfH;
 
-        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
+        if (inX && inY) {
+            const panelId = identity.variant; // Panel ID stored in Identity.variant
+            this.hoveringPanelId = panelId;
 
-        if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
-            this.lastRepairTime = time;
-            
-            if (p.isDestroyed) {
-                AudioSystem.playSound('loop_reboot');
-            } else {
-                this.events.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
+            const panelState = this.panelSystem.getPanelState(panelId);
+            if (!panelState) continue;
+
+            if (!panelState.isDestroyed && panelState.health >= 100) continue;
+
+            this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
+
+            if (time > this.lastRepairTime + this.REPAIR_RATE) {
+                // We still call PanelSystem to execute the logic because it owns the Store updates
+                // But the *detection* is now fully ECS based.
+                this.panelSystem.healPanel(panelId, 2.8, cursor.x);
+                this.lastRepairTime = time;
+
+                if (panelState.isDestroyed) {
+                    AudioSystem.playSound('loop_reboot');
+                } else {
+                    this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
+                }
+
+                const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+                this.spawnRepairParticles(cursor, color);
             }
-
-            if (Math.random() > 0.3) {
-                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 2;
-                this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
-            }
+            break; // Handle one panel at a time
         }
-        break; 
-      }
     }
+  }
+
+  private spawnRepairParticles(cursor: {x: number, y: number}, color: string) {
+      if (Math.random() > 0.3) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 2;
+          this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
+      }
   }
 }
 
@@ -16867,6 +16871,47 @@ export class OrbitalSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/MobileCombatSystem.ts
+=====================================
+import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents } from '@/engine/signals/FastEventBus';
+import { Entity } from '@/engine/ecs/Entity';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export class MobileCombatSystem implements IGameSystem, ICombatSystem {
+    constructor(
+        private registry: IEntityRegistry,
+        private events: IGameEventService,
+        private fastEvents: IFastEventService,
+        private audio: IAudioService
+    ) {
+        this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+            const entity = this.registry.getEntity(p.id);
+            if (entity && entity.active) {
+                this.kill(entity);
+            }
+        });
+    }
+    
+    update() {}
+    teardown() {}
+    resolveCollision() {}
+
+    private kill(entity: Entity) {
+        const t = entity.getComponent<TransformData>(ComponentType.Transform);
+        if (t) {
+            // 1 = EXPLOSION_PURPLE
+            this.fastEvents.emit(FastEvents.SPAWN_FX, 1, t.x * 100, t.y * 100, 0); 
+            this.audio.playSound('fx_impact_light');
+        }
+        this.registry.destroyEntity(entity.id);
+    }
+}
+
+
+=====================================
 FILE: ./src/engine/systems/TimeSystem.ts
 =====================================
 import { IGameSystem } from '@/engine/interfaces';
@@ -16952,10 +16997,11 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -16982,7 +17028,7 @@ export class WeaponSystem implements IGameSystem {
     if (!playerEntity) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
-    if (!stateComp || (stateComp.current !== 'ACTIVE' && stateComp.current !== 'REBOOTING')) return;
+    if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
 
     const upgrades = this.gameSystem.activeUpgrades;
     const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
@@ -17004,10 +17050,8 @@ export class WeaponSystem implements IGameSystem {
 
       const count = 360; const speed = 45; const damage = 100;
       
-      // Fast Events for FX
-      // EXPLOSION_YELLOW = 2
       this.fastEvents.emit(FastEvents.SPAWN_FX, 2, t.x * 100, t.y * 100, 0);
-      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); // 1.0 amount
+      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -17022,7 +17066,7 @@ export class WeaponSystem implements IGameSystem {
     for (const e of enemies) {
       if (!e.active || e.hasTag(Tag.BULLET)) continue;
       const state = e.getComponent<AIStateData>(ComponentType.State);
-      if (state && state.current === 'SPAWN') continue;
+      if (state && state.current === AI_STATE.SPAWN) continue;
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
@@ -17043,13 +17087,7 @@ export class WeaponSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    // Audio via Fast Bus (Player Fire = 1)
-    // Pan calculation done in AudioDirector reading the x pos
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
-    
-    // We still emit legacy event for things like Stats tracking if needed, but not for audio
-    // this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y });
-    
     this.lastFireTime = time;
   }
 
@@ -18041,6 +18079,87 @@ export class GameStateSystem implements IGameStateSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/WorldSystem.ts
+=====================================
+import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
+import { useStore } from '@/engine/state/global/useStore'; 
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
+import { Tag } from '@/engine/ecs/types';
+import * as THREE from 'three';
+
+const COL_SAFE = new THREE.Color("#00FF41");
+const COL_WARN = new THREE.Color("#FFD700");
+const COL_CRIT = new THREE.Color("#FF003C");
+const COL_SBX  = new THREE.Color("#00FFFF");
+
+export class WorldSystem implements IGameSystem {
+  private targetColor = new THREE.Color();
+  private currentColor = new THREE.Color();
+  private worldEntityId: number | null = null;
+
+  constructor(
+    private panelSystem: IPanelSystem,
+    private registry: IEntityRegistry
+  ) {
+    this.ensureWorldEntity();
+  }
+
+  private ensureWorldEntity() {
+      // Check if exists
+      for(const e of this.registry.getByTag(Tag.WORLD)) {
+          this.worldEntityId = e.id;
+          return;
+      }
+
+      // Create if missing
+      const world = this.registry.createEntity();
+      world.addTag(Tag.WORLD);
+      world.addComponent(ComponentRegistry.create(ComponentType.Render, { 
+          r: 0, g: 0.2, b: 0, 
+          visualScale: 1.0, 
+          visualRotation: 0 
+      }));
+      this.registry.updateCache(world);
+      this.worldEntityId = world.id;
+  }
+
+  update(delta: number, time: number): void {
+    if (this.worldEntityId === null) return;
+    
+    const world = this.registry.getEntity(this.worldEntityId);
+    if (!world || !world.active) return;
+
+    const render = world.getComponent<RenderData>(ComponentType.Render);
+    if (!render) return;
+
+    const integrity = this.panelSystem.systemIntegrity;
+    const bootState = useStore.getState().bootState;
+    
+    // 1. Determine Target Color
+    if (bootState === 'sandbox') this.targetColor.copy(COL_SBX);
+    else if (integrity < 30) this.targetColor.copy(COL_CRIT);
+    else if (integrity < 60) this.targetColor.copy(COL_WARN);
+    else this.targetColor.copy(COL_SAFE);
+
+    // 2. Smooth Lerp
+    this.currentColor.setRGB(render.r, render.g, render.b);
+    this.currentColor.lerp(this.targetColor, delta * 2.0);
+    
+    render.r = this.currentColor.r;
+    render.g = this.currentColor.g;
+    render.b = this.currentColor.b;
+    
+    // 3. World Spin
+    render.visualRotation += 0.5 * delta; 
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/engine/systems/MobileWaveSystem.ts
 =====================================
 import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
@@ -18670,7 +18789,8 @@ export class LifeCycleSystem implements IGameSystem {
 FILE: ./src/engine/systems/VisualSystem.ts
 =====================================
 import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
-import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
@@ -18737,9 +18857,6 @@ export class VisualSystem implements IGameSystem {
       }
 
       // --- 2. Scale ---
-      // Apply base dimensions first (Aspect Ratio)
-      // Transform.scale is the uniform multiplier
-      // Render.visualScale is the effect multiplier (pulsing)
       let scaleX = transform.scale * render.visualScale * render.baseScaleX;
       let scaleY = transform.scale * render.visualScale * render.baseScaleY;
       let scaleZ = transform.scale * render.visualScale * render.baseScaleZ;
@@ -18747,15 +18864,10 @@ export class VisualSystem implements IGameSystem {
       // Velocity Deformation (Squash/Stretch)
       if (motion && render.elasticity > 0.01) {
           const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0; // Bullets stretch easier than enemies
+          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0;
 
           if (speedSq > threshold) {
               const speed = Math.sqrt(speedSq);
-              
-              // Apply Elasticity to the base factors
-              // If elasticity is high (bullets), use the "jelly" caps.
-              // If low (enemies), use the "rigid" caps.
-              
               let stretchY, squashXZ;
               
               if (render.elasticity > 1.0) {
@@ -18779,21 +18891,25 @@ export class VisualSystem implements IGameSystem {
       qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
       qFinal.copy(qAim).multiply(qSpin);
 
-      // --- 4. Pack ---
-      group.buffer[idx + 0] = vx;
-      group.buffer[idx + 1] = vy;
-      group.buffer[idx + 2] = vz;
-      group.buffer[idx + 3] = qFinal.x;
-      group.buffer[idx + 4] = qFinal.y;
-      group.buffer[idx + 5] = qFinal.z;
-      group.buffer[idx + 6] = qFinal.w;
-      group.buffer[idx + 7] = scaleX;
-      group.buffer[idx + 8] = scaleY;
-      group.buffer[idx + 9] = scaleZ;
-      group.buffer[idx + 10] = render.r;
-      group.buffer[idx + 11] = render.g;
-      group.buffer[idx + 12] = render.b;
-      group.buffer[idx + 13] = render.spawnProgress;
+      // --- 4. Pack (Using Strict Schema) ---
+      group.buffer[idx + RenderOffset.POSITION_X] = vx;
+      group.buffer[idx + RenderOffset.POSITION_Y] = vy;
+      group.buffer[idx + RenderOffset.POSITION_Z] = vz;
+      
+      group.buffer[idx + RenderOffset.ROTATION_X] = qFinal.x;
+      group.buffer[idx + RenderOffset.ROTATION_Y] = qFinal.y;
+      group.buffer[idx + RenderOffset.ROTATION_Z] = qFinal.z;
+      group.buffer[idx + RenderOffset.ROTATION_W] = qFinal.w;
+      
+      group.buffer[idx + RenderOffset.SCALE_X] = scaleX;
+      group.buffer[idx + RenderOffset.SCALE_Y] = scaleY;
+      group.buffer[idx + RenderOffset.SCALE_Z] = scaleZ;
+      
+      group.buffer[idx + RenderOffset.COLOR_R] = render.r;
+      group.buffer[idx + RenderOffset.COLOR_G] = render.g;
+      group.buffer[idx + RenderOffset.COLOR_B] = render.b;
+      
+      group.buffer[idx + RenderOffset.SPAWN_PROGRESS] = render.spawnProgress;
 
       group.count++;
     }
@@ -18812,6 +18928,7 @@ import { IPhysicsSystem, IEntityRegistry } from '@/engine/interfaces';
 import { SpatialGrid } from '@/engine/ecs/SpatialGrid';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -18828,6 +18945,8 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
+    // 1. INTEGRATION STEP (Movement)
+    // Only entities with Motion need position updates
     const movables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Motion] });
     
     for (const entity of movables) {
@@ -18844,9 +18963,21 @@ export class PhysicsSystem implements IPhysicsSystem {
             motion.vx *= (1 - motion.friction);
             motion.vy *= (1 - motion.friction);
         }
-
-        this.spatialGrid.insert(entity.id, transform.x, transform.y);
       }
+    }
+
+    // 2. BROADPHASE STEP (Spatial Hashing)
+    // Insert ALL colliders (Static + Dynamic) into the grid
+    const collidables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Collider] });
+
+    for (const entity of collidables) {
+        if (!entity.active) continue;
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+        // We don't need the Collider component to insert, just the position, 
+        // but we filter by Collider existence to avoid inserting pure visual effects.
+        if (transform) {
+            this.spatialGrid.insert(entity.id, transform.x, transform.y);
+        }
     }
   }
 
@@ -19574,364 +19705,211 @@ self.onmessage = (e: MessageEvent) => {
 =====================================
 FILE: ./src/engine/services/MobileBootstrapper.ts
 =====================================
+import { EngineFactory } from './EngineFactory';
+
+export const MobileBootstrapper = () => {
+  return EngineFactory.create('MOBILE');
+};
+
+
+=====================================
+FILE: ./src/engine/services/EngineFactory.ts
+=====================================
 import { ServiceLocator } from './ServiceLocator';
-import { GameEngineCore } from '@/engine/services/GameEngine';
+import { GameEngineCore } from './GameEngine';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { EntitySpawner } from '@/engine/services/EntitySpawner';
-import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
-import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
-import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
-import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
+import { EntitySpawner } from './EntitySpawner';
+import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
-import { ConfigService } from '@/engine/services/ConfigService';
+import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
+import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
+import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { SystemPhase } from '@/engine/interfaces';
 
+// Common Systems
 import { TimeSystem } from '@/engine/systems/TimeSystem';
-import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
-import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { InputSystem } from '@/engine/systems/InputSystem';
-
-import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
-import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { ShakeSystem } from '@/engine/systems/ShakeSystem';
-import { StructureSystem } from '@/engine/systems/StructureSystem';
-import { MobileWaveSystem } from '@/engine/systems/MobileWaveSystem';
-import { TargetingSystem } from '@/engine/systems/TargetingSystem';
-import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
-import { GameStateSystem } from '@/engine/systems/GameStateSystem';
-import { RenderSystem } from '@/engine/systems/RenderSystem';
-import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
-import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
+import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
+import { GameStateSystem } from '@/engine/systems/GameStateSystem';
+import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
+import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
+import { ShakeSystem } from '@/engine/systems/ShakeSystem';
+import { RenderSystem } from '@/engine/systems/RenderSystem';
+import { VisualSystem } from '@/engine/systems/VisualSystem';
+import { AudioDirector } from '@/engine/audio/AudioDirector';
+import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
+import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
 import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
-import { InteractionSystem } from '@/engine/systems/InteractionSystem';
+import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
+import { WorldSystem } from '@/engine/systems/WorldSystem';
+import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
+import { VFXSystem } from '@/engine/systems/VFXSystem';
 
-import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents } from '@/engine/signals/FastEventBus';
-import { Entity } from '@/engine/ecs/Entity';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
+// Mode Specific Systems
+import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
+import { WeaponSystem } from '@/engine/systems/WeaponSystem';
+import { CollisionSystem } from '@/engine/systems/CollisionSystem';
+import { CombatSystem } from '@/engine/systems/CombatSystem';
+import { StructureSystem } from '@/engine/systems/StructureSystem';
+import { WaveSystem } from '@/engine/systems/WaveSystem';
+import { MobileWaveSystem } from '@/engine/systems/MobileWaveSystem';
+import { MobileCombatSystem } from '@/engine/systems/MobileCombatSystem';
 
-class MobileCombatSystem implements IGameSystem, ICombatSystem {
-    constructor(
-        private registry: IEntityRegistry,
-        private events: IGameEventService,
-        private fastEvents: IFastEventService,
-        private audio: IAudioService
-    ) {
-        this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-            const entity = this.registry.getEntity(p.id);
-            if (entity && entity.active) {
-                this.kill(entity);
-            }
-        });
-    }
+export type EngineMode = 'DESKTOP' | 'MOBILE';
+
+export class EngineFactory {
+  public static create(mode: EngineMode): GameEngineCore {
+    // 1. Core Services
+    const registry = new EntityRegistry();
+    const eventBus = new GameEventService();
+    const fastEventBus = new FastEventBusImpl();
+    const audioService = new AudioServiceImpl();
+    const inputSystem = new InputSystem();
+    const spawner = new EntitySpawner(registry);
     
-    update() {}
-    teardown() {}
-    resolveCollision() {}
+    // 2. Global Registration
+    ServiceLocator.reset();
+    ServiceLocator.register('EntityRegistry', registry);
+    ServiceLocator.register('GameEventService', eventBus);
+    ServiceLocator.register('FastEventService', fastEventBus);
+    ServiceLocator.register('AudioService', audioService);
+    ServiceLocator.register('InputSystem', inputSystem);
+    ServiceLocator.register('EntitySpawner', spawner);
 
-    private kill(entity: Entity) {
-        const t = entity.getComponent<TransformData>(ComponentType.Transform);
-        if (t) {
-            this.fastEvents.emit(FastEvents.SPAWN_FX, 1, t.x * 100, t.y * 100, 0); // 1 = EXPLOSION_PURPLE
-            this.audio.playSound('fx_impact_light');
-        }
-        this.registry.destroyEntity(entity.id);
+    // 3. Content Registration
+    registerAllComponents();
+    registerAllBehaviors();
+    registerAllAssets();
+
+    // 4. Common Systems Instantiation
+    const timeSystem = new TimeSystem();
+    const physicsSystem = new PhysicsSystem(registry);
+    const particleSystem = new ParticleSystem();
+    const shakeSystem = new ShakeSystem(eventBus, fastEventBus);
+    
+    const panelSystem = new PanelRegistrySystem(eventBus, audioService);
+    const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
+    const progressionSystem = new ProgressionSystem(eventBus);
+    const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
+    
+    const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
+    const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
+    const worldSystem = new WorldSystem(panelSystem, registry);
+    
+    const projectileSystem = new ProjectileSystem(registry);
+    const targetingSystem = new TargetingSystem(registry, panelSystem);
+    const orbitalSystem = new OrbitalSystem(registry);
+    const guidanceSystem = new GuidanceSystem(registry);
+    
+    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
+    
+    // Directors
+    const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
+    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
+    const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const visualSystem = new VisualSystem(registry);
+
+    // 5. Engine Injection
+    const engine = new GameEngineCore(registry);
+    engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
+    engine.injectFastEventBus(fastEventBus);
+
+    // 6. System Registration Helpers
+    const register = (sys: any, phase: SystemPhase, name?: string) => {
+        engine.registerSystem(sys, phase);
+        if (name) ServiceLocator.registerSystem(name, sys);
+    };
+
+    // --- PIPELINE CONSTRUCTION ---
+
+    // PHASE 0: INPUT
+    register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
+    register(inputSystem, SystemPhase.INPUT, 'InputSystem');
+    register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
+    
+    if (mode === 'DESKTOP') {
+        const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
+        register(movementSystem, SystemPhase.INPUT);
     }
+
+    // PHASE 1: LOGIC
+    register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
+    register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
+    register(targetingSystem, SystemPhase.LOGIC);
+    
+    if (mode === 'DESKTOP') {
+        const waveSystem = new WaveSystem(spawner, panelSystem);
+        const structureSystem = new StructureSystem(panelSystem);
+        const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
+        
+        register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
+        register(structureSystem, SystemPhase.LOGIC);
+        register(behaviorSystem, SystemPhase.LOGIC); // Enemies behave
+        register(weaponSystem, SystemPhase.LOGIC);   // Player shoots
+    } else {
+        const mobileWaveSystem = new MobileWaveSystem(spawner);
+        register(mobileWaveSystem, SystemPhase.LOGIC);
+        register(behaviorSystem, SystemPhase.LOGIC); // Enemies still behave
+    }
+
+    // PHASE 2: PHYSICS
+    register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
+    register(orbitalSystem, SystemPhase.PHYSICS);
+    register(guidanceSystem, SystemPhase.PHYSICS);
+    register(projectileSystem, SystemPhase.PHYSICS);
+
+    // PHASE 3: COLLISION
+    if (mode === 'DESKTOP') {
+        const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
+        const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
+        
+        register(collisionSystem, SystemPhase.COLLISION);
+        register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
+    } else {
+        const mobileCombat = new MobileCombatSystem(registry, eventBus, fastEventBus, audioService);
+        register(mobileCombat, SystemPhase.COLLISION);
+    }
+
+    // PHASE 4: STATE
+    register(healthSystem, SystemPhase.STATE, 'HealthSystem');
+    register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
+    register(lifeCycleSystem, SystemPhase.STATE);
+
+    // PHASE 5: RENDER
+    register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
+    register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
+    register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
+    register(vfxSystem, SystemPhase.RENDER);
+    register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');
+    register(worldSystem, SystemPhase.RENDER, 'WorldSystem');
+    register(audioDirector, SystemPhase.RENDER);
+
+    // 7. Final Setup
+    engine.setup(ServiceLocator);
+
+    // 8. Player Spawn (Desktop Only)
+    if (mode === 'DESKTOP') {
+        spawner.spawnPlayer();
+    }
+
+    return engine;
+  }
 }
-
-export const MobileBootstrapper = () => {
-  const registry = new EntityRegistry();
-  const eventBus = new GameEventService();
-  const fastEventBus = new FastEventBusImpl();
-  const audioService = new AudioServiceImpl();
-  const inputSystem = new InputSystem();
-  
-  const spawner = new EntitySpawner(registry);
-  const engine = new GameEngineCore(registry);
-  
-  ServiceLocator.reset();
-  ServiceLocator.register('EntityRegistry', registry);
-  ServiceLocator.register('GameEventService', eventBus);
-  ServiceLocator.register('FastEventService', fastEventBus);
-  ServiceLocator.register('AudioService', audioService);
-  ServiceLocator.register('InputSystem', inputSystem);
-  ServiceLocator.register('EntitySpawner', spawner);
-
-  registerAllComponents();
-  registerAllBehaviors();
-  registerAllAssets();
-
-  const panelSystem = new PanelRegistrySystem(eventBus, audioService);
-  const timeSystem = new TimeSystem();
-  const physicsSystem = new PhysicsSystem(registry);
-
-  const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
-  const progressionSystem = new ProgressionSystem(eventBus);
-  const gameStateSystem = new GameStateSystem(
-      healthSystem, progressionSystem, panelSystem, eventBus, audioService
-  );
-  
-  const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus, fastEventBus);
-  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
-  
-  const mobileCombatSystem = new MobileCombatSystem(registry, eventBus, fastEventBus, audioService);
-  const projectileSystem = new ProjectileSystem(registry);
-  
-  const targetingSystem = new TargetingSystem(registry, panelSystem);
-  const orbitalSystem = new OrbitalSystem(registry);
-  const guidanceSystem = new GuidanceSystem(registry);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus, fastEventBus);
-  
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
-  const structureSystem = new StructureSystem(panelSystem);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-  const visualSystem = new VisualSystem(registry); // NEW
-  const waveSystem = new MobileWaveSystem(spawner);
-
-  engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-  engine.injectFastEventBus(fastEventBus);
-
-  const systemMap = {
-    TimeSystem: timeSystem,
-    InputSystem: inputSystem,
-    PhysicsSystem: physicsSystem,
-    PanelRegistrySystem: panelSystem,
-    HealthSystem: healthSystem,
-    ProgressionSystem: progressionSystem,
-    GameStateSystem: gameStateSystem,
-    InteractionSystem: interactionSystem,
-    ParticleSystem: particleSystem,
-    ShakeSystem: shakeSystem
-  };
-  Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
-
-  // INPUT
-  engine.registerSystem(timeSystem, SystemPhase.INPUT);
-  engine.registerSystem(inputSystem, SystemPhase.INPUT);
-  engine.registerSystem(interactionSystem, SystemPhase.INPUT);
-  
-  // LOGIC
-  engine.registerSystem(panelSystem, SystemPhase.LOGIC);
-  engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
-  engine.registerSystem(targetingSystem, SystemPhase.LOGIC);
-  engine.registerSystem(waveSystem, SystemPhase.LOGIC);
-  engine.registerSystem(structureSystem, SystemPhase.LOGIC);
-  engine.registerSystem(behaviorSystem, SystemPhase.LOGIC);
-  
-  // PHYSICS
-  engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(orbitalSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(guidanceSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(projectileSystem, SystemPhase.PHYSICS);
-  
-  // COLLISION
-  engine.registerSystem(mobileCombatSystem, SystemPhase.COLLISION);
-  
-  // STATE
-  engine.registerSystem(healthSystem, SystemPhase.STATE);
-  engine.registerSystem(progressionSystem, SystemPhase.STATE);
-  engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
-  
-  // RENDER
-  engine.registerSystem(renderSystem, SystemPhase.RENDER);
-  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW
-  engine.registerSystem(particleSystem, SystemPhase.RENDER);
-  engine.registerSystem(vfxSystem, SystemPhase.RENDER);
-  engine.registerSystem(shakeSystem, SystemPhase.RENDER);
-  engine.registerSystem(audioDirector, SystemPhase.RENDER);
-
-  engine.setup(ServiceLocator);
-  
-  return engine;
-};
 
 
 =====================================
 FILE: ./src/engine/services/GameBootstrapper.ts
 =====================================
-import { ServiceLocator } from './ServiceLocator';
-import { GameEngineCore } from '@/engine/services/GameEngine';
-import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
-import { EntitySpawner } from '@/engine/services/EntitySpawner';
-import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
-import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
-import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
-import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
-import { Tag } from '@/engine/ecs/types';
-import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { AudioServiceImpl } from '@/engine/audio/AudioService';
-import { GameEventService } from '@/engine/signals/GameEventBus';
-import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
-import { ConfigService } from '@/engine/services/ConfigService';
-import { SystemPhase } from '@/engine/interfaces';
-
-import { TimeSystem } from '@/engine/systems/TimeSystem';
-import { InputSystem } from '@/engine/systems/InputSystem';
-import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
-import { HealthSystem } from '@/engine/systems/HealthSystem';
-import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
-import { GameStateSystem } from '@/engine/systems/GameStateSystem';
-import { AtmosphereSystem } from '@/engine/systems/AtmosphereSystem';
-import { InteractionSystem } from '@/engine/systems/InteractionSystem';
-import { StructureSystem } from '@/engine/systems/StructureSystem';
-import { WaveSystem } from '@/engine/systems/WaveSystem';
-import { ParticleSystem } from '@/engine/systems/ParticleSystem';
-import { TargetingSystem } from '@/engine/systems/TargetingSystem';
-import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
-import { WeaponSystem } from '@/engine/systems/WeaponSystem';
-import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
-import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
-import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
-import { CollisionSystem } from '@/engine/systems/CollisionSystem';
-import { CombatSystem } from '@/engine/systems/CombatSystem';
-import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
-import { RenderSystem } from '@/engine/systems/RenderSystem';
-import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
-import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { AudioDirector } from '@/engine/audio/AudioDirector';
-import { ShakeSystem } from '@/engine/systems/ShakeSystem';
+import { EngineFactory } from './EngineFactory';
 
 export const GameBootstrapper = () => {
-  // 1. Core Services
-  const registry = new EntityRegistry();
-  const eventBus = new GameEventService();
-  const fastEventBus = new FastEventBusImpl(); 
-  const audioService = new AudioServiceImpl(); 
-  const inputSystem = new InputSystem(); 
-  
-  // 2. Data Services
-  const spawner = new EntitySpawner(registry);
-  const engine = new GameEngineCore(registry);
-
-  // 3. Global Registration
-  ServiceLocator.reset(); 
-  ServiceLocator.register('EntityRegistry', registry);
-  ServiceLocator.register('GameEventService', eventBus);
-  ServiceLocator.register('FastEventService', fastEventBus); 
-  ServiceLocator.register('AudioService', audioService);
-  ServiceLocator.register('InputSystem', inputSystem);
-  ServiceLocator.register('EntitySpawner', spawner);
-
-  // 4. Content Registration
-  registerAllComponents();
-  registerAllBehaviors();
-  registerAllAssets();
-
-  // 5. System Instantiation
-  
-  const timeSystem = new TimeSystem();
-  const physicsSystem = new PhysicsSystem(registry);
-  const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); 
-  
-  const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
-  const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
-  const progressionSystem = new ProgressionSystem(eventBus);
-  const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
-  
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
-  const structureSystem = new StructureSystem(panelSystem);
-  
-  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); 
-  const projectileSystem = new ProjectileSystem(registry);
-  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); 
-  
-  // Directors
-  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); 
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); 
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-  const visualSystem = new VisualSystem(registry); // NEW
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); 
-  
-  const waveSystem = new WaveSystem(spawner, panelSystem);
-  const targetingSystem = new TargetingSystem(registry, panelSystem);
-  const orbitalSystem = new OrbitalSystem(registry);
-  const guidanceSystem = new GuidanceSystem(registry);
-  const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
-  const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus, fastEventBus);
-  const atmosphereSystem = new AtmosphereSystem(panelSystem, registry);
-
-  // 6. Engine Injection
-  engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-  engine.injectFastEventBus(fastEventBus); 
-
-  // 7. Locator Registration
-  const systemMap = {
-    TimeSystem: timeSystem,
-    PhysicsSystem: physicsSystem,
-    PanelRegistrySystem: panelSystem,
-    HealthSystem: healthSystem,
-    ProgressionSystem: progressionSystem,
-    GameStateSystem: gameStateSystem,
-    AtmosphereSystem: atmosphereSystem,
-    InteractionSystem: interactionSystem,
-    CombatSystem: combatSystem,
-    ParticleSystem: particleSystem,
-    ShakeSystem: shakeSystem,
-    RenderSystem: renderSystem,
-    VisualSystem: visualSystem, // NEW
-    WaveSystem: waveSystem
-  };
-  Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
-
-  // 8. Pipeline Construction
-  
-  engine.registerSystem(timeSystem, SystemPhase.INPUT);
-  engine.registerSystem(inputSystem, SystemPhase.INPUT); 
-  engine.registerSystem(interactionSystem, SystemPhase.INPUT);
-  engine.registerSystem(movementSystem, SystemPhase.INPUT);
-  
-  engine.registerSystem(panelSystem, SystemPhase.LOGIC);
-  engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
-  engine.registerSystem(targetingSystem, SystemPhase.LOGIC);
-  engine.registerSystem(waveSystem, SystemPhase.LOGIC);
-  engine.registerSystem(structureSystem, SystemPhase.LOGIC);
-  engine.registerSystem(behaviorSystem, SystemPhase.LOGIC);
-  engine.registerSystem(weaponSystem, SystemPhase.LOGIC);
-  
-  engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(orbitalSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(guidanceSystem, SystemPhase.PHYSICS);
-  engine.registerSystem(projectileSystem, SystemPhase.PHYSICS);
-  
-  engine.registerSystem(collisionSystem, SystemPhase.COLLISION);
-  engine.registerSystem(combatSystem, SystemPhase.COLLISION);
-  
-  engine.registerSystem(healthSystem, SystemPhase.STATE);
-  engine.registerSystem(progressionSystem, SystemPhase.STATE);
-  engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
-  
-  engine.registerSystem(renderSystem, SystemPhase.RENDER);
-  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW: Before particles/VFX
-  engine.registerSystem(particleSystem, SystemPhase.RENDER);
-  engine.registerSystem(vfxSystem, SystemPhase.RENDER);
-  engine.registerSystem(shakeSystem, SystemPhase.RENDER);
-  engine.registerSystem(atmosphereSystem, SystemPhase.RENDER);
-  engine.registerSystem(audioDirector, SystemPhase.RENDER);
-
-  engine.setup(ServiceLocator);
-  spawner.spawnPlayer();
-
-  const world = registry.createEntity();
-  world.addTag(Tag.WORLD);
-  world.addComponent(ComponentRegistry.create(ComponentType.Render, { r: 0, g: 0.2, b: 0, visualScale: 1.0, visualRotation: 0 }));
-  registry.updateCache(world);
-
-  return engine;
+  return EngineFactory.create('DESKTOP');
 };
 
 
@@ -19981,15 +19959,16 @@ import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
+import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
-// Map GeometryType to GeometryKey
+// Map GeometryType to GeometryKey using Constants
 const GEO_MAP: Record<string, string> = {
-    'SPHERE': 'GEO_PRJ_SPHERE',
-    'CAPSULE': 'GEO_PRJ_CAPSULE',
-    'DIAMOND': 'GEO_PRJ_DIAMOND',
-    'PYRAMID': 'GEO_PRJ_PYRAMID',
-    'RING': 'GEO_PRJ_RING',
-    'ARROW': 'GEO_PRJ_ARROW'
+    'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
+    'CAPSULE': GEOMETRY_IDS.PRJ_CAPSULE,
+    'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
+    'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
+    'RING': GEOMETRY_IDS.PRJ_RING,
+    'ARROW': GEOMETRY_IDS.PRJ_ARROW
 };
 
 export class EntitySpawner implements IEntitySpawner {
@@ -20036,8 +20015,6 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
-    // Enemies generally rely on the geometry's native aspect ratio (1.0 scales), 
-    // unless defined otherwise in ARCHETYPES or MODEL_CONFIG.
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -20049,8 +20026,8 @@ export class EntitySpawner implements IEntitySpawner {
     // Fallbacks
     const color = config ? config.color : [1, 1, 1];
     const shape = config ? config.geometry : 'CAPSULE';
-    const geoId = GEO_MAP[shape] || 'GEO_PRJ_CAPSULE';
-    const s = config ? config.scale : [1,1,1]; // Get configured scale [x, y, z]
+    const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
+    const s = config ? config.scale : [1,1,1]; 
 
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
@@ -20061,10 +20038,9 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Render]: { 
             visualScale: 1.0, 
             geometryId: geoId,
-            materialId: 'MAT_PROJECTILE',
+            materialId: MATERIAL_IDS.PROJECTILE,
             r: color[0], g: color[1], b: color[2],
             elasticity: 2.0, 
-            // INJECT CONFIG SCALES
             baseScaleX: s[0],
             baseScaleY: s[1],
             baseScaleZ: s[2]
