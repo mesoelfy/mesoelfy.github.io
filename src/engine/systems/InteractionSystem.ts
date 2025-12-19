@@ -1,7 +1,13 @@
-import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService } from '@/engine/interfaces';
+import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { Tag } from '@/engine/ecs/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -11,9 +17,9 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private readonly REPAIR_RATE = 0.05;
-  
-  // Track previous ID to prevent store thrashing
   private previousHoverId: string | null = null;
+  
+  private registry: IEntityRegistry;
 
   constructor(
     private input: IInputService,
@@ -21,7 +27,10 @@ export class InteractionSystem implements IInteractionSystem {
     private gameSystem: IGameStateSystem,
     private panelSystem: IPanelSystem,
     private events: IGameEventService
-  ) {}
+  ) {
+      // Lazy grab registry to avoid circular dependency in factory order if passed directly (though factory usually handles this)
+      this.registry = ServiceLocator.getRegistry();
+  }
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
@@ -48,7 +57,6 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private syncInteractionState() {
-      // Only push to store if the target actually changed
       if (this.hoveringPanelId !== this.previousHoverId) {
           useGameStore.getState().setInteractionTarget(this.hoveringPanelId);
           this.previousHoverId = this.hoveringPanelId;
@@ -60,11 +68,13 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handleRevival(cursor: {x: number, y: number}, time: number) {
+    // Special case: Player Revival still checks the 'identity' panel explicitly
+    // Ideally this should also be ECS, but 'identity' is a specific panel ID.
+    // We can look it up via ECS.
     const rect = this.panelSystem.getPanelRect('identity');
     if (!rect) return;
     
     const padding = 0.1; 
-    
     const isHovering = 
         cursor.x >= rect.left - padding && 
         cursor.x <= rect.right + padding && 
@@ -76,48 +86,69 @@ export class InteractionSystem implements IInteractionSystem {
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + this.REPAIR_RATE) {
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
-            
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
-
-            if (Math.random() > 0.3) {
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 2;
-                this.spawner.spawnParticle(cursor.x, cursor.y, '#9E4EA5', Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
-            }
+            this.spawnRepairParticles(cursor, '#9E4EA5');
         }
     }
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panels = this.panelSystem.getAllPanels();
-    for (const p of panels) {
-      if (cursor.x >= p.left && cursor.x <= p.right && cursor.y >= p.bottom && cursor.y <= p.top) {
-        this.hoveringPanelId = p.id;
+    // ECS Query: Find all OBSTACLES (Panels)
+    const panels = this.registry.getByTag(Tag.OBSTACLE);
+
+    for (const entity of panels) {
+        if (!entity.active) continue;
+
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
+        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+
+        if (!transform || !collider || !identity) continue;
+
+        // Perform AABB Check (Mouse vs Panel)
+        const halfW = collider.width / 2;
+        const halfH = collider.height / 2;
         
-        if (!p.isDestroyed && p.health >= 100) continue;
+        const inX = cursor.x >= transform.x - halfW && cursor.x <= transform.x + halfW;
+        const inY = cursor.y >= transform.y - halfH && cursor.y <= transform.y + halfH;
 
-        this.repairState = p.isDestroyed ? 'REBOOTING' : 'HEALING';
+        if (inX && inY) {
+            const panelId = identity.variant; // Panel ID stored in Identity.variant
+            this.hoveringPanelId = panelId;
 
-        if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.panelSystem.healPanel(p.id, 2.8, cursor.x); 
-            this.lastRepairTime = time;
-            
-            if (p.isDestroyed) {
-                AudioSystem.playSound('loop_reboot');
-            } else {
-                this.events.emit(GameEvents.PANEL_HEALED, { id: p.id, amount: 4 });
+            const panelState = this.panelSystem.getPanelState(panelId);
+            if (!panelState) continue;
+
+            if (!panelState.isDestroyed && panelState.health >= 100) continue;
+
+            this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
+
+            if (time > this.lastRepairTime + this.REPAIR_RATE) {
+                // We still call PanelSystem to execute the logic because it owns the Store updates
+                // But the *detection* is now fully ECS based.
+                this.panelSystem.healPanel(panelId, 2.8, cursor.x);
+                this.lastRepairTime = time;
+
+                if (panelState.isDestroyed) {
+                    AudioSystem.playSound('loop_reboot');
+                } else {
+                    this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
+                }
+
+                const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+                this.spawnRepairParticles(cursor, color);
             }
-
-            if (Math.random() > 0.3) {
-                const color = p.isDestroyed ? '#9E4EA5' : '#00F0FF'; 
-                const angle = Math.random() * Math.PI * 2;
-                const speed = 2 + Math.random() * 2;
-                this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
-            }
+            break; // Handle one panel at a time
         }
-        break; 
-      }
     }
+  }
+
+  private spawnRepairParticles(cursor: {x: number, y: number}, color: string) {
+      if (Math.random() > 0.3) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 2;
+          this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
+      }
   }
 }
