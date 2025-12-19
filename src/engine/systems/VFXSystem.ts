@@ -12,7 +12,10 @@ export class VFXSystem implements IGameSystem {
     private events: IGameEventService,
     private fastEvents: IFastEventService
   ) {
-    this.setupListeners();
+    // Only keeping ONE slow listener because Hex Colors are annoying to pack into Int32
+    this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
+        this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
+    });
   }
 
   update(delta: number, time: number): void {
@@ -28,43 +31,15 @@ export class VFXSystem implements IGameSystem {
           else if (id === FastEvents.CAM_SHAKE) {
               this.shakeSystem.addTrauma(a1 / 100);
           }
+          else if (id === FastEvents.HIT_STOP) {
+              // a1 = Duration (ms)
+              // Implementation of hitstop usually involves pausing TimeSystem
+              // For now, we stub it or access TimeSystem if we inject it
+          }
       });
   }
 
   teardown(): void {}
-
-  private setupListeners() {
-    // Slow Path / Fallback
-    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
-        this.executeRecipe(p.type, p.x, p.y, p.angle);
-    });
-
-    this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
-        this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
-    });
-
-    this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => {
-        this.shakeSystem.addTrauma(p.amount);
-    });
-
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        if (p.damage > 10) this.triggerHitStop(0.05);
-    });
-
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
-        this.shakeSystem.addTrauma(0.75); 
-        this.triggerHitStop(0.1); 
-    });
-
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
-        this.shakeSystem.addTrauma(1.0);
-        this.triggerHitStop(0.5); 
-    });
-    
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        this.executeRecipe('PURGE_BLAST', 0, 0);
-    });
-  }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
       const count = this.randomRange(2, 3);
@@ -141,6 +116,4 @@ export class VFXSystem implements IGameSystem {
   private randomRange(min: number, max: number) {
       return min + Math.random() * (max - min);
   }
-
-  private triggerHitStop(duration: number) {}
 }

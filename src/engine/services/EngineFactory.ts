@@ -33,7 +33,7 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { FeedbackBridgeSystem } from '@/engine/systems/FeedbackBridgeSystem'; // NEW
+import { FeedbackBridgeSystem } from '@/engine/systems/FeedbackBridgeSystem';
 
 // Mode Specific Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
@@ -115,7 +115,9 @@ export class EngineFactory {
 
     // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
-    register(inputSystem, SystemPhase.INPUT, 'InputSystem');
+    // FIX: Removed 'InputSystem' name to prevent double registration warning
+    // (It is already registered in step 2 as IInputService)
+    register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     
     if (mode === 'DESKTOP') {
@@ -135,12 +137,12 @@ export class EngineFactory {
         
         register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
         register(structureSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); // Enemies behave
-        register(weaponSystem, SystemPhase.LOGIC);   // Player shoots
+        register(behaviorSystem, SystemPhase.LOGIC); 
+        register(weaponSystem, SystemPhase.LOGIC);   
     } else {
         const mobileWaveSystem = new MobileWaveSystem(spawner);
         register(mobileWaveSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); // Enemies still behave
+        register(behaviorSystem, SystemPhase.LOGIC); 
     }
 
     // PHASE 2: PHYSICS
@@ -165,7 +167,7 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
-    register(feedbackBridge, SystemPhase.STATE); // New Bridge runs here to catch events from Logic/Collision
+    register(feedbackBridge, SystemPhase.STATE); 
 
     // PHASE 5: RENDER
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');

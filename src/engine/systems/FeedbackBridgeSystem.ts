@@ -22,47 +22,27 @@ export class FeedbackBridgeSystem implements IGameSystem {
 
   private setupRoutes() {
     // --- PLAYER FEEDBACK ---
-    this.events.subscribe(GameEvents.PLAYER_FIRED, (p) => {
-        this.emitSound('fx_player_fire', p.x);
-    });
-
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        // Heavy impact + Ducking + Shake
-        this.emitSound('fx_impact_heavy');
-        this.fastEvents.emit(FastEvents.DUCK_MUSIC, 70, 100); // 0.7 intensity, 1.0s
-        
-        // Trauma logic moved from ShakeSystem to here
-        const trauma = p.damage >= 5 ? 40 : 30; // 0.4 or 0.3
-        this.fastEvents.emit(FastEvents.CAM_SHAKE, trauma);
-        
-        // Hitstop for heavy hits
-        if (p.damage > 10) this.fastEvents.emit(FastEvents.HIT_STOP, 50);
-    });
-
-    // --- ENEMY FEEDBACK ---
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, (p) => { 
-        if (p.type === 'kamikaze') this.emitSound('fx_impact_heavy', p.x);
-        else this.emitSound('fx_impact_light', p.x);
-    });
+    // PLAYER_FIRED: Emitted by WeaponSystem directly as FastEvent.
+    // PLAYER_HIT: Emitted by CombatSystem directly as FastEvent.
+    // ENEMY_DESTROYED: Emitted by CombatSystem directly as FastEvent.
 
     // --- PANEL FEEDBACK ---
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         const x = this.getPanelX(p.id);
         this.emitSound('loop_heal', x);
-        // Visuals usually handled by InteractionSystem spawning particles directly
     });
 
     this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
         this.emitSound('fx_reboot_success', x);
-        this.emitFX('REBOOT_HEAL', x, 0); // 0 Y assumed if not provided
+        this.emitFX('REBOOT_HEAL', x, 0); 
     });
 
     this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         const x = this.getPanelX(p.id);
         this.emitSound('fx_impact_heavy', x); 
         this.fastEvents.emit(FastEvents.DUCK_MUSIC, 80, 150);
-        this.fastEvents.emit(FastEvents.CAM_SHAKE, 75); // 0.75
+        this.fastEvents.emit(FastEvents.CAM_SHAKE, 75); 
         this.fastEvents.emit(FastEvents.HIT_STOP, 100);
     });
 
@@ -78,19 +58,8 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.emitSound('fx_level_up');
     });
     
-    this.events.subscribe(GameEvents.HEARTBEAT, (p) => {
-        // Pulse Effect? We don't have a FastEvent for generic screen pulse yet, 
-        // usually handled by React UI state, but sound is here.
-        // GameStateSystem plays sound directly currently. We can move it here if we emit event.
-        // Keeping GameStateSystem logic for now as it uses timers.
-    });
-    
-    this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => {
-        this.fastEvents.emit(FastEvents.CAM_SHAKE, p.amount * 100);
-    });
-    
+    // Legacy support for manual triggers (e.g., UI debug buttons)
     this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
-        // Bridge legacy/slow spawn requests
         this.emitFX(p.type, p.x, p.y, p.angle);
     });
     

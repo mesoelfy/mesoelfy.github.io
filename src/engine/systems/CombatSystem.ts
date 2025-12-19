@@ -35,6 +35,7 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
+              // Game Logic still goes to Slow Bus (UI needs it)
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
@@ -46,22 +47,19 @@ export class CombatSystem implements IGameSystem {
               }
           },
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Keep object allocation for now as Color hex string logic is complex to migrate to ints
-              // Or could use a specialized event.
-              // For now, we fallback to GameEvents for impact (less frequent than bullets)
+              // Keep legacy event for dynamic color impacts (complex payload)
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
-          playAudio: (key) => this.audio.playSound(key),
+          playAudio: (key) => {
+              const keyId = REVERSE_SOUND_MAP[key.toLowerCase()];
+              if (keyId) this.fastEvents.emit(FastEvents.PLAY_SOUND, keyId, 0);
+          },
           playSpatialAudio: (key, x) => {
-              // FAST PATH
               const keyId = REVERSE_SOUND_MAP[key.toLowerCase()];
               if (keyId) {
                   this.fastEvents.emit(FastEvents.PLAY_SOUND, keyId, (x || 0) * 100);
-              } else {
-                  // Fallback for non-mapped sounds
-                  this.events.emit(GameEvents.PLAY_SOUND, { key: key.toLowerCase(), x });
               }
           },
           addTrauma: (amount) => {
@@ -97,6 +95,7 @@ export class CombatSystem implements IGameSystem {
           let finalFX = fx;
           const angleToUse = impactAngle || 0;
           
+          // Dynamic overrides based on type
           if (identity?.variant === EnemyTypes.HUNTER) {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
           }
