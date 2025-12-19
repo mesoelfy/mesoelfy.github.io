@@ -1,7 +1,6 @@
 import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
@@ -10,10 +9,10 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { IInteractionSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
+import { useGameContext } from '@/engine/state/GameContext';
 import * as THREE from 'three';
 
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
@@ -61,6 +60,7 @@ const COL_HIT = new THREE.Color('#FF003C');
 const COL_RETICLE_HEAL = new THREE.Color('#257171');
 
 export const PlayerActor = () => {
+  const { registry, getSystem, events } = useGameContext();
   const containerRef = useRef<THREE.Group>(null);
   const centerDotRef = useRef<THREE.Mesh>(null);
   const reticleRef = useRef<THREE.Mesh>(null);
@@ -98,7 +98,7 @@ export const PlayerActor = () => {
       return mat;
   }, []);
 
-  useEffect(() => { return GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }); }, []);
+  useEffect(() => { return events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }); }, [events]);
 
   useFrame((state, delta) => {
     if (!containerRef.current) return;
@@ -110,19 +110,20 @@ export const PlayerActor = () => {
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
 
     let interactState = 'IDLE';
-    try { const interact = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem'); if (interact) interactState = interact.repairState; } catch {}
+    const interact = getSystem<IInteractionSystem>('InteractionSystem');
+    if (interact) interactState = interact.repairState;
+
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     
     if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     let playerEntity;
-    try { const registry = ServiceLocator.getRegistry(); for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; } } catch { return; }
+    for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
     if (!playerEntity) return;
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
     
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
@@ -136,12 +137,6 @@ export const PlayerActor = () => {
         
         let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
         
-        // If renderModel exists, we could use its R/G/B too
-        if (renderModel) {
-            // tempColor.setRGB(renderModel.r, renderModel.g, renderModel.b);
-            // targetColor = tempColor;
-        }
-
         tempColor.current.lerp(targetColor, 0.2); 
         
         if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);

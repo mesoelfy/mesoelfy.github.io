@@ -1,7 +1,7 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useGameContext } from '@/engine/state/GameContext';
 import { Tag } from '@/engine/ecs/types';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
@@ -16,6 +16,7 @@ const WIDTH_SCALE = 1.2;
 const SPIN_SPEED = 2.0;
 
 export const DaemonActor = () => {
+  const { registry } = useGameContext();
   const groupRef = useRef<THREE.Group>(null);
   const pool = useMemo(() => {
       const items: { root: THREE.Group, cage: THREE.Mesh, orb: THREE.Mesh }[] = [];
@@ -37,7 +38,7 @@ export const DaemonActor = () => {
 
   useFrame((state, delta) => {
       if (!groupRef.current) return;
-      const registry = ServiceLocator.getRegistry();
+      
       const entities = Array.from(registry.getByTag(Tag.PLAYER)).filter(e => {
           const id = e.getComponent<IdentityData>(ComponentType.Identity);
           return id?.variant === EnemyTypes.DAEMON && e.active;

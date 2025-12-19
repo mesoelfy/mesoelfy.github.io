@@ -1,56 +1,71 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { IAudioService, IInputService, IGameEventService } from '@/engine/interfaces';
+import { 
+  IAudioService, 
+  IInputService, 
+  IGameEventService, 
+  IEntityRegistry, 
+  IEntitySpawner, 
+  IGameSystem 
+} from '@/engine/interfaces';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { GameEventService } from '@/engine/signals/GameEventBus';
+import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
+import { EntitySpawner } from '@/engine/services/EntitySpawner';
 
 interface GameContextProps {
   audio: IAudioService;
   input: IInputService;
   events: IGameEventService;
+  registry: IEntityRegistry;
+  spawner: IEntitySpawner;
+  // Generic accessor for specific systems (e.g. ShakeSystem)
+  getSystem: <T extends IGameSystem>(id: string) => T | null;
 }
 
-// Default mock to prevent crash if accessed outside provider
+// Fallbacks for initial render (before EngineFactory runs)
+const mockRegistry = new EntityRegistry();
+const mockSpawner = new EntitySpawner(mockRegistry);
+
 const defaultContext: GameContextProps = {
   audio: new AudioServiceImpl(),
   input: new InputSystem(),
-  events: new GameEventService()
+  events: new GameEventService(),
+  registry: mockRegistry,
+  spawner: mockSpawner,
+  getSystem: () => null
 };
 
 const GameContext = createContext<GameContextProps>(defaultContext);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
+  // We grab references from ServiceLocator ONCE during provider mount.
+  // This bridges the imperative Engine world to the declarative React world.
+  
   let audio: IAudioService;
   let input: IInputService;
   let events: IGameEventService;
+  let registry: IEntityRegistry;
+  let spawner: IEntitySpawner;
 
-  try {
-      audio = ServiceLocator.getAudioService();
-  } catch {
-      const impl = new AudioServiceImpl();
-      ServiceLocator.register('AudioService', impl);
-      audio = impl;
-  }
+  // Safe retrieval with fallbacks
+  const safeGet = <T,>(id: string, fallback: T): T => {
+      try { return ServiceLocator.get<T>(id); } catch { return fallback; }
+  };
 
-  try {
-      input = ServiceLocator.getInputService();
-  } catch {
-      const impl = new InputSystem();
-      ServiceLocator.register('InputSystem', impl);
-      input = impl;
-  }
+  audio = safeGet('AudioService', new AudioServiceImpl());
+  input = safeGet('InputSystem', new InputSystem());
+  events = safeGet('GameEventService', new GameEventService());
+  registry = safeGet('EntityRegistry', mockRegistry);
+  spawner = safeGet('EntitySpawner', mockSpawner);
 
-  try {
-      events = ServiceLocator.getGameEventBus();
-  } catch {
-      const impl = new GameEventService();
-      ServiceLocator.register('GameEventService', impl);
-      events = impl;
-  }
+  const getSystem = <T extends IGameSystem>(id: string): T | null => {
+      try { return ServiceLocator.getSystem<T>(id); } catch { return null; }
+  };
 
   return (
-    <GameContext.Provider value={{ audio, input, events }}>
+    <GameContext.Provider value={{ audio, input, events, registry, spawner, getSystem }}>
       {children}
     </GameContext.Provider>
   );

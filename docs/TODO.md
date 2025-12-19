@@ -651,3 +651,9 @@ Have hunter squish from front to back like a spring compressing while charging.
 What is the incentive to keep all panels alive instead of just puppy guarding one? Maybe you only get your upgrades if in green status or 100%?
 
 Have a notch/panel on the side of identity panel like a gear / slot for charging health?
+
+what is background motion grid called and what can it be renamed to?
+
+heal and reboot panels 15% faster.
+
+holodeck (is it also called sandbox?) is slow and glitchy - player pointer cursor and battle reticle both appearing, but not in sync. should just be battle cur if not hovering on settings.

@@ -4,12 +4,13 @@ import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useGameContext } from '@/engine/state/GameContext';
 import { Tag } from '@/engine/ecs/types';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const MatrixGrid = () => {
+  const { registry } = useGameContext();
   const groupRef = useRef<THREE.Group>(null);
   const gridRef = useRef<any>(null);
 
@@ -25,11 +26,10 @@ export const MatrixGrid = () => {
   
   useFrame((state, delta) => {
     let worldEntity;
-    try { const registry = ServiceLocator.getRegistry(); for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; } } catch { return; }
+    for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; }
 
     if (worldEntity && groupRef.current) {
         const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        // Using Modulo 5 to keep the offset small as texture wraps
         if (render) groupRef.current.position.z = render.rotation % 5;
     }
 

@@ -1,7 +1,7 @@
 import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useGameContext } from '@/engine/state/GameContext';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 
@@ -9,17 +9,14 @@ const dummy = new THREE.Object3D();
 const color = new THREE.Color();
 const MAX_PARTICLES = 20000;
 
-// Deterministic random to prevent jittering Z every frame, 
-// since we rebuild particles every frame based on index.
 const getZDepth = (index: number) => {
-    // Hashes index to float between -2.0 and 2.0
-    // This distributes particles in volume "around" the z=0 plane.
     const h = (index * 9301 + 49297) % 233280;
-    const norm = h / 233280; // 0..1
+    const norm = h / 233280; 
     return (norm * 4.0) - 2.0; 
 };
 
 export const ParticleActor = () => {
+  const { getSystem } = useGameContext();
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => AssetService.get<THREE.BufferGeometry>('GEO_PARTICLE'), []);
   const material = useMemo(() => AssetService.get<THREE.Material>('MAT_PARTICLE'), []);
@@ -32,8 +29,8 @@ export const ParticleActor = () => {
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
-    let sys: ParticleSystem | null = null;
-    try { sys = ServiceLocator.getParticleSystem() as ParticleSystem; } catch { return; }
+    const sys = getSystem<ParticleSystem>('ParticleSystem');
+    if (!sys) return;
 
     const count = sys.count;
     if (count === 0) { meshRef.current.count = 0; return; }
@@ -44,7 +41,6 @@ export const ParticleActor = () => {
         const life = sys.life[i]; const maxLife = sys.maxLife[i];
         const baseSize = sys.size[i]; const shape = sys.shape[i];
         
-        // Volumetric Z-distribution
         const zDepth = getZDepth(i);
         
         dummy.position.set(x, y, zDepth);

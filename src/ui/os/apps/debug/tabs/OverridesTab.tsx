@@ -2,9 +2,8 @@ import { Play, Sparkles, Trash2, Skull, RefreshCw, Crown, Ghost, Shield, Crossha
 import { clsx } from 'clsx';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useGameContext } from '@/engine/state/GameContext';
 import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -15,6 +14,7 @@ interface OverridesTabProps {
 export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   const { setIntroDone, setBootState, bootState, resetApplication, debugFlags, setDebugFlag, resetDebugFlags } = useStore();
   const { startGame, stopGame, activateZenMode } = useGameStore();
+  const { getSystem, events } = useGameContext();
 
   const areAllGodModesOn = debugFlags.godMode && debugFlags.panelGodMode && debugFlags.peaceMode;
 
@@ -29,15 +29,12 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
   };
 
   const executeCrash = () => {
-    try {
-        // Destroy all panels via System
-        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-        panels.destroyAll();
-        
-        useGameStore.setState({ systemIntegrity: 0 });
-        GameEventBus.emit(GameEvents.GAME_OVER, { score: 0 });
-        stopGame();
-    } catch {}
+      const panels = getSystem<IPanelSystem>('PanelRegistrySystem');
+      if (panels) panels.destroyAll();
+      
+      useGameStore.setState({ systemIntegrity: 0 });
+      events.emit(GameEvents.GAME_OVER, { score: 0 });
+      stopGame();
   };
 
   const handleForceCrash = () => {
@@ -56,11 +53,11 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const handleReboot = () => {
     useGameStore.setState({ playerHealth: 100, playerRebootProgress: 0 });
-    try {
-        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+    const panels = getSystem<IPanelSystem>('PanelRegistrySystem');
+    if (panels) {
         const list = panels.getAllPanels();
         list.forEach((p: any) => panels.healPanel(p.id, 1000));
-    } catch {}
+    }
     closeDebug();
   };
 
@@ -81,11 +78,9 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   const toggleGodSuite = () => {
       const newState = !areAllGodModesOn;
-      if (newState) {
-          AudioSystem.playSound('powerup');
-      } else {
-          AudioSystem.playSound('ui_click');
-      }
+      if (newState) AudioSystem.playSound('ui_optimal');
+      else AudioSystem.playSound('ui_click');
+      
       setDebugFlag('godMode', newState);
       setDebugFlag('panelGodMode', newState);
       setDebugFlag('peaceMode', newState);
@@ -95,118 +90,28 @@ export const OverridesTab = ({ closeDebug }: OverridesTabProps) => {
 
   return (
     <div className="space-y-6">
-      
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">SCENE_SELECT</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button 
-            onClick={handleSkipBoot} 
-            onMouseEnter={() => AudioSystem.playHover()}
-            className={`${btnClass} border-primary-green/50 hover:bg-primary-green hover:text-black`}
-          >
-            <Play size={14} /> SKIP_BOOT
-          </button>
-          
-          <button 
-            onClick={handleZenModeWrapper} 
-            onMouseEnter={() => AudioSystem.playHover()}
-            className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"
-          >
-            <div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" />
-            <div className="relative z-10 flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 font-bold tracking-widest text-xs group-hover:text-white transition-colors">
-                <Sparkles size={14} className="text-yellow-300" /> ZEN_MODE
-            </div>
-          </button>
-          <button 
-            onClick={handleSystemFormat} 
-            onMouseEnter={() => AudioSystem.playHover()}
-            className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold"
-          >
-            <Trash2 size={14} /> SYSTEM_FORMAT
-          </button>
+          <button onClick={handleSkipBoot} onMouseEnter={() => AudioSystem.playHover()} className={`${btnClass} border-primary-green/50 hover:bg-primary-green hover:text-black`}><Play size={14} /> SKIP_BOOT</button>
+          <button onClick={handleZenModeWrapper} onMouseEnter={() => AudioSystem.playHover()} className="relative flex items-center justify-center gap-2 p-3 overflow-hidden group transition-all duration-300 border border-transparent hover:border-white/50"><div className="absolute inset-0 opacity-20 group-hover:opacity-40 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-gradient-xy transition-opacity" /><div className="relative z-10 flex items-center gap-2 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-yellow-400 to-blue-400 font-bold tracking-widest text-xs group-hover:text-white transition-colors"><Sparkles size={14} className="text-yellow-300" /> ZEN_MODE</div></button>
+          <button onClick={handleSystemFormat} onMouseEnter={() => AudioSystem.playHover()} className="col-span-2 flex items-center justify-center gap-2 p-3 border border-gray-500/50 text-gray-400 hover:bg-white hover:text-black transition-all text-xs font-bold"><Trash2 size={14} /> SYSTEM_FORMAT</button>
         </div>
       </div>
-
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">STATE_OVERRIDES</h3>
         <div className="grid grid-cols-2 gap-3">
-          <button 
-            onClick={handleForceCrash} 
-            onMouseEnter={() => AudioSystem.playHover()}
-            className={`${btnClass} border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black`}
-          >
-            <Skull size={14} /> FORCE_CRASH
-          </button>
-          <button 
-            onClick={handleReboot} 
-            onMouseEnter={() => AudioSystem.playHover()}
-            className={`${btnClass} border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black`}
-          >
-            <RefreshCw size={14} /> REBOOT_CORE
-          </button>
+          <button onClick={handleForceCrash} onMouseEnter={() => AudioSystem.playHover()} className={`${btnClass} border-critical-red/50 text-critical-red hover:bg-critical-red hover:text-black`}><Skull size={14} /> FORCE_CRASH</button>
+          <button onClick={handleReboot} onMouseEnter={() => AudioSystem.playHover()} className={`${btnClass} border-latent-purple/50 text-latent-purple hover:bg-latent-purple hover:text-black`}><RefreshCw size={14} /> REBOOT_CORE</button>
         </div>
       </div>
-
       <div className="space-y-3">
         <h3 className="text-xs text-primary-green-dim border-b border-primary-green-dim/30 pb-1 mb-2">GOD_SUITE</h3>
-        
-        <button 
-          onClick={toggleGodSuite}
-          onMouseEnter={() => AudioSystem.playHover()}
-          className={clsx(
-              "w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border",
-              areAllGodModesOn
-                  ? "bg-primary-green text-black border-primary-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" 
-                  : "bg-primary-green/10 text-primary-green border-primary-green/50 hover:bg-primary-green hover:text-black"
-          )}
-        >
-          <Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />
-          {areAllGodModesOn ? "DISABLE_ALL" : "ENABLE_MAX_POWER"}
-        </button>
-
-        <label 
-          data-interactive="true"
-          onMouseEnter={() => AudioSystem.playHover()}
-          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
-        >
-          <span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE (Player Invincible)</span>
-          <input 
-            type="checkbox" 
-            checked={debugFlags.godMode} 
-            onChange={(e) => setDebugFlag('godMode', e.target.checked)}
-            className="accent-primary-green cursor-pointer"
-          />
-        </label>
-
-        <label 
-          data-interactive="true"
-          onMouseEnter={() => AudioSystem.playHover()}
-          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
-        >
-          <span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE (Panels Invincible)</span>
-          <input 
-            type="checkbox" 
-            checked={debugFlags.panelGodMode} 
-            onChange={(e) => setDebugFlag('panelGodMode', e.target.checked)}
-            className="accent-primary-green cursor-pointer"
-          />
-        </label>
-
-        <label 
-          data-interactive="true"
-          onMouseEnter={() => AudioSystem.playHover()}
-          className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"
-        >
-          <span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL (No Spawns)</span>
-          <input 
-            type="checkbox" 
-            checked={debugFlags.peaceMode} 
-            onChange={(e) => setDebugFlag('peaceMode', e.target.checked)}
-            className="accent-primary-green cursor-pointer"
-          />
-        </label>
+        <button onClick={toggleGodSuite} onMouseEnter={() => AudioSystem.playHover()} className={clsx("w-full flex items-center justify-center gap-2 p-2 mb-3 text-xs font-bold transition-all border", areAllGodModesOn ? "bg-primary-green text-black border-primary-green shadow-[0_0_10px_rgba(0,255,65,0.4)]" : "bg-primary-green/10 text-primary-green border-primary-green/50 hover:bg-primary-green hover:text-black")}><Crown size={14} className={areAllGodModesOn ? "fill-black" : ""} />{areAllGodModesOn ? "DISABLE_ALL" : "ENABLE_MAX_POWER"}</button>
+        <label data-interactive="true" onMouseEnter={() => AudioSystem.playHover()} className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"><span className="text-xs font-bold flex items-center gap-2"><Ghost size={14} /> GHOST_MODE</span><input type="checkbox" checked={debugFlags.godMode} onChange={(e) => setDebugFlag('godMode', e.target.checked)} className="accent-primary-green cursor-pointer" /></label>
+        <label data-interactive="true" onMouseEnter={() => AudioSystem.playHover()} className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"><span className="text-xs font-bold flex items-center gap-2"><Shield size={14} /> FORTRESS_MODE</span><input type="checkbox" checked={debugFlags.panelGodMode} onChange={(e) => setDebugFlag('panelGodMode', e.target.checked)} className="accent-primary-green cursor-pointer" /></label>
+        <label data-interactive="true" onMouseEnter={() => AudioSystem.playHover()} className="flex items-center justify-between p-3 border border-primary-green/30 hover:border-primary-green hover:bg-primary-green/20 cursor-pointer transition-all select-none"><span className="text-xs font-bold flex items-center gap-2"><Crosshair size={14} /> PEACE_PROTOCOL</span><input type="checkbox" checked={debugFlags.peaceMode} onChange={(e) => setDebugFlag('peaceMode', e.target.checked)} className="accent-primary-green cursor-pointer" /></label>
       </div>
-
     </div>
   );
 };

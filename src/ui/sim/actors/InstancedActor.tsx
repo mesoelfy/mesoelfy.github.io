@@ -3,9 +3,8 @@ import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
 import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useGameContext } from '@/engine/state/GameContext';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 
@@ -29,7 +28,7 @@ export const InstancedActor = ({
     geometry, material, maxCount, 
     interactive = false, renderKey 
 }: InstancedActorProps) => {
-  
+  const { registry, events } = useGameContext();
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
   useLayoutEffect(() => {
@@ -107,7 +106,6 @@ export const InstancedActor = ({
       e.stopPropagation();
       
       try {
-          const registry = ServiceLocator.getRegistry();
           const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] }));
           
           let matchIndex = 0;
@@ -129,7 +127,7 @@ export const InstancedActor = ({
           }
 
           if (foundEntity) {
-              GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: foundEntity.id as number, damage: 9999, type: 'TAP' });
+              events.emit(GameEvents.ENEMY_DAMAGED, { id: foundEntity.id as number, damage: 9999, type: 'TAP' });
           }
       } catch (err) {
           console.warn("Interaction Failed:", err);
