@@ -15,6 +15,7 @@ import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 
 const DEFAULT_MAX_HEALTH = 100;
 
+// Variants apply to the INNER visual container
 const panelVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
@@ -45,23 +46,27 @@ const CircuitLockOverlay = () => (
 
 interface GlassPanelProps {
   children: ReactNode;
-  className?: string;
+  className?: string; // Layout classes (Grid, Flex, Dimensions)
   title?: string;
   gameId?: string;
   maxHealth?: number; 
 }
 
 export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH }: GlassPanelProps) => {
+  // 1. Registry Hook (Tracks the OUTER layout anchor)
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
+  
+  // 2. Physics Ref (Manipulates the INNER visual container)
+  const visualRef = useReactRef<HTMLDivElement>(null);
+
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
   const isGameOver = Math.floor(systemIntegrity) <= 0;
 
-  // Use new Physics Hook if gameId exists. 
-  // IMPORTANT: Disable physics loop when game is over so Framer Motion can take over the transform.
-  if (gameId && registryRef) {
-      usePanelPhysics(gameId, registryRef, !isGameOver);
+  // Physics Hook attached to visualRef
+  if (gameId) {
+      usePanelPhysics(gameId, visualRef, !isGameOver);
   }
   
   const isInteracting = !!(gameId && interactionTarget === gameId);
@@ -115,67 +120,73 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
   return (
-    <motion.div 
-      ref={registryRef}
-      variants={panelVariants}
-      initial="hidden"
-      animate={shakeControls}
-      custom={randSeed}
-      className={clsx(
-        "relative overflow-hidden flex flex-col group",
-        isDestroyed ? "bg-black/20" : "bg-black", 
-        "border", borderColor, "rounded-sm",
-        showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300",
-        className
-      )}
+    // OUTER ANCHOR: Purely for Layout & Registry. No visual borders or physics shakes.
+    <div 
+      ref={registryRef} 
+      className={clsx("relative", className)}
     >
-      <DotGridBackground className="top-8" />
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
-      
-      {isCriticalGlobal && (
-          <motion.div 
-            className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
-            animate={heartbeatControls}
-            variants={pulseVariants}
-            initial={{ opacity: 0 }}
-          />
-      )}
-
-      {title && (
-          <IntelligentHeader 
-            title={title} health={health} maxHealth={maxHealth} 
-            isDestroyed={isDestroyed} isGameOver={isGameOver} gameId={gameId}
-          />
-      )}
-
-      <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
-        {(isDestroyed || isGameOver) && (
-            <SafePanelContent fallbackId={`sparks-${gameId}`}>
-                <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
-            </SafePanelContent>
+      {/* INNER CONTENT: Handles Visuals, Physics, and Animations */}
+      <motion.div 
+        ref={visualRef}
+        variants={panelVariants}
+        initial="hidden"
+        animate={shakeControls}
+        custom={randSeed}
+        className={clsx(
+          "w-full h-full relative overflow-hidden flex flex-col group",
+          isDestroyed ? "bg-black/20" : "bg-black", 
+          "border", borderColor, "rounded-sm",
+          showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300"
         )}
-        <div className={clsx("flex-1 min-h-0 flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
-            {children}
-            {isDestroyed && !isGameOver && (
-                <SafePanelContent fallbackId={`breach-${gameId}`}>
-                    <BreachOverlay 
-                        progress={healthPercent} isVideo={gameId === 'video'} 
-                        showInteractive={true} isRepairing={isInteracting} panelId={gameId} 
-                    />
-                </SafePanelContent>
-            )}
+      >
+        <DotGridBackground className="top-8" />
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+        
+        {isCriticalGlobal && (
+            <motion.div 
+              className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
+              animate={heartbeatControls}
+              variants={pulseVariants}
+              initial={{ opacity: 0 }}
+            />
+        )}
+
+        {title && (
+            <IntelligentHeader 
+              title={title} health={health} maxHealth={maxHealth} 
+              isDestroyed={isDestroyed} isGameOver={isGameOver} gameId={gameId}
+            />
+        )}
+
+        <div className="relative z-10 p-4 flex-1 min-h-0 flex flex-col">
+          {(isDestroyed || isGameOver) && (
+              <SafePanelContent fallbackId={`sparks-${gameId}`}>
+                  <PanelSparks intensity={isGameOver ? 'extreme' : 'normal'} />
+              </SafePanelContent>
+          )}
+          <div className={clsx("flex-1 min-h-0 flex flex-col relative z-20", isGameOver ? "invisible" : "visible")}>
+              {children}
+              {isDestroyed && !isGameOver && (
+                  <SafePanelContent fallbackId={`breach-${gameId}`}>
+                      <BreachOverlay 
+                          progress={healthPercent} isVideo={gameId === 'video'} 
+                          showInteractive={true} isRepairing={isInteracting} panelId={gameId} 
+                      />
+                  </SafePanelContent>
+              )}
+          </div>
+          <AnimatePresence>
+              {showReboot && <RebootOverlay key="reboot" />}
+              {showCircuitLock && <CircuitLockOverlay key="lock" />}
+          </AnimatePresence>
+          {isGameOver && (
+              <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
+                  <Skull className="text-critical-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
+                  <span className="text-critical-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
+              </div>
+          )}
         </div>
-        <AnimatePresence>
-            {showReboot && <RebootOverlay key="reboot" />}
-            {showCircuitLock && <CircuitLockOverlay key="lock" />}
-        </AnimatePresence>
-        {isGameOver && (
-            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-transparent pointer-events-none">
-                <Skull className="text-critical-red animate-pulse w-20 h-20 drop-shadow-[0_0_15px_rgba(255,0,60,0.8)]" />
-                <span className="text-critical-red font-header font-black text-2xl tracking-widest drop-shadow-lg">SYSTEM FAILURE</span>
-            </div>
-        )}
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 };

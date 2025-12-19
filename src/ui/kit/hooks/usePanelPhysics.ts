@@ -10,7 +10,7 @@ const JITTER_SCALE = 3.0;
 
 export const usePanelPhysics = (
     panelId: string, 
-    domRef: React.RefObject<HTMLElement>,
+    visualRef: React.RefObject<HTMLElement>,
     isActive: boolean
 ) => {
   const { events } = useGameContext();
@@ -32,9 +32,15 @@ export const usePanelPhysics = (
 
     // 2. Physics Loop
     const loop = () => {
+        if (!visualRef.current) return;
+
         // If inactive (Game Over), stop fighting Framer Motion
         if (!isActive) {
-            frameId.current = requestAnimationFrame(loop);
+            // Ensure we reset visually if we were stressed
+            if (physics.current.stress > 0) {
+                visualRef.current.style.transform = 'none';
+                physics.current.stress = 0;
+            }
             return;
         }
 
@@ -50,14 +56,12 @@ export const usePanelPhysics = (
             const jx = (Math.random() - 0.5) * currentScale;
             const jy = (Math.random() - 0.5) * currentScale;
             
-            // Apply
-            if (domRef.current) {
-                domRef.current.style.transform = `translate(${jx.toFixed(1)}px, ${jy.toFixed(1)}px)`;
-            }
+            // Apply to VISUAL layer only
+            visualRef.current.style.transform = `translate3d(${jx.toFixed(1)}px, ${jy.toFixed(1)}px, 0)`;
         } else {
             // Reset if idle
-            if (domRef.current && domRef.current.style.transform !== 'none') {
-                domRef.current.style.transform = 'none';
+            if (visualRef.current.style.transform !== 'none') {
+                visualRef.current.style.transform = 'none';
             }
         }
 
@@ -70,5 +74,5 @@ export const usePanelPhysics = (
         unsub();
         cancelAnimationFrame(frameId.current);
     };
-  }, [panelId, events, isActive]); // Re-run if active state changes
+  }, [panelId, events, isActive, visualRef]);
 };
