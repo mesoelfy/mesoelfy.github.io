@@ -52,7 +52,6 @@ export class DrillAttack extends BTNode {
         motion.vy = 0;
     }
 
-    // UPDATED: Using unified spawnFX
     context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
 
     if (!state.timers.drillAudio || state.timers.drillAudio <= 0) {

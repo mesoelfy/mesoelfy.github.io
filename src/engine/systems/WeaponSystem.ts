@@ -3,12 +3,12 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -35,7 +35,7 @@ export class WeaponSystem implements IGameSystem {
     if (!playerEntity) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
-    if (!stateComp || (stateComp.current !== 'ACTIVE' && stateComp.current !== 'REBOOTING')) return;
+    if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
 
     const upgrades = this.gameSystem.activeUpgrades;
     const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
@@ -57,10 +57,8 @@ export class WeaponSystem implements IGameSystem {
 
       const count = 360; const speed = 45; const damage = 100;
       
-      // Fast Events for FX
-      // EXPLOSION_YELLOW = 2
       this.fastEvents.emit(FastEvents.SPAWN_FX, 2, t.x * 100, t.y * 100, 0);
-      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); // 1.0 amount
+      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -75,7 +73,7 @@ export class WeaponSystem implements IGameSystem {
     for (const e of enemies) {
       if (!e.active || e.hasTag(Tag.BULLET)) continue;
       const state = e.getComponent<AIStateData>(ComponentType.State);
-      if (state && state.current === 'SPAWN') continue;
+      if (state && state.current === AI_STATE.SPAWN) continue;
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
@@ -96,13 +94,7 @@ export class WeaponSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    // Audio via Fast Bus (Player Fire = 1)
-    // Pan calculation done in AudioDirector reading the x pos
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
-    
-    // We still emit legacy event for things like Stats tracking if needed, but not for audio
-    // this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y });
-    
     this.lastFireTime = time;
   }
 

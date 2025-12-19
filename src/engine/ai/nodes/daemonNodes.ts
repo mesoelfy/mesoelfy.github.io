@@ -7,6 +7,7 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
 // --- ACTIONS ---
 
@@ -28,21 +29,21 @@ export class ChargeMechanic extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
-    // Init
     if (typeof state.data.chargeProgress === 'undefined') {
         state.data.chargeProgress = 0;
     }
 
-    // Charge
     if (state.data.chargeProgress < 1.0) {
         state.data.chargeProgress += context.delta / this.duration;
         
         // Clamp
         if (state.data.chargeProgress >= 1.0) {
             state.data.chargeProgress = 1.0;
-            context.playSound('ui_optimal', 0); // Audio feedback when full
+            state.current = AI_STATE.READY;
+            context.playSound('ui_optimal', 0); 
             return NodeState.SUCCESS;
         }
+        state.current = AI_STATE.CHARGING;
         return NodeState.RUNNING;
     }
 
@@ -60,12 +61,10 @@ export class FireDaemonShot extends BTNode {
 
     if (!transform || !target || !state) return NodeState.FAILURE;
 
-    // Calculate Direction to Target
     const dx = target.x - transform.x;
     const dy = target.y - transform.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    // Default to forward if no target (safety)
     let dirX = 1, dirY = 0;
     
     if (dist > 0.001) {
@@ -73,7 +72,6 @@ export class FireDaemonShot extends BTNode {
         dirY = dy / dist;
     }
 
-    // Spawn
     context.spawnProjectile(
         transform.x + (dirX * 0.5), 
         transform.y + (dirY * 0.5), 
@@ -84,13 +82,12 @@ export class FireDaemonShot extends BTNode {
         entity.id as number
     );
 
-    // FX
     context.spawnFX('IMPACT_WHITE', transform.x, transform.y);
     context.playSound('fx_teleport', transform.x);
 
-    // Reset Charge
     state.data.chargeProgress = 0;
     state.data.lastFireTime = context.time;
+    state.current = AI_STATE.ORBIT;
 
     return NodeState.SUCCESS;
   }
@@ -107,30 +104,23 @@ export class DaemonAim extends BTNode {
 
     if (!transform || !target || !state || !render) return NodeState.FAILURE;
 
-    // 1. Determine Target Angle
     let targetAngle = 0;
     const isCharged = state.data.chargeProgress >= 1.0;
     const hasEnemy = target.id !== null && target.id !== undefined;
 
     if (isCharged && hasEnemy) {
-        // Face Enemy
         const dx = target.x - transform.x;
         const dy = target.y - transform.y;
         targetAngle = Math.atan2(dy, dx);
     } else {
-        // Face Player (Center 0,0 relative to self)
-        // Since Daemon orbits 0,0, facing center is just atan2(-y, -x)
         targetAngle = Math.atan2(-transform.y, -transform.x);
     }
 
-    // 2. Smooth Rotation
     let diff = targetAngle - transform.rotation;
     while (diff > Math.PI) diff -= Math.PI * 2;
     while (diff < -Math.PI) diff += Math.PI * 2;
     
     transform.rotation += diff * this.TURN_SPEED * context.delta;
-
-    // 3. Update Render Spin (Visual Flair)
     render.visualRotation += context.delta * 2.0;
 
     return NodeState.SUCCESS;
@@ -142,7 +132,6 @@ export class DaemonAim extends BTNode {
 export class HasTargetLock extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
-    // TargetingSystem sets id to 'ENEMY_LOCKED' when it finds a valid enemy
     if (target && target.id) {
         return NodeState.SUCCESS;
     }

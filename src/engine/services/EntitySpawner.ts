@@ -7,15 +7,16 @@ import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
+import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
-// Map GeometryType to GeometryKey
+// Map GeometryType to GeometryKey using Constants
 const GEO_MAP: Record<string, string> = {
-    'SPHERE': 'GEO_PRJ_SPHERE',
-    'CAPSULE': 'GEO_PRJ_CAPSULE',
-    'DIAMOND': 'GEO_PRJ_DIAMOND',
-    'PYRAMID': 'GEO_PRJ_PYRAMID',
-    'RING': 'GEO_PRJ_RING',
-    'ARROW': 'GEO_PRJ_ARROW'
+    'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
+    'CAPSULE': GEOMETRY_IDS.PRJ_CAPSULE,
+    'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
+    'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
+    'RING': GEOMETRY_IDS.PRJ_RING,
+    'ARROW': GEOMETRY_IDS.PRJ_ARROW
 };
 
 export class EntitySpawner implements IEntitySpawner {
@@ -62,8 +63,6 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
-    // Enemies generally rely on the geometry's native aspect ratio (1.0 scales), 
-    // unless defined otherwise in ARCHETYPES or MODEL_CONFIG.
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -75,8 +74,8 @@ export class EntitySpawner implements IEntitySpawner {
     // Fallbacks
     const color = config ? config.color : [1, 1, 1];
     const shape = config ? config.geometry : 'CAPSULE';
-    const geoId = GEO_MAP[shape] || 'GEO_PRJ_CAPSULE';
-    const s = config ? config.scale : [1,1,1]; // Get configured scale [x, y, z]
+    const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
+    const s = config ? config.scale : [1,1,1]; 
 
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
@@ -87,10 +86,9 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Render]: { 
             visualScale: 1.0, 
             geometryId: geoId,
-            materialId: 'MAT_PROJECTILE',
+            materialId: MATERIAL_IDS.PROJECTILE,
             r: color[0], g: color[1], b: color[2],
             elasticity: 2.0, 
-            // INJECT CONFIG SCALES
             baseScaleX: s[0],
             baseScaleY: s[1],
             baseScaleZ: s[2]

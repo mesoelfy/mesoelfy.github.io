@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Thu Dec 18 19:18:58 CST 2025
+Generated on: Fri Dec 19 12:10:56 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -118,6 +118,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── types.ts
 │   │   ├── graphics
 │   │   │   ├── MaterialFactory.ts
+│   │   │   ├── RenderBuffer.ts
 │   │   │   ├── ShaderLib.ts
 │   │   │   ├── glsl
 │   │   │   │   ├── math.ts
@@ -197,6 +198,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── TargetingSystem.ts
 │   │   │   ├── TimeSystem.ts
 │   │   │   ├── VFXSystem.ts
+│   │   │   ├── VisualSystem.ts
 │   │   │   ├── WaveSystem.ts
 │   │   │   ├── WeaponSystem.ts
 │   │   │   └── index.ts
@@ -320,7 +322,7 @@ PROJECT DIRECTORY STRUCTURE:
 │           │   ├── InstancedActor.tsx
 │           │   ├── ParticleActor.tsx
 │           │   ├── PlayerActor.tsx
-│           │   ├── ProjectileRenderer.tsx
+│           │   ├── ProjectileActor.tsx
 │           │   └── UniversalActor.tsx
 │           ├── assets
 │           │   ├── AssetCatalog.ts
@@ -349,7 +351,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-81 directories, 260 files
+81 directories, 262 files
 
 =====================================
 FILE: ./next.config.js
@@ -9355,15 +9357,12 @@ export const UniversalActor = () => {
       {groups.map(group => (
         <InstancedActor
           key={group.key} 
+          renderKey={group.key}
           tag={Tag.ENEMY} 
           geometry={group.geometry} 
           material={group.material} 
-          maxCount={500}
+          maxCount={2000}
           interactive={true}
-          filter={(entity) => { 
-              const render = entity.getComponent<RenderData>(ComponentType.Render); 
-              return render?.geometryId === group.geometryId && render?.materialId === group.materialId; 
-          }}
         />
       ))}
     </>
@@ -9372,106 +9371,34 @@ export const UniversalActor = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/actors/ProjectileRenderer.tsx
+FILE: ./src/ui/sim/actors/ProjectileActor.tsx
 =====================================
-import { useRef, useLayoutEffect, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { InstancedActor } from './InstancedActor';
+import { AssetService } from '@/ui/sim/assets/AssetService';
+import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
-import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
-import { MotionData } from '@/engine/ecs/components/MotionData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { PROJECTILE_CONFIG, GeometryType } from '@/engine/config/ProjectileConfig';
-import { applyRotation } from '@/engine/math/RenderUtils';
 
-const MAX_PER_TYPE = 1000;
-const tempObj = new THREE.Object3D();
-const tempColor = new THREE.Color();
-const neonMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
-const STRETCH_FACTOR = 0.08; 
-const SQUASH_FACTOR = 0.04;
-const MAX_STRETCH = 4.0;
+const KEYS = [
+    'GEO_PRJ_SPHERE', 'GEO_PRJ_CAPSULE', 'GEO_PRJ_DIAMOND', 
+    'GEO_PRJ_PYRAMID', 'GEO_PRJ_RING', 'GEO_PRJ_ARROW'
+];
 
-export const ProjectileRenderer = () => {
-  const sphereRef = useRef<THREE.InstancedMesh>(null);
-  const capsuleRef = useRef<THREE.InstancedMesh>(null);
-  const diamondRef = useRef<THREE.InstancedMesh>(null);
-  const pyramidRef = useRef<THREE.InstancedMesh>(null);
-  const ringRef = useRef<THREE.InstancedMesh>(null);
-  const arrowRef = useRef<THREE.InstancedMesh>(null);
-
-  const geos = useMemo(() => ({
-      SPHERE: new THREE.IcosahedronGeometry(1, 1),
-      CAPSULE: new THREE.CylinderGeometry(0.5, 0.5, 1, 6),
-      DIAMOND: new THREE.OctahedronGeometry(1, 0),
-      PYRAMID: new THREE.TetrahedronGeometry(1, 0),
-      RING: new THREE.TorusGeometry(0.8, 0.2, 4, 8),
-      ARROW: new THREE.ConeGeometry(0.5, 1, 4)
-  }), []);
-
-  useLayoutEffect(() => {
-      [sphereRef, capsuleRef, diamondRef, pyramidRef, ringRef, arrowRef].forEach(ref => {
-          if (ref.current) ref.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(MAX_PER_TYPE * 3), 3);
-      });
-  }, []);
-
-  useFrame(() => {
-    let registry;
-    try { registry = ServiceLocator.getRegistry(); } catch { return; }
-    const counts: Record<GeometryType, number> = { SPHERE: 0, CAPSULE: 0, DIAMOND: 0, PYRAMID: 0, RING: 0, ARROW: 0 };
-    const refs: Record<GeometryType, THREE.InstancedMesh | null> = { SPHERE: sphereRef.current, CAPSULE: capsuleRef.current, DIAMOND: diamondRef.current, PYRAMID: pyramidRef.current, RING: ringRef.current, ARROW: arrowRef.current };
-    const entities = registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });
-
-    for (const entity of entities) {
-        if (!entity.active) continue;
-        const t = entity.getComponent<TransformData>(ComponentType.Transform);
-        const p = entity.getComponent<ProjectileData>(ComponentType.Projectile);
-        const r = entity.getComponent<RenderData>(ComponentType.Render);
-        const m = entity.getComponent<MotionData>(ComponentType.Motion);
-        if (!t || !p) continue;
-        const config = PROJECTILE_CONFIG[p.configId];
-        if (!config) continue;
-
-        const mesh = refs[config.geometry];
-        const index = counts[config.geometry];
-        if (!mesh || index >= MAX_PER_TYPE) continue;
-
-        tempObj.position.set(t.x, t.y, 0);
-        applyRotation(tempObj, r ? r.visualRotation : 0, t.rotation);
-
-        let stretchY = 1.0; let squashXZ = 1.0; 
-        if (m) {
-            const speed = Math.sqrt(m.vx*m.vx + m.vy*m.vy);
-            if (speed > 1.0) { stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR)); squashXZ = Math.max(0.4, 1.0 - (speed * SQUASH_FACTOR)); }
-        }
-        const vScale = r?.visualScale || 1.0;
-        tempObj.scale.set(config.scale[0] * t.scale * vScale * squashXZ, config.scale[1] * t.scale * vScale * stretchY, config.scale[2] * t.scale * vScale * squashXZ);
-
-        if (r) tempColor.setRGB(r.r, r.g, r.b);
-        else tempColor.setRGB(config.color[0], config.color[1], config.color[2]);
-        
-        tempObj.updateMatrix();
-        mesh.setMatrixAt(index, tempObj.matrix);
-        mesh.setColorAt(index, tempColor);
-        counts[config.geometry]++;
-    }
-
-    Object.keys(refs).forEach((k) => {
-        const mesh = refs[k as GeometryType];
-        if (mesh) { mesh.count = counts[k as GeometryType]; if (mesh.instanceMatrix) mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; }
-    });
-  });
+export const ProjectileActor = () => {
+  const material = AssetService.get<THREE.Material>('MAT_PROJECTILE');
 
   return (
     <>
-        <instancedMesh ref={sphereRef} args={[geos.SPHERE, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
-        <instancedMesh ref={capsuleRef} args={[geos.CAPSULE, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
-        <instancedMesh ref={diamondRef} args={[geos.DIAMOND, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
-        <instancedMesh ref={pyramidRef} args={[geos.PYRAMID, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
-        <instancedMesh ref={ringRef} args={[geos.RING, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
-        <instancedMesh ref={arrowRef} args={[geos.ARROW, neonMaterial, MAX_PER_TYPE]} renderOrder={5} />
+      {KEYS.map(key => (
+        <InstancedActor
+          key={key} 
+          renderKey={`${key}|MAT_PROJECTILE`}
+          tag={Tag.BULLET} 
+          geometry={AssetService.get(key)} 
+          material={material} 
+          maxCount={2000}
+          interactive={false}
+        />
+      ))}
     </>
   );
 };
@@ -9563,43 +9490,43 @@ export const DaemonActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/InstancedActor.tsx
 =====================================
-import { useRef, useLayoutEffect, useMemo } from 'react';
+import { useRef, useLayoutEffect } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
-import { Entity } from '@/engine/ecs/Entity';
+import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { applyRotation } from '@/engine/math/RenderUtils';
+import { RenderData } from '@/engine/ecs/components/RenderData';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
-const SPAWN_Y_OFFSET = 3.5;
 
 interface InstancedActorProps {
   tag: string;
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
   maxCount: number;
-  updateEntity?: (entity: Entity, obj: THREE.Object3D, color: THREE.Color, delta: number) => void;
-  filter?: (entity: Entity) => boolean;
-  baseColor?: string;
+  renderKey?: string; 
   interactive?: boolean; 
+  // Unused but kept for interface compatibility
+  updateEntity?: any; 
+  filter?: any;
+  baseColor?: string;
   z?: number;
 }
 
-export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity, filter, baseColor = '#FFFFFF', interactive = false, z = 0 }: InstancedActorProps) => {
+export const InstancedActor = ({ 
+    geometry, material, maxCount, 
+    interactive = false, renderKey 
+}: InstancedActorProps) => {
+  
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const instanceMap = useMemo(() => new Int32Array(maxCount).fill(-1), [maxCount]);
-  const defaultColor = useMemo(() => new THREE.Color(baseColor), [baseColor]);
-
+  
   useLayoutEffect(() => {
     if (meshRef.current) {
         meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
-        
         meshRef.current.geometry.setAttribute(
             'spawnProgress', 
             new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1)
@@ -9607,71 +9534,58 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
     }
   }, [maxCount]);
 
-  useFrame((state, delta) => {
-    if (!meshRef.current) return;
-    let registry;
-    try { registry = ServiceLocator.getRegistry(); } catch { return; }
+  useFrame(() => {
+    if (!meshRef.current || !renderKey) return;
 
-    const entities = registry.getByTag(tag);
-    let count = 0;
-    
+    const group = RenderBuffer.getGroup(renderKey);
+    const count = group.count;
+    const buffer = group.buffer;
+
+    if (count === 0) {
+        meshRef.current.count = 0;
+        return;
+    }
+
     const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
 
-    for (const entity of entities) {
-      if (count >= maxCount) break;
-      if (filter && !filter(entity)) continue;
+    for (let i = 0; i < count; i++) {
+        const offset = i * RENDER_STRIDE;
+        
+        // POS
+        tempObj.position.set(
+            buffer[offset + 0],
+            buffer[offset + 1],
+            buffer[offset + 2]
+        );
 
-      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-      if (!transform) continue;
-      
-      if (interactive) instanceMap[count] = entity.id as number;
+        // QUAT
+        tempObj.quaternion.set(
+            buffer[offset + 3],
+            buffer[offset + 4],
+            buffer[offset + 5],
+            buffer[offset + 6]
+        );
 
-      // Direct property access (Simpler than previous TransformStore lookup)
-      const { x, y, rotation, scale } = transform;
+        // SCALE
+        tempObj.scale.set(
+            buffer[offset + 7],
+            buffer[offset + 8],
+            buffer[offset + 9]
+        );
 
-      tempObj.position.set(x, y, z);
-      
-      const render = entity.getComponent<RenderData>(ComponentType.Render);
-      let finalScale = scale;
-      let visualRot = 0;
-      let spawnVal = 1.0;
-
-      if (render) {
-          finalScale *= render.visualScale;
-          visualRot = render.visualRotation;
-          tempColor.setRGB(render.r, render.g, render.b);
-          spawnVal = render.spawnProgress;
-
-          // --- VISUAL OFFSET LOGIC ---
-          if (spawnVal < 1.0) {
-              const t = spawnVal;
-              const ease = 1 - Math.pow(1 - t, 3); 
-              const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
-              tempObj.position.y += yOffset;
-          }
-
-          // --- SHUDDER LOGIC ---
-          if (render.shudder > 0) {
-              const shake = render.shudder * 0.2; 
-              tempObj.position.x += (Math.random() - 0.5) * shake;
-              tempObj.position.y += (Math.random() - 0.5) * shake;
-          }
-      } else {
-          tempColor.copy(defaultColor);
-      }
-
-      applyRotation(tempObj, visualRot, rotation);
-      tempObj.scale.setScalar(finalScale);
-
-      if (updateEntity) updateEntity(entity, tempObj, tempColor, delta);
-
-      tempObj.updateMatrix();
-      meshRef.current.setMatrixAt(count, tempObj.matrix);
-      if (meshRef.current.instanceColor) meshRef.current.setColorAt(count, tempColor);
-      
-      spawnAttr.setX(count, spawnVal);
-      
-      count++;
+        tempObj.updateMatrix();
+        meshRef.current.setMatrixAt(i, tempObj.matrix);
+        
+        // COLOR
+        tempColor.setRGB(
+            buffer[offset + 10],
+            buffer[offset + 11],
+            buffer[offset + 12]
+        );
+        if (meshRef.current.instanceColor) meshRef.current.setColorAt(i, tempColor);
+        
+        // SPAWN
+        spawnAttr.setX(i, buffer[offset + 13]);
     }
 
     meshRef.current.count = count;
@@ -9683,8 +9597,35 @@ export const InstancedActor = ({ tag, geometry, material, maxCount, updateEntity
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
       if (!interactive || e.instanceId === undefined) return;
       e.stopPropagation();
-      const entityId = instanceMap[e.instanceId];
-      if (entityId !== -1) GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: entityId, damage: 9999, type: 'TAP' });
+      
+      try {
+          const registry = ServiceLocator.getRegistry();
+          const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.Render] }));
+          
+          let matchIndex = 0;
+          let foundEntity = null;
+          
+          for (const ent of candidates) {
+              if (!ent.active) continue;
+              const render = ent.getComponent<RenderData>(ComponentType.Render);
+              if (!render) continue;
+              
+              const key = `${render.geometryId}|${render.materialId}`;
+              if (key === renderKey) {
+                  if (matchIndex === e.instanceId) {
+                      foundEntity = ent;
+                      break;
+                  }
+                  matchIndex++;
+              }
+          }
+
+          if (foundEntity) {
+              GameEventBus.emit(GameEvents.ENEMY_DAMAGED, { id: foundEntity.id as number, damage: 9999, type: 'TAP' });
+          }
+      } catch (err) {
+          console.warn("Interaction Failed:", err);
+      }
   };
 
   return (
@@ -9703,14 +9644,14 @@ FILE: ./src/ui/sim/registry/RenderCatalog.ts
 =====================================
 import { RenderRegistry } from './RenderRegistry';
 
-// Core Actors (Still specialized)
+// Core Actors
 import { PlayerActor } from '../actors/PlayerActor';
 import { ParticleActor } from '../actors/ParticleActor';
-import { ProjectileRenderer } from '../actors/ProjectileRenderer';
 import { DaemonActor } from '../actors/DaemonActor';
 
-// The New Generic System
+// The New Generic Systems
 import { UniversalActor } from '../actors/UniversalActor';
+import { ProjectileActor } from '../actors/ProjectileActor'; // NEW
 
 export const registerAllRenderers = () => {
   // 1. Opaque / Depth-Writing Geometry (Draw First)
@@ -9719,7 +9660,7 @@ export const registerAllRenderers = () => {
   
   // 2. Transparent / Additive Geometry (Draw Last)
   RenderRegistry.register(PlayerActor);
-  RenderRegistry.register(ProjectileRenderer);
+  RenderRegistry.register(ProjectileActor); // REPLACES ProjectileRenderer
   
   // Particles must be absolutely last to composite correctly over everything
   RenderRegistry.register(ParticleActor);
@@ -10045,6 +9986,9 @@ export const registerAllAssets = () => {
   });
 
   AssetService.registerGenerator('PLAYER_MAT', () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  
+  // Projectiles now use a shared basic neon material but colored via vertex attributes
+  AssetService.registerGenerator('MAT_PROJECTILE', () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
   // --- GEOMETRY ---
 
@@ -10052,15 +9996,22 @@ export const registerAllAssets = () => {
   const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
   AssetService.generateAsyncGeometry('GEO_HUNTER', 'GEO_HUNTER', hunterPlaceholder);
 
-  // Procedural Geometries
+  // Enemies
   AssetService.registerGenerator('GEO_DRILLER', () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  
-  // UPDATED: Now uses MODEL_CONFIG
   AssetService.registerGenerator('GEO_KAMIKAZE', () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
-  
   AssetService.registerGenerator('GEO_DAEMON', () => new THREE.OctahedronGeometry(0.6, 0));
+  
+  // Bullets
+  AssetService.registerGenerator('GEO_PRJ_SPHERE', () => new THREE.IcosahedronGeometry(1, 1));
+  AssetService.registerGenerator('GEO_PRJ_CAPSULE', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
+  AssetService.registerGenerator('GEO_PRJ_DIAMOND', () => new THREE.OctahedronGeometry(1, 0));
+  AssetService.registerGenerator('GEO_PRJ_PYRAMID', () => new THREE.TetrahedronGeometry(1, 0));
+  AssetService.registerGenerator('GEO_PRJ_RING', () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
+  AssetService.registerGenerator('GEO_PRJ_ARROW', () => new THREE.ConeGeometry(0.5, 1, 4));
+  
+  // Misc
   AssetService.registerGenerator('GEO_PARTICLE', () => new THREE.PlaneGeometry(0.3, 0.3));
-  AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6));
+  AssetService.registerGenerator('GEO_BULLET', () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6)); // Legacy fallback
   AssetService.registerGenerator('PLAYER_GEO', () => new THREE.BoxGeometry(1, 1, 1));
 };
 
@@ -11136,13 +11087,9 @@ FILE: ./src/engine/config/AssetKeys.ts
 import { AUDIO_MANIFEST } from './assets/AudioManifest';
 import { VFX_MANIFEST } from './assets/VFXManifest';
 
-// 1. AUDIO KEYS (Inferred)
 export type AudioKey = keyof typeof AUDIO_MANIFEST;
-
-// 2. VFX KEYS (Inferred)
 export type VFXKey = keyof typeof VFX_MANIFEST;
 
-// 3. GEOMETRY KEYS (Manually Synced with AssetCatalog)
 export type GeometryKey = 
   | 'GEO_DRILLER' 
   | 'GEO_KAMIKAZE' 
@@ -11151,9 +11098,14 @@ export type GeometryKey =
   | 'GEO_PARTICLE' 
   | 'GEO_BULLET' 
   | 'PLAYER_GEO' 
+  | 'GEO_PRJ_SPHERE'
+  | 'GEO_PRJ_CAPSULE'
+  | 'GEO_PRJ_DIAMOND'
+  | 'GEO_PRJ_PYRAMID'
+  | 'GEO_PRJ_RING'
+  | 'GEO_PRJ_ARROW'
   | 'DEFAULT_GEO';
 
-// 4. MATERIAL KEYS (Manually Synced with AssetCatalog)
 export type MaterialKey = 
   | 'MAT_ENEMY_BASE' 
   | 'MAT_PARTICLE' 
@@ -11162,6 +11114,7 @@ export type MaterialKey =
   | 'MAT_PLAYER_AMBIENT' 
   | 'MAT_PLAYER_BACKING'
   | 'MAT_GALLERY_BODY'
+  | 'MAT_PROJECTILE'
   | 'DEFAULT_MAT';
 
 
@@ -12189,7 +12142,12 @@ export class RenderData extends Component {
     public baseB: number = 1,
     public flash: number = 0,
     public spawnProgress: number = 1.0,
-    public shudder: number = 0 // NEW: Visual vibration intensity (0.0 - 1.0)
+    public shudder: number = 0,
+    public elasticity: number = 0.1,
+    // NEW: Non-uniform base scaling (Aspect Ratio)
+    public baseScaleX: number = 1.0,
+    public baseScaleY: number = 1.0,
+    public baseScaleZ: number = 1.0
   ) {
     super();
   }
@@ -12206,6 +12164,12 @@ export class RenderData extends Component {
     this.flash = 0;
     this.spawnProgress = data.spawnProgress ?? 1.0;
     this.shudder = 0;
+    this.elasticity = data.elasticity ?? 0.1;
+    
+    // Reset Aspect Ratio
+    this.baseScaleX = data.baseScaleX ?? 1.0;
+    this.baseScaleY = data.baseScaleY ?? 1.0;
+    this.baseScaleZ = data.baseScaleZ ?? 1.0;
     
     this.baseR = this.r;
     this.baseG = this.g;
@@ -15565,6 +15529,62 @@ export class GPGPUManager {
 
 
 =====================================
+FILE: ./src/engine/graphics/RenderBuffer.ts
+=====================================
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Entity } from '@/engine/ecs/Entity';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+
+// STRIDE: 14
+// 0,1,2: Position (x, y, z)
+// 3,4,5,6: Quaternion (x, y, z, w)
+// 7,8,9: Scale (x, y, z)
+// 10,11,12: Color (r, g, b)
+// 13: SpawnProgress
+export const RENDER_STRIDE = 14;
+const DEFAULT_CAPACITY = 2000;
+
+export interface RenderGroup {
+  count: number;
+  buffer: Float32Array;
+}
+
+class RenderBufferService {
+  private groups = new Map<string, RenderGroup>();
+
+  public getGroup(key: string): RenderGroup {
+    let group = this.groups.get(key);
+    if (!group) {
+      group = {
+        count: 0,
+        buffer: new Float32Array(DEFAULT_CAPACITY * RENDER_STRIDE)
+      };
+      this.groups.set(key, group);
+    }
+    return group;
+  }
+
+  public reset() {
+    for (const group of this.groups.values()) {
+      group.count = 0;
+    }
+  }
+
+  public ensureCapacity(group: RenderGroup, requiredIndex: number) {
+    if (requiredIndex >= group.buffer.length) {
+      const newSize = group.buffer.length * 2;
+      const newBuffer = new Float32Array(newSize);
+      newBuffer.set(group.buffer);
+      group.buffer = newBuffer;
+      console.log(`[RenderBuffer] Resized group buffer to ${newSize}`);
+    }
+  }
+}
+
+export const RenderBuffer = new RenderBufferService();
+
+
+=====================================
 FILE: ./src/engine/graphics/ShaderLib.ts
 =====================================
 import { chunk_noise } from './glsl/noise';
@@ -17053,9 +17073,12 @@ export class ShakeSystem implements IGameSystem {
   public currentOffset = { x: 0, y: 0, r: 0 };
 
   private readonly DECAY_RATE = 2.0; 
-  private readonly MAX_OFFSET_X = 0.5; 
-  private readonly MAX_OFFSET_Y = 0.3; 
-  private readonly MAX_ROTATION = 0.04; 
+  
+  // REDUCED INTENSITY CONSTANTS (Maintained from previous step)
+  private readonly MAX_OFFSET_X = 0.2;  
+  private readonly MAX_OFFSET_Y = 0.12; 
+  private readonly MAX_ROTATION = 0.015; 
+  
   private readonly BASE_SPEED = 15.0; 
   private readonly TRAUMA_SPEED_BOOST = 65.0; 
   private readonly PIXELS_PER_UNIT = 40; 
@@ -17068,7 +17091,11 @@ export class ShakeSystem implements IGameSystem {
   ) {
     const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
     const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const amount = p.damage > 10 ? 0.45 : 0.2;
+        // INCREASED BASE SENSITIVITY
+        // Was: > 10 ? 0.45 : 0.2
+        // Now: > 5 ? 0.4 : 0.3
+        // This ensures even small hits (1-3 dmg) register a 0.3 baseline trauma
+        const amount = p.damage >= 5 ? 0.4 : 0.3;
         this.addTrauma(amount);
     });
     
@@ -18640,6 +18667,145 @@ export class LifeCycleSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/VisualSystem.ts
+=====================================
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
+import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { RenderData } from '@/engine/ecs/components/RenderData';
+import { MotionData } from '@/engine/ecs/components/MotionData';
+import * as THREE from 'three';
+
+const STRETCH_FACTOR = 0.005; 
+const SQUASH_FACTOR = 0.002;  
+const MAX_STRETCH = 1.1;      
+const MIN_SQUASH = 0.95;      
+const SPAWN_Y_OFFSET = 3.5;
+
+// BASE FACTORS (Multiplied by Elasticity)
+const BASE_STRETCH = 0.04; 
+const BASE_SQUASH = 0.02;
+const MAX_STRETCH_CAP = 4.0;
+const MIN_SQUASH_CAP = 0.4;
+
+const axisY = new THREE.Vector3(0, 1, 0); 
+const axisZ = new THREE.Vector3(0, 0, 1); 
+const qSpin = new THREE.Quaternion();
+const qAim = new THREE.Quaternion();
+const qFinal = new THREE.Quaternion();
+
+export class VisualSystem implements IGameSystem {
+  constructor(private registry: IEntityRegistry) {}
+
+  update(delta: number, time: number): void {
+    RenderBuffer.reset();
+
+    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.Render] });
+
+    for (const entity of entities) {
+      if (!entity.active) continue;
+
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+      const render = entity.getComponent<RenderData>(ComponentType.Render);
+      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+
+      if (!transform || !render) continue;
+
+      const key = `${render.geometryId}|${render.materialId}`;
+      const group = RenderBuffer.getGroup(key);
+      const idx = group.count * RENDER_STRIDE;
+      
+      RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
+
+      // --- 1. Position ---
+      let vx = transform.x;
+      let vy = transform.y;
+      let vz = 0;
+      
+      if (render.spawnProgress < 1.0) {
+          const t = render.spawnProgress;
+          const ease = 1 - Math.pow(1 - t, 3); 
+          const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
+          vy += yOffset;
+      }
+
+      if (render.shudder > 0) {
+          const shake = render.shudder * 0.2; 
+          vx += (Math.random() - 0.5) * shake;
+          vy += (Math.random() - 0.5) * shake;
+      }
+
+      // --- 2. Scale ---
+      // Apply base dimensions first (Aspect Ratio)
+      // Transform.scale is the uniform multiplier
+      // Render.visualScale is the effect multiplier (pulsing)
+      let scaleX = transform.scale * render.visualScale * render.baseScaleX;
+      let scaleY = transform.scale * render.visualScale * render.baseScaleY;
+      let scaleZ = transform.scale * render.visualScale * render.baseScaleZ;
+      
+      // Velocity Deformation (Squash/Stretch)
+      if (motion && render.elasticity > 0.01) {
+          const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
+          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0; // Bullets stretch easier than enemies
+
+          if (speedSq > threshold) {
+              const speed = Math.sqrt(speedSq);
+              
+              // Apply Elasticity to the base factors
+              // If elasticity is high (bullets), use the "jelly" caps.
+              // If low (enemies), use the "rigid" caps.
+              
+              let stretchY, squashXZ;
+              
+              if (render.elasticity > 1.0) {
+                  // Bullet Logic
+                  stretchY = Math.min(MAX_STRETCH_CAP, 1.0 + (speed * BASE_STRETCH * render.elasticity));
+                  squashXZ = Math.max(MIN_SQUASH_CAP, 1.0 - (speed * BASE_SQUASH * render.elasticity));
+              } else {
+                  // Rigid Logic
+                  stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR));
+                  squashXZ = Math.max(MIN_SQUASH, 1.0 - (speed * SQUASH_FACTOR));
+              }
+              
+              scaleY *= stretchY;
+              scaleX *= squashXZ;
+              scaleZ *= squashXZ;
+          }
+      }
+
+      // --- 3. Rotation ---
+      qSpin.setFromAxisAngle(axisY, render.visualRotation);
+      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
+      qFinal.copy(qAim).multiply(qSpin);
+
+      // --- 4. Pack ---
+      group.buffer[idx + 0] = vx;
+      group.buffer[idx + 1] = vy;
+      group.buffer[idx + 2] = vz;
+      group.buffer[idx + 3] = qFinal.x;
+      group.buffer[idx + 4] = qFinal.y;
+      group.buffer[idx + 5] = qFinal.z;
+      group.buffer[idx + 6] = qFinal.w;
+      group.buffer[idx + 7] = scaleX;
+      group.buffer[idx + 8] = scaleY;
+      group.buffer[idx + 9] = scaleZ;
+      group.buffer[idx + 10] = render.r;
+      group.buffer[idx + 11] = render.g;
+      group.buffer[idx + 12] = render.b;
+      group.buffer[idx + 13] = render.spawnProgress;
+
+      group.count++;
+    }
+  }
+
+  teardown(): void {
+    RenderBuffer.reset();
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/systems/PhysicsSystem.ts
 =====================================
 import { IPhysicsSystem, IEntityRegistry } from '@/engine/interfaces';
@@ -18774,7 +18940,11 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
 
   ctx.damagePlayer(damage);
-  ctx.addTrauma(damage >= 3 ? 0.5 : 0.2);
+  
+  // INCREASED CRASH TRAUMA
+  // Low damage (Driller): 0.3 (was 0.2) + 0.3 (Base) = 0.6 Total
+  // High damage (Kamikaze): 0.5 + 0.3 (Base) = 0.8 Total
+  ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
   
   const variant = getId(enemy)?.variant || 'UNKNOWN';
   ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
@@ -18791,6 +18961,11 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const damage = combat ? combat.damage : 1;
 
   ctx.damagePlayer(damage);
+  
+  // NEW: Add small trauma for projectiles
+  // Total: 0.1 (Here) + 0.3 (Base) + 0.1 (Bonus for > 5 dmg) = 0.5
+  ctx.addTrauma(0.1);
+
   ctx.destroyEntity(bullet, 'IMPACT_RED'); 
   ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
 };
@@ -18805,28 +18980,20 @@ export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatC
   handleMassExchange(bulletA, bulletB, ctx, 'CLASH_YELLOW');
 };
 
-// NEW: Handle Enemy hitting Panel
-// Previously done manually inside DrillerLogic / AI
 export const handleEnemyPanelHit = (enemy: Entity, panel: Entity, ctx: CombatContext) => {
-    // We only process if it's a "Crash" enemy like Kamikaze
-    // Drillers handle their own damage via AI logic (since they sit on the wall)
-    // But if a Hunter or Kamikaze flies into it:
-    
     const id = getId(enemy);
-    const pId = getId(panel); // Panel ID stored in Identity variant
+    const pId = getId(panel); 
     
     if (id?.variant === EnemyTypes.KAMIKAZE && pId) {
         const combat = getCombat(enemy);
         const dmg = combat ? combat.damage : 1;
         const pos = getPos(enemy);
         
-        ctx.damagePanel(pId.variant, dmg * 5, pos?.x, pos?.y); // Bonus damage vs structures
+        ctx.damagePanel(pId.variant, dmg * 5, pos?.x, pos?.y); 
         ctx.destroyEntity(enemy, 'EXPLOSION_RED');
         ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
         ctx.addTrauma(0.3);
     }
-    // Drillers/Hunters just bounce or slide? 
-    // For now, only Kamikaze explodes on contact.
 };
 
 function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatContext, fixedDamage?: number) {
@@ -19435,6 +19602,7 @@ import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { GameStateSystem } from '@/engine/systems/GameStateSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
+import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
@@ -19528,6 +19696,7 @@ export const MobileBootstrapper = () => {
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
+  const visualSystem = new VisualSystem(registry); // NEW
   const waveSystem = new MobileWaveSystem(spawner);
 
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -19576,6 +19745,7 @@ export const MobileBootstrapper = () => {
   
   // RENDER
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
+  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW
   engine.registerSystem(particleSystem, SystemPhase.RENDER);
   engine.registerSystem(vfxSystem, SystemPhase.RENDER);
   engine.registerSystem(shakeSystem, SystemPhase.RENDER);
@@ -19629,6 +19799,7 @@ import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
+import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
 import { VFXSystem } from '@/engine/systems/VFXSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
@@ -19637,7 +19808,7 @@ export const GameBootstrapper = () => {
   // 1. Core Services
   const registry = new EntityRegistry();
   const eventBus = new GameEventService();
-  const fastEventBus = new FastEventBusImpl(); // NEW: Ring Buffer Bus
+  const fastEventBus = new FastEventBusImpl(); 
   const audioService = new AudioServiceImpl(); 
   const inputSystem = new InputSystem(); 
   
@@ -19649,7 +19820,7 @@ export const GameBootstrapper = () => {
   ServiceLocator.reset(); 
   ServiceLocator.register('EntityRegistry', registry);
   ServiceLocator.register('GameEventService', eventBus);
-  ServiceLocator.register('FastEventService', fastEventBus); // NEW
+  ServiceLocator.register('FastEventService', fastEventBus); 
   ServiceLocator.register('AudioService', audioService);
   ServiceLocator.register('InputSystem', inputSystem);
   ServiceLocator.register('EntitySpawner', spawner);
@@ -19664,7 +19835,7 @@ export const GameBootstrapper = () => {
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
   const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); // Injected FastBus
+  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); 
   
   const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
   const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
@@ -19674,15 +19845,16 @@ export const GameBootstrapper = () => {
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const structureSystem = new StructureSystem(panelSystem);
   
-  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); // Injected FastBus
+  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); 
   const projectileSystem = new ProjectileSystem(registry);
-  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); // Injected FastBus
+  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); 
   
   // Directors
-  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); // Injected FastBus
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); // Injected FastBus
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); 
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); 
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); // Injected FastBus
+  const visualSystem = new VisualSystem(registry); // NEW
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); 
   
   const waveSystem = new WaveSystem(spawner, panelSystem);
   const targetingSystem = new TargetingSystem(registry, panelSystem);
@@ -19695,7 +19867,7 @@ export const GameBootstrapper = () => {
 
   // 6. Engine Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-  engine.injectFastEventBus(fastEventBus); // NEW: Engine clears it at end of frame
+  engine.injectFastEventBus(fastEventBus); 
 
   // 7. Locator Registration
   const systemMap = {
@@ -19711,6 +19883,7 @@ export const GameBootstrapper = () => {
     ParticleSystem: particleSystem,
     ShakeSystem: shakeSystem,
     RenderSystem: renderSystem,
+    VisualSystem: visualSystem, // NEW
     WaveSystem: waveSystem
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
@@ -19743,6 +19916,7 @@ export const GameBootstrapper = () => {
   engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
   
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
+  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW: Before particles/VFX
   engine.registerSystem(particleSystem, SystemPhase.RENDER);
   engine.registerSystem(vfxSystem, SystemPhase.RENDER);
   engine.registerSystem(shakeSystem, SystemPhase.RENDER);
@@ -19808,6 +19982,16 @@ import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
+// Map GeometryType to GeometryKey
+const GEO_MAP: Record<string, string> = {
+    'SPHERE': 'GEO_PRJ_SPHERE',
+    'CAPSULE': 'GEO_PRJ_CAPSULE',
+    'DIAMOND': 'GEO_PRJ_DIAMOND',
+    'PYRAMID': 'GEO_PRJ_PYRAMID',
+    'RING': 'GEO_PRJ_RING',
+    'ARROW': 'GEO_PRJ_ARROW'
+};
+
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
 
@@ -19826,7 +20010,6 @@ export class EntitySpawner implements IEntitySpawner {
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
-    // 1. Core Component Hydration
     for (const compDef of blueprint.components) {
         const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
         const runtimeData = overrides[compDef.type] || {};
@@ -19836,7 +20019,6 @@ export class EntitySpawner implements IEntitySpawner {
         e.addComponent(component);
     }
 
-    // 2. Automated Visual/Asset Linking
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.Render);
         if (render) {
@@ -19854,6 +20036,8 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnEnemy(type: string, x: number, y: number): Entity {
+    // Enemies generally rely on the geometry's native aspect ratio (1.0 scales), 
+    // unless defined otherwise in ARCHETYPES or MODEL_CONFIG.
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -19861,7 +20045,12 @@ export class EntitySpawner implements IEntitySpawner {
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
+    
+    // Fallbacks
     const color = config ? config.color : [1, 1, 1];
+    const shape = config ? config.geometry : 'CAPSULE';
+    const geoId = GEO_MAP[shape] || 'GEO_PRJ_CAPSULE';
+    const s = config ? config.scale : [1,1,1]; // Get configured scale [x, y, z]
 
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
@@ -19871,12 +20060,18 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Render]: { 
             visualScale: 1.0, 
-            geometryId: 'GEO_BULLET',
-            r: color[0], g: color[1], b: color[2]
+            geometryId: geoId,
+            materialId: 'MAT_PROJECTILE',
+            r: color[0], g: color[1], b: color[2],
+            elasticity: 2.0, 
+            // INJECT CONFIG SCALES
+            baseScaleX: s[0],
+            baseScaleY: s[1],
+            baseScaleZ: s[2]
         },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
-
+    
     return this.spawn(id, overrides);
   }
 
