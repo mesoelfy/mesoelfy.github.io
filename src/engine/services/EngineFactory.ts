@@ -82,7 +82,9 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
+    // Updated: Inject PhysicsSystem & Registry
+    const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
+    
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
     const worldSystem = new WorldSystem(panelSystem, registry);
     
@@ -115,8 +117,6 @@ export class EngineFactory {
 
     // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
-    // FIX: Removed 'InputSystem' name to prevent double registration warning
-    // (It is already registered in step 2 as IInputService)
     register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     
