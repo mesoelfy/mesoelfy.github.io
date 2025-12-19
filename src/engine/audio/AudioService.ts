@@ -1,5 +1,5 @@
 import { useStore } from '@/engine/state/global/useStore';
-import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
+import { AUDIO_MANIFEST, SoundDef } from '@/engine/config/assets/AudioManifest';
 import { IAudioService } from '@/engine/interfaces';
 import { AudioContextManager } from './modules/AudioContextManager';
 import { AudioSynthesizer } from './modules/AudioSynthesizer';
@@ -7,6 +7,12 @@ import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
 import { VoiceManager } from './modules/VoiceManager';
 import { AudioKey } from '@/engine/config/AssetKeys';
+
+// Sounds needed immediately for the UI/Menu
+const CRITICAL_SOUNDS: AudioKey[] = [
+    'ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 
+    'fx_boot_sequence', 'ambience_core'
+];
 
 export class AudioServiceImpl implements IAudioService {
   private ctxManager = new AudioContextManager();
@@ -16,7 +22,14 @@ export class AudioServiceImpl implements IAudioService {
   
   public isReady = false;
   private hasInteracted = false; 
-  private _autoStartAmbience = false; // Queue flag
+  private _autoStartAmbience = false; 
+  
+  // Generation Queue
+  private genQueue: AudioKey[] = [];
+  private isGenerating = false;
+  
+  // Playback Queue (for sounds triggered during init)
+  private pendingSounds: { key: AudioKey, pan: number }[] = [];
 
   public async init() {
     if (this.isReady) { this.ctxManager.resume(); return; }
@@ -26,25 +39,60 @@ export class AudioServiceImpl implements IAudioService {
     this.mixer.init();
     this.updateVolumes();
     
-    // Async generation
-    await this.generateAllSounds();
+    // 1. Generate Critical Sounds (Blocking)
+    await this.generateList(CRITICAL_SOUNDS);
     
+    // 2. Queue the rest (Non-blocking)
+    const allKeys = Object.keys(AUDIO_MANIFEST) as AudioKey[];
+    this.genQueue = allKeys.filter(k => !this.bank.has(k));
+    this.processQueue();
+
     this.setupGlobalInteraction();
     this.isReady = true;
 
-    // Check queue
+    // 3. Flush Pending Playback
+    if (this.pendingSounds.length > 0) {
+        this.pendingSounds.forEach(s => this.playSound(s.key, s.pan));
+        this.pendingSounds = [];
+    }
+
     if (this._autoStartAmbience) {
         this.playAmbience('ambience_core');
     }
   }
 
-  private async generateAllSounds() {
-      const promises = Object.entries(AUDIO_MANIFEST).map(([key, recipe]) => {
-          return AudioSynthesizer.generate(recipe).then(buffer => {
-              if (buffer) this.bank.add(key, buffer);
-          });
-      });
+  private async generateList(keys: AudioKey[]) {
+      const promises = keys.map(key => this.generateSingle(key));
       await Promise.all(promises);
+  }
+
+  private async generateSingle(key: AudioKey) {
+      if (this.bank.has(key)) return;
+      
+      const recipe = AUDIO_MANIFEST[key];
+      if (!recipe) return;
+
+      const buffer = await AudioSynthesizer.generate(recipe);
+      if (buffer) this.bank.add(key, buffer);
+  }
+
+  private processQueue() {
+      if (this.genQueue.length === 0) return;
+      if (this.isGenerating) return;
+
+      this.isGenerating = true;
+
+      const nextKey = this.genQueue.shift();
+      if (nextKey) {
+          // Process one, then schedule next
+          this.generateSingle(nextKey).then(() => {
+              this.isGenerating = false;
+              // Small delay to let UI breathe
+              setTimeout(() => this.processQueue(), 10);
+          });
+      } else {
+          this.isGenerating = false;
+      }
   }
 
   private setupGlobalInteraction() {
@@ -52,7 +100,6 @@ export class AudioServiceImpl implements IAudioService {
           if (this.hasInteracted) return;
           this.hasInteracted = true; 
           this.ctxManager.resume();
-          // Ensure ambience is playing if we missed the auto-start due to suspension
           if (this.isReady) this.playAmbience('ambience_core');
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
@@ -66,23 +113,35 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public playSound(key: AudioKey, pan: number = 0) {
-      if (!this.isReady) return; // SFX needs buffers
-      this.voices.playSFX(key, pan);
+      if (this.isReady) {
+          if (this.bank.has(key)) {
+              this.voices.playSFX(key, pan);
+          }
+      } else {
+          // If we are still booting, queue critical UI sounds so they play the moment we are ready
+          if (CRITICAL_SOUNDS.includes(key)) {
+              this.pendingSounds.push({ key, pan });
+          }
+      }
   }
 
   public playAmbience(key: AudioKey) {
-      if (!this.isReady) return; // Ambience needs buffers
-      this.voices.playAmbience(key);
+      if (!this.isReady) return;
+      
+      if (this.bank.has(key)) {
+          this.voices.playAmbience(key);
+      } else {
+          this.generateSingle(key).then(() => {
+              this.voices.playAmbience(key);
+          });
+      }
   }
 
   public startMusic() {
     this.ctxManager.resume();
-    
-    // 1. Start Streaming Music (Does not require isReady/Buffers)
     this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
     
-    // 2. Queue Ambience (Requires Buffers)
-    if (this.isReady) {
+    if (this.isReady && this.bank.has('ambience_core')) {
         this.playAmbience('ambience_core');
     } else {
         this._autoStartAmbience = true;
@@ -100,6 +159,7 @@ export class AudioServiceImpl implements IAudioService {
   public stopAll() {
       this.voices.stopAll();
       this._autoStartAmbience = false;
+      this.pendingSounds = [];
   }
 
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }
