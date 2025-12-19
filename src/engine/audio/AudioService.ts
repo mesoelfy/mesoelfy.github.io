@@ -16,6 +16,7 @@ export class AudioServiceImpl implements IAudioService {
   
   public isReady = false;
   private hasInteracted = false; 
+  private _autoStartAmbience = false; // Queue flag
 
   public async init() {
     if (this.isReady) { this.ctxManager.resume(); return; }
@@ -24,9 +25,17 @@ export class AudioServiceImpl implements IAudioService {
 
     this.mixer.init();
     this.updateVolumes();
+    
+    // Async generation
     await this.generateAllSounds();
+    
     this.setupGlobalInteraction();
     this.isReady = true;
+
+    // Check queue
+    if (this._autoStartAmbience) {
+        this.playAmbience('ambience_core');
+    }
   }
 
   private async generateAllSounds() {
@@ -43,7 +52,8 @@ export class AudioServiceImpl implements IAudioService {
           if (this.hasInteracted) return;
           this.hasInteracted = true; 
           this.ctxManager.resume();
-          this.playAmbience('ambience_core');
+          // Ensure ambience is playing if we missed the auto-start due to suspension
+          if (this.isReady) this.playAmbience('ambience_core');
           window.removeEventListener('pointerdown', wakeUp);
           window.removeEventListener('keydown', wakeUp);
       };
@@ -56,18 +66,26 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public playSound(key: AudioKey, pan: number = 0) {
+      if (!this.isReady) return; // SFX needs buffers
       this.voices.playSFX(key, pan);
   }
 
   public playAmbience(key: AudioKey) {
+      if (!this.isReady) return; // Ambience needs buffers
       this.voices.playAmbience(key);
   }
 
   public startMusic() {
     this.ctxManager.resume();
+    
+    // 1. Start Streaming Music (Does not require isReady/Buffers)
+    this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
+    
+    // 2. Queue Ambience (Requires Buffers)
     if (this.isReady) {
         this.playAmbience('ambience_core');
-        this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
+    } else {
+        this._autoStartAmbience = true;
     }
   }
   
@@ -81,6 +99,7 @@ export class AudioServiceImpl implements IAudioService {
   
   public stopAll() {
       this.voices.stopAll();
+      this._autoStartAmbience = false;
   }
 
   public playClick(pan: number = 0) { this.playSound('ui_click', pan); }

@@ -69,58 +69,53 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
 
 export const MobileBootstrapper = () => {
   const registry = new EntityRegistry();
+  const eventBus = new GameEventService();
+  const audioService = new AudioServiceImpl();
+  const inputSystem = new InputSystem();
+  
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
   
-  ServiceLocator.registerRegistry(registry);
-  ServiceLocator.registerSpawner(spawner);
+  ServiceLocator.reset();
+  ServiceLocator.register('EntityRegistry', registry);
+  ServiceLocator.register('GameEventService', eventBus);
+  ServiceLocator.register('AudioService', audioService);
+  ServiceLocator.register('InputSystem', inputSystem);
+  ServiceLocator.register('EntitySpawner', spawner);
 
-  let audioService;
-  try { audioService = ServiceLocator.getAudioService(); } 
-  catch { audioService = new AudioServiceImpl(); ServiceLocator.register('AudioService', audioService); }
-
-  let eventService;
-  try { eventService = ServiceLocator.getGameEventBus(); } 
-  catch { eventService = new GameEventService(); ServiceLocator.register('GameEventService', eventService); }
-
-  // --- REGISTRATIONS ---
   registerAllComponents();
   registerAllBehaviors();
   registerAllAssets();
 
-  const panelSystem = new PanelRegistrySystem(eventService, audioService);
-  ServiceLocator.registerSystem('PanelRegistrySystem', panelSystem);
-  
+  const panelSystem = new PanelRegistrySystem(eventBus, audioService);
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
-  const inputSystem = new InputSystem(); 
 
-  const healthSystem = new HealthSystem(eventService, audioService, panelSystem);
-  const progressionSystem = new ProgressionSystem(eventService);
+  const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
+  const progressionSystem = new ProgressionSystem(eventBus);
   const gameStateSystem = new GameStateSystem(
-      healthSystem, progressionSystem, panelSystem, registry, eventService, audioService
+      healthSystem, progressionSystem, panelSystem, eventBus, audioService
   );
   
   const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventService);
-  const audioDirector = new AudioDirector(panelSystem, eventService, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventService);
+  const shakeSystem = new ShakeSystem(eventBus);
+  const audioDirector = new AudioDirector(panelSystem, eventBus, audioService); // Remove fastEventBus from constructor if not needed, updating AudioDirector below
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus);
   
-  const mobileCombatSystem = new MobileCombatSystem(registry, eventService, audioService);
+  const mobileCombatSystem = new MobileCombatSystem(registry, eventBus, audioService);
   const projectileSystem = new ProjectileSystem(registry);
   
   const targetingSystem = new TargetingSystem(registry, panelSystem);
   const orbitalSystem = new OrbitalSystem(registry);
   const guidanceSystem = new GuidanceSystem(registry);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventService);
+  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
   
-  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventService);
+  const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const structureSystem = new StructureSystem(panelSystem);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventService);
-  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventService);
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
+  const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
   const waveSystem = new MobileWaveSystem(spawner);
 
-  // Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
 
   const systemMap = {
@@ -137,8 +132,6 @@ export const MobileBootstrapper = () => {
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
-  // --- PHASED REGISTRATION ---
-  
   // INPUT
   engine.registerSystem(timeSystem, SystemPhase.INPUT);
   engine.registerSystem(inputSystem, SystemPhase.INPUT);
@@ -158,7 +151,7 @@ export const MobileBootstrapper = () => {
   engine.registerSystem(guidanceSystem, SystemPhase.PHYSICS);
   engine.registerSystem(projectileSystem, SystemPhase.PHYSICS);
   
-  // COLLISION (Mobile uses specialized combat)
+  // COLLISION
   engine.registerSystem(mobileCombatSystem, SystemPhase.COLLISION);
   
   // STATE
