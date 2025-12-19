@@ -33,6 +33,7 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
+import { FeedbackBridgeSystem } from '@/engine/systems/FeedbackBridgeSystem'; // NEW
 
 // Mode Specific Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
@@ -91,6 +92,7 @@ export class EngineFactory {
     const guidanceSystem = new GuidanceSystem(registry);
     
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
+    const feedbackBridge = new FeedbackBridgeSystem(eventBus, fastEventBus, panelSystem);
     
     // Directors
     const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
@@ -163,6 +165,7 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
+    register(feedbackBridge, SystemPhase.STATE); // New Bridge runs here to catch events from Logic/Collision
 
     // PHASE 5: RENDER
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');

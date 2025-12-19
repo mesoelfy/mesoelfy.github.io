@@ -3,13 +3,13 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents } from '@/engine/signals/FastEventBus';
+import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { TargetData } from '@/engine/ecs/components/TargetData';
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -58,7 +58,8 @@ export class WeaponSystem implements IGameSystem {
 
       const count = 360; const speed = 45; const damage = 100;
       
-      this.fastEvents.emit(FastEvents.SPAWN_FX, 2, t.x * 100, t.y * 100, 0);
+      // Fast FX: 2 = SPAWN_FX, 13 = PURGE_BLAST
+      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, t.x * 100, t.y * 100, 0);
       this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
@@ -95,6 +96,7 @@ export class WeaponSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
+    // Fast Sound: 1 = PLAY_SOUND, 1 = fx_player_fire
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
     this.lastFireTime = time;
   }

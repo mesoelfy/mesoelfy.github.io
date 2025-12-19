@@ -6,10 +6,11 @@ export enum FastEvents {
   PLAY_SOUND = 1,  // Arg1: SoundID, Arg2: Pan (x * 100)
   SPAWN_FX = 2,    // Arg1: FX_ID, Arg2: x * 100, Arg3: y * 100, Arg4: angle * 100
   CAM_SHAKE = 3,   // Arg1: Intensity * 100
-  HIT_STOP = 4     // Arg1: Duration (ms)
+  HIT_STOP = 4,    // Arg1: Duration (ms)
+  DUCK_MUSIC = 5   // Arg1: Intensity * 100, Arg2: Duration * 100
 }
 
-// Maps Numeric IDs back to String Keys for lookup (Audio/VFX Manifests)
+// Maps Numeric IDs back to String Keys for lookup
 export const SOUND_ID_MAP: Record<number, string> = {
   1: 'fx_player_fire',
   2: 'fx_impact_light',
@@ -19,7 +20,12 @@ export const SOUND_ID_MAP: Record<number, string> = {
   6: 'ui_hover',
   7: 'loop_drill',
   8: 'fx_reboot_success',
-  9: 'fx_level_up'
+  9: 'fx_level_up',
+  10: 'loop_heal',
+  11: 'loop_warning',
+  12: 'fx_teleport',
+  13: 'fx_exhaust_sizzle',
+  14: 'fx_player_death'
 };
 
 export const FX_ID_MAP: Record<number, string> = {
@@ -33,10 +39,14 @@ export const FX_ID_MAP: Record<number, string> = {
   8: 'CLASH_YELLOW',
   9: 'EXPLOSION_PURPLE_DIR',
   10: 'EXPLOSION_YELLOW_DIR',
-  11: 'EXPLOSION_RED_DIR'
+  11: 'EXPLOSION_RED_DIR',
+  12: 'REBOOT_HEAL',
+  13: 'PURGE_BLAST',
+  14: 'ENGINE_FLARE',
+  15: 'IMPACT_YELLOW'
 };
 
-// Reverse maps for Emitters
+// Reverse maps for Emitters (Computed once)
 export const REVERSE_SOUND_MAP: Record<string, number> = Object.fromEntries(
   Object.entries(SOUND_ID_MAP).map(([k, v]) => [v, Number(k)])
 );
@@ -53,12 +63,7 @@ export class FastEventBusImpl implements IFastEventService {
   private cursor = 0;
 
   public emit(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
-    if (this.cursor + EVENT_STRIDE >= BUFFER_SIZE) {
-      // Buffer overflow - wrap around or drop? 
-      // For visual FX, dropping is safer than overwriting unread data if readers are slow.
-      // But typically we reset cursor every frame.
-      return; 
-    }
+    if (this.cursor + EVENT_STRIDE >= BUFFER_SIZE) return; 
 
     this.buffer[this.cursor++] = eventId;
     this.buffer[this.cursor++] = a1;
@@ -67,7 +72,6 @@ export class FastEventBusImpl implements IFastEventService {
     this.buffer[this.cursor++] = a4;
   }
 
-  // Returns the cursor position at the end of the frame, so readers know where to stop
   public getCursor(): number {
     return this.cursor;
   }
@@ -77,16 +81,8 @@ export class FastEventBusImpl implements IFastEventService {
   }
 
   public readEvents(startCursor: number, handler: (id: number, a1: number, a2: number, a3: number, a4: number) => void): number {
-    let ptr = startCursor; // In case we want multiple readers tracking their own read head (unlikely here)
-    // Actually, since we clear every frame, readers just read 0 to currentCursor
-    // But keeping the signature flexible.
-    
-    // For this architecture: Systems run sequentially. 
-    // Readers should read ONLY what hasn't been processed if they run mid-frame?
-    // Simplified: We assume systems run AFTER logic phase.
-    
-    // Actually, readers just iterate the buffer.
-    // The previous architecture cleared the bus at the end of the frame.
+    // Current architecture clears buffer every frame, so we just iterate 0 to cursor
+    // startCursor arg is kept for interface compatibility if ring buffer logic changes later
     return this.cursor;
   }
   
