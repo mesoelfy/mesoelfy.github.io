@@ -607,7 +607,8 @@ Refactoring prompts:
     - Where is re "Tech Debt" accumulating?
     - Please audit the obvious and not obvious ways I could better use SOLID and other good practices then layout a step-by-step PHASE-based remediation protocol to refactor the code base into a healthier, more readable, cleaner architecture.
     - Configuration should just be data, not repeated logic. (logic is scattered and repetitive (WET: Write Everything Twice))
-    - magic strings
+    - magic strings / magic numbers / constants
+        Magic Booleans / Magic Methods (Dunder Methods) / Magic Paths and URLs / Magic Behavior (Implicit Logic) / Primitive Obsession 
     - are there any legacy systems that need to be scrubbed?
     - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
 
@@ -657,3 +658,8 @@ what is background motion grid called and what can it be renamed to?
 heal and reboot panels 15% faster.
 
 holodeck (is it also called sandbox?) is slow and glitchy - player pointer cursor and battle reticle both appearing, but not in sync. should just be battle cur if not hovering on settings.
+
+The sounds aren't playing in audio_matrix.
+
+
+Have a pop-up like wikipedia does asking for money $2.75 / $4.20 / $6.66 / $7.77 / $11.11

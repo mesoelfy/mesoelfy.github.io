@@ -7,6 +7,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { Tag } from '@/engine/ecs/types';
+import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -15,7 +16,6 @@ export class InteractionSystem implements IInteractionSystem {
   public hoveringPanelId: string | null = null;
   
   private lastRepairTime = 0;
-  private readonly REPAIR_RATE = 0.05;
   private previousHoverId: string | null = null;
 
   constructor(
@@ -77,8 +77,8 @@ export class InteractionSystem implements IInteractionSystem {
     if (isHovering) {
         this.hoveringPanelId = 'identity';
         this.repairState = 'REBOOTING';
-        if (time > this.lastRepairTime + this.REPAIR_RATE) {
-            this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: 4.0 });
+        if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+            this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
             this.spawnRepairParticles(cursor, '#9E4EA5');
@@ -87,9 +87,6 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    // REVERT: Use Linear Scan for Panels (Tag.OBSTACLE).
-    // SpatialGrid fails for large objects unless we implement multi-cell insertion.
-    // Since N < 10 for panels, O(N) is faster and perfectly accurate.
     const panels = this.registry.getByTag(Tag.OBSTACLE);
 
     for (const entity of panels) {
@@ -119,8 +116,8 @@ export class InteractionSystem implements IInteractionSystem {
 
             this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
 
-            if (time > this.lastRepairTime + this.REPAIR_RATE) {
-                this.panelSystem.healPanel(panelId, 2.8, cursor.x);
+            if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+                this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
                 this.lastRepairTime = time;
 
                 if (panelState.isDestroyed) {
@@ -132,7 +129,7 @@ export class InteractionSystem implements IInteractionSystem {
                 const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
                 this.spawnRepairParticles(cursor, color);
             }
-            break; // Handle one panel at a time
+            break; 
         }
     }
   }

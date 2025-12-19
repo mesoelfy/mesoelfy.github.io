@@ -8,6 +8,7 @@ import { Tag } from '@/engine/ecs/types';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -17,8 +18,6 @@ const COL_DEAD = new THREE.Color('#FF003C');
 
 export class RenderSystem implements IGameSystem {
   private tempColor = new THREE.Color();
-  private readonly FLASH_DECAY = 6.0; 
-  private readonly SHUDDER_DECAY = 15.0; 
 
   constructor(
     private registry: IEntityRegistry,
@@ -37,6 +36,7 @@ export class RenderSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
+    const CFG = VISUAL_CONFIG.RENDER;
 
     const entities = this.registry.query({ all: [ComponentType.RenderModel] });
     const interactState = this.interactionSystem.repairState;
@@ -55,7 +55,6 @@ export class RenderSystem implements IGameSystem {
         const isPlayer = entity.hasTag(Tag.PLAYER) && (!identity || identity.variant === 'PLAYER');
         
         if (isPlayer) {
-            // Player Logic (Updates Model Color/Rotation)
             let targetCol = COL_BASE;
             let spinSpeed = 0.02; 
 
@@ -89,21 +88,12 @@ export class RenderSystem implements IGameSystem {
             }
         }
         else if (effect) {
-            // Effect Decay Logic
             if (effect.shudder > 0) {
-                effect.shudder = Math.max(0, effect.shudder - (delta * this.SHUDDER_DECAY));
+                effect.shudder = Math.max(0, effect.shudder - (delta * CFG.SHUDDER_DECAY));
             }
 
             if (effect.flash > 0) {
-                effect.flash = Math.max(0, effect.flash - (delta * this.FLASH_DECAY));
-                
-                // Color Mixing Logic (Base -> Flash -> Base)
-                // Note: We don't permanently change 'RenderModel.r/g/b' here to avoid drift.
-                // Instead, VisualSystem will apply the mix every frame based on 'RenderEffect.flash'.
-                // However, the original system mutated RenderData.
-                // To keep it simple: RenderSystem updates effect state, VisualSystem consumes it.
-                // But wait, the original system interpolated color.
-                // Let's rely on VisualSystem to mix colors on the fly to keep Model clean.
+                effect.flash = Math.max(0, effect.flash - (delta * CFG.FLASH_DECAY));
                 
                 if (transform) {
                     transform.scale = 1.0 + (effect.flash * 0.25);

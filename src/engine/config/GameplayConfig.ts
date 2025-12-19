@@ -1,0 +1,15 @@
+export const GAMEPLAY_CONFIG = {
+  INTERACTION: {
+    REPAIR_RATE: 0.05,
+    QUERY_RADIUS: 1.0,
+    REPAIR_HEAL_AMOUNT: 2.8,
+    REBOOT_TICK_AMOUNT: 4.0
+  },
+  WEAPON: {
+    MUZZLE_OFFSET: 1.2
+  },
+  STRUCTURE: {
+    DECAY_INTERVAL: 0.1,
+    DECAY_AMOUNT: 2.0
+  }
+} as const;

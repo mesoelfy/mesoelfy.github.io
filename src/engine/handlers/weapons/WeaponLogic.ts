@@ -2,6 +2,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 
 export interface ShotDef {
   x: number;
@@ -14,8 +15,7 @@ export interface ShotDef {
   isHoming: boolean;
 }
 
-// VISUAL TWEAK: Push bullets out so they don't clip the player mesh when stretched
-const MUZZLE_OFFSET = 1.2; 
+const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
 
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
@@ -53,7 +53,6 @@ export const calculatePlayerShots = (
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
       
-      // Offset spawn point along the firing vector
       const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
       const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
 
@@ -91,7 +90,6 @@ export const calculatePlayerShots = (
   // 6. Generate Sniffers (Homing Swarm)
   if (snifferLevel > 0) {
       const angleStep = (Math.PI * 2) / snifferLevel;
-      // Offset starting angle so they don't overlap exactly with main shots
       const angleOffset = baseAngle + (Math.PI / 4); 
       
       for(let i=0; i<snifferLevel; i++) {
