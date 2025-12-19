@@ -8,19 +8,18 @@ import { useMetaUrl } from './hooks/useMetaUrl';
 import { useMetaTitle } from './hooks/useMetaTitle';
 import { useMetaTheme } from './hooks/useMetaTheme';
 import { useWindowFocus } from '@/ui/sim/hooks/useWindowFocus';
-import { initializeConsoleScrubber } from './ConsoleScrubber';
 
 export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
   const [lastLog, setLastLog] = useState<string | null>(null);
 
   useEffect(() => {
-    if (window.hasLoggedIdentity) return;
-    
-    initializeConsoleScrubber();
+    // Check if we've already logged to avoid double-logging in React StrictMode (dev)
+    if ((window as any).hasLoggedIdentity) return;
 
     const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'DEV_NODE';
 
+    // 1. THE ART & STATUS (Safe to remain visible)
     console.log(
       `%c${ASCII_CONSOLE}%c\n` +
       ` %c STATUS %c ONLINE %c  ` +
@@ -28,13 +27,21 @@ export const MetaManager = () => {
       ` %c NODE %c ${commitHash} %c\n\n` +
       `%c// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.\n` +
       `%c// LATENT_SPACE_BANDIT // IDENTITY_VERIFIED\n`,
-      CONSOLE_STYLES.GREEN,  // ASCII
+      CONSOLE_STYLES.GREEN,
       '', 
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', // Status Pill
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Kernel Pill
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Node Pill
-      CONSOLE_STYLES.GREEN,  // Message 1
-      CONSOLE_STYLES.CYAN    // Message 2
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', 
+      CONSOLE_STYLES.GREEN, 
+      CONSOLE_STYLES.CYAN
+    );
+
+    // 2. THE FILTER HINT (Will disappear when filter is applied)
+    console.log(
+      `%c[DEV_HINT] To silence YouTube/AdBlock errors, paste this filter above:\n` +
+      `%c-source:www-embed-player.js -source:base.js -ERR_BLOCKED_BY_CLIENT`,
+      'color: gray; font-style: italic;',
+      'color: #eae747; background: #222; padding: 2px 4px; border-radius: 2px;'
     );
 
     (window as any).hasLoggedIdentity = true;

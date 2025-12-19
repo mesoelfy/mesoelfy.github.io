@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 19 15:23:39 CST 2025
+Generated on: Fri Dec 19 16:06:14 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -3338,60 +3338,50 @@ import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 import { useRef, useState } from 'react';
 
-// Props serve as initial/fallback state
 interface VitalsRingProps {
   health: number;
   maxHealth: number;
-  xp: number;
-  xpToNext: number;
-  level: number;
   isDead: boolean;
-  rebootProgress: number;
+  level: number;
 }
 
 export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const levelRef = useRef<SVGTSpanElement>(null);
   
-  // Local state only for critical UI changes (Death State) to allow re-render
-  // High freq health updates bypass this
   const [deadState, setDeadState] = useState(isDead);
   const [rebootState, setRebootState] = useState(0);
 
-  // STREAM BINDINGS
-  
-  // 1. Health
-  useGameStream('PLAYER_HEALTH', (hp) => {
-      if (hp <= 0 && !deadState) setDeadState(true);
-      if (hp > 0 && deadState) setDeadState(false);
-      
-      // Update CSS Vars directly
-      if (containerRef.current) {
-          // Assuming maxHealth is relatively static or we can fetch it too
-          // For simplicity we use the prop or assume 100 for percentage if simpler
-          // Better: Subscribe to max too
-          const ratio = Math.max(0, Math.min(1, hp / 100)); // Normalized roughly
-          containerRef.current.style.setProperty('--hp-progress', ratio.toString());
-          
-          let color = '#78F654';
-          if (ratio < 0.3) color = '#FF003C';
-          else if (ratio < 0.6) color = '#eae747';
-          containerRef.current.style.setProperty('--hp-color', color);
-      }
+  // Use refs to track values for ratio calculation across independent stream updates
+  const hpRef = useRef(health);
+  const maxHpRef = useRef(maxHealth);
+  const xpMaxRef = useRef(100);
+
+  const updateHPUI = () => {
+    if (!containerRef.current) return;
+    const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
+    containerRef.current.style.setProperty('--hp-progress', ratio.toString());
+    
+    // Dynamic Thresholds matching OS aesthetics
+    let color = '#78F654'; // GREEN
+    if (ratio < 0.3) color = '#FF003C';      // RED
+    else if (ratio < 0.6) color = '#eae747'; // YELLOW
+    
+    containerRef.current.style.setProperty('--hp-color', color);
+  };
+
+  useGameStream('PLAYER_MAX_HEALTH', (val) => {
+    maxHpRef.current = val;
+    updateHPUI();
   });
 
-  // 2. XP
-  useGameStream('XP', (val) => {
-      // We need XP_NEXT to calculate ratio. 
-      // In a real optimized scenario we'd calc the ratio in the System and stream 'XP_RATIO'.
-      // But let's just listen to XP_NEXT too or assume.
+  useGameStream('PLAYER_HEALTH', (hp) => {
+      hpRef.current = hp;
+      if (hp <= 0 && !deadState) setDeadState(true);
+      if (hp > 0 && deadState) setDeadState(false);
+      updateHPUI();
   });
-  
-  // Alternative: Listen to calculated ratio from system?
-  // Let's stick to updating CSS vars. 
-  // We need to know Max XP to update the ring correctly. 
-  // Let's use a small ref to hold max.
-  const xpMaxRef = useRef(100);
+
   useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
   
   useGameStream('XP', (v) => {
@@ -3401,19 +3391,16 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       }
   });
 
-  // 3. Level
   useGameStream('LEVEL', (lvl) => {
       if (levelRef.current) {
           levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
       }
   });
 
-  // 4. Reboot
   useGameStream('PLAYER_REBOOT', (val) => {
       setRebootState(val);
   });
 
-  // Constants
   const size = 160; 
   const center = size / 2;
   const radiusHp = 60;
@@ -3458,7 +3445,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           <circle cx={center} cy={center} r={radiusHp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" />
           <circle cx={center} cy={center} r={radiusXp} stroke="#1a1a1a" strokeWidth={stroke} fill="transparent" strokeDasharray="2 4" />
           
-          {/* HP RING */}
           <circle 
             cx={center} cy={center} r={radiusHp} 
             strokeWidth={stroke} fill="transparent" 
@@ -3473,7 +3459,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             }}
           />
           
-          {/* XP RING */}
           <circle 
             cx={center} cy={center} r={radiusXp} 
             stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 
@@ -5124,10 +5109,11 @@ export const MetaManager = () => {
   const [bootKey, setBootKey] = useState('INIT');
   const [lastLog, setLastLog] = useState<string | null>(null);
 
+  // Run scrubber immediately on mount
   useEffect(() => {
-    if (window.hasLoggedIdentity) return;
-    
     initializeConsoleScrubber();
+    
+    if (window.hasLoggedIdentity) return;
 
     const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'DEV_NODE';
 
@@ -5138,13 +5124,13 @@ export const MetaManager = () => {
       ` %c NODE %c ${commitHash} %c\n\n` +
       `%c// TERMINAL UPLINK ESTABLISHED. WELCOME TO THE VOID.\n` +
       `%c// LATENT_SPACE_BANDIT // IDENTITY_VERIFIED\n`,
-      CONSOLE_STYLES.GREEN,  // ASCII
+      CONSOLE_STYLES.GREEN,
       '', 
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', // Status Pill
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Kernel Pill
-      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', // Node Pill
-      CONSOLE_STYLES.GREEN,  // Message 1
-      CONSOLE_STYLES.CYAN    // Message 2
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.STATUS, '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', 
+      CONSOLE_STYLES.PURPLE, CONSOLE_STYLES.TAG,    '', 
+      CONSOLE_STYLES.GREEN, 
+      CONSOLE_STYLES.CYAN 
     );
 
     (window as any).hasLoggedIdentity = true;
@@ -5390,42 +5376,106 @@ export const useMetaTheme = () => {
 FILE: ./src/ui/os/system/ConsoleScrubber.ts
 =====================================
 /**
- * CONSOLE_SCRUBBER // NOISE_REDUCTION_PROTOCOL
- * Silences common third-party noise (YouTube, Ad-Blockers) 
- * to keep the kernel logs clean.
+ * CONSOLE_SCRUBBER // GOD_TIER_SILENCE
+ * Intercepts console, network, and DOM-level leakage from 3rd party scripts.
  */
 export const initializeConsoleScrubber = () => {
   if (typeof window === 'undefined') return;
 
-  const originalError = console.error;
-  const originalWarn = console.warn;
-
-  // Pattern match for junk logs
   const JUNK_PATTERNS = [
     'net::ERR_BLOCKED_BY_CLIENT',
     'www-embed-player.js',
     'base.js',
-    'Failed to load resource',
-    'YouTube'
+    'ytimg.com',
+    'googlesyndication',
+    'doubleclick',
+    'googleads',
+    'play.google.com/log',
+    'youtube.com/api/stats',
+    'youtube.com/ptracking',
+    'youtube.com/pagead',
+    'YouTube',
+    'POST',
+    'GET'
   ];
 
-  console.error = (...args: any[]) => {
-    const msg = args[0]?.toString() || '';
-    if (JUNK_PATTERNS.some(pattern => msg.includes(pattern))) {
-      return; // Packet Dropped
-    }
-    originalError.apply(console, args);
+  const isJunk = (msg: string) => JUNK_PATTERNS.some(p => msg.includes(p));
+
+  // --- 1. CONSOLE WRAPPERS ---
+  const wrap = (method: keyof Console) => {
+    const original = console[method] as Function;
+    console[method] = (...args: any[]) => {
+      const combined = args.map(a => a?.toString() || '').join(' ');
+      if (isJunk(combined)) return;
+      original.apply(console, args);
+    };
   };
 
-  console.warn = (...args: any[]) => {
-    const msg = args[0]?.toString() || '';
-    if (JUNK_PATTERNS.some(pattern => msg.includes(pattern))) {
-      return; // Packet Dropped
+  ['error', 'warn', 'log', 'debug', 'info'].forEach(m => wrap(m as keyof Console));
+
+  // --- 2. NETWORK INTERCEPTION (Stop scripts from failing) ---
+  
+  // A. Fetch API
+  const originalFetch = window.fetch;
+  window.fetch = async (...args) => {
+    const url = args[0]?.toString() || '';
+    if (isJunk(url)) {
+      return new Response(null, { status: 204, statusText: 'No Content' });
     }
-    originalWarn.apply(console, args);
+    return originalFetch.apply(window, args);
   };
 
-  console.log("%c// LOG_SCRUBBER: ACTIVE // NOISE_REDUCTION: ENABLED", "color: #78F654; font-weight: bold;");
+  // B. XMLHttpRequest
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method: string, url: string | URL, ...rest: any[]) {
+    this._url = url.toString();
+    return originalOpen.apply(this, [method, url, ...rest] as any);
+  };
+
+  const originalSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function(body?: any) {
+    if (isJunk(this._url || '')) {
+      // Fake a successful completion
+      Object.defineProperty(this, 'readyState', { value: 4 });
+      Object.defineProperty(this, 'status', { value: 204 });
+      this.dispatchEvent(new Event('load'));
+      return;
+    }
+    return originalSend.apply(this, [body]);
+  };
+
+  // --- 3. IMAGE PIXELS (Tracking pixels) ---
+  const ImageCustom = window.Image;
+  // @ts-ignore
+  window.Image = function() {
+    const img = new ImageCustom();
+    const originalSet = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')?.set;
+    
+    Object.defineProperty(img, 'src', {
+      set(value) {
+        if (isJunk(value)) return;
+        if (originalSet) originalSet.call(this, value);
+      }
+    });
+    return img;
+  };
+
+  // --- 4. GLOBAL ERRORS ---
+  window.addEventListener('error', (e) => {
+    if (isJunk(e.message) || isJunk(e.filename)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  window.addEventListener('unhandledrejection', (e) => {
+    if (isJunk(e.reason?.toString() || '')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  console.log("%c// THE_VOID_SILENCE: ENABLED // NETWORK_FILTER: ACTIVE", "color: #78F654; font-weight: bold;");
 };
 
 
@@ -7017,7 +7067,7 @@ const CATEGORIES = [
   { id: 'UI', label: 'SYSTEM_INTERFACE', icon: Monitor, color: 'text-service-cyan', border: 'border-service-cyan', bg: 'bg-service-cyan' },
   { id: 'COMBAT', label: 'COMBAT_PROTOCOL', icon: Activity, color: 'text-critical-red', border: 'border-critical-red', bg: 'bg-critical-red' },
   { id: 'AMBIENCE', label: 'ENVIRONMENTAL', icon: Radio, color: 'text-latent-purple', border: 'border-latent-purple', bg: 'bg-latent-purple' },
-  { id: 'UNUSED', label: 'SYNTH_ARCHIVE', icon: Database, color: 'text-primary-green', border: 'border-primary-green', bg: 'bg-primary-green' },
+  { id: 'LAB_RESOURCES', label: 'SYNTH_ARCHIVE', icon: Database, color: 'text-primary-green', border: 'border-primary-green', bg: 'bg-primary-green' },
 ];
 
 export const AudioMatrix = () => {
@@ -9863,45 +9913,27 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
 export const registerAllAssets = () => {
-  // --- MATERIALS ---
-  
-  AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => {
-    return MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy);
-  });
-
+  AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
     mat.blending = THREE.AdditiveBlending;
     mat.depthWrite = false;
     return mat;
   });
-
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  
-  // Projectiles now use a shared basic neon material but colored via vertex attributes
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
-  // --- GEOMETRY ---
-
-  // Hunter (Now Synchronous)
   AssetService.registerGenerator(GEOMETRY_IDS.HUNTER, () => createHunterSpear());
-
-  // Enemies
   AssetService.registerGenerator(GEOMETRY_IDS.DRILLER, () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
   AssetService.registerGenerator(GEOMETRY_IDS.KAMIKAZE, () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
   AssetService.registerGenerator(GEOMETRY_IDS.DAEMON, () => new THREE.OctahedronGeometry(0.6, 0));
-  
-  // Bullets
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_SPHERE, () => new THREE.IcosahedronGeometry(1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CAPSULE, () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_DIAMOND, () => new THREE.OctahedronGeometry(1, 0));
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_PYRAMID, () => new THREE.TetrahedronGeometry(1, 0));
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_RING, () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
-  
-  // Misc
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
-  AssetService.registerGenerator(GEOMETRY_IDS.BULLET, () => new THREE.CylinderGeometry(0.1, 0.1, 1.0, 6)); // Legacy fallback
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
 };
 
@@ -9912,6 +9944,12 @@ FILE: ./src/app/layout.tsx
 import type { Metadata, Viewport } from 'next';
 import { Montserrat, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
+import { initializeConsoleScrubber } from '@/ui/os/system/ConsoleScrubber';
+
+// INITIALIZE SILENCE PROTOCOL BEFORE HYDRATION
+if (typeof window !== 'undefined') {
+  initializeConsoleScrubber();
+}
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
@@ -9930,27 +9968,6 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'MESOELFY // LATENT SPACE BANDIT',
   description: 'The official digital HQ of Mesoelfy. Art, Lore, and Neural Network Injections.',
-  openGraph: {
-    title: 'MESOELFY_OS',
-    description: 'Access the terminal. View the art. Breach the firewall.',
-    url: 'https://mesoelfy.github.io',
-    siteName: 'MESOELFY',
-    images: [
-      {
-        url: 'https://mesoelfy.github.io/assets/images/social-card.jpg',
-        width: 1200,
-        height: 630,
-      },
-    ],
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'MESOELFY // LATENT SPACE BANDIT',
-    description: 'Access the terminal. View the art. Breach the firewall.',
-    images: ['https://mesoelfy.github.io/assets/images/social-card.jpg'],
-  },
 };
 
 export const viewport: Viewport = {
@@ -11032,15 +11049,13 @@ export const GEOMETRY_IDS = {
   HUNTER: 'GEO_HUNTER',
   DAEMON: 'GEO_DAEMON',
   PARTICLE: 'GEO_PARTICLE',
-  BULLET: 'GEO_BULLET',
   PLAYER: 'PLAYER_GEO',
   PRJ_SPHERE: 'GEO_PRJ_SPHERE',
   PRJ_CAPSULE: 'GEO_PRJ_CAPSULE',
   PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
   PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
   PRJ_RING: 'GEO_PRJ_RING',
-  PRJ_ARROW: 'GEO_PRJ_ARROW',
-  DEFAULT: 'DEFAULT_GEO'
+  PRJ_ARROW: 'GEO_PRJ_ARROW'
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
@@ -11054,13 +11069,11 @@ export const MATERIAL_IDS = {
   PLAYER_AMBIENT: 'MAT_PLAYER_AMBIENT',
   PLAYER_BACKING: 'MAT_PLAYER_BACKING',
   GALLERY_BODY: 'MAT_GALLERY_BODY',
-  PROJECTILE: 'MAT_PROJECTILE',
-  DEFAULT: 'DEFAULT_MAT'
+  PROJECTILE: 'MAT_PROJECTILE'
 } as const;
 
 export type MaterialKey = typeof MATERIAL_IDS[keyof typeof MATERIAL_IDS];
 
-// --- AUDIO & VFX (Derived from Manifests for now, but typed) ---
 export type AudioKey = keyof typeof AUDIO_MANIFEST;
 export type VFXKey = keyof typeof VFX_MANIFEST;
 
@@ -11162,7 +11175,6 @@ FILE: ./src/engine/config/assets/AudioManifest.ts
 export type SoundType = 'oscillator' | 'noise';
 
 export interface SoundDef {
-  // recipe
   type: SoundType;
   wave?: OscillatorType; 
   frequency: [number, number]; 
@@ -11172,186 +11184,66 @@ export interface SoundDef {
   filter?: [number, number]; 
   distortion?: number; 
   attack?: number; 
-  fm?: {
-    modFreq: number; 
-    modIndex: number; 
-    modType: OscillatorType;
-  };
-  tremolo?: {
-    rate: number; 
-    depth: number; 
-    wave?: OscillatorType;
-  };
-  // meta
+  fm?: { modFreq: number; modIndex: number; modType: OscillatorType; };
+  tremolo?: { rate: number; depth: number; wave?: OscillatorType; };
   label: string;
-  category: 'UI' | 'COMBAT' | 'AMBIENCE' | 'UNUSED';
-  description?: string;
+  category: 'UI' | 'COMBAT' | 'AMBIENCE' | 'LAB_RESOURCES';
 }
 
 export const AUDIO_MANIFEST: Record<string, SoundDef> = {
-  'ui_click': { 
-      type: 'oscillator', wave: 'square', frequency: [400, 400], duration: 0.05, volume: 0.1, pitchVariance: 0,
-      label: 'Click', category: 'UI' 
-  },
-  'ui_hover': { 
-      type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50,
-      label: 'Hover', category: 'UI' 
-  },
-  'ui_menu_open': { 
-      type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02,
-      label: 'Menu Open', category: 'UI' 
-  },
-  'ui_menu_close': { 
-      type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02,
-      label: 'Menu Close', category: 'UI' 
-  },
-  'ui_optimal': { 
-      type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01,
-      label: 'Optimal', category: 'UI' 
-  },
-  'ui_error': { 
-      type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50,
-      label: 'Error', category: 'UI' 
-  },
-  'ui_chirp': { 
-      type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0,
-      label: 'Chirp', category: 'UI' 
-  },
+  // --- PRODUCTION UI ---
+  'ui_click': { type: 'oscillator', wave: 'square', frequency: [400, 400], duration: 0.05, volume: 0.1, pitchVariance: 0, label: 'Click', category: 'UI' },
+  'ui_hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50, label: 'Hover', category: 'UI' },
+  'ui_menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Open', category: 'UI' },
+  'ui_menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Close', category: 'UI' },
+  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01, label: 'Optimal', category: 'UI' },
+  'ui_error': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50, label: 'Error', category: 'UI' },
+  'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0, label: 'Chirp', category: 'UI' },
   
-  'fx_player_fire': { 
-      type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.35, pitchVariance: 100, attack: 0.005,
-      label: 'Plasma Shot', category: 'COMBAT' 
-  },
-  'fx_enemy_fire': { 
-      type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50,
-      label: 'Enemy Shot', category: 'COMBAT' 
-  },
-  'fx_impact_light': { 
-      type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20,
-      label: 'Light Hit', category: 'COMBAT' 
-  },
-  'fx_impact_heavy': { 
-      type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50,
-      label: 'Heavy Hit', category: 'COMBAT' 
-  },
-  'fx_boot_sequence': { 
-      type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30,
-      label: 'Boot Up', category: 'AMBIENCE' 
-  },
-  'fx_player_death': { 
-      type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, tremolo: { rate: 12, depth: 1.0, wave: 'square' },
-      label: 'Flatline', category: 'COMBAT' 
-  },
-  'fx_level_up': { 
-      type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0,
-      label: 'Level Up', category: 'COMBAT' 
-  },
-  'fx_reboot_success': { 
-      type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.3, volume: 0.3, pitchVariance: 0, attack: 0.01, tremolo: { rate: 10, depth: 1.0, wave: 'square' },
-      label: 'Reboot', category: 'COMBAT' 
-  },
-  'fx_teleport': { 
-      type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0,
-      label: 'Teleport', category: 'COMBAT' 
-  },
-  'fx_exhaust_sizzle': { 
-      type: 'noise', frequency: [0, 0], filter: [4000, 2000], duration: 0.3, volume: 0.1, pitchVariance: 0, distortion: 10, tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' },
-      label: 'Sizzle', category: 'COMBAT' 
-  },
+  // --- PRODUCTION COMBAT ---
+  'fx_player_fire': { type: 'oscillator', wave: 'sawtooth', frequency: [880, 110], duration: 0.15, volume: 0.35, pitchVariance: 100, attack: 0.005, label: 'Plasma Shot', category: 'COMBAT' },
+  'fx_enemy_fire': { type: 'oscillator', wave: 'square', frequency: [440, 220], duration: 0.2, volume: 0.15, pitchVariance: 50, label: 'Enemy Shot', category: 'COMBAT' },
+  'fx_impact_light': { type: 'noise', frequency: [0, 0], filter: [1000, 100], duration: 0.4, volume: 0.3, pitchVariance: 200, distortion: 20, label: 'Light Hit', category: 'COMBAT' },
+  'fx_impact_heavy': { type: 'noise', frequency: [0, 0], filter: [600, 50], duration: 1.5, volume: 0.5, pitchVariance: 0, distortion: 50, label: 'Heavy Hit', category: 'COMBAT' },
+  'fx_player_death': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 200, tremolo: { rate: 12, depth: 1.0, wave: 'square' }, label: 'Flatline', category: 'COMBAT' },
+  'fx_level_up': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.4, volume: 0.2, pitchVariance: 0, label: 'Level Up', category: 'COMBAT' },
+  'fx_reboot_success': { type: 'oscillator', wave: 'triangle', frequency: [440, 880], duration: 0.3, volume: 0.3, pitchVariance: 0, attack: 0.01, tremolo: { rate: 10, depth: 1.0, wave: 'square' }, label: 'Reboot', category: 'COMBAT' },
+  'fx_teleport': { type: 'oscillator', wave: 'sine', frequency: [100, 1500], duration: 0.3, volume: 0.2, pitchVariance: 0, label: 'Teleport', category: 'COMBAT' },
+  'fx_exhaust_sizzle': { type: 'noise', frequency: [0, 0], filter: [4000, 2000], duration: 0.3, volume: 0.1, pitchVariance: 0, distortion: 10, tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' }, label: 'Sizzle', category: 'COMBAT' },
 
-  'loop_heal': { 
-      type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0,
-      label: 'Repair Loop', category: 'AMBIENCE' 
-  },
-  'loop_reboot': { 
-      type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.2, pitchVariance: 0,
-      label: 'Reboot Loop', category: 'AMBIENCE' 
-  },
-  'loop_warning': { 
-      type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 },
-      label: 'Low Health', category: 'AMBIENCE' 
-  },
-  'loop_drill': { 
-      type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60,
-      label: 'Drill Grind', category: 'COMBAT' 
-  },
-  'ambience_core': { 
-      type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0,
-      label: 'Core Hum', category: 'AMBIENCE' 
-  },
+  // --- PRODUCTION AMBIENCE ---
+  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' },
+  'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.6, pitchVariance: 0, label: 'Reboot Loop', category: 'AMBIENCE' },
+  'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 }, label: 'Low Health', category: 'AMBIENCE' },
+  'loop_drill': { type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60, label: 'Drill Grind', category: 'COMBAT' },
+  'ambience_core': { type: 'noise', frequency: [0,0], filter: [800, 800], duration: 40.0, volume: 0.24, pitchVariance: 0, label: 'Core Hum', category: 'AMBIENCE' },
+  'fx_boot_sequence': { type: 'noise', frequency: [0, 0], filter: [1500, 50], duration: 2.0, volume: 0.6, pitchVariance: 0, distortion: 30, label: 'Boot Up', category: 'AMBIENCE' },
 
-  'syn_fm_scream': { 
-      type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 },
-      label: 'FM Scream', category: 'UNUSED' 
-  },
-  'syn_data_burst': { 
-      type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50,
-      label: 'Data Burst', category: 'UNUSED' 
-  },
-  'syn_bass_drop': { 
-      type: 'oscillator', wave: 'triangle', frequency: [150, 100], duration: 0.6, volume: 0.3, pitchVariance: 20, fm: { modType: 'square', modFreq: 57, modIndex: 1000 },
-      label: 'Bass Drop', category: 'UNUSED' 
-  },
-  'syn_alarm_chirp': { 
-      type: 'oscillator', wave: 'sawtooth', frequency: [400, 50], duration: 0.3, volume: 0.3, pitchVariance: 50, distortion: 100,
-      label: 'Alarm Chirp', category: 'UNUSED' 
-  },
-  'syn_static_burst': { 
-      type: 'noise', frequency: [0, 0], filter: [800, 2000], duration: 0.4, volume: 0.3, pitchVariance: 0, distortion: 400,
-      label: 'Static', category: 'UNUSED' 
-  },
-  'syn_wobble_bass': { 
-      type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.5, volume: 0.6, pitchVariance: 0, fm: { modType: 'sine', modFreq: 10, modIndex: 50 },
-      label: 'Wobble', category: 'UNUSED' 
-  },
-  'syn_grind_loop': { 
-      type: 'noise', frequency: [0,0], filter: [200, 100], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 50, tremolo: { rate: 2, depth: 0.8, wave: 'sine' },
-      label: 'Grind Loop', category: 'UNUSED' 
-  },
-  'syn_insect_swarm': { 
-      type: 'noise', frequency: [0,0], filter: [1500, 800], duration: 3.0, volume: 0.3, pitchVariance: 0, distortion: 10, tremolo: { rate: 12, depth: 1.0, wave: 'sawtooth' },
-      label: 'Swarm', category: 'UNUSED' 
-  },
-  'syn_interference': { 
-      type: 'noise', frequency: [0,0], filter: [800, 400], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 100, tremolo: { rate: 6, depth: 0.6, wave: 'square' },
-      label: 'Interference', category: 'UNUSED' 
-  },
-  'syn_wind_howl': { 
-      type: 'noise', frequency: [0,0], filter: [100, 1000], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 20, tremolo: { rate: 15, depth: 0.5, wave: 'sine' },
-      label: 'Wind', category: 'UNUSED' 
-  },
-  'syn_robot_chatter': { 
-      type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' },
-      label: 'Bot Chatter', category: 'UNUSED' 
-  },
-  'syn_deep_hum': { 
-      type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' },
-      label: 'Deep Hum', category: 'UNUSED' 
-  },
-  'syn_sine_rise': { 
-      type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0,
-      label: 'Sine Rise', category: 'UNUSED' 
-  },
-  'syn_saw_rise': { 
-      type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 },
-      label: 'Saw Rise', category: 'UNUSED' 
-  },
-  'syn_sqr_rise': { 
-      type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 },
-      label: 'Square Rise', category: 'UNUSED' 
-  },
-  'syn_siren_wail': { 
-      type: 'oscillator', wave: 'sine', frequency: [60, 20], duration: 2.5, volume: 0.6, pitchVariance: 0, distortion: 20,
-      label: 'Siren', category: 'UNUSED' 
-  },
-  'syn_alert_pulse': { 
-      type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 },
-      label: 'Alert Pulse', category: 'UNUSED' 
-  },
-  'syn_static_wash': { 
-      type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100,
-      label: 'Wash', category: 'UNUSED' 
-  },
+  // --- LAB RESOURCES: SYNTHETIC RISERS ---
+  'syn_sine_rise': { type: 'oscillator', wave: 'sine', frequency: [200, 400], duration: 1.0, volume: 0.3, pitchVariance: 0, label: 'Sine Rise', category: 'LAB_RESOURCES' },
+  'syn_saw_rise': { type: 'oscillator', wave: 'sawtooth', frequency: [100, 800], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'sine', modFreq: 50, modIndex: 200 }, label: 'Saw Rise', category: 'LAB_RESOURCES' },
+  'syn_sqr_rise': { type: 'oscillator', wave: 'square', frequency: [60, 60], duration: 1.0, volume: 0.2, pitchVariance: 0, fm: { modType: 'triangle', modFreq: 15, modIndex: 100 }, label: 'Square Rise', category: 'LAB_RESOURCES' },
+  'syn_siren_wail': { type: 'oscillator', wave: 'sine', frequency: [60, 20], duration: 2.5, volume: 0.6, pitchVariance: 0, distortion: 20, label: 'Siren', category: 'LAB_RESOURCES' },
+  
+  // --- LAB RESOURCES: DATA & STATIC ---
+  'syn_data_burst': { type: 'oscillator', wave: 'square', frequency: [25, 20], duration: 0.4, volume: 0.4, pitchVariance: 0, distortion: 50, label: 'Data Burst', category: 'LAB_RESOURCES' },
+  'syn_static_burst': { type: 'noise', frequency: [0, 0], filter: [800, 2000], duration: 0.4, volume: 0.3, pitchVariance: 0, distortion: 400, label: 'Static', category: 'LAB_RESOURCES' },
+  'syn_static_wash': { type: 'noise', frequency: [0, 0], filter: [2000, 200], duration: 1.5, volume: 0.4, pitchVariance: 0, distortion: 100, label: 'Wash', category: 'LAB_RESOURCES' },
+  'syn_interference': { type: 'noise', frequency: [0,0], filter: [800, 400], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 100, tremolo: { rate: 6, depth: 0.6, wave: 'square' }, label: 'Interference', category: 'LAB_RESOURCES' },
+
+  // --- LAB RESOURCES: TEXTURES & BASS ---
+  'syn_fm_scream': { type: 'oscillator', wave: 'sawtooth', frequency: [800, 1200], duration: 0.5, volume: 0.15, pitchVariance: 50, fm: { modType: 'sine', modFreq: 150, modIndex: 300 }, label: 'FM Scream', category: 'LAB_RESOURCES' },
+  'syn_bass_drop': { type: 'oscillator', wave: 'triangle', frequency: [150, 100], duration: 0.6, volume: 0.3, pitchVariance: 20, fm: { modType: 'square', modFreq: 57, modIndex: 1000 }, label: 'Bass Drop', category: 'LAB_RESOURCES' },
+  'syn_wobble_bass': { type: 'oscillator', wave: 'sine', frequency: [50, 50], duration: 0.5, volume: 0.6, pitchVariance: 0, fm: { modType: 'sine', modFreq: 10, modIndex: 50 }, label: 'Wobble', category: 'LAB_RESOURCES' },
+  'syn_deep_hum': { type: 'noise', frequency: [0,0], filter: [80, 40], duration: 3.0, volume: 0.8, pitchVariance: 0, distortion: 20, tremolo: { rate: 0.5, depth: 0.9, wave: 'sine' }, label: 'Deep Hum', category: 'LAB_RESOURCES' },
+  'syn_grind_loop': { type: 'noise', frequency: [0,0], filter: [200, 100], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 50, tremolo: { rate: 2, depth: 0.8, wave: 'sine' }, label: 'Grind Loop', category: 'LAB_RESOURCES' },
+  
+  // --- LAB RESOURCES: ORGANIC ---
+  'syn_insect_swarm': { type: 'noise', frequency: [0,0], filter: [1500, 800], duration: 3.0, volume: 0.3, pitchVariance: 0, distortion: 10, tremolo: { rate: 12, depth: 1.0, wave: 'sawtooth' }, label: 'Swarm', category: 'LAB_RESOURCES' },
+  'syn_robot_chatter': { type: 'noise', frequency: [0,0], filter: [500, 500], duration: 3.0, volume: 0.5, pitchVariance: 0, distortion: 200, tremolo: { rate: 8, depth: 1.0, wave: 'square' }, label: 'Bot Chatter', category: 'LAB_RESOURCES' },
+  'syn_wind_howl': { type: 'noise', frequency: [0,0], filter: [100, 1000], duration: 3.0, volume: 0.4, pitchVariance: 0, distortion: 20, tremolo: { rate: 15, depth: 0.5, wave: 'sine' }, label: 'Wind', category: 'LAB_RESOURCES' },
+  'syn_alarm_chirp': { type: 'oscillator', wave: 'sawtooth', frequency: [400, 50], duration: 0.3, volume: 0.3, pitchVariance: 50, distortion: 100, label: 'Alarm Chirp', category: 'LAB_RESOURCES' },
+  'syn_alert_pulse': { type: 'oscillator', wave: 'square', frequency: [400, 350], duration: 1.0, volume: 0.3, pitchVariance: 0, fm: { modType: 'square', modFreq: 8, modIndex: 50 }, label: 'Alert Pulse', category: 'LAB_RESOURCES' }
 };
 
 
@@ -12868,12 +12760,8 @@ export interface ProgressionSlice {
   xpToNextLevel: number;
   upgradePoints: number;
   activeUpgrades: Record<string, number>;
-
-  // Setters (Called by ECS)
   setScore: (val: number) => void;
   setProgressionData: (data: { xp: number, level: number, nextXp: number, points: number }) => void;
-  
-  // UI Actions
   selectUpgrade: (option: UpgradeOption) => void;
   resetProgressionState: () => void;
 }
@@ -12885,10 +12773,16 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   level: 1,
   xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
   upgradePoints: 0,
-  activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 },
+  activeUpgrades: { 
+    'OVERCLOCK': 0, 
+    'EXECUTE': 0, 
+    'FORK': 0, 
+    'SNIFFER': 0, 
+    'BACKDOOR': 0, 
+    'DAEMON': 0 
+  },
 
   setScore: (val) => set((state) => {
-      // High Score logic remains here as it's a persistent data concern, not gameplay simulation
       const newHigh = Math.max(state.highScore, val);
       return { score: val, highScore: newHigh };
   }),
@@ -12901,9 +12795,6 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   }),
 
   selectUpgrade: (option) => {
-    // We just emit intent. ECS handles the logic.
-    // However, for immediate UI feedback, we can optimistically update?
-    // No, trust ECS.
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
   },
 
@@ -12913,7 +12804,14 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
       level: 1,
       xpToNextLevel: PLAYER_CONFIG.baseXpRequirement,
       upgradePoints: 0,
-      activeUpgrades: { 'RAPID_FIRE': 0, 'MULTI_SHOT': 0, 'SPEED_UP': 0, 'REPAIR_NANITES': 0 }
+      activeUpgrades: { 
+        'OVERCLOCK': 0, 
+        'EXECUTE': 0, 
+        'FORK': 0, 
+        'SNIFFER': 0, 
+        'BACKDOOR': 0, 
+        'DAEMON': 0 
+      }
   })
 });
 
@@ -13238,24 +13136,20 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 
-// --- TYPES ---
 interface AudioSettings {
   master: boolean;
   music: boolean;
   sfx: boolean;
   ambience: boolean;
-  
   volumeMaster: number;
   volumeMusic: number;
   volumeSfx: number;
   volumeAmbience: number;
-  
   ambFilter: number;   
   ambSpeed: number;    
   ambWidth: number;    
   ambModSpeed: number; 
   ambModDepth: number; 
-
   fxReverbMix: number; 
   fxDelayMix: number;  
   fxDelayTime: number; 
@@ -13271,13 +13165,11 @@ const DEFAULT_AUDIO: AudioSettings = {
   volumeMusic: 1.0,
   volumeSfx: 1.0,
   volumeAmbience: 1.0,
-  
   ambFilter: 0.5,
   ambSpeed: 0.5,
   ambWidth: 0.5,
   ambModSpeed: 0.5, 
   ambModDepth: 0.5, 
-
   fxReverbMix: 0.2,     
   fxDelayMix: 0.1,      
   fxDelayTime: 0.25,    
@@ -13304,57 +13196,41 @@ interface AppState {
   introDone: boolean;
   isBreaching: boolean;
   activeModal: ModalType;
-  hoveredItem: string | null;
-  
   isSimulationPaused: boolean;
   initialClickPos: { x: number, y: number } | null;
-  
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
-  
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
-  
   audioSettings: AudioSettings;
   graphicsMode: GraphicsMode;
   screenShakeStrength: number; 
-  
   isDebugOpen: boolean;
   isDebugMinimized: boolean;
   debugFlags: DebugFlags;
-  
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   startBreach: () => void;
-  
   setSandboxView: (view: SandboxView) => void;
   setLabExperiment: (exp: LabExperiment) => void;
-  
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
-  
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   toggleSettings: () => void;
-  
-  setHovered: (item: string | null) => void;
   resetApplication: () => void;
-  
   toggleMaster: () => void;
   toggleMusic: () => void;
   toggleSfx: () => void;
   toggleAmbience: () => void;
   setVolume: (channel: keyof AudioSettings, value: number, max?: number) => void;
   resetAudioSettings: () => void;
-  
   setGraphicsMode: (mode: GraphicsMode) => void;
   setScreenShake: (val: number) => void;
-  
   toggleDebugMenu: () => void;
   toggleDebugMinimize: () => void;
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
   resetDebugFlags: () => void;
-  
   setSimulationPaused: (paused: boolean) => void;
   setInitialClickPos: (pos: { x: number, y: number } | null) => void;
 }
@@ -13367,21 +13243,15 @@ export const useStore = create<AppState>()(
       introDone: false,
       isBreaching: false,
       activeModal: 'none',
-      hoveredItem: null,
-      
       isSimulationPaused: false,
       initialClickPos: null,
-      
       sandboxView: 'lab',
       labExperiment: 'NONE',
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
-      
       audioSettings: { ...DEFAULT_AUDIO },
       graphicsMode: 'HIGH',
-      
       screenShakeStrength: 1.0, 
-      
       isDebugOpen: false,
       isDebugMinimized: false,
       debugFlags: {
@@ -13398,24 +13268,17 @@ export const useStore = create<AppState>()(
       }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
-      
       setSandboxView: (view) => set({ sandboxView: view }),
       setLabExperiment: (exp) => set({ labExperiment: exp }),
-      
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       setGalleryAction: (action) => set({ galleryAction: action }),
-      
       openModal: (modal) => set({ activeModal: modal }),
       closeModal: () => set({ activeModal: 'none' }),
-
       toggleSettings: () => {
           const current = get().activeModal;
           if (current === 'settings') get().closeModal();
           else get().openModal('settings');
       },
-      
-      setHovered: (item) => set({ hoveredItem: item }),
-      
       resetApplication: () => {
           AudioSystem.stopAll();
           useGameStore.getState().stopGame();
@@ -13436,7 +13299,6 @@ export const useStore = create<AppState>()(
               initialClickPos: null
           }));
       },
-      
       toggleMaster: () => {
           set(s => ({ audioSettings: { ...s.audioSettings, master: !s.audioSettings.master } }));
           AudioSystem.updateVolumes();
@@ -13457,23 +13319,19 @@ export const useStore = create<AppState>()(
           AudioSystem.updateVolumes();
           if (get().audioSettings.ambience) AudioSystem.playClick();
       },
-      
       setVolume: (channel, value, max = 2.0) => {
           const limit = max || 2.0;
           const clamped = Math.max(0, Math.min(limit, value));
           set(s => ({ audioSettings: { ...s.audioSettings, [channel]: clamped } }));
           AudioSystem.updateVolumes();
       },
-      
       resetAudioSettings: () => {
           set({ audioSettings: { ...DEFAULT_AUDIO } });
           AudioSystem.updateVolumes();
           AudioSystem.playClick();
       },
-      
       setGraphicsMode: (mode) => set({ graphicsMode: mode }),
       setScreenShake: (val) => set({ screenShakeStrength: val }),
-      
       toggleDebugMenu: () => set(state => ({ isDebugOpen: !state.isDebugOpen })),
       toggleDebugMinimize: () => set(state => ({ isDebugMinimized: !state.isDebugMinimized })),
       setDebugFlag: (key, value) => set(state => ({ 
@@ -13482,7 +13340,6 @@ export const useStore = create<AppState>()(
       resetDebugFlags: () => set({
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
       }),
-      
       setSimulationPaused: (paused) => set({ isSimulationPaused: paused }),
       setInitialClickPos: (pos) => set({ initialClickPos: pos })
     }),
@@ -16959,12 +16816,7 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
-/**
- * BRIDGES 'Logic' (GameEvents) -> 'Feedback' (FastEvents)
- * Decouples game rules from audio/visual implementation.
- */
 export class FeedbackBridgeSystem implements IGameSystem {
-  
   constructor(
     private events: IGameEventService,
     private fastEvents: IFastEventService,
@@ -16973,19 +16825,12 @@ export class FeedbackBridgeSystem implements IGameSystem {
     this.setupRoutes();
   }
 
-  update(delta: number, time: number): void {}
+  update(): void {}
   teardown(): void {}
 
   private setupRoutes() {
-    // --- PLAYER FEEDBACK ---
-    // PLAYER_FIRED: Emitted by WeaponSystem directly as FastEvent.
-    // PLAYER_HIT: Emitted by CombatSystem directly as FastEvent.
-    // ENEMY_DESTROYED: Emitted by CombatSystem directly as FastEvent.
-
-    // --- PANEL FEEDBACK ---
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        const x = this.getPanelX(p.id);
-        this.emitSound('loop_heal', x);
+        this.emitSound('loop_heal', this.getPanelX(p.id));
     });
 
     this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
@@ -17002,7 +16847,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.fastEvents.emit(FastEvents.HIT_STOP, 100);
     });
 
-    // --- GLOBAL STATE ---
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.emitSound('fx_player_death');
         this.fastEvents.emit(FastEvents.DUCK_MUSIC, 100, 300);
@@ -17014,7 +16858,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.emitSound('fx_level_up');
     });
     
-    // Legacy support for manual triggers (e.g., UI debug buttons)
     this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
         this.emitFX(p.type, p.x, p.y, p.angle);
     });
@@ -17023,8 +16866,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.emitSound(p.key, p.x);
     });
   }
-
-  // --- HELPERS ---
 
   private emitSound(key: string, x: number = 0) {
       const id = REVERSE_SOUND_MAP[key];
@@ -17044,7 +16885,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
   private calculatePan(worldX: number): number {
       const halfWidth = ViewportHelper.viewport.width / 2;
       if (halfWidth === 0) return 0;
-      // Result x100 for integer packing
       return Math.floor(Math.max(-1, Math.min(1, worldX / halfWidth)) * 100);
   }
 
@@ -17939,20 +17779,36 @@ export class PanelRegistrySystem implements IPanelSystem {
 =====================================
 FILE: ./src/engine/systems/index.ts
 =====================================
+export * from './AudioDirector';
 export * from './BehaviorSystem';
-export * from './CameraSystem';
 export * from './CollisionSystem';
-export * from './FXManager';
+export * from './CombatSystem';
+export * from './FeedbackBridgeSystem';
 export * from './GameStateSystem';
+export * from './GuidanceSystem';
+export * from './HealthSystem';
 export * from './InputSystem';
 export * from './InteractionSystem';
 export * from './LifeCycleSystem';
+export * from './MobileCombatSystem';
+export * from './MobileWaveSystem';
+export * from './OrbitalSystem';
 export * from './PanelRegistrySystem';
+export * from './ParticleSystem';
 export * from './PhysicsSystem';
-export * from './PlayerSystem';
+export * from './PlayerMovementSystem';
+export * from './ProgressionSystem';
+export * from './ProjectileSystem';
+export * from './RenderSystem';
+export * from './ShakeSystem';
+export * from './StructureSystem';
+export * from './TargetingSystem';
 export * from './TimeSystem';
-export * from './UISyncSystem';
+export * from './VFXSystem';
+export * from './VisualSystem';
 export * from './WaveSystem';
+export * from './WeaponSystem';
+export * from './WorldSystem';
 
 
 =====================================
@@ -18074,7 +17930,9 @@ export class GameStateSystem implements IGameStateSystem {
   ) {
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
-            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.2);
+            // Buffed: Now heals 75% of max health
+            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
+            this.audio.playSound('ui_optimal');
         } else if (p.option === 'DAEMON') {
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
@@ -18086,7 +17944,6 @@ export class GameStateSystem implements IGameStateSystem {
 
       const integrity = this.panelSystem.systemIntegrity;
       
-      // Process Low Health Heartbeat FX
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -18105,14 +17962,12 @@ export class GameStateSystem implements IGameStateSystem {
       this.progSys.reset();
   }
 
-  // Bridged Vitals Properties
   get playerHealth() { return this.healthSys.playerHealth; }
   get maxPlayerHealth() { return this.healthSys.maxPlayerHealth; }
   get playerRebootProgress() { return this.healthSys.playerRebootProgress; }
   get isGameOver() { return this.healthSys.isGameOver; }
   set isGameOver(v: boolean) { this.healthSys.isGameOver = v; }
 
-  // Bridged Progression Properties
   get score() { return this.progSys.score; }
   get xp() { return this.progSys.xp; }
   get level() { return this.progSys.level; }
@@ -18120,7 +17975,6 @@ export class GameStateSystem implements IGameStateSystem {
   get upgradePoints() { return this.progSys.upgradePoints; }
   get activeUpgrades() { return this.progSys.activeUpgrades; }
 
-  // Bridged Methods
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }
   tickReboot(amount: number) { this.healthSys.tickReboot(amount); }
@@ -19595,7 +19449,6 @@ const DAEMON_DEF: NodeDef = {
                 children: [
                     { type: 'ChargeMechanic', args: [2.0] },
                     { type: 'HasTargetLock' },
-                    // FireDaemonShot(speed, damage)
                     { type: 'FireDaemonShot', args: [35.0, 20] },
                     { type: 'Wait', args: [0.5] }
                 ]
@@ -19609,9 +19462,7 @@ let treeRoot: any = null;
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) {
-        treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
-    }
+    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
     treeRoot.tick(e, ctx);
   }
 };
@@ -19647,7 +19498,6 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
 
-// CONFIGURATION (Data)
 const DRILLER_DEF: NodeDef = {
   type: 'Sequence',
   children: [
@@ -19655,10 +19505,7 @@ const DRILLER_DEF: NodeDef = {
     {
       type: 'Sequence',
       children: [
-        { 
-            type: 'Succeeder', 
-            children: [{ type: 'SpinVisual', args: [5.0] }] 
-        },
+        { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [5.0] }] },
         {
           type: 'Selector',
           children: [
@@ -19666,14 +19513,11 @@ const DRILLER_DEF: NodeDef = {
               type: 'Sequence',
               children: [
                 { type: 'IsTargetInRange', args: [0.5] },
-                { 
-                    type: 'Succeeder', 
-                    children: [{ type: 'SpinVisual', args: [15.0] }] 
-                },
+                { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [15.0] }] },
                 { type: 'DrillAttack', args: [0.2] }
               ]
             },
-            { type: 'MoveToTarget', args: [8] } // Base Speed
+            { type: 'MoveToTarget', args: [8] }
           ]
         }
       ]
@@ -19685,9 +19529,7 @@ let treeRoot: any = null;
 
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) {
-        treeRoot = BehaviorTreeBuilder.build(DRILLER_DEF);
-    }
+    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DRILLER_DEF);
     treeRoot.tick(e, ctx);
   }
 };
@@ -19997,9 +19839,7 @@ export class EntitySpawner implements IEntitySpawner {
 
   public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
-    if (!blueprint) {
-        return this.registry.createEntity();
-    }
+    if (!blueprint) return this.registry.createEntity();
 
     const e = this.registry.createEntity();
     blueprint.tags.forEach(tag => e.addTag(tag));
@@ -20009,12 +19849,9 @@ export class EntitySpawner implements IEntitySpawner {
         const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
         const runtimeData = overrides[compDef.type] || {};
         const mergedData = { ...blueprintData, ...runtimeData };
-        
-        const component = ComponentRegistry.create(compDef.type, mergedData);
-        e.addComponent(component);
+        e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
 
-    // Asset injection for RenderModel if not explicitly in components
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
@@ -20027,10 +19864,7 @@ export class EntitySpawner implements IEntitySpawner {
     return e;
   }
 
-  public spawnPlayer(): Entity {
-    return this.spawn(ArchetypeIDs.PLAYER);
-  }
-
+  public spawnPlayer(): Entity { return this.spawn(ArchetypeIDs.PLAYER); }
   public spawnEnemy(type: string, x: number, y: number): Entity {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
@@ -20040,7 +19874,6 @@ export class EntitySpawner implements IEntitySpawner {
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     
-    // Fallbacks
     const color = config ? config.color : [1, 1, 1];
     const shape = config ? config.geometry : 'CAPSULE';
     const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
@@ -20052,8 +19885,6 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        
-        // Split Render Data
         [ComponentType.RenderModel]: {
             geometryId: geoId,
             materialId: MATERIAL_IDS.PROJECTILE,
@@ -20061,14 +19892,9 @@ export class EntitySpawner implements IEntitySpawner {
         },
         [ComponentType.RenderTransform]: {
             scale: 1.0,
-            baseScaleX: s[0],
-            baseScaleY: s[1],
-            baseScaleZ: s[2]
+            baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: {
-            elasticity: 2.0 // Projectiles are stretchy
-        },
-        
+        [ComponentType.RenderEffect]: { elasticity: 2.0 },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
