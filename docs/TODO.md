@@ -645,3 +645,6 @@ BURROWER (goes inside)
 relabel motion grid
 fix red game over OS and grid state / tied to Zen mode interfering?
 
+Have hunter squish from front to back like a spring compressing while charging.
+
+reduce max screenshake threshold to be less intense.

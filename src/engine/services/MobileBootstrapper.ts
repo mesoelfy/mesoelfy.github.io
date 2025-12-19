@@ -26,6 +26,7 @@ import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { GameStateSystem } from '@/engine/systems/GameStateSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
+import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { HealthSystem } from '@/engine/systems/HealthSystem';
 import { ProgressionSystem } from '@/engine/systems/ProgressionSystem';
@@ -119,6 +120,7 @@ export const MobileBootstrapper = () => {
   const structureSystem = new StructureSystem(panelSystem);
   const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
+  const visualSystem = new VisualSystem(registry); // NEW
   const waveSystem = new MobileWaveSystem(spawner);
 
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -167,6 +169,7 @@ export const MobileBootstrapper = () => {
   
   // RENDER
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
+  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW
   engine.registerSystem(particleSystem, SystemPhase.RENDER);
   engine.registerSystem(vfxSystem, SystemPhase.RENDER);
   engine.registerSystem(shakeSystem, SystemPhase.RENDER);

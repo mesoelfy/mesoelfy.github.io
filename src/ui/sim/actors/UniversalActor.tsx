@@ -61,15 +61,12 @@ export const UniversalActor = () => {
       {groups.map(group => (
         <InstancedActor
           key={group.key} 
+          renderKey={group.key}
           tag={Tag.ENEMY} 
           geometry={group.geometry} 
           material={group.material} 
-          maxCount={500}
+          maxCount={2000}
           interactive={true}
-          filter={(entity) => { 
-              const render = entity.getComponent<RenderData>(ComponentType.Render); 
-              return render?.geometryId === group.geometryId && render?.materialId === group.materialId; 
-          }}
         />
       ))}
     </>

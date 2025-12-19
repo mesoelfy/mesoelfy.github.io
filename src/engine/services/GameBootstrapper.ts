@@ -37,6 +37,7 @@ import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
+import { VisualSystem } from '@/engine/systems/VisualSystem'; // NEW
 import { VFXSystem } from '@/engine/systems/VFXSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
@@ -45,7 +46,7 @@ export const GameBootstrapper = () => {
   // 1. Core Services
   const registry = new EntityRegistry();
   const eventBus = new GameEventService();
-  const fastEventBus = new FastEventBusImpl(); // NEW: Ring Buffer Bus
+  const fastEventBus = new FastEventBusImpl(); 
   const audioService = new AudioServiceImpl(); 
   const inputSystem = new InputSystem(); 
   
@@ -57,7 +58,7 @@ export const GameBootstrapper = () => {
   ServiceLocator.reset(); 
   ServiceLocator.register('EntityRegistry', registry);
   ServiceLocator.register('GameEventService', eventBus);
-  ServiceLocator.register('FastEventService', fastEventBus); // NEW
+  ServiceLocator.register('FastEventService', fastEventBus); 
   ServiceLocator.register('AudioService', audioService);
   ServiceLocator.register('InputSystem', inputSystem);
   ServiceLocator.register('EntitySpawner', spawner);
@@ -72,7 +73,7 @@ export const GameBootstrapper = () => {
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
   const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); // Injected FastBus
+  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); 
   
   const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
   const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
@@ -82,15 +83,16 @@ export const GameBootstrapper = () => {
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const structureSystem = new StructureSystem(panelSystem);
   
-  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); // Injected FastBus
+  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); 
   const projectileSystem = new ProjectileSystem(registry);
-  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); // Injected FastBus
+  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); 
   
   // Directors
-  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); // Injected FastBus
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); // Injected FastBus
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); 
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); 
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); // Injected FastBus
+  const visualSystem = new VisualSystem(registry); // NEW
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); 
   
   const waveSystem = new WaveSystem(spawner, panelSystem);
   const targetingSystem = new TargetingSystem(registry, panelSystem);
@@ -103,7 +105,7 @@ export const GameBootstrapper = () => {
 
   // 6. Engine Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-  engine.injectFastEventBus(fastEventBus); // NEW: Engine clears it at end of frame
+  engine.injectFastEventBus(fastEventBus); 
 
   // 7. Locator Registration
   const systemMap = {
@@ -119,6 +121,7 @@ export const GameBootstrapper = () => {
     ParticleSystem: particleSystem,
     ShakeSystem: shakeSystem,
     RenderSystem: renderSystem,
+    VisualSystem: visualSystem, // NEW
     WaveSystem: waveSystem
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
@@ -151,6 +154,7 @@ export const GameBootstrapper = () => {
   engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
   
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
+  engine.registerSystem(visualSystem, SystemPhase.RENDER); // NEW: Before particles/VFX
   engine.registerSystem(particleSystem, SystemPhase.RENDER);
   engine.registerSystem(vfxSystem, SystemPhase.RENDER);
   engine.registerSystem(shakeSystem, SystemPhase.RENDER);
