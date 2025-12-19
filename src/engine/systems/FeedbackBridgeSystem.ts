@@ -3,12 +3,7 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 
-/**
- * BRIDGES 'Logic' (GameEvents) -> 'Feedback' (FastEvents)
- * Decouples game rules from audio/visual implementation.
- */
 export class FeedbackBridgeSystem implements IGameSystem {
-  
   constructor(
     private events: IGameEventService,
     private fastEvents: IFastEventService,
@@ -17,19 +12,12 @@ export class FeedbackBridgeSystem implements IGameSystem {
     this.setupRoutes();
   }
 
-  update(delta: number, time: number): void {}
+  update(): void {}
   teardown(): void {}
 
   private setupRoutes() {
-    // --- PLAYER FEEDBACK ---
-    // PLAYER_FIRED: Emitted by WeaponSystem directly as FastEvent.
-    // PLAYER_HIT: Emitted by CombatSystem directly as FastEvent.
-    // ENEMY_DESTROYED: Emitted by CombatSystem directly as FastEvent.
-
-    // --- PANEL FEEDBACK ---
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        const x = this.getPanelX(p.id);
-        this.emitSound('loop_heal', x);
+        this.emitSound('loop_heal', this.getPanelX(p.id));
     });
 
     this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
@@ -46,7 +34,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.fastEvents.emit(FastEvents.HIT_STOP, 100);
     });
 
-    // --- GLOBAL STATE ---
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.emitSound('fx_player_death');
         this.fastEvents.emit(FastEvents.DUCK_MUSIC, 100, 300);
@@ -58,7 +45,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.emitSound('fx_level_up');
     });
     
-    // Legacy support for manual triggers (e.g., UI debug buttons)
     this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
         this.emitFX(p.type, p.x, p.y, p.angle);
     });
@@ -67,8 +53,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
         this.emitSound(p.key, p.x);
     });
   }
-
-  // --- HELPERS ---
 
   private emitSound(key: string, x: number = 0) {
       const id = REVERSE_SOUND_MAP[key];
@@ -88,7 +72,6 @@ export class FeedbackBridgeSystem implements IGameSystem {
   private calculatePan(worldX: number): number {
       const halfWidth = ViewportHelper.viewport.width / 2;
       if (halfWidth === 0) return 0;
-      // Result x100 for integer packing
       return Math.floor(Math.max(-1, Math.min(1, worldX / halfWidth)) * 100);
   }
 

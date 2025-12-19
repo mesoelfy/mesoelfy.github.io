@@ -17,7 +17,6 @@ const DAEMON_DEF: NodeDef = {
                 children: [
                     { type: 'ChargeMechanic', args: [2.0] },
                     { type: 'HasTargetLock' },
-                    // FireDaemonShot(speed, damage)
                     { type: 'FireDaemonShot', args: [35.0, 20] },
                     { type: 'Wait', args: [0.5] }
                 ]
@@ -31,9 +30,7 @@ let treeRoot: any = null;
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) {
-        treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
-    }
+    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
     treeRoot.tick(e, ctx);
   }
 };
