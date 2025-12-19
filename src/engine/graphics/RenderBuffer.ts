@@ -1,14 +1,5 @@
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Entity } from '@/engine/ecs/Entity';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RENDER_STRIDE } from './RenderSchema';
 
-// STRIDE: 14
-// 0,1,2: Position (x, y, z)
-// 3,4,5,6: Quaternion (x, y, z, w)
-// 7,8,9: Scale (x, y, z)
-// 10,11,12: Color (r, g, b)
-// 13: SpawnProgress
-export const RENDER_STRIDE = 14;
 const DEFAULT_CAPACITY = 2000;
 
 export interface RenderGroup {
@@ -49,3 +40,4 @@ class RenderBufferService {
 }
 
 export const RenderBuffer = new RenderBufferService();
+export { RENDER_STRIDE };

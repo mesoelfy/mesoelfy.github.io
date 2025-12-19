@@ -1,5 +1,6 @@
 import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
-import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
@@ -66,9 +67,6 @@ export class VisualSystem implements IGameSystem {
       }
 
       // --- 2. Scale ---
-      // Apply base dimensions first (Aspect Ratio)
-      // Transform.scale is the uniform multiplier
-      // Render.visualScale is the effect multiplier (pulsing)
       let scaleX = transform.scale * render.visualScale * render.baseScaleX;
       let scaleY = transform.scale * render.visualScale * render.baseScaleY;
       let scaleZ = transform.scale * render.visualScale * render.baseScaleZ;
@@ -76,15 +74,10 @@ export class VisualSystem implements IGameSystem {
       // Velocity Deformation (Squash/Stretch)
       if (motion && render.elasticity > 0.01) {
           const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0; // Bullets stretch easier than enemies
+          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0;
 
           if (speedSq > threshold) {
               const speed = Math.sqrt(speedSq);
-              
-              // Apply Elasticity to the base factors
-              // If elasticity is high (bullets), use the "jelly" caps.
-              // If low (enemies), use the "rigid" caps.
-              
               let stretchY, squashXZ;
               
               if (render.elasticity > 1.0) {
@@ -108,21 +101,25 @@ export class VisualSystem implements IGameSystem {
       qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
       qFinal.copy(qAim).multiply(qSpin);
 
-      // --- 4. Pack ---
-      group.buffer[idx + 0] = vx;
-      group.buffer[idx + 1] = vy;
-      group.buffer[idx + 2] = vz;
-      group.buffer[idx + 3] = qFinal.x;
-      group.buffer[idx + 4] = qFinal.y;
-      group.buffer[idx + 5] = qFinal.z;
-      group.buffer[idx + 6] = qFinal.w;
-      group.buffer[idx + 7] = scaleX;
-      group.buffer[idx + 8] = scaleY;
-      group.buffer[idx + 9] = scaleZ;
-      group.buffer[idx + 10] = render.r;
-      group.buffer[idx + 11] = render.g;
-      group.buffer[idx + 12] = render.b;
-      group.buffer[idx + 13] = render.spawnProgress;
+      // --- 4. Pack (Using Strict Schema) ---
+      group.buffer[idx + RenderOffset.POSITION_X] = vx;
+      group.buffer[idx + RenderOffset.POSITION_Y] = vy;
+      group.buffer[idx + RenderOffset.POSITION_Z] = vz;
+      
+      group.buffer[idx + RenderOffset.ROTATION_X] = qFinal.x;
+      group.buffer[idx + RenderOffset.ROTATION_Y] = qFinal.y;
+      group.buffer[idx + RenderOffset.ROTATION_Z] = qFinal.z;
+      group.buffer[idx + RenderOffset.ROTATION_W] = qFinal.w;
+      
+      group.buffer[idx + RenderOffset.SCALE_X] = scaleX;
+      group.buffer[idx + RenderOffset.SCALE_Y] = scaleY;
+      group.buffer[idx + RenderOffset.SCALE_Z] = scaleZ;
+      
+      group.buffer[idx + RenderOffset.COLOR_R] = render.r;
+      group.buffer[idx + RenderOffset.COLOR_G] = render.g;
+      group.buffer[idx + RenderOffset.COLOR_B] = render.b;
+      
+      group.buffer[idx + RenderOffset.SPAWN_PROGRESS] = render.spawnProgress;
 
       group.count++;
     }

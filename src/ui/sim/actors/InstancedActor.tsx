@@ -1,7 +1,8 @@
 import { useRef, useLayoutEffect } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
-import { RenderBuffer, RENDER_STRIDE } from '@/engine/graphics/RenderBuffer';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
@@ -18,7 +19,6 @@ interface InstancedActorProps {
   maxCount: number;
   renderKey?: string; 
   interactive?: boolean; 
-  // Unused but kept for interface compatibility
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -61,24 +61,24 @@ export const InstancedActor = ({
         
         // POS
         tempObj.position.set(
-            buffer[offset + 0],
-            buffer[offset + 1],
-            buffer[offset + 2]
+            buffer[offset + RenderOffset.POSITION_X],
+            buffer[offset + RenderOffset.POSITION_Y],
+            buffer[offset + RenderOffset.POSITION_Z]
         );
 
         // QUAT
         tempObj.quaternion.set(
-            buffer[offset + 3],
-            buffer[offset + 4],
-            buffer[offset + 5],
-            buffer[offset + 6]
+            buffer[offset + RenderOffset.ROTATION_X],
+            buffer[offset + RenderOffset.ROTATION_Y],
+            buffer[offset + RenderOffset.ROTATION_Z],
+            buffer[offset + RenderOffset.ROTATION_W]
         );
 
         // SCALE
         tempObj.scale.set(
-            buffer[offset + 7],
-            buffer[offset + 8],
-            buffer[offset + 9]
+            buffer[offset + RenderOffset.SCALE_X],
+            buffer[offset + RenderOffset.SCALE_Y],
+            buffer[offset + RenderOffset.SCALE_Z]
         );
 
         tempObj.updateMatrix();
@@ -86,14 +86,14 @@ export const InstancedActor = ({
         
         // COLOR
         tempColor.setRGB(
-            buffer[offset + 10],
-            buffer[offset + 11],
-            buffer[offset + 12]
+            buffer[offset + RenderOffset.COLOR_R],
+            buffer[offset + RenderOffset.COLOR_G],
+            buffer[offset + RenderOffset.COLOR_B]
         );
         if (meshRef.current.instanceColor) meshRef.current.setColorAt(i, tempColor);
         
         // SPAWN
-        spawnAttr.setX(i, buffer[offset + 13]);
+        spawnAttr.setX(i, buffer[offset + RenderOffset.SPAWN_PROGRESS]);
     }
 
     meshRef.current.count = count;
