@@ -11,8 +11,12 @@ import { AIStateData } from './components/AIStateData';
 import { ColliderData } from './components/ColliderData';
 import { TargetData } from './components/TargetData';
 import { OrbitalData } from './components/OrbitalData';
-import { RenderData } from './components/RenderData';
 import { ProjectileData } from './components/ProjectileData';
+
+// New Render Components
+import { RenderModel } from './components/RenderModel';
+import { RenderTransform } from './components/RenderTransform';
+import { RenderEffect } from './components/RenderEffect';
 
 export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Transform, TransformData);
@@ -25,8 +29,12 @@ export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Collider, ColliderData);
   ComponentRegistry.register(ComponentType.Target, TargetData);
   ComponentRegistry.register(ComponentType.Orbital, OrbitalData);
-  ComponentRegistry.register(ComponentType.Render, RenderData);
   ComponentRegistry.register(ComponentType.Projectile, ProjectileData);
+  
+  // New
+  ComponentRegistry.register(ComponentType.RenderModel, RenderModel);
+  ComponentRegistry.register(ComponentType.RenderTransform, RenderTransform);
+  ComponentRegistry.register(ComponentType.RenderEffect, RenderEffect);
   
   console.log('[ComponentCatalog] Components Registered.');
 };

@@ -2,9 +2,9 @@ import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEv
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
+import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
@@ -43,9 +43,9 @@ export class WeaponSystem implements IGameSystem {
 
     if (time > this.lastFireTime + currentFireRate) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-        const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+        const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
         if (transform) {
-            this.attemptAutoFire(time, transform, upgrades, render);
+            this.attemptAutoFire(time, transform, upgrades, renderModel);
         }
     }
   }
@@ -58,7 +58,6 @@ export class WeaponSystem implements IGameSystem {
 
       const count = 360; const speed = 45; const damage = 100;
       
-      // Fast FX: 2 = SPAWN_FX, 13 = PURGE_BLAST
       this.fastEvents.emit(FastEvents.SPAWN_FX, 13, t.x * 100, t.y * 100, 0);
       this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
@@ -68,7 +67,7 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderData) {
+  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity; let targetEnemy = null;
 
@@ -90,13 +89,12 @@ export class WeaponSystem implements IGameSystem {
     shots.forEach(shot => {
         const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, false, shot.life, shot.damage, shot.configId);
         if (pRender) {
-            const bRender = bullet.getComponent<RenderData>(ComponentType.Render);
-            if (bRender) { bRender.r = pRender.r * 4; bRender.g = pRender.g * 4; bRender.b = pRender.b * 4; }
+            const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
+            if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    // Fast Sound: 1 = PLAY_SOUND, 1 = fx_player_fire
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
     this.lastFireTime = time;
   }

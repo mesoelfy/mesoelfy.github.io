@@ -131,8 +131,8 @@ export class WaveSystem implements IGameSystem {
                       drillAudio: Math.random() * 0.2 
                   } 
               },
-              [ComponentType.Render]: { 
-                  visualScale: 1.0 
+              [ComponentType.RenderTransform]: { 
+                  scale: 1.0 
               }
           });
       }

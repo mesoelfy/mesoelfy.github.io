@@ -5,7 +5,8 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -15,7 +16,8 @@ const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
 const getPos = (e: Entity) => e.getComponent<TransformData>(ComponentType.Transform);
 const getCombat = (e: Entity) => e.getComponent<CombatData>(ComponentType.Combat);
-const getRender = (e: Entity) => e.getComponent<RenderData>(ComponentType.Render);
+const getModel = (e: Entity) => e.getComponent<RenderModel>(ComponentType.RenderModel);
+const getEffect = (e: Entity) => e.getComponent<RenderEffect>(ComponentType.RenderEffect);
 const getMotion = (e: Entity) => e.getComponent<MotionData>(ComponentType.Motion);
 const getAI = (e: Entity) => e.getComponent<AIStateData>(ComponentType.State);
 
@@ -37,10 +39,10 @@ const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: numbe
         return;
     }
 
-    const render = getRender(source);
-    if (render) {
-        const maxC = Math.max(render.r, render.g, render.b, 1.0); 
-        ctx.spawnImpact(x, y, render.r / maxC, render.g / maxC, render.b / maxC, angle);
+    const model = getModel(source);
+    if (model) {
+        const maxC = Math.max(model.r, model.g, model.b, 1.0); 
+        ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
     } else {
         ctx.spawnFX('IMPACT_WHITE', x, y);
     }
@@ -50,7 +52,7 @@ const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, fo
     const motion = getMotion(entity);
     const pos = getPos(entity);
     const ai = getAI(entity);
-    const render = getRender(entity);
+    const effect = getEffect(entity);
 
     if (motion && pos && sourcePos) {
         const dx = pos.x - sourcePos.x;
@@ -61,7 +63,7 @@ const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, fo
             motion.vx += (dx / dist) * force;
             motion.vy += (dy / dist) * force;
             if (ai) ai.stunTimer = 0.15;
-            if (render) render.shudder = 1.0;
+            if (effect) effect.shudder = 1.0;
         }
     }
 };
@@ -79,10 +81,6 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
 
   ctx.damagePlayer(damage);
-  
-  // INCREASED CRASH TRAUMA
-  // Low damage (Driller): 0.3 (was 0.2) + 0.3 (Base) = 0.6 Total
-  // High damage (Kamikaze): 0.5 + 0.3 (Base) = 0.8 Total
   ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
   
   const variant = getId(enemy)?.variant || 'UNKNOWN';
@@ -100,9 +98,6 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
   const damage = combat ? combat.damage : 1;
 
   ctx.damagePlayer(damage);
-  
-  // NEW: Add small trauma for projectiles
-  // Total: 0.1 (Here) + 0.3 (Base) + 0.1 (Bonus for > 5 dmg) = 0.5
   ctx.addTrauma(0.1);
 
   ctx.destroyEntity(bullet, 'IMPACT_RED'); 

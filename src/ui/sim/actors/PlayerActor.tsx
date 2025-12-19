@@ -4,7 +4,8 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { IInteractionSystem } from '@/engine/interfaces';
@@ -120,19 +121,27 @@ export const PlayerActor = () => {
     if (!playerEntity) return;
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-    const render = playerEntity.getComponent<RenderData>(ComponentType.Render);
+    const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
     
-    // Check BOTH Player Health AND System Integrity
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     const isDeadState = isPlayerDead || isSystemFailure;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
-    if (render && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
+    
+    if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
         if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
-        else reticleRef.current.rotation.z = -render.visualRotation;
+        else reticleRef.current.rotation.z = -renderTrans.rotation;
         
         let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+        
+        // If renderModel exists, we could use its R/G/B too
+        if (renderModel) {
+            // tempColor.setRGB(renderModel.r, renderModel.g, renderModel.b);
+            // targetColor = tempColor;
+        }
+
         tempColor.current.lerp(targetColor, 0.2); 
         
         if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
@@ -146,7 +155,7 @@ export const PlayerActor = () => {
         ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
         backingMaterial.uniforms.uColor.value.copy(tempColor.current);
         
-        containerRef.current.scale.setScalar(render.visualScale * animScale.current);
+        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }

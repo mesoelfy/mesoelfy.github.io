@@ -3,7 +3,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class ProjectileSystem implements IGameSystem {
@@ -17,7 +17,7 @@ export class ProjectileSystem implements IGameSystem {
 
         const proj = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const render = entity.getComponent<RenderData>(ComponentType.Render);
+        const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
         const motion = entity.getComponent<MotionData>(ComponentType.Motion);
         
         if (!proj || !transform) continue;
@@ -25,7 +25,6 @@ export class ProjectileSystem implements IGameSystem {
         const config = PROJECTILE_CONFIG[proj.configId];
         if (!config) continue;
 
-        // --- STATE: CHARGING (Stuck to Owner) ---
         if (proj.state === 'CHARGING' && proj.ownerId !== -1) {
             const owner = this.registry.getEntity(proj.ownerId);
             
@@ -37,7 +36,6 @@ export class ProjectileSystem implements IGameSystem {
             const ownerTransform = owner.getComponent<TransformData>(ComponentType.Transform);
             if (ownerTransform) {
                 const offsetDist = 1.6; 
-                
                 const cos = Math.cos(ownerTransform.rotation);
                 const sin = Math.sin(ownerTransform.rotation);
                 
@@ -45,23 +43,15 @@ export class ProjectileSystem implements IGameSystem {
                 transform.y = ownerTransform.y + (sin * offsetDist);
                 transform.rotation = ownerTransform.rotation;
                 
-                if (motion) {
-                    motion.vx = 0;
-                    motion.vy = 0;
-                }
+                if (motion) { motion.vx = 0; motion.vy = 0; }
             }
         }
-        
-        // --- STATE: FLIGHT (Visual Physics) ---
         else if (proj.state === 'FLIGHT' && render) {
-            // Apply Spin
             if (!config.faceVelocity && config.spinSpeed !== 0) {
-                render.visualRotation += delta * config.spinSpeed;
+                render.rotation += delta * config.spinSpeed;
             }
-
-            // Apply Pulse
             if (config.pulseSpeed > 0) {
-                render.visualScale = 1.0 + Math.sin(time * config.pulseSpeed) * 0.2;
+                render.scale = 1.0 + Math.sin(time * config.pulseSpeed) * 0.2;
             }
         }
     }

@@ -27,6 +27,13 @@ export interface EntityBlueprint {
   components: { type: ComponentType; data?: any }[];
 }
 
+// Helper for Render Composition
+const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
+    { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
+    { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
+    { type: ComponentType.RenderEffect, data: { ...effectData } }
+];
+
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
     id: ArchetypeIDs.PLAYER,
@@ -42,7 +49,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.turret.base), visualScale: 1.0, geometryId: GEOMETRY_IDS.PLAYER, materialId: MATERIAL_IDS.PLAYER } }
+      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
     ]
   },
   [ArchetypeIDs.BULLET_PLAYER]: {
@@ -59,8 +66,11 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER_PROJECTILE, 
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0 } },
-      { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } }
+      { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } },
+      // Placeholders to allow EntitySpawner overrides to take effect
+      { type: ComponentType.RenderModel, data: {} },
+      { type: ComponentType.RenderTransform, data: {} },
+      { type: ComponentType.RenderEffect, data: {} }
     ]
   },
   [ArchetypeIDs.BULLET_ENEMY]: {
@@ -77,8 +87,10 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.ENEMY_PROJECTILE, 
           mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
       }},
-      { type: ComponentType.Render, data: { visualScale: 1.0 } },
-      { type: ComponentType.Projectile, data: { configId: 'ENEMY_HUNTER', state: 'FLIGHT' } }
+      { type: ComponentType.Projectile, data: { configId: 'ENEMY_HUNTER', state: 'FLIGHT' } },
+      { type: ComponentType.RenderModel, data: {} },
+      { type: ComponentType.RenderTransform, data: {} },
+      { type: ComponentType.RenderEffect, data: {} }
     ]
   },
   [ArchetypeIDs.DRILLER]: {
@@ -95,7 +107,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PANEL' } },
-      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.muncher) } }
+      ...RenderComps(GEOMETRY_IDS.DRILLER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.muncher, { elasticity: 0.1 })
     ]
   },
   [ArchetypeIDs.KAMIKAZE]: {
@@ -112,7 +124,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.kamikaze) } }
+      ...RenderComps(GEOMETRY_IDS.KAMIKAZE, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.kamikaze, { elasticity: 0.1 })
     ]
   },
   [ArchetypeIDs.HUNTER]: {
@@ -129,7 +141,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
       { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      { type: ComponentType.Render, data: { ...parseHex(GAME_THEME.enemy.hunter) } }
+      ...RenderComps(GEOMETRY_IDS.HUNTER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.hunter, { elasticity: 0.1 })
     ]
   },
   [ArchetypeIDs.DAEMON]: {
@@ -145,7 +157,7 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
       { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.State, data: { current: AI_STATE.ORBIT } },
-      { type: ComponentType.Render, data: { ...parseHex('#00F0FF') } }
+      ...RenderComps(GEOMETRY_IDS.DAEMON, MATERIAL_IDS.ENEMY_BASE, '#00F0FF', { elasticity: 0.05 })
     ]
   }
 };

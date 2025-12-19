@@ -6,7 +6,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { Tag } from '@/engine/ecs/types';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const MatrixGrid = () => {
@@ -28,8 +28,9 @@ export const MatrixGrid = () => {
     try { const registry = ServiceLocator.getRegistry(); for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; } } catch { return; }
 
     if (worldEntity && groupRef.current) {
-        const render = worldEntity.getComponent<RenderData>(ComponentType.Render);
-        if (render) groupRef.current.position.z = render.visualRotation % 5;
+        const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        // Using Modulo 5 to keep the offset small as texture wraps
+        if (render) groupRef.current.position.z = render.rotation % 5;
     }
 
     const integrity = useGameStore.getState().systemIntegrity;

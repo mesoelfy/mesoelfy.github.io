@@ -3,7 +3,9 @@ import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
 import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import * as THREE from 'three';
 
@@ -31,18 +33,23 @@ export class VisualSystem implements IGameSystem {
   update(delta: number, time: number): void {
     RenderBuffer.reset();
 
-    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.Render] });
+    // Query: Must have Position + Visual Model
+    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
 
     for (const entity of entities) {
       if (!entity.active) continue;
 
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-      const render = entity.getComponent<RenderData>(ComponentType.Render);
+      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
+      
+      // Optional Components
+      const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
 
-      if (!transform || !render) continue;
+      if (!transform || !model) continue;
 
-      const key = `${render.geometryId}|${render.materialId}`;
+      const key = `${model.geometryId}|${model.materialId}`;
       const group = RenderBuffer.getGroup(key);
       const idx = group.count * RENDER_STRIDE;
       
@@ -51,57 +58,86 @@ export class VisualSystem implements IGameSystem {
       // --- 1. Position ---
       let vx = transform.x;
       let vy = transform.y;
-      let vz = 0;
+      const vz = visual ? visual.offsetZ : 0;
       
-      if (render.spawnProgress < 1.0) {
-          const t = render.spawnProgress;
-          const ease = 1 - Math.pow(1 - t, 3); 
-          const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
-          vy += yOffset;
+      let spawnP = 1.0;
+      if (effect) {
+          spawnP = effect.spawnProgress;
+          if (spawnP < 1.0) {
+              const t = spawnP;
+              const ease = 1 - Math.pow(1 - t, 3); 
+              const yOffset = -SPAWN_Y_OFFSET * (1.0 - ease);
+              vy += yOffset;
+          }
+          if (effect.shudder > 0) {
+              const shake = effect.shudder * 0.2; 
+              vx += (Math.random() - 0.5) * shake;
+              vy += (Math.random() - 0.5) * shake;
+          }
       }
 
-      if (render.shudder > 0) {
-          const shake = render.shudder * 0.2; 
-          vx += (Math.random() - 0.5) * shake;
-          vy += (Math.random() - 0.5) * shake;
+      if (visual) {
+          vx += visual.offsetX;
+          vy += visual.offsetY;
       }
 
       // --- 2. Scale ---
-      let scaleX = transform.scale * render.visualScale * render.baseScaleX;
-      let scaleY = transform.scale * render.visualScale * render.baseScaleY;
-      let scaleZ = transform.scale * render.visualScale * render.baseScaleZ;
+      let sX = transform.scale;
+      let sY = transform.scale;
+      let sZ = transform.scale;
+
+      if (visual) {
+          sX *= visual.scale * visual.baseScaleX;
+          sY *= visual.scale * visual.baseScaleY;
+          sZ *= visual.scale * visual.baseScaleZ;
+      }
       
-      // Velocity Deformation (Squash/Stretch)
-      if (motion && render.elasticity > 0.01) {
+      // Velocity Deformation
+      if (effect && motion && effect.elasticity > 0.01) {
           const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-          const threshold = render.elasticity > 1.0 ? 1.0 : 4.0;
+          const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
 
           if (speedSq > threshold) {
               const speed = Math.sqrt(speedSq);
               let stretchY, squashXZ;
               
-              if (render.elasticity > 1.0) {
-                  // Bullet Logic
-                  stretchY = Math.min(MAX_STRETCH_CAP, 1.0 + (speed * BASE_STRETCH * render.elasticity));
-                  squashXZ = Math.max(MIN_SQUASH_CAP, 1.0 - (speed * BASE_SQUASH * render.elasticity));
+              if (effect.elasticity > 1.0) {
+                  stretchY = Math.min(MAX_STRETCH_CAP, 1.0 + (speed * BASE_STRETCH * effect.elasticity));
+                  squashXZ = Math.max(MIN_SQUASH_CAP, 1.0 - (speed * BASE_SQUASH * effect.elasticity));
               } else {
-                  // Rigid Logic
                   stretchY = Math.min(MAX_STRETCH, 1.0 + (speed * STRETCH_FACTOR));
                   squashXZ = Math.max(MIN_SQUASH, 1.0 - (speed * SQUASH_FACTOR));
               }
               
-              scaleY *= stretchY;
-              scaleX *= squashXZ;
-              scaleZ *= squashXZ;
+              sY *= stretchY;
+              sX *= squashXZ;
+              sZ *= squashXZ;
           }
       }
 
       // --- 3. Rotation ---
-      qSpin.setFromAxisAngle(axisY, render.visualRotation);
+      const visRot = visual ? visual.rotation : 0;
+      qSpin.setFromAxisAngle(axisY, visRot);
       qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
       qFinal.copy(qAim).multiply(qSpin);
 
-      // --- 4. Pack (Using Strict Schema) ---
+      // --- 4. Color ---
+      let r = model.r;
+      let g = model.g;
+      let b = model.b;
+
+      if (effect && effect.flash > 0) {
+          // Mix with Flash Color
+          const t = effect.flash; // 0..1
+          
+          // Flash Color defaults to White/Pinkish if not set? 
+          // Effect component has flashR/G/B now.
+          r = r + (effect.flashR - r) * t;
+          g = g + (effect.flashG - g) * t;
+          b = b + (effect.flashB - b) * t;
+      }
+
+      // --- 5. Pack ---
       group.buffer[idx + RenderOffset.POSITION_X] = vx;
       group.buffer[idx + RenderOffset.POSITION_Y] = vy;
       group.buffer[idx + RenderOffset.POSITION_Z] = vz;
@@ -111,15 +147,15 @@ export class VisualSystem implements IGameSystem {
       group.buffer[idx + RenderOffset.ROTATION_Z] = qFinal.z;
       group.buffer[idx + RenderOffset.ROTATION_W] = qFinal.w;
       
-      group.buffer[idx + RenderOffset.SCALE_X] = scaleX;
-      group.buffer[idx + RenderOffset.SCALE_Y] = scaleY;
-      group.buffer[idx + RenderOffset.SCALE_Z] = scaleZ;
+      group.buffer[idx + RenderOffset.SCALE_X] = sX;
+      group.buffer[idx + RenderOffset.SCALE_Y] = sY;
+      group.buffer[idx + RenderOffset.SCALE_Z] = sZ;
       
-      group.buffer[idx + RenderOffset.COLOR_R] = render.r;
-      group.buffer[idx + RenderOffset.COLOR_G] = render.g;
-      group.buffer[idx + RenderOffset.COLOR_B] = render.b;
+      group.buffer[idx + RenderOffset.COLOR_R] = r;
+      group.buffer[idx + RenderOffset.COLOR_G] = g;
+      group.buffer[idx + RenderOffset.COLOR_B] = b;
       
-      group.buffer[idx + RenderOffset.SPAWN_PROGRESS] = render.spawnProgress;
+      group.buffer[idx + RenderOffset.SPAWN_PROGRESS] = spawnP;
 
       group.count++;
     }

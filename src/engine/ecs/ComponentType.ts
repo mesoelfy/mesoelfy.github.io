@@ -9,6 +9,10 @@ export enum ComponentType {
   Collider = 'Collider',
   Target = 'Target',
   Orbital = 'Orbital',
-  Render = 'Render',
-  Projectile = 'Projectile'
+  Projectile = 'Projectile',
+  
+  // New Render Composition
+  RenderModel = 'RenderModel',         // Geometry, Material, Base Color
+  RenderTransform = 'RenderTransform', // Visual Offsets, Base Scale
+  RenderEffect = 'RenderEffect'        // Flash, Shudder, Spawn Progress
 }

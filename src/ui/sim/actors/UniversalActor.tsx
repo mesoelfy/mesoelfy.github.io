@@ -3,7 +3,6 @@ import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { RenderData } from '@/engine/ecs/components/RenderData';
 import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
@@ -28,7 +27,7 @@ export const UniversalActor = () => {
       let materialId = blueprint.assets?.material;
 
       if (!geometryId || !materialId) {
-          const renderDef = blueprint.components.find(c => c.type === ComponentType.Render);
+          const renderDef = blueprint.components.find(c => c.type === ComponentType.RenderModel);
           if (renderDef?.data) {
               geometryId = geometryId || renderDef.data.geometryId;
               materialId = materialId || renderDef.data.materialId;

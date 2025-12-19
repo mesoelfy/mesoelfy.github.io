@@ -5,7 +5,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
@@ -36,7 +36,6 @@ export class ChargeMechanic extends BTNode {
     if (state.data.chargeProgress < 1.0) {
         state.data.chargeProgress += context.delta / this.duration;
         
-        // Clamp
         if (state.data.chargeProgress >= 1.0) {
             state.data.chargeProgress = 1.0;
             state.current = AI_STATE.READY;
@@ -100,9 +99,9 @@ export class DaemonAim extends BTNode {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
-    const render = entity.getComponent<RenderData>(ComponentType.Render);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
-    if (!transform || !target || !state || !render) return NodeState.FAILURE;
+    if (!transform || !target || !state || !visual) return NodeState.FAILURE;
 
     let targetAngle = 0;
     const isCharged = state.data.chargeProgress >= 1.0;
@@ -121,7 +120,7 @@ export class DaemonAim extends BTNode {
     while (diff < -Math.PI) diff += Math.PI * 2;
     
     transform.rotation += diff * this.TURN_SPEED * context.delta;
-    render.visualRotation += context.delta * 2.0;
+    visual.rotation += context.delta * 2.0;
 
     return NodeState.SUCCESS;
   }

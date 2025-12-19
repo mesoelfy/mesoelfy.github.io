@@ -7,7 +7,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -108,17 +108,17 @@ export const InstancedActor = ({
       
       try {
           const registry = ServiceLocator.getRegistry();
-          const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.Render] }));
+          const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] }));
           
           let matchIndex = 0;
           let foundEntity = null;
           
           for (const ent of candidates) {
               if (!ent.active) continue;
-              const render = ent.getComponent<RenderData>(ComponentType.Render);
-              if (!render) continue;
+              const model = ent.getComponent<RenderModel>(ComponentType.RenderModel);
+              if (!model) continue;
               
-              const key = `${render.geometryId}|${render.materialId}`;
+              const key = `${model.geometryId}|${model.materialId}`;
               if (key === renderKey) {
                   if (matchIndex === e.instanceId) {
                       foundEntity = ent;

@@ -1,6 +1,11 @@
 import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+
+// Dynamic offset to match Driller model
+const DRILLER_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
 
 export class MobileWaveSystem implements IGameSystem {
   private time = 0;
@@ -19,7 +24,6 @@ export class MobileWaveSystem implements IGameSystem {
     if (this.time >= this.nextSpawn) {
         this.spawnDriller();
         
-        // Difficulty Ramp
         const progress = Math.min(1.0, this.time / this.RAMP_DURATION);
         const currentInterval = this.START_INTERVAL - (progress * (this.START_INTERVAL - this.MIN_INTERVAL));
         
@@ -29,12 +33,11 @@ export class MobileWaveSystem implements IGameSystem {
 
   private spawnDriller() {
       const { width, height } = ViewportHelper.viewport;
-      const pad = 3.0; // Spawn further out
+      const pad = 3.0; 
       
-      // RESTRICT TO TOP AND BOTTOM ONLY
       const isTop = Math.random() > 0.5;
       
-      let x = (Math.random() - 0.5) * (width * 0.6); // Keep them somewhat central horizontally
+      let x = (Math.random() - 0.5) * (width * 0.6); 
       let y = 0;
 
       if (isTop) { 
@@ -43,7 +46,23 @@ export class MobileWaveSystem implements IGameSystem {
           y = -(height / 2) - pad;
       }
 
-      this.spawner.spawnEnemy(EnemyTypes.DRILLER, x, y);
+      this.spawner.spawn(EnemyTypes.DRILLER, {
+          [ComponentType.Transform]: { 
+              x, y, 
+              scale: 1.0, 
+              rotation: Math.atan2(isTop ? -1 : 1, 0) // Point towards center
+          },
+          [ComponentType.State]: { 
+              current: 'ACTIVE',
+              timers: { 
+                  spawn: 0,
+                  drillAudio: Math.random() * 0.2 
+              } 
+          },
+          [ComponentType.RenderTransform]: { 
+              scale: 1.0 
+          }
+      });
   }
 
   teardown(): void {}

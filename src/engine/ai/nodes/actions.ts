@@ -4,7 +4,7 @@ import { AIContext } from '@/engine/handlers/ai/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
@@ -20,7 +20,6 @@ export class MoveToTarget extends BTNode {
     if (!transform || !motion || !target) return NodeState.FAILURE;
 
     // --- STUN LOGIC ---
-    // If stunned, skip velocity update to let physics impulse take over
     if (state && state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
@@ -84,9 +83,9 @@ export class SpinVisual extends BTNode {
   constructor(private speed: number) { super(); }
   
   tick(entity: Entity, context: AIContext): NodeState {
-      const render = entity.getComponent<RenderData>(ComponentType.Render);
-      if (render) {
-          render.visualRotation += context.delta * this.speed;
+      const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      if (visual) {
+          visual.rotation += context.delta * this.speed;
       }
       return NodeState.SUCCESS;
   }

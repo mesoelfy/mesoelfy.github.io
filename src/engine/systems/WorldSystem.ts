@@ -1,6 +1,7 @@
 import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
 import { useStore } from '@/engine/state/global/useStore'; 
-import { RenderData } from '@/engine/ecs/components/RenderData';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { Tag } from '@/engine/ecs/types';
@@ -33,11 +34,16 @@ export class WorldSystem implements IGameSystem {
       // Create if missing
       const world = this.registry.createEntity();
       world.addTag(Tag.WORLD);
-      world.addComponent(ComponentRegistry.create(ComponentType.Render, { 
-          r: 0, g: 0.2, b: 0, 
-          visualScale: 1.0, 
-          visualRotation: 0 
+      
+      // Add split render components
+      world.addComponent(ComponentRegistry.create(ComponentType.RenderModel, { 
+          r: 0, g: 0.2, b: 0
       }));
+      world.addComponent(ComponentRegistry.create(ComponentType.RenderTransform, {
+          scale: 1.0, 
+          rotation: 0 
+      }));
+
       this.registry.updateCache(world);
       this.worldEntityId = world.id;
   }
@@ -48,8 +54,10 @@ export class WorldSystem implements IGameSystem {
     const world = this.registry.getEntity(this.worldEntityId);
     if (!world || !world.active) return;
 
-    const render = world.getComponent<RenderData>(ComponentType.Render);
-    if (!render) return;
+    const model = world.getComponent<RenderModel>(ComponentType.RenderModel);
+    const transform = world.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    
+    if (!model || !transform) return;
 
     const integrity = this.panelSystem.systemIntegrity;
     const bootState = useStore.getState().bootState;
@@ -61,15 +69,15 @@ export class WorldSystem implements IGameSystem {
     else this.targetColor.copy(COL_SAFE);
 
     // 2. Smooth Lerp
-    this.currentColor.setRGB(render.r, render.g, render.b);
+    this.currentColor.setRGB(model.r, model.g, model.b);
     this.currentColor.lerp(this.targetColor, delta * 2.0);
     
-    render.r = this.currentColor.r;
-    render.g = this.currentColor.g;
-    render.b = this.currentColor.b;
+    model.r = this.currentColor.r;
+    model.g = this.currentColor.g;
+    model.b = this.currentColor.b;
     
     // 3. World Spin
-    render.visualRotation += 0.5 * delta; 
+    transform.rotation += 0.5 * delta; 
   }
 
   teardown(): void {}

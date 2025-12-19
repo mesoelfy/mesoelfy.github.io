@@ -9,7 +9,6 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
-// Map GeometryType to GeometryKey using Constants
 const GEO_MAP: Record<string, string> = {
     'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
     'CAPSULE': GEOMETRY_IDS.PRJ_CAPSULE,
@@ -29,7 +28,6 @@ export class EntitySpawner implements IEntitySpawner {
   public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
     if (!blueprint) {
-        console.warn('[EntitySpawner] Unknown archetype: ' + archetypeId);
         return this.registry.createEntity();
     }
 
@@ -46,8 +44,9 @@ export class EntitySpawner implements IEntitySpawner {
         e.addComponent(component);
     }
 
+    // Asset injection for RenderModel if not explicitly in components
     if (blueprint.assets) {
-        const render: any = e.getComponent(ComponentType.Render);
+        const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
             render.geometryId = blueprint.assets.geometry;
             render.materialId = blueprint.assets.material;
@@ -83,16 +82,23 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Render]: { 
-            visualScale: 1.0, 
+        
+        // Split Render Data
+        [ComponentType.RenderModel]: {
             geometryId: geoId,
             materialId: MATERIAL_IDS.PROJECTILE,
             r: color[0], g: color[1], b: color[2],
-            elasticity: 2.0, 
+        },
+        [ComponentType.RenderTransform]: {
+            scale: 1.0,
             baseScaleX: s[0],
             baseScaleY: s[1],
             baseScaleZ: s[2]
         },
+        [ComponentType.RenderEffect]: {
+            elasticity: 2.0 // Projectiles are stretchy
+        },
+        
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
