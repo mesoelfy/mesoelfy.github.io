@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
-import { addBarycentricCoordinates } from '@/engine/math/GeometryUtils';
+import { addBarycentricCoordinates, createHunterSpear } from '@/engine/math/GeometryUtils';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
@@ -27,9 +27,8 @@ export const registerAllAssets = () => {
 
   // --- GEOMETRY ---
 
-  // Async Hunter Placeholder
-  const hunterPlaceholder = addBarycentricCoordinates(new THREE.ConeGeometry(0.5, 2, 4));
-  AssetService.generateAsyncGeometry(GEOMETRY_IDS.HUNTER, GEOMETRY_IDS.HUNTER, hunterPlaceholder);
+  // Hunter (Now Synchronous)
+  AssetService.registerGenerator(GEOMETRY_IDS.HUNTER, () => createHunterSpear());
 
   // Enemies
   AssetService.registerGenerator(GEOMETRY_IDS.DRILLER, () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));

@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { GeometryKey, MaterialKey } from '@/engine/config/AssetKeys';
 
 export type AssetKey = GeometryKey | MaterialKey | string;
@@ -6,22 +5,9 @@ export type AssetKey = GeometryKey | MaterialKey | string;
 class AssetServiceController {
   private cache = new Map<string, any>();
   private generators = new Map<string, () => any>();
-  
-  private worker: Worker | null = null;
-  private pendingRequests = new Map<string, (data: any) => void>();
 
-  public init() {
-    if (typeof window !== 'undefined' && !this.worker) {
-        this.worker = new Worker(new URL('../../../engine/handlers/workers/GeometryWorker.ts', import.meta.url));
-        this.worker.onmessage = (e) => {
-            const { id, success, positions, barycentric } = e.data;
-            if (this.pendingRequests.has(id)) {
-                this.pendingRequests.get(id)!({ success, positions, barycentric });
-                this.pendingRequests.delete(id);
-            }
-        };
-    }
-  }
+  // Init is now a no-op, kept for API compatibility if needed
+  public init() {}
 
   public registerGenerator(key: AssetKey, generator: () => any) {
     this.generators.set(key, generator);
@@ -40,32 +26,6 @@ class AssetServiceController {
     const asset = generator();
     this.cache.set(key, asset);
     return asset as T;
-  }
-
-  public generateAsyncGeometry(key: GeometryKey, taskName: string, placeholderGeo: THREE.BufferGeometry) {
-    if (this.cache.has(key)) return; 
-
-    this.cache.set(key, placeholderGeo);
-
-    if (!this.worker) this.init();
-
-    if (this.worker) {
-        this.worker.postMessage({ id: key, task: taskName });
-        
-        this.pendingRequests.set(key, (data) => {
-            if (data.success) {
-                console.log('[AssetService] Worker finished: ' + key);
-                
-                placeholderGeo.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
-                placeholderGeo.setAttribute('barycentric', new THREE.BufferAttribute(data.barycentric, 3));
-                
-                placeholderGeo.computeVertexNormals();
-                placeholderGeo.computeBoundingSphere();
-                
-                placeholderGeo.attributes.position.needsUpdate = true;
-            }
-        });
-    }
   }
 }
 

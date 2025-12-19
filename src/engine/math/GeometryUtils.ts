@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 
 export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) => {
-  // Only convert if it's indexed to avoid Three.js console warnings
   const geometry = bufferGeometry.index ? bufferGeometry.toNonIndexed() : bufferGeometry.clone();
   
   const count = geometry.attributes.position.count;
@@ -28,34 +27,38 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) 
 export const createHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.2;
+  const length = 1.25; // Tuned value from Worker
   const wingWidth = 0.4;
   const wingThickness = 0.05;
 
+  const tipY = length / 2;
+  const baseY = -length / 2;
+
+  const rotateY = (x: number, y: number, z: number, rad: number) => {
+    return [
+      x * Math.cos(rad) - z * Math.sin(rad),
+      y,
+      x * Math.sin(rad) + z * Math.cos(rad)
+    ];
+  };
+
   for(let i=0; i<numWings; i++) {
       const angle = (i / numWings) * Math.PI * 2;
-      const tipY = length / 2;
-      const baseY = -length / 2;
+      
       const pTip = [0, tipY, 0];
       const pBaseOut = [wingWidth, baseY, 0];
       const pBaseInBack = [0, baseY, -wingThickness];
       const pBaseInFront = [0, baseY, wingThickness];
-      
-      const rotateY = (p: number[], rad: number) => [
-          p[0] * Math.cos(rad) - p[2] * Math.sin(rad),
-          p[1],
-          p[0] * Math.sin(rad) + p[2] * Math.cos(rad)
-      ];
 
-      let v1 = rotateY(pTip, angle);
-      let v2 = rotateY(pBaseOut, angle);
-      let v3 = rotateY(pBaseInFront, angle);
-      positions.push(...v1, ...v2, ...v3);
+      // Front Face
+      positions.push(...rotateY(pTip[0], pTip[1], pTip[2], angle));
+      positions.push(...rotateY(pBaseOut[0], pBaseOut[1], pBaseOut[2], angle));
+      positions.push(...rotateY(pBaseInFront[0], pBaseInFront[1], pBaseInFront[2], angle));
       
-      v1 = rotateY(pTip, angle);
-      v2 = rotateY(pBaseInBack, angle);
-      v3 = rotateY(pBaseOut, angle);
-      positions.push(...v1, ...v2, ...v3);
+      // Back Face
+      positions.push(...rotateY(pTip[0], pTip[1], pTip[2], angle));
+      positions.push(...rotateY(pBaseInBack[0], pBaseInBack[1], pBaseInBack[2], angle));
+      positions.push(...rotateY(pBaseOut[0], pBaseOut[1], pBaseOut[2], angle));
   }
   
   const geometry = new THREE.BufferGeometry();
