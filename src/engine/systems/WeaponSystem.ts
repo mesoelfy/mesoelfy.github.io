@@ -1,10 +1,11 @@
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IFastEventService } from '@/engine/interfaces';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderData } from '@/engine/ecs/components/RenderData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
@@ -18,6 +19,7 @@ export class WeaponSystem implements IGameSystem {
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
+    private fastEvents: IFastEventService,
     private config: typeof ConfigService
   ) {
     this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
@@ -55,8 +57,10 @@ export class WeaponSystem implements IGameSystem {
 
       const count = 360; const speed = 45; const damage = 100;
       
-      this.events.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_YELLOW', x: t.x, y: t.y });
-      this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
+      // Fast Events for FX
+      // EXPLOSION_YELLOW = 2
+      this.fastEvents.emit(FastEvents.SPAWN_FX, 2, t.x * 100, t.y * 100, 0);
+      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); // 1.0 amount
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -92,7 +96,13 @@ export class WeaponSystem implements IGameSystem {
         if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
     });
 
-    this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y });
+    // Audio via Fast Bus (Player Fire = 1)
+    // Pan calculation done in AudioDirector reading the x pos
+    this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
+    
+    // We still emit legacy event for things like Stats tracking if needed, but not for audio
+    // this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y });
+    
     this.lastFireTime = time;
   }
 

@@ -1,4 +1,4 @@
-import { IGameSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { noise } from '@/engine/math/Noise';
 import { useStore } from '@/engine/state/global/useStore';
@@ -18,7 +18,10 @@ export class ShakeSystem implements IGameSystem {
   
   private cleanupListeners: (() => void) | null = null;
 
-  constructor(private events: IGameEventService) {
+  constructor(
+      private events: IGameEventService,
+      private fastEvents: IFastEventService
+  ) {
     const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
     const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const amount = p.damage > 10 ? 0.45 : 0.2;

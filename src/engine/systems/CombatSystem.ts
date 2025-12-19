@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
@@ -8,11 +8,13 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents, REVERSE_FX_MAP, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService,
+    private fastEvents: IFastEventService,
     private audio: IAudioService
   ) {}
 
@@ -37,20 +39,33 @@ export class CombatSystem implements IGameSystem {
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
-              this.events.emit(GameEvents.SPAWN_FX, { type, x, y });
+              // FAST PATH: Zero-Alloc
+              const typeId = REVERSE_FX_MAP[type];
+              if (typeId) {
+                  this.fastEvents.emit(FastEvents.SPAWN_FX, typeId, x * 100, y * 100, 0);
+              }
           },
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Convert RGB normalized (0-1) to Hex String
+              // Keep object allocation for now as Color hex string logic is complex to migrate to ints
+              // Or could use a specialized event.
+              // For now, we fallback to GameEvents for impact (less frequent than bullets)
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
           playAudio: (key) => this.audio.playSound(key),
           playSpatialAudio: (key, x) => {
-              this.events.emit(GameEvents.PLAY_SOUND, { key: key.toLowerCase(), x });
+              // FAST PATH
+              const keyId = REVERSE_SOUND_MAP[key.toLowerCase()];
+              if (keyId) {
+                  this.fastEvents.emit(FastEvents.PLAY_SOUND, keyId, (x || 0) * 100);
+              } else {
+                  // Fallback for non-mapped sounds
+                  this.events.emit(GameEvents.PLAY_SOUND, { key: key.toLowerCase(), x });
+              }
           },
           addTrauma: (amount) => {
-              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
+              this.fastEvents.emit(FastEvents.CAM_SHAKE, amount * 100);
           },
           flashEntity: (id) => {
               this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
@@ -80,7 +95,7 @@ export class CombatSystem implements IGameSystem {
       
       if (fx && transform) {
           let finalFX = fx;
-          let angleToUse = impactAngle || 0;
+          const angleToUse = impactAngle || 0;
           
           if (identity?.variant === EnemyTypes.HUNTER) {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
@@ -92,7 +107,10 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          this.events.emit(GameEvents.SPAWN_FX, { type: finalFX, x: transform.x, y: transform.y, angle: angleToUse });
+          const fxId = REVERSE_FX_MAP[finalFX];
+          if (fxId) {
+              this.fastEvents.emit(FastEvents.SPAWN_FX, fxId, transform.x * 100, transform.y * 100, angleToUse * 100);
+          }
       }
   }
 

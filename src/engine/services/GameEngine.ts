@@ -1,4 +1,4 @@
-import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem, IGameStateSystem, SystemPhase } from '@/engine/interfaces';
+import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem, IGameStateSystem, IFastEventService, SystemPhase } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -19,6 +19,7 @@ export class GameEngineCore implements IGameSystem {
   private panelSystem: IPanelSystem | null = null;
   private gameSystem: IGameStateSystem | null = null;
   private timeSystem: TimeSystem | null = null;
+  private fastEventBus: IFastEventService | null = null;
 
   constructor(registry: IEntityRegistry) {
       this.registry = registry;
@@ -28,6 +29,10 @@ export class GameEngineCore implements IGameSystem {
       this.panelSystem = panel;
       this.gameSystem = game;
       this.timeSystem = time;
+  }
+
+  public injectFastEventBus(bus: IFastEventService) {
+      this.fastEventBus = bus;
   }
 
   setup(locator: IServiceLocator): void {}
@@ -75,6 +80,12 @@ export class GameEngineCore implements IGameSystem {
     const fixedStep = WorldConfig.time.fixedDelta;
 
     while (this.accumulator >= fixedStep) {
+        // Clear Fast Event Buffer at START of simulation step
+        // This ensures events generated in previous step (or render) are gone?
+        // Actually, we want to clear at end of frame or start of frame.
+        // If we clear here, we clear accumulated events from previous ticks?
+        // Let's clear at the very end of the update loop.
+        
         // Iterate Phases 0 to 5
         for (let phase = 0; phase < this.systems.length; phase++) {
             const phaseSystems = this.systems[phase];
@@ -89,6 +100,11 @@ export class GameEngineCore implements IGameSystem {
         this.simulationTime += fixedStep;
         this.accumulator -= fixedStep;
     }
+    
+    // Clear Fast Bus after all systems (including Render) have run
+    if (this.fastEventBus) {
+        this.fastEventBus.clear();
+    }
   }
 
   teardown(): void {
@@ -101,6 +117,7 @@ export class GameEngineCore implements IGameSystem {
     this.panelSystem = null;
     this.gameSystem = null;
     this.timeSystem = null;
+    this.fastEventBus = null;
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {

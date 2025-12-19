@@ -25,6 +25,7 @@ export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
   getGameEventBus(): IGameEventService;
+  getFastEventBus(): IFastEventService; // NEW
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
@@ -33,6 +34,13 @@ export interface IServiceLocator {
   getParticleSystem(): IParticleSystem;
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
+}
+
+export interface IFastEventService {
+  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
+  process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
+  clear(): void;
+  getCursor(): number;
 }
 
 export interface IGameEventService {

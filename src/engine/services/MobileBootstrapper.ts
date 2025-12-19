@@ -8,6 +8,7 @@ import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { PanelRegistrySystem } from '@/engine/systems/PanelRegistrySystem';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
+import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { SystemPhase } from '@/engine/interfaces';
 
@@ -33,8 +34,9 @@ import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
 import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 
-import { IGameSystem, ICombatSystem, IGameEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents } from '@/engine/signals/FastEventBus';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -43,6 +45,7 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
     constructor(
         private registry: IEntityRegistry,
         private events: IGameEventService,
+        private fastEvents: IFastEventService,
         private audio: IAudioService
     ) {
         this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
@@ -60,7 +63,7 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private kill(entity: Entity) {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
-            this.events.emit(GameEvents.SPAWN_FX, { type: 'EXPLOSION_PURPLE', x: t.x, y: t.y });
+            this.fastEvents.emit(FastEvents.SPAWN_FX, 1, t.x * 100, t.y * 100, 0); // 1 = EXPLOSION_PURPLE
             this.audio.playSound('fx_impact_light');
         }
         this.registry.destroyEntity(entity.id);
@@ -70,6 +73,7 @@ class MobileCombatSystem implements IGameSystem, ICombatSystem {
 export const MobileBootstrapper = () => {
   const registry = new EntityRegistry();
   const eventBus = new GameEventService();
+  const fastEventBus = new FastEventBusImpl();
   const audioService = new AudioServiceImpl();
   const inputSystem = new InputSystem();
   
@@ -79,6 +83,7 @@ export const MobileBootstrapper = () => {
   ServiceLocator.reset();
   ServiceLocator.register('EntityRegistry', registry);
   ServiceLocator.register('GameEventService', eventBus);
+  ServiceLocator.register('FastEventService', fastEventBus);
   ServiceLocator.register('AudioService', audioService);
   ServiceLocator.register('InputSystem', inputSystem);
   ServiceLocator.register('EntitySpawner', spawner);
@@ -98,25 +103,26 @@ export const MobileBootstrapper = () => {
   );
   
   const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus);
-  const audioDirector = new AudioDirector(panelSystem, eventBus, audioService); // Remove fastEventBus from constructor if not needed, updating AudioDirector below
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus);
+  const shakeSystem = new ShakeSystem(eventBus, fastEventBus);
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
   
-  const mobileCombatSystem = new MobileCombatSystem(registry, eventBus, audioService);
+  const mobileCombatSystem = new MobileCombatSystem(registry, eventBus, fastEventBus, audioService);
   const projectileSystem = new ProjectileSystem(registry);
   
   const targetingSystem = new TargetingSystem(registry, panelSystem);
   const orbitalSystem = new OrbitalSystem(registry);
   const guidanceSystem = new GuidanceSystem(registry);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
+  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus, fastEventBus);
   
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const structureSystem = new StructureSystem(panelSystem);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
   const waveSystem = new MobileWaveSystem(spawner);
 
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
+  engine.injectFastEventBus(fastEventBus);
 
   const systemMap = {
     TimeSystem: timeSystem,

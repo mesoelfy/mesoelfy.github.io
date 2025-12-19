@@ -1,5 +1,6 @@
-import { IGameSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { FastEvents, SOUND_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
 
@@ -8,15 +9,28 @@ export class AudioDirector implements IGameSystem {
   constructor(
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
+    private fastEvents: IFastEventService,
     private audio: IAudioService
   ) {
     this.setupEventListeners();
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+    // Poll the Ring Buffer
+    this.fastEvents.process((id, a1, a2) => {
+        if (id === FastEvents.PLAY_SOUND) {
+            const key = SOUND_ID_MAP[a1];
+            if (key) {
+                // a2 is x * 100
+                const pan = this.calculatePan(a2 / 100);
+                this.audio.playSound(key as AudioKey, pan);
+            }
+        }
+    });
+  }
 
   private setupEventListeners() {
-    // 1. Unified Sound Event
+    // 1. Legacy/Slow Path (Object Events)
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);

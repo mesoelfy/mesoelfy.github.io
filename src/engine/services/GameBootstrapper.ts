@@ -11,6 +11,7 @@ import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
+import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { SystemPhase } from '@/engine/interfaces';
 
@@ -41,21 +42,22 @@ import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 
 export const GameBootstrapper = () => {
-  // 1. Core Services (The Backbone)
-  // We explicitly create new instances. No lazy fetching.
+  // 1. Core Services
   const registry = new EntityRegistry();
   const eventBus = new GameEventService();
-  const audioService = new AudioServiceImpl(); // Note: Actual init() happens via UI trigger, but instance exists.
-  const inputSystem = new InputSystem(); // Acts as both System and Service
+  const fastEventBus = new FastEventBusImpl(); // NEW: Ring Buffer Bus
+  const audioService = new AudioServiceImpl(); 
+  const inputSystem = new InputSystem(); 
   
   // 2. Data Services
   const spawner = new EntitySpawner(registry);
   const engine = new GameEngineCore(registry);
 
-  // 3. Global Registration (For React UI Access)
-  ServiceLocator.reset(); // Clear old references
+  // 3. Global Registration
+  ServiceLocator.reset(); 
   ServiceLocator.register('EntityRegistry', registry);
   ServiceLocator.register('GameEventService', eventBus);
+  ServiceLocator.register('FastEventService', fastEventBus); // NEW
   ServiceLocator.register('AudioService', audioService);
   ServiceLocator.register('InputSystem', inputSystem);
   ServiceLocator.register('EntitySpawner', spawner);
@@ -65,13 +67,12 @@ export const GameBootstrapper = () => {
   registerAllBehaviors();
   registerAllAssets();
 
-  // 5. System Instantiation (Dependency Injection)
-  // Order matters less here, but logical grouping helps readability.
+  // 5. System Instantiation
   
   const timeSystem = new TimeSystem();
   const physicsSystem = new PhysicsSystem(registry);
   const particleSystem = new ParticleSystem();
-  const shakeSystem = new ShakeSystem(eventBus);
+  const shakeSystem = new ShakeSystem(eventBus, fastEventBus); // Injected FastBus
   
   const panelSystem = new PanelRegistrySystem(eventBus, audioService); 
   const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
@@ -81,15 +82,15 @@ export const GameBootstrapper = () => {
   const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus);
   const structureSystem = new StructureSystem(panelSystem);
   
-  const combatSystem = new CombatSystem(registry, eventBus, audioService);
+  const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService); // Injected FastBus
   const projectileSystem = new ProjectileSystem(registry);
-  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+  const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService); // Injected FastBus
   
-  // Directors (Glue Logic)
-  const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
-  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus);
+  // Directors
+  const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService); // Injected FastBus
+  const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus); // Injected FastBus
   const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
+  const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus); // Injected FastBus
   
   const waveSystem = new WaveSystem(spawner, panelSystem);
   const targetingSystem = new TargetingSystem(registry, panelSystem);
@@ -97,13 +98,14 @@ export const GameBootstrapper = () => {
   const guidanceSystem = new GuidanceSystem(registry);
   const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
   const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
-  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
+  const lifeCycleSystem = new LifeCycleSystem(registry, eventBus, fastEventBus);
   const atmosphereSystem = new AtmosphereSystem(panelSystem, registry);
 
-  // 6. Engine Injection (Systems that engine needs direct ref to)
+  // 6. Engine Injection
   engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
+  engine.injectFastEventBus(fastEventBus); // NEW: Engine clears it at end of frame
 
-  // 7. Locator Registration (For Debug/UI tools)
+  // 7. Locator Registration
   const systemMap = {
     TimeSystem: timeSystem,
     PhysicsSystem: physicsSystem,
@@ -121,15 +123,13 @@ export const GameBootstrapper = () => {
   };
   Object.entries(systemMap).forEach(([id, sys]) => ServiceLocator.registerSystem(id, sys));
 
-  // 8. Pipeline Construction (Execution Order)
+  // 8. Pipeline Construction
   
-  // INPUT Phase
   engine.registerSystem(timeSystem, SystemPhase.INPUT);
   engine.registerSystem(inputSystem, SystemPhase.INPUT); 
   engine.registerSystem(interactionSystem, SystemPhase.INPUT);
   engine.registerSystem(movementSystem, SystemPhase.INPUT);
   
-  // LOGIC Phase
   engine.registerSystem(panelSystem, SystemPhase.LOGIC);
   engine.registerSystem(gameStateSystem, SystemPhase.LOGIC);
   engine.registerSystem(targetingSystem, SystemPhase.LOGIC);
@@ -138,22 +138,18 @@ export const GameBootstrapper = () => {
   engine.registerSystem(behaviorSystem, SystemPhase.LOGIC);
   engine.registerSystem(weaponSystem, SystemPhase.LOGIC);
   
-  // PHYSICS Phase
   engine.registerSystem(physicsSystem, SystemPhase.PHYSICS);
   engine.registerSystem(orbitalSystem, SystemPhase.PHYSICS);
   engine.registerSystem(guidanceSystem, SystemPhase.PHYSICS);
   engine.registerSystem(projectileSystem, SystemPhase.PHYSICS);
   
-  // COLLISION Phase
   engine.registerSystem(collisionSystem, SystemPhase.COLLISION);
   engine.registerSystem(combatSystem, SystemPhase.COLLISION);
   
-  // STATE Phase
   engine.registerSystem(healthSystem, SystemPhase.STATE);
   engine.registerSystem(progressionSystem, SystemPhase.STATE);
   engine.registerSystem(lifeCycleSystem, SystemPhase.STATE);
   
-  // RENDER Phase
   engine.registerSystem(renderSystem, SystemPhase.RENDER);
   engine.registerSystem(particleSystem, SystemPhase.RENDER);
   engine.registerSystem(vfxSystem, SystemPhase.RENDER);
@@ -161,11 +157,9 @@ export const GameBootstrapper = () => {
   engine.registerSystem(atmosphereSystem, SystemPhase.RENDER);
   engine.registerSystem(audioDirector, SystemPhase.RENDER);
 
-  // 9. Final Setup
   engine.setup(ServiceLocator);
   spawner.spawnPlayer();
 
-  // Create World Entity
   const world = registry.createEntity();
   world.addTag(Tag.WORLD);
   world.addComponent(ComponentRegistry.create(ComponentType.Render, { r: 0, g: 0.2, b: 0, visualScale: 1.0, visualRotation: 0 }));
