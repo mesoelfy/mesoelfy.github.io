@@ -11,6 +11,7 @@ import { MotionData } from '@/engine/ecs/components/MotionData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
@@ -34,36 +35,23 @@ const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
 };
 
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
-    if (overrideFX) {
-        ctx.spawnFX(overrideFX as VFXKey, x, y);
-        return;
-    }
-
+    if (overrideFX) { ctx.spawnFX(overrideFX as VFXKey, x, y); return; }
     const model = getModel(source);
     if (model) {
         const maxC = Math.max(model.r, model.g, model.b, 1.0); 
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
-    } else {
-        ctx.spawnFX('IMPACT_WHITE', x, y);
-    }
+    } else { ctx.spawnFX('IMPACT_WHITE', x, y); }
 };
 
 const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, force: number) => {
-    const motion = getMotion(entity);
-    const pos = getPos(entity);
-    const ai = getAI(entity);
-    const effect = getEffect(entity);
-
+    const motion = getMotion(entity); const pos = getPos(entity);
+    const ai = getAI(entity); const effect = getEffect(entity);
     if (motion && pos && sourcePos) {
-        const dx = pos.x - sourcePos.x;
-        const dy = pos.y - sourcePos.y;
+        const dx = pos.x - sourcePos.x; const dy = pos.y - sourcePos.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        
         if (dist > 0.001) {
-            motion.vx += (dx / dist) * force;
-            motion.vy += (dy / dist) * force;
-            if (ai) ai.stunTimer = 0.15;
-            if (effect) effect.shudder = 1.0;
+            motion.vx += (dx / dist) * force; motion.vy += (dy / dist) * force;
+            if (ai) ai.stunTimer = 0.15; if (effect) effect.shudder = 1.0;
         }
     }
 };
@@ -71,42 +59,28 @@ const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, fo
 export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   if (pId?.variant === EnemyTypes.DAEMON) { resolveDaemonCollision(player, enemy, ctx); return; }
-
-  const combat = getCombat(enemy);
-  const pos = getPos(enemy);
-  const pPos = getPos(player);
+  const combat = getCombat(enemy); const pos = getPos(enemy); const pPos = getPos(player);
   const damage = combat ? combat.damage : 1;
-
   let sprayAngle = 0;
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
-
-  ctx.damagePlayer(damage);
-  ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
-  
+  ctx.damagePlayer(damage); ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
   const variant = getId(enemy)?.variant || 'UNKNOWN';
   ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
-  
   ctx.playSpatialAudio(damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light', pos ? pos.x : 0);
 };
 
 export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatContext) => {
   const pId = getId(player);
   if (pId?.variant === EnemyTypes.DAEMON) { resolveDaemonCollision(player, bullet, ctx, 1); return; }
-
-  const combat = getCombat(bullet);
-  const pos = getPos(bullet);
+  const combat = getCombat(bullet); const pos = getPos(bullet);
   const damage = combat ? combat.damage : 1;
-
-  ctx.damagePlayer(damage);
-  ctx.addTrauma(0.1);
-
+  ctx.damagePlayer(damage); ctx.addTrauma(0.1);
   ctx.destroyEntity(bullet, 'IMPACT_RED'); 
   ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
 };
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
-  const bPos = getPos(bullet);
-  applyKnockback(enemy, bPos, 3.0);
+  const bPos = getPos(bullet); applyKnockback(enemy, bPos, 3.0);
   handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 
@@ -115,15 +89,11 @@ export const handleBulletClash = (bulletA: Entity, bulletB: Entity, ctx: CombatC
 };
 
 export const handleEnemyPanelHit = (enemy: Entity, panel: Entity, ctx: CombatContext) => {
-    const id = getId(enemy);
-    const pId = getId(panel); 
-    
+    const id = getId(enemy); const pId = getId(panel); 
     if (id?.variant === EnemyTypes.KAMIKAZE && pId) {
-        const combat = getCombat(enemy);
-        const dmg = combat ? combat.damage : 1;
+        const combat = getCombat(enemy); const dmg = combat ? combat.damage : 1;
         const pos = getPos(enemy);
-        
-        ctx.damagePanel(pId.variant, dmg * 5, pos?.x, pos?.y); 
+        ctx.damagePanel(pId.variant as PanelId, dmg * 5, { source: pos ? { x: pos.x, y: pos.y } : undefined }); 
         ctx.destroyEntity(enemy, 'EXPLOSION_RED');
         ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
         ctx.addTrauma(0.3);
@@ -136,7 +106,6 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
   const pos = getPos(attacker);
   const incomingDamage = fixedDamage || (getCombat(attacker)?.damage || 1);
   const shield = state.data.shieldHP || 0;
-
   if (state.current === 'CHARGING' || state.current === 'READY') {
       if (shield > 0) {
           state.data.shieldHP = Math.max(0, shield - incomingDamage);
@@ -153,30 +122,14 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
 }
 
 function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: string, sprayAngle?: number) {
-  const hpA = getHp(a); const hpB = getHp(b);
-  const cA = getCombat(a); const cB = getCombat(b);
+  const hpA = getHp(a); const hpB = getHp(b); const cA = getCombat(a); const cB = getCombat(b);
   const dmgA = cA ? cA.damage : 1; const dmgB = cB ? cB.damage : 1;
-
-  if (hpA) {
-      hpA.current = Math.max(0, hpA.current - dmgB);
-      if (hpA.current > 0) ctx.flashEntity(a.id as number); 
-  }
-  if (hpB) {
-      hpB.current = Math.max(0, hpB.current - dmgA);
-      if (hpB.current > 0) ctx.flashEntity(b.id as number); 
-  }
-
-  const posA = getPos(a);
-  const posB = getPos(b);
-  
-  if (posA) {
-      const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0;
-      resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX);
-  }
-
+  if (hpA) { hpA.current = Math.max(0, hpA.current - dmgB); if (hpA.current > 0) ctx.flashEntity(a.id as number); }
+  if (hpB) { hpB.current = Math.max(0, hpB.current - dmgA); if (hpB.current > 0) ctx.flashEntity(b.id as number); }
+  const posA = getPos(a); const posB = getPos(b);
+  if (posA) { const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0; resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX); }
   let soundKey = '';
   if (hpA && hpA.current <= 0) { ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
   if (hpB && hpB.current <= 0) { ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
-  
   if (soundKey) ctx.playSpatialAudio(soundKey, posA ? posA.x : 0);
 }

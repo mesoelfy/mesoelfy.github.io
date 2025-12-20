@@ -1,6 +1,6 @@
 import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
-import { Tag } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
@@ -57,7 +57,16 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage: number = 1, projectileId: string = 'PLAYER_STANDARD', ownerId?: number): Entity {
+  public spawnBullet(
+      x: number, y: number, 
+      vx: number, vy: number, 
+      faction: Faction, 
+      life: number, 
+      damage: number = 1, 
+      projectileId: string = 'PLAYER_STANDARD', 
+      ownerId?: number
+  ): Entity {
+    const isEnemy = faction === Faction.HOSTILE;
     const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];

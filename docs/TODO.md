@@ -665,3 +665,4 @@ The sounds aren't playing in audio_matrix.
 Have a pop-up like wikipedia does asking for money $2.75 / $4.20 / $6.66 / $7.77 / $11.11
 
 sniffer is broken
+daemon ally persists after game over state

@@ -9,7 +9,7 @@ const DAEMON_DEF: NodeDef = {
     {
         type: 'Parallel',
         children: [
-            { type: 'OrbitControl', args: [true] },
+            { type: 'OrbitControl', args: ['ACTIVE'] },
             { type: 'DaemonAim' },
             {
                 type: 'MemSequence',

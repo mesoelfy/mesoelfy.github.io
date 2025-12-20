@@ -53,7 +53,6 @@ export class WaveSystem implements IGameSystem {
     if (!this.scenarioInit) {
         const panels = this.panelSystem.getAllPanels();
         const ready = panels.some(p => p.width > 0);
-        
         if (ready) {
             this.runScenario(panels);
             this.scenarioInit = true;
@@ -61,23 +60,19 @@ export class WaveSystem implements IGameSystem {
     }
 
     this.waveTime += delta;
-    
     if (!useStore.getState().debugFlags.peaceMode) {
         this.checkTimeline();
         this.processQueue(time);
     }
-
     this.handleBreaches(delta);
   }
 
   private triggerStressTest() {
       if (this.hasStressTested) return;
       this.hasStressTested = true;
-
       const { width, height } = ViewportHelper.viewport;
       const types = [EnemyTypes.DRILLER, EnemyTypes.HUNTER, EnemyTypes.KAMIKAZE];
       const countPerType = 100;
-
       types.forEach(type => {
           for(let i = 0; i < countPerType; i++) {
               const x = (Math.random() - 0.5) * width * 1.5;
@@ -88,18 +83,14 @@ export class WaveSystem implements IGameSystem {
   }
 
   private runScenario(panels: any[]) {
-      this.panelSystem.damagePanel(PanelId.ART, 9999, true); 
-      this.panelSystem.damagePanel(PanelId.VIDEO, 85, true); 
-      
+      this.panelSystem.damagePanel(PanelId.ART, 9999, { silent: true }); 
+      this.panelSystem.damagePanel(PanelId.VIDEO, 85, { silent: true }); 
       const videoPanel = panels.find(p => p.id === PanelId.VIDEO);
-      if (videoPanel) {
-          this.spawnDrillerOn(videoPanel, 3);
-      }
-
+      if (videoPanel) this.spawnDrillerOn(videoPanel, 3);
       const targets = panels.filter(p => p.id !== PanelId.ART && p.id !== PanelId.VIDEO);
       targets.forEach(p => {
           const dmg = 20 + Math.floor(Math.random() * 30);
-          this.panelSystem.damagePanel(p.id, dmg, true); 
+          this.panelSystem.damagePanel(p.id, dmg, { silent: true }); 
           const count = 1 + Math.floor(Math.random() * 3);
           this.spawnDrillerOn(p, count);
       });
@@ -108,56 +99,21 @@ export class WaveSystem implements IGameSystem {
   private spawnDrillerOn(panel: any, count: number) {
       for(let i=0; i<count; i++) {
           const side = Math.floor(Math.random() * 4);
-          let edgeX = 0, edgeY = 0; 
-          let normalX = 0, normalY = 0; 
-          
-          const halfW = panel.width / 2;
-          const halfH = panel.height / 2;
-          
+          let edgeX = 0, edgeY = 0; let normalX = 0, normalY = 0; 
+          const halfW = panel.width / 2; const halfH = panel.height / 2;
           switch(side) {
-              case 0: // Top
-                  edgeX = (Math.random() - 0.5) * panel.width;
-                  edgeY = halfH;
-                  normalX = 0; normalY = 1;
-                  break;
-              case 1: // Bottom
-                  edgeX = (Math.random() - 0.5) * panel.width;
-                  edgeY = -halfH;
-                  normalX = 0; normalY = -1;
-                  break;
-              case 2: // Left
-                  edgeX = -halfW;
-                  edgeY = (Math.random() - 0.5) * panel.height;
-                  normalX = -1; normalY = 0;
-                  break;
-              case 3: // Right
-                  edgeX = halfW;
-                  edgeY = (Math.random() - 0.5) * panel.height;
-                  normalX = 1; normalY = 0;
-                  break;
+              case 0: edgeX = (Math.random() - 0.5) * panel.width; edgeY = halfH; normalX = 0; normalY = 1; break;
+              case 1: edgeX = (Math.random() - 0.5) * panel.width; edgeY = -halfH; normalX = 0; normalY = -1; break;
+              case 2: edgeX = -halfW; edgeY = (Math.random() - 0.5) * panel.height; normalX = -1; normalY = 0; break;
+              case 3: edgeX = halfW; edgeY = (Math.random() - 0.5) * panel.height; normalX = 1; normalY = 0; break;
           }
-
           const spawnX = panel.x + edgeX + (normalX * DRILLER_OFFSET);
           const spawnY = panel.y + edgeY + (normalY * DRILLER_OFFSET);
           const angle = Math.atan2(-normalY, -normalX);
-
           this.spawner.spawn(EnemyTypes.DRILLER, {
-              [ComponentType.Transform]: { 
-                  x: spawnX, 
-                  y: spawnY, 
-                  scale: 1.0, 
-                  rotation: angle 
-              },
-              [ComponentType.State]: { 
-                  current: 'ACTIVE',
-                  timers: { 
-                      spawn: 0,
-                      drillAudio: Math.random() * 0.2 
-                  } 
-              },
-              [ComponentType.RenderTransform]: { 
-                  scale: 1.0 
-              }
+              [ComponentType.Transform]: { x: spawnX, y: spawnY, scale: 1.0, rotation: angle },
+              [ComponentType.State]: { current: 'ACTIVE', timers: { spawn: 0, drillAudio: Math.random() * 0.2 } },
+              [ComponentType.RenderTransform]: { scale: 1.0 }
           });
       }
   }
@@ -165,20 +121,12 @@ export class WaveSystem implements IGameSystem {
   private handleBreaches(delta: number) {
       const flags = useStore.getState().debugFlags;
       if (flags.panelGodMode || flags.peaceMode) return;
-
       const allPanels = this.panelSystem.getAllPanels();
       const deadPanels = allPanels.filter(p => p.isDestroyed && p.width > 0);
-      
       if (deadPanels.length === 0) return;
-
       const enemiesPerSecondPerPanel = 0.2 + (this.waveTime * 0.005);
       const spawnChance = enemiesPerSecondPerPanel * delta;
-
-      for (const p of deadPanels) {
-          if (Math.random() < spawnChance) {
-              this.spawnBreachEnemy(p);
-          }
-      }
+      for (const p of deadPanels) { if (Math.random() < spawnChance) this.spawnBreachEnemy(p); }
   }
 
   private spawnBreachEnemy(p: any) {
@@ -186,54 +134,32 @@ export class WaveSystem implements IGameSystem {
       let type = EnemyTypes.DRILLER;
       if (rand > 0.85) type = EnemyTypes.HUNTER;
       else if (rand > 0.60) type = EnemyTypes.KAMIKAZE;
-
-      const safeW = p.width * 0.7; 
-      const safeH = p.height * 0.7;
-      const offsetX = (Math.random() - 0.5) * safeW;
-      const offsetY = (Math.random() - 0.5) * safeH;
-      
+      const safeW = p.width * 0.7; const safeH = p.height * 0.7;
+      const offsetX = (Math.random() - 0.5) * safeW; const offsetY = (Math.random() - 0.5) * safeH;
       this.spawner.spawnEnemy(type, p.x + offsetX, p.y + offsetY);
   }
 
   private checkTimeline() {
-    if (this.currentWaveIndex >= this.timeline.length) {
-        this.waveTime = 0;
-        this.currentWaveIndex = 0;
-        this.loopCount++;
-    }
-
+    if (this.currentWaveIndex >= this.timeline.length) { this.waveTime = 0; this.currentWaveIndex = 0; this.loopCount++; }
     const nextWave = this.timeline[this.currentWaveIndex];
-    if (nextWave && this.waveTime >= nextWave.at) {
-        this.queueSpawns(nextWave);
-        this.currentWaveIndex++;
-    }
+    if (nextWave && this.waveTime >= nextWave.at) { this.queueSpawns(nextWave); this.currentWaveIndex++; }
   }
 
   private queueSpawns(wave: WaveDef) {
     const count = wave.count + (this.loopCount * 2);
-    for (let i = 0; i < count; i++) {
-        this.spawnQueue.push({
-            type: wave.type,
-            time: this.waveTime + (i * wave.interval)
-        });
-    }
+    for (let i = 0; i < count; i++) { this.spawnQueue.push({ type: wave.type, time: this.waveTime + (i * wave.interval) }); }
   }
 
   private processQueue(currentTime: number) {
     for (let i = this.spawnQueue.length - 1; i >= 0; i--) {
         const spawn = this.spawnQueue[i];
         if (this.waveTime >= spawn.time) {
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 25; 
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            this.spawner.spawnEnemy(spawn.type, x, y);
-            this.spawnQueue.splice(i, 1);
+            const angle = Math.random() * Math.PI * 2; const radius = 25; 
+            const x = Math.cos(angle) * radius; const y = Math.sin(angle) * radius;
+            this.spawner.spawnEnemy(spawn.type, x, y); this.spawnQueue.splice(i, 1);
         }
     }
   }
 
-  teardown(): void {
-    this.reset();
-  }
+  teardown(): void { this.reset(); }
 }

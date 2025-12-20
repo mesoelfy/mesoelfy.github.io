@@ -3,7 +3,7 @@ import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { QueryDef } from './ecs/Query';
-import { Tag } from './ecs/types';
+import { Tag, Faction } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -91,7 +91,15 @@ export interface IEntitySpawner {
   spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
   spawnEnemy(type: string, x: number, y: number): Entity;
-  spawnBullet(x: number, y: number, vx: number, vy: number, isEnemy: boolean, life: number, damage?: number, projectileId?: string, ownerId?: number): Entity;
+  spawnBullet(
+      x: number, y: number, 
+      vx: number, vy: number, 
+      faction: Faction, 
+      life: number, 
+      damage?: number, 
+      projectileId?: string, 
+      ownerId?: number
+  ): Entity;
   spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
 }
 
@@ -137,13 +145,18 @@ export interface IInteractionSystem extends IGameSystem {
   hoveringPanelId: PanelId | null;
 }
 
+export interface DamageOptions {
+    silent?: boolean;
+    source?: { x: number; y: number };
+}
+
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
   register(id: PanelId, element: HTMLElement): void;
   unregister(id: PanelId): void;
   refreshAll(): void;
   refreshSingle(id: PanelId): void;
-  damagePanel(id: PanelId, amount: number, silent?: boolean, sourceX?: number, sourceY?: number): void;
+  damagePanel(id: PanelId, amount: number, options?: DamageOptions): void;
   healPanel(id: PanelId, amount: number, sourceX?: number): void;
   decayPanel(id: PanelId, amount: number): void;
   destroyAll(): void;

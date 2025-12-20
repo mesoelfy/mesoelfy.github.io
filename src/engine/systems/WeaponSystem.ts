@@ -1,5 +1,5 @@
 import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IFastEventService } from '@/engine/interfaces';
-import { Tag } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
@@ -68,7 +68,7 @@ export class WeaponSystem implements IGameSystem {
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 3.0, damage, 'PLAYER_PURGE');
+          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, Faction.FRIENDLY, 3.0, damage, 'PLAYER_PURGE');
       }
   }
 
@@ -92,7 +92,7 @@ export class WeaponSystem implements IGameSystem {
     const shots = calculatePlayerShots({ x: pPos.x, y: pPos.y }, { x: tPos.x, y: tPos.y }, upgrades);
 
     shots.forEach(shot => {
-        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, false, shot.life, shot.damage, shot.configId);
+        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, Faction.FRIENDLY, shot.life, shot.damage, shot.configId);
         if (pRender) {
             const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }

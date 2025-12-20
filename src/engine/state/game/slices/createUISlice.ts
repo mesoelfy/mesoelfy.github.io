@@ -5,6 +5,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { GameStream } from '@/engine/state/GameStream';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { DamageOptions } from '@/engine/interfaces';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -18,7 +19,7 @@ export interface UISlice {
   setInteractionTarget: (id: PanelId | null) => void;
   
   healPanel: (id: PanelId, amount: number, sourceX?: number) => void;
-  damagePanel: (id: PanelId, amount: number, silent?: boolean, sourceX?: number, sourceY?: number) => void;
+  damagePanel: (id: PanelId, amount: number, options?: DamageOptions) => void;
   decayPanel: (id: PanelId, amount: number) => void;
   restoreAllPanels: () => number;
   destroyAllPanels: () => void;
@@ -102,10 +103,13 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       });
   },
 
-  damagePanel: (id, amount, silent = false, sourceX, sourceY) => {
+  damagePanel: (id, amount, options) => {
       const state = get();
       const panel = state.panels[id];
       if (!panel || panel.isDestroyed) return;
+
+      const silent = options?.silent ?? false;
+      const source = options?.source;
 
       let newHealth = Math.max(0, panel.health - amount);
       let newDestroyed = panel.isDestroyed;
@@ -119,7 +123,8 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           }
       } else if (!silent) {
           GameEventBus.emit(GameEvents.PANEL_DAMAGED, { 
-              id, amount, currentHealth: newHealth, sourceX, sourceY 
+              id, amount, currentHealth: newHealth, 
+              sourceX: source?.x, sourceY: source?.y 
           });
       }
 
@@ -149,9 +154,9 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       const nextPanels = { ...state.panels };
 
       for (const key in nextPanels) {
+          const pid = key as PanelId;
           const p = nextPanels[key];
           if (p.isDestroyed) {
-              const pid = key as PanelId;
               nextPanels[key] = { ...p, isDestroyed: false, health: MAX_PANEL_HEALTH * 0.3 };
               GameEventBus.emit(GameEvents.PANEL_RESTORED, { id: pid });
               restoredCount++;

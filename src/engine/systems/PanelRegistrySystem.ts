@@ -1,4 +1,4 @@
-import { IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IPanelSystem, IGameEventService, IAudioService, DamageOptions } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { WorldRect, ViewportHelper } from '@/engine/math/ViewportHelper';
 import { useGameStore } from '@/engine/state/game/useGameStore';
@@ -8,7 +8,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { CollisionLayers, PhysicsConfig } from '@/engine/config/PhysicsConfig';
+import { CollisionLayers } from '@/engine/config/PhysicsConfig';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -129,9 +129,9 @@ export class PanelRegistrySystem implements IPanelSystem {
       if (el) this.syncEntity(id, el.getBoundingClientRect());
   }
 
-  public damagePanel(id: PanelId, amount: number, silent: boolean = false, sourceX?: number, sourceY?: number) {
+  public damagePanel(id: PanelId, amount: number, options?: DamageOptions) {
       if (useStore.getState().debugFlags.panelGodMode) return;
-      useGameStore.getState().damagePanel(id, amount, silent, sourceX, sourceY);
+      useGameStore.getState().damagePanel(id, amount, options);
   }
 
   public healPanel(id: PanelId, amount: number, sourceX?: number) {

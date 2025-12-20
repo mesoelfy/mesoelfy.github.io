@@ -11,6 +11,7 @@ import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Faction } from '@/engine/ecs/types';
 
 export class BehaviorSystem implements IGameSystem {
   constructor(
@@ -45,18 +46,16 @@ export class BehaviorSystem implements IGameSystem {
           let bullet;
           if (damage) {
               const finalConfig = configId || 'DAEMON_ORB';
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, false, 2.0, damage, finalConfig);
+              bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
               const finalConfig = configId || 'ENEMY_HUNTER';
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 4, finalConfig);
+              bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
-
           if (ownerId !== undefined) {
               const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
               if (proj) proj.ownerId = ownerId;
           }
-
           return bullet;
       },
       spawnFX: (type, x, y, angle) => {
@@ -66,13 +65,12 @@ export class BehaviorSystem implements IGameSystem {
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
       },
-      damagePanel: (id, amount, sx, sy) => this.panelSystem.damagePanel(id, amount, false, sx, sy),
+      damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 
             : 0;
-          
           const id = getSoundCode(key.toLowerCase());
           if (id) {
               this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan * 100);
@@ -89,7 +87,6 @@ export class BehaviorSystem implements IGameSystem {
         if (!entity.active) continue;
         const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
         if (!identity) continue;
-
         const behavior = AIRegistry.get(identity.variant);
         if (behavior) {
             behavior.update(entity, aiContext);

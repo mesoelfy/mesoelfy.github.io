@@ -1,4 +1,3 @@
-// Nominal typing to prevent mixing up IDs with math numbers
 export type EntityID = number & { __brand: 'EntityID' };
 
 export const createEntityID = (id: number): EntityID => id as EntityID;
@@ -9,5 +8,10 @@ export enum Tag {
   BULLET = 'BULLET',
   PARTICLE = 'PARTICLE',
   OBSTACLE = 'OBSTACLE',
-  WORLD = 'WORLD' // NEW
+  WORLD = 'WORLD' 
+}
+
+export enum Faction {
+  FRIENDLY = 'FRIENDLY',
+  HOSTILE = 'HOSTILE'
 }
