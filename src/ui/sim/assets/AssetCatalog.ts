@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
 import { addBarycentricCoordinates, createHunterSpear } from '@/engine/math/GeometryUtils';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
-import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
+import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
+import { WEAPONS } from '@/engine/config/defs/Weapons';
 
 export const registerAllAssets = () => {
+  // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -17,39 +19,46 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
-  AssetService.registerGenerator(GEOMETRY_IDS.HUNTER, () => createHunterSpear());
-  AssetService.registerGenerator(GEOMETRY_IDS.DRILLER, () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  AssetService.registerGenerator(GEOMETRY_IDS.KAMIKAZE, () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
-  AssetService.registerGenerator(GEOMETRY_IDS.DAEMON, () => new THREE.OctahedronGeometry(0.6, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_SPHERE, () => new THREE.IcosahedronGeometry(1, 1));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CAPSULE, () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_DIAMOND, () => new THREE.OctahedronGeometry(1, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_PYRAMID, () => new THREE.TetrahedronGeometry(1, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_RING, () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
-  AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
+  // 2. Static Geometries (Player/Particles)
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
+  AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
-  // --- CHEVRON GENERATOR ---
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CHEVRON, () => {
-      const shape = new THREE.Shape();
-      const w = 0.8; 
-      const h = 0.8; 
-      const t = 0.3; // Thickness of the V arms
-      
-      shape.moveTo(0, h);           // Tip
-      shape.lineTo(w, -h);          // Right Bottom Outer
-      shape.lineTo(w - t, -h);      // Right Bottom Inner
-      shape.lineTo(0, h - (t*2.5)); // Crotch (Inner V point)
-      shape.lineTo(-(w - t), -h);   // Left Bottom Inner
-      shape.lineTo(-w, -h);         // Left Bottom Outer
-      shape.lineTo(0, h);           // Back to Tip
-
-      const extrudeSettings = { depth: 0.2, bevelEnabled: false };
-      const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      geo.center(); // Center pivot
-      // Rotate to point forward (Up in Y is forward in our game logic usually, but Extrude implies Z depth)
-      // Actually standard rotation logic handles Y-up orientation well.
-      return geo;
+  // 3. Dynamic Registration (Enemies)
+  Object.values(ENEMIES).forEach(def => {
+      const key = `GEO_${def.id.toUpperCase()}`;
+      AssetService.registerGenerator(key, () => createGeometry(def.visual));
   });
+
+  // 4. Dynamic Registration (Weapons)
+  Object.values(WEAPONS).forEach(def => {
+      // Check if visual is reused or new
+      // For simplicity in this engine, we register a unique geo per weapon ID to allow distinct shapes
+      const key = `GEO_${def.id}`;
+      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+  });
+};
+
+const createGeometry = (visual: any) => {
+    switch (visual.model) {
+        case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
+        case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
+        case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);
+        case 'TETRA': return new THREE.TetrahedronGeometry(1, 0);
+        case 'SPHERE': return new THREE.IcosahedronGeometry(1, 1);
+        case 'CAPSULE': return new THREE.CylinderGeometry(0.5, 0.5, 1, 6);
+        case 'CYLINDER': return new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+        case 'TORUS': return new THREE.TorusGeometry(0.8, 0.2, 4, 8);
+        case 'BOX': return new THREE.BoxGeometry(1, 1, 1);
+        case 'CUSTOM_HUNTER': return createHunterSpear();
+        case 'CUSTOM_CHEVRON': {
+            const shape = new THREE.Shape();
+            const w = 0.8, h = 0.8, t = 0.3;
+            shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
+            shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
+            geo.center();
+            return geo;
+        }
+        default: return new THREE.BoxGeometry(1,1,1);
+    }
 };

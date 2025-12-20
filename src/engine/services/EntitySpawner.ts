@@ -10,16 +10,6 @@ import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 
-const GEO_MAP: Record<string, string> = {
-    'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
-    'CAPSULE': GEOMETRY_IDS.PRJ_CAPSULE,
-    'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
-    'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
-    'RING': GEOMETRY_IDS.PRJ_RING,
-    'ARROW': GEOMETRY_IDS.PRJ_ARROW,
-    'CHEVRON': GEOMETRY_IDS.PRJ_CHEVRON
-};
-
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
 
@@ -73,9 +63,9 @@ export class EntitySpawner implements IEntitySpawner {
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     
+    // Geometry Key is now derived directly from the ID (See Archetypes.ts Phase 4)
+    const geoId = `GEO_${projectileId}`; 
     const color = config ? config.color : [1, 1, 1];
-    const shape = config ? config.geometry : 'CAPSULE';
-    const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
     const s = config ? config.scale : [1,1,1]; 
     const pulseSpeed = config ? config.pulseSpeed : 0;
 

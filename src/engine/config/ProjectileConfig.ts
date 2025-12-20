@@ -1,19 +1,11 @@
-import { PALETTE } from './Palette';
+import { WEAPONS } from './defs/Weapons';
+import { ProjectileDef } from './defs/types';
 
-export const ProjectileGeometry = {
-  SPHERE: 'SPHERE',
-  CAPSULE: 'CAPSULE',
-  DIAMOND: 'DIAMOND',
-  PYRAMID: 'PYRAMID',
-  RING: 'RING',
-  ARROW: 'ARROW',
-  CHEVRON: 'CHEVRON'
-} as const;
+// Adapting the new structure to the old ProjectileConfig interface
+// to maintain compatibility with existing systems (WeaponLogic, Spawner)
 
-export type GeometryType = keyof typeof ProjectileGeometry;
-
-export interface ProjectileDef {
-  geometry: GeometryType;
+export interface LegacyProjectileDef {
+  geometry: string;
   color: [number, number, number];
   scale: [number, number, number];
   spinSpeed: number;  
@@ -21,57 +13,24 @@ export interface ProjectileDef {
   faceVelocity: boolean; 
 }
 
-const neon = (hex: string, intensity: number): [number, number, number] => {
-  const c = parseInt(hex.replace('#', ''), 16);
-  const r = ((c >> 16) & 255) / 255;
-  const g = ((c >> 8) & 255) / 255;
-  const b = (c & 255) / 255;
-  return [r * intensity, g * intensity, b * intensity];
+const parseHexTuple = (hex: string): [number, number, number] => {
+    const c = parseInt(hex.replace('#', ''), 16);
+    return [
+        ((c >> 16) & 255) / 255, 
+        ((c >> 8) & 255) / 255, 
+        (c & 255) / 255
+    ];
 };
 
-export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
-  'PLAYER_STANDARD': {
-    geometry: 'CAPSULE',
-    color: neon(PALETTE.GREEN.PRIMARY, 4.0),
-    scale: [0.15, 0.6, 0.15],
-    spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
-  },
-  'PLAYER_FORK': {
-    geometry: 'PYRAMID',
-    color: neon(PALETTE.YELLOW.SOFT, 3.0),
-    scale: [0.4, 0.4, 0.4],
-    spinSpeed: 5.0, pulseSpeed: 0, faceVelocity: true
-  },
-  'PLAYER_SNIFFER': {
-    geometry: 'DIAMOND',
-    color: neon(PALETTE.CYAN.PRIMARY, 5.0),
-    scale: [0.3, 0.3, 0.3],
-    spinSpeed: 15.0, pulseSpeed: 0, faceVelocity: false
-  },
-  'PLAYER_BACKDOOR': {
-    geometry: 'RING',
-    color: neon(PALETTE.RED.LIGHT, 3.0),
-    scale: [0.4, 0.4, 0.4],
-    spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
-  },
-  'PLAYER_PURGE': {
-    geometry: 'CHEVRON',
-    color: neon(PALETTE.YELLOW.ORANGE, 3.0), // UPDATED: Orange Neon
-    scale: [2.5, 0.7, 1.5], 
-    spinSpeed: 0, 
-    pulseSpeed: 0, 
-    faceVelocity: true 
-  },
-  'ENEMY_HUNTER': {
-    geometry: 'ARROW',
-    color: neon(PALETTE.YELLOW.ORANGE, 6.0),
-    scale: [0.3, 1.0, 0.3],
-    spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
-  },
-  'DAEMON_ORB': {
-    geometry: 'SPHERE',
-    color: neon('#0088FF', 5.0), 
-    scale: [0.5, 0.5, 0.5],
-    spinSpeed: 1.0, pulseSpeed: 4.0, faceVelocity: false
-  }
-};
+export const PROJECTILE_CONFIG: Record<string, LegacyProjectileDef> = {};
+
+Object.values(WEAPONS).forEach(def => {
+    PROJECTILE_CONFIG[def.id] = {
+        geometry: def.visual.model,
+        color: parseHexTuple(def.visual.color),
+        scale: def.visual.scale,
+        spinSpeed: def.behavior?.spinSpeed || 0,
+        pulseSpeed: def.behavior?.pulseSpeed || 0,
+        faceVelocity: def.behavior?.faceVelocity ?? true
+    };
+});

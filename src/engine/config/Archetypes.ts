@@ -6,6 +6,8 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { GEOMETRY_IDS, MATERIAL_IDS } from './AssetKeys';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { ENEMIES } from './defs/Enemies';
+import { WEAPONS } from './defs/Weapons';
 
 const parseHex = (hex: string) => {
     const c = parseInt(hex.replace('#', ''), 16);
@@ -16,7 +18,6 @@ const parseHex = (hex: string) => {
     };
 };
 
-// Helper for Render Composition
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
@@ -31,7 +32,8 @@ export interface EntityBlueprint {
   components: { type: ComponentType; data?: any }[];
 }
 
-export const ARCHETYPES: Record<string, EntityBlueprint> = {
+const BLUEPRINTS: Record<string, EntityBlueprint> = {
+  // --- PLAYER (Manual) ---
   [ArchetypeIDs.PLAYER]: {
     id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
@@ -46,7 +48,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
-      // New: Define State Colors explicitly
       { type: ComponentType.StateColor, data: {
           base: GAME_THEME.turret.base,
           damaged: GAME_THEME.vfx.damage,
@@ -56,112 +57,103 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
       }},
       ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
     ]
-  },
-  [ArchetypeIDs.BULLET_PLAYER]: {
-    id: ArchetypeIDs.BULLET_PLAYER,
-    tags: [Tag.BULLET, Tag.PLAYER],
-    components: [
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Lifetime, data: { remaining: 1.5, total: 1.5 } },
-      { type: ComponentType.Combat, data: { damage: 1 } },
-      { type: ComponentType.Health, data: { max: 1 } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.BULLET, 
-          layer: CollisionLayers.PLAYER_PROJECTILE, 
-          mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
-      }},
-      { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } },
-      { type: ComponentType.RenderModel, data: {} },
-      { type: ComponentType.RenderTransform, data: {} },
-      { type: ComponentType.RenderEffect, data: {} }
-    ]
-  },
-  [ArchetypeIDs.BULLET_ENEMY]: {
-    id: ArchetypeIDs.BULLET_ENEMY,
-    tags: [Tag.BULLET, Tag.ENEMY],
-    components: [
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Lifetime, data: { remaining: 3.0, total: 3.0 } },
-      { type: ComponentType.Combat, data: { damage: 10 } },
-      { type: ComponentType.Health, data: { max: 1 } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.HUNTER_BULLET, 
-          layer: CollisionLayers.ENEMY_PROJECTILE, 
-          mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
-      }},
-      { type: ComponentType.Projectile, data: { configId: 'ENEMY_HUNTER', state: 'FLIGHT' } },
-      { type: ComponentType.RenderModel, data: {} },
-      { type: ComponentType.RenderTransform, data: {} },
-      { type: ComponentType.RenderEffect, data: {} }
-    ]
-  },
-  [ArchetypeIDs.DRILLER]: {
-    id: ArchetypeIDs.DRILLER,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'driller',
-    assets: { geometry: GEOMETRY_IDS.DRILLER, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 1 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 1 } },
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PANEL' } },
-      ...RenderComps(GEOMETRY_IDS.DRILLER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.muncher, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.KAMIKAZE]: {
-    id: ArchetypeIDs.KAMIKAZE,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'kamikaze',
-    assets: { geometry: GEOMETRY_IDS.KAMIKAZE, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 2 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 3 } },
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      ...RenderComps(GEOMETRY_IDS.KAMIKAZE, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.kamikaze, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.HUNTER]: {
-    id: ArchetypeIDs.HUNTER,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'hunter',
-    assets: { geometry: GEOMETRY_IDS.HUNTER, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 3 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 10 } }, 
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      ...RenderComps(GEOMETRY_IDS.HUNTER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.hunter, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.DAEMON]: {
-    id: ArchetypeIDs.DAEMON,
-    tags: [Tag.PLAYER],
-    aiLogic: 'daemon',
-    assets: { geometry: GEOMETRY_IDS.DAEMON, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DAEMON } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Health, data: { max: 100 } }, 
-      { type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } },
-      { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
-      { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
-      { type: ComponentType.State, data: { current: AI_STATE.ORBIT } },
-      ...RenderComps(GEOMETRY_IDS.DAEMON, MATERIAL_IDS.ENEMY_BASE, '#00F0FF', { elasticity: 0.05 })
-    ]
   }
 };
+
+// --- ENEMY GENERATION ---
+Object.values(ENEMIES).forEach(def => {
+    const geoId = `GEO_${def.id.toUpperCase()}`;
+    const matId = 'MAT_ENEMY_BASE'; // Hardcoded for now, could be in def
+    
+    // Components common to all enemies
+    const comps: any[] = [
+      { type: ComponentType.Identity, data: { variant: def.id } },
+      { type: ComponentType.Transform, data: { scale: 1.0 } },
+      { type: ComponentType.Health, data: { max: def.health } },
+      { type: ComponentType.Motion, data: { friction: def.physics.friction } },
+      { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
+      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
+      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1 })
+    ];
+
+    if (def.damage > 0) {
+        comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
+    }
+
+    // Specific AI extras
+    if (def.ai === 'daemon') {
+        comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
+        comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
+        // Override collider for Daemon (Friendly)
+        const col = comps.find((c: any) => c.type === ComponentType.Collider);
+        if (col) {
+            col.data.layer = CollisionLayers.PLAYER;
+            col.data.mask = PhysicsConfig.MASKS.PLAYER;
+        }
+    } else {
+        comps.push({ type: ComponentType.Target, data: { type: def.ai === 'driller' ? 'PANEL' : 'PLAYER' } });
+    }
+
+    BLUEPRINTS[def.id] = {
+        id: def.id,
+        tags: def.id === 'daemon' ? [Tag.PLAYER] : [Tag.ENEMY, Tag.OBSTACLE],
+        aiLogic: def.ai,
+        assets: { geometry: geoId, material: matId },
+        components: comps
+    };
+});
+
+// --- WEAPON GENERATION ---
+Object.values(WEAPONS).forEach(def => {
+    const geoId = `GEO_${def.id}`;
+    const matId = 'MAT_PROJECTILE';
+    const isEnemy = def.tags.includes(Tag.ENEMY);
+    const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
+    const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
+
+    // Use default hitboxes based on config for now, eventually move to Def
+    const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
+
+    const comps: any[] = [
+      { type: ComponentType.Transform, data: { scale: 1.0 } },
+      { type: ComponentType.Motion, data: { friction: 0 } },
+      { type: ComponentType.Lifetime, data: { remaining: def.life, total: def.life } },
+      { type: ComponentType.Combat, data: { damage: def.damage } },
+      { type: ComponentType.Health, data: { max: def.damage } }, // HP = Dmg for cancellation
+      { type: ComponentType.Collider, data: { radius, layer, mask } },
+      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
+      { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
+      { type: ComponentType.RenderTransform, data: { 
+          scale: 1.0, 
+          baseScaleX: def.visual.scale[0], 
+          baseScaleY: def.visual.scale[1], 
+          baseScaleZ: def.visual.scale[2] 
+      }},
+      { type: ComponentType.RenderEffect, data: { elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, pulseSpeed: def.behavior?.pulseSpeed || 0 } }
+    ];
+
+    if (def.behavior?.spinSpeed) {
+        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
+    }
+
+    // Special Case: Bullets also have archetypes for spawning
+    // We map 'BULLET_PLAYER' -> 'PLAYER_STANDARD' internally in Spawner
+    // But we need blueprints for the ID being spawned.
+    // EntitySpawner.spawnBullet calls spawn with ArchetypeIDs.BULLET_PLAYER usually,
+    // but applies overrides.
+    // For this refactor, we are adding the blueprints directly.
+    
+    BLUEPRINTS[def.id] = {
+        id: def.id,
+        tags: def.tags,
+        components: comps
+    };
+});
+
+// BACKWARDS COMPATIBILITY MAPS
+// The Spawner still uses generic IDs like 'BULLET_PLAYER' to mean "Default bullet".
+// We need to keep these keys valid.
+BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
+BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
+
+export const ARCHETYPES = BLUEPRINTS;

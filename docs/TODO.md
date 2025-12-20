@@ -668,3 +668,5 @@ Have a pop-up like wikipedia does asking for money $2.75 / $4.20 / $6.66 / $7.77
 
 kill count insn't increasing.
 ProjectileGeometry - more shapes?
+
+player cursor explodes a second wave of projectiles, one blast 360 degrees at once, which kills any remaining enemies (this is when the sound effect plays) and then transition to zen mode and zen reticle. (like a metamorphosis of the cursor into its prismatic form)
