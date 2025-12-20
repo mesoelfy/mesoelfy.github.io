@@ -102,11 +102,6 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
     
-    // Logic:
-    // 1. If Intro Not Done: Hide (0)
-    // 2. If Zen Mode: Show (1)
-    // 3. If System Failure (Game Over) AND Not Zen Mode: Hide (0) - to let Cursor take over
-    // 4. Otherwise: Show (1)
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     const isZenMode = useGameStore.getState().isZenMode;
     const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
@@ -125,7 +120,9 @@ export const PlayerActor = () => {
     const interact = getSystem<IInteractionSystem>('InteractionSystem');
     if (interact) interactState = interact.repairState;
 
-    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
+    // Treat Zen Mode as an active high-energy state (similar to Healing)
+    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING') || isZenMode;
+    
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     
     if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
@@ -148,7 +145,8 @@ export const PlayerActor = () => {
         
         // --- COLOR LOGIC ---
         if (isZenMode) {
-            const time = state.clock.elapsedTime * 0.2; // Slower base cycle
+            // Slower cycle: 0.1 multiplier (was 0.2)
+            const time = state.clock.elapsedTime * 0.1; 
             
             // 1. Center Dot (Leading, almost white)
             tempColor.current.setHSL(time % 1, 1.0, 0.9);
@@ -186,7 +184,10 @@ export const PlayerActor = () => {
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         
-        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current);
+        // SCALE APPLICATION: 3x if Zen Mode
+        const zenScale = isZenMode ? 3.0 : 1.0;
+        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * zenScale);
+        
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }

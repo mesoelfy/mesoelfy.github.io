@@ -9,6 +9,7 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -41,6 +42,7 @@ export class RenderSystem implements IGameSystem {
     const entities = this.registry.query({ all: [ComponentType.RenderModel] });
     const interactState = this.interactionSystem.repairState;
     const isDead = this.gameSystem.playerHealth <= 0;
+    const isZenMode = useGameStore.getState().isZenMode;
 
     for (const entity of entities) {
         if (!entity.active) continue;
@@ -58,7 +60,10 @@ export class RenderSystem implements IGameSystem {
             let targetCol = COL_BASE;
             let spinSpeed = 0.02; 
 
-            if (isDead) {
+            if (isZenMode) {
+                // Zen Mode: Ultra slow rotation (50% of previous 0.06)
+                spinSpeed = -0.03;
+            } else if (isDead) {
                 targetCol = COL_DEAD;
                 if (interactState === 'REBOOTING') {
                     targetCol = COL_REBOOT;
