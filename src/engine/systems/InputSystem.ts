@@ -1,5 +1,6 @@
 import { IGameSystem, IInputService } from '@/engine/interfaces';
 import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
+import { INPUT_SETTINGS } from '@/engine/config/InputConfig';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
@@ -11,7 +12,7 @@ export class InputSystem implements IGameSystem, IInputService {
     // Poll Providers
     if (VirtualJoystickService.isActive) {
         const joyVector = VirtualJoystickService.getVector();
-        const speed = 30.0; // Virtual cursor speed
+        const speed = INPUT_SETTINGS.VIRTUAL_CURSOR.SPEED; 
         
         this._cursor.x += joyVector.x * speed * delta;
         this._cursor.y += joyVector.y * speed * delta;

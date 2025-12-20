@@ -1,34 +1,40 @@
+import { AUDIO_CURVES } from '@/engine/config/AudioConfig';
+
 /**
  * AUDIO MATH LIBRARY
  */
 
 export const getAmbienceFilterHz = (val: number): number => {
-  return 300 * Math.pow(10, (val - 0.5) * 2);
+  const { BASE_HZ, MULTIPLIER } = AUDIO_CURVES.FILTER;
+  return BASE_HZ * Math.pow(MULTIPLIER, (val - 0.5) * 2);
 };
 
 export const getAmbiencePanFreq = (val: number): number => {
-  return 0.05 * Math.pow(20, (val - 0.5) * 2);
+  const { BASE_FREQ, MULTIPLIER } = AUDIO_CURVES.PAN;
+  return BASE_FREQ * Math.pow(MULTIPLIER, (val - 0.5) * 2);
 };
 
 export const getAmbienceModFreq = (val: number): number => {
-  return 0.2 * Math.pow(30, (val - 0.5) * 2);
+  const { BASE_FREQ, MULTIPLIER } = AUDIO_CURVES.LFO;
+  return BASE_FREQ * Math.pow(MULTIPLIER, (val - 0.5) * 2);
 };
 
 export const getAmbienceModDepth = (val: number): number => {
-  return 10 * Math.pow(20, (val - 0.5) * 2);
+  const { DEPTH_BASE, DEPTH_MULT } = AUDIO_CURVES.LFO;
+  return DEPTH_BASE * Math.pow(DEPTH_MULT, (val - 0.5) * 2);
 };
 
 export const getAmbienceStereoGain = (val: number): number => {
-  return Math.pow(val, 3) * 0.8;
+  const { GAIN_FACTOR, POWER } = AUDIO_CURVES.STEREO;
+  return Math.pow(val, POWER) * GAIN_FACTOR;
 };
 
 export const getAmbienceDistortion = (val: number): number => {
-  return val * 400;
+  return val * AUDIO_CURVES.DISTORTION.FACTOR;
 };
 
 /**
  * Generates a synthetic impulse response for reverb.
- * Creates a "Metallic/Digital" decay sound.
  */
 export const generateImpulseResponse = (ctx: AudioContext, duration: number = 2.0, decay: number = 2.0, reverse: boolean = false): AudioBuffer => {
   const sampleRate = ctx.sampleRate;
