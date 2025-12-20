@@ -22,14 +22,31 @@ export class MobileCombatSystem implements IGameSystem, ICombatSystem {
     
     update() {}
     teardown() {}
+    
+    // Stub for interface compliance (Mobile uses direct kill logic for now)
     resolveCollision() {}
 
     private kill(entity: Entity) {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
-            this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.EXPLOSION_PURPLE, t.x * 100, t.y * 100, 0); 
+            // Visuals: Explosion
+            this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.EXPLOSION_PURPLE, t.x * 100, t.y * 100, 0);
+            
+            // Audio: Impact
             this.audio.playSound('fx_impact_light');
+            
+            // Audio: Satisfaction (Coins/XP sound)
+            this.audio.playSound('fx_reboot_success');
         }
+        
         this.registry.destroyEntity(entity.id);
+        
+        // Propagate destruction event for Score/XP systems
+        this.events.emit(GameEvents.ENEMY_DESTROYED, { 
+            id: entity.id as number, 
+            type: 'DRILLER', 
+            x: t?.x || 0, 
+            y: t?.y || 0 
+        });
     }
 }

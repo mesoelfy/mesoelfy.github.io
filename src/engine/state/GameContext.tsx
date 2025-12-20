@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { 
   IAudioService, 
   IInputService, 
@@ -20,18 +20,20 @@ interface GameContextProps {
   events: IGameEventService;
   registry: IEntityRegistry;
   spawner: IEntitySpawner;
-  // Generic accessor for specific systems (e.g. ShakeSystem)
   getSystem: <T extends IGameSystem>(id: string) => T | null;
 }
 
-// Fallbacks for initial render (before EngineFactory runs)
+// Fallbacks for SSR / Initial Mount
 const mockRegistry = new EntityRegistry();
 const mockSpawner = new EntitySpawner(mockRegistry);
+const mockEvents = new GameEventService();
+const mockInput = new InputSystem();
+const mockAudio = new AudioServiceImpl();
 
 const defaultContext: GameContextProps = {
-  audio: new AudioServiceImpl(),
-  input: new InputSystem(),
-  events: new GameEventService(),
+  audio: mockAudio,
+  input: mockInput,
+  events: mockEvents,
   registry: mockRegistry,
   spawner: mockSpawner,
   getSystem: () => null
@@ -40,32 +42,35 @@ const defaultContext: GameContextProps = {
 const GameContext = createContext<GameContextProps>(defaultContext);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  // We grab references from ServiceLocator ONCE during provider mount.
-  // This bridges the imperative Engine world to the declarative React world.
+  // CRITICAL ARCHITECTURE FIX:
+  // We use getters to proxy calls to the ServiceLocator.
+  // This ensures that when the Engine restarts (ServiceLocator.reset()),
+  // React components immediately interact with the NEW instances
+  // without needing a full context re-mount or forceUpdate.
   
-  let audio: IAudioService;
-  let input: IInputService;
-  let events: IGameEventService;
-  let registry: IEntityRegistry;
-  let spawner: IEntitySpawner;
-
-  // Safe retrieval with fallbacks
-  const safeGet = <T,>(id: string, fallback: T): T => {
-      try { return ServiceLocator.get<T>(id); } catch { return fallback; }
-  };
-
-  audio = safeGet('AudioService', new AudioServiceImpl());
-  input = safeGet('InputSystem', new InputSystem());
-  events = safeGet('GameEventService', new GameEventService());
-  registry = safeGet('EntityRegistry', mockRegistry);
-  spawner = safeGet('EntitySpawner', mockSpawner);
-
-  const getSystem = <T extends IGameSystem>(id: string): T | null => {
+  const contextValue = useMemo(() => ({
+    get audio() { 
+      try { return ServiceLocator.getAudioService(); } catch { return mockAudio; } 
+    },
+    get input() { 
+      try { return ServiceLocator.getInputService(); } catch { return mockInput; } 
+    },
+    get events() { 
+      try { return ServiceLocator.getGameEventBus(); } catch { return mockEvents; } 
+    },
+    get registry() { 
+      try { return ServiceLocator.getRegistry(); } catch { return mockRegistry; } 
+    },
+    get spawner() { 
+      try { return ServiceLocator.getSpawner(); } catch { return mockSpawner; } 
+    },
+    getSystem: <T extends IGameSystem>(id: string): T | null => {
       try { return ServiceLocator.getSystem<T>(id); } catch { return null; }
-  };
+    }
+  }), []);
 
   return (
-    <GameContext.Provider value={{ audio, input, events, registry, spawner, getSystem }}>
+    <GameContext.Provider value={contextValue}>
       {children}
     </GameContext.Provider>
   );

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 16:49:05 CST 2025
+Generated on: Sat Dec 20 17:23:20 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -288,7 +288,8 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   │   └── AboutModal.tsx
 │       │   │   ├── mobile
 │       │   │   │   ├── MobileExperience.tsx
-│       │   │   │   └── MobileRejectionModal.tsx
+│       │   │   │   ├── MobileRejectionModal.tsx
+│       │   │   │   └── SadMac.tsx
 │       │   │   ├── sandbox
 │       │   │   │   ├── ArenaLab.tsx
 │       │   │   │   ├── AudioMatrix.tsx
@@ -342,6 +343,7 @@ PROJECT DIRECTORY STRUCTURE:
 │           ├── GameCanvas.tsx
 │           ├── GameDirector.tsx
 │           ├── MobileGameDirector.tsx
+│           ├── MobileInputController.tsx
 │           ├── RenderDirector.tsx
 │           ├── SceneCanvas.tsx
 │           ├── actors
@@ -364,7 +366,8 @@ PROJECT DIRECTORY STRUCTURE:
 │           │   ├── usePanelRegistry.ts
 │           │   └── useWindowFocus.ts
 │           ├── props
-│           │   └── MiniCrystalCanvas.tsx
+│           │   ├── MiniCrystalCanvas.tsx
+│           │   └── MobilePanelBase.tsx
 │           ├── registry
 │           │   ├── RenderCatalog.ts
 │           │   └── RenderRegistry.ts
@@ -374,11 +377,12 @@ PROJECT DIRECTORY STRUCTURE:
 │           └── vfx
 │               ├── CameraRig.tsx
 │               ├── PostProcessing.tsx
+│               ├── TouchRipple.tsx
 │               └── WireframeFloor.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-83 directories, 287 files
+83 directories, 291 files
 
 =====================================
 FILE: ./next.config.js
@@ -6919,6 +6923,33 @@ export const VisualLab = () => {
 
 
 =====================================
+FILE: ./src/ui/os/apps/mobile/SadMac.tsx
+=====================================
+import { Frown } from 'lucide-react';
+
+export const SadMac = ({ className }: { className?: string }) => (
+  <div className={`relative w-24 h-24 ${className}`}>
+    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)]">
+      <path 
+        d="M10 20 C10 10 20 10 30 10 L70 10 C80 10 90 10 90 20 L90 80 C90 90 80 95 50 95 C20 95 10 90 10 80 Z" 
+        fill="none" 
+        stroke="#FF003C" 
+        strokeWidth="4"
+      />
+      <line x1="10" y1="20" x2="25" y2="20" stroke="#FF003C" strokeWidth="4" />
+      <line x1="75" y1="20" x2="90" y2="20" stroke="#FF003C" strokeWidth="4" />
+      <circle cx="35" cy="40" r="4" fill="#FF003C" />
+      <circle cx="65" cy="40" r="4" fill="#FF003C" />
+      <path d="M50 45 L45 60 L55 60 Z" fill="#FF003C" />
+    </svg>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-critical-red">
+        <Frown size={24} strokeWidth={2.5} />
+    </div>
+  </div>
+);
+
+
+=====================================
 FILE: ./src/ui/os/apps/mobile/MobileRejectionModal.tsx
 =====================================
 import { useEffect, useState } from 'react';
@@ -7218,32 +7249,29 @@ import { Canvas } from '@react-three/fiber';
 import { MobileGameDirector } from '@/ui/sim/MobileGameDirector';
 import { RenderDirector } from '@/ui/sim/RenderDirector';
 import { CameraRig } from '@/ui/sim/vfx/CameraRig';
+import { TouchRipple } from '@/ui/sim/vfx/TouchRipple';
+import { MobileInputController } from '@/ui/sim/MobileInputController';
+import { MobilePanelBase } from '@/ui/sim/props/MobilePanelBase';
 import { SocialRow } from '@/ui/kit/molecules/SocialRow';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Skull, Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { CAMERA_CONFIG } from '@/engine/config/CameraConfig';
+import { SadMac } from './SadMac';
 
 const MOBILE_PANEL_HP = 100;
 
-const SocialPanelWrapper = () => {
-    return (
-        <div className="w-full max-w-sm pointer-events-auto">
-            <GlassPanel title="SOCIAL_UPLINK" gameId={PanelId.SOCIAL} className="bg-black/90" maxHealth={MOBILE_PANEL_HP}>
-                <SocialRow layout="column" />
-            </GlassPanel>
-        </div>
-    );
-};
+interface Props {
+  skipIntro?: boolean;
+}
 
-export const MobileExperience = () => {
-  const [phase, setPhase] = useState<'intro' | 'game'>('intro');
+export const MobileExperience = ({ skipIntro = false }: Props) => {
+  const [phase, setPhase] = useState<'intro' | 'game'>(skipIntro ? 'game' : 'intro');
   const [showFailureModal, setShowFailureModal] = useState(false);
   const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
 
@@ -7255,14 +7283,14 @@ export const MobileExperience = () => {
               setTimeout(() => {
                   setShowFailureModal(true);
                   AudioSystem.playSound('fx_impact_heavy');
-              }, 4000);
+              }, 2000);
           }
       });
       return unsub;
   }, [setIntegrity]);
 
   return (
-    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green pointer-events-none">
+    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black">
         {phase === 'intro' && (
             <div className="pointer-events-auto w-full h-full relative z-50">
                 <MobileRejectionModal onComplete={() => setPhase('game')} />
@@ -7270,7 +7298,8 @@ export const MobileExperience = () => {
         )}
         {phase === 'game' && (
             <>
-                <div className="absolute inset-0 z-0 pointer-events-auto">
+                {/* LAYER 0: THE SIMULATION (Visuals & Input Logic) */}
+                <div className="absolute inset-0 z-0 pointer-events-none">
                     <Canvas
                         orthographic
                         camera={{ zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 0, 100] }}
@@ -7278,77 +7307,94 @@ export const MobileExperience = () => {
                     >
                         <MobileGameDirector />
                         <CameraRig />
+                        
+                        {/* 3D Panel Backing */}
+                        <MobilePanelBase />
+                        
+                        {/* Ripples appear ON TOP of the 3D panel backing */}
+                        <TouchRipple />
+                        
+                        {/* Enemies render here */}
                         <RenderDirector />
+                        
+                        {/* Invisible Controller catches Global Window Taps */}
+                        <MobileInputController />
                     </Canvas>
                 </div>
+                
+                {/* LAYER 1: THE INTERFACE (Links & HUD) */}
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
-                    <SocialPanelWrapper />
+                    <div className="w-full max-w-sm pointer-events-auto">
+                        {/* 
+                           We use a transparent GlassPanel so the 3D backing + Ripples show through.
+                           pointer-events-auto ensures Links are clickable.
+                           The Canvas InputController listens to WINDOW events, so it catches taps 
+                           that miss the buttons.
+                        */}
+                        <GlassPanel 
+                            title="SOCIAL_UPLINK" 
+                            gameId={PanelId.SOCIAL} 
+                            className="bg-transparent/10 shadow-none border-primary-green/30" 
+                            maxHealth={MOBILE_PANEL_HP}
+                        >
+                            <SocialRow layout="column" />
+                        </GlassPanel>
+                    </div>
                 </div>
+
                 {!showFailureModal && (
                     <div className="absolute bottom-10 w-full text-center animate-pulse z-20 pointer-events-none">
                         <span className="bg-black/80 px-4 py-1 text-xs font-mono border border-primary-green/30">
-                            TAP TARGETS TO DESTROY
+                            TAP HOSTILES TO PURGE
                         </span>
                     </div>
                 )}
+
+                {/* LAYER 2: GAME OVER OVERLAY */}
                 <AnimatePresence>
                     {showFailureModal && (
                         <motion.div 
-                            initial={{ opacity: 0 }} 
-                            animate={{ opacity: 1 }} 
-                            transition={{ duration: 0.5 }}
-                            className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 pointer-events-auto"
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
+                            className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto"
                         >
                             <motion.div 
-                                initial={{ scale: 0.8, y: 20 }}
-                                animate={{ scale: 1, y: 0 }}
-                                transition={{ type: "spring", bounce: 0.4 }}
+                                initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }}
                                 className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_50px_rgba(255,0,60,0.4)] overflow-hidden flex flex-col"
                             >
                                 <div className="bg-critical-red px-4 py-2 flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-black font-black tracking-widest">
                                         <AlertTriangle size={18} />
-                                        <span>CRITICAL_ERROR</span>
+                                        <span>FATAL_EXCEPTION</span>
                                     </div>
-                                    <Skull size={18} className="text-black" />
+                                    <div className="w-3 h-3 bg-black rounded-full" />
                                 </div>
+                                
                                 <div className="p-8 flex flex-col items-center text-center relative">
-                                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#FF003C_10px,#FF003C_12px)] pointer-events-none" />
+                                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,#FF003C_2px,#FF003C_3px)] pointer-events-none" />
+                                    
                                     <motion.div 
                                         initial={{ scale: 0 }} animate={{ scale: 1 }} 
                                         transition={{ type: 'spring', stiffness: 200, damping: 12 }}
-                                        className="mb-6 relative"
+                                        className="mb-8"
                                     >
-                                        <Skull size={80} className="text-critical-red mx-auto drop-shadow-[0_0_15px_#FF003C]" />
+                                        <SadMac />
                                     </motion.div>
-                                    <h1 className="text-4xl font-black text-critical-red tracking-widest mb-2 glitch-text">
-                                        SYSTEM<br/>FAILURE
-                                    </h1>
-                                    <p className="text-xs font-mono text-critical-red/70 mb-8 uppercase tracking-widest">
-                                        0x0000DEAD // CORE_DUMPED
+
+                                    <h1 className="text-3xl font-black text-critical-red tracking-widest mb-2">SYSTEM HALTED</h1>
+                                    <p className="text-[10px] font-mono text-critical-red/70 mb-8 uppercase leading-relaxed">
+                                        MOBILE_CORE_DUMPED.<br/>
+                                        PLEASE MIGRATE TO DESKTOP<br/>
+                                        FOR FULL NEURAL LINK.
                                     </p>
-                                    <div className="w-full space-y-3 relative z-10">
-                                        <div className="bg-critical-red/10 border border-critical-red/30 p-3">
-                                            <p className="text-[10px] text-critical-red font-mono leading-relaxed">
-                                                MOBILE_TERMINAL_DESTROYED.<br/>
-                                                PLEASE MIGRATE TO WORKSTATION.
-                                            </p>
-                                        </div>
-                                        <a 
-                                            href="https://mesoelfy.github.io" 
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="group block w-full py-3 bg-critical-red text-black font-bold font-header tracking-widest hover:bg-white hover:text-critical-red transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Monitor size={16} />
-                                            <span>mesoelfy.github.io</span>
-                                            <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
-                                        </a>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-900 px-4 py-1 flex justify-between text-[8px] font-mono text-gray-500">
-                                    <span>ERR_CODE: ID_10_T</span>
-                                    <span>REBOOT_REQUIRED</span>
+
+                                    <a 
+                                        href="https://mesoelfy.github.io" 
+                                        className="group block w-full py-3 bg-critical-red text-black font-bold tracking-widest hover:bg-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Monitor size={16} />
+                                        <span>REBOOT SEQUENCE</span>
+                                        <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
+                                    </a>
                                 </div>
                             </motion.div>
                         </motion.div>
@@ -8243,6 +8289,44 @@ export const MiniCrystalCanvas = () => {
 
 
 =====================================
+FILE: ./src/ui/sim/props/MobilePanelBase.tsx
+=====================================
+import { useMemo } from 'react';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { PanelId } from '@/engine/config/PanelConfig';
+import * as THREE from 'three';
+
+export const MobilePanelBase = () => {
+  const panel = useGameStore(s => s.panels[PanelId.SOCIAL]);
+  const isDead = panel ? panel.isDestroyed : false;
+
+  // We render a plane at roughly the same dimensions as the CSS panel
+  // CSS Panel is max-w-sm (approx 24rem = 384px)
+  // In our Ortho camera (Zoom 40), 384px is approx 9.6 world units width.
+  // Height is set to fit content, approx 13 world units.
+  
+  const width = 9.6;
+  const height = 13;
+
+  return (
+    <mesh position={[0, 0, -1]}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial 
+        color={isDead ? "#1a0505" : "#000500"} 
+        transparent 
+        opacity={0.9} 
+      />
+      {/* Grid Overlay */}
+      <lineSegments position={[0, 0, 0.01]}>
+        <edgesGeometry args={[new THREE.PlaneGeometry(width, height)]} />
+        <lineBasicMaterial color={isDead ? "#FF003C" : "#78F654"} transparent opacity={0.3} />
+      </lineSegments>
+    </mesh>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/sim/experiments/GlitchGhost.tsx
 =====================================
 import { useRef, useMemo } from 'react';
@@ -8422,6 +8506,91 @@ export const WireframeFloor = () => {
 
 
 =====================================
+FILE: ./src/ui/sim/vfx/TouchRipple.tsx
+=====================================
+import { useRef, useMemo, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+
+const RIPPLE_COUNT = 8;
+
+export const TouchRipple = () => {
+  const groupRef = useRef<THREE.Group>(null);
+  const [ripples, setRipples] = useState<any[]>([]);
+
+  useMemo(() => {
+    if (typeof window === 'undefined') return;
+    const handleTap = (e: any) => {
+      const { x, y } = e.detail;
+      setRipples(prev => [
+        ...prev.slice(-RIPPLE_COUNT), 
+        { x, y, time: 0, id: Math.random() }
+      ]);
+    };
+    window.addEventListener('mobile-spatial-tap', handleTap);
+    return () => window.removeEventListener('mobile-spatial-tap', handleTap);
+  }, []);
+
+  const rippleMaterial = useMemo(() => {
+    return MaterialFactory.create('MAT_TOUCH_RIPPLE', {
+      vertex: `
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragment: `
+        uniform float uProgress; 
+        
+        void main() {
+          float d = distance(vUv, vec2(0.5));
+          // Expanding ring logic: thickness and expansion
+          float ring = smoothstep(uProgress - 0.1, uProgress, d) - smoothstep(uProgress, uProgress + 0.02, d);
+          // Fade out as progress increases
+          float alpha = ring * (1.0 - uProgress * 2.0);
+          
+          if (alpha < 0.01) discard;
+          
+          // Electric Green #78F654
+          vec3 color = vec3(0.47, 0.96, 0.33); 
+          gl_FragColor = vec4(color * 1.5, alpha);
+        }
+      `,
+      uniforms: {
+        uProgress: { value: 0 }
+      }
+    });
+  }, []);
+
+  useFrame((state, delta) => {
+    setRipples(prev => prev
+      .map(r => ({ ...r, time: r.time + delta * 2.5 }))
+      .filter(r => r.time < 0.5)
+    );
+  });
+
+  return (
+    <group ref={groupRef}>
+      {ripples.map((r) => (
+        <mesh key={r.id} position={[r.x, r.y, 1]} scale={[4, 4, 1]}>
+          <planeGeometry />
+          <primitive 
+            object={rippleMaterial.clone()} 
+            attach="material" 
+            uniforms-uProgress-value={r.time}
+            transparent
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/sim/vfx/PostProcessing.tsx
 =====================================
 import { useThree, extend, useFrame } from '@react-three/fiber';
@@ -8469,6 +8638,80 @@ export const EffectsLayer = () => {
       <shaderPass args={[VignetteShader]} uniforms-offset-value={0.9} uniforms-darkness-value={0.6} />
     </Effects>
   );
+};
+
+
+=====================================
+FILE: ./src/ui/sim/MobileInputController.tsx
+=====================================
+import { useEffect } from 'react';
+import { useGameContext } from '@/engine/state/GameContext';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { Tag } from '@/engine/ecs/types';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { screenToWorld } from '@/engine/math/coords';
+
+const TAP_RADIUS = 2.0;
+
+export const MobileInputController = () => {
+  const { registry, events } = useGameContext();
+
+  useEffect(() => {
+    const handleWindowTap = (e: PointerEvent) => {
+        // 1. Convert Screen -> World
+        // We use the global ViewportHelper which is updated by MobileGameDirector
+        const { width, height } = ViewportHelper.screenSize;
+        if (width === 0 || height === 0) return;
+
+        const worldPos = screenToWorld(e.clientX, e.clientY, width, height);
+        
+        // 2. Dispatch Visual Ripple
+        window.dispatchEvent(new CustomEvent('mobile-spatial-tap', { detail: worldPos }));
+
+        // 3. Audio Feedback
+        AudioSystem.playSound('ui_click');
+
+        // 4. Hit Test Enemies
+        const enemies = registry.getByTag(Tag.ENEMY);
+        let hitFound = false;
+
+        for (const enemy of enemies) {
+            if (!enemy.active) continue;
+            
+            const t = enemy.getComponent<TransformData>(ComponentType.Transform);
+            const c = enemy.getComponent<ColliderData>(ComponentType.Collider);
+            
+            if (t) {
+                const dx = t.x - worldPos.x;
+                const dy = t.y - worldPos.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const hitThreshold = (c ? c.radius : 0.5) + TAP_RADIUS;
+                
+                if (dist <= hitThreshold) {
+                    events.emit(GameEvents.ENEMY_DAMAGED, { 
+                        id: enemy.id as number, 
+                        damage: 9999, 
+                        type: 'TAP' 
+                    });
+                    hitFound = true;
+                }
+            }
+        }
+
+        if (hitFound) {
+            AudioSystem.playSound('fx_impact_light');
+        }
+    };
+
+    window.addEventListener('pointerdown', handleWindowTap);
+    return () => window.removeEventListener('pointerdown', handleWindowTap);
+  }, [registry, events]);
+
+  return null;
 };
 
 
@@ -9450,6 +9693,7 @@ export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const isLab = bootState === 'sandbox' && sandboxView === 'lab';
+  const isMobileExperience = bootState === 'mobile_lockdown';
   
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -9473,7 +9717,7 @@ export const GameOverlay = () => {
       return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted || !assetsReady) return null;
+  if (!mounted || !assetsReady || isMobileExperience) return null;
 
   return (
     <>
@@ -9491,7 +9735,7 @@ export const GameOverlay = () => {
               stencil: false,
               powerPreference: "high-performance"
             }}
-            eventSource={document.body}
+            eventSource={typeof document !== 'undefined' ? document.body : undefined}
             eventPrefix="client"
           >
             {isLab ? (
@@ -9742,6 +9986,7 @@ export default function Home() {
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
+  const [mobileSkip, setMobileSkip] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -9778,6 +10023,20 @@ export default function Home() {
         clearTimeout(timeoutId);
     };
   }, [bootState]); 
+
+  // --- DEBUG SHORTCUT: '1' for Mobile Quickstart ---
+  useEffect(() => {
+      const handleDebugKeys = (e: KeyboardEvent) => {
+          if (e.key === '1') {
+              AudioSystem.init(); // Initialize audio context
+              setIntroDone(true);
+              setMobileSkip(true); // Force game phase in MobileExperience
+              setBootState('mobile_lockdown');
+          }
+      };
+      window.addEventListener('keydown', handleDebugKeys);
+      return () => window.removeEventListener('keydown', handleDebugKeys);
+  }, [setIntroDone, setBootState]);
 
   useEffect(() => {
     if (bootState !== 'active') return;
@@ -9877,7 +10136,7 @@ export default function Home() {
             />
           )}
 
-          {isMobileLockdown && <MobileExperience />}
+          {isMobileLockdown && <MobileExperience skipIntro={mobileSkip} />}
 
           {!isSandbox && !isMobileLockdown && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -9898,7 +10157,6 @@ export default function Home() {
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              // LONG EXIT DURATION FOR GRACEFUL FADE
                               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
                               variants={{
                               hidden: { opacity: 0 },
@@ -15000,7 +15258,7 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class DrillAttack extends BTNode {
-  // Switched to ENEMIES def
+  // Use a slightly larger offset to ensure visual overlap
   private readonly TIP_OFFSET = ENEMIES.driller.params?.spawnOffset || 0.32;
   
   constructor(private interval: number) { super(); }
@@ -15014,13 +15272,21 @@ export class DrillAttack extends BTNode {
 
     if (!target || !state || !transform) return NodeState.FAILURE;
 
+    // TARGET LATCH LOGIC:
+    // If we have a target panel, snap our destination to its edge
     let destX = target.x;
     let destY = target.y;
+    
+    // Force re-acquisition of panel rect if possible
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
+            // Find closest point on panel rect to current position
             destX = Math.max(rect.left, Math.min(transform.x, rect.right));
             destY = Math.max(rect.bottom, Math.min(transform.y, rect.top));
+        } else {
+            // Fallback: If registry empty (mobile init race), target 0,0 (center)
+            // This explains the "aiming for center" bug if registry fails
         }
     }
 
@@ -15028,11 +15294,14 @@ export class DrillAttack extends BTNode {
     const dy = destY - transform.y;
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist > 0.001) {
-        const normX = dx / dist;
-        const normY = dy / dist;
-        transform.x = destX - (normX * this.TIP_OFFSET);
-        transform.y = destY - (normY * this.TIP_OFFSET);
+    
+    // Snap to position logic
+    if (dist > 0.05) {
+        // Still moving into position
+        // This node usually runs AFTER MoveToTarget succeeds, so we should be close.
+        // We gently lerp to the drill spot
+        transform.x += dx * 0.1;
+        transform.y += dy * 0.1;
         transform.rotation = angle;
     }
 
@@ -15042,6 +15311,7 @@ export class DrillAttack extends BTNode {
     }
 
     context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
+    
     if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
         context.playSound('loop_drill', transform.x);
         state.timers[AITimerID.DRILL_AUDIO] = 0.25;
@@ -19456,14 +19726,16 @@ class AIRegistryController {
   private behaviors = new Map<string, EnemyLogic>();
 
   public register(id: string, logic: EnemyLogic) {
-    if (this.behaviors.has(id)) {
-        console.warn(`[AIRegistry] Overwriting behavior for ${id}`);
-    }
+    // Overwriting is allowed (needed for HMR/React Strict Mode)
     this.behaviors.set(id, logic);
   }
 
   public get(id: string): EnemyLogic | undefined {
     return this.behaviors.get(id);
+  }
+
+  public clear() {
+    this.behaviors.clear();
   }
 }
 
@@ -19477,12 +19749,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
 
-// Note: Tip Offset is now handled inside the DrillAttack node or passed as an arg if we wanted to be fully dynamic.
-// However, looking at nodes/drillerNodes.ts, DrillAttack *also* imports MODEL_CONFIG. 
-// We must update the Node definition first or pass it as an argument.
-// For this step, I will update the Node Registry file next. 
-// This file just builds the tree.
-
+// Increased Range check from 0.5 to 1.5 to ensure they stop and drill even if slightly offset
 const DRILLER_DEF: NodeDef = {
   type: 'Sequence',
   children: [
@@ -19497,12 +19764,12 @@ const DRILLER_DEF: NodeDef = {
             {
               type: 'Sequence',
               children: [
-                { type: 'IsTargetInRange', args: [0.5] },
+                { type: 'IsTargetInRange', args: [1.5] }, 
                 { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [15.0] }] },
                 { type: 'DrillAttack', args: [0.2] }
               ]
             },
-            { type: 'MoveToTarget', args: [8] }
+            { type: 'MoveToTarget', args: [8, 1.2] } // Speed 8, StopDistance 1.2
           ]
         }
       ]
@@ -19533,6 +19800,8 @@ import { HunterLogic } from './HunterLogic';
 import { DaemonLogic } from './DaemonLogic';
 
 export const registerAllBehaviors = () => {
+  AIRegistry.clear(); // Ensure clean slate for HMR/Re-mounts
+  
   AIRegistry.register(EnemyTypes.DRILLER, DrillerLogic);
   AIRegistry.register(EnemyTypes.KAMIKAZE, KamikazeLogic);
   AIRegistry.register(EnemyTypes.HUNTER, HunterLogic);
