@@ -1,6 +1,6 @@
 import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, FX_ID_MAP } from '@/engine/signals/FastEventBus';
+import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
@@ -12,29 +12,23 @@ export class VFXSystem implements IGameSystem {
     private events: IGameEventService,
     private fastEvents: IFastEventService
   ) {
-    // Only keeping ONE slow listener because Hex Colors are annoying to pack into Int32
     this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
     });
   }
 
   update(delta: number, time: number): void {
-      // Poll Fast Events
       this.fastEvents.process((id, a1, a2, a3, a4) => {
-          if (id === FastEvents.SPAWN_FX) {
-              const key = FX_ID_MAP[a1];
+          if (id === FastEventType.SPAWN_FX) {
+              const key = FX_LOOKUP[a1 as FXCode];
               if (key) {
-                  // a2=x*100, a3=y*100, a4=angle*100
                   this.executeRecipe(key, a2 / 100, a3 / 100, a4 / 100);
               }
           }
-          else if (id === FastEvents.CAM_SHAKE) {
+          else if (id === FastEventType.CAM_SHAKE) {
               this.shakeSystem.addTrauma(a1 / 100);
           }
-          else if (id === FastEvents.HIT_STOP) {
-              // a1 = Duration (ms)
-              // Implementation of hitstop usually involves pausing TimeSystem
-              // For now, we stub it or access TimeSystem if we inject it
+          else if (id === FastEventType.HIT_STOP) {
           }
       });
   }

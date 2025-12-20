@@ -1,6 +1,6 @@
 import { IGameSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
+import { FastEventType, getSoundCode, getFXCode } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
 
@@ -30,16 +30,16 @@ export class FeedbackBridgeSystem implements IGameSystem {
     this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         const x = this.getPanelX(p.id);
         this.emitSound('fx_impact_heavy', x); 
-        this.fastEvents.emit(FastEvents.DUCK_MUSIC, 80, 150);
-        this.fastEvents.emit(FastEvents.CAM_SHAKE, 75); 
-        this.fastEvents.emit(FastEvents.HIT_STOP, 100);
+        this.fastEvents.emit(FastEventType.DUCK_MUSIC, 80, 150);
+        this.fastEvents.emit(FastEventType.CAM_SHAKE, 75); 
+        this.fastEvents.emit(FastEventType.HIT_STOP, 100);
     });
 
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.emitSound('fx_player_death');
-        this.fastEvents.emit(FastEvents.DUCK_MUSIC, 100, 300);
-        this.fastEvents.emit(FastEvents.CAM_SHAKE, 100);
-        this.fastEvents.emit(FastEvents.HIT_STOP, 500);
+        this.fastEvents.emit(FastEventType.DUCK_MUSIC, 100, 300);
+        this.fastEvents.emit(FastEventType.CAM_SHAKE, 100);
+        this.fastEvents.emit(FastEventType.HIT_STOP, 500);
     });
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
@@ -56,17 +56,17 @@ export class FeedbackBridgeSystem implements IGameSystem {
   }
 
   private emitSound(key: string, x: number = 0) {
-      const id = REVERSE_SOUND_MAP[key];
+      const id = getSoundCode(key);
       if (id) {
           const pan = this.calculatePan(x);
-          this.fastEvents.emit(FastEvents.PLAY_SOUND, id, pan);
+          this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan);
       }
   }
 
   private emitFX(key: string, x: number, y: number, angle: number = 0) {
-      const id = REVERSE_FX_MAP[key];
+      const id = getFXCode(key);
       if (id) {
-          this.fastEvents.emit(FastEvents.SPAWN_FX, id, x * 100, y * 100, angle * 100);
+          this.fastEvents.emit(FastEventType.SPAWN_FX, id, x * 100, y * 100, angle * 100);
       }
   }
 

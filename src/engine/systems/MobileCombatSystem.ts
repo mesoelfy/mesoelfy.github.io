@@ -1,6 +1,6 @@
 import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents } from '@/engine/signals/FastEventBus';
+import { FastEventType, FXCode } from '@/engine/signals/FastEventBus';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -27,8 +27,7 @@ export class MobileCombatSystem implements IGameSystem, ICombatSystem {
     private kill(entity: Entity) {
         const t = entity.getComponent<TransformData>(ComponentType.Transform);
         if (t) {
-            // 1 = EXPLOSION_PURPLE
-            this.fastEvents.emit(FastEvents.SPAWN_FX, 1, t.x * 100, t.y * 100, 0); 
+            this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.EXPLOSION_PURPLE, t.x * 100, t.y * 100, 0); 
             this.audio.playSound('fx_impact_light');
         }
         this.registry.destroyEntity(entity.id);

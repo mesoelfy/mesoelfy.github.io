@@ -8,7 +8,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents, REVERSE_FX_MAP, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
+import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
 
 export class CombatSystem implements IGameSystem {
   constructor(
@@ -35,35 +35,32 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              // Game Logic still goes to Slow Bus (UI needs it)
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
-              // FAST PATH: Zero-Alloc
-              const typeId = REVERSE_FX_MAP[type];
+              const typeId = getFXCode(type);
               if (typeId) {
-                  this.fastEvents.emit(FastEvents.SPAWN_FX, typeId, x * 100, y * 100, 0);
+                  this.fastEvents.emit(FastEventType.SPAWN_FX, typeId, x * 100, y * 100, 0);
               }
           },
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Keep legacy event for dynamic color impacts (complex payload)
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
           playAudio: (key) => {
-              const keyId = REVERSE_SOUND_MAP[key.toLowerCase()];
-              if (keyId) this.fastEvents.emit(FastEvents.PLAY_SOUND, keyId, 0);
+              const keyId = getSoundCode(key.toLowerCase());
+              if (keyId) this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, 0);
           },
           playSpatialAudio: (key, x) => {
-              const keyId = REVERSE_SOUND_MAP[key.toLowerCase()];
+              const keyId = getSoundCode(key.toLowerCase());
               if (keyId) {
-                  this.fastEvents.emit(FastEvents.PLAY_SOUND, keyId, (x || 0) * 100);
+                  this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, (x || 0) * 100);
               }
           },
           addTrauma: (amount) => {
-              this.fastEvents.emit(FastEvents.CAM_SHAKE, amount * 100);
+              this.fastEvents.emit(FastEventType.CAM_SHAKE, amount * 100);
           },
           flashEntity: (id) => {
               this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
@@ -95,7 +92,6 @@ export class CombatSystem implements IGameSystem {
           let finalFX = fx;
           const angleToUse = impactAngle || 0;
           
-          // Dynamic overrides based on type
           if (identity?.variant === EnemyTypes.HUNTER) {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
           }
@@ -106,9 +102,9 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          const fxId = REVERSE_FX_MAP[finalFX];
+          const fxId = getFXCode(finalFX);
           if (fxId) {
-              this.fastEvents.emit(FastEvents.SPAWN_FX, fxId, transform.x * 100, transform.y * 100, angleToUse * 100);
+              this.fastEvents.emit(FastEventType.SPAWN_FX, fxId, transform.x * 100, transform.y * 100, angleToUse * 100);
           }
       }
   }

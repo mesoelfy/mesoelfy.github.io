@@ -4,7 +4,7 @@ import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
-import { FastEvents, REVERSE_FX_MAP, REVERSE_SOUND_MAP } from '@/engine/signals/FastEventBus';
+import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -51,15 +51,17 @@ export class BehaviorSystem implements IGameSystem {
               const finalConfig = configId || 'ENEMY_HUNTER';
               bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 4, finalConfig);
           }
+
           if (ownerId !== undefined) {
               const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
               if (proj) proj.ownerId = ownerId;
           }
+
           return bullet;
       },
       spawnFX: (type, x, y, angle) => {
-          const id = REVERSE_FX_MAP[type];
-          if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x * 100, y * 100, (angle || 0) * 100);
+          const id = getFXCode(type);
+          if (id) this.fastEvents.emit(FastEventType.SPAWN_FX, id, x * 100, y * 100, (angle || 0) * 100);
       },
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
@@ -70,9 +72,10 @@ export class BehaviorSystem implements IGameSystem {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 
             : 0;
-          const id = REVERSE_SOUND_MAP[key.toLowerCase()];
+          
+          const id = getSoundCode(key.toLowerCase());
           if (id) {
-              this.fastEvents.emit(FastEvents.PLAY_SOUND, id, pan * 100);
+              this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan * 100);
           } else {
               this.audio.playSound(key as any, pan);
           }
@@ -86,8 +89,11 @@ export class BehaviorSystem implements IGameSystem {
         if (!entity.active) continue;
         const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
         if (!identity) continue;
+
         const behavior = AIRegistry.get(identity.variant);
-        if (behavior) behavior.update(entity, aiContext);
+        if (behavior) {
+            behavior.update(entity, aiContext);
+        }
     }
   }
 

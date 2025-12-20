@@ -96,6 +96,12 @@ export class EntitySpawner implements IEntitySpawner {
     e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
     e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
     e.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: color }));
+    
+    e.addComponent(ComponentRegistry.create(ComponentType.RenderModel, {
+        geometryId: GEOMETRY_IDS.PARTICLE,
+        materialId: MATERIAL_IDS.PARTICLE
+    }));
+    
     this.registry.updateCache(e);
   }
 }

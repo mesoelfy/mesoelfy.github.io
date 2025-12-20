@@ -5,7 +5,7 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEvents } from '@/engine/signals/FastEventBus';
+import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
@@ -63,8 +63,8 @@ export class WeaponSystem implements IGameSystem {
       const speed = 45; 
       const damage = 100;
       
-      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, startX * 100, startY * 100, 0);
-      this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
+      this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, startX * 100, startY * 100, 0);
+      this.fastEvents.emit(FastEventType.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
@@ -102,7 +102,7 @@ export class WeaponSystem implements IGameSystem {
         }
     });
 
-    this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
+    this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, pPos.x * 100);
     this.lastFireTime = time;
   }
 
