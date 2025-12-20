@@ -4,21 +4,22 @@ import { UpgradeOption } from '@/engine/types/game.types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { GameStream } from '@/engine/state/GameStream';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 const MAX_PANEL_HEALTH = 100;
 
 export interface UISlice {
-  panels: Record<string, { id: string, health: number, isDestroyed: boolean, element?: HTMLElement }>;
-  interactionTarget: string | null;
+  panels: Record<string, { id: PanelId, health: number, isDestroyed: boolean, element?: HTMLElement }>;
+  interactionTarget: PanelId | null;
   availableUpgrades: UpgradeOption[];
 
-  registerPanel: (id: string, element: HTMLElement) => void;
-  unregisterPanel: (id: string) => void;
-  setInteractionTarget: (id: string | null) => void;
+  registerPanel: (id: PanelId, element: HTMLElement) => void;
+  unregisterPanel: (id: PanelId) => void;
+  setInteractionTarget: (id: PanelId | null) => void;
   
-  healPanel: (id: string, amount: number, sourceX?: number) => void;
-  damagePanel: (id: string, amount: number, silent?: boolean, sourceX?: number, sourceY?: number) => void;
-  decayPanel: (id: string, amount: number) => void;
+  healPanel: (id: PanelId, amount: number, sourceX?: number) => void;
+  damagePanel: (id: PanelId, amount: number, silent?: boolean, sourceX?: number, sourceY?: number) => void;
+  decayPanel: (id: PanelId, amount: number) => void;
   restoreAllPanels: () => number;
   destroyAllPanels: () => void;
   resetUIState: () => void;
@@ -37,15 +38,9 @@ const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed
     return max > 0 ? (current / max) * 100 : 100;
 };
 
-// Helper to push integrity to both Store (for React) and Stream (for HUD)
 const updateIntegrity = (state: GameState, panels: any) => {
     const integrity = calculateIntegrity(panels);
-    // Write to Stream (Fast)
     GameStream.set('SYSTEM_INTEGRITY', integrity);
-    
-    // Only write to React Store if it crosses a critical threshold (Optimization)
-    // Or if we need it for Game Over logic.
-    // For now, we keep writing it to Store but components should prefer Stream.
     state.setSystemIntegrity(integrity);
 };
 
@@ -156,8 +151,9 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       for (const key in nextPanels) {
           const p = nextPanels[key];
           if (p.isDestroyed) {
+              const pid = key as PanelId;
               nextPanels[key] = { ...p, isDestroyed: false, health: MAX_PANEL_HEALTH * 0.3 };
-              GameEventBus.emit(GameEvents.PANEL_RESTORED, { id: key });
+              GameEventBus.emit(GameEvents.PANEL_RESTORED, { id: pid });
               restoredCount++;
           } else if (p.health < MAX_PANEL_HEALTH) {
               nextPanels[key] = { ...p, health: MAX_PANEL_HEALTH };
@@ -175,9 +171,10 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       const state = get();
       const nextPanels = { ...state.panels };
       for (const key in nextPanels) {
+          const pid = key as PanelId;
           const p = nextPanels[key];
           nextPanels[key] = { ...p, health: 0, isDestroyed: true };
-          GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id: key });
+          GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id: pid });
       }
       set(s => {
           updateIntegrity(s as GameState, nextPanels);

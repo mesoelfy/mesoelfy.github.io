@@ -1,5 +1,7 @@
+import { PanelId } from '@/engine/config/PanelConfig';
+
 export interface RegisteredPanel {
-  id: string;
+  id: PanelId;
   element: HTMLElement;
   health: number;
   isDestroyed: boolean;
@@ -24,10 +26,10 @@ export interface GameState {
   
   startGame: () => void;
   stopGame: () => void;
-  registerPanel: (id: string, element: HTMLElement) => void;
-  unregisterPanel: (id: string) => void;
-  damagePanel: (id: string, amount: number) => void;
-  healPanel: (id: string, amount: number) => void;
+  registerPanel: (id: PanelId, element: HTMLElement) => void;
+  unregisterPanel: (id: PanelId) => void;
+  damagePanel: (id: PanelId, amount: number) => void;
+  healPanel: (id: PanelId, amount: number) => void;
 }
 
 export interface Entity {

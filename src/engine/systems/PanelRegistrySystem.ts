@@ -11,11 +11,9 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { CollisionLayers, PhysicsConfig } from '@/engine/config/PhysicsConfig';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class PanelRegistrySystem implements IPanelSystem {
-  
-  // Map Panel String IDs to ECS Entities
   private entityMap = new Map<string, Entity>();
   private observer: ResizeObserver | null = null;
   private elements = new Map<string, HTMLElement>();
@@ -31,10 +29,9 @@ export class PanelRegistrySystem implements IPanelSystem {
     if (typeof window !== 'undefined') {
         this.observer = new ResizeObserver((entries) => {
             for (const entry of entries) {
-                // Find ID by element
                 for (const [id, el] of this.elements) {
                     if (el === entry.target) {
-                        this.syncEntity(id, entry.contentRect);
+                        this.syncEntity(id as PanelId, entry.contentRect);
                         break;
                     }
                 }
@@ -65,36 +62,30 @@ export class PanelRegistrySystem implements IPanelSystem {
       this.elements.clear();
   }
 
-  public register(id: string, element: HTMLElement) {
+  public register(id: PanelId, element: HTMLElement) {
       this.elements.set(id, element);
       useGameStore.getState().registerPanel(id, element);
       this.observer?.observe(element);
       
-      // Create ECS Entity
       const registry = ServiceLocator.getRegistry();
       const entity = registry.createEntity();
-      entity.addTag(Tag.OBSTACLE); // It's an obstacle
+      entity.addTag(Tag.OBSTACLE); 
       
-      // Add Components
       entity.addComponent(ComponentRegistry.create(ComponentType.Transform));
-      entity.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: id })); // Store Panel ID in Identity
+      entity.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: id })); 
       
-      // Collider (Box)
       entity.addComponent(ComponentRegistry.create(ComponentType.Collider, {
           shape: 'BOX',
           layer: CollisionLayers.PANEL,
-          mask: 0 // Panels don't hit things proactively, things hit panels
+          mask: 0 
       }));
 
-      // Map it
       this.entityMap.set(id, entity);
       registry.updateCache(entity);
-
-      // Initial Sync
       this.syncEntity(id, element.getBoundingClientRect());
   }
 
-  public unregister(id: string) {
+  public unregister(id: PanelId) {
       const el = this.elements.get(id);
       if (el) this.observer?.unobserve(el);
       this.elements.delete(id);
@@ -108,12 +99,11 @@ export class PanelRegistrySystem implements IPanelSystem {
       }
   }
 
-  private syncEntity(id: string, rect: DOMRect | { width: number, height: number }) {
+  private syncEntity(id: PanelId, rect: DOMRect | { width: number, height: number }) {
       const entity = this.entityMap.get(id);
       const el = this.elements.get(id);
       if (!entity || !el) return;
 
-      // Use getBoundingClientRect for absolute positioning
       const fullRect = el.getBoundingClientRect();
       const worldRect = ViewportHelper.domToWorld(id, fullRect);
 
@@ -125,38 +115,30 @@ export class PanelRegistrySystem implements IPanelSystem {
           transform.y = worldRect.y;
           collider.width = worldRect.width;
           collider.height = worldRect.height;
-          
-          // Spatial Grid needs re-inserting in PhysicsSystem update loop automatically
       }
   }
 
   public refreshAll() { 
       for (const [id, el] of this.elements) {
-          this.syncEntity(id, el.getBoundingClientRect());
+          this.syncEntity(id as PanelId, el.getBoundingClientRect());
       }
   }
   
-  public refreshSingle(id: string) { 
+  public refreshSingle(id: PanelId) { 
       const el = this.elements.get(id);
       if (el) this.syncEntity(id, el.getBoundingClientRect());
   }
 
-  public damagePanel(id: string, amount: number, silent: boolean = false, sourceX?: number, sourceY?: number) {
+  public damagePanel(id: PanelId, amount: number, silent: boolean = false, sourceX?: number, sourceY?: number) {
       if (useStore.getState().debugFlags.panelGodMode) return;
-      
-      // IMPORTANT: Since CollisionSystem calls resolveCollision, and CombatSystem emits events,
-      // The logic flow is: 
-      // 1. Collision -> CombatSystem.resolveCollision -> damagePanel (via context) -> HERE
-      // 2. HERE -> Update Store -> Emit PANEL_DAMAGED
-      
       useGameStore.getState().damagePanel(id, amount, silent, sourceX, sourceY);
   }
 
-  public healPanel(id: string, amount: number, sourceX?: number) {
+  public healPanel(id: PanelId, amount: number, sourceX?: number) {
       useGameStore.getState().healPanel(id, amount, sourceX);
   }
   
-  public decayPanel(id: string, amount: number) {
+  public decayPanel(id: PanelId, amount: number) {
       useGameStore.getState().decayPanel(id, amount);
   }
 
@@ -164,9 +146,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       useGameStore.getState().destroyAllPanels();
   }
 
-  public getPanelRect(id: string): WorldRect | undefined {
-      // Use entity map for source of truth if possible, or fallback to DOM calc
-      // For simplicity/compatibility with legacy consumers (AI nodes), we return WorldRect struct
+  public getPanelRect(id: PanelId): WorldRect | undefined {
       const entity = this.entityMap.get(id);
       if (entity) {
           const t = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -186,7 +166,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       return undefined;
   }
 
-  public getPanelState(id: string) {
+  public getPanelState(id: PanelId) {
       const panel = useGameStore.getState().panels[id];
       if (!panel) return undefined;
       return { health: panel.health, isDestroyed: panel.isDestroyed };
@@ -197,8 +177,9 @@ export class PanelRegistrySystem implements IPanelSystem {
       const state = useGameStore.getState();
       
       for(const [id, entity] of this.entityMap) {
-          const rect = this.getPanelRect(id);
-          const panel = state.panels[id];
+          const pid = id as PanelId;
+          const rect = this.getPanelRect(pid);
+          const panel = state.panels[pid];
           if (rect && panel) {
               results.push({ ...rect, health: panel.health, isDestroyed: panel.isDestroyed });
           }

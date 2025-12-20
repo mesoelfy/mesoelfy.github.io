@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 09:02:55 CST 2025
+Generated on: Sat Dec 20 09:14:20 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -87,6 +87,10 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── assets
 │   │   │   │   ├── AudioManifest.ts
 │   │   │   │   └── VFXManifest.ts
+│   │   │   ├── constants
+│   │   │   │   ├── MathConstants.ts
+│   │   │   │   ├── SystemConstants.ts
+│   │   │   │   └── UIConstants.ts
 │   │   │   └── static
 │   │   │       ├── feed.json
 │   │   │       ├── gallery.json
@@ -359,7 +363,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-80 directories, 271 files
+81 directories, 274 files
 
 =====================================
 FILE: ./next.config.js
@@ -2594,14 +2598,14 @@ FILE: ./src/ui/kit/atoms/VirtualJoystick.tsx
 =====================================
 import { useState, useRef } from 'react';
 import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
+import { UI_METRICS } from '@/engine/config/constants/UIConstants';
 
 export const VirtualJoystick = () => {
   const [active, setActive] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const stickRef = useRef<HTMLDivElement>(null);
   
-  // Configuration
-  const MAX_RADIUS = 40;
+  const MAX_RADIUS = UI_METRICS.JOYSTICK.MAX_RADIUS;
 
   const handlePointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -2629,30 +2633,24 @@ export const VirtualJoystick = () => {
     
     setPos({ x, y });
 
-    // Normalize and Invert Y for World Space
     const normX = x / MAX_RADIUS;
     const normY = -(y / MAX_RADIUS); 
     
-    // Write to Service
     VirtualJoystickService.setVector(normX, normY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     setActive(false);
     setPos({ x: 0, y: 0 });
-    // Reset Service
     VirtualJoystickService.setVector(0, 0);
   };
 
   return (
-    // UPDATE: Moved to bottom-left (left-8)
     <div className="fixed bottom-8 left-8 w-32 h-32 z-[90] touch-none select-none">
-      {/* Base */}
       <div 
         className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center"
         ref={stickRef}
       >
-        {/* Stick */}
         <div 
           className="w-12 h-12 rounded-full bg-primary-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear"
           style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
@@ -3406,6 +3404,7 @@ import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 import { useRef, useState } from 'react';
+import { UI_METRICS, UI_COLORS } from '@/engine/config/constants/UIConstants';
 
 interface VitalsRingProps {
   health: number;
@@ -3421,7 +3420,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   const [deadState, setDeadState] = useState(isDead);
   const [rebootState, setRebootState] = useState(0);
 
-  // Use refs to track values for ratio calculation across independent stream updates
   const hpRef = useRef(health);
   const maxHpRef = useRef(maxHealth);
   const xpMaxRef = useRef(100);
@@ -3431,10 +3429,9 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
     const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
     containerRef.current.style.setProperty('--hp-progress', ratio.toString());
     
-    // Dynamic Thresholds matching OS aesthetics
-    let color = '#78F654'; // GREEN
-    if (ratio < 0.3) color = '#FF003C';      // RED
-    else if (ratio < 0.6) color = '#eae747'; // YELLOW
+    let color = UI_COLORS.HP_SAFE; 
+    if (ratio < UI_METRICS.VITALS.THRESHOLD_CRITICAL) color = UI_COLORS.HP_CRIT;      
+    else if (ratio < UI_METRICS.VITALS.THRESHOLD_WARNING) color = UI_COLORS.HP_WARN; 
     
     containerRef.current.style.setProperty('--hp-color', color);
   };
@@ -3470,11 +3467,11 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       setRebootState(val);
   });
 
-  const size = 160; 
+  const size = UI_METRICS.VITALS.SIZE; 
   const center = size / 2;
-  const radiusHp = 60;
-  const radiusXp = 70;
-  const stroke = 4;
+  const radiusHp = UI_METRICS.VITALS.RADIUS_HP;
+  const radiusXp = UI_METRICS.VITALS.RADIUS_XP;
+  const stroke = UI_METRICS.VITALS.STROKE;
   const circHp = 2 * Math.PI * radiusHp;
   const circXp = 2 * Math.PI * radiusXp;
 
@@ -3487,7 +3484,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             '--xp-max': circXp,
             '--hp-progress': health / maxHealth,
             '--xp-progress': 0,
-            '--hp-color': '#78F654'
+            '--hp-color': UI_COLORS.HP_SAFE
         } as React.CSSProperties}
     > 
         <div className={clsx("absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle", deadState ? "opacity-60 grayscale" : "opacity-100")}>
@@ -3530,7 +3527,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           
           <circle 
             cx={center} cy={center} r={radiusXp} 
-            stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 
+            stroke={UI_COLORS.XP_BAR} strokeWidth={stroke} fill="transparent" 
             strokeDasharray={circXp} 
             strokeLinecap="round" 
             transform={`rotate(-90 ${center} ${center})`} 
@@ -3541,7 +3538,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           />
           
           <defs><path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /></defs>
-          <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
+          <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill={UI_COLORS.XP_BAR} style={{ filter: `drop-shadow(0 0 2px ${UI_COLORS.XP_BAR})` }}>
               <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
                   <tspan ref={levelRef}>LVL_{level.toString().padStart(2, '0')}</tspan>
               </textPath>
@@ -10636,6 +10633,60 @@ export const PLAYER_CONFIG = {
 
 
 =====================================
+FILE: ./src/engine/config/constants/MathConstants.ts
+=====================================
+export const GAME_MATH = {
+  SPAWN_RADIUS_STD: 25,
+  WEAPON_SPREAD_BASE: 0.15,
+  SNIFFER_ANGLE_OFFSET: Math.PI / 4,
+  FULL_CIRCLE: Math.PI * 2
+} as const;
+
+
+=====================================
+FILE: ./src/engine/config/constants/SystemConstants.ts
+=====================================
+export const SYS_LIMITS = {
+  MAX_ENTITIES: 30000,
+  MAX_PARTICLES: 20000,
+  MAX_COLLISION_RESULTS: 1024,
+  SPATIAL_GRID_SIZE: 4096,
+  SPATIAL_CELL_SIZE: 4,
+  EVENT_BUFFER_SIZE: 4096,
+  MAX_POLYPHONY: 100,
+  SAMPLE_RATE: 44100,
+} as const;
+
+
+=====================================
+FILE: ./src/engine/config/constants/UIConstants.ts
+=====================================
+import { PALETTE } from '../Palette';
+
+export const UI_METRICS = {
+  VITALS: {
+    SIZE: 160,
+    RADIUS_HP: 60,
+    RADIUS_XP: 70,
+    STROKE: 4,
+    THRESHOLD_CRITICAL: 0.3,
+    THRESHOLD_WARNING: 0.6
+  },
+  JOYSTICK: {
+    MAX_RADIUS: 40,
+    SENSITIVITY: 30.0
+  }
+} as const;
+
+export const UI_COLORS = {
+  HP_SAFE: PALETTE.GREEN.PRIMARY,
+  HP_WARN: PALETTE.YELLOW.ALERT,
+  HP_CRIT: PALETTE.RED.CRITICAL,
+  XP_BAR: PALETTE.PURPLE.PRIMARY
+} as const;
+
+
+=====================================
 FILE: ./src/engine/config/TextAssets.ts
 =====================================
 // Used for the 3D Intro UI (Block Style)
@@ -11552,18 +11603,17 @@ export const GameEventBus = new GameEventBusFacade();
 FILE: ./src/engine/signals/FastEventBus.ts
 =====================================
 import { IFastEventService } from '@/engine/interfaces';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
-// Numeric OpCodes for zero-allocation handling
 export enum FastEvents {
   NONE = 0,
-  PLAY_SOUND = 1,  // Arg1: SoundID, Arg2: Pan (x * 100)
-  SPAWN_FX = 2,    // Arg1: FX_ID, Arg2: x * 100, Arg3: y * 100, Arg4: angle * 100
-  CAM_SHAKE = 3,   // Arg1: Intensity * 100
-  HIT_STOP = 4,    // Arg1: Duration (ms)
-  DUCK_MUSIC = 5   // Arg1: Intensity * 100, Arg2: Duration * 100
+  PLAY_SOUND = 1,
+  SPAWN_FX = 2,
+  CAM_SHAKE = 3,
+  HIT_STOP = 4,
+  DUCK_MUSIC = 5
 }
 
-// Maps Numeric IDs back to String Keys for lookup
 export const SOUND_ID_MAP: Record<number, string> = {
   1: 'fx_player_fire',
   2: 'fx_impact_light',
@@ -11599,7 +11649,6 @@ export const FX_ID_MAP: Record<number, string> = {
   15: 'IMPACT_YELLOW'
 };
 
-// Reverse maps for Emitters (Computed once)
 export const REVERSE_SOUND_MAP: Record<string, number> = Object.fromEntries(
   Object.entries(SOUND_ID_MAP).map(([k, v]) => [v, Number(k)])
 );
@@ -11608,15 +11657,14 @@ export const REVERSE_FX_MAP: Record<string, number> = Object.fromEntries(
   Object.entries(FX_ID_MAP).map(([k, v]) => [v, Number(k)])
 );
 
-const BUFFER_SIZE = 4096; // Max events per frame * params
-const EVENT_STRIDE = 5;   // ID + 4 Args
+const EVENT_STRIDE = 5;
 
 export class FastEventBusImpl implements IFastEventService {
-  private buffer = new Int32Array(BUFFER_SIZE);
+  private buffer = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
   private cursor = 0;
 
   public emit(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
-    if (this.cursor + EVENT_STRIDE >= BUFFER_SIZE) return; 
+    if (this.cursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
 
     this.buffer[this.cursor++] = eventId;
     this.buffer[this.cursor++] = a1;
@@ -11634,8 +11682,6 @@ export class FastEventBusImpl implements IFastEventService {
   }
 
   public readEvents(startCursor: number, handler: (id: number, a1: number, a2: number, a3: number, a4: number) => void): number {
-    // Current architecture clears buffer every frame, so we just iterate 0 to cursor
-    // startCursor arg is kept for interface compatibility if ring buffer logic changes later
     return this.cursor;
   }
   
@@ -12245,9 +12291,11 @@ export class AIStateData extends Component {
 =====================================
 FILE: ./src/engine/ecs/Constants.ts
 =====================================
-export const MAX_ENTITIES = 30000; // Scaled for Bullet Hell capability
-export const SPATIAL_GRID_SIZE = 4096; // Power of 2 for bitwise masking
-export const SPATIAL_CELL_SIZE = 4; // World Units
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+
+export const MAX_ENTITIES = SYS_LIMITS.MAX_ENTITIES;
+export const SPATIAL_GRID_SIZE = SYS_LIMITS.SPATIAL_GRID_SIZE;
+export const SPATIAL_CELL_SIZE = SYS_LIMITS.SPATIAL_CELL_SIZE;
 
 
 =====================================
@@ -14225,8 +14273,7 @@ import { SoundBank } from './SoundBank';
 import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
-
-const MAX_POLYPHONY = 100;
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class VoiceManager {
   private activeCount = 0;
@@ -14242,7 +14289,7 @@ export class VoiceManager {
   ) {}
 
   public playSFX(key: AudioKey, pan: number = 0) {
-    if (this.activeCount >= MAX_POLYPHONY) return;
+    if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
 
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
@@ -14344,6 +14391,7 @@ export class VoiceManager {
 FILE: ./src/engine/audio/modules/AudioSynthesizer.ts
 =====================================
 import { SoundDef } from '@/engine/config/assets/AudioManifest';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class AudioSynthesizer {
   
@@ -14356,7 +14404,7 @@ export class AudioSynthesizer {
     const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
     if (!OfflineContextClass) return null;
 
-    const sampleRate = 44100;
+    const sampleRate = SYS_LIMITS.SAMPLE_RATE;
     const length = Math.ceil(sampleRate * recipe.duration);
     
     if (length <= 0) return null;
@@ -14455,7 +14503,7 @@ export class AudioSynthesizer {
 
   private static makeDistortionCurve(amount: number) {
     const k = typeof amount === 'number' ? amount : 50;
-    const n_samples = 44100;
+    const n_samples = SYS_LIMITS.SAMPLE_RATE;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
     for (let i = 0; i < n_samples; ++i) {
@@ -16029,11 +16077,10 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-
-const MAX_COLLISION_RESULTS = 1024;
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class CollisionSystem implements IGameSystem {
-  private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   private handledPairs = new Set<number>(); 
 
   constructor(
@@ -16054,11 +16101,9 @@ export class CollisionSystem implements IGameSystem {
         
         if (!collider || collider.mask === 0 || !transform) continue;
 
-        // Skip spawning entities
         const state = entity.getComponent<AIStateData>(ComponentType.State);
         if (state && state.current === 'SPAWN') continue;
 
-        // Query radius: If box, use pythagoras of half-width/height to approximate radius for broadphase
         const queryRad = collider.shape === 'BOX' 
             ? Math.sqrt((collider.width/2)**2 + (collider.height/2)**2) + 1.0
             : collider.radius + 1.0;
@@ -16099,7 +16144,6 @@ export class CollisionSystem implements IGameSystem {
       tA: TransformData, cA: ColliderData, 
       tB: TransformData, cB: ColliderData
   ): boolean {
-      // 1. Circle vs Circle
       if (cA.shape === 'CIRCLE' && cB.shape === 'CIRCLE') {
           const dx = tA.x - tB.x;
           const dy = tA.y - tB.y;
@@ -16107,7 +16151,6 @@ export class CollisionSystem implements IGameSystem {
           return (dx * dx + dy * dy) < (rSum * rSum);
       }
 
-      // 2. Box vs Box (AABB)
       if (cA.shape === 'BOX' && cB.shape === 'BOX') {
           return (
               Math.abs(tA.x - tB.x) * 2 < (cA.width + cB.width) &&
@@ -16115,27 +16158,21 @@ export class CollisionSystem implements IGameSystem {
           );
       }
 
-      // 3. Circle vs Box
       const circle = cA.shape === 'CIRCLE' ? { t: tA, c: cA } : { t: tB, c: cB };
       const box = cA.shape === 'BOX' ? { t: tA, c: cA } : { t: tB, c: cB };
 
-      // Find closest point on box to circle center
-      // t.x/y is box center.
       const boxHalfW = box.c.width / 2;
       const boxHalfH = box.c.height / 2;
 
       const distX = Math.abs(circle.t.x - box.t.x);
       const distY = Math.abs(circle.t.y - box.t.y);
 
-      // Broadphase check
       if (distX > (boxHalfW + circle.c.radius)) return false;
       if (distY > (boxHalfH + circle.c.radius)) return false;
 
-      // Inside check
       if (distX <= boxHalfW) return true; 
       if (distY <= boxHalfH) return true;
 
-      // Corner check
       const dx = distX - boxHalfW;
       const dy = distY - boxHalfH;
       return (dx*dx + dy*dy <= (circle.c.radius * circle.c.radius));
@@ -16689,15 +16726,14 @@ export class StructureSystem implements IGameSystem {
 FILE: ./src/engine/systems/ParticleSystem.ts
 =====================================
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import * as THREE from 'three';
 
-// UPDATED: Increased capacity to prevent starvation during chaotic scenes
-const MAX_PARTICLES = 20000;
+const MAX_PARTICLES = SYS_LIMITS.MAX_PARTICLES;
 
 export class ParticleSystem implements IParticleSystem {
   public count = 0;
 
-  // Data Oriented Design (Structure of Arrays)
   public x = new Float32Array(MAX_PARTICLES);
   public y = new Float32Array(MAX_PARTICLES);
   public vx = new Float32Array(MAX_PARTICLES);
@@ -16705,13 +16741,12 @@ export class ParticleSystem implements IParticleSystem {
   public life = new Float32Array(MAX_PARTICLES);
   public maxLife = new Float32Array(MAX_PARTICLES);
   public size = new Float32Array(MAX_PARTICLES);
-  public shape = new Float32Array(MAX_PARTICLES); // 0=Square, 1=Teardrop
+  public shape = new Float32Array(MAX_PARTICLES); 
   
   public r = new Float32Array(MAX_PARTICLES);
   public g = new Float32Array(MAX_PARTICLES);
   public b = new Float32Array(MAX_PARTICLES);
 
-  // Helper for hex parsing
   private tempColor = new THREE.Color();
 
   constructor() {
@@ -19319,6 +19354,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
+import { GAME_MATH } from '@/engine/config/constants/MathConstants';
 
 export interface ShotDef {
   x: number;
@@ -19341,7 +19377,6 @@ export const calculatePlayerShots = (
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
 
-  // 1. Calculate Stats based on Upgrades
   const forkLevel = upgrades['FORK'] || 0;
   const dmgLevel = upgrades['EXECUTE'] || 0;
   const snifferLevel = upgrades['SNIFFER'] || 0;
@@ -19352,18 +19387,14 @@ export const calculatePlayerShots = (
   const speed = config.bulletSpeed;
   const life = config.bulletLife;
 
-  // 2. Base Targeting
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
   const baseAngle = Math.atan2(dy, dx);
 
-  // 3. Determine Config ID (Visuals)
   let configId = 'PLAYER_STANDARD';
   if (forkLevel > 0) configId = 'PLAYER_FORK';
   
-  // 4. Generate Main Frontal Arc (Fork)
-  const baseSpread = 0.15;
-  const spreadAngle = baseSpread; 
+  const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
   for (let i = 0; i < projectileCount; i++) {
@@ -19384,7 +19415,6 @@ export const calculatePlayerShots = (
       });
   }
 
-  // 5. Generate Backdoor (Rear Shot)
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
       
@@ -19403,24 +19433,17 @@ export const calculatePlayerShots = (
       });
   }
 
-  // 6. Generate Sniffers (Homing Swarm)
   if (snifferLevel > 0) {
-      const angleStep = (Math.PI * 2) / snifferLevel;
-      const angleOffset = baseAngle + (Math.PI / 4); 
-      
-      for(let i=0; i<snifferLevel; i++) {
-          const angle = angleOffset + (i * angleStep);
-          
-          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
-
+      const angleStep = GAME_MATH.FULL_CIRCLE / snifferLevel;
+      for (let i = 0; i < snifferLevel; i++) {
+          const angle = i * angleStep;
           shots.push({
-              x: spawnX,
-              y: spawnY,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              damage,
-              life,
+              x: origin.x + Math.cos(angle) * 10,
+              y: origin.y + Math.sin(angle) * 10,
+              vx: Math.cos(angle) * speed * 0.5,
+              vy: Math.sin(angle) * speed * 0.5,
+              damage: damage * 0.5,
+              life: life * 2,
               configId: 'PLAYER_SNIFFER',
               isHoming: true
           });

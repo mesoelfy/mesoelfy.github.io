@@ -2,6 +2,7 @@ import { IGameSystem, IGameEventService, IFastEventService, IPanelSystem } from 
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, REVERSE_SOUND_MAP, REVERSE_FX_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class FeedbackBridgeSystem implements IGameSystem {
   constructor(
@@ -75,7 +76,7 @@ export class FeedbackBridgeSystem implements IGameSystem {
       return Math.floor(Math.max(-1, Math.min(1, worldX / halfWidth)) * 100);
   }
 
-  private getPanelX(panelId: string): number {
+  private getPanelX(panelId: PanelId): number {
       const rect = this.panelSystem.getPanelRect(panelId);
       return rect ? rect.x : 0;
   }

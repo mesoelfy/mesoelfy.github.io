@@ -8,15 +8,16 @@ import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { Tag } from '@/engine/ecs/types';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
 export class InteractionSystem implements IInteractionSystem {
   public repairState: RepairState = 'IDLE';
-  public hoveringPanelId: string | null = null;
+  public hoveringPanelId: PanelId | null = null;
   
   private lastRepairTime = 0;
-  private previousHoverId: string | null = null;
+  private previousHoverId: PanelId | null = null;
 
   constructor(
     private input: IInputService,
@@ -41,7 +42,6 @@ export class InteractionSystem implements IInteractionSystem {
     
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
-        
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
             this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
         }
@@ -64,7 +64,7 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handleRevival(cursor: {x: number, y: number}, time: number) {
-    const rect = this.panelSystem.getPanelRect('identity');
+    const rect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
     if (!rect) return;
     
     const padding = 0.1; 
@@ -75,7 +75,7 @@ export class InteractionSystem implements IInteractionSystem {
         cursor.y <= rect.top + padding;
 
     if (isHovering) {
-        this.hoveringPanelId = 'identity';
+        this.hoveringPanelId = PanelId.IDENTITY;
         this.repairState = 'REBOOTING';
         if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
@@ -98,7 +98,6 @@ export class InteractionSystem implements IInteractionSystem {
 
         if (!transform || !collider || !identity) continue;
 
-        // Precise AABB Check
         const halfW = collider.width / 2;
         const halfH = collider.height / 2;
         
@@ -106,7 +105,7 @@ export class InteractionSystem implements IInteractionSystem {
         const inY = cursor.y >= transform.y - halfH && cursor.y <= transform.y + halfH;
 
         if (inX && inY) {
-            const panelId = identity.variant;
+            const panelId = identity.variant as PanelId;
             this.hoveringPanelId = panelId;
 
             const panelState = this.panelSystem.getPanelState(panelId);

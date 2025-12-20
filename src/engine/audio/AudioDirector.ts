@@ -3,9 +3,9 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents, SOUND_ID_MAP } from '@/engine/signals/FastEventBus';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class AudioDirector implements IGameSystem {
-  
   constructor(
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
@@ -16,12 +16,10 @@ export class AudioDirector implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Poll the Ring Buffer
     this.fastEvents.process((id, a1, a2) => {
         if (id === FastEvents.PLAY_SOUND) {
             const key = SOUND_ID_MAP[a1];
             if (key) {
-                // a2 is x * 100
                 const pan = this.calculatePan(a2 / 100);
                 this.audio.playSound(key as AudioKey, pan);
             }
@@ -30,13 +28,11 @@ export class AudioDirector implements IGameSystem {
   }
 
   private setupEventListeners() {
-    // 1. Legacy/Slow Path (Object Events)
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
     });
 
-    // 2. Gameplay Events
     this.events.subscribe(GameEvents.PLAYER_FIRED, (p) => {
         this.audio.playSound('fx_player_fire', this.calculatePan(p.x));
     });
@@ -84,7 +80,7 @@ export class AudioDirector implements IGameSystem {
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
-  private getPanelPan(panelId: string): number {
+  private getPanelPan(panelId: PanelId): number {
       const rect = this.panelSystem.getPanelRect(panelId);
       if (!rect) return 0;
       return this.calculatePan(rect.x);

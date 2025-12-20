@@ -1,3 +1,5 @@
+import { PanelId } from '@/engine/config/PanelConfig';
+
 export enum GameEvents {
   PLAYER_FIRED = 'PLAYER_FIRED',
   PLAYER_HIT = 'PLAYER_HIT',
@@ -60,10 +62,10 @@ export interface GameEventPayloads {
   [GameEvents.ENEMY_DESTROYED]: { id: number; type: string; x: number; y: number };
   [GameEvents.PROJECTILE_CLASH]: { x: number; y: number };
   
-  [GameEvents.PANEL_DAMAGED]: { id: string; amount: number; currentHealth: number; sourceX?: number; sourceY?: number };
-  [GameEvents.PANEL_HEALED]: { id: string; amount: number };
-  [GameEvents.PANEL_RESTORED]: { id: string; x?: number }; 
-  [GameEvents.PANEL_DESTROYED]: { id: string };
+  [GameEvents.PANEL_DAMAGED]: { id: PanelId; amount: number; currentHealth: number; sourceX?: number; sourceY?: number };
+  [GameEvents.PANEL_HEALED]: { id: PanelId; amount: number };
+  [GameEvents.PANEL_RESTORED]: { id: PanelId; x?: number }; 
+  [GameEvents.PANEL_DESTROYED]: { id: PanelId };
   
   [GameEvents.GAME_START]: null;
   [GameEvents.GAME_OVER]: { score: number };

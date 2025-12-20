@@ -1,7 +1,7 @@
 import { motion, useMotionValue, useTransform, useAnimationFrame } from 'framer-motion';
 import { ChevronUp, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useRef } from 'react';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 const TEXT = "SYSTEM BREACH // CRITICAL FAILURE // REBOOT REQUIRED // ";
 const REPEAT_COUNT = 8; 
@@ -9,47 +9,22 @@ const FULL_TEXT = Array(REPEAT_COUNT).fill(TEXT).join("");
 
 const HazardStrip = ({ direction, isSecondary, isActive, index }: { direction: 1 | -1, isSecondary: boolean, isActive: boolean, index: number }) => {
   const staggerOffset = ((index * 23) % 80) - 40; 
-  
-  // We track position manually to allow seamless reversal
   const x = useMotionValue(0); 
-  
-  // Configuration
-  // TUNED: 0.4 (Secondary) and 0.7 (Main)
   const baseSpeed = isSecondary ? 0.4 : 0.7; 
   
   useAnimationFrame((time, delta) => {
-    // Determine velocity:
-    // 1. Base Speed
-    // 2. Original Direction (Row Alternation)
-    // 3. Active State Reversal (Flip if repairing)
     const velocity = baseSpeed * direction * (isActive ? -1 : 1);
-    
-    // Calculate movement for this frame (delta is in ms)
     const moveAmount = velocity * (delta / 1000);
-    
     let newX = x.get() + moveAmount;
-
-    // Infinite Loop Logic (0% to -25%)
     if (newX > 0) newX -= 25;
     if (newX < -25) newX += 25;
-
     x.set(newX);
   });
 
   return (
-    <div 
-        className={clsx(
-            "flex relative overflow-visible w-full select-none transition-opacity duration-500",
-            // Note: Use opacity-[0.XX] for custom values if standard classes (10, 20, 30) don't fit.
-            isSecondary ? "opacity-10" : "opacity-20" 
-        )}
-        style={{ transform: `translateX(${staggerOffset}%)` }}
-    >
+    <div className={clsx("flex relative overflow-visible w-full select-none transition-opacity duration-500", isSecondary ? "opacity-10" : "opacity-20")} style={{ transform: `translateX(${staggerOffset}%)` }}>
       <motion.div
-        className={clsx(
-          "flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out",
-          isActive ? "text-latent-purple" : "text-critical-red"
-        )}
+        className={clsx("flex whitespace-nowrap font-header font-black text-4xl md:text-6xl tracking-widest uppercase transition-colors duration-300 ease-out", isActive ? "text-latent-purple" : "text-critical-red")}
         style={{ x: useTransform(x, v => `${v}%`) }}
       >
         <span className="shrink-0 px-4">{FULL_TEXT}</span>
@@ -63,27 +38,23 @@ interface BreachOverlayProps {
   isVideo: boolean;
   showInteractive: boolean;
   isRepairing?: boolean;
-  panelId?: string;
+  panelId?: PanelId;
 }
 
 export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing = false, panelId }: BreachOverlayProps) => {
   const safeProgress = (Number.isFinite(progress) && !isNaN(progress)) ? Math.max(0, Math.min(100, progress)) : 0;
   const isActive = isRepairing;
-  const isCompactHeight = panelId === 'feed' || panelId === 'social';
-  const showStatusBar = panelId !== 'social';
+  const isCompactHeight = panelId === PanelId.FEED || panelId === PanelId.SOCIAL;
+  const showStatusBar = panelId !== PanelId.SOCIAL;
 
   return (
-    <div className={clsx(
-        "absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden",
-        isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md"
-    )}>
+    <div className={clsx("absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden", isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md")}>
         <div className="absolute inset-[-100%] flex flex-col justify-center gap-0 md:gap-4 rotate-[-12deg] pointer-events-none">
             {Array.from({ length: 16 }).map((_, i) => (
                 <HazardStrip key={i} index={i} direction={i % 2 === 0 ? 1 : -1} isSecondary={i % 2 !== 0} isActive={isActive} />
             ))}
         </div>
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,transparent_20%,#000_100%)] z-10" />
-
         {showInteractive && (
           <div className={clsx("relative z-20 flex flex-col items-center justify-center gap-1 cursor-crosshair group", isCompactHeight ? "mb-0" : "mb-[25%]")}>
               <div className="relative h-20 flex items-center justify-center">
@@ -93,16 +64,11 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                       </motion.div>
                   </div>
                   <div className={clsx("absolute inset-0 flex items-center justify-center -translate-y-8 transition-opacity duration-200", isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                      <motion.div 
-                          animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }}
-                          transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-latent-purple drop-shadow-[0_0_25px_#E0B0FF]"
-                      >
+                      <motion.div animate={{ scale: [1, 1.2, 1], filter: ["brightness(1)", "brightness(1.5)", "brightness(1)"] }} transition={{ duration: 0.2, repeat: Infinity, ease: "easeInOut" }} className="text-latent-purple drop-shadow-[0_0_25px_#E0B0FF]">
                           <ChevronUp size={80} strokeWidth={4} />
                       </motion.div>
                   </div>
               </div>
-
               {showStatusBar && (
                   <div className="flex flex-col items-center text-center gap-2">
                       <div className={clsx("px-4 py-1 backdrop-blur-md border transition-colors duration-300", isActive ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50")}>
@@ -111,12 +77,7 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
                           </span>
                       </div>
                       <div className="w-48 bg-gray-900/80 h-2 rounded-full overflow-hidden border border-gray-700 shadow-lg relative">
-                          <motion.div 
-                              className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" 
-                              initial={{ width: "0%" }}
-                              animate={{ width: `${safeProgress}%` }}
-                              transition={{ type: "tween", duration: 0.1 }}
-                          />
+                          <motion.div className="h-full bg-gradient-to-r from-[#2a0a2e] via-latent-purple to-[#E0B0FF]" initial={{ width: "0%" }} animate={{ width: `${safeProgress}%` }} transition={{ type: "tween", duration: 0.1 }} />
                       </div>
                       <div className="flex justify-between w-full text-[9px] font-mono font-bold">
                           <span className={clsx("transition-colors duration-200", isActive ? "text-[#E0B0FF]" : "text-critical-red")}>INTEGRITY: {Math.floor(safeProgress)}%</span>

@@ -2,6 +2,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export interface AIContext {
   delta: number;
@@ -15,14 +16,13 @@ export interface AIContext {
       ownerId?: number
   ) => Entity;
 
-  // Unified FX Spawner
   spawnFX: (type: VFXKey, x: number, y: number, angle?: number) => void;
   spawnParticle: (x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number) => void;
   
   playSound: (key: AudioKey, x?: number) => void;
-  damagePanel: (id: string, amount: number, sourceX?: number, sourceY?: number) => void;
+  damagePanel: (id: PanelId, amount: number, sourceX?: number, sourceY?: number) => void;
   
-  getPanelRect: (id: string) => WorldRect | undefined;
+  getPanelRect: (id: PanelId) => WorldRect | undefined;
   getUpgradeLevel: (key: string) => number;
   
   config: typeof ConfigService;

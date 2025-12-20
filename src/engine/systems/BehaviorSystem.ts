@@ -51,16 +51,13 @@ export class BehaviorSystem implements IGameSystem {
               const finalConfig = configId || 'ENEMY_HUNTER';
               bullet = this.spawner.spawnBullet(x, y, vx, vy, true, 3.0, 4, finalConfig);
           }
-
           if (ownerId !== undefined) {
               const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
               if (proj) proj.ownerId = ownerId;
           }
-
           return bullet;
       },
       spawnFX: (type, x, y, angle) => {
-          // Fast Path
           const id = REVERSE_FX_MAP[type];
           if (id) this.fastEvents.emit(FastEvents.SPAWN_FX, id, x * 100, y * 100, (angle || 0) * 100);
       },
@@ -73,7 +70,6 @@ export class BehaviorSystem implements IGameSystem {
           const pan = x !== undefined && halfWidth > 0 
             ? Math.max(-1, Math.min(1, x / halfWidth)) 
             : 0;
-          
           const id = REVERSE_SOUND_MAP[key.toLowerCase()];
           if (id) {
               this.fastEvents.emit(FastEvents.PLAY_SOUND, id, pan * 100);
@@ -90,11 +86,8 @@ export class BehaviorSystem implements IGameSystem {
         if (!entity.active) continue;
         const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
         if (!identity) continue;
-
         const behavior = AIRegistry.get(identity.variant);
-        if (behavior) {
-            behavior.update(entity, aiContext);
-        }
+        if (behavior) behavior.update(entity, aiContext);
     }
   }
 

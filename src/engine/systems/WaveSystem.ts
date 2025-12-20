@@ -6,6 +6,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { PanelId } from '@/engine/config/PanelConfig';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -15,7 +16,6 @@ interface WaveDef {
     interval: number;
 }
 
-// Dynamic offset to match Driller model
 const DRILLER_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
 
 export class WaveSystem implements IGameSystem {
@@ -48,8 +48,6 @@ export class WaveSystem implements IGameSystem {
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
-    
-    // STOP STANDARD SPAWNING IF GAME OVER
     if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
@@ -77,14 +75,11 @@ export class WaveSystem implements IGameSystem {
       this.hasStressTested = true;
 
       const { width, height } = ViewportHelper.viewport;
-      
-      // 100 of EACH type = 300 Total
       const types = [EnemyTypes.DRILLER, EnemyTypes.HUNTER, EnemyTypes.KAMIKAZE];
       const countPerType = 100;
 
       types.forEach(type => {
           for(let i = 0; i < countPerType; i++) {
-              // Scatter across the entire viewport + margin
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               this.spawner.spawnEnemy(type, x, y);
@@ -93,15 +88,15 @@ export class WaveSystem implements IGameSystem {
   }
 
   private runScenario(panels: any[]) {
-      this.panelSystem.damagePanel('art', 9999, true); 
-      this.panelSystem.damagePanel('video', 85, true); 
-      const videoPanel = panels.find(p => p.id === 'video');
+      this.panelSystem.damagePanel(PanelId.ART, 9999, true); 
+      this.panelSystem.damagePanel(PanelId.VIDEO, 85, true); 
+      
+      const videoPanel = panels.find(p => p.id === PanelId.VIDEO);
       if (videoPanel) {
           this.spawnDrillerOn(videoPanel, 3);
       }
 
-      const targets = panels.filter(p => p.id !== 'art' && p.id !== 'video');
-      
+      const targets = panels.filter(p => p.id !== PanelId.ART && p.id !== PanelId.VIDEO);
       targets.forEach(p => {
           const dmg = 20 + Math.floor(Math.random() * 30);
           this.panelSystem.damagePanel(p.id, dmg, true); 
@@ -194,7 +189,6 @@ export class WaveSystem implements IGameSystem {
 
       const safeW = p.width * 0.7; 
       const safeH = p.height * 0.7;
-      
       const offsetX = (Math.random() - 0.5) * safeW;
       const offsetY = (Math.random() - 0.5) * safeH;
       

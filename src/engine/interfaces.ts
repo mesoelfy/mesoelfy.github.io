@@ -6,6 +6,7 @@ import { QueryDef } from './ecs/Query';
 import { Tag } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -25,7 +26,7 @@ export interface IServiceLocator {
   register<T>(id: string, instance: T): void;
   get<T>(id: string): T;
   getGameEventBus(): IGameEventService;
-  getFastEventBus(): IFastEventService; // NEW
+  getFastEventBus(): IFastEventService; 
   getAudioService(): IAudioService;
   getInputService(): IInputService;
   getRegistry(): IEntityRegistry;
@@ -133,20 +134,20 @@ export interface ICombatSystem extends IGameSystem {
 
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
-  hoveringPanelId: string | null;
+  hoveringPanelId: PanelId | null;
 }
 
 export interface IPanelSystem extends IGameSystem {
   systemIntegrity: number;
-  register(id: string, element: HTMLElement): void;
-  unregister(id: string): void;
+  register(id: PanelId, element: HTMLElement): void;
+  unregister(id: PanelId): void;
   refreshAll(): void;
-  refreshSingle(id: string): void;
-  damagePanel(id: string, amount: number, silent?: boolean, sourceX?: number, sourceY?: number): void;
-  healPanel(id: string, amount: number, sourceX?: number): void;
-  decayPanel(id: string, amount: number): void;
+  refreshSingle(id: PanelId): void;
+  damagePanel(id: PanelId, amount: number, silent?: boolean, sourceX?: number, sourceY?: number): void;
+  healPanel(id: PanelId, amount: number, sourceX?: number): void;
+  decayPanel(id: PanelId, amount: number): void;
   destroyAll(): void;
-  getPanelRect(id: string): WorldRect | undefined;
-  getPanelState(id: string): { health: number; isDestroyed: boolean } | undefined;
+  getPanelRect(id: PanelId): WorldRect | undefined;
+  getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
 }
