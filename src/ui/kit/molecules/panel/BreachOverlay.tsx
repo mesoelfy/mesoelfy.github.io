@@ -48,13 +48,14 @@ export const BreachOverlay = ({ progress, isVideo, showInteractive, isRepairing 
   const showStatusBar = panelId !== PanelId.SOCIAL;
 
   return (
-    <div className={clsx("absolute inset-0 z-[70] flex flex-col items-center justify-center overflow-hidden", isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md")}>
+    <div className={clsx("absolute inset-0 z-breach flex flex-col items-center justify-center overflow-hidden", isVideo ? "bg-black/60 backdrop-blur-[2px]" : "bg-black/80 backdrop-blur-md")}>
         <div className="absolute inset-[-100%] flex flex-col justify-center gap-0 md:gap-4 rotate-[-12deg] pointer-events-none">
             {Array.from({ length: 16 }).map((_, i) => (
                 <HazardStrip key={i} index={i} direction={i % 2 === 0 ? 1 : -1} isSecondary={i % 2 !== 0} isActive={isActive} />
             ))}
         </div>
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle,transparent_20%,#000_100%)] z-10" />
+
         {showInteractive && (
           <div className={clsx("relative z-20 flex flex-col items-center justify-center gap-1 cursor-crosshair group", isCompactHeight ? "mb-0" : "mb-[25%]")}>
               <div className="relative h-20 flex items-center justify-center">

@@ -58,7 +58,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
       className={clsx(
-          "fixed inset-0 z-[100] font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
+          "fixed inset-0 z-boot font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
           isBreaching ? "overflow-hidden cursor-none" : "overflow-y-auto overflow-x-auto cursor-auto"
       )}
     >

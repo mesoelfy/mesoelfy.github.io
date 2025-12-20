@@ -6,6 +6,25 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      zIndex: {
+        'deep': '-10',
+        'canvas': '0',
+        'base': '10',
+        'decor': '20',
+        'panel': '30',
+        'header': '40',
+        'holo': '50', 
+        'game-overlay': '60', 
+        'breach': '70',       
+        'mobile': '80',       
+        'joystick': '90',     
+        'boot': '100',        
+        'bomb': '120',        
+        'backdrop': '150',    
+        'modal': '200',       
+        'debug': '10000',
+        'cursor': '20000',
+      },
       colors: {
         'primary-green': {
           light: '#7FF65F',

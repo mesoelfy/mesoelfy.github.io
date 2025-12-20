@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
+import { STORAGE_KEYS } from '@/engine/config/StorageConfig';
 
 interface AudioSettings {
   master: boolean;
@@ -212,7 +213,7 @@ export const useStore = create<AppState>()(
       setInitialClickPos: (pos) => set({ initialClickPos: pos })
     }),
     {
-      name: 'mesoelfy-ui-settings-v3',
+      name: STORAGE_KEYS.UI_SETTINGS, 
       partialize: (state) => ({ 
           audioSettings: state.audioSettings,
           screenShakeStrength: state.screenShakeStrength,

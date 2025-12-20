@@ -4,6 +4,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
 import { Atom, Zap, RefreshCcw } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
+import { DOM_ID } from '@/ui/config/DOMConfig';
 
 const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
@@ -16,8 +17,6 @@ export const VisualLab = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col">
-        
-        {/* TOP LEFT: CONTROL PANEL */}
         <div className="absolute top-20 left-10 w-72 bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 rounded-sm shadow-xl pointer-events-auto p-4 flex flex-col gap-6">
             <div>
                 <h3 className="text-service-cyan font-header font-black tracking-widest text-xs mb-2 border-b border-service-cyan/20 pb-2 flex justify-between items-center">
@@ -43,8 +42,6 @@ export const VisualLab = () => {
                     ))}
                 </div>
             </div>
-
-            {/* DYNAMIC CONTROLS */}
             {labExperiment === 'GLITCH' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">Parameters</div>
@@ -58,8 +55,6 @@ export const VisualLab = () => {
                 </div>
             )}
         </div>
-
-        {/* CENTER: STANDBY UI */}
         {labExperiment === 'NONE' && (
             <div className="flex-1 w-full h-full flex items-center justify-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="text-center opacity-50 flex flex-col items-center gap-4">
@@ -74,9 +69,7 @@ export const VisualLab = () => {
                 </div>
             </div>
         )}
-
-        {/* DATA BRIDGE */}
-        <div id="lab-params" data-a={paramA} className="hidden" />
+        <div id={DOM_ID.LAB_PARAMS} data-a={paramA} className="hidden" />
     </div>
   );
 };

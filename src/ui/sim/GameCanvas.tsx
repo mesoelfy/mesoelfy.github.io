@@ -11,6 +11,7 @@ import { ActionButton } from '@/ui/kit/atoms/ActionButton';
 import { useStore } from '@/engine/state/global/useStore';
 import { useEffect, useState, useLayoutEffect } from 'react';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
+import { CAMERA_CONFIG } from '@/engine/config/CameraConfig';
 
 export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
@@ -49,7 +50,7 @@ export const GameOverlay = () => {
             camera={
                 isGallery ? { position: [5, 5, 10], fov: 45 } : 
                 isLab ? { position: [0, 0, 10], fov: 50 } :
-                { zoom: 40, position: [0, 0, 100] }
+                { zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 0, 100] }
             }
             gl={{ 
               alpha: true, 

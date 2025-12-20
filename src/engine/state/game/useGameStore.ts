@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { STORAGE_KEYS } from '@/engine/config/StorageConfig';
 
-// Slices
 import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
 import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
 import { createUISlice, UISlice } from './slices/createUISlice';
@@ -35,7 +35,7 @@ export const useGameStore = create<GameState>()(
       },
     }),
     {
-      name: 'mesoelfy-os-storage-v3', 
+      name: STORAGE_KEYS.GAME_STATE, 
       partialize: (state) => ({ highScore: state.highScore }), 
     }
   )

@@ -1,18 +1,15 @@
-// Camera Zoom level defined in GameOverlay
-const ZOOM = 40; 
+import { CAMERA_CONFIG } from '@/engine/config/CameraConfig';
+
+const ZOOM = CAMERA_CONFIG.BASE_ZOOM; 
 
 export const screenToWorld = (screenX: number, screenY: number, screenW: number, screenH: number) => {
-  // DOM: 0,0 is Top-Left. +Y is Down.
-  // THREE: 0,0 is Center. +Y is Up.
-  
   const worldX = (screenX - screenW / 2) / ZOOM;
-  const worldY = -(screenY - screenH / 2) / ZOOM; // Invert Y
+  const worldY = -(screenY - screenH / 2) / ZOOM; 
   
   return { x: worldX, y: worldY };
 };
 
 export const domRectToWorldRect = (rect: { x: number, y: number, width: number, height: number }, screenW: number, screenH: number) => {
-  // Get center of DOM element
   const centerX = rect.x + rect.width / 2;
   const centerY = rect.y + rect.height / 2;
   
