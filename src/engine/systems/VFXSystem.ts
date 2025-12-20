@@ -1,24 +1,53 @@
-import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
+import { TimeSystem } from './TimeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
 import { ParticleShape } from '@/engine/ecs/types';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class VFXSystem implements IGameSystem {
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
     private events: IGameEventService,
-    private fastEvents: IFastEventService
+    private fastEvents: IFastEventService,
+    private panelSystem: IPanelSystem,
+    private timeSystem: TimeSystem
   ) {
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    // 1. Slow Bus Events
     this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
+        this.executeRecipe(p.type, p.x, p.y, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
+        this.executeRecipe('REBOOT_HEAL', x, 0);
+    });
+
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
+        this.shakeSystem.addTrauma(0.75);
+        this.timeSystem.freeze(0.15);
+    });
+
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.shakeSystem.addTrauma(1.0);
+        this.timeSystem.freeze(0.5);
     });
   }
 
   update(delta: number, time: number): void {
+      // 2. Fast Bus Events (High Frequency)
       this.fastEvents.process((id, a1, a2, a3, a4) => {
           if (id === FastEventType.SPAWN_FX) {
               const key = FX_LOOKUP[a1 as FXCode];
@@ -29,7 +58,15 @@ export class VFXSystem implements IGameSystem {
           else if (id === FastEventType.CAM_SHAKE) {
               this.shakeSystem.addTrauma(a1 / 100);
           }
+          else if (id === FastEventType.HIT_STOP) {
+              this.timeSystem.freeze(a1 / 1000); // Convert ms to seconds
+          }
       });
+  }
+
+  private getPanelX(panelId: PanelId): number {
+      const rect = this.panelSystem.getPanelRect(panelId);
+      return rect ? rect.x : 0;
   }
 
   teardown(): void {}

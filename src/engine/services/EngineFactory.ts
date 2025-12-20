@@ -4,7 +4,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
-import { SharedGameEventBus } from '@/engine/signals/GameEventBus'; // IMPORT SHARED
+import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
@@ -34,7 +34,6 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { FeedbackBridgeSystem } from '@/engine/systems/FeedbackBridgeSystem';
 
 // Mode Specific Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
@@ -52,10 +51,7 @@ export class EngineFactory {
   public static create(mode: EngineMode): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
-    
-    // USE SHARED BUS (Do not create new)
     const eventBus = SharedGameEventBus; 
-    
     const fastEventBus = new FastEventBusImpl();
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
@@ -99,11 +95,10 @@ export class EngineFactory {
     const guidanceSystem = new GuidanceSystem(registry);
     
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
-    const feedbackBridge = new FeedbackBridgeSystem(eventBus, fastEventBus, panelSystem);
     
     // Directors
     const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
-    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
+    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus, panelSystem, timeSystem);
     const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const visualSystem = new VisualSystem(registry);
 
@@ -172,7 +167,6 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
-    register(feedbackBridge, SystemPhase.STATE); 
     register(hudService, SystemPhase.STATE);
 
     // PHASE 5: RENDER
