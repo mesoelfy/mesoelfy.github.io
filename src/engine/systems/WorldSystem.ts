@@ -49,15 +49,17 @@ export class WorldSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // Only handling lighting color interpolation here for system consistency.
+    // Visual movement (WireframeFloor) is now handled in the View layer
+    // to ensure it persists during Game Over / Paused states.
+
     if (this.worldEntityId === null) return;
     
     const world = this.registry.getEntity(this.worldEntityId);
     if (!world || !world.active) return;
 
     const model = world.getComponent<RenderModel>(ComponentType.RenderModel);
-    const transform = world.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    
-    if (!model || !transform) return;
+    if (!model) return;
 
     const integrity = this.panelSystem.systemIntegrity;
     const bootState = useStore.getState().bootState;
@@ -75,9 +77,6 @@ export class WorldSystem implements IGameSystem {
     model.r = this.currentColor.r;
     model.g = this.currentColor.g;
     model.b = this.currentColor.b;
-    
-    // 3. World Spin
-    transform.rotation += 0.5 * delta; 
   }
 
   teardown(): void {}

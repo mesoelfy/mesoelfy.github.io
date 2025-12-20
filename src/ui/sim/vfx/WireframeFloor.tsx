@@ -4,13 +4,8 @@ import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
-import { useGameContext } from '@/engine/state/GameContext';
-import { Tag } from '@/engine/ecs/types';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const WireframeFloor = () => {
-  const { registry } = useGameContext();
   const groupRef = useRef<THREE.Group>(null);
   const gridRef = useRef<any>(null);
 
@@ -25,19 +20,20 @@ export const WireframeFloor = () => {
   const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
   
   useFrame((state, delta) => {
-    let worldEntity;
-    for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; }
-
-    if (worldEntity && groupRef.current) {
-        const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        if (render) groupRef.current.position.z = render.rotation % 5;
+    // 1. INDEPENDENT MOVEMENT
+    // Driven by real-time clock, ignores game pause/game over states
+    if (groupRef.current) {
+        // RESTORED ORIGINAL SPEED (Was 0.5 in WorldSystem)
+        const speed = 0.5; 
+        groupRef.current.position.z = (state.clock.elapsedTime * speed) % 5;
     }
 
+    // 2. STATE-BASED COLORING
     const { systemIntegrity, isZenMode } = useGameStore.getState();
     const bootState = useStore.getState().bootState;
 
     if (isZenMode) {
-        // Prismatic Flow
+        // Prismatic Flow for Zen
         const time = state.clock.elapsedTime * 0.1;
         currentSectionColor.current.setHSL(time % 1, 0.8, 0.1);
         currentCellColor.current.setHSL((time + 0.1) % 1, 0.9, 0.5);
@@ -55,6 +51,7 @@ export const WireframeFloor = () => {
             target = colors.warning;
         }
 
+        // Smooth Lerp
         currentSectionColor.current.lerp(target.section, delta * 3.0);
         currentCellColor.current.lerp(target.cell, delta * 3.0);
     }

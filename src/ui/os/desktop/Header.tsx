@@ -87,7 +87,9 @@ export const Header = () => {
       )}
 
       <div className="flex items-center gap-4">
+        {/* ADDED KEY: Force Remount when switching to Zen Mode to kill Heartbeat Animation */}
         <motion.span 
+            key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },

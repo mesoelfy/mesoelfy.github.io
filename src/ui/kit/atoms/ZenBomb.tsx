@@ -20,21 +20,27 @@ export const ZenBomb = () => {
     setClicked(true);
     AudioSystem.playClick();
     
-    // 1. Fire Weapon to kill entities visually
+    // 1. Fire Weapon Visuals Immediately (The "Button Press" feedback)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
     AudioSystem.playSound('syn_bass_drop');
 
-    // 2. Clear Panels silently so they don't obstruct the view
-    try {
-        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-        if (panels) panels.destroyAll();
-    } catch (e) { console.warn(e); }
+    // 2. Wait 0.5s, THEN dissolve panels and kill entities
+    setTimeout(() => {
+        // This event tells page.tsx to hide the UI layer
+        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: 'UI_PURGE_TRIGGER' }); 
 
-    // 3. Wait 5 seconds (Game Loop still running physics for sparks/bullets)
+        // Destroy backend entities
+        try {
+            const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            if (panels) panels.destroyAll();
+        } catch (e) { console.warn(e); }
+    }, 500);
+
+    // 3. Wait 5 seconds for the "Red Void" moment, then switch to Zen Mode
     setTimeout(() => {
         activateZenMode();
         AudioSystem.playAmbience('ambience_core'); 
-    }, 5000);
+    }, 5500);
   };
 
   return (

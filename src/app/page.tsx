@@ -32,6 +32,8 @@ import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { GameProvider } from '@/engine/state/GameContext';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -61,7 +63,18 @@ export default function Home() {
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
+  const [showPanels, setShowPanels] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Handle Purge Dissolve Logic
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.LOG_DEBUG, (p) => {
+          if (p.msg === 'UI_PURGE_TRIGGER') {
+              setShowPanels(false);
+          }
+      });
+      return unsub;
+  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -212,12 +225,12 @@ export default function Home() {
                   >
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
-                          {!isZenMode && (
+                          {!isZenMode && showPanels && (
                           <motion.div 
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.8 } }} // Slow dissolve
                               variants={{
                               hidden: { opacity: 0 },
                               visible: { 
