@@ -3,8 +3,12 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export const useMetaUrl = (bootLogMessage: string | null) => {
-  const { bootState, isSimulationPaused, isBreaching, isZenMode } = useStore();
+  const { bootState, isSimulationPaused, isBreaching } = useStore();
+  
+  // FIX: isZenMode comes from useGameStore, not useStore
   const integrity = useGameStore(s => s.systemIntegrity);
+  const isZenMode = useGameStore(s => s.isZenMode);
+  
   const lastUpdate = useRef(0);
 
   // 1. Boot Sequence Updates (Immediate)
@@ -32,16 +36,14 @@ export const useMetaUrl = (bootLogMessage: string | null) => {
         } else if (bootState === 'sandbox') {
             hash = '#/SIMULATION/HOLO_DECK';
         } else if (isZenMode) {
-            hash = '#/ZEN_GARDEN/PEACE_PROTOCOL';
+            hash = '#/VIBING'; // Correct Zen Hash
         } else if (isGameOver) {
             hash = '#/STATUS:CRITICAL/SYSTEM_FAILURE';
         } else if (safeInt < 30) {
-            // UPDATED: SYS_INT -> OS_INT
             hash = `#/STATUS:CRITICAL/OS_INT:${safeInt}%`;
         } else {
             let status = 'STABLE';
             if (safeInt < 60) status = 'CAUTION';
-            // UPDATED: SYS_INT -> OS_INT
             hash = `#/STATUS:${status}/OS_INT:${safeInt}%`;
         }
 

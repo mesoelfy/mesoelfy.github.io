@@ -82,7 +82,6 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    // Updated: Inject PhysicsSystem & Registry
     const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
@@ -131,7 +130,8 @@ export class EngineFactory {
     register(targetingSystem, SystemPhase.LOGIC);
     
     if (mode === 'DESKTOP') {
-        const waveSystem = new WaveSystem(spawner, panelSystem);
+        // UPDATED: Pass eventBus to WaveSystem
+        const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
         const structureSystem = new StructureSystem(panelSystem);
         const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
         

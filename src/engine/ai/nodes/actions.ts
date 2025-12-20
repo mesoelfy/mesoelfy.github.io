@@ -58,14 +58,22 @@ export class MoveToTarget extends BTNode {
 }
 
 export class Wait extends BTNode {
-  constructor(private duration: number) { super(); }
+  private min: number;
+  private max: number;
+
+  constructor(min: number, max?: number) { 
+    super(); 
+    this.min = min;
+    this.max = max ?? min;
+  }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<any>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
     if (state.timers.wait === undefined) {
-        state.timers.wait = this.duration;
+        // Randomize duration on entry
+        state.timers.wait = this.min + Math.random() * (this.max - this.min);
     }
 
     state.timers.wait -= context.delta;

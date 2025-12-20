@@ -1,9 +1,11 @@
-import { IGameSystem, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IGameEventService } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -23,12 +25,15 @@ export class WaveSystem implements IGameSystem {
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
+  private hasStressTested = false;
 
   constructor(
     private spawner: IEntitySpawner,
-    private panelSystem: IPanelSystem
+    private panelSystem: IPanelSystem,
+    private events: IGameEventService
   ) {
     this.reset();
+    this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
   }
 
   private reset() {
@@ -37,11 +42,15 @@ export class WaveSystem implements IGameSystem {
     this.spawnQueue = [];
     this.loopCount = 0;
     this.scenarioInit = false;
+    this.hasStressTested = false;
   }
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
+    
+    // STOP STANDARD SPAWNING IF GAME OVER
+    if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
         const panels = this.panelSystem.getAllPanels();
@@ -61,6 +70,26 @@ export class WaveSystem implements IGameSystem {
     }
 
     this.handleBreaches(delta);
+  }
+
+  private triggerStressTest() {
+      if (this.hasStressTested) return;
+      this.hasStressTested = true;
+
+      const { width, height } = ViewportHelper.viewport;
+      
+      // 100 of EACH type = 300 Total
+      const types = [EnemyTypes.DRILLER, EnemyTypes.HUNTER, EnemyTypes.KAMIKAZE];
+      const countPerType = 100;
+
+      types.forEach(type => {
+          for(let i = 0; i < countPerType; i++) {
+              // Scatter across the entire viewport + margin
+              const x = (Math.random() - 0.5) * width * 1.5;
+              const y = (Math.random() - 0.5) * height * 1.5;
+              this.spawner.spawnEnemy(type, x, y);
+          }
+      });
   }
 
   private runScenario(panels: any[]) {

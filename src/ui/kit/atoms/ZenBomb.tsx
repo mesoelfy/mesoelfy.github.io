@@ -19,10 +19,10 @@ export const ZenBomb = () => {
   const handleClick = () => {
     setClicked(true);
     AudioSystem.playClick();
-    AudioSystem.playSound('fx_reboot_success'); 
-
+    
     // 1. Fire Weapon to kill entities visually
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
+    AudioSystem.playSound('syn_bass_drop');
 
     // 2. Clear Panels silently so they don't obstruct the view
     try {
@@ -47,9 +47,6 @@ export const ZenBomb = () => {
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
           
           onClick={handleClick}
-          // Z-INDEX 120 (Below Custom Cursor at 20000)
-          // cursor-none ensures browser cursor doesn't appear
-          // pointer-events-auto is key
           className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-none outline-none pointer-events-auto"
         >
           {/* CONNECTOR LINE */}

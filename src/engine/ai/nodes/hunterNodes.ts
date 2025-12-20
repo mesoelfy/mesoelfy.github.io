@@ -8,7 +8,14 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class HoverDrift extends BTNode {
-  constructor(private minRange: number, private maxRange: number, private duration: number) { super(); }
+  private minDur: number;
+  private maxDur: number;
+
+  constructor(private minRange: number, private maxRange: number, minDuration: number, maxDuration?: number) { 
+      super(); 
+      this.minDur = minDuration;
+      this.maxDur = maxDuration ?? minDuration;
+  }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -27,7 +34,8 @@ export class HoverDrift extends BTNode {
     if (!state.data) state.data = {};
 
     if (!state.timers.hover) {
-        state.timers.hover = this.duration;
+        // Randomize duration on entry
+        state.timers.hover = this.minDur + Math.random() * (this.maxDur - this.minDur);
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -121,7 +129,6 @@ export class FireProjectile extends BTNode {
         motion.vy = -dirY * 5.0;
     }
 
-    // UPDATED: Unified API
     context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
 
     return NodeState.SUCCESS;
