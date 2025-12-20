@@ -22,18 +22,10 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
 
   const hpRef = useRef(health);
   const maxHpRef = useRef(maxHealth);
+  const xpRef = useRef(0);
   const xpMaxRef = useRef(100);
 
-  useEffect(() => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) {
-              hud.bindVitals(containerRef.current);
-              hud.bindLevelText(levelRef.current);
-          }
-      } catch (e) {}
-  }, []);
-
+  // --- HEALTH LOGIC ---
   const updateHPUI = () => {
     if (!containerRef.current) return;
     const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
@@ -46,6 +38,16 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
     containerRef.current.style.setProperty('--hp-color', color);
   };
 
+  // --- XP LOGIC (Now Local) ---
+  const updateXPUI = () => {
+    if (!containerRef.current) return;
+    const ratio = xpMaxRef.current > 0 ? (xpRef.current / xpMaxRef.current) : 0;
+    // Clamp to 0-1 for display
+    const safeRatio = Math.max(0, Math.min(1, ratio));
+    containerRef.current.style.setProperty('--xp-progress', safeRatio.toString());
+  };
+
+  // --- STREAMS ---
   useGameStream('PLAYER_MAX_HEALTH', (val) => {
     maxHpRef.current = val;
     updateHPUI();
@@ -58,20 +60,20 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       updateHPUI();
   });
 
-  useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
+  useGameStream('XP_NEXT', (v) => { 
+      xpMaxRef.current = v;
+      updateXPUI(); 
+  });
   
   useGameStream('XP', (v) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateXP(xpMaxRef.current > 0 ? (v / xpMaxRef.current) : 0);
-      } catch {}
+      xpRef.current = v;
+      updateXPUI();
   });
 
   useGameStream('LEVEL', (lvl) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateLevel(lvl);
-      } catch {}
+      if (levelRef.current) {
+          levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
+      }
   });
 
   useGameStream('PLAYER_REBOOT', (val) => {
@@ -144,7 +146,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             transform={`rotate(-90 ${center} ${center})`} 
             style={{
                 strokeDashoffset: 'calc(var(--xp-max) * (1 - var(--xp-progress)))',
-                transition: 'stroke-dashoffset 0.1s linear'
+                transition: 'stroke-dashoffset 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
             }}
           />
           

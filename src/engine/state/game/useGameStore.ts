@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '@/engine/config/StorageConfig';
+import { GameStream } from '@/engine/state/GameStream';
 
 import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
 import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
@@ -40,3 +41,16 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+// --- REACTIVE BRIDGE ---
+// Automatically syncs Zustand State -> GameStream (DOM/High-Freq)
+useGameStore.subscribe((state) => {
+  GameStream.set('PLAYER_HEALTH', state.playerHealth);
+  GameStream.set('PLAYER_MAX_HEALTH', state.maxPlayerHealth);
+  GameStream.set('PLAYER_REBOOT', state.playerRebootProgress);
+  GameStream.set('SYSTEM_INTEGRITY', state.systemIntegrity);
+  GameStream.set('SCORE', state.score);
+  GameStream.set('XP', state.xp);
+  GameStream.set('XP_NEXT', state.xpToNextLevel);
+  GameStream.set('LEVEL', state.level);
+});

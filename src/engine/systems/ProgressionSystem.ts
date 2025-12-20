@@ -1,7 +1,6 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { GameStream } from '@/engine/state/GameStream';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 
@@ -31,7 +30,7 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    GameStream.set('SCORE', this.score);
+    useGameStore.getState().setScore(this.score);
   }
 
   public addXp(amount: number) {
@@ -46,9 +45,7 @@ export class ProgressionSystem implements IGameSystem {
         this.syncStore(); 
     }
     
-    GameStream.set('XP', this.xp);
-    GameStream.set('XP_NEXT', this.xpToNextLevel);
-    GameStream.set('LEVEL', this.level);
+    this.syncStore();
   }
 
   public applyUpgrade(option: UpgradeOption) {
@@ -86,10 +83,8 @@ export class ProgressionSystem implements IGameSystem {
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
       
-      GameStream.set('SCORE', 0);
-      GameStream.set('XP', 0);
-      GameStream.set('XP_NEXT', this.xpToNextLevel);
-      GameStream.set('LEVEL', 1);
+      useGameStore.getState().setScore(0);
+      this.syncStore();
   }
 
   teardown(): void {}
