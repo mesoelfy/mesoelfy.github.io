@@ -8,8 +8,8 @@ interface ToggleButtonProps {
   iconOff?: any;
   active: boolean;
   onClick: () => void;
-  variant?: 'icon' | 'panel'; // icon = Header style, panel = SoundTab style
-  color?: string; // Optional text color override
+  variant?: 'icon' | 'panel'; 
+  color?: string; // e.g. "text-primary-green"
 }
 
 export const ToggleButton = ({ 
@@ -29,6 +29,7 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
+  // 1. PANEL VARIANT (Settings Menu) - Unchanged
   if (variant === 'panel') {
       return (
         <button
@@ -54,20 +55,35 @@ export const ToggleButton = ({
       );
   }
 
-  // Variant 'icon' (Header)
+  // 2. ICON VARIANT (Header) - Updated with Invert Logic
   return (
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
       className={clsx(
-        "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
+        "group flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
+        // Base Dynamic Color (e.g. text-primary-green, text-critical-red)
+        color || 'text-white',
+        // Hover: Background becomes the text color
+        "hover:bg-current hover:border-transparent",
         active 
-          ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color || ''}`
-          : `${color || ''} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
+          ? "bg-white/5 border-white/20 opacity-100"
+          : "border-transparent opacity-40 hover:opacity-100"
       )}
     >
-      <div className={clsx(active ? "" : "opacity-50")}>
-          {label ? <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">{label}</span> : <Icon size={14} />}
+      <div className={clsx(
+          "flex items-center justify-center transition-colors duration-200",
+          // Default: Inherit color. Hover: Force BLACK to contrast against the colored background
+          "text-current group-hover:text-black",
+          active ? "" : "opacity-80"
+      )}>
+          {label ? (
+            <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">
+                {label}
+            </span> 
+          ) : (
+            <Icon size={14} />
+          )}
       </div>
     </button>
   );

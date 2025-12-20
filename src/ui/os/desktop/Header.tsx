@@ -87,7 +87,7 @@ export const Header = () => {
       )}
 
       <div className="flex items-center gap-4">
-        {/* ADDED KEY: Force Remount when switching to Zen Mode to kill Heartbeat Animation */}
+        {/* Force Remount when switching to Zen Mode to kill Heartbeat Animation */}
         <motion.span 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
@@ -126,8 +126,17 @@ export const Header = () => {
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
-            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-white hover:bg-white/5", statusColor)}>
-                <Settings size={14} className="animate-spin-slow" />
+            
+            {/* UPDATED SETTINGS BUTTON WITH INVERT HOVER */}
+            <button 
+                onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} 
+                className={clsx(
+                    "group flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
+                    statusColor,
+                    "hover:bg-current hover:border-transparent"
+                )}
+            >
+                <Settings size={14} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
             </button>
         </div>
       </div>
