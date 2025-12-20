@@ -46,6 +46,7 @@ export const calculatePlayerShots = (
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
+  // Standard / Fork Shots
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
       
@@ -64,6 +65,7 @@ export const calculatePlayerShots = (
       });
   }
 
+  // Backdoor Shots
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
       
@@ -82,13 +84,19 @@ export const calculatePlayerShots = (
       });
   }
 
+  // Sniffer (Homing) Shots
   if (snifferLevel > 0) {
       const angleStep = GAME_MATH.FULL_CIRCLE / snifferLevel;
       for (let i = 0; i < snifferLevel; i++) {
           const angle = i * angleStep;
+          
+          // FIX: Use MUZZLE_OFFSET instead of hardcoded 10
+          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+          
           shots.push({
-              x: origin.x + Math.cos(angle) * 10,
-              y: origin.y + Math.sin(angle) * 10,
+              x: spawnX,
+              y: spawnY,
               vx: Math.cos(angle) * speed * 0.5,
               vy: Math.sin(angle) * speed * 0.5,
               damage: damage * 0.5,

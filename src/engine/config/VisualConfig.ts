@@ -21,8 +21,9 @@ export const VISUAL_CONFIG = {
     SPAWN_Y_OFFSET: 3.5,
     
     // High Elasticity (Bullets)
-    BASE_STRETCH: 0.04,
-    BASE_SQUASH: 0.02,
+    // TUNING: Increased base stretch from 0.04 to 0.06 for better visuals at lower speeds
+    BASE_STRETCH: 0.06, 
+    BASE_SQUASH: 0.03,
     MAX_STRETCH_CAP: 4.0,
     MIN_SQUASH_CAP: 0.4
   }
