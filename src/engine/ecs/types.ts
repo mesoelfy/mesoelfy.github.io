@@ -15,3 +15,8 @@ export enum Faction {
   FRIENDLY = 'FRIENDLY',
   HOSTILE = 'HOSTILE'
 }
+
+export enum ParticleShape {
+  CIRCLE = 0,
+  SQUARE = 1
+}

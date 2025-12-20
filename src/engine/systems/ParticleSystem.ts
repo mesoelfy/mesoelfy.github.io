@@ -1,5 +1,6 @@
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { ParticleShape } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
 const MAX_PARTICLES = SYS_LIMITS.MAX_PARTICLES;
@@ -55,7 +56,7 @@ export class ParticleSystem implements IParticleSystem {
       vx: number, vy: number, 
       life: number, 
       size: number = 1.0, 
-      shape: number = 0
+      shape: ParticleShape = ParticleShape.CIRCLE
   ) {
     if (this.count >= MAX_PARTICLES) return;
 

@@ -3,7 +3,7 @@ import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { QueryDef } from './ecs/Query';
-import { Tag, Faction } from './ecs/types';
+import { Tag, Faction, ParticleShape } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -100,7 +100,14 @@ export interface IEntitySpawner {
       projectileId?: string, 
       ownerId?: number
   ): Entity;
-  spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
+  spawnParticle(
+      x: number, y: number, 
+      color: string, 
+      vx: number, vy: number, 
+      life: number, 
+      size?: number, 
+      shape?: ParticleShape
+  ): void;
 }
 
 export interface IAudioService {
@@ -127,7 +134,14 @@ export interface IInputService {
 }
 
 export interface IParticleSystem extends IGameSystem {
-  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number, size?: number, shape?: number): void;
+  spawn(
+      x: number, y: number, 
+      colorHex: string, 
+      vx: number, vy: number, 
+      life: number, 
+      size?: number, 
+      shape?: ParticleShape
+  ): void;
   getCount(): number;
   getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; color: Float32Array; };
 }

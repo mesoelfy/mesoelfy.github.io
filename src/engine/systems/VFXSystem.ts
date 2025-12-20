@@ -4,6 +4,7 @@ import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus'
 import { ShakeSystem } from './ShakeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
+import { ParticleShape } from '@/engine/ecs/types';
 
 export class VFXSystem implements IGameSystem {
   constructor(
@@ -28,8 +29,6 @@ export class VFXSystem implements IGameSystem {
           else if (id === FastEventType.CAM_SHAKE) {
               this.shakeSystem.addTrauma(a1 / 100);
           }
-          else if (id === FastEventType.HIT_STOP) {
-          }
       });
   }
 
@@ -48,7 +47,7 @@ export class VFXSystem implements IGameSystem {
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          this.particleSystem.spawn(x, y, hexColor, vx, vy, life, 1.0); 
+          this.particleSystem.spawn(x, y, hexColor, vx, vy, life, 1.0, ParticleShape.SQUARE); 
       }
   }
 
@@ -102,7 +101,7 @@ export class VFXSystem implements IGameSystem {
               vy = Math.sin(a) * finalSpeed;
           }
 
-          const shape = recipe.shape || 0;
+          const shape = (recipe.shape === 1) ? ParticleShape.SQUARE : ParticleShape.CIRCLE;
           this.particleSystem.spawn(x, y, color, vx, vy, finalLife, size, shape);
       }
   }

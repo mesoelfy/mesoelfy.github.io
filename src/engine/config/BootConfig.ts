@@ -1,0 +1,11 @@
+export const BOOT_SEQUENCE = {
+  TIMINGS: {
+    INIT: 3000,
+    LINK: 4000,
+    SECURITY_CHECK: 8000,
+    BYPASS: 9500,
+    DECRYPT: 11500,
+    READY: 13500
+  },
+  COMPLETION_DELAY: 800
+};

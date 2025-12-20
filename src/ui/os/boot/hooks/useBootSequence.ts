@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { LOG_DATA } from '../data/bootLogs';
+import { BOOT_SEQUENCE } from '@/engine/config/BootConfig';
 
 interface UseBootSequenceProps {
   onComplete: () => void;
@@ -14,13 +15,11 @@ export const useBootSequence = ({ onComplete, onBreachStart }: UseBootSequencePr
   const [isBreaching, setIsBreaching] = useState(false);
   const [showGpuPanel, setShowGpuPanel] = useState(false); 
 
-  // Emit Logs to Global Event Bus (for MetaManager)
   useEffect(() => {
     if (LOG_DATA[step]) {
         GameEventBus.emit(GameEvents.BOOT_LOG, { message: LOG_DATA[step].text });
     }
     
-    // Trigger GPU Panel Delay at step 6
     if (step >= 6 && !showGpuPanel) {
         const timer = setTimeout(() => {
             setShowGpuPanel(true);
@@ -30,19 +29,21 @@ export const useBootSequence = ({ onComplete, onBreachStart }: UseBootSequencePr
     }
   }, [step, showGpuPanel]);
 
-  // Main Timeline
   useEffect(() => {
+    const { TIMINGS } = BOOT_SEQUENCE;
     const sequence = [
-      { t: 3000, step: 1 }, 
-      { t: 4000, step: 2 }, 
-      { t: 8000, step: 3 }, 
-      { t: 9500, step: 4 }, 
-      { t: 11500, step: 5 }, 
-      { t: 13500, step: 6 }, 
+      { t: TIMINGS.INIT, step: 1 }, 
+      { t: TIMINGS.LINK, step: 2 }, 
+      { t: TIMINGS.SECURITY_CHECK, step: 3 }, 
+      { t: TIMINGS.BYPASS, step: 4 }, 
+      { t: TIMINGS.DECRYPT, step: 5 }, 
+      { t: TIMINGS.READY, step: 6 }, 
     ];
+    
     const timeouts = sequence.map(({ t, step: s }) => setTimeout(() => {
       if (!isBreaching) setStep(s);
     }, t));
+    
     return () => timeouts.forEach(clearTimeout);
   }, [isBreaching]);
 
@@ -56,7 +57,7 @@ export const useBootSequence = ({ onComplete, onBreachStart }: UseBootSequencePr
     AudioSystem.startMusic();
     
     setStep(6);
-    setTimeout(onComplete, 800); 
+    setTimeout(onComplete, BOOT_SEQUENCE.COMPLETION_DELAY); 
   };
 
   return {
@@ -65,8 +66,6 @@ export const useBootSequence = ({ onComplete, onBreachStart }: UseBootSequencePr
     showGpuPanel,
     handleInitialize,
     logsToShow: LOG_DATA.slice(0, step + 1),
-    
-    // Derived State Flags
     showMatrix: step >= 1,
     showPayloadWindow: step >= 2,
     showWarningBox: step >= 3,
