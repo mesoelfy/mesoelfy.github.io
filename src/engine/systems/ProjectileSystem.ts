@@ -3,7 +3,6 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class ProjectileSystem implements IGameSystem {
@@ -17,14 +16,11 @@ export class ProjectileSystem implements IGameSystem {
 
         const proj = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
         const motion = entity.getComponent<MotionData>(ComponentType.Motion);
         
         if (!proj || !transform) continue;
 
-        const config = PROJECTILE_CONFIG[proj.configId];
-        if (!config) continue;
-
+        // Logic for Charging projectiles (attached to parent)
         if (proj.state === 'CHARGING' && proj.ownerId !== -1) {
             const owner = this.registry.getEntity(proj.ownerId);
             
@@ -46,14 +42,7 @@ export class ProjectileSystem implements IGameSystem {
                 if (motion) { motion.vx = 0; motion.vy = 0; }
             }
         }
-        else if (proj.state === 'FLIGHT' && render) {
-            if (!config.faceVelocity && config.spinSpeed !== 0) {
-                render.rotation += delta * config.spinSpeed;
-            }
-            if (config.pulseSpeed > 0) {
-                render.scale = 1.0 + Math.sin(time * config.pulseSpeed) * 0.2;
-            }
-        }
+        // Flight logic (Rotation) is now handled by VisualSystem + AutoRotate component
     }
   }
 

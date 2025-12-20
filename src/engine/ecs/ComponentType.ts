@@ -11,8 +11,12 @@ export enum ComponentType {
   Orbital = 'Orbital',
   Projectile = 'Projectile',
   
-  // New Render Composition
-  RenderModel = 'RenderModel',         // Geometry, Material, Base Color
-  RenderTransform = 'RenderTransform', // Visual Offsets, Base Scale
-  RenderEffect = 'RenderEffect'        // Flash, Shudder, Spawn Progress
+  // Render Composition
+  RenderModel = 'RenderModel',         
+  RenderTransform = 'RenderTransform', 
+  RenderEffect = 'RenderEffect',
+  
+  // Logic Components (New)
+  AutoRotate = 'AutoRotate',
+  StateColor = 'StateColor'
 }

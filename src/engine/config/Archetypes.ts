@@ -16,23 +16,20 @@ const parseHex = (hex: string) => {
     };
 };
 
-export interface EntityBlueprint {
-  id: string;
-  tags: Tag[];
-  aiLogic?: string;
-  assets?: {
-      geometry: string;
-      material: string;
-  };
-  components: { type: ComponentType; data?: any }[];
-}
-
 // Helper for Render Composition
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
     { type: ComponentType.RenderEffect, data: { ...effectData } }
 ];
+
+export interface EntityBlueprint {
+  id: string;
+  tags: Tag[];
+  aiLogic?: string;
+  assets?: { geometry: string; material: string; };
+  components: { type: ComponentType; data?: any }[];
+}
 
 export const ARCHETYPES: Record<string, EntityBlueprint> = {
   [ArchetypeIDs.PLAYER]: {
@@ -48,6 +45,14 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           radius: PhysicsConfig.HITBOX.PLAYER, 
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
+      }},
+      // New: Define State Colors explicitly
+      { type: ComponentType.StateColor, data: {
+          base: GAME_THEME.turret.base,
+          damaged: GAME_THEME.vfx.damage,
+          dead: '#FF003C',
+          repair: GAME_THEME.turret.repair,
+          reboot: '#9E4EA5'
       }},
       ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
     ]
@@ -67,7 +72,6 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
       }},
       { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } },
-      // Placeholders to allow EntitySpawner overrides to take effect
       { type: ComponentType.RenderModel, data: {} },
       { type: ComponentType.RenderTransform, data: {} },
       { type: ComponentType.RenderEffect, data: {} }

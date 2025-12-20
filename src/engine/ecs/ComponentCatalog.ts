@@ -13,10 +13,13 @@ import { TargetData } from './components/TargetData';
 import { OrbitalData } from './components/OrbitalData';
 import { ProjectileData } from './components/ProjectileData';
 
-// New Render Components
 import { RenderModel } from './components/RenderModel';
 import { RenderTransform } from './components/RenderTransform';
 import { RenderEffect } from './components/RenderEffect';
+
+// New
+import { AutoRotate } from './components/AutoRotate';
+import { StateColor } from './components/StateColor';
 
 export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Transform, TransformData);
@@ -31,10 +34,13 @@ export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Orbital, OrbitalData);
   ComponentRegistry.register(ComponentType.Projectile, ProjectileData);
   
-  // New
   ComponentRegistry.register(ComponentType.RenderModel, RenderModel);
   ComponentRegistry.register(ComponentType.RenderTransform, RenderTransform);
   ComponentRegistry.register(ComponentType.RenderEffect, RenderEffect);
+  
+  // New
+  ComponentRegistry.register(ComponentType.AutoRotate, AutoRotate);
+  ComponentRegistry.register(ComponentType.StateColor, StateColor);
   
   console.log('[ComponentCatalog] Components Registered.');
 };

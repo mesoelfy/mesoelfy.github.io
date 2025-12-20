@@ -99,8 +99,10 @@ export class EngineFactory {
     // Directors
     const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus, panelSystem, timeSystem);
-    const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-    const visualSystem = new VisualSystem(registry);
+    
+    // Refactored Visual Pipeline
+    const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem);
+    const renderSystem = new RenderSystem(registry);
 
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
@@ -170,8 +172,9 @@ export class EngineFactory {
     register(hudService, SystemPhase.STATE);
 
     // PHASE 5: RENDER
-    register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
+    // VisualSystem (Animation/Logic) must run BEFORE RenderSystem (Buffer Packing)
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
+    register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');

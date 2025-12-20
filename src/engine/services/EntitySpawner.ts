@@ -8,6 +8,7 @@ import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
+import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 
 const GEO_MAP: Record<string, string> = {
     'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
@@ -76,8 +77,8 @@ export class EntitySpawner implements IEntitySpawner {
     const shape = config ? config.geometry : 'CAPSULE';
     const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
     const s = config ? config.scale : [1,1,1]; 
+    const pulseSpeed = config ? config.pulseSpeed : 0;
 
-    // Disable stretching for Purge projectiles to keep them beefy
     const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
 
     const overrides: Record<string, any> = {
@@ -95,11 +96,17 @@ export class EntitySpawner implements IEntitySpawner {
             scale: 1.0,
             baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: { elasticity },
+        [ComponentType.RenderEffect]: { elasticity, pulseSpeed },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
-    return this.spawn(id, overrides);
+    const entity = this.spawn(id, overrides);
+
+    if (config && config.spinSpeed !== 0) {
+        entity.addComponent(new AutoRotate(config.spinSpeed));
+    }
+
+    return entity;
   }
 
   public spawnParticle(

@@ -1,105 +1,117 @@
-import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Tag } from '@/engine/ecs/types';
-import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import * as THREE from 'three';
 
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
+const axisY = new THREE.Vector3(0, 1, 0); 
+const axisZ = new THREE.Vector3(0, 0, 1); 
+const qSpin = new THREE.Quaternion();
+const qAim = new THREE.Quaternion();
+const qFinal = new THREE.Quaternion();
 
 export class RenderSystem implements IGameSystem {
-  private tempColor = new THREE.Color();
-  constructor(
-    private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem,
-    events: IGameEventService
-  ) {
-    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-            if (effect) effect.flash = 1.0; 
-        }
-    });
-  }
+  constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
-    const CFG = VISUAL_CONFIG.RENDER;
-    const entities = this.registry.query({ all: [ComponentType.RenderModel] });
-    const interactState = this.interactionSystem.repairState;
-    const isDead = this.gameSystem.playerHealth <= 0;
-    const isZenMode = useGameStore.getState().isZenMode;
+    RenderBuffer.reset();
+
+    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
 
     for (const entity of entities) {
-        if (!entity.active) continue;
-        const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
-        const transform = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
-        
-        if (!model) continue;
-        
-        // FIX: Explicitly exclude bullets from player state logic
-        const isPlayer = entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.BULLET) && (!identity || identity.variant === 'PLAYER');
-        
-        if (isPlayer) {
-            let targetCol = COL_BASE;
-            let spinSpeed = 0.02; 
-            if (isZenMode) {
-                spinSpeed = -0.03;
-            } else if (isDead) {
-                targetCol = COL_DEAD;
-                if (interactState === 'REBOOTING') {
-                    targetCol = COL_REBOOT;
-                    spinSpeed = -0.3; 
-                } else {
-                    spinSpeed = 1.5;
-                }
-            } else {
-                if (interactState === 'HEALING') {
-                    targetCol = COL_REPAIR;
-                    spinSpeed = -0.24;
-                } else if (interactState === 'REBOOTING') {
-                    targetCol = COL_REBOOT;
-                    spinSpeed = -0.24;
-                }
-            }
-            this.tempColor.setRGB(model.r, model.g, model.b);
-            this.tempColor.lerp(targetCol, delta * 3.0);
-            model.r = this.tempColor.r;
-            model.g = this.tempColor.g;
-            model.b = this.tempColor.b;
-            if (transform) {
-                transform.rotation += spinSpeed;
-                transform.scale = 1.0;
-            }
-        }
-        else if (effect) {
-            if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * CFG.SHUDDER_DECAY));
-            if (effect.flash > 0) {
-                effect.flash = Math.max(0, effect.flash - (delta * CFG.FLASH_DECAY));
-                if (transform) transform.scale = 1.0 + (effect.flash * 0.25);
-            } else {
-                // BUGFIX: Only reset scale if entity is fully spawned.
-                // Prevents overriding 0.0 scale during spawn phase.
-                if (transform && transform.scale !== 1.0 && effect.spawnProgress >= 1.0) {
-                    transform.scale = 1.0;
-                }
-            }
-        }
+      if (!entity.active) continue;
+
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
+      const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+
+      if (!transform || !model) continue;
+
+      const key = `${model.geometryId}|${model.materialId}`;
+      const group = RenderBuffer.getGroup(key);
+      const idx = group.count * RENDER_STRIDE;
+      
+      RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
+
+      // --- 1. Position ---
+      let vx = transform.x;
+      let vy = transform.y;
+      const vz = visual ? visual.offsetZ : 0;
+      
+      if (effect && effect.shudder > 0) {
+          const shake = effect.shudder * 0.2; 
+          vx += (Math.random() - 0.5) * shake;
+          vy += (Math.random() - 0.5) * shake;
+      }
+
+      if (visual) {
+          vx += visual.offsetX;
+          vy += visual.offsetY;
+      }
+
+      // --- 2. Scale ---
+      // Compose: Transform (World) * Visual (Multiplier) * Base (Static Config) * Dynamic (Frame Deformation)
+      let sX = transform.scale;
+      let sY = transform.scale;
+      let sZ = transform.scale;
+
+      if (visual) {
+          sX *= visual.scale * visual.baseScaleX * visual.dynamicScaleX;
+          sY *= visual.scale * visual.baseScaleY * visual.dynamicScaleY;
+          sZ *= visual.scale * visual.baseScaleZ * visual.dynamicScaleZ;
+      }
+
+      // --- 3. Rotation ---
+      const visRot = visual ? visual.rotation : 0;
+      qSpin.setFromAxisAngle(axisY, visRot);
+      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
+      qFinal.copy(qAim).multiply(qSpin);
+
+      // --- 4. Color ---
+      let r = model.r;
+      let g = model.g;
+      let b = model.b;
+
+      if (effect && effect.flash > 0) {
+          const t = effect.flash; 
+          r = r + (effect.flashR - r) * t;
+          g = g + (effect.flashG - g) * t;
+          b = b + (effect.flashB - b) * t;
+      }
+
+      // --- 5. Pack Buffer ---
+      const buf = group.buffer;
+      buf[idx + RenderOffset.POSITION_X] = vx;
+      buf[idx + RenderOffset.POSITION_Y] = vy;
+      buf[idx + RenderOffset.POSITION_Z] = vz;
+      
+      buf[idx + RenderOffset.ROTATION_X] = qFinal.x;
+      buf[idx + RenderOffset.ROTATION_Y] = qFinal.y;
+      buf[idx + RenderOffset.ROTATION_Z] = qFinal.z;
+      buf[idx + RenderOffset.ROTATION_W] = qFinal.w;
+      
+      buf[idx + RenderOffset.SCALE_X] = sX;
+      buf[idx + RenderOffset.SCALE_Y] = sY;
+      buf[idx + RenderOffset.SCALE_Z] = sZ;
+      
+      buf[idx + RenderOffset.COLOR_R] = r;
+      buf[idx + RenderOffset.COLOR_G] = g;
+      buf[idx + RenderOffset.COLOR_B] = b;
+      
+      buf[idx + RenderOffset.SPAWN_PROGRESS] = effect ? effect.spawnProgress : 1.0;
+
+      group.count++;
     }
   }
-  teardown(): void {}
+
+  teardown(): void {
+    RenderBuffer.reset();
+  }
 }

@@ -10,10 +10,14 @@ export class RenderTransform extends Component {
     public offsetZ: number = 0,
     public rotation: number = 0,
     public scale: number = 1.0,
-    // Intrinsic Aspect Ratio (crucial for projectiles)
+    // Intrinsic Dimensions (Static)
     public baseScaleX: number = 1.0,
     public baseScaleY: number = 1.0,
-    public baseScaleZ: number = 1.0
+    public baseScaleZ: number = 1.0,
+    // Frame Deformations (Dynamic - Reset every frame)
+    public dynamicScaleX: number = 1.0,
+    public dynamicScaleY: number = 1.0,
+    public dynamicScaleZ: number = 1.0
   ) {
     super();
   }
@@ -27,6 +31,9 @@ export class RenderTransform extends Component {
     this.baseScaleX = data.baseScaleX ?? 1.0;
     this.baseScaleY = data.baseScaleY ?? 1.0;
     this.baseScaleZ = data.baseScaleZ ?? 1.0;
+    this.dynamicScaleX = 1.0;
+    this.dynamicScaleY = 1.0;
+    this.dynamicScaleZ = 1.0;
     return this;
   }
 }
