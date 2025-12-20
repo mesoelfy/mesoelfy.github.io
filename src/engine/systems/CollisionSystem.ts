@@ -3,11 +3,10 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-
-const MAX_COLLISION_RESULTS = 1024;
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class CollisionSystem implements IGameSystem {
-  private queryBuffer = new Int32Array(MAX_COLLISION_RESULTS);
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   private handledPairs = new Set<number>(); 
 
   constructor(
@@ -28,11 +27,9 @@ export class CollisionSystem implements IGameSystem {
         
         if (!collider || collider.mask === 0 || !transform) continue;
 
-        // Skip spawning entities
         const state = entity.getComponent<AIStateData>(ComponentType.State);
         if (state && state.current === 'SPAWN') continue;
 
-        // Query radius: If box, use pythagoras of half-width/height to approximate radius for broadphase
         const queryRad = collider.shape === 'BOX' 
             ? Math.sqrt((collider.width/2)**2 + (collider.height/2)**2) + 1.0
             : collider.radius + 1.0;
@@ -73,7 +70,6 @@ export class CollisionSystem implements IGameSystem {
       tA: TransformData, cA: ColliderData, 
       tB: TransformData, cB: ColliderData
   ): boolean {
-      // 1. Circle vs Circle
       if (cA.shape === 'CIRCLE' && cB.shape === 'CIRCLE') {
           const dx = tA.x - tB.x;
           const dy = tA.y - tB.y;
@@ -81,7 +77,6 @@ export class CollisionSystem implements IGameSystem {
           return (dx * dx + dy * dy) < (rSum * rSum);
       }
 
-      // 2. Box vs Box (AABB)
       if (cA.shape === 'BOX' && cB.shape === 'BOX') {
           return (
               Math.abs(tA.x - tB.x) * 2 < (cA.width + cB.width) &&
@@ -89,27 +84,21 @@ export class CollisionSystem implements IGameSystem {
           );
       }
 
-      // 3. Circle vs Box
       const circle = cA.shape === 'CIRCLE' ? { t: tA, c: cA } : { t: tB, c: cB };
       const box = cA.shape === 'BOX' ? { t: tA, c: cA } : { t: tB, c: cB };
 
-      // Find closest point on box to circle center
-      // t.x/y is box center.
       const boxHalfW = box.c.width / 2;
       const boxHalfH = box.c.height / 2;
 
       const distX = Math.abs(circle.t.x - box.t.x);
       const distY = Math.abs(circle.t.y - box.t.y);
 
-      // Broadphase check
       if (distX > (boxHalfW + circle.c.radius)) return false;
       if (distY > (boxHalfH + circle.c.radius)) return false;
 
-      // Inside check
       if (distX <= boxHalfW) return true; 
       if (distY <= boxHalfH) return true;
 
-      // Corner check
       const dx = distX - boxHalfW;
       const dy = distY - boxHalfH;
       return (dx*dx + dy*dy <= (circle.c.radius * circle.c.radius));

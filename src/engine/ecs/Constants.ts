@@ -1,3 +1,5 @@
-export const MAX_ENTITIES = 30000; // Scaled for Bullet Hell capability
-export const SPATIAL_GRID_SIZE = 4096; // Power of 2 for bitwise masking
-export const SPATIAL_CELL_SIZE = 4; // World Units
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+
+export const MAX_ENTITIES = SYS_LIMITS.MAX_ENTITIES;
+export const SPATIAL_GRID_SIZE = SYS_LIMITS.SPATIAL_GRID_SIZE;
+export const SPATIAL_CELL_SIZE = SYS_LIMITS.SPATIAL_CELL_SIZE;

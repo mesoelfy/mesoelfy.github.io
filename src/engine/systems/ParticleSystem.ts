@@ -1,13 +1,12 @@
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import * as THREE from 'three';
 
-// UPDATED: Increased capacity to prevent starvation during chaotic scenes
-const MAX_PARTICLES = 20000;
+const MAX_PARTICLES = SYS_LIMITS.MAX_PARTICLES;
 
 export class ParticleSystem implements IParticleSystem {
   public count = 0;
 
-  // Data Oriented Design (Structure of Arrays)
   public x = new Float32Array(MAX_PARTICLES);
   public y = new Float32Array(MAX_PARTICLES);
   public vx = new Float32Array(MAX_PARTICLES);
@@ -15,13 +14,12 @@ export class ParticleSystem implements IParticleSystem {
   public life = new Float32Array(MAX_PARTICLES);
   public maxLife = new Float32Array(MAX_PARTICLES);
   public size = new Float32Array(MAX_PARTICLES);
-  public shape = new Float32Array(MAX_PARTICLES); // 0=Square, 1=Teardrop
+  public shape = new Float32Array(MAX_PARTICLES); 
   
   public r = new Float32Array(MAX_PARTICLES);
   public g = new Float32Array(MAX_PARTICLES);
   public b = new Float32Array(MAX_PARTICLES);
 
-  // Helper for hex parsing
   private tempColor = new THREE.Color();
 
   constructor() {

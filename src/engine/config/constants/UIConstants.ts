@@ -1,0 +1,23 @@
+import { PALETTE } from '../Palette';
+
+export const UI_METRICS = {
+  VITALS: {
+    SIZE: 160,
+    RADIUS_HP: 60,
+    RADIUS_XP: 70,
+    STROKE: 4,
+    THRESHOLD_CRITICAL: 0.3,
+    THRESHOLD_WARNING: 0.6
+  },
+  JOYSTICK: {
+    MAX_RADIUS: 40,
+    SENSITIVITY: 30.0
+  }
+} as const;
+
+export const UI_COLORS = {
+  HP_SAFE: PALETTE.GREEN.PRIMARY,
+  HP_WARN: PALETTE.YELLOW.ALERT,
+  HP_CRIT: PALETTE.RED.CRITICAL,
+  XP_BAR: PALETTE.PURPLE.PRIMARY
+} as const;

@@ -3,6 +3,7 @@ import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 import { useRef, useState } from 'react';
+import { UI_METRICS, UI_COLORS } from '@/engine/config/constants/UIConstants';
 
 interface VitalsRingProps {
   health: number;
@@ -18,7 +19,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   const [deadState, setDeadState] = useState(isDead);
   const [rebootState, setRebootState] = useState(0);
 
-  // Use refs to track values for ratio calculation across independent stream updates
   const hpRef = useRef(health);
   const maxHpRef = useRef(maxHealth);
   const xpMaxRef = useRef(100);
@@ -28,10 +28,9 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
     const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
     containerRef.current.style.setProperty('--hp-progress', ratio.toString());
     
-    // Dynamic Thresholds matching OS aesthetics
-    let color = '#78F654'; // GREEN
-    if (ratio < 0.3) color = '#FF003C';      // RED
-    else if (ratio < 0.6) color = '#eae747'; // YELLOW
+    let color = UI_COLORS.HP_SAFE; 
+    if (ratio < UI_METRICS.VITALS.THRESHOLD_CRITICAL) color = UI_COLORS.HP_CRIT;      
+    else if (ratio < UI_METRICS.VITALS.THRESHOLD_WARNING) color = UI_COLORS.HP_WARN; 
     
     containerRef.current.style.setProperty('--hp-color', color);
   };
@@ -67,11 +66,11 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       setRebootState(val);
   });
 
-  const size = 160; 
+  const size = UI_METRICS.VITALS.SIZE; 
   const center = size / 2;
-  const radiusHp = 60;
-  const radiusXp = 70;
-  const stroke = 4;
+  const radiusHp = UI_METRICS.VITALS.RADIUS_HP;
+  const radiusXp = UI_METRICS.VITALS.RADIUS_XP;
+  const stroke = UI_METRICS.VITALS.STROKE;
   const circHp = 2 * Math.PI * radiusHp;
   const circXp = 2 * Math.PI * radiusXp;
 
@@ -84,7 +83,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             '--xp-max': circXp,
             '--hp-progress': health / maxHealth,
             '--xp-progress': 0,
-            '--hp-color': '#78F654'
+            '--hp-color': UI_COLORS.HP_SAFE
         } as React.CSSProperties}
     > 
         <div className={clsx("absolute inset-0 rounded-full bg-black/50 overflow-hidden transition-opacity duration-500 clip-circle", deadState ? "opacity-60 grayscale" : "opacity-100")}>
@@ -127,7 +126,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           
           <circle 
             cx={center} cy={center} r={radiusXp} 
-            stroke="#9E4EA5" strokeWidth={stroke} fill="transparent" 
+            stroke={UI_COLORS.XP_BAR} strokeWidth={stroke} fill="transparent" 
             strokeDasharray={circXp} 
             strokeLinecap="round" 
             transform={`rotate(-90 ${center} ${center})`} 
@@ -138,7 +137,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
           />
           
           <defs><path id="levelCurve" d="M 25,80 A 55,55 0 0,0 135,80" /></defs>
-          <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill="#9E4EA5" style={{ filter: 'drop-shadow(0 0 2px #9E4EA5)' }}>
+          <text fontSize="10" fontFamily="monospace" fontWeight="bold" letterSpacing="3" fill={UI_COLORS.XP_BAR} style={{ filter: `drop-shadow(0 0 2px ${UI_COLORS.XP_BAR})` }}>
               <textPath href="#levelCurve" startOffset="50%" textAnchor="middle" side="right">
                   <tspan ref={levelRef}>LVL_{level.toString().padStart(2, '0')}</tspan>
               </textPath>

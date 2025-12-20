@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 19 22:47:09 CST 2025
+Generated on: Sat Dec 20 09:02:55 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -2385,21 +2385,27 @@ export const ZenBomb = () => {
     setClicked(true);
     AudioSystem.playClick();
     
-    // 1. Fire Weapon to kill entities visually
+    // 1. Fire Weapon Visuals Immediately (The "Button Press" feedback)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
     AudioSystem.playSound('syn_bass_drop');
 
-    // 2. Clear Panels silently so they don't obstruct the view
-    try {
-        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-        if (panels) panels.destroyAll();
-    } catch (e) { console.warn(e); }
+    // 2. Wait 0.5s, THEN dissolve panels and kill entities
+    setTimeout(() => {
+        // This event tells page.tsx to hide the UI layer
+        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: 'UI_PURGE_TRIGGER' }); 
 
-    // 3. Wait 5 seconds (Game Loop still running physics for sparks/bullets)
+        // Destroy backend entities
+        try {
+            const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            if (panels) panels.destroyAll();
+        } catch (e) { console.warn(e); }
+    }, 500);
+
+    // 3. Wait 5 seconds for the "Red Void" moment, then switch to Zen Mode
     setTimeout(() => {
         activateZenMode();
         AudioSystem.playAmbience('ambience_core'); 
-    }, 5000);
+    }, 5500);
   };
 
   return (
@@ -2461,10 +2467,12 @@ export const ZenBomb = () => {
 =====================================
 FILE: ./src/ui/kit/atoms/CustomCursor.tsx
 =====================================
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -2472,8 +2480,11 @@ export const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isOnScrollbar, setIsOnScrollbar] = useState(false);
+  const [isHit, setIsHit] = useState(false);
+  const hitTimer = useRef<NodeJS.Timeout | null>(null);
   
-  const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
+  // We include sessionId to force re-subscription on game reset
+  const { bootState, activeModal, isDebugOpen, isBreaching, sessionId } = useStore();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
@@ -2486,6 +2497,19 @@ export const CustomCursor = () => {
   // 3. OR Mobile Lockdown
   // 4. OR Game Over (This allows clicking the Purge Button)
   const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown' || isGameOver) && !isOnScrollbar;
+
+  // Hit Detection Logic
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
+          setIsHit(true);
+          if (hitTimer.current) clearTimeout(hitTimer.current);
+          hitTimer.current = setTimeout(() => setIsHit(false), 150);
+      });
+      return () => {
+          unsub();
+          if (hitTimer.current) clearTimeout(hitTimer.current);
+      };
+  }, [sessionId, bootState]); // Dependency on sessionId ensures we listen to the active Engine instance
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -2518,12 +2542,17 @@ export const CustomCursor = () => {
     };
   }, [isGameActive, isMenuOpen, isBreaching, isGameOver]);
 
+  const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
+  const cursorShadow = isHit 
+    ? 'drop-shadow(0 0 15px #FF003C)' 
+    : (isHovering ? 'drop-shadow(0 0 12px #eae747)' : 'drop-shadow(0 0 8px #78F654)');
+
   return (
     <>
       <motion.div
         className={clsx(
             "fixed top-0 left-0 pointer-events-none z-[20000]", 
-            (isHovering && showCustomCursor) ? "mix-blend-difference" : "" 
+            (isHovering && showCustomCursor && !isHit) ? "mix-blend-difference" : "" 
         )}
         animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
         transition={{ type: "tween", ease: "linear", duration: 0 }}
@@ -2542,10 +2571,11 @@ export const CustomCursor = () => {
                 width="24" 
                 height="24" 
                 viewBox="0 0 24 24" 
-                className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'}`}
+                className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'} ${isHit ? 'scale-125' : ''}`}
                 style={{ 
-                    filter: isHovering ? 'drop-shadow(0 0 12px #eae747)' : 'drop-shadow(0 0 8px #78F654)',
-                    fill: isHovering ? '#eae747' : '#78F654'
+                    filter: cursorShadow,
+                    fill: cursorColor,
+                    transition: 'fill 0.1s ease, filter 0.1s ease'
                 }}
               >
                 <path d="M5.5 3.21l12.32 12.32-4.5 1.12 3.5 3.5-2.12 2.12-3.5-3.5-1.12 4.5z" />
@@ -2944,8 +2974,8 @@ interface ToggleButtonProps {
   iconOff?: any;
   active: boolean;
   onClick: () => void;
-  variant?: 'icon' | 'panel'; // icon = Header style, panel = SoundTab style
-  color?: string; // Optional text color override
+  variant?: 'icon' | 'panel'; 
+  color?: string; // e.g. "text-primary-green"
 }
 
 export const ToggleButton = ({ 
@@ -2965,6 +2995,7 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
+  // 1. PANEL VARIANT (Settings Menu) - Unchanged
   if (variant === 'panel') {
       return (
         <button
@@ -2990,20 +3021,35 @@ export const ToggleButton = ({
       );
   }
 
-  // Variant 'icon' (Header)
+  // 2. ICON VARIANT (Header) - Updated with Invert Logic
   return (
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
       className={clsx(
-        "flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
+        "group flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
+        // Base Dynamic Color (e.g. text-primary-green, text-critical-red)
+        color || 'text-white',
+        // Hover: Background becomes the text color
+        "hover:bg-current hover:border-transparent",
         active 
-          ? `hover:text-alert-yellow bg-white/5 border-white/20 ${color || ''}`
-          : `${color || ''} border-transparent opacity-40 hover:text-critical-red hover:opacity-100`
+          ? "bg-white/5 border-white/20 opacity-100"
+          : "border-transparent opacity-40 hover:opacity-100"
       )}
     >
-      <div className={clsx(active ? "" : "opacity-50")}>
-          {label ? <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">{label}</span> : <Icon size={14} />}
+      <div className={clsx(
+          "flex items-center justify-center transition-colors duration-200",
+          // Default: Inherit color. Hover: Force BLACK to contrast against the colored background
+          "text-current group-hover:text-black",
+          active ? "" : "opacity-80"
+      )}>
+          {label ? (
+            <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">
+                {label}
+            </span> 
+          ) : (
+            <Icon size={14} />
+          )}
       </div>
     </button>
   );
@@ -4908,7 +4954,9 @@ export const Header = () => {
       )}
 
       <div className="flex items-center gap-4">
+        {/* Force Remount when switching to Zen Mode to kill Heartbeat Animation */}
         <motion.span 
+            key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },
@@ -4945,8 +4993,17 @@ export const Header = () => {
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
-            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-white hover:bg-white/5", statusColor)}>
-                <Settings size={14} className="animate-spin-slow" />
+            
+            {/* UPDATED SETTINGS BUTTON WITH INVERT HOVER */}
+            <button 
+                onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} 
+                className={clsx(
+                    "group flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
+                    statusColor,
+                    "hover:bg-current hover:border-transparent"
+                )}
+            >
+                <Settings size={14} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
             </button>
         </div>
       </div>
@@ -8680,13 +8737,8 @@ import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
-import { useGameContext } from '@/engine/state/GameContext';
-import { Tag } from '@/engine/ecs/types';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export const WireframeFloor = () => {
-  const { registry } = useGameContext();
   const groupRef = useRef<THREE.Group>(null);
   const gridRef = useRef<any>(null);
 
@@ -8701,19 +8753,20 @@ export const WireframeFloor = () => {
   const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
   
   useFrame((state, delta) => {
-    let worldEntity;
-    for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; }
-
-    if (worldEntity && groupRef.current) {
-        const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        if (render) groupRef.current.position.z = render.rotation % 5;
+    // 1. INDEPENDENT MOVEMENT
+    // Driven by real-time clock, ignores game pause/game over states
+    if (groupRef.current) {
+        // RESTORED ORIGINAL SPEED (Was 0.5 in WorldSystem)
+        const speed = 0.5; 
+        groupRef.current.position.z = (state.clock.elapsedTime * speed) % 5;
     }
 
+    // 2. STATE-BASED COLORING
     const { systemIntegrity, isZenMode } = useGameStore.getState();
     const bootState = useStore.getState().bootState;
 
     if (isZenMode) {
-        // Prismatic Flow
+        // Prismatic Flow for Zen
         const time = state.clock.elapsedTime * 0.1;
         currentSectionColor.current.setHSL(time % 1, 0.8, 0.1);
         currentCellColor.current.setHSL((time + 0.1) % 1, 0.9, 0.5);
@@ -8731,6 +8784,7 @@ export const WireframeFloor = () => {
             target = colors.warning;
         }
 
+        // Smooth Lerp
         currentSectionColor.current.lerp(target.section, delta * 3.0);
         currentCellColor.current.lerp(target.cell, delta * 3.0);
     }
@@ -8960,9 +9014,13 @@ import { useEffect } from 'react';
 import { useAnimation, AnimationControls } from 'framer-motion';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { useStore } from '@/engine/state/global/useStore';
 
 export const useHeartbeat = (): AnimationControls => {
   const controls = useAnimation();
+  // We track sessionId and bootState to ensure we re-subscribe 
+  // if the EngineFactory replaces the EventBus instance (e.g. on game reset or boot)
+  const { sessionId, bootState } = useStore();
 
   useEffect(() => {
     const unsub = GameEventBus.subscribe(GameEvents.HEARTBEAT, (payload) => {
@@ -8972,7 +9030,7 @@ export const useHeartbeat = (): AnimationControls => {
     });
 
     return () => unsub();
-  }, [controls]);
+  }, [controls, sessionId, bootState]);
 
   return controls;
 };
@@ -9172,11 +9230,6 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
     
-    // Logic:
-    // 1. If Intro Not Done: Hide (0)
-    // 2. If Zen Mode: Show (1)
-    // 3. If System Failure (Game Over) AND Not Zen Mode: Hide (0) - to let Cursor take over
-    // 4. Otherwise: Show (1)
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     const isZenMode = useGameStore.getState().isZenMode;
     const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
@@ -9195,7 +9248,9 @@ export const PlayerActor = () => {
     const interact = getSystem<IInteractionSystem>('InteractionSystem');
     if (interact) interactState = interact.repairState;
 
-    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING');
+    // Treat Zen Mode as an active high-energy state (similar to Healing)
+    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING') || isZenMode;
+    
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     
     if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
@@ -9218,7 +9273,8 @@ export const PlayerActor = () => {
         
         // --- COLOR LOGIC ---
         if (isZenMode) {
-            const time = state.clock.elapsedTime * 0.2; // Slower base cycle
+            // Slower cycle: 0.1 multiplier (was 0.2)
+            const time = state.clock.elapsedTime * 0.1; 
             
             // 1. Center Dot (Leading, almost white)
             tempColor.current.setHSL(time % 1, 1.0, 0.9);
@@ -9256,7 +9312,10 @@ export const PlayerActor = () => {
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         
-        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current);
+        // SCALE APPLICATION: 3x if Zen Mode
+        const zenScale = isZenMode ? 3.0 : 1.0;
+        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * zenScale);
+        
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }
@@ -10026,6 +10085,8 @@ import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { GameProvider } from '@/engine/state/GameContext';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 
 export default function Home() {
@@ -10055,7 +10116,18 @@ export default function Home() {
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
+  const [showPanels, setShowPanels] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Handle Purge Dissolve Logic
+  useEffect(() => {
+      const unsub = GameEventBus.subscribe(GameEvents.LOG_DEBUG, (p) => {
+          if (p.msg === 'UI_PURGE_TRIGGER') {
+              setShowPanels(false);
+          }
+      });
+      return unsub;
+  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -10206,12 +10278,12 @@ export default function Home() {
                   >
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
-                          {!isZenMode && (
+                          {!isZenMode && showPanels && (
                           <motion.div 
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.8 } }} // Slow dissolve
                               variants={{
                               hidden: { opacity: 0 },
                               visible: { 
@@ -11268,8 +11340,10 @@ export const GAMEPLAY_CONFIG = {
   INTERACTION: {
     REPAIR_RATE: 0.05,
     QUERY_RADIUS: 1.0,
-    REPAIR_HEAL_AMOUNT: 2.8,
-    REBOOT_TICK_AMOUNT: 4.0
+    // Increased by ~15% (Was 2.8 -> 3.25)
+    REPAIR_HEAL_AMOUNT: 3.25,
+    // Increased by ~15% (Was 4.0 -> 4.6)
+    REBOOT_TICK_AMOUNT: 4.6
   },
   WEAPON: {
     MUZZLE_OFFSET: 1.2
@@ -17196,6 +17270,7 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import * as THREE from 'three';
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -17228,6 +17303,7 @@ export class RenderSystem implements IGameSystem {
     const entities = this.registry.query({ all: [ComponentType.RenderModel] });
     const interactState = this.interactionSystem.repairState;
     const isDead = this.gameSystem.playerHealth <= 0;
+    const isZenMode = useGameStore.getState().isZenMode;
 
     for (const entity of entities) {
         if (!entity.active) continue;
@@ -17245,7 +17321,10 @@ export class RenderSystem implements IGameSystem {
             let targetCol = COL_BASE;
             let spinSpeed = 0.02; 
 
-            if (isDead) {
+            if (isZenMode) {
+                // Zen Mode: Ultra slow rotation (50% of previous 0.06)
+                spinSpeed = -0.03;
+            } else if (isDead) {
                 targetCol = COL_DEAD;
                 if (interactState === 'REBOOTING') {
                     targetCol = COL_REBOOT;
@@ -18054,15 +18133,17 @@ export class WorldSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
+    // Only handling lighting color interpolation here for system consistency.
+    // Visual movement (WireframeFloor) is now handled in the View layer
+    // to ensure it persists during Game Over / Paused states.
+
     if (this.worldEntityId === null) return;
     
     const world = this.registry.getEntity(this.worldEntityId);
     if (!world || !world.active) return;
 
     const model = world.getComponent<RenderModel>(ComponentType.RenderModel);
-    const transform = world.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    
-    if (!model || !transform) return;
+    if (!model) return;
 
     const integrity = this.panelSystem.systemIntegrity;
     const bootState = useStore.getState().bootState;
@@ -18080,9 +18161,6 @@ export class WorldSystem implements IGameSystem {
     model.r = this.currentColor.r;
     model.g = this.currentColor.g;
     model.b = this.currentColor.b;
-    
-    // 3. World Spin
-    transform.rotation += 0.5 * delta; 
   }
 
   teardown(): void {}

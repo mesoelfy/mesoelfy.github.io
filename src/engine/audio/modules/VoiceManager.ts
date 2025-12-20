@@ -3,8 +3,7 @@ import { SoundBank } from './SoundBank';
 import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
-
-const MAX_POLYPHONY = 100;
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class VoiceManager {
   private activeCount = 0;
@@ -20,7 +19,7 @@ export class VoiceManager {
   ) {}
 
   public playSFX(key: AudioKey, pan: number = 0) {
-    if (this.activeCount >= MAX_POLYPHONY) return;
+    if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
 
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);

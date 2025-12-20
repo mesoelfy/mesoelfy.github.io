@@ -1,4 +1,5 @@
 import { SoundDef } from '@/engine/config/assets/AudioManifest';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class AudioSynthesizer {
   
@@ -11,7 +12,7 @@ export class AudioSynthesizer {
     const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
     if (!OfflineContextClass) return null;
 
-    const sampleRate = 44100;
+    const sampleRate = SYS_LIMITS.SAMPLE_RATE;
     const length = Math.ceil(sampleRate * recipe.duration);
     
     if (length <= 0) return null;
@@ -110,7 +111,7 @@ export class AudioSynthesizer {
 
   private static makeDistortionCurve(amount: number) {
     const k = typeof amount === 'number' ? amount : 50;
-    const n_samples = 44100;
+    const n_samples = SYS_LIMITS.SAMPLE_RATE;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
     for (let i = 0; i < n_samples; ++i) {
