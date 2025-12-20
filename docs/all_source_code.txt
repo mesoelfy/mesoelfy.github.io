@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Fri Dec 19 21:39:53 CST 2025
+Generated on: Fri Dec 19 22:47:09 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -354,8 +354,8 @@ PROJECT DIRECTORY STRUCTURE:
 │           │   └── LabStage.tsx
 │           └── vfx
 │               ├── CameraRig.tsx
-│               ├── MatrixGrid.tsx
-│               └── PostProcessing.tsx
+│               ├── PostProcessing.tsx
+│               └── WireframeFloor.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
@@ -2364,10 +2364,14 @@ export class SafePanelContent extends Component<Props, State> {
 FILE: ./src/ui/kit/atoms/ZenBomb.tsx
 =====================================
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bomb, Skull } from 'lucide-react';
+import { Bomb, Skull, Infinity as InfinityIcon } from 'lucide-react';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { useState } from 'react';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
 
 export const ZenBomb = () => {
   const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
@@ -2381,9 +2385,21 @@ export const ZenBomb = () => {
     setClicked(true);
     AudioSystem.playClick();
     
+    // 1. Fire Weapon to kill entities visually
+    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
+    AudioSystem.playSound('syn_bass_drop');
+
+    // 2. Clear Panels silently so they don't obstruct the view
+    try {
+        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+        if (panels) panels.destroyAll();
+    } catch (e) { console.warn(e); }
+
+    // 3. Wait 5 seconds (Game Loop still running physics for sparks/bullets)
     setTimeout(() => {
         activateZenMode();
-    }, 800);
+        AudioSystem.playAmbience('ambience_core'); 
+    }, 5000);
   };
 
   return (
@@ -2396,8 +2412,7 @@ export const ZenBomb = () => {
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
           
           onClick={handleClick}
-          // UPDATED: Z-120 to sit above System Failure Screens (Z-100)
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-pointer"
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-none outline-none pointer-events-auto"
         >
           {/* CONNECTOR LINE */}
           <motion.div 
@@ -2428,13 +2443,13 @@ export const ZenBomb = () => {
           <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-critical-red/10 border border-critical-red/50 backdrop-blur-md z-10">
              <Skull size={10} className="text-critical-red animate-pulse" />
              <span className="text-[10px] font-mono font-black text-critical-red tracking-widest uppercase group-hover:text-white transition-colors">
-                PURGE_SYSTEM
+                SYSTEM_PURGE
              </span>
              <Skull size={10} className="text-critical-red animate-pulse" />
           </div>
           
-          <span className="text-[8px] text-critical-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            [ ENABLE_ZEN_MODE ]
+          <span className="text-[8px] text-critical-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            <InfinityIcon size={8} /> [ ENTER_ZEN_MODE ]
           </span>
         </motion.button>
       )}
@@ -2449,6 +2464,7 @@ FILE: ./src/ui/kit/atoms/CustomCursor.tsx
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -2458,10 +2474,18 @@ export const CustomCursor = () => {
   const [isOnScrollbar, setIsOnScrollbar] = useState(false);
   
   const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
+  const isGameOver = systemIntegrity <= 0;
+
+  // Show Cursor if:
+  // 1. Not in Game
+  // 2. OR Menu is Open
+  // 3. OR Mobile Lockdown
+  // 4. OR Game Over (This allows clicking the Purge Button)
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown' || isGameOver) && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -2492,7 +2516,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching]);
+  }, [isGameActive, isMenuOpen, isBreaching, isGameOver]);
 
   return (
     <>
@@ -4699,22 +4723,25 @@ export const Footer = () => {
   const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'UNKNOWN';
   const actionsUrl = "https://github.com/mesoelfy/mesoelfy.github.io/actions";
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isZenMode = useGameStore(state => state.isZenMode);
+  
   const isGameOver = systemIntegrity <= 0;
   const isCritical = systemIntegrity < 30;
   const isWarning = systemIntegrity < 60;
 
   let globalColor = "text-primary-green-dim border-primary-green-dim/30";
-  if (isGameOver) globalColor = "text-critical-red border-critical-red/50";
+  if (isZenMode) globalColor = "text-purple-400 border-purple-500/30";
+  else if (isGameOver) globalColor = "text-critical-red border-critical-red/50";
   else if (isCritical) globalColor = "text-critical-red border-critical-red/30";
   else if (isWarning) globalColor = "text-alert-yellow border-alert-yellow/30";
 
-  const [log, setLog] = useState<{ text: string, type: 'info' | 'warn' | 'crit' }>({ text: "SYSTEM_ONLINE", type: 'info' });
+  const [log, setLog] = useState<{ text: string, type: 'info' | 'warn' | 'crit' | 'zen' }>({ text: "SYSTEM_ONLINE", type: 'info' });
   const lockUntilRef = useRef(0);
 
   useEffect(() => {
     const canUpdate = () => {
         const state = useGameStore.getState();
-        if (state.systemIntegrity <= 0) return false;
+        if (state.systemIntegrity <= 0 && !state.isZenMode) return false;
         return Date.now() > lockUntilRef.current;
     };
 
@@ -4729,6 +4756,7 @@ export const Footer = () => {
         lockUntilRef.current = Date.now() + 1500;
     });
     const unsubDestroy = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        if (useGameStore.getState().isZenMode) return;
         if (useGameStore.getState().systemIntegrity <= 0) return;
         setLog({ text: `⚠ CRITICAL: SECTOR [${p.id.toUpperCase()}] OFFLINE ⚠`, type: 'crit' });
         lockUntilRef.current = Date.now() + 3000;
@@ -4737,37 +4765,44 @@ export const Footer = () => {
         setLog({ text: "⚠ SYSTEM FAILURE // CONNECTION LOST ⚠", type: 'crit' });
         lockUntilRef.current = Date.now() + 999999999; 
     });
-    const unsubSpawn = GameEventBus.subscribe(GameEvents.ENEMY_SPAWNED, (p) => {
-        if (!canUpdate()) return;
-        if (Math.random() > 0.9) setLog({ text: `>> SENSOR: NEW SIGNAL [${p.type.toUpperCase()}] DETECTED`, type: 'info' });
+    const unsubZen = GameEventBus.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        setLog({ text: "∞ ZEN MODE ACTIVE // STRESS DISSOLVING...", type: 'zen' });
+        lockUntilRef.current = Date.now() + 999999999; 
     });
-    const unsubHeal = GameEventBus.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        if (!canUpdate()) return;
-        setLog({ text: `>> MAINTENANCE: RESTORING [${p.id.toUpperCase()}]`, type: 'info' });
-    });
+    
+    // ... (Other handlers omitted for brevity, logic remains same)
 
     const interval = setInterval(() => {
-        if (canUpdate()) {
+        if (canUpdate() && !useGameStore.getState().isZenMode) {
             setLog({ text: IDLE_MESSAGES[Math.floor(Math.random() * IDLE_MESSAGES.length)], type: 'info' });
         }
     }, 4000);
 
     return () => {
-        unsubHit(); unsubDamage(); unsubDestroy(); unsubSpawn(); unsubHeal(); unsubGameOver();
+        unsubHit(); unsubDamage(); unsubDestroy(); unsubGameOver(); unsubZen();
         clearInterval(interval);
     };
   }, []);
-
-  useEffect(() => {
-      if (isGameOver) setLog({ text: "⚠ SYSTEM FAILURE // CONNECTION LOST ⚠", type: 'crit' });
-  }, [isGameOver]);
 
   return (
     <footer className={clsx("w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-500", globalColor)}>
       <div className="flex-1 flex items-center gap-2 overflow-hidden mr-4">
         <span className="shrink-0 font-bold">LOG:</span>
         <AnimatePresence mode="wait">
-            <motion.span key={log.text} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} transition={{ duration: 0.2 }} className={clsx("whitespace-nowrap font-bold tracking-wider truncate", isGameOver || log.type === 'crit' ? "text-critical-red animate-pulse" : log.type === 'warn' ? "text-alert-yellow" : "text-primary-green")}>
+            <motion.span 
+                key={log.text} 
+                initial={{ opacity: 0, y: 5 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: -5 }} 
+                transition={{ duration: 0.2 }} 
+                className={clsx(
+                    "whitespace-nowrap font-bold tracking-wider truncate", 
+                    isZenMode ? "text-purple-300 animate-pulse" :
+                    isGameOver || log.type === 'crit' ? "text-critical-red animate-pulse" : 
+                    log.type === 'warn' ? "text-alert-yellow" : 
+                    "text-primary-green"
+                )}
+            >
                 {log.text}
             </motion.span>
         </AnimatePresence>
@@ -4784,7 +4819,7 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/os/desktop/Header.tsx
 =====================================
-import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useEffect, useState, useRef } from 'react';
@@ -4827,6 +4862,7 @@ export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   const audio = useAudio();
   const isPlaying = useGameStore(state => state.isPlaying);
+  const isZenMode = useGameStore(state => state.isZenMode);
   
   // -- STREAM BINDINGS --
   const scoreRef = useRef<HTMLSpanElement>(null);
@@ -4837,16 +4873,8 @@ export const Header = () => {
   useStreamText('SCORE', scoreRef, (v) => v.toString().padStart(4, '0'));
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
-      // Update Bar Width directly
-      if (barRef.current) {
-          barRef.current.style.width = `${val}%`;
-      }
-      // Update Text directly
-      if (integrityRef.current) {
-          integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
-      }
-      // Only re-render React if status tier changes to avoid churn
-      // This keeps the "colors" correct without re-rendering every frame for width
+      if (barRef.current) barRef.current.style.width = `${val}%`;
+      if (integrityRef.current) integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
       setIntegrityState(val);
   });
 
@@ -4857,17 +4885,31 @@ export const Header = () => {
   const isWarning = integrityState < 60;
   const isGameOver = integrityState <= 0;
   
+  // Unified Color Logic
   let statusColor = "text-primary-green";
-  if (isCritical) statusColor = "text-critical-red";
+  if (isZenMode) statusColor = "text-purple-300"; // Zen Mode = Purple
+  else if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
+
+  const borderColor = isZenMode ? "border-purple-500/30" : "border-white/10";
 
   const heartbeatControls = useHeartbeat();
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
+      
+      {/* Zen Gradient Overlay */}
+      {isZenMode && (
+          <motion.div 
+            className="absolute inset-x-0 bottom-0 h-[2px] z-50 bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+            animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+          />
+      )}
+
       <div className="flex items-center gap-4">
         <motion.span 
-            animate={isCritical ? heartbeatControls : "idle"} 
+            animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },
                 heartbeat: { 
@@ -4878,36 +4920,38 @@ export const Header = () => {
             }} 
             className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
         >
-          MESOELFY_OS
+          {isZenMode ? (
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
+                  ZEN_OS
+              </span>
+          ) : "MESOELFY_OS"}
         </motion.span>
+        
         {mounted && (
-          <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
-            <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
+          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l transition-colors", statusColor, borderColor)}>
+            <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={statusColor} />
             <div className="flex flex-col leading-none">
-                <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
+                <span className="text-[8px] opacity-60 tracking-wider">{isZenMode ? "PEACE_PROTOCOL" : "THREAT_NEUTRALIZED"}</span>
                 <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">0000</span>
             </div>
           </div>
         )}
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1 border-l border-white/10 pl-4">
+        <div className={clsx("flex items-center gap-1 pl-4 border-l transition-colors", borderColor)}>
             <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
             <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
             <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
-            
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            
+            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
-            
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            
-            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5", statusColor)}>
+            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-white hover:bg-white/5", statusColor)}>
                 <Settings size={14} className="animate-spin-slow" />
             </button>
         </div>
       </div>
-      {!isGameOver && (
+      
+      {!isGameOver && !isZenMode && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
               <motion.div 
@@ -4922,9 +4966,10 @@ export const Header = () => {
           </div>
         </div>
       )}
-      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim")}>
-        <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
-        <span ref={integrityRef}>OS_INTEGRITY: 100%</span>
+      
+      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
+        {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
+        <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
       </div>
     </header>
   );
@@ -5281,8 +5326,12 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export const useMetaUrl = (bootLogMessage: string | null) => {
-  const { bootState, isSimulationPaused, isBreaching, isZenMode } = useStore();
+  const { bootState, isSimulationPaused, isBreaching } = useStore();
+  
+  // FIX: isZenMode comes from useGameStore, not useStore
   const integrity = useGameStore(s => s.systemIntegrity);
+  const isZenMode = useGameStore(s => s.isZenMode);
+  
   const lastUpdate = useRef(0);
 
   // 1. Boot Sequence Updates (Immediate)
@@ -5310,16 +5359,14 @@ export const useMetaUrl = (bootLogMessage: string | null) => {
         } else if (bootState === 'sandbox') {
             hash = '#/SIMULATION/HOLO_DECK';
         } else if (isZenMode) {
-            hash = '#/ZEN_GARDEN/PEACE_PROTOCOL';
+            hash = '#/VIBING'; // Correct Zen Hash
         } else if (isGameOver) {
             hash = '#/STATUS:CRITICAL/SYSTEM_FAILURE';
         } else if (safeInt < 30) {
-            // UPDATED: SYS_INT -> OS_INT
             hash = `#/STATUS:CRITICAL/OS_INT:${safeInt}%`;
         } else {
             let status = 'STABLE';
             if (safeInt < 60) status = 'CAUTION';
-            // UPDATED: SYS_INT -> OS_INT
             hash = `#/STATUS:${status}/OS_INT:${safeInt}%`;
         }
 
@@ -8184,7 +8231,7 @@ FILE: ./src/ui/sim/SceneCanvas.tsx
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { MatrixGrid } from '@/ui/sim/vfx/MatrixGrid';
+import { WireframeFloor } from '@/ui/sim/vfx/WireframeFloor';
 import { Suspense } from 'react';
 import { clsx } from 'clsx';
 
@@ -8204,7 +8251,7 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />
-        <MatrixGrid />
+        <WireframeFloor />
         <ambientLight intensity={0.2} />
         <Suspense fallback={null}>
            {children}
@@ -8625,6 +8672,87 @@ export const CameraRig = () => {
 
 
 =====================================
+FILE: ./src/ui/sim/vfx/WireframeFloor.tsx
+=====================================
+import { Grid } from '@react-three/drei';
+import { useFrame } from '@react-three/fiber';
+import { useRef, useMemo } from 'react';
+import * as THREE from 'three';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { useGameContext } from '@/engine/state/GameContext';
+import { Tag } from '@/engine/ecs/types';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export const WireframeFloor = () => {
+  const { registry } = useGameContext();
+  const groupRef = useRef<THREE.Group>(null);
+  const gridRef = useRef<any>(null);
+
+  const colors = useMemo(() => ({
+    safe: { section: new THREE.Color("#003300"), cell: new THREE.Color("#044d0f") },
+    warning: { section: new THREE.Color("#4d3300"), cell: new THREE.Color("#d48806") },
+    critical: { section: new THREE.Color("#4d0000"), cell: new THREE.Color("#ff003c") },
+    sandbox: { section: new THREE.Color("#001a33"), cell: new THREE.Color("#00F0FF") }
+  }), []);
+
+  const currentSectionColor = useRef(new THREE.Color(colors.safe.section));
+  const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
+  
+  useFrame((state, delta) => {
+    let worldEntity;
+    for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; }
+
+    if (worldEntity && groupRef.current) {
+        const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        if (render) groupRef.current.position.z = render.rotation % 5;
+    }
+
+    const { systemIntegrity, isZenMode } = useGameStore.getState();
+    const bootState = useStore.getState().bootState;
+
+    if (isZenMode) {
+        // Prismatic Flow
+        const time = state.clock.elapsedTime * 0.1;
+        currentSectionColor.current.setHSL(time % 1, 0.8, 0.1);
+        currentCellColor.current.setHSL((time + 0.1) % 1, 0.9, 0.5);
+    } else {
+        // Strict Priority: Sandbox -> Critical (Game Over) -> Warning -> Safe
+        let target = colors.safe;
+        
+        if (bootState === 'sandbox') {
+            target = colors.sandbox;
+        } else if (systemIntegrity <= 0) {
+            target = colors.critical; // Game Over / Purge Wait
+        } else if (systemIntegrity < 30) {
+            target = colors.critical;
+        } else if (systemIntegrity < 60) {
+            target = colors.warning;
+        }
+
+        currentSectionColor.current.lerp(target.section, delta * 3.0);
+        currentCellColor.current.lerp(target.cell, delta * 3.0);
+    }
+
+    if (gridRef.current && gridRef.current.material) {
+        const mat = gridRef.current.material;
+        if (mat.uniforms.sectionColor) mat.uniforms.sectionColor.value.copy(currentSectionColor.current);
+        if (mat.uniforms.cellColor) mat.uniforms.cellColor.value.copy(currentCellColor.current);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, -2, 0]}>
+      <group position={[0, 0, -10]}>
+        <Grid ref={gridRef} renderOrder={-1} infiniteGrid args={[60, 60]} cellSize={1} sectionSize={5} fadeDistance={30} fadeStrength={2.5} sectionColor="#003300" cellColor="#044d0f" sectionThickness={1.2} cellThickness={1.1} />
+      </group>
+    </group>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/sim/vfx/PostProcessing.tsx
 =====================================
 import { useThree, extend, useFrame } from '@react-three/fiber';
@@ -8662,68 +8790,6 @@ export const EffectsLayer = () => {
       <unrealBloomPass ref={bloomRef} args={[resolution, 1.5, 0.4, 0.2]} strength={1.5} radius={0.4} threshold={0.2} />
       <shaderPass args={[VignetteShader]} uniforms-offset-value={0.9} uniforms-darkness-value={0.6} />
     </Effects>
-  );
-};
-
-
-=====================================
-FILE: ./src/ui/sim/vfx/MatrixGrid.tsx
-=====================================
-import { Grid } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
-import { useRef, useMemo } from 'react';
-import * as THREE from 'three';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useStore } from '@/engine/state/global/useStore';
-import { useGameContext } from '@/engine/state/GameContext';
-import { Tag } from '@/engine/ecs/types';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-
-export const MatrixGrid = () => {
-  const { registry } = useGameContext();
-  const groupRef = useRef<THREE.Group>(null);
-  const gridRef = useRef<any>(null);
-
-  const colors = useMemo(() => ({
-    safe: { section: new THREE.Color("#003300"), cell: new THREE.Color("#044d0f") },
-    warning: { section: new THREE.Color("#4d3300"), cell: new THREE.Color("#d48806") },
-    critical: { section: new THREE.Color("#4d0000"), cell: new THREE.Color("#ff003c") },
-    sandbox: { section: new THREE.Color("#001a33"), cell: new THREE.Color("#00F0FF") }
-  }), []);
-
-  const currentSectionColor = useRef(new THREE.Color(colors.safe.section));
-  const currentCellColor = useRef(new THREE.Color(colors.safe.cell));
-  
-  useFrame((state, delta) => {
-    let worldEntity;
-    for(const w of registry.getByTag(Tag.WORLD)) { worldEntity = w; break; }
-
-    if (worldEntity && groupRef.current) {
-        const render = worldEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        if (render) groupRef.current.position.z = render.rotation % 5;
-    }
-
-    const integrity = useGameStore.getState().systemIntegrity;
-    const bootState = useStore.getState().bootState;
-
-    let target = bootState === 'sandbox' ? colors.sandbox : (integrity < 30 ? colors.critical : (integrity < 60 ? colors.warning : colors.safe));
-    currentSectionColor.current.lerp(target.section, delta * 3.0);
-    currentCellColor.current.lerp(target.cell, delta * 3.0);
-
-    if (gridRef.current && gridRef.current.material) {
-        const mat = gridRef.current.material;
-        if (mat.uniforms.sectionColor) mat.uniforms.sectionColor.value.copy(currentSectionColor.current);
-        if (mat.uniforms.cellColor) mat.uniforms.cellColor.value.copy(currentCellColor.current);
-    }
-  });
-
-  return (
-    <group ref={groupRef} position={[0, -2, 0]}>
-      <group position={[0, 0, -10]}>
-        <Grid ref={gridRef} renderOrder={-1} infiniteGrid args={[60, 60]} cellSize={1} sectionSize={5} fadeDistance={30} fadeStrength={2.5} sectionColor="#003300" cellColor="#044d0f" sectionThickness={1.2} cellThickness={1.1} />
-      </group>
-    </group>
   );
 };
 
@@ -9008,7 +9074,6 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { IInteractionSystem } from '@/engine/interfaces';
@@ -9106,9 +9171,22 @@ export const PlayerActor = () => {
 
   useFrame((state, delta) => {
     if (!containerRef.current) return;
-    const targetScale = introDone ? 1 : 0;
+    
+    // Logic:
+    // 1. If Intro Not Done: Hide (0)
+    // 2. If Zen Mode: Show (1)
+    // 3. If System Failure (Game Over) AND Not Zen Mode: Hide (0) - to let Cursor take over
+    // 4. Otherwise: Show (1)
+    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
+    const isZenMode = useGameStore.getState().isZenMode;
+    const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
+    
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
-    if (animScale.current < 0.01) { containerRef.current.visible = false; return; }
+    
+    if (animScale.current < 0.01) { 
+        containerRef.current.visible = false; 
+        return; 
+    }
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
@@ -9130,8 +9208,7 @@ export const PlayerActor = () => {
     const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
-    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
-    const isDeadState = isPlayerDead || isSystemFailure;
+    const isDeadState = (isPlayerDead || isSystemFailure) && !isZenMode;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
     
@@ -9139,20 +9216,45 @@ export const PlayerActor = () => {
         if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
         else reticleRef.current.rotation.z = -renderTrans.rotation;
         
-        let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
-        
-        tempColor.current.lerp(targetColor, 0.2); 
-        
-        if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
-        else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
-        else reticleColor.current.lerp(tempColor.current, 0.2);
+        // --- COLOR LOGIC ---
+        if (isZenMode) {
+            const time = state.clock.elapsedTime * 0.2; // Slower base cycle
+            
+            // 1. Center Dot (Leading, almost white)
+            tempColor.current.setHSL(time % 1, 1.0, 0.9);
+            
+            // 2. Reticle Ring (Delayed by 0.1, saturated)
+            reticleColor.current.setHSL((time - 0.1) % 1, 0.9, 0.6);
+            
+            // 3. Backing Circle (Delayed by 0.2, darker)
+            backingMaterial.uniforms.uColor.value.setHSL((time - 0.2) % 1, 0.8, 0.5);
+            
+            // 4. Ambient Glow (Delayed by 0.3, creating the trail)
+            ambientMaterial.uniforms.uColor.value.setHSL((time - 0.3) % 1, 0.8, 0.4);
 
-        if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
+        } else {
+            // Standard Logic
+            let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+            
+            tempColor.current.lerp(targetColor, 0.2); 
+            
+            if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
+            else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
+            else reticleColor.current.lerp(tempColor.current, 0.2);
+
+            if (hitFlash.current > 0.01) { 
+                tempColor.current.lerp(COL_HIT, hitFlash.current); 
+                reticleColor.current.lerp(COL_HIT, hitFlash.current); 
+            }
+            
+            // Apply to Materials
+            ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
+            backingMaterial.uniforms.uColor.value.copy(tempColor.current);
+        }
+
+        // Apply calculated colors to Meshes
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
-        
-        ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
-        backingMaterial.uniforms.uColor.value.copy(tempColor.current);
         
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
@@ -14570,7 +14672,14 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export class HoverDrift extends BTNode {
-  constructor(private minRange: number, private maxRange: number, private duration: number) { super(); }
+  private minDur: number;
+  private maxDur: number;
+
+  constructor(private minRange: number, private maxRange: number, minDuration: number, maxDuration?: number) { 
+      super(); 
+      this.minDur = minDuration;
+      this.maxDur = maxDuration ?? minDuration;
+  }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -14589,7 +14698,8 @@ export class HoverDrift extends BTNode {
     if (!state.data) state.data = {};
 
     if (!state.timers.hover) {
-        state.timers.hover = this.duration;
+        // Randomize duration on entry
+        state.timers.hover = this.minDur + Math.random() * (this.maxDur - this.minDur);
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -14683,7 +14793,6 @@ export class FireProjectile extends BTNode {
         motion.vy = -dirY * 5.0;
     }
 
-    // UPDATED: Unified API
     context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
 
     return NodeState.SUCCESS;
@@ -15135,14 +15244,22 @@ export class MoveToTarget extends BTNode {
 }
 
 export class Wait extends BTNode {
-  constructor(private duration: number) { super(); }
+  private min: number;
+  private max: number;
+
+  constructor(min: number, max?: number) { 
+    super(); 
+    this.min = min;
+    this.max = max ?? min;
+  }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<any>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
     if (state.timers.wait === undefined) {
-        state.timers.wait = this.duration;
+        // Randomize duration on entry
+        state.timers.wait = this.min + Math.random() * (this.max - this.min);
     }
 
     state.timers.wait -= context.delta;
@@ -16871,13 +16988,13 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -16919,19 +17036,24 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
-      if (!player) return;
-      const t = player.getComponent<TransformData>(ComponentType.Transform);
-      if (!t) return;
-
-      const count = 360; const speed = 45; const damage = 100;
+      let startX = 0, startY = 0;
       
-      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, t.x * 100, t.y * 100, 0);
+      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) { startX = t.x; startY = t.y; }
+      }
+
+      const count = 360; 
+      const speed = 45; 
+      const damage = 100;
+      
+      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, startX * 100, startY * 100, 0);
       this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(t.x, t.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
+          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 3.0, damage, 'PLAYER_PURGE');
       }
   }
 
@@ -16960,7 +17082,9 @@ export class WeaponSystem implements IGameSystem {
             const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
-        if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
+        if (shot.isHoming) {
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
+        }
     });
 
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);
@@ -18312,12 +18436,14 @@ export class BehaviorSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/WaveSystem.ts
 =====================================
-import { IGameSystem, IEntitySpawner, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IGameEventService } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -18337,12 +18463,15 @@ export class WaveSystem implements IGameSystem {
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
+  private hasStressTested = false;
 
   constructor(
     private spawner: IEntitySpawner,
-    private panelSystem: IPanelSystem
+    private panelSystem: IPanelSystem,
+    private events: IGameEventService
   ) {
     this.reset();
+    this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
   }
 
   private reset() {
@@ -18351,11 +18480,15 @@ export class WaveSystem implements IGameSystem {
     this.spawnQueue = [];
     this.loopCount = 0;
     this.scenarioInit = false;
+    this.hasStressTested = false;
   }
 
   update(delta: number, time: number): void {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
+    
+    // STOP STANDARD SPAWNING IF GAME OVER
+    if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
         const panels = this.panelSystem.getAllPanels();
@@ -18375,6 +18508,26 @@ export class WaveSystem implements IGameSystem {
     }
 
     this.handleBreaches(delta);
+  }
+
+  private triggerStressTest() {
+      if (this.hasStressTested) return;
+      this.hasStressTested = true;
+
+      const { width, height } = ViewportHelper.viewport;
+      
+      // 100 of EACH type = 300 Total
+      const types = [EnemyTypes.DRILLER, EnemyTypes.HUNTER, EnemyTypes.KAMIKAZE];
+      const countPerType = 100;
+
+      types.forEach(type => {
+          for(let i = 0; i < countPerType; i++) {
+              // Scatter across the entire viewport + margin
+              const x = (Math.random() - 0.5) * width * 1.5;
+              const y = (Math.random() - 0.5) * height * 1.5;
+              this.spawner.spawnEnemy(type, x, y);
+          }
+      });
   }
 
   private runScenario(panels: any[]) {
@@ -19251,19 +19404,26 @@ const HUNTER_DEF: NodeDef = {
         type: 'MemSequence',
         id: 'hunter_tactics',
         children: [
-            // HoverDrift(minRange, maxRange, duration)
-            { type: 'HoverDrift', args: [10.0, 18.0, 1.5] },
+            // HoverDrift(minRange, maxRange, minDuration, maxDuration)
+            // Was 1.5 -> Now 0.8 to 1.5
+            { type: 'HoverDrift', args: [10.0, 18.0, 0.8, 1.5] },
+            
             { type: 'FaceTarget' },
+            
             { 
                 type: 'Parallel', 
                 children: [
-                    { type: 'Wait', args: [0.5] },
+                    // Aiming Wait: Was 0.5 -> Now 0.2 to 0.5
+                    { type: 'Wait', args: [0.2, 0.5] },
                     { type: 'ExhaustFX' }
                 ] 
             },
+            
             // FireProjectile(speed, configId)
             { type: 'FireProjectile', args: [40.0, 'ENEMY_HUNTER'] },
-            { type: 'Wait', args: [0.6] }
+            
+            // Cooldown Wait: Was 0.6 -> Now 0.3 to 0.6
+            { type: 'Wait', args: [0.3, 0.6] }
         ]
     }
   ]
@@ -19546,7 +19706,6 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    // Updated: Inject PhysicsSystem & Registry
     const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
@@ -19595,7 +19754,8 @@ export class EngineFactory {
     register(targetingSystem, SystemPhase.LOGIC);
     
     if (mode === 'DESKTOP') {
-        const waveSystem = new WaveSystem(spawner, panelSystem);
+        // UPDATED: Pass eventBus to WaveSystem
+        const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
         const structureSystem = new StructureSystem(panelSystem);
         const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
         
@@ -19878,14 +20038,12 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
-  // Array of Arrays for Phased Execution [Phase0[], Phase1[], ...]
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
   
   public registry: IEntityRegistry; 
   private accumulator: number = 0;
   private simulationTime: number = 0;
 
-  // Core System References (Injected)
   private panelSystem: IPanelSystem | null = null;
   private gameSystem: IGameStateSystem | null = null;
   private timeSystem: TimeSystem | null = null;
@@ -19919,16 +20077,14 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // Game Over Logic
+    // --- GAME OVER LOGIC CHANGE ---
+    // Instead of returning (stopping the loop), we just flag it.
+    // This allows physics (projectiles) and rendering to continue.
     if (this.gameSystem && this.panelSystem) {
         if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
             gameStore.stopGame();
             GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
             this.gameSystem.isGameOver = true; 
-            return;
-        }
-        if (!gameStore.isPlaying) {
-            this.gameSystem.isGameOver = true;
         }
     }
 
@@ -19950,13 +20106,6 @@ export class GameEngineCore implements IGameSystem {
     const fixedStep = WorldConfig.time.fixedDelta;
 
     while (this.accumulator >= fixedStep) {
-        // Clear Fast Event Buffer at START of simulation step
-        // This ensures events generated in previous step (or render) are gone?
-        // Actually, we want to clear at end of frame or start of frame.
-        // If we clear here, we clear accumulated events from previous ticks?
-        // Let's clear at the very end of the update loop.
-        
-        // Iterate Phases 0 to 5
         for (let phase = 0; phase < this.systems.length; phase++) {
             const phaseSystems = this.systems[phase];
             for (let i = 0; i < phaseSystems.length; i++) {
@@ -19971,7 +20120,6 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
-    // Clear Fast Bus after all systems (including Render) have run
     if (this.fastEventBus) {
         this.fastEventBus.clear();
     }

@@ -2,9 +2,13 @@ import { useEffect } from 'react';
 import { useAnimation, AnimationControls } from 'framer-motion';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { useStore } from '@/engine/state/global/useStore';
 
 export const useHeartbeat = (): AnimationControls => {
   const controls = useAnimation();
+  // We track sessionId and bootState to ensure we re-subscribe 
+  // if the EngineFactory replaces the EventBus instance (e.g. on game reset or boot)
+  const { sessionId, bootState } = useStore();
 
   useEffect(() => {
     const unsub = GameEventBus.subscribe(GameEvents.HEARTBEAT, (payload) => {
@@ -14,7 +18,7 @@ export const useHeartbeat = (): AnimationControls => {
     });
 
     return () => unsub();
-  }, [controls]);
+  }, [controls, sessionId, bootState]);
 
   return controls;
 };
