@@ -20,13 +20,6 @@ export class LifeCycleSystem implements IGameSystem {
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.purgeSummons();
     });
-
-    // NEW: Also purge hostiles immediately when PURGE is clicked to prevent lingering enemies
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.purgeHostiles();
-        }
-    });
   }
 
   update(delta: number, time: number): void {

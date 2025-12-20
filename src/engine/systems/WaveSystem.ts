@@ -24,7 +24,6 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
-  private isPurging = false;
 
   constructor(
     private spawner: IEntitySpawner,
@@ -33,13 +32,6 @@ export class WaveSystem implements IGameSystem {
   ) {
     this.reset();
     this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
-    
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.isPurging = true;
-            this.spawnQueue = [];
-        }
-    });
   }
 
   private reset() {
@@ -49,14 +41,14 @@ export class WaveSystem implements IGameSystem {
     this.loopCount = 0;
     this.scenarioInit = false;
     this.hasStressTested = false;
-    this.isPurging = false;
   }
 
   update(delta: number, time: number): void {
-    if (this.isPurging) return;
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
+    // Normal waves stop at Game Over (integrity <= 0)
+    // The "Huge Wave" (Stress Test) is triggered via event listener below
     if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
@@ -80,7 +72,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   private triggerStressTest() {
-      if (this.hasStressTested || this.isPurging) return;
+      if (this.hasStressTested) return;
       this.hasStressTested = true;
 
       const { width, height } = ViewportHelper.viewport;
