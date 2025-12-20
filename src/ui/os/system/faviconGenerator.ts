@@ -1,6 +1,7 @@
 import { COLORS } from './metaConstants';
 
 const toURI = (svgBody: string) => {
+  // Ensure strict XML namespace and standard dimensions
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">${svgBody}</svg>`;
   return `data:image/svg+xml;base64,${btoa(svg)}`;
 };
@@ -34,7 +35,7 @@ export const generateBreachIcon = (state: 'A' | 'B') => {
         <path d="M48 10 H54 V16" stroke="${color}" stroke-width="4" fill="none" />
         <path d="M16 54 H10 V48" stroke="${color}" stroke-width="4" fill="none" />
         <path d="M48 54 H54 V48" stroke="${color}" stroke-width="4" fill="none" />
-        <circle cx="32" cy="32" r="20" stroke="${color}" stroke-width="2" stroke-dasharray="10 10" />
+        <circle cx="32" cy="32" r="20" stroke="${color}" stroke-width="2" stroke-dasharray="10 10" fill="none" />
         <circle cx="32" cy="32" r="${coreSize}" fill="${color}" />
     </g>
   `);
@@ -109,16 +110,13 @@ export const generateBootIcon = (stage: string, tick: boolean) => {
 };
 
 // --- PAUSED ---
-export const generatePausedIcon = (tick: boolean, colorHex: string) => { // UPDATED: Accepts color
+export const generatePausedIcon = (tick: boolean, colorHex: string) => {
   if (!tick) {
-      // Blink Off: Show Outline only
       return toURI(`
         ${BG}
         <rect x="4" y="4" width="56" height="56" rx="12" stroke="${colorHex}" stroke-width="2" fill="none" opacity="0.5" />
       `);
   }
-  
-  // Blink On: Solid Bars
   return toURI(`
     ${BG}
     <rect x="4" y="4" width="56" height="56" rx="12" stroke="${colorHex}" stroke-width="4" fill="none" />

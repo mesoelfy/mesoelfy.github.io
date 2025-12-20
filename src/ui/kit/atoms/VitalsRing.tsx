@@ -2,8 +2,9 @@ import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { UI_METRICS, UI_COLORS } from '@/engine/config/constants/UIConstants';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 interface VitalsRingProps {
   health: number;
@@ -22,6 +23,16 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   const hpRef = useRef(health);
   const maxHpRef = useRef(maxHealth);
   const xpMaxRef = useRef(100);
+
+  useEffect(() => {
+      try {
+          const hud = ServiceLocator.getHUDService();
+          if (hud) {
+              hud.bindVitals(containerRef.current);
+              hud.bindLevelText(levelRef.current);
+          }
+      } catch (e) {}
+  }, []);
 
   const updateHPUI = () => {
     if (!containerRef.current) return;
@@ -50,16 +61,17 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
   
   useGameStream('XP', (v) => {
-      if (containerRef.current) {
-          const ratio = xpMaxRef.current > 0 ? (v / xpMaxRef.current) : 0;
-          containerRef.current.style.setProperty('--xp-progress', ratio.toString());
-      }
+      try {
+          const hud = ServiceLocator.getHUDService();
+          if (hud) hud.updateXP(xpMaxRef.current > 0 ? (v / xpMaxRef.current) : 0);
+      } catch {}
   });
 
   useGameStream('LEVEL', (lvl) => {
-      if (levelRef.current) {
-          levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
-      }
+      try {
+          const hud = ServiceLocator.getHUDService();
+          if (hud) hud.updateLevel(lvl);
+      } catch {}
   });
 
   useGameStream('PLAYER_REBOOT', (val) => {

@@ -33,8 +33,20 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
+  getHUDService(): IHUDService; 
+
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
+}
+
+export interface IHUDService extends IGameSystem {
+  bindScore(el: HTMLElement | null): void;
+  bindVitals(el: HTMLElement | null): void;
+  bindLevelText(el: Element | null): void;
+  updateScore(val: number): void;
+  updateHealth(percent: number, color: string): void;
+  updateXP(percent: number): void;
+  updateLevel(level: number): void;
 }
 
 export interface IFastEventService {

@@ -8,7 +8,8 @@ import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
-import { useGameStream, useStreamText } from '@/ui/hooks/useGameStream';
+import { useGameStream } from '@/ui/hooks/useGameStream';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -43,13 +44,24 @@ export const Header = () => {
   const isPlaying = useGameStore(state => state.isPlaying);
   const isZenMode = useGameStore(state => state.isZenMode);
   
-  // -- STREAM BINDINGS --
   const scoreRef = useRef<HTMLSpanElement>(null);
   const integrityRef = useRef<HTMLSpanElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [integrityState, setIntegrityState] = useState(100);
 
-  useStreamText('SCORE', scoreRef, (v) => v.toString().padStart(4, '0'));
+  useEffect(() => {
+      try {
+          const hud = ServiceLocator.getHUDService();
+          if (hud) hud.bindScore(scoreRef.current);
+      } catch {}
+  }, []);
+  
+  useGameStream('SCORE', (v) => {
+      try {
+          const hud = ServiceLocator.getHUDService();
+          if (hud) hud.updateScore(v);
+      } catch {}
+  });
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
       if (barRef.current) barRef.current.style.width = `${val}%`;
@@ -64,20 +76,17 @@ export const Header = () => {
   const isWarning = integrityState < 60;
   const isGameOver = integrityState <= 0;
   
-  // Unified Color Logic
   let statusColor = "text-primary-green";
-  if (isZenMode) statusColor = "text-purple-300"; // Zen Mode = Purple
+  if (isZenMode) statusColor = "text-purple-300"; 
   else if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const borderColor = isZenMode ? "border-purple-500/30" : "border-white/10";
-
   const heartbeatControls = useHeartbeat();
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
       
-      {/* Zen Gradient Overlay */}
       {isZenMode && (
           <motion.div 
             className="absolute inset-x-0 bottom-0 h-[2px] z-50 bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
@@ -87,7 +96,6 @@ export const Header = () => {
       )}
 
       <div className="flex items-center gap-4">
-        {/* Force Remount when switching to Zen Mode to kill Heartbeat Animation */}
         <motion.span 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
@@ -127,7 +135,6 @@ export const Header = () => {
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             
-            {/* UPDATED SETTINGS BUTTON WITH INVERT HOVER */}
             <button 
                 onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} 
                 className={clsx(

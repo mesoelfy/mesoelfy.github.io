@@ -7,7 +7,8 @@ import {
   IEntitySpawner, 
   IParticleSystem,
   IGameEventService,
-  IFastEventService
+  IFastEventService,
+  IHUDService
 } from '@/engine/interfaces';
 import { ConfigService } from '@/engine/services/ConfigService';
 
@@ -40,12 +41,12 @@ class ServiceLocatorImpl implements IServiceLocator {
   public getAudioService(): IAudioService { return this.get<IAudioService>('AudioService'); }
   public getInputService(): IInputService { return this.get<IInputService>('InputSystem'); }
   public getParticleSystem(): IParticleSystem { return this.get<IParticleSystem>('ParticleSystem'); }
+  public getHUDService(): IHUDService { return this.get<IHUDService>('HUDService'); }
   
   public getRegistry(): IEntityRegistry { return this.get<IEntityRegistry>('EntityRegistry'); }
   public getSpawner(): IEntitySpawner { return this.get<IEntitySpawner>('EntitySpawner'); }
   public getConfigService() { return ConfigService; }
 
-  // Legacy Helpers
   public registerSystem(id: string, system: IGameSystem) { this.register(id, system); }
   public getSystem<T extends IGameSystem>(id: string): T { return this.get<T>(id); }
   public registerRegistry(r: IEntityRegistry) { this.register('EntityRegistry', r); }

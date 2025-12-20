@@ -14,12 +14,10 @@ export const MetaManager = () => {
   const [lastLog, setLastLog] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we've already logged to avoid double-logging in React StrictMode (dev)
     if ((window as any).hasLoggedIdentity) return;
 
     const commitHash = process.env.NEXT_PUBLIC_COMMIT_HASH || 'DEV_NODE';
 
-    // 1. THE ART & STATUS (Safe to remain visible)
     console.log(
       `%c${ASCII_CONSOLE}%c\n` +
       ` %c STATUS %c ONLINE %c  ` +
@@ -36,24 +34,27 @@ export const MetaManager = () => {
       CONSOLE_STYLES.CYAN
     );
 
-    // 2. THE FILTER HINT (Will disappear when filter is applied)
-    console.log(
-      `%c[DEV_HINT] To silence YouTube/AdBlock errors, paste this filter above:\n` +
-      `%c-source:www-embed-player.js -source:base.js -ERR_BLOCKED_BY_CLIENT`,
-      'color: gray; font-style: italic;',
-      'color: #eae747; background: #222; padding: 2px 4px; border-radius: 2px;'
-    );
-
     (window as any).hasLoggedIdentity = true;
   }, []);
 
   useEffect(() => {
-      return GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
+      const unsub = GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
           setLastLog(p.message);
-          let currentKey = 'INIT';
-          for (const k in BOOT_KEYS) { if (p.message.includes(k)) { currentKey = BOOT_KEYS[k]; break; } }
-          setBootKey(currentKey);
+          
+          let foundKey = 'INIT';
+          for (const [textMatch, code] of Object.entries(BOOT_KEYS)) {
+              if (p.message.includes(textMatch)) { 
+                  foundKey = code;
+                  break; 
+              }
+          }
+          
+          setBootKey(prev => {
+              if (prev !== foundKey) return foundKey;
+              return prev;
+          });
       });
+      return unsub;
   }, []);
 
   useWindowFocus();
