@@ -11,21 +11,25 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import * as THREE from 'three';
 
 interface PurgeState {
     active: boolean;
     shotsRemaining: number;
     currentAngle: number;
+    accumulator: number;
 }
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubPurge: () => void;
+  private tempColor = new THREE.Color();
   
   private purgeState: PurgeState = {
       active: false,
       shotsRemaining: 0,
-      currentAngle: 0
+      currentAngle: 0,
+      accumulator: 0
   };
 
   constructor(
@@ -64,7 +68,7 @@ export class WeaponSystem implements IGameSystem {
     if (this.purgeState.active) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         if (transform) {
-            this.processPurgeFrame(transform.x, transform.y);
+            this.processPurgeFrame(delta, transform.x, transform.y);
         }
     }
 
@@ -87,11 +91,12 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      // 60 fps * 2 seconds * 3 shots per frame = 360 shots
+      // 50% Fewer Shots (Was 360, Now 180)
       this.purgeState = {
           active: true,
-          shotsRemaining: 360, 
-          currentAngle: 0
+          shotsRemaining: 180, 
+          currentAngle: 0,
+          accumulator: 0
       };
 
       const player = this.getPlayerEntity();
@@ -104,14 +109,20 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private processPurgeFrame(originX: number, originY: number) {
-      const SHOTS_PER_FRAME = 3;
+  private processPurgeFrame(delta: number, originX: number, originY: number) {
       const ANGLE_INCREMENT = 0.4; 
       const SPEED = 24; 
       const DAMAGE = 50;
-      const LIFE = 2.4; // DOUBLED (Was 1.2)
+      const LIFE = 2.4;
+      
+      // Target Rate: 164 shots/sec (approx 10% slower than 60fps * 3 = 180)
+      const FIRE_RATE = 164; 
 
-      for (let i = 0; i < SHOTS_PER_FRAME; i++) {
+      this.purgeState.accumulator += delta * FIRE_RATE;
+
+      while (this.purgeState.accumulator >= 1.0) {
+          this.purgeState.accumulator -= 1.0;
+
           if (this.purgeState.shotsRemaining <= 0) {
               this.purgeState.active = false;
               break;
@@ -121,7 +132,7 @@ export class WeaponSystem implements IGameSystem {
           const vx = Math.cos(angle) * SPEED;
           const vy = Math.sin(angle) * SPEED;
 
-          this.spawner.spawnBullet(
+          const bullet = this.spawner.spawnBullet(
               originX, originY, 
               vx, vy, 
               Faction.FRIENDLY, 
@@ -130,6 +141,19 @@ export class WeaponSystem implements IGameSystem {
               'PLAYER_PURGE'
           );
 
+          // --- PRISMATIC COLOR LOGIC ---
+          const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
+          this.tempColor.setHSL(hue, 1.0, 0.6); 
+          
+          const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
+          if (model) {
+              model.r = this.tempColor.r;
+              model.g = this.tempColor.g;
+              model.b = this.tempColor.b;
+          }
+          // ----------------------------
+
+          // Audio: Play every 5th shot
           if (this.purgeState.shotsRemaining % 5 === 0) {
              this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
           }
