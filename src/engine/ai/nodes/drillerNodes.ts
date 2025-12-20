@@ -6,12 +6,14 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class DrillAttack extends BTNode {
-  private readonly TIP_OFFSET = MODEL_CONFIG.DRILLER.spawnOffset;
+  // Switched to ENEMIES def
+  private readonly TIP_OFFSET = ENEMIES.driller.params?.spawnOffset || 0.32;
+  
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {

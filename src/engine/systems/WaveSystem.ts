@@ -3,7 +3,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -47,8 +47,6 @@ export class WaveSystem implements IGameSystem {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
-    // Normal waves stop at Game Over (integrity <= 0)
-    // The "Huge Wave" (Stress Test) is triggered via event listener below
     if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
@@ -85,12 +83,9 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
-              // USE GENERIC SPAWN TO FORCE ZERO SCALE INITIALIZATION
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
-                  // Crucial: Set RenderTransform scale to 0 to prevent 1-frame flash before logic runs
                   [ComponentType.RenderTransform]: { scale: 0.0 },
-                  // Crucial: Initialize spawn progress to 0
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
               });
           }
@@ -117,7 +112,8 @@ export class WaveSystem implements IGameSystem {
   }
 
   private spawnDrillerOn(panel: any, count: number) {
-      const offset = MODEL_CONFIG.DRILLER.spawnOffset;
+      // Replaced MODEL_CONFIG with ENEMIES def
+      const offset = ENEMIES.driller.params?.spawnOffset || 0.32;
 
       for(let i=0; i<count; i++) {
           const side = Math.floor(Math.random() * 4);

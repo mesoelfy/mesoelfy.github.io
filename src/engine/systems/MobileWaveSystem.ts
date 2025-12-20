@@ -2,10 +2,10 @@ import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
-// Dynamic offset to match Driller model
-const DRILLER_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
+// Dynamic offset from the new definition
+const DRILLER_OFFSET = (ENEMIES.driller.visual.height || 1.0) / 2; 
 
 export class MobileWaveSystem implements IGameSystem {
   private time = 0;
