@@ -61,6 +61,7 @@ export default function Home() {
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
+  const [mobileSkip, setMobileSkip] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -97,6 +98,20 @@ export default function Home() {
         clearTimeout(timeoutId);
     };
   }, [bootState]); 
+
+  // --- DEBUG SHORTCUT: '1' for Mobile Quickstart ---
+  useEffect(() => {
+      const handleDebugKeys = (e: KeyboardEvent) => {
+          if (e.key === '1') {
+              AudioSystem.init(); // Initialize audio context
+              setIntroDone(true);
+              setMobileSkip(true); // Force game phase in MobileExperience
+              setBootState('mobile_lockdown');
+          }
+      };
+      window.addEventListener('keydown', handleDebugKeys);
+      return () => window.removeEventListener('keydown', handleDebugKeys);
+  }, [setIntroDone, setBootState]);
 
   useEffect(() => {
     if (bootState !== 'active') return;
@@ -196,7 +211,7 @@ export default function Home() {
             />
           )}
 
-          {isMobileLockdown && <MobileExperience />}
+          {isMobileLockdown && <MobileExperience skipIntro={mobileSkip} />}
 
           {!isSandbox && !isMobileLockdown && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
@@ -217,7 +232,6 @@ export default function Home() {
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              // LONG EXIT DURATION FOR GRACEFUL FADE
                               exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
                               variants={{
                               hidden: { opacity: 0 },

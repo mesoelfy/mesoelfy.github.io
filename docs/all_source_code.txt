@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 14:45:19 CST 2025
+Generated on: Sat Dec 20 16:49:05 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -72,7 +72,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │       ├── SoundBank.ts
 │   │   │       └── VoiceManager.ts
 │   │   ├── config
-│   │   │   ├── AIConfig.ts
 │   │   │   ├── Archetypes.ts
 │   │   │   ├── AssetKeys.ts
 │   │   │   ├── AudioConfig.ts
@@ -81,7 +80,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GameplayConfig.ts
 │   │   │   ├── Identifiers.ts
 │   │   │   ├── InputConfig.ts
-│   │   │   ├── ModelConfig.ts
 │   │   │   ├── Palette.ts
 │   │   │   ├── PanelConfig.ts
 │   │   │   ├── PhysicsConfig.ts
@@ -99,6 +97,10 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   ├── MathConstants.ts
 │   │   │   │   ├── SystemConstants.ts
 │   │   │   │   └── UIConstants.ts
+│   │   │   ├── defs
+│   │   │   │   ├── Enemies.ts
+│   │   │   │   ├── Weapons.ts
+│   │   │   │   └── types.ts
 │   │   │   └── static
 │   │   │       ├── feed.json
 │   │   │       ├── gallery.json
@@ -119,6 +121,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── SpatialGrid.ts
 │   │   │   ├── components
 │   │   │   │   ├── AIStateData.ts
+│   │   │   │   ├── AutoRotate.ts
 │   │   │   │   ├── ColliderData.ts
 │   │   │   │   ├── CombatData.ts
 │   │   │   │   ├── HealthData.ts
@@ -130,6 +133,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   ├── RenderEffect.ts
 │   │   │   │   ├── RenderModel.ts
 │   │   │   │   ├── RenderTransform.ts
+│   │   │   │   ├── StateColor.ts
 │   │   │   │   ├── TargetData.ts
 │   │   │   │   └── TransformData.ts
 │   │   │   └── types.ts
@@ -198,7 +202,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── BehaviorSystem.ts
 │   │   │   ├── CollisionSystem.ts
 │   │   │   ├── CombatSystem.ts
-│   │   │   ├── FeedbackBridgeSystem.ts
 │   │   │   ├── GameStateSystem.ts
 │   │   │   ├── GuidanceSystem.ts
 │   │   │   ├── HealthSystem.ts
@@ -375,7 +378,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-82 directories, 285 files
+83 directories, 287 files
 
 =====================================
 FILE: ./next.config.js
@@ -3124,18 +3127,10 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
 
   const hpRef = useRef(health);
   const maxHpRef = useRef(maxHealth);
+  const xpRef = useRef(0);
   const xpMaxRef = useRef(100);
 
-  useEffect(() => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) {
-              hud.bindVitals(containerRef.current);
-              hud.bindLevelText(levelRef.current);
-          }
-      } catch (e) {}
-  }, []);
-
+  // --- HEALTH LOGIC ---
   const updateHPUI = () => {
     if (!containerRef.current) return;
     const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
@@ -3148,6 +3143,16 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
     containerRef.current.style.setProperty('--hp-color', color);
   };
 
+  // --- XP LOGIC (Now Local) ---
+  const updateXPUI = () => {
+    if (!containerRef.current) return;
+    const ratio = xpMaxRef.current > 0 ? (xpRef.current / xpMaxRef.current) : 0;
+    // Clamp to 0-1 for display
+    const safeRatio = Math.max(0, Math.min(1, ratio));
+    containerRef.current.style.setProperty('--xp-progress', safeRatio.toString());
+  };
+
+  // --- STREAMS ---
   useGameStream('PLAYER_MAX_HEALTH', (val) => {
     maxHpRef.current = val;
     updateHPUI();
@@ -3160,20 +3165,20 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
       updateHPUI();
   });
 
-  useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; });
+  useGameStream('XP_NEXT', (v) => { 
+      xpMaxRef.current = v;
+      updateXPUI(); 
+  });
   
   useGameStream('XP', (v) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateXP(xpMaxRef.current > 0 ? (v / xpMaxRef.current) : 0);
-      } catch {}
+      xpRef.current = v;
+      updateXPUI();
   });
 
   useGameStream('LEVEL', (lvl) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateLevel(lvl);
-      } catch {}
+      if (levelRef.current) {
+          levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
+      }
   });
 
   useGameStream('PLAYER_REBOOT', (val) => {
@@ -3246,7 +3251,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
             transform={`rotate(-90 ${center} ${center})`} 
             style={{
                 strokeDashoffset: 'calc(var(--xp-max) * (1 - var(--xp-progress)))',
-                transition: 'stroke-dashoffset 0.1s linear'
+                transition: 'stroke-dashoffset 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
             }}
           />
           
@@ -9007,25 +9012,18 @@ FILE: ./src/ui/sim/actors/ProjectileActor.tsx
 import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { Tag } from '@/engine/ecs/types';
-import { GEOMETRY_IDS } from '@/engine/config/AssetKeys';
+import { WEAPONS } from '@/engine/config/defs/Weapons';
 import * as THREE from 'three';
-
-const KEYS = [
-    GEOMETRY_IDS.PRJ_SPHERE, 
-    GEOMETRY_IDS.PRJ_CAPSULE, 
-    GEOMETRY_IDS.PRJ_DIAMOND, 
-    GEOMETRY_IDS.PRJ_PYRAMID, 
-    GEOMETRY_IDS.PRJ_RING, 
-    GEOMETRY_IDS.PRJ_ARROW,
-    GEOMETRY_IDS.PRJ_CHEVRON // NEW
-];
 
 export const ProjectileActor = () => {
   const material = AssetService.get<THREE.Material>('MAT_PROJECTILE');
 
+  // Generate keys based on the Weapons definition
+  const renderKeys = Object.values(WEAPONS).map(def => `GEO_${def.id}`);
+
   return (
     <>
-      {KEYS.map(key => (
+      {renderKeys.map(key => (
         <InstancedActor
           key={key} 
           renderKey={`${key}|MAT_PROJECTILE`}
@@ -9564,12 +9562,14 @@ FILE: ./src/ui/sim/assets/AssetCatalog.ts
 import * as THREE from 'three';
 import { AssetService } from './AssetService';
 import { addBarycentricCoordinates, createHunterSpear } from '@/engine/math/GeometryUtils';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
-import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
+import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
+import { WEAPONS } from '@/engine/config/defs/Weapons';
 
 export const registerAllAssets = () => {
+  // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -9580,41 +9580,48 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
-  AssetService.registerGenerator(GEOMETRY_IDS.HUNTER, () => createHunterSpear());
-  AssetService.registerGenerator(GEOMETRY_IDS.DRILLER, () => addBarycentricCoordinates(new THREE.ConeGeometry(0.5, MODEL_CONFIG.DRILLER.height, MODEL_CONFIG.DRILLER.segments)));
-  AssetService.registerGenerator(GEOMETRY_IDS.KAMIKAZE, () => addBarycentricCoordinates(new THREE.IcosahedronGeometry(MODEL_CONFIG.KAMIKAZE.radius, 0)));
-  AssetService.registerGenerator(GEOMETRY_IDS.DAEMON, () => new THREE.OctahedronGeometry(0.6, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_SPHERE, () => new THREE.IcosahedronGeometry(1, 1));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CAPSULE, () => new THREE.CylinderGeometry(0.5, 0.5, 1, 6));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_DIAMOND, () => new THREE.OctahedronGeometry(1, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_PYRAMID, () => new THREE.TetrahedronGeometry(1, 0));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_RING, () => new THREE.TorusGeometry(0.8, 0.2, 4, 8));
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
-  AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
+  // 2. Static Geometries (Player/Particles)
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
+  AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
-  // --- CHEVRON GENERATOR ---
-  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CHEVRON, () => {
-      const shape = new THREE.Shape();
-      const w = 0.8; 
-      const h = 0.8; 
-      const t = 0.3; // Thickness of the V arms
-      
-      shape.moveTo(0, h);           // Tip
-      shape.lineTo(w, -h);          // Right Bottom Outer
-      shape.lineTo(w - t, -h);      // Right Bottom Inner
-      shape.lineTo(0, h - (t*2.5)); // Crotch (Inner V point)
-      shape.lineTo(-(w - t), -h);   // Left Bottom Inner
-      shape.lineTo(-w, -h);         // Left Bottom Outer
-      shape.lineTo(0, h);           // Back to Tip
-
-      const extrudeSettings = { depth: 0.2, bevelEnabled: false };
-      const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-      geo.center(); // Center pivot
-      // Rotate to point forward (Up in Y is forward in our game logic usually, but Extrude implies Z depth)
-      // Actually standard rotation logic handles Y-up orientation well.
-      return geo;
+  // 3. Dynamic Registration (Enemies)
+  Object.values(ENEMIES).forEach(def => {
+      const key = `GEO_${def.id.toUpperCase()}`;
+      AssetService.registerGenerator(key, () => createGeometry(def.visual));
   });
+
+  // 4. Dynamic Registration (Weapons)
+  Object.values(WEAPONS).forEach(def => {
+      // Check if visual is reused or new
+      // For simplicity in this engine, we register a unique geo per weapon ID to allow distinct shapes
+      const key = `GEO_${def.id}`;
+      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+  });
+};
+
+const createGeometry = (visual: any) => {
+    switch (visual.model) {
+        case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
+        case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
+        case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);
+        case 'TETRA': return new THREE.TetrahedronGeometry(1, 0);
+        case 'SPHERE': return new THREE.IcosahedronGeometry(1, 1);
+        case 'CAPSULE': return new THREE.CylinderGeometry(0.5, 0.5, 1, 6);
+        case 'CYLINDER': return new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
+        case 'TORUS': return new THREE.TorusGeometry(0.8, 0.2, 4, 8);
+        case 'BOX': return new THREE.BoxGeometry(1, 1, 1);
+        case 'CUSTOM_HUNTER': return createHunterSpear();
+        case 'CUSTOM_CHEVRON': {
+            const shape = new THREE.Shape();
+            const w = 0.8, h = 0.8, t = 0.3;
+            shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
+            shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
+            geo.center();
+            return geo;
+        }
+        default: return new THREE.BoxGeometry(1,1,1);
+    }
 };
 
 
@@ -10091,65 +10098,16 @@ export interface Entity {
 
 
 =====================================
-FILE: ./src/engine/config/AIConfig.ts
-=====================================
-export const AI_CONFIG = {
-  HUNTER: {
-    ORBIT_SPEED: 0.5,
-    TARGET_RADIUS: 10.0,
-    AIM_LERP: 0.05,
-    CHARGE_LERP: 0.15,
-    SPIN_SPEED_IDLE: 2.0,
-    SPIN_SPEED_CHARGE: -8.0,
-    PROJECTILE_SPEED: 25,
-    OFFSET_DIST: 1.6,
-    RECOIL_FORCE: 2.0
-  },
-  KAMIKAZE: {
-    ROTATION_SPEED: 10.0,
-    ENGAGEMENT_DIST: 0.1
-  },
-  DRILLER: {
-    SNAP_THRESHOLD: 0.1,
-    TIP_OFFSET: 0.4, // Based on Model Height
-    AUDIO_INTERVAL: 0.25
-  },
-  DAEMON: {
-    SHIELD_CHARGE_TIME: 2.0,
-    COOLDOWN_TIME: 0.5,
-    RECOVERY_TIME: 2.0,
-    ORBIT_RADIUS: 4.0,
-    ORBIT_SPEED_MIN: 1.5,
-    ROTATION_SPEED: {
-      CHARGING: 15.0,
-      READY: 3.0,
-      FIRE: 20.0,
-      COOLDOWN: -5.0,
-      BROKEN: 30.0
-    }
-  }
-};
-
-
-=====================================
 FILE: ./src/engine/config/ProjectileConfig.ts
 =====================================
-import { PALETTE } from './Palette';
+import { WEAPONS } from './defs/Weapons';
+import { ProjectileDef } from './defs/types';
 
-export const ProjectileGeometry = {
-  SPHERE: 'SPHERE',
-  CAPSULE: 'CAPSULE',
-  DIAMOND: 'DIAMOND',
-  PYRAMID: 'PYRAMID',
-  RING: 'RING',
-  ARROW: 'ARROW',
-  CHEVRON: 'CHEVRON'
-} as const;
+// Adapting the new structure to the old ProjectileConfig interface
+// to maintain compatibility with existing systems (WeaponLogic, Spawner)
 
-export type GeometryType = keyof typeof ProjectileGeometry;
-
-export interface ProjectileDef {
-  geometry: GeometryType;
+export interface LegacyProjectileDef {
+  geometry: string;
   color: [number, number, number];
   scale: [number, number, number];
   spinSpeed: number;  
@@ -10157,80 +10115,27 @@ export interface ProjectileDef {
   faceVelocity: boolean; 
 }
 
-const neon = (hex: string, intensity: number): [number, number, number] => {
-  const c = parseInt(hex.replace('#', ''), 16);
-  const r = ((c >> 16) & 255) / 255;
-  const g = ((c >> 8) & 255) / 255;
-  const b = (c & 255) / 255;
-  return [r * intensity, g * intensity, b * intensity];
+const parseHexTuple = (hex: string): [number, number, number] => {
+    const c = parseInt(hex.replace('#', ''), 16);
+    return [
+        ((c >> 16) & 255) / 255, 
+        ((c >> 8) & 255) / 255, 
+        (c & 255) / 255
+    ];
 };
 
-export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
-  'PLAYER_STANDARD': {
-    geometry: 'CAPSULE',
-    color: neon(PALETTE.GREEN.PRIMARY, 4.0),
-    scale: [0.15, 0.6, 0.15],
-    spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
-  },
-  'PLAYER_FORK': {
-    geometry: 'PYRAMID',
-    color: neon(PALETTE.YELLOW.SOFT, 3.0),
-    scale: [0.4, 0.4, 0.4],
-    spinSpeed: 5.0, pulseSpeed: 0, faceVelocity: true
-  },
-  'PLAYER_SNIFFER': {
-    geometry: 'DIAMOND',
-    color: neon(PALETTE.CYAN.PRIMARY, 5.0),
-    scale: [0.3, 0.3, 0.3],
-    spinSpeed: 15.0, pulseSpeed: 0, faceVelocity: false
-  },
-  'PLAYER_BACKDOOR': {
-    geometry: 'RING',
-    color: neon(PALETTE.RED.LIGHT, 3.0),
-    scale: [0.4, 0.4, 0.4],
-    spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
-  },
-  'PLAYER_PURGE': {
-    geometry: 'CHEVRON',
-    color: [10, 10, 10], 
-    scale: [2.5, 0.7, 1.5], 
-    spinSpeed: 0, 
-    pulseSpeed: 0, 
-    faceVelocity: true 
-  },
-  'ENEMY_HUNTER': {
-    geometry: 'ARROW',
-    color: neon(PALETTE.YELLOW.ORANGE, 6.0),
-    scale: [0.3, 1.0, 0.3],
-    spinSpeed: 0, pulseSpeed: 0, faceVelocity: true
-  },
-  'DAEMON_ORB': {
-    geometry: 'SPHERE',
-    color: neon('#0088FF', 5.0), 
-    scale: [0.5, 0.5, 0.5],
-    spinSpeed: 1.0, pulseSpeed: 4.0, faceVelocity: false
-  }
-};
+export const PROJECTILE_CONFIG: Record<string, LegacyProjectileDef> = {};
 
-
-=====================================
-FILE: ./src/engine/config/ModelConfig.ts
-=====================================
-export const MODEL_CONFIG = {
-  DRILLER: {
-    height: 0.64, 
-    radius: 0.24, 
-    segments: 4,
-    spawnOffset: 0.32 
-  },
-  KAMIKAZE: {
-    radius: 0.69,
-    detail: 0
-  },
-  HUNTER: {
-    scale: 2.1
-  }
-};
+Object.values(WEAPONS).forEach(def => {
+    PROJECTILE_CONFIG[def.id] = {
+        geometry: def.visual.model,
+        color: parseHexTuple(def.visual.color),
+        scale: def.visual.scale,
+        spinSpeed: def.behavior?.spinSpeed || 0,
+        pulseSpeed: def.behavior?.pulseSpeed || 0,
+        faceVelocity: def.behavior?.faceVelocity ?? true
+    };
+});
 
 
 =====================================
@@ -10676,6 +10581,8 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { GEOMETRY_IDS, MATERIAL_IDS } from './AssetKeys';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { ENEMIES } from './defs/Enemies';
+import { WEAPONS } from './defs/Weapons';
 
 const parseHex = (hex: string) => {
     const c = parseInt(hex.replace('#', ''), 16);
@@ -10686,25 +10593,22 @@ const parseHex = (hex: string) => {
     };
 };
 
-export interface EntityBlueprint {
-  id: string;
-  tags: Tag[];
-  aiLogic?: string;
-  assets?: {
-      geometry: string;
-      material: string;
-  };
-  components: { type: ComponentType; data?: any }[];
-}
-
-// Helper for Render Composition
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
     { type: ComponentType.RenderEffect, data: { ...effectData } }
 ];
 
-export const ARCHETYPES: Record<string, EntityBlueprint> = {
+export interface EntityBlueprint {
+  id: string;
+  tags: Tag[];
+  aiLogic?: string;
+  assets?: { geometry: string; material: string; };
+  components: { type: ComponentType; data?: any }[];
+}
+
+const BLUEPRINTS: Record<string, EntityBlueprint> = {
+  // --- PLAYER (Manual) ---
   [ArchetypeIDs.PLAYER]: {
     id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
@@ -10719,118 +10623,115 @@ export const ARCHETYPES: Record<string, EntityBlueprint> = {
           layer: CollisionLayers.PLAYER, 
           mask: PhysicsConfig.MASKS.PLAYER 
       }},
+      { type: ComponentType.StateColor, data: {
+          base: GAME_THEME.turret.base,
+          damaged: GAME_THEME.vfx.damage,
+          dead: '#FF003C',
+          repair: GAME_THEME.turret.repair,
+          reboot: '#9E4EA5'
+      }},
       ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
-    ]
-  },
-  [ArchetypeIDs.BULLET_PLAYER]: {
-    id: ArchetypeIDs.BULLET_PLAYER,
-    tags: [Tag.BULLET, Tag.PLAYER],
-    components: [
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Lifetime, data: { remaining: 1.5, total: 1.5 } },
-      { type: ComponentType.Combat, data: { damage: 1 } },
-      { type: ComponentType.Health, data: { max: 1 } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.BULLET, 
-          layer: CollisionLayers.PLAYER_PROJECTILE, 
-          mask: PhysicsConfig.MASKS.PLAYER_PROJECTILE 
-      }},
-      { type: ComponentType.Projectile, data: { configId: 'PLAYER_STANDARD', state: 'FLIGHT' } },
-      // Placeholders to allow EntitySpawner overrides to take effect
-      { type: ComponentType.RenderModel, data: {} },
-      { type: ComponentType.RenderTransform, data: {} },
-      { type: ComponentType.RenderEffect, data: {} }
-    ]
-  },
-  [ArchetypeIDs.BULLET_ENEMY]: {
-    id: ArchetypeIDs.BULLET_ENEMY,
-    tags: [Tag.BULLET, Tag.ENEMY],
-    components: [
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Lifetime, data: { remaining: 3.0, total: 3.0 } },
-      { type: ComponentType.Combat, data: { damage: 10 } },
-      { type: ComponentType.Health, data: { max: 1 } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.HUNTER_BULLET, 
-          layer: CollisionLayers.ENEMY_PROJECTILE, 
-          mask: PhysicsConfig.MASKS.ENEMY_PROJECTILE 
-      }},
-      { type: ComponentType.Projectile, data: { configId: 'ENEMY_HUNTER', state: 'FLIGHT' } },
-      { type: ComponentType.RenderModel, data: {} },
-      { type: ComponentType.RenderTransform, data: {} },
-      { type: ComponentType.RenderEffect, data: {} }
-    ]
-  },
-  [ArchetypeIDs.DRILLER]: {
-    id: ArchetypeIDs.DRILLER,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'driller',
-    assets: { geometry: GEOMETRY_IDS.DRILLER, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DRILLER } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 1 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 1 } },
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.DRILLER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PANEL' } },
-      ...RenderComps(GEOMETRY_IDS.DRILLER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.muncher, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.KAMIKAZE]: {
-    id: ArchetypeIDs.KAMIKAZE,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'kamikaze',
-    assets: { geometry: GEOMETRY_IDS.KAMIKAZE, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.KAMIKAZE } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 2 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 3 } },
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.KAMIKAZE, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      ...RenderComps(GEOMETRY_IDS.KAMIKAZE, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.kamikaze, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.HUNTER]: {
-    id: ArchetypeIDs.HUNTER,
-    tags: [Tag.ENEMY, Tag.OBSTACLE],
-    aiLogic: 'hunter',
-    assets: { geometry: GEOMETRY_IDS.HUNTER, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.HUNTER } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } }, 
-      { type: ComponentType.Health, data: { max: 3 } }, 
-      { type: ComponentType.Motion, data: { friction: 0 } },
-      { type: ComponentType.Combat, data: { damage: 10 } }, 
-      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.HUNTER, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
-      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      { type: ComponentType.Target, data: { type: 'PLAYER' } },
-      ...RenderComps(GEOMETRY_IDS.HUNTER, MATERIAL_IDS.ENEMY_BASE, GAME_THEME.enemy.hunter, { elasticity: 0.1 })
-    ]
-  },
-  [ArchetypeIDs.DAEMON]: {
-    id: ArchetypeIDs.DAEMON,
-    tags: [Tag.PLAYER],
-    aiLogic: 'daemon',
-    assets: { geometry: GEOMETRY_IDS.DAEMON, material: MATERIAL_IDS.ENEMY_BASE },
-    components: [
-      { type: ComponentType.Identity, data: { variant: ArchetypeIDs.DAEMON } },
-      { type: ComponentType.Transform, data: { scale: 1.0 } },
-      { type: ComponentType.Health, data: { max: 100 } }, 
-      { type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } },
-      { type: ComponentType.Target, data: { type: 'ENEMY' } }, 
-      { type: ComponentType.Collider, data: { radius: 0.6, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
-      { type: ComponentType.State, data: { current: AI_STATE.ORBIT } },
-      ...RenderComps(GEOMETRY_IDS.DAEMON, MATERIAL_IDS.ENEMY_BASE, '#00F0FF', { elasticity: 0.05 })
     ]
   }
 };
+
+// --- ENEMY GENERATION ---
+Object.values(ENEMIES).forEach(def => {
+    const geoId = `GEO_${def.id.toUpperCase()}`;
+    const matId = 'MAT_ENEMY_BASE'; // Hardcoded for now, could be in def
+    
+    // Components common to all enemies
+    const comps: any[] = [
+      { type: ComponentType.Identity, data: { variant: def.id } },
+      { type: ComponentType.Transform, data: { scale: 1.0 } },
+      { type: ComponentType.Health, data: { max: def.health } },
+      { type: ComponentType.Motion, data: { friction: def.physics.friction } },
+      { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
+      { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
+      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1 })
+    ];
+
+    if (def.damage > 0) {
+        comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
+    }
+
+    // Specific AI extras
+    if (def.ai === 'daemon') {
+        comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
+        comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
+        // Override collider for Daemon (Friendly)
+        const col = comps.find((c: any) => c.type === ComponentType.Collider);
+        if (col) {
+            col.data.layer = CollisionLayers.PLAYER;
+            col.data.mask = PhysicsConfig.MASKS.PLAYER;
+        }
+    } else {
+        comps.push({ type: ComponentType.Target, data: { type: def.ai === 'driller' ? 'PANEL' : 'PLAYER' } });
+    }
+
+    BLUEPRINTS[def.id] = {
+        id: def.id,
+        tags: def.id === 'daemon' ? [Tag.PLAYER] : [Tag.ENEMY, Tag.OBSTACLE],
+        aiLogic: def.ai,
+        assets: { geometry: geoId, material: matId },
+        components: comps
+    };
+});
+
+// --- WEAPON GENERATION ---
+Object.values(WEAPONS).forEach(def => {
+    const geoId = `GEO_${def.id}`;
+    const matId = 'MAT_PROJECTILE';
+    const isEnemy = def.tags.includes(Tag.ENEMY);
+    const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
+    const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
+
+    // Use default hitboxes based on config for now, eventually move to Def
+    const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
+
+    const comps: any[] = [
+      { type: ComponentType.Transform, data: { scale: 1.0 } },
+      { type: ComponentType.Motion, data: { friction: 0 } },
+      { type: ComponentType.Lifetime, data: { remaining: def.life, total: def.life } },
+      { type: ComponentType.Combat, data: { damage: def.damage } },
+      { type: ComponentType.Health, data: { max: def.damage } }, // HP = Dmg for cancellation
+      { type: ComponentType.Collider, data: { radius, layer, mask } },
+      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
+      { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
+      { type: ComponentType.RenderTransform, data: { 
+          scale: 1.0, 
+          baseScaleX: def.visual.scale[0], 
+          baseScaleY: def.visual.scale[1], 
+          baseScaleZ: def.visual.scale[2] 
+      }},
+      { type: ComponentType.RenderEffect, data: { elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, pulseSpeed: def.behavior?.pulseSpeed || 0 } }
+    ];
+
+    if (def.behavior?.spinSpeed) {
+        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
+    }
+
+    // Special Case: Bullets also have archetypes for spawning
+    // We map 'BULLET_PLAYER' -> 'PLAYER_STANDARD' internally in Spawner
+    // But we need blueprints for the ID being spawned.
+    // EntitySpawner.spawnBullet calls spawn with ArchetypeIDs.BULLET_PLAYER usually,
+    // but applies overrides.
+    // For this refactor, we are adding the blueprints directly.
+    
+    BLUEPRINTS[def.id] = {
+        id: def.id,
+        tags: def.tags,
+        components: comps
+    };
+});
+
+// BACKWARDS COMPATIBILITY MAPS
+// The Spawner still uses generic IDs like 'BULLET_PLAYER' to mean "Default bullet".
+// We need to keep these keys valid.
+BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
+BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
+
+export const ARCHETYPES = BLUEPRINTS;
 
 
 =====================================
@@ -11094,6 +10995,185 @@ export const GAMEPLAY_CONFIG = {
     DECAY_AMOUNT: 2.0
   }
 } as const;
+
+
+=====================================
+FILE: ./src/engine/config/defs/Weapons.ts
+=====================================
+import { WeaponDef } from './types';
+import { Tag } from '@/engine/ecs/types';
+import { PALETTE } from '@/engine/config/Palette';
+
+export const WEAPONS: Record<string, WeaponDef> = {
+  // --- PLAYER WEAPONS ---
+  'PLAYER_STANDARD': {
+    id: 'PLAYER_STANDARD',
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+  'PLAYER_FORK': {
+    id: 'PLAYER_FORK',
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'TETRA', color: PALETTE.YELLOW.SOFT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true, spinSpeed: 5.0 },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+  'PLAYER_SNIFFER': {
+    id: 'PLAYER_SNIFFER',
+    damage: 0.5, speed: 22, life: 3.0,
+    // FIX: Added radius: 1.0 to restore original size (default was 0.5)
+    visual: { model: 'OCTA', color: PALETTE.CYAN.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+  'PLAYER_BACKDOOR': {
+    id: 'PLAYER_BACKDOOR',
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
+    behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+  'PLAYER_PURGE': {
+    id: 'PLAYER_PURGE',
+    damage: 50, speed: 24, life: 2.4,
+    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.YELLOW.ORANGE, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+
+  // --- ENEMY WEAPONS ---
+  'ENEMY_HUNTER': {
+    id: 'ENEMY_HUNTER',
+    damage: 10, speed: 25, life: 3.0,
+    visual: { model: 'CONE', color: PALETTE.YELLOW.ORANGE, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.BULLET, Tag.ENEMY]
+  },
+  'DAEMON_ORB': {
+    id: 'DAEMON_ORB',
+    damage: 20, speed: 35, life: 2.0,
+    visual: { model: 'SPHERE', color: '#0088FF', scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
+    tags: [Tag.BULLET, Tag.PLAYER] // Daemon is friendly
+  }
+};
+
+
+=====================================
+FILE: ./src/engine/config/defs/types.ts
+=====================================
+import { Tag } from '@/engine/ecs/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export interface VisualDef {
+  model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON';
+  color: string; // Hex
+  scale: [number, number, number];
+  material: 'ENEMY_BASE' | 'PROJECTILE' | 'PLAYER';
+  // Procedural Params
+  height?: number;
+  radius?: number;
+  segments?: number;
+  detail?: number;
+}
+
+export interface PhysicsDef {
+  radius: number;
+  mass: number; // For knockback resistance? (Future proofing)
+  friction: number;
+}
+
+export interface WeaponDef {
+  id: string;
+  damage: number;
+  speed: number;
+  life: number;
+  fireRate?: number; // Only for player/enemies
+  behavior?: {
+    spinSpeed?: number;
+    pulseSpeed?: number;
+    faceVelocity?: boolean;
+    homing?: boolean;
+  };
+  visual: VisualDef;
+  tags: Tag[];
+}
+
+export interface EnemyDef {
+  id: string;
+  health: number;
+  damage: number; // Collision damage
+  score: number;
+  xp: number;
+  ai: string; // Behavior Tree ID
+  visual: VisualDef;
+  physics: PhysicsDef;
+  // Specific AI Params
+  params?: Record<string, any>;
+}
+
+
+=====================================
+FILE: ./src/engine/config/defs/Enemies.ts
+=====================================
+import { EnemyDef } from './types';
+import { PALETTE } from '@/engine/config/Palette';
+
+export const ENEMIES: Record<string, EnemyDef> = {
+  'driller': {
+    id: 'driller',
+    health: 1, damage: 1, score: 100, xp: 10,
+    ai: 'driller',
+    physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
+    visual: { 
+      model: 'CONE', 
+      color: PALETTE.PURPLE.PRIMARY, 
+      scale: [1, 1, 1], 
+      material: 'ENEMY_BASE',
+      height: 0.64, radius: 0.24, segments: 4
+    },
+    params: { spawnOffset: 0.32 }
+  },
+  'kamikaze': {
+    id: 'kamikaze',
+    health: 2, damage: 3, score: 200, xp: 20,
+    ai: 'kamikaze',
+    physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
+    visual: { 
+      model: 'ICOSA', 
+      color: PALETTE.RED.CRITICAL, 
+      scale: [1, 1, 1], 
+      material: 'ENEMY_BASE', 
+      radius: 0.69, detail: 0 
+    }
+  },
+  'hunter': {
+    id: 'hunter',
+    health: 3, damage: 10, score: 300, xp: 30,
+    ai: 'hunter',
+    physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
+    visual: { 
+      model: 'CUSTOM_HUNTER', 
+      color: PALETTE.YELLOW.SOFT, 
+      scale: [1, 1, 1], 
+      material: 'ENEMY_BASE'
+    }
+  },
+  'daemon': {
+    id: 'daemon',
+    health: 100, damage: 0, score: 0, xp: 0,
+    ai: 'daemon',
+    physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
+    visual: { 
+      model: 'OCTA', 
+      color: PALETTE.CYAN.PRIMARY, 
+      scale: [1, 1, 1], 
+      material: 'ENEMY_BASE'
+    }
+  }
+};
 
 
 =====================================
@@ -11444,10 +11524,14 @@ export enum ComponentType {
   Orbital = 'Orbital',
   Projectile = 'Projectile',
   
-  // New Render Composition
-  RenderModel = 'RenderModel',         // Geometry, Material, Base Color
-  RenderTransform = 'RenderTransform', // Visual Offsets, Base Scale
-  RenderEffect = 'RenderEffect'        // Flash, Shudder, Spawn Progress
+  // Render Composition
+  RenderModel = 'RenderModel',         
+  RenderTransform = 'RenderTransform', 
+  RenderEffect = 'RenderEffect',
+  
+  // Logic Components (New)
+  AutoRotate = 'AutoRotate',
+  StateColor = 'StateColor'
 }
 
 
@@ -11708,10 +11792,14 @@ export class RenderTransform extends Component {
     public offsetZ: number = 0,
     public rotation: number = 0,
     public scale: number = 1.0,
-    // Intrinsic Aspect Ratio (crucial for projectiles)
+    // Intrinsic Dimensions (Static)
     public baseScaleX: number = 1.0,
     public baseScaleY: number = 1.0,
-    public baseScaleZ: number = 1.0
+    public baseScaleZ: number = 1.0,
+    // Frame Deformations (Dynamic - Reset every frame)
+    public dynamicScaleX: number = 1.0,
+    public dynamicScaleY: number = 1.0,
+    public dynamicScaleZ: number = 1.0
   ) {
     super();
   }
@@ -11725,6 +11813,9 @@ export class RenderTransform extends Component {
     this.baseScaleX = data.baseScaleX ?? 1.0;
     this.baseScaleY = data.baseScaleY ?? 1.0;
     this.baseScaleZ = data.baseScaleZ ?? 1.0;
+    this.dynamicScaleX = 1.0;
+    this.dynamicScaleY = 1.0;
+    this.dynamicScaleZ = 1.0;
     return this;
   }
 }
@@ -11837,7 +11928,7 @@ export class RenderEffect extends Component {
     public shudder: number = 0,
     public spawnProgress: number = 1.0,
     public elasticity: number = 0.1,
-    // Color overrides for flash
+    public pulseSpeed: number = 0,
     public flashR: number = 4.0,
     public flashG: number = 0.0,
     public flashB: number = 0.2
@@ -11850,6 +11941,7 @@ export class RenderEffect extends Component {
     this.shudder = 0;
     this.spawnProgress = data.spawnProgress ?? 1.0;
     this.elasticity = data.elasticity ?? 0.1;
+    this.pulseSpeed = data.pulseSpeed ?? 0;
     this.flashR = data.flashR ?? 4.0;
     this.flashG = data.flashG ?? 0.0;
     this.flashB = data.flashB ?? 0.2;
@@ -11982,6 +12074,56 @@ export class IdentityData extends Component {
 
 
 =====================================
+FILE: ./src/engine/ecs/components/StateColor.ts
+=====================================
+import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export class StateColor extends Component {
+  readonly _type = ComponentType.StateColor;
+
+  constructor(
+    public base: string = '#FFFFFF',
+    public damaged: string = '#FF0000',
+    public dead: string = '#FF0000',
+    public repair: string = '#00FFFF',
+    public reboot: string = '#9E4EA5'
+  ) {
+    super();
+  }
+
+  public reset(data: Partial<StateColor>) {
+    this.base = data.base ?? '#FFFFFF';
+    this.damaged = data.damaged ?? '#FF0000';
+    this.dead = data.dead ?? '#FF0000';
+    this.repair = data.repair ?? '#00FFFF';
+    this.reboot = data.reboot ?? '#9E4EA5';
+    return this;
+  }
+}
+
+
+=====================================
+FILE: ./src/engine/ecs/components/AutoRotate.ts
+=====================================
+import { Component } from '@/engine/ecs/Component';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+
+export class AutoRotate extends Component {
+  readonly _type = ComponentType.AutoRotate;
+
+  constructor(public speed: number = 0) {
+    super();
+  }
+
+  public reset(data: Partial<AutoRotate>) {
+    this.speed = data.speed ?? 0;
+    return this;
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/ecs/components/AIStateData.ts
 =====================================
 import { Component } from '@/engine/ecs/Component';
@@ -12045,10 +12187,13 @@ import { TargetData } from './components/TargetData';
 import { OrbitalData } from './components/OrbitalData';
 import { ProjectileData } from './components/ProjectileData';
 
-// New Render Components
 import { RenderModel } from './components/RenderModel';
 import { RenderTransform } from './components/RenderTransform';
 import { RenderEffect } from './components/RenderEffect';
+
+// New
+import { AutoRotate } from './components/AutoRotate';
+import { StateColor } from './components/StateColor';
 
 export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Transform, TransformData);
@@ -12063,10 +12208,13 @@ export const registerAllComponents = () => {
   ComponentRegistry.register(ComponentType.Orbital, OrbitalData);
   ComponentRegistry.register(ComponentType.Projectile, ProjectileData);
   
-  // New
   ComponentRegistry.register(ComponentType.RenderModel, RenderModel);
   ComponentRegistry.register(ComponentType.RenderTransform, RenderTransform);
   ComponentRegistry.register(ComponentType.RenderEffect, RenderEffect);
+  
+  // New
+  ComponentRegistry.register(ComponentType.AutoRotate, AutoRotate);
+  ComponentRegistry.register(ComponentType.StateColor, StateColor);
   
   console.log('[ComponentCatalog] Components Registered.');
 };
@@ -12731,7 +12879,6 @@ import { GameState } from '../useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { GameStream } from '@/engine/state/GameStream';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DamageOptions } from '@/engine/interfaces';
 
@@ -12769,7 +12916,7 @@ const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed
 
 const updateIntegrity = (state: GameState, panels: any) => {
     const integrity = calculateIntegrity(panels);
-    GameStream.set('SYSTEM_INTEGRITY', integrity);
+    // GameStream update removed (Handled by subscription in useGameStore)
     state.setSystemIntegrity(integrity);
 };
 
@@ -12921,7 +13068,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
       );
       set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
-      GameStream.set('SYSTEM_INTEGRITY', 100);
+      // Manual reset for GameStream removed (handled by state update)
       get().setSystemIntegrity(100);
   }
 });
@@ -12933,6 +13080,7 @@ FILE: ./src/engine/state/game/useGameStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '@/engine/config/StorageConfig';
+import { GameStream } from '@/engine/state/GameStream';
 
 import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
 import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
@@ -12972,6 +13120,19 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
+
+// --- REACTIVE BRIDGE ---
+// Automatically syncs Zustand State -> GameStream (DOM/High-Freq)
+useGameStore.subscribe((state) => {
+  GameStream.set('PLAYER_HEALTH', state.playerHealth);
+  GameStream.set('PLAYER_MAX_HEALTH', state.maxPlayerHealth);
+  GameStream.set('PLAYER_REBOOT', state.playerRebootProgress);
+  GameStream.set('SYSTEM_INTEGRITY', state.systemIntegrity);
+  GameStream.set('SCORE', state.score);
+  GameStream.set('XP', state.xp);
+  GameStream.set('XP_NEXT', state.xpToNextLevel);
+  GameStream.set('LEVEL', state.level);
+});
 
 
 =====================================
@@ -13782,6 +13943,7 @@ FILE: ./src/engine/audio/AudioDirector.ts
 =====================================
 import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
 import { FastEventType, SOUND_LOOKUP, SoundCode } from '@/engine/signals/FastEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -13793,18 +13955,51 @@ export class AudioDirector implements IGameSystem {
     private events: IGameEventService,
     private fastEvents: IFastEventService,
     private audio: IAudioService
-  ) {}
+  ) {
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    // 1. Panel Events (Spatial Audio)
+    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+        this.playSpatial(p.id, 'loop_heal');
+    });
+
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
+        else this.playSpatial(p.id, 'fx_reboot_success');
+    });
+
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        this.playSpatial(p.id, 'fx_impact_heavy');
+        this.audio.duckMusic(0.8, 1.5); 
+    });
+
+    // 2. Global Game State
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.audio.playSound('fx_player_death');
+        this.audio.duckMusic(1.0, 3.0);
+    });
+
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+        this.audio.playSound('fx_level_up');
+    });
+
+    // 3. Generic Play Trigger (Slow Bus Fallback)
+    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
+        const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
+        this.audio.playSound(p.key as AudioKey, pan);
+    });
+  }
 
   update(delta: number, time: number): void {
-    // READ ONLY FROM FAST BUS
-    // The bus is cleared at the end of every frame by GameEngine, 
-    // so we process everything currently in the buffer.
+    // Poll Fast Bus for High-Frequency Combat Audio (Machine guns, etc)
     this.fastEvents.process((id, a1, a2, a3, a4) => {
         if (id === FastEventType.PLAY_SOUND) {
             // a1: SoundCode, a2: Pan * 100
             const key = SOUND_LOOKUP[a1 as SoundCode];
             if (key) {
-                const pan = this.calculatePan(a2 / 100); 
+                const pan = this.calculatePan(a2 / 100); // Convert back from Int representation
                 this.audio.playSound(key as AudioKey, pan);
             }
         }
@@ -13815,9 +14010,16 @@ export class AudioDirector implements IGameSystem {
     });
   }
 
+  private playSpatial(panelId: PanelId, key: AudioKey) {
+      const rect = this.panelSystem.getPanelRect(panelId);
+      const x = rect ? rect.x : 0;
+      this.audio.playSound(key, this.calculatePan(x));
+  }
+
   private calculatePan(worldX: number): number {
       const halfWidth = ViewportHelper.viewport.width / 2;
       if (halfWidth === 0) return 0;
+      // Map world position to -1.0 to 1.0 stereo field
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
@@ -14793,12 +14995,14 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class DrillAttack extends BTNode {
-  private readonly TIP_OFFSET = MODEL_CONFIG.DRILLER.spawnOffset;
+  // Switched to ENEMIES def
+  private readonly TIP_OFFSET = ENEMIES.driller.params?.spawnOffset || 0.32;
+  
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -15876,7 +16080,6 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { GameStream } from '@/engine/state/GameStream';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -15906,9 +16109,7 @@ export class HealthSystem implements IGameSystem {
         this.events.emit(GameEvents.GAME_OVER, { score: 0 });
         this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
         
-        // Sync final state to React for Game Over Screen
         useGameStore.setState({ systemIntegrity: 0 });
-        GameStream.set('SYSTEM_INTEGRITY', 0);
     }
   }
 
@@ -15919,66 +16120,49 @@ export class HealthSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        this.pushStream();
+        useGameStore.setState({ playerHealth: this.playerHealth });
         
         if (this.playerHealth <= 0) {
             this.audio.playSound('fx_player_death');
-            // Sync death state to React once
-            useGameStore.setState({ playerHealth: 0 }); 
         }
     } else {
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
-        this.pushStream();
+        useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
     }
   }
 
   public healPlayer(amount: number) {
-    const wasDead = this.playerHealth <= 0;
     this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
-    this.pushStream();
-    
-    // Sync revival state to React once
-    if (!wasDead && this.playerHealth > 0) {
-       // Only if transitioning from dead to alive, but here we usually heal alive players
-    }
-    if (wasDead && this.playerHealth > 0) {
-        useGameStore.setState({ playerHealth: this.playerHealth });
-    }
+    useGameStore.setState({ playerHealth: this.playerHealth });
   }
 
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
-    this.pushStream();
+    useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
     
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
         this.audio.playSound('fx_reboot_success');
-        this.pushStream();
         
-        // React State Sync (Low Frequency)
-        useGameStore.setState({ playerHealth: this.playerHealth, playerRebootProgress: 0 });
+        useGameStore.setState({ 
+            playerHealth: this.playerHealth, 
+            playerRebootProgress: 0 
+        });
     }
   }
 
   public decayReboot(amount: number) {
       if (this.playerHealth > 0) return; 
       this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
-      if (Math.random() > 0.5) this.pushStream();
-  }
-
-  private pushStream() {
-      GameStream.set('PLAYER_HEALTH', this.playerHealth);
-      GameStream.set('PLAYER_MAX_HEALTH', this.maxPlayerHealth);
-      GameStream.set('PLAYER_REBOOT', this.playerRebootProgress);
+      useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
   }
 
   public reset() {
       this.playerHealth = this.maxPlayerHealth;
       this.playerRebootProgress = 0;
       this.isGameOver = false;
-      this.pushStream();
       
       useGameStore.setState({ 
           playerHealth: this.maxPlayerHealth,
@@ -15998,11 +16182,6 @@ import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IIn
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { Tag } from '@/engine/ecs/types';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 
@@ -16083,48 +16262,32 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panels = this.registry.getByTag(Tag.OBSTACLE);
+    // Direct lookup via optimized PanelSystem cache
+    const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
 
-    for (const entity of panels) {
-        if (!entity.active) continue;
+    if (panelId) {
+        this.hoveringPanelId = panelId;
 
-        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
-        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+        const panelState = this.panelSystem.getPanelState(panelId);
+        if (!panelState) return;
 
-        if (!transform || !collider || !identity) continue;
+        // Skip if healthy
+        if (!panelState.isDestroyed && panelState.health >= 100) return;
 
-        const halfW = collider.width / 2;
-        const halfH = collider.height / 2;
-        
-        const inX = cursor.x >= transform.x - halfW && cursor.x <= transform.x + halfW;
-        const inY = cursor.y >= transform.y - halfH && cursor.y <= transform.y + halfH;
+        this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
 
-        if (inX && inY) {
-            const panelId = identity.variant as PanelId;
-            this.hoveringPanelId = panelId;
+        if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+            this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
+            this.lastRepairTime = time;
 
-            const panelState = this.panelSystem.getPanelState(panelId);
-            if (!panelState) continue;
-
-            if (!panelState.isDestroyed && panelState.health >= 100) continue;
-
-            this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
-
-            if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
-                this.lastRepairTime = time;
-
-                if (panelState.isDestroyed) {
-                    AudioSystem.playSound('loop_reboot');
-                } else {
-                    this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
-                }
-
-                const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
-                this.spawnRepairParticles(cursor, color);
+            if (panelState.isDestroyed) {
+                AudioSystem.playSound('loop_reboot');
+            } else {
+                this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
-            break; 
+
+            const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+            this.spawnRepairParticles(cursor, color);
         }
     }
   }
@@ -16147,7 +16310,6 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 
 export class ProjectileSystem implements IGameSystem {
@@ -16161,14 +16323,11 @@ export class ProjectileSystem implements IGameSystem {
 
         const proj = entity.getComponent<ProjectileData>(ComponentType.Projectile);
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
         const motion = entity.getComponent<MotionData>(ComponentType.Motion);
         
         if (!proj || !transform) continue;
 
-        const config = PROJECTILE_CONFIG[proj.configId];
-        if (!config) continue;
-
+        // Logic for Charging projectiles (attached to parent)
         if (proj.state === 'CHARGING' && proj.ownerId !== -1) {
             const owner = this.registry.getEntity(proj.ownerId);
             
@@ -16190,14 +16349,7 @@ export class ProjectileSystem implements IGameSystem {
                 if (motion) { motion.vx = 0; motion.vy = 0; }
             }
         }
-        else if (proj.state === 'FLIGHT' && render) {
-            if (!config.faceVelocity && config.spinSpeed !== 0) {
-                render.rotation += delta * config.spinSpeed;
-            }
-            if (config.pulseSpeed > 0) {
-                render.scale = 1.0 + Math.sin(time * config.pulseSpeed) * 0.2;
-            }
-        }
+        // Flight logic (Rotation) is now handled by VisualSystem + AutoRotate component
     }
   }
 
@@ -16208,27 +16360,56 @@ export class ProjectileSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/VFXSystem.ts
 =====================================
-import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
+import { TimeSystem } from './TimeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
 import { ParticleShape } from '@/engine/ecs/types';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class VFXSystem implements IGameSystem {
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
     private events: IGameEventService,
-    private fastEvents: IFastEventService
+    private fastEvents: IFastEventService,
+    private panelSystem: IPanelSystem,
+    private timeSystem: TimeSystem
   ) {
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    // 1. Slow Bus Events
     this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
+        this.executeRecipe(p.type, p.x, p.y, p.angle);
+    });
+
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
+        this.executeRecipe('REBOOT_HEAL', x, 0);
+    });
+
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
+        this.shakeSystem.addTrauma(0.75);
+        this.timeSystem.freeze(0.15);
+    });
+
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.shakeSystem.addTrauma(1.0);
+        this.timeSystem.freeze(0.5);
     });
   }
 
   update(delta: number, time: number): void {
+      // 2. Fast Bus Events (High Frequency)
       this.fastEvents.process((id, a1, a2, a3, a4) => {
           if (id === FastEventType.SPAWN_FX) {
               const key = FX_LOOKUP[a1 as FXCode];
@@ -16239,7 +16420,15 @@ export class VFXSystem implements IGameSystem {
           else if (id === FastEventType.CAM_SHAKE) {
               this.shakeSystem.addTrauma(a1 / 100);
           }
+          else if (id === FastEventType.HIT_STOP) {
+              this.timeSystem.freeze(a1 / 1000); // Convert ms to seconds
+          }
       });
+  }
+
+  private getPanelX(panelId: PanelId): number {
+      const rect = this.panelSystem.getPanelRect(panelId);
+      return rect ? rect.x : 0;
   }
 
   teardown(): void {}
@@ -16605,94 +16794,6 @@ export class MobileCombatSystem implements IGameSystem, ICombatSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/FeedbackBridgeSystem.ts
-=====================================
-import { IGameSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, getSoundCode, getFXCode } from '@/engine/signals/FastEventBus';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { PanelId } from '@/engine/config/PanelConfig';
-
-export class FeedbackBridgeSystem implements IGameSystem {
-  constructor(
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
-    private panelSystem: IPanelSystem
-  ) {
-    this.setupRoutes();
-  }
-
-  update(): void {}
-  teardown(): void {}
-
-  private setupRoutes() {
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        this.emitSound('loop_heal', this.getPanelX(p.id));
-    });
-
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
-        const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
-        this.emitSound('fx_reboot_success', x);
-        this.emitFX('REBOOT_HEAL', x, 0); 
-    });
-
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
-        const x = this.getPanelX(p.id);
-        this.emitSound('fx_impact_heavy', x); 
-        this.fastEvents.emit(FastEventType.DUCK_MUSIC, 80, 150);
-        this.fastEvents.emit(FastEventType.CAM_SHAKE, 75); 
-        this.fastEvents.emit(FastEventType.HIT_STOP, 100);
-    });
-
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
-        this.emitSound('fx_player_death');
-        this.fastEvents.emit(FastEventType.DUCK_MUSIC, 100, 300);
-        this.fastEvents.emit(FastEventType.CAM_SHAKE, 100);
-        this.fastEvents.emit(FastEventType.HIT_STOP, 500);
-    });
-
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
-        this.emitSound('fx_level_up');
-    });
-    
-    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
-        this.emitFX(p.type, p.x, p.y, p.angle);
-    });
-    
-    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
-        this.emitSound(p.key, p.x);
-    });
-  }
-
-  private emitSound(key: string, x: number = 0) {
-      const id = getSoundCode(key);
-      if (id) {
-          const pan = this.calculatePan(x);
-          this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan);
-      }
-  }
-
-  private emitFX(key: string, x: number, y: number, angle: number = 0) {
-      const id = getFXCode(key);
-      if (id) {
-          this.fastEvents.emit(FastEventType.SPAWN_FX, id, x * 100, y * 100, angle * 100);
-      }
-  }
-
-  private calculatePan(worldX: number): number {
-      const halfWidth = ViewportHelper.viewport.width / 2;
-      if (halfWidth === 0) return 0;
-      return Math.floor(Math.max(-1, Math.min(1, worldX / halfWidth)) * 100);
-  }
-
-  private getPanelX(panelId: PanelId): number {
-      const rect = this.panelSystem.getPanelRect(panelId);
-      return rect ? rect.x : 0;
-  }
-}
-
-
-=====================================
 FILE: ./src/engine/systems/TimeSystem.ts
 =====================================
 import { IGameSystem } from '@/engine/interfaces';
@@ -16784,21 +16885,25 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import * as THREE from 'three';
 
 interface PurgeState {
     active: boolean;
     shotsRemaining: number;
     currentAngle: number;
+    accumulator: number;
 }
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubPurge: () => void;
+  private tempColor = new THREE.Color();
   
   private purgeState: PurgeState = {
       active: false,
       shotsRemaining: 0,
-      currentAngle: 0
+      currentAngle: 0,
+      accumulator: 0
   };
 
   constructor(
@@ -16837,7 +16942,7 @@ export class WeaponSystem implements IGameSystem {
     if (this.purgeState.active) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         if (transform) {
-            this.processPurgeFrame(transform.x, transform.y);
+            this.processPurgeFrame(delta, transform.x, transform.y);
         }
     }
 
@@ -16860,11 +16965,12 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      // 60 fps * 2 seconds * 3 shots per frame = 360 shots
+      // 50% Fewer Shots (Was 360, Now 180)
       this.purgeState = {
           active: true,
-          shotsRemaining: 360, 
-          currentAngle: 0
+          shotsRemaining: 180, 
+          currentAngle: 0,
+          accumulator: 0
       };
 
       const player = this.getPlayerEntity();
@@ -16877,14 +16983,20 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private processPurgeFrame(originX: number, originY: number) {
-      const SHOTS_PER_FRAME = 3;
+  private processPurgeFrame(delta: number, originX: number, originY: number) {
       const ANGLE_INCREMENT = 0.4; 
       const SPEED = 24; 
       const DAMAGE = 50;
-      const LIFE = 2.4; // DOUBLED (Was 1.2)
+      const LIFE = 2.4;
+      
+      // Target Rate: 164 shots/sec (approx 10% slower than 60fps * 3 = 180)
+      const FIRE_RATE = 164; 
 
-      for (let i = 0; i < SHOTS_PER_FRAME; i++) {
+      this.purgeState.accumulator += delta * FIRE_RATE;
+
+      while (this.purgeState.accumulator >= 1.0) {
+          this.purgeState.accumulator -= 1.0;
+
           if (this.purgeState.shotsRemaining <= 0) {
               this.purgeState.active = false;
               break;
@@ -16894,7 +17006,7 @@ export class WeaponSystem implements IGameSystem {
           const vx = Math.cos(angle) * SPEED;
           const vy = Math.sin(angle) * SPEED;
 
-          this.spawner.spawnBullet(
+          const bullet = this.spawner.spawnBullet(
               originX, originY, 
               vx, vy, 
               Faction.FRIENDLY, 
@@ -16903,6 +17015,19 @@ export class WeaponSystem implements IGameSystem {
               'PLAYER_PURGE'
           );
 
+          // --- PRISMATIC COLOR LOGIC ---
+          const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
+          this.tempColor.setHSL(hue, 1.0, 0.6); 
+          
+          const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
+          if (model) {
+              model.r = this.tempColor.r;
+              model.g = this.tempColor.g;
+              model.b = this.tempColor.b;
+          }
+          // ----------------------------
+
+          // Audio: Play every 5th shot
           if (this.purgeState.shotsRemaining % 5 === 0) {
              this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
           }
@@ -17050,107 +17175,122 @@ export class ShakeSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/RenderSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IGameStateSystem, IInteractionSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Tag } from '@/engine/ecs/types';
-import { GAME_THEME } from '@/ui/sim/config/theme';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import * as THREE from 'three';
 
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
+const axisY = new THREE.Vector3(0, 1, 0); 
+const axisZ = new THREE.Vector3(0, 0, 1); 
+const qSpin = new THREE.Quaternion();
+const qAim = new THREE.Quaternion();
+const qFinal = new THREE.Quaternion();
 
 export class RenderSystem implements IGameSystem {
-  private tempColor = new THREE.Color();
-  constructor(
-    private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem,
-    events: IGameEventService
-  ) {
-    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-            if (effect) effect.flash = 1.0; 
-        }
-    });
-  }
+  constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
-    const CFG = VISUAL_CONFIG.RENDER;
-    const entities = this.registry.query({ all: [ComponentType.RenderModel] });
-    const interactState = this.interactionSystem.repairState;
-    const isDead = this.gameSystem.playerHealth <= 0;
-    const isZenMode = useGameStore.getState().isZenMode;
+    RenderBuffer.reset();
+
+    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
 
     for (const entity of entities) {
-        if (!entity.active) continue;
-        const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
-        const transform = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-        const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
-        
-        if (!model) continue;
-        const isPlayer = entity.hasTag(Tag.PLAYER) && (!identity || identity.variant === 'PLAYER');
-        if (isPlayer) {
-            let targetCol = COL_BASE;
-            let spinSpeed = 0.02; 
-            if (isZenMode) {
-                spinSpeed = -0.03;
-            } else if (isDead) {
-                targetCol = COL_DEAD;
-                if (interactState === 'REBOOTING') {
-                    targetCol = COL_REBOOT;
-                    spinSpeed = -0.3; 
-                } else {
-                    spinSpeed = 1.5;
-                }
-            } else {
-                if (interactState === 'HEALING') {
-                    targetCol = COL_REPAIR;
-                    spinSpeed = -0.24;
-                } else if (interactState === 'REBOOTING') {
-                    targetCol = COL_REBOOT;
-                    spinSpeed = -0.24;
-                }
-            }
-            this.tempColor.setRGB(model.r, model.g, model.b);
-            this.tempColor.lerp(targetCol, delta * 3.0);
-            model.r = this.tempColor.r;
-            model.g = this.tempColor.g;
-            model.b = this.tempColor.b;
-            if (transform) {
-                transform.rotation += spinSpeed;
-                transform.scale = 1.0;
-            }
-        }
-        else if (effect) {
-            if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * CFG.SHUDDER_DECAY));
-            if (effect.flash > 0) {
-                effect.flash = Math.max(0, effect.flash - (delta * CFG.FLASH_DECAY));
-                if (transform) transform.scale = 1.0 + (effect.flash * 0.25);
-            } else {
-                // BUGFIX: Only reset scale if entity is fully spawned.
-                // Prevents overriding 0.0 scale during spawn phase.
-                if (transform && transform.scale !== 1.0 && effect.spawnProgress >= 1.0) {
-                    transform.scale = 1.0;
-                }
-            }
-        }
+      if (!entity.active) continue;
+
+      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
+      const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+
+      if (!transform || !model) continue;
+
+      const key = `${model.geometryId}|${model.materialId}`;
+      const group = RenderBuffer.getGroup(key);
+      const idx = group.count * RENDER_STRIDE;
+      
+      RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
+
+      // --- 1. Position ---
+      let vx = transform.x;
+      let vy = transform.y;
+      const vz = visual ? visual.offsetZ : 0;
+      
+      if (effect && effect.shudder > 0) {
+          const shake = effect.shudder * 0.2; 
+          vx += (Math.random() - 0.5) * shake;
+          vy += (Math.random() - 0.5) * shake;
+      }
+
+      if (visual) {
+          vx += visual.offsetX;
+          vy += visual.offsetY;
+      }
+
+      // --- 2. Scale ---
+      // Compose: Transform (World) * Visual (Multiplier) * Base (Static Config) * Dynamic (Frame Deformation)
+      let sX = transform.scale;
+      let sY = transform.scale;
+      let sZ = transform.scale;
+
+      if (visual) {
+          sX *= visual.scale * visual.baseScaleX * visual.dynamicScaleX;
+          sY *= visual.scale * visual.baseScaleY * visual.dynamicScaleY;
+          sZ *= visual.scale * visual.baseScaleZ * visual.dynamicScaleZ;
+      }
+
+      // --- 3. Rotation ---
+      const visRot = visual ? visual.rotation : 0;
+      qSpin.setFromAxisAngle(axisY, visRot);
+      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
+      qFinal.copy(qAim).multiply(qSpin);
+
+      // --- 4. Color ---
+      let r = model.r;
+      let g = model.g;
+      let b = model.b;
+
+      if (effect && effect.flash > 0) {
+          const t = effect.flash; 
+          r = r + (effect.flashR - r) * t;
+          g = g + (effect.flashG - g) * t;
+          b = b + (effect.flashB - b) * t;
+      }
+
+      // --- 5. Pack Buffer ---
+      const buf = group.buffer;
+      buf[idx + RenderOffset.POSITION_X] = vx;
+      buf[idx + RenderOffset.POSITION_Y] = vy;
+      buf[idx + RenderOffset.POSITION_Z] = vz;
+      
+      buf[idx + RenderOffset.ROTATION_X] = qFinal.x;
+      buf[idx + RenderOffset.ROTATION_Y] = qFinal.y;
+      buf[idx + RenderOffset.ROTATION_Z] = qFinal.z;
+      buf[idx + RenderOffset.ROTATION_W] = qFinal.w;
+      
+      buf[idx + RenderOffset.SCALE_X] = sX;
+      buf[idx + RenderOffset.SCALE_Y] = sY;
+      buf[idx + RenderOffset.SCALE_Z] = sZ;
+      
+      buf[idx + RenderOffset.COLOR_R] = r;
+      buf[idx + RenderOffset.COLOR_G] = g;
+      buf[idx + RenderOffset.COLOR_B] = b;
+      
+      buf[idx + RenderOffset.SPAWN_PROGRESS] = effect ? effect.spawnProgress : 1.0;
+
+      group.count++;
     }
   }
-  teardown(): void {}
+
+  teardown(): void {
+    RenderBuffer.reset();
+  }
 }
 
 
@@ -17456,6 +17596,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   private entityMap = new Map<string, Entity>();
   private observer: ResizeObserver | null = null;
   private elements = new Map<string, HTMLElement>();
+  private rectCache = new Map<PanelId, WorldRect>();
 
   public get systemIntegrity() {
       return useGameStore.getState().systemIntegrity;
@@ -17499,6 +17640,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       this.observer?.disconnect();
       this.entityMap.clear();
       this.elements.clear();
+      this.rectCache.clear();
   }
 
   public register(id: PanelId, element: HTMLElement) {
@@ -17528,6 +17670,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       const el = this.elements.get(id);
       if (el) this.observer?.unobserve(el);
       this.elements.delete(id);
+      this.rectCache.delete(id);
       
       useGameStore.getState().unregisterPanel(id);
 
@@ -17541,19 +17684,23 @@ export class PanelRegistrySystem implements IPanelSystem {
   private syncEntity(id: PanelId, rect: DOMRect | { width: number, height: number }) {
       const entity = this.entityMap.get(id);
       const el = this.elements.get(id);
-      if (!entity || !el) return;
+      if (!el) return;
 
       const fullRect = el.getBoundingClientRect();
       const worldRect = ViewportHelper.domToWorld(id, fullRect);
+      
+      this.rectCache.set(id, worldRect);
 
-      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-      const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
+      if (entity) {
+          const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+          const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
 
-      if (transform && collider) {
-          transform.x = worldRect.x;
-          transform.y = worldRect.y;
-          collider.width = worldRect.width;
-          collider.height = worldRect.height;
+          if (transform && collider) {
+              transform.x = worldRect.x;
+              transform.y = worldRect.y;
+              collider.width = worldRect.width;
+              collider.height = worldRect.height;
+          }
       }
   }
 
@@ -17586,23 +17733,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   public getPanelRect(id: PanelId): WorldRect | undefined {
-      const entity = this.entityMap.get(id);
-      if (entity) {
-          const t = entity.getComponent<TransformData>(ComponentType.Transform);
-          const c = entity.getComponent<ColliderData>(ComponentType.Collider);
-          if (t && c) {
-              const halfW = c.width / 2;
-              const halfH = c.height / 2;
-              return {
-                  id,
-                  x: t.x, y: t.y,
-                  width: c.width, height: c.height,
-                  left: t.x - halfW, right: t.x + halfW,
-                  top: t.y + halfH, bottom: t.y - halfH
-              };
-          }
-      }
-      return undefined;
+      return this.rectCache.get(id);
   }
 
   public getPanelState(id: PanelId) {
@@ -17615,15 +17746,23 @@ export class PanelRegistrySystem implements IPanelSystem {
       const results = [];
       const state = useGameStore.getState();
       
-      for(const [id, entity] of this.entityMap) {
+      for(const [id, rect] of this.rectCache) {
           const pid = id as PanelId;
-          const rect = this.getPanelRect(pid);
           const panel = state.panels[pid];
-          if (rect && panel) {
+          if (panel) {
               results.push({ ...rect, health: panel.health, isDestroyed: panel.isDestroyed });
           }
       }
       return results;
+  }
+
+  public getPanelAt(x: number, y: number): PanelId | null {
+      for (const [id, rect] of this.rectCache) {
+          if (x >= rect.left && x <= rect.right && y >= rect.bottom && y <= rect.top) {
+              return id;
+          }
+      }
+      return null;
   }
 }
 
@@ -17669,7 +17808,6 @@ FILE: ./src/engine/systems/ProgressionSystem.ts
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { GameStream } from '@/engine/state/GameStream';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 
@@ -17699,7 +17837,7 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    GameStream.set('SCORE', this.score);
+    useGameStore.getState().setScore(this.score);
   }
 
   public addXp(amount: number) {
@@ -17714,9 +17852,7 @@ export class ProgressionSystem implements IGameSystem {
         this.syncStore(); 
     }
     
-    GameStream.set('XP', this.xp);
-    GameStream.set('XP_NEXT', this.xpToNextLevel);
-    GameStream.set('LEVEL', this.level);
+    this.syncStore();
   }
 
   public applyUpgrade(option: UpgradeOption) {
@@ -17754,10 +17890,8 @@ export class ProgressionSystem implements IGameSystem {
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
       
-      GameStream.set('SCORE', 0);
-      GameStream.set('XP', 0);
-      GameStream.set('XP_NEXT', this.xpToNextLevel);
-      GameStream.set('LEVEL', 1);
+      useGameStore.getState().setScore(0);
+      this.syncStore();
   }
 
   teardown(): void {}
@@ -17933,10 +18067,10 @@ import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
-// Dynamic offset to match Driller model
-const DRILLER_OFFSET = MODEL_CONFIG.DRILLER.height / 2; 
+// Dynamic offset from the new definition
+const DRILLER_OFFSET = (ENEMIES.driller.visual.height || 1.0) / 2; 
 
 export class MobileWaveSystem implements IGameSystem {
   private time = 0;
@@ -18266,7 +18400,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -18310,8 +18444,6 @@ export class WaveSystem implements IGameSystem {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
-    // Normal waves stop at Game Over (integrity <= 0)
-    // The "Huge Wave" (Stress Test) is triggered via event listener below
     if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
@@ -18348,12 +18480,9 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
-              // USE GENERIC SPAWN TO FORCE ZERO SCALE INITIALIZATION
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
-                  // Crucial: Set RenderTransform scale to 0 to prevent 1-frame flash before logic runs
                   [ComponentType.RenderTransform]: { scale: 0.0 },
-                  // Crucial: Initialize spawn progress to 0
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
               });
           }
@@ -18380,7 +18509,8 @@ export class WaveSystem implements IGameSystem {
   }
 
   private spawnDrillerOn(panel: any, count: number) {
-      const offset = MODEL_CONFIG.DRILLER.spawnOffset;
+      // Replaced MODEL_CONFIG with ENEMIES def
+      const offset = ENEMIES.driller.params?.spawnOffset || 0.32;
 
       for(let i=0; i<count; i++) {
           const side = Math.floor(Math.random() * 4);
@@ -18621,159 +18751,162 @@ export class LifeCycleSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/VisualSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
-import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
-import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MotionData } from '@/engine/ecs/components/MotionData';
+import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
+import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import * as THREE from 'three';
 
-const axisY = new THREE.Vector3(0, 1, 0); 
-const axisZ = new THREE.Vector3(0, 0, 1); 
-const qSpin = new THREE.Quaternion();
-const qAim = new THREE.Quaternion();
-const qFinal = new THREE.Quaternion();
-
 export class VisualSystem implements IGameSystem {
-  constructor(private registry: IEntityRegistry) {}
+  private tempColor = new THREE.Color();
+
+  constructor(
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem,
+    events: IGameEventService
+  ) {
+    // RESTORED: Flash logic moved from RenderSystem
+    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+        const entity = this.registry.getEntity(p.id);
+        if (entity) {
+            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+            if (effect) effect.flash = 1.0; 
+        }
+    });
+  }
 
   update(delta: number, time: number): void {
-    RenderBuffer.reset();
     const CFG = VISUAL_CONFIG.DEFORMATION;
+    const isZenMode = useGameStore.getState().isZenMode;
+    const isDead = this.gameSystem.playerHealth <= 0;
+    const interactState = this.interactionSystem.repairState;
 
-    // Query: Must have Position + Visual Model
-    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
+    const entities = this.registry.query({ all: [ComponentType.RenderTransform] });
 
     for (const entity of entities) {
       if (!entity.active) continue;
 
-      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
-      
-      const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
       const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+      const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
+      const stateColor = entity.getComponent<StateColor>(ComponentType.StateColor);
+      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
 
-      if (!transform || !model) continue;
+      if (!render) continue;
 
-      const key = `${model.geometryId}|${model.materialId}`;
-      const group = RenderBuffer.getGroup(key);
-      const idx = group.count * RENDER_STRIDE;
-      
-      RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
-
-      // --- 1. Position ---
-      let vx = transform.x;
-      let vy = transform.y;
-      const vz = visual ? visual.offsetZ : 0;
-      
-      let spawnP = 1.0;
-      if (effect) {
-          spawnP = effect.spawnProgress;
-          if (spawnP < 1.0) {
-              const t = spawnP;
-              const ease = 1 - Math.pow(1 - t, 3); 
-              const yOffset = -CFG.SPAWN_Y_OFFSET * (1.0 - ease);
-              vy += yOffset;
-          }
-          if (effect.shudder > 0) {
-              const shake = effect.shudder * 0.2; 
-              vx += (Math.random() - 0.5) * shake;
-              vy += (Math.random() - 0.5) * shake;
-          }
+      // 1. AUTO ROTATION
+      if (rotate) {
+          render.rotation += rotate.speed * delta;
       }
 
-      if (visual) {
-          vx += visual.offsetX;
-          vy += visual.offsetY;
-      }
+      // 2. STATE COLORING
+      if (stateColor && model) {
+          let targetHex = stateColor.base;
+          let spinSpeed = 0.02;
 
-      // --- 2. Scale ---
-      let sX = transform.scale;
-      let sY = transform.scale;
-      let sZ = transform.scale;
-
-      if (visual) {
-          sX *= visual.scale * visual.baseScaleX;
-          sY *= visual.scale * visual.baseScaleY;
-          sZ *= visual.scale * visual.baseScaleZ;
-      }
-      
-      // Velocity Deformation
-      if (effect && motion && effect.elasticity > 0.01) {
-          const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-          const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
-
-          if (speedSq > threshold) {
-              const speed = Math.sqrt(speedSq);
-              let stretchY, squashXZ;
-              
-              if (effect.elasticity > 1.0) {
-                  // High Elasticity (Bullets)
-                  stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
-                  squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
-              } else {
-                  // Rigid (Entities)
-                  stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
-                  squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
+          if (isZenMode) {
+              spinSpeed = -0.03;
+          } else if (isDead) {
+              targetHex = stateColor.dead;
+              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+              if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
+          } else {
+              if (interactState === 'HEALING') {
+                  targetHex = stateColor.repair;
+                  spinSpeed = -0.24;
+              } else if (interactState === 'REBOOTING') {
+                  targetHex = stateColor.reboot;
+                  spinSpeed = -0.24;
               }
-              
-              sY *= stretchY;
-              sX *= squashXZ;
-              sZ *= squashXZ;
+          }
+
+          render.rotation += spinSpeed;
+          render.scale = 1.0; 
+
+          const c = new THREE.Color(targetHex);
+          this.tempColor.setRGB(model.r, model.g, model.b);
+          this.tempColor.lerp(c, delta * 3.0);
+          model.r = this.tempColor.r;
+          model.g = this.tempColor.g;
+          model.b = this.tempColor.b;
+      }
+
+      // 3. DYNAMIC SCALING
+      let dX = 1.0, dY = 1.0, dZ = 1.0;
+
+      if (effect) {
+          // Effect Decay
+          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * 15.0));
+          if (effect.flash > 0) {
+              effect.flash = Math.max(0, effect.flash - (delta * 6.0));
+              const bump = effect.flash * 0.25;
+              dX += bump; dY += bump; dZ += bump;
+          }
+
+          // Pulse
+          if (effect.pulseSpeed > 0) {
+              const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
+              dX += pulse; dY += pulse; dZ += pulse;
+          }
+
+          // Elasticity
+          if (motion && effect.elasticity > 0.01) {
+              const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
+              const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
+
+              if (speedSq > threshold) {
+                  const speed = Math.sqrt(speedSq);
+                  let stretchY = 1.0, squashXZ = 1.0;
+                  
+                  if (effect.elasticity > 1.0) {
+                      stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
+                      squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
+                  } else {
+                      stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
+                      squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
+                  }
+                  
+                  dY *= stretchY;
+                  dX *= squashXZ;
+                  dZ *= squashXZ;
+              }
+          }
+          
+          // Spawn Pop
+          if (effect.spawnProgress < 1.0) {
+              const t = effect.spawnProgress;
+              if (t < 0.8) {
+                  const s = t / 0.8;
+                  dX *= s; dY *= s; dZ *= s;
+              } else {
+                  const popT = (t - 0.8) / 0.2;
+                  const pop = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
+                  dX *= pop; dY *= pop; dZ *= pop;
+              }
+              const ease = 1 - Math.pow(1 - t, 3);
+              render.offsetY = -CFG.SPAWN_Y_OFFSET * (1.0 - ease);
+          } else {
+              render.offsetY = 0;
           }
       }
 
-      // --- 3. Rotation ---
-      const visRot = visual ? visual.rotation : 0;
-      qSpin.setFromAxisAngle(axisY, visRot);
-      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
-      qFinal.copy(qAim).multiply(qSpin);
-
-      // --- 4. Color ---
-      let r = model.r;
-      let g = model.g;
-      let b = model.b;
-
-      if (effect && effect.flash > 0) {
-          const t = effect.flash; 
-          r = r + (effect.flashR - r) * t;
-          g = g + (effect.flashG - g) * t;
-          b = b + (effect.flashB - b) * t;
-      }
-
-      // --- 5. Pack ---
-      group.buffer[idx + RenderOffset.POSITION_X] = vx;
-      group.buffer[idx + RenderOffset.POSITION_Y] = vy;
-      group.buffer[idx + RenderOffset.POSITION_Z] = vz;
-      
-      group.buffer[idx + RenderOffset.ROTATION_X] = qFinal.x;
-      group.buffer[idx + RenderOffset.ROTATION_Y] = qFinal.y;
-      group.buffer[idx + RenderOffset.ROTATION_Z] = qFinal.z;
-      group.buffer[idx + RenderOffset.ROTATION_W] = qFinal.w;
-      
-      group.buffer[idx + RenderOffset.SCALE_X] = sX;
-      group.buffer[idx + RenderOffset.SCALE_Y] = sY;
-      group.buffer[idx + RenderOffset.SCALE_Z] = sZ;
-      
-      group.buffer[idx + RenderOffset.COLOR_R] = r;
-      group.buffer[idx + RenderOffset.COLOR_G] = g;
-      group.buffer[idx + RenderOffset.COLOR_B] = b;
-      
-      group.buffer[idx + RenderOffset.SPAWN_PROGRESS] = spawnP;
-
-      group.count++;
+      render.dynamicScaleX = dX;
+      render.dynamicScaleY = dY;
+      render.dynamicScaleZ = dZ;
     }
   }
 
-  teardown(): void {
-    RenderBuffer.reset();
-  }
+  teardown(): void {}
 }
 
 
@@ -19344,6 +19477,12 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
 
+// Note: Tip Offset is now handled inside the DrillAttack node or passed as an arg if we wanted to be fully dynamic.
+// However, looking at nodes/drillerNodes.ts, DrillAttack *also* imports MODEL_CONFIG. 
+// We must update the Node definition first or pass it as an argument.
+// For this step, I will update the Node Registry file next. 
+// This file just builds the tree.
+
 const DRILLER_DEF: NodeDef = {
   type: 'Sequence',
   children: [
@@ -19422,7 +19561,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
-import { SharedGameEventBus } from '@/engine/signals/GameEventBus'; // IMPORT SHARED
+import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
@@ -19452,7 +19591,6 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { FeedbackBridgeSystem } from '@/engine/systems/FeedbackBridgeSystem';
 
 // Mode Specific Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
@@ -19470,10 +19608,7 @@ export class EngineFactory {
   public static create(mode: EngineMode): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
-    
-    // USE SHARED BUS (Do not create new)
     const eventBus = SharedGameEventBus; 
-    
     const fastEventBus = new FastEventBusImpl();
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
@@ -19517,13 +19652,14 @@ export class EngineFactory {
     const guidanceSystem = new GuidanceSystem(registry);
     
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
-    const feedbackBridge = new FeedbackBridgeSystem(eventBus, fastEventBus, panelSystem);
     
     // Directors
     const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
-    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
-    const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
-    const visualSystem = new VisualSystem(registry);
+    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus, panelSystem, timeSystem);
+    
+    // Refactored Visual Pipeline (Updated Constructor)
+    const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const renderSystem = new RenderSystem(registry);
 
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
@@ -19590,12 +19726,11 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
-    register(feedbackBridge, SystemPhase.STATE); 
     register(hudService, SystemPhase.STATE);
 
     // PHASE 5: RENDER
-    register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
+    register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');
@@ -19631,26 +19766,22 @@ FILE: ./src/engine/services/ConfigService.ts
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { WAVE_CONFIG } from '@/engine/config/WaveConfig';
 import { WorldConfig } from '@/engine/config/WorldConfig';
-import { AI_CONFIG } from '@/engine/config/AIConfig';
 import { PhysicsConfig } from '@/engine/config/PhysicsConfig';
 
 type PlayerConfigType = typeof PLAYER_CONFIG;
 type WorldConfigType = typeof WorldConfig;
-type AIConfigType = typeof AI_CONFIG;
 type PhysicsConfigType = typeof PhysicsConfig;
 type WaveConfigType = typeof WAVE_CONFIG;
 
 class ConfigServiceController {
   public player: PlayerConfigType = { ...PLAYER_CONFIG };
   public world: WorldConfigType = { ...WorldConfig };
-  public ai: AIConfigType = JSON.parse(JSON.stringify(AI_CONFIG));
   public physics: PhysicsConfigType = { ...PhysicsConfig };
   public waves: WaveConfigType = { ...WAVE_CONFIG };
 
   public reset() {
     this.player = { ...PLAYER_CONFIG };
     this.world = { ...WorldConfig };
-    this.ai = JSON.parse(JSON.stringify(AI_CONFIG));
     this.physics = { ...PhysicsConfig };
     this.waves = { ...WAVE_CONFIG };
   }
@@ -19672,16 +19803,7 @@ import { ArchetypeIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
-
-const GEO_MAP: Record<string, string> = {
-    'SPHERE': GEOMETRY_IDS.PRJ_SPHERE,
-    'CAPSULE': GEOMETRY_IDS.PRJ_CAPSULE,
-    'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
-    'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
-    'RING': GEOMETRY_IDS.PRJ_RING,
-    'ARROW': GEOMETRY_IDS.PRJ_ARROW,
-    'CHEVRON': GEOMETRY_IDS.PRJ_CHEVRON
-};
+import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -19736,12 +19858,12 @@ export class EntitySpawner implements IEntitySpawner {
     const rotation = Math.atan2(vy, vx);
     const config = PROJECTILE_CONFIG[projectileId];
     
+    // Geometry Key is now derived directly from the ID (See Archetypes.ts Phase 4)
+    const geoId = `GEO_${projectileId}`; 
     const color = config ? config.color : [1, 1, 1];
-    const shape = config ? config.geometry : 'CAPSULE';
-    const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
     const s = config ? config.scale : [1,1,1]; 
+    const pulseSpeed = config ? config.pulseSpeed : 0;
 
-    // Disable stretching for Purge projectiles to keep them beefy
     const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
 
     const overrides: Record<string, any> = {
@@ -19759,11 +19881,17 @@ export class EntitySpawner implements IEntitySpawner {
             scale: 1.0,
             baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: { elasticity },
+        [ComponentType.RenderEffect]: { elasticity, pulseSpeed },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
-    return this.spawn(id, overrides);
+    const entity = this.spawn(id, overrides);
+
+    if (config && config.spinSpeed !== 0) {
+        entity.addComponent(new AutoRotate(config.spinSpeed));
+    }
+
+    return entity;
   }
 
   public spawnParticle(
@@ -20216,6 +20344,7 @@ export interface IPanelSystem extends IGameSystem {
   getPanelRect(id: PanelId): WorldRect | undefined;
   getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
+  getPanelAt(x: number, y: number): PanelId | null;
 }
 
 

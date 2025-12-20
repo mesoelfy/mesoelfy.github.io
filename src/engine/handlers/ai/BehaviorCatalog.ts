@@ -8,6 +8,8 @@ import { HunterLogic } from './HunterLogic';
 import { DaemonLogic } from './DaemonLogic';
 
 export const registerAllBehaviors = () => {
+  AIRegistry.clear(); // Ensure clean slate for HMR/Re-mounts
+  
   AIRegistry.register(EnemyTypes.DRILLER, DrillerLogic);
   AIRegistry.register(EnemyTypes.KAMIKAZE, KamikazeLogic);
   AIRegistry.register(EnemyTypes.HUNTER, HunterLogic);

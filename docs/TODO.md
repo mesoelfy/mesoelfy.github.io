@@ -672,4 +672,3 @@ ProjectileGeometry - more shapes?
 player cursor explodes a second wave of projectiles, one blast 360 degrees at once, which kills any remaining enemies (this is when the sound effect plays) and then transition to zen mode and zen reticle. (like a metamorphosis of the cursor into its prismatic form)
 
 
-Refactor the simplified game slice of protecting the social_uplink panel with tapping instead of a reticle/cursor so that the code architecture is done elegantly. (there should be no visible cursor, but there should be a sign of impact where the player clicks. i'm not sure what would be good simple and cool and beautifully polished with good animation)

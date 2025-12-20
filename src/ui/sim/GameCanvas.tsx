@@ -17,6 +17,7 @@ export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const isLab = bootState === 'sandbox' && sandboxView === 'lab';
+  const isMobileExperience = bootState === 'mobile_lockdown';
   
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -40,7 +41,7 @@ export const GameOverlay = () => {
       return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted || !assetsReady) return null;
+  if (!mounted || !assetsReady || isMobileExperience) return null;
 
   return (
     <>
@@ -58,7 +59,7 @@ export const GameOverlay = () => {
               stencil: false,
               powerPreference: "high-performance"
             }}
-            eventSource={document.body}
+            eventSource={typeof document !== 'undefined' ? document.body : undefined}
             eventPrefix="client"
           >
             {isLab ? (
