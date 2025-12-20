@@ -16,6 +16,17 @@ export class LifeCycleSystem implements IGameSystem {
     this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.purgeHostiles();
     });
+
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.purgeSummons();
+    });
+
+    // NEW: Also purge hostiles immediately when PURGE is clicked to prevent lingering enemies
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this.purgeHostiles();
+        }
+    });
   }
 
   update(delta: number, time: number): void {
@@ -39,16 +50,21 @@ export class LifeCycleSystem implements IGameSystem {
           const transform = entity.getComponent<TransformData>(ComponentType.Transform);
           
           if (identity && transform) {
-             this.events.emit(GameEvents.ENEMY_DESTROYED, { 
-                id: entity.id as number, 
-                type: identity.variant, 
-                x: transform.x, 
-                y: transform.y 
-             });
+             const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
+             
+             if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
+                 this.events.emit(GameEvents.ENEMY_DESTROYED, { 
+                    id: entity.id as number, 
+                    type: identity.variant, 
+                    x: transform.x, 
+                    y: transform.y 
+                 });
+             }
              
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
+             else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
              
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
@@ -59,13 +75,26 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   private purgeHostiles() {
-      // Destroy everything EXCEPT the player
-      // This keeps the reticle moving and the camera logic working
+      // Destroy everything EXCEPT the player tag
       const allEntities = this.registry.getAll();
       for (const entity of allEntities) {
           if (!entity.hasTag(Tag.PLAYER)) {
-              // Optional: Spawn disappearing FX for enemies?
-              // For now, just silent wipe to be instant
+              this.registry.destroyEntity(entity.id);
+          }
+      }
+  }
+
+  private purgeSummons() {
+      const allies = this.registry.getByTag(Tag.PLAYER);
+      for (const entity of allies) {
+          if (!entity.active) continue;
+          
+          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+          if (identity && identity.variant === EnemyTypes.DAEMON) {
+              const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+              if (transform) {
+                  this.events.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x: transform.x, y: transform.y });
+              }
               this.registry.destroyEntity(entity.id);
           }
       }

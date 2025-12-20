@@ -32,8 +32,6 @@ import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { GameProvider } from '@/engine/state/GameContext';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DOM_ID } from '@/ui/config/DOMConfig';
@@ -57,24 +55,13 @@ export default function Home() {
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
-  const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
-  const [showPanels, setShowPanels] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-      const unsub = GameEventBus.subscribe(GameEvents.LOG_DEBUG, (p) => {
-          if (p.msg === 'UI_PURGE_TRIGGER') {
-              setShowPanels(false);
-          }
-      });
-      return unsub;
-  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -225,12 +212,13 @@ export default function Home() {
                   >
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
-                          {!isZenMode && showPanels && (
+                          {!isZenMode && (
                           <motion.div 
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.8 } }} // Slow dissolve
+                              // LONG EXIT DURATION FOR GRACEFUL FADE
+                              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
                               variants={{
                               hidden: { opacity: 0 },
                               visible: { 

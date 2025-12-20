@@ -57,6 +57,10 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const visualRef = useReactRef<HTMLDivElement>(null);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
+  
+  // Game Over is strictly strictly integrity <= 0.
+  // We use this to force the shattered state, even if Zen Mode has technically activated in the store.
+  // Because integrity is NOT reset by Zen Mode activation (only by resetGame), this persists.
   const isGameOver = Math.floor(systemIntegrity) <= 0;
 
   if (gameId) {
@@ -81,7 +85,12 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
   useReactEffect(() => {
-      isGameOver ? shakeControls.start("shattered") : shakeControls.start("visible");
+      // Prioritize Shattered state above all else if integrity is 0
+      if (isGameOver) {
+          shakeControls.start("shattered");
+      } else {
+          shakeControls.start("visible");
+      }
   }, [isGameOver, shakeControls]);
 
   useReactEffect(() => {

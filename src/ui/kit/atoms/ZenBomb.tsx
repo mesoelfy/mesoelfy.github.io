@@ -5,8 +5,6 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useState } from 'react';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { IPanelSystem } from '@/engine/interfaces';
 
 export const ZenBomb = () => {
   const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
@@ -17,17 +15,21 @@ export const ZenBomb = () => {
   if (!isGameOver || isZenMode) return null;
 
   const handleClick = () => {
-    setClicked(true); AudioSystem.playClick();
+    setClicked(true); 
+    AudioSystem.playClick();
+    
+    // 1. Trigger the Purge FX immediately (Audio + Visual Blast)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
     AudioSystem.playSound('syn_bass_drop');
-    setTimeout(() => {
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: 'UI_PURGE_TRIGGER' }); 
-        try {
-            const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-            if (panels) panels.destroyAll();
-        } catch (e) { console.warn(e); }
-    }, 500);
-    setTimeout(() => { activateZenMode(); AudioSystem.playAmbience('ambience_core'); }, 5500);
+
+    // 2. HOLD STATE (3 Seconds)
+    // We do nothing here. The user sits with the broken UI and the blast FX.
+    
+    // 3. Transition to Zen Mode
+    setTimeout(() => { 
+        activateZenMode(); 
+        AudioSystem.playAmbience('ambience_core'); 
+    }, 3000);
   };
 
   return (

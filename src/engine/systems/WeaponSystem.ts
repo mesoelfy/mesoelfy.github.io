@@ -3,7 +3,7 @@ import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
-import { TargetData } from '@/engine/ecs/components/TargetData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -32,7 +32,15 @@ export class WeaponSystem implements IGameSystem {
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
     let playerEntity = null;
-    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
+    const players = this.registry.getByTag(Tag.PLAYER);
+    for (const p of players) {
+        const id = p.getComponent<IdentityData>(ComponentType.Identity);
+        if (id && id.variant === 'PLAYER') {
+            playerEntity = p; 
+            break; 
+        }
+    }
+    
     if (!playerEntity) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
@@ -53,22 +61,46 @@ export class WeaponSystem implements IGameSystem {
   private triggerPurge() {
       let startX = 0, startY = 0;
       
-      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
-      if (player) {
-          const t = player.getComponent<TransformData>(ComponentType.Transform);
-          if (t) { startX = t.x; startY = t.y; }
+      const players = this.registry.getByTag(Tag.PLAYER);
+      for (const p of players) {
+          const id = p.getComponent<IdentityData>(ComponentType.Identity);
+          if (id && id.variant === 'PLAYER') {
+              const t = p.getComponent<TransformData>(ComponentType.Transform);
+              if (t) { startX = t.x; startY = t.y; }
+              break;
+          }
       }
 
-      const count = 360; 
-      const speed = 45; 
-      const damage = 100;
-      
+      // 1. CLEANUP: Destroy all existing bullets to prevent visual artifacts
+      const bullets = this.registry.getByTag(Tag.BULLET);
+      // Create a copy of the list to avoid modification issues during iteration
+      const bulletsToKill = Array.from(bullets); 
+      for (const b of bulletsToKill) {
+          this.registry.destroyEntity(b.id);
+      }
+
+      // 2. FX
       this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, startX * 100, startY * 100, 0);
       this.fastEvents.emit(FastEventType.CAM_SHAKE, 100); 
 
+      // 3. SPAWN RING
+      const count = 360; 
+      const speed = 45; 
+      const damage = 100;
+      const life = 0.8; 
+      
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, Faction.FRIENDLY, 3.0, damage, 'PLAYER_PURGE');
+          this.spawner.spawnBullet(
+              startX, 
+              startY, 
+              Math.cos(angle) * speed, 
+              Math.sin(angle) * speed, 
+              Faction.FRIENDLY, 
+              life, 
+              damage, 
+              'PLAYER_PURGE'
+          );
       }
   }
 
@@ -98,7 +130,7 @@ export class WeaponSystem implements IGameSystem {
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
         if (shot.isHoming) {
-            bullet.addComponent(new TargetData(null, 'ENEMY'));
+            bullet.addComponent(new IdentityData('BULLET')); 
         }
     });
 
