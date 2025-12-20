@@ -11,7 +11,7 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class DrillAttack extends BTNode {
-  // Switched to ENEMIES def
+  // Use a slightly larger offset to ensure visual overlap
   private readonly TIP_OFFSET = ENEMIES.driller.params?.spawnOffset || 0.32;
   
   constructor(private interval: number) { super(); }
@@ -25,13 +25,21 @@ export class DrillAttack extends BTNode {
 
     if (!target || !state || !transform) return NodeState.FAILURE;
 
+    // TARGET LATCH LOGIC:
+    // If we have a target panel, snap our destination to its edge
     let destX = target.x;
     let destY = target.y;
+    
+    // Force re-acquisition of panel rect if possible
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
+            // Find closest point on panel rect to current position
             destX = Math.max(rect.left, Math.min(transform.x, rect.right));
             destY = Math.max(rect.bottom, Math.min(transform.y, rect.top));
+        } else {
+            // Fallback: If registry empty (mobile init race), target 0,0 (center)
+            // This explains the "aiming for center" bug if registry fails
         }
     }
 
@@ -39,11 +47,14 @@ export class DrillAttack extends BTNode {
     const dy = destY - transform.y;
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist > 0.001) {
-        const normX = dx / dist;
-        const normY = dy / dist;
-        transform.x = destX - (normX * this.TIP_OFFSET);
-        transform.y = destY - (normY * this.TIP_OFFSET);
+    
+    // Snap to position logic
+    if (dist > 0.05) {
+        // Still moving into position
+        // This node usually runs AFTER MoveToTarget succeeds, so we should be close.
+        // We gently lerp to the drill spot
+        transform.x += dx * 0.1;
+        transform.y += dy * 0.1;
         transform.rotation = angle;
     }
 
@@ -53,6 +64,7 @@ export class DrillAttack extends BTNode {
     }
 
     context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
+    
     if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
         context.playSound('loop_drill', transform.x);
         state.timers[AITimerID.DRILL_AUDIO] = 0.25;

@@ -2,12 +2,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
 
-// Note: Tip Offset is now handled inside the DrillAttack node or passed as an arg if we wanted to be fully dynamic.
-// However, looking at nodes/drillerNodes.ts, DrillAttack *also* imports MODEL_CONFIG. 
-// We must update the Node definition first or pass it as an argument.
-// For this step, I will update the Node Registry file next. 
-// This file just builds the tree.
-
+// Increased Range check from 0.5 to 1.5 to ensure they stop and drill even if slightly offset
 const DRILLER_DEF: NodeDef = {
   type: 'Sequence',
   children: [
@@ -22,12 +17,12 @@ const DRILLER_DEF: NodeDef = {
             {
               type: 'Sequence',
               children: [
-                { type: 'IsTargetInRange', args: [0.5] },
+                { type: 'IsTargetInRange', args: [1.5] }, 
                 { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [15.0] }] },
                 { type: 'DrillAttack', args: [0.2] }
               ]
             },
-            { type: 'MoveToTarget', args: [8] }
+            { type: 'MoveToTarget', args: [8, 1.2] } // Speed 8, StopDistance 1.2
           ]
         }
       ]
