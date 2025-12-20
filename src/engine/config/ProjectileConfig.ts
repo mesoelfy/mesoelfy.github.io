@@ -55,9 +55,12 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   },
   'PLAYER_PURGE': {
     geometry: 'DIAMOND',
-    color: [10, 10, 10],
-    scale: [0.6, 0.6, 0.6],
-    spinSpeed: 20.0, pulseSpeed: 0, faceVelocity: false
+    color: [10, 10, 10], // Pure bright white intensity
+    // Increased Width (X/Z) for a wider "blade" effect
+    scale: [1.8, 0.5, 1.8], 
+    spinSpeed: 20.0, 
+    pulseSpeed: 0, 
+    faceVelocity: false
   },
   'ENEMY_HUNTER': {
     geometry: 'ARROW',
