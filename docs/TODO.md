@@ -668,3 +668,4 @@ sniffer is broken
 daemon ally persists after game over state
 double max sound threshold or add 100
 custom favicons not appearing
+more things should be toggle-able in the settings.

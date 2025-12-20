@@ -7,13 +7,13 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ParticleShape } from '@/engine/ecs/types';
+import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class HoverDrift extends BTNode {
   private minDur: number;
   private maxDur: number;
-
   constructor(private minRange: number, private maxRange: number, minDuration: number, maxDuration?: number) { 
-      super(); 
+      super();
       this.minDur = minDuration;
       this.maxDur = maxDuration ?? minDuration;
   }
@@ -25,21 +25,20 @@ export class HoverDrift extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !motion || !target || !state) return NodeState.FAILURE;
-
     if (state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
     }
 
-    if (!state.timers.hover) {
-        state.timers.hover = this.minDur + Math.random() * (this.maxDur - this.minDur);
+    if (!state.timers[AITimerID.HOVER]) {
+        state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
 
-    state.timers.hover -= context.delta;
-    if (state.timers.hover <= 0) {
-        state.timers.hover = undefined;
+    state.timers[AITimerID.HOVER]! -= context.delta;
+    if (state.timers[AITimerID.HOVER]! <= 0) {
+        state.timers[AITimerID.HOVER] = undefined;
         return NodeState.SUCCESS;
     }
 
@@ -47,7 +46,6 @@ export class HoverDrift extends BTNode {
     const dy = target.y - transform.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
-    
     if (dist < 0.001) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -59,17 +57,16 @@ export class HoverDrift extends BTNode {
     let ty = state.data.driftY || 0;
 
     if (dist < this.minRange) {
-        tx -= dx * 0.5; 
+        tx -= dx * 0.5;
         ty -= dy * 0.5;
     } else if (dist > this.maxRange) {
-        tx += dx * 0.5; 
+        tx += dx * 0.5;
         ty += dy * 0.5;
     }
 
     motion.vx += (tx - motion.vx) * context.delta * 2.0;
     motion.vy += (ty - motion.vy) * context.delta * 2.0;
     transform.rotation = angleToTarget;
-
     return NodeState.RUNNING;
   }
 }
@@ -84,9 +81,8 @@ export class AimAndFire extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !target || !state) return NodeState.FAILURE;
-
-    if (state.timers.aim === undefined) {
-        state.timers.aim = this.aimDuration;
+    if (state.timers[AITimerID.AIM] === undefined) {
+        state.timers[AITimerID.AIM] = this.aimDuration;
     }
 
     if (motion) {
@@ -98,11 +94,11 @@ export class AimAndFire extends BTNode {
     const dy = target.y - transform.y;
     transform.rotation = Math.atan2(dy, dx);
 
-    if (!state.timers.sizzle || state.timers.sizzle <= 0) {
+    if (!state.timers[AITimerID.SIZZLE] || state.timers[AITimerID.SIZZLE]! <= 0) {
         context.playSound('fx_exhaust_sizzle', transform.x);
-        state.timers.sizzle = 0.15;
+        state.timers[AITimerID.SIZZLE] = 0.15;
     } else {
-        state.timers.sizzle -= context.delta;
+        state.timers[AITimerID.SIZZLE]! -= context.delta;
     }
 
     const rearAngle = transform.rotation + Math.PI;
@@ -121,10 +117,9 @@ export class AimAndFire extends BTNode {
         context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, ParticleShape.SQUARE);
     }
 
-    state.timers.aim -= context.delta;
-
-    if (state.timers.aim <= 0) {
-        state.timers.aim = undefined; 
+    state.timers[AITimerID.AIM]! -= context.delta;
+    if (state.timers[AITimerID.AIM]! <= 0) {
+        state.timers[AITimerID.AIM] = undefined; 
         const dirX = Math.cos(transform.rotation);
         const dirY = Math.sin(transform.rotation);
 
@@ -143,10 +138,10 @@ export class AimAndFire extends BTNode {
             motion.vx = -dirX * 5.0;
             motion.vy = -dirY * 5.0;
         }
+
         context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
         return NodeState.SUCCESS;
     }
-
     return NodeState.RUNNING;
   }
 }

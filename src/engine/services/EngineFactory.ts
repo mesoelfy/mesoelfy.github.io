@@ -6,7 +6,7 @@ import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { GameEventService } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
-import { HUDService } from '@/engine/services/HUDService';
+import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
@@ -50,14 +50,16 @@ export type EngineMode = 'DESKTOP' | 'MOBILE';
 
 export class EngineFactory {
   public static create(mode: EngineMode): GameEngineCore {
+    // 1. Core Services
     const registry = new EntityRegistry();
     const eventBus = new GameEventService();
     const fastEventBus = new FastEventBusImpl();
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
-    const hudService = new HUDService();
+    const hudService = new HUDService(); 
     const spawner = new EntitySpawner(registry);
     
+    // 2. Global Registration
     ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
     ServiceLocator.register('GameEventService', eventBus);
@@ -65,12 +67,14 @@ export class EngineFactory {
     ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
-    ServiceLocator.register('HUDService', hudService);
+    ServiceLocator.register('HUDService', hudService); // Explicitly Registered Here
 
+    // 3. Content Registration
     registerAllComponents();
     registerAllBehaviors();
     registerAllAssets();
 
+    // 4. Common Systems Instantiation
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
@@ -94,22 +98,28 @@ export class EngineFactory {
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
     const feedbackBridge = new FeedbackBridgeSystem(eventBus, fastEventBus, panelSystem);
     
+    // Directors
     const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus);
     const renderSystem = new RenderSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const visualSystem = new VisualSystem(registry);
 
+    // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
     engine.injectFastEventBus(fastEventBus);
 
+    // 6. System Registration Helpers
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
     };
 
+    // --- PIPELINE CONSTRUCTION ---
+
+    // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
-    register(inputSystem, SystemPhase.INPUT);
+    register(inputSystem, SystemPhase.INPUT); // Already registered globally, so no name needed
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     
     if (mode === 'DESKTOP') {
@@ -117,6 +127,7 @@ export class EngineFactory {
         register(movementSystem, SystemPhase.INPUT);
     }
 
+    // PHASE 1: LOGIC
     register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
     register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
     register(targetingSystem, SystemPhase.LOGIC);
@@ -136,11 +147,13 @@ export class EngineFactory {
         register(behaviorSystem, SystemPhase.LOGIC); 
     }
 
+    // PHASE 2: PHYSICS
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
     register(guidanceSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
 
+    // PHASE 3: COLLISION
     if (mode === 'DESKTOP') {
         const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
         const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
@@ -152,12 +165,14 @@ export class EngineFactory {
         register(mobileCombat, SystemPhase.COLLISION);
     }
 
+    // PHASE 4: STATE
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(feedbackBridge, SystemPhase.STATE); 
-    register(hudService, SystemPhase.STATE, 'HUDService');
+    register(hudService, SystemPhase.STATE); // No name passed, avoids overwrite
 
+    // PHASE 5: RENDER
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
@@ -166,8 +181,10 @@ export class EngineFactory {
     register(worldSystem, SystemPhase.RENDER, 'WorldSystem');
     register(audioDirector, SystemPhase.RENDER);
 
+    // 7. Final Setup
     engine.setup(ServiceLocator);
 
+    // 8. Player Spawn (Desktop Only)
     if (mode === 'DESKTOP') {
         spawner.spawnPlayer();
     }

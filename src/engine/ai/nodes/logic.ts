@@ -8,6 +8,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class SpawnPhase extends BTNode {
   constructor(private duration: number) { super(); }
@@ -20,17 +21,16 @@ export class SpawnPhase extends BTNode {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     
     if (!state) return NodeState.SUCCESS;
-
-    if (state.timers.spawn === undefined) {
-        state.timers.spawn = this.duration;
+    if (state.timers[AITimerID.SPAWN] === undefined) {
+        state.timers[AITimerID.SPAWN] = this.duration;
         state.current = AI_STATE.SPAWN;
         if (effect) {
             effect.spawnProgress = 0.0;
         }
     }
 
-    if (state.timers.spawn > 0) {
-        state.timers.spawn -= context.delta;
+    if (state.timers[AITimerID.SPAWN]! > 0) {
+        state.timers[AITimerID.SPAWN]! -= context.delta;
         
         if (transform && target) {
             const dx = target.x - transform.x;
@@ -42,19 +42,17 @@ export class SpawnPhase extends BTNode {
         }
 
         if (effect && visual) {
-            const t = 1.0 - (state.timers.spawn / this.duration);
+            const t = 1.0 - (state.timers[AITimerID.SPAWN]! / this.duration);
             effect.spawnProgress = Math.max(0, Math.min(1, t));
             
             if (t < 0.8) {
-                visual.scale = t / 0.8; 
+                visual.scale = t / 0.8;
             } else {
-                const popT = (t - 0.8) / 0.2; 
+                const popT = (t - 0.8) / 0.2;
                 visual.scale = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
             }
-
             visual.rotation += (1.0 - t) * 15.0 * context.delta;
         }
-
         return NodeState.RUNNING;
     }
 
@@ -63,10 +61,9 @@ export class SpawnPhase extends BTNode {
         if (effect && visual) {
             effect.spawnProgress = 1.0;
             visual.scale = 1.0;
-            effect.flash = 0.6; // Spawn flash
+            effect.flash = 0.6; 
         }
     }
-
     return NodeState.SUCCESS;
   }
 }

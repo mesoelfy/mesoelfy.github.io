@@ -12,11 +12,11 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { useGameContext } from '@/engine/state/GameContext';
+import { Uniforms } from '@/engine/graphics/Uniforms';
 import * as THREE from 'three';
 
 const centerGeo = new THREE.CircleGeometry(0.1, 16);
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-
 const createStarRingGeo = () => {
     const points = 4;
     const outerRadius = 0.65;
@@ -26,7 +26,6 @@ const createStarRingGeo = () => {
     const shape = new THREE.Shape();
     const step = (Math.PI * 2) / points;
     const halfStep = step / 2;
-
     for (let i = 0; i < points; i++) {
         const theta = i * step;
         const tipA = theta - twistAngle;
@@ -47,7 +46,6 @@ const createStarRingGeo = () => {
     shape.holes.push(hole);
     return new THREE.ShapeGeometry(shape);
 };
-
 const reticleGeo = createStarRingGeo();
 
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
@@ -76,9 +74,9 @@ export const PlayerActor = () => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
           ...ShaderLib.presets.playerAmbient,
           uniforms: { 
-              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
-              uOpacity: { value: 0.6 }, 
-              uEnergy: { value: 0.0 } 
+              [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              [Uniforms.OPACITY]: { value: 0.6 }, 
+              [Uniforms.ENERGY]: { value: 0.0 } 
           }
       });
       mat.blending = THREE.AdditiveBlending;
@@ -89,23 +87,21 @@ export const PlayerActor = () => {
       const mat = MaterialFactory.create('MAT_PLAYER_BACKING', {
           ...ShaderLib.presets.playerBacking,
           uniforms: { 
-              uColor: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
-              uOpacity: { value: 0.5 } 
+              [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
+              [Uniforms.OPACITY]: { value: 0.5 } 
           }
       });
       mat.blending = THREE.NormalBlending;
       return mat;
   }, []);
 
-  useEffect(() => { return events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }); }, [events]);
+  useEffect(() => events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }), [events]);
 
   useFrame((state, delta) => {
     if (!containerRef.current) return;
-    
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     const isZenMode = useGameStore.getState().isZenMode;
     const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
-    
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
     if (animScale.current < 0.01) { 
@@ -120,12 +116,12 @@ export const PlayerActor = () => {
     const interact = getSystem<IInteractionSystem>('InteractionSystem');
     if (interact) interactState = interact.repairState;
 
-    // Treat Zen Mode as an active high-energy state (similar to Healing)
     const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING') || isZenMode;
-    
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     
-    if (ambientMaterial.uniforms.uEnergy) ambientMaterial.uniforms.uEnergy.value = Math.min(1.0, currentEnergy.current + hitFlash.current);
+    if (ambientMaterial.uniforms[Uniforms.ENERGY]) {
+        ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
+    }
 
     let playerEntity;
     for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
@@ -133,61 +129,37 @@ export const PlayerActor = () => {
 
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
     const isDeadState = (isPlayerDead || isSystemFailure) && !isZenMode;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
-    
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
-        if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
+        if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25;
         else reticleRef.current.rotation.z = -renderTrans.rotation;
         
-        // --- COLOR LOGIC ---
         if (isZenMode) {
-            // Slower cycle: 0.1 multiplier (was 0.2)
-            const time = state.clock.elapsedTime * 0.1; 
-            
-            // 1. Center Dot (Leading, almost white)
+            const time = state.clock.elapsedTime * 0.1;
             tempColor.current.setHSL(time % 1, 1.0, 0.9);
-            
-            // 2. Reticle Ring (Delayed by 0.1, saturated)
             reticleColor.current.setHSL((time - 0.1) % 1, 0.9, 0.6);
-            
-            // 3. Backing Circle (Delayed by 0.2, darker)
-            backingMaterial.uniforms.uColor.value.setHSL((time - 0.2) % 1, 0.8, 0.5);
-            
-            // 4. Ambient Glow (Delayed by 0.3, creating the trail)
-            ambientMaterial.uniforms.uColor.value.setHSL((time - 0.3) % 1, 0.8, 0.4);
-
+            backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time - 0.2) % 1, 0.8, 0.5);
+            ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time - 0.3) % 1, 0.8, 0.4);
         } else {
-            // Standard Logic
             let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
-            
-            tempColor.current.lerp(targetColor, 0.2); 
-            
+            tempColor.current.lerp(targetColor, 0.2);
             if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
             else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
-
             if (hitFlash.current > 0.01) { 
-                tempColor.current.lerp(COL_HIT, hitFlash.current); 
+                tempColor.current.lerp(COL_HIT, hitFlash.current);
                 reticleColor.current.lerp(COL_HIT, hitFlash.current); 
             }
-            
-            // Apply to Materials
-            ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
-            backingMaterial.uniforms.uColor.value.copy(tempColor.current);
+            ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
+            backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
         }
-
-        // Apply calculated colors to Meshes
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
-        
-        // SCALE APPLICATION: 3x if Zen Mode
         const zenScale = isZenMode ? 3.0 : 1.0;
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * zenScale);
-        
         centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }

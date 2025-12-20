@@ -8,10 +8,10 @@ import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { MODEL_CONFIG } from '@/engine/config/ModelConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class DrillAttack extends BTNode {
   private readonly TIP_OFFSET = MODEL_CONFIG.DRILLER.spawnOffset;
-
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -25,7 +25,6 @@ export class DrillAttack extends BTNode {
 
     let destX = target.x;
     let destY = target.y;
-
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
@@ -38,11 +37,9 @@ export class DrillAttack extends BTNode {
     const dy = destY - transform.y;
     const angle = Math.atan2(dy, dx);
     const dist = Math.sqrt(dx*dx + dy*dy);
-
     if (dist > 0.001) {
         const normX = dx / dist;
         const normY = dy / dist;
-        
         transform.x = destX - (normX * this.TIP_OFFSET);
         transform.y = destY - (normY * this.TIP_OFFSET);
         transform.rotation = angle;
@@ -54,29 +51,26 @@ export class DrillAttack extends BTNode {
     }
 
     context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
-
-    if (!state.timers.drillAudio || state.timers.drillAudio <= 0) {
+    if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
         context.playSound('loop_drill', transform.x);
-        state.timers.drillAudio = 0.25;
+        state.timers[AITimerID.DRILL_AUDIO] = 0.25;
     } else {
-        state.timers.drillAudio -= context.delta;
+        state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
     }
 
-    if (!state.timers.drillDmg || state.timers.drillDmg <= 0) {
+    if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
         const damage = combat ? combat.damage : 1;
-        
         if (target.type === 'PANEL' && target.id) {
             context.damagePanel(target.id as PanelId, damage, { 
                 source: { x: transform.x, y: transform.y } 
             });
-            state.timers.drillDmg = this.interval;
+            state.timers[AITimerID.DRILL_DMG] = this.interval;
         } else {
-            state.timers.drillDmg = this.interval;
+            state.timers[AITimerID.DRILL_DMG] = this.interval;
         }
     } else {
-        state.timers.drillDmg -= context.delta;
+        state.timers[AITimerID.DRILL_DMG] -= context.delta;
     }
-
     return NodeState.RUNNING;
   }
 }

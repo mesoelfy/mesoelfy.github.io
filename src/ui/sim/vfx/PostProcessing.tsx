@@ -4,13 +4,24 @@ import { useRef, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { RenderPass, UnrealBloomPass, AfterimagePass, ShaderPass } from 'three-stdlib';
 import { useStore } from '@/engine/state/global/useStore';
+import { Uniforms } from '@/engine/graphics/Uniforms';
 
 extend({ RenderPass, UnrealBloomPass, AfterimagePass, ShaderPass });
 
 const VignetteShader = {
-  uniforms: { "tDiffuse": { value: null }, "offset": { value: 1.0 }, "darkness": { value: 1.0 } },
-  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
-  fragmentShader: `uniform float offset; uniform float darkness; uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 texel = texture2D( tDiffuse, vUv ); vec2 uv = ( vUv - vec2( 0.5 ) ) * vec2( offset ); gl_FragColor = vec4( mix( texel.rgb, vec3( 1.0 - darkness ), dot( uv, uv ) ), texel.a ); }`
+  uniforms: { 
+      "tDiffuse": { value: null }, 
+      [Uniforms.OFFSET]: { value: 1.0 }, 
+      [Uniforms.DARKNESS]: { value: 1.0 } 
+  },
+  vertexShader: `varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
+  fragmentShader: `uniform float offset; uniform float darkness; uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main() { 
+      vec4 texel = texture2D( tDiffuse, vUv );
+      vec2 uv = ( vUv - vec2( 0.5 ) ) * vec2( offset );
+      gl_FragColor = vec4( mix( texel.rgb, vec3( 1.0 - darkness ), dot( uv, uv ) ), texel.a ); 
+    }`
 };
 
 export const EffectsLayer = () => {
@@ -21,11 +32,9 @@ export const EffectsLayer = () => {
   const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
 
   useEffect(() => { if (bloomRef.current) bloomRef.current.resolution = new THREE.Vector2(size.width, size.height); }, [size]);
-
-  useFrame(() => { if (afterimageRef.current) afterimageRef.current.uniforms["damp"].value = 0.92; });
+  useFrame(() => { if (afterimageRef.current) afterimageRef.current.uniforms[Uniforms.DAMP].value = 0.92; });
 
   if (graphicsMode === 'POTATO') return null;
-
   return (
     <Effects disableGamma>
       <renderPass args={[scene, camera]} />

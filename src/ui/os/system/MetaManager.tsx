@@ -34,6 +34,14 @@ export const MetaManager = () => {
       CONSOLE_STYLES.CYAN
     );
 
+    // RESTORED: Debug Hint
+    console.log(
+      `%c[DEV_HINT] To silence YouTube/AdBlock errors, paste this filter above:\n` +
+      `%c-source:www-embed-player.js -source:base.js -ERR_BLOCKED_BY_CLIENT`,
+      'color: gray; font-style: italic;',
+      'color: #eae747; background: #222; padding: 2px 4px; border-radius: 2px;'
+    );
+
     (window as any).hasLoggedIdentity = true;
   }, []);
 

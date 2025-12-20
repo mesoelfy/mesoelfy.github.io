@@ -7,6 +7,8 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PanelId } from '@/engine/config/PanelConfig';
+import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class MoveToTarget extends BTNode {
   constructor(private speed: number, private stopDistance: number = 0) { super(); }
@@ -18,8 +20,6 @@ export class MoveToTarget extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !motion || !target) return NodeState.FAILURE;
-
-    // --- STUN LOGIC ---
     if (state && state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
@@ -27,9 +27,8 @@ export class MoveToTarget extends BTNode {
 
     let tx = target.x;
     let ty = target.y;
-
     if (target.type === 'PANEL' && target.id) {
-        const rect = context.getPanelRect(target.id);
+        const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
             tx = Math.max(rect.left, Math.min(transform.x, rect.right));
             ty = Math.max(rect.bottom, Math.min(transform.y, rect.top));
@@ -39,7 +38,6 @@ export class MoveToTarget extends BTNode {
     const dx = tx - transform.x;
     const dy = ty - transform.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-
     if (dist <= this.stopDistance) {
         motion.vx = 0;
         motion.vy = 0;
@@ -48,11 +46,9 @@ export class MoveToTarget extends BTNode {
 
     const nx = dx / dist;
     const ny = dy / dist;
-
     motion.vx = nx * this.speed;
     motion.vy = ny * this.speed;
     transform.rotation = Math.atan2(dy, dx);
-
     return NodeState.RUNNING;
   }
 }
@@ -60,7 +56,6 @@ export class MoveToTarget extends BTNode {
 export class Wait extends BTNode {
   private min: number;
   private max: number;
-
   constructor(min: number, max?: number) { 
     super(); 
     this.min = min;
@@ -68,28 +63,23 @@ export class Wait extends BTNode {
   }
 
   tick(entity: Entity, context: AIContext): NodeState {
-    const state = entity.getComponent<any>(ComponentType.State);
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
-
-    if (state.timers.wait === undefined) {
-        // Randomize duration on entry
-        state.timers.wait = this.min + Math.random() * (this.max - this.min);
+    if (state.timers[AITimerID.WAIT] === undefined) {
+        state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
     }
 
-    state.timers.wait -= context.delta;
-    
-    if (state.timers.wait <= 0) {
-        state.timers.wait = undefined; 
+    state.timers[AITimerID.WAIT]! -= context.delta;
+    if (state.timers[AITimerID.WAIT]! <= 0) {
+        state.timers[AITimerID.WAIT] = undefined;
         return NodeState.SUCCESS;
     }
-
     return NodeState.RUNNING;
   }
 }
 
 export class SpinVisual extends BTNode {
   constructor(private speed: number) { super(); }
-  
   tick(entity: Entity, context: AIContext): NodeState {
       const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
       if (visual) {
