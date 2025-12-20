@@ -64,10 +64,16 @@ export const Header = () => {
   const isWarning = integrityState < 60;
   const isGameOver = integrityState <= 0;
   
+  // Left Side (System Status) Colors
   let statusColor = "text-primary-green";
-  if (isZenMode) statusColor = "text-white";
+  if (isZenMode) statusColor = "text-white"; // Title stays white/clean in Zen
   else if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
+
+  // Right Side (Tools) Colors - Requested Purple Override
+  // If Zen Mode, use the Pulse/Lighter purple
+  const toolsColor = isZenMode ? "text-purple-300" : "text-latent-purple";
+  const toolsBorder = "border-latent-purple/30";
 
   const heartbeatControls = useHeartbeat();
 
@@ -104,8 +110,8 @@ export const Header = () => {
         </motion.span>
         
         {mounted && (
-          <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
-            <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={statusColor} />
+          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l", toolsColor, toolsBorder)}>
+            <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={toolsColor} />
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">{isZenMode ? "PEACE_PROTOCOL" : "THREAT_NEUTRALIZED"}</span>
                 <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">0000</span>
@@ -114,14 +120,14 @@ export const Header = () => {
         )}
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1 border-l border-white/10 pl-4">
-            <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
-            <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
-            <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5", statusColor)}>
+        <div className={clsx("flex items-center gap-1 pl-4 border-l", toolsBorder)}>
+            <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={toolsColor} icon={Wind} />
+            <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={toolsColor} icon={Music} label="SFX" />
+            <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={toolsColor} icon={Music} />
+            <div className={clsx("w-[1px] h-4 mx-1 bg-latent-purple/30")} />
+            <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={toolsColor} icon={Volume2} iconOff={VolumeX} />
+            <div className={clsx("w-[1px] h-4 mx-1 bg-latent-purple/30")} />
+            <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-white hover:bg-latent-purple/20", toolsColor)}>
                 <Settings size={14} className="animate-spin-slow" />
             </button>
         </div>
