@@ -6,6 +6,7 @@ import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { ParticleShape } from '@/engine/ecs/types';
 
 export class HoverDrift extends BTNode {
   private minDur: number;
@@ -30,11 +31,7 @@ export class HoverDrift extends BTNode {
         return NodeState.RUNNING;
     }
 
-    if (!state.timers) state.timers = {};
-    if (!state.data) state.data = {};
-
     if (!state.timers.hover) {
-        // Randomize duration on entry
         state.timers.hover = this.minDur + Math.random() * (this.maxDur - this.minDur);
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
@@ -79,68 +76,38 @@ export class HoverDrift extends BTNode {
   }
 }
 
-export class FaceTarget extends BTNode {
+/**
+ * Consolidated Attack Node: Faces target for a duration, then fires.
+ * Handles tracking, audio sizzle, and exhaust particles.
+ */
+export class AimAndFire extends BTNode {
+  constructor(private aimDuration: number, private projectileSpeed: number, private configId: string) { super(); }
+
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
 
-    if (!transform || !target) return NodeState.FAILURE;
+    if (!transform || !target || !state) return NodeState.FAILURE;
 
+    // Initialize Timer
+    if (state.timers.aim === undefined) {
+        state.timers.aim = this.aimDuration;
+    }
+
+    // --- 1. TRACKING & PHYSICS ---
     if (motion) {
-        motion.vx *= 0.9;
-        motion.vy *= 0.9;
+        motion.vx *= 0.8;
+        motion.vy *= 0.8;
     }
 
     const dx = target.x - transform.x;
     const dy = target.y - transform.y;
     transform.rotation = Math.atan2(dy, dx);
 
-    return NodeState.SUCCESS;
-  }
-}
-
-export class FireProjectile extends BTNode {
-  constructor(private speed: number, private configId: string) { super(); }
-
-  tick(entity: Entity, context: AIContext): NodeState {
-    const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    
-    if (!transform) return NodeState.FAILURE;
-
-    const dirX = Math.cos(transform.rotation);
-    const dirY = Math.sin(transform.rotation);
-
-    context.spawnProjectile(
-        transform.x + dirX * 1.5, 
-        transform.y + dirY * 1.5, 
-        dirX * this.speed, 
-        dirY * this.speed, 
-        undefined, 
-        this.configId, 
-        entity.id as number
-    );
-
-    context.playSound('fx_enemy_fire', transform.x);
-    
-    const motion = entity.getComponent<MotionData>(ComponentType.Motion);
-    if (motion) {
-        motion.vx = -dirX * 5.0;
-        motion.vy = -dirY * 5.0;
-    }
-
-    context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
-
-    return NodeState.SUCCESS;
-  }
-}
-
-export class ExhaustFX extends BTNode {
-  tick(entity: Entity, context: AIContext): NodeState {
-    const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    const state = entity.getComponent<AIStateData>(ComponentType.State);
-    if (!transform || !state) return NodeState.FAILURE;
-
+    // --- 2. VISUALS & AUDIO (Charging Effects) ---
+    // Audio Loop
     if (!state.timers.sizzle || state.timers.sizzle <= 0) {
         context.playSound('fx_exhaust_sizzle', transform.x);
         state.timers.sizzle = 0.15;
@@ -148,6 +115,7 @@ export class ExhaustFX extends BTNode {
         state.timers.sizzle -= context.delta;
     }
 
+    // Particle Emissions (Exhaust)
     const rearAngle = transform.rotation + Math.PI;
     const offset = 0.5;
     const spreadAngle = 0.2; 
@@ -164,9 +132,47 @@ export class ExhaustFX extends BTNode {
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
         
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0);
+        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, ParticleShape.SQUARE);
     }
 
-    return NodeState.SUCCESS;
+    // --- 3. TIMER LOGIC ---
+    state.timers.aim -= context.delta;
+
+    // --- 4. FIRE LOGIC ---
+    if (state.timers.aim <= 0) {
+        state.timers.aim = undefined; // Reset
+
+        const dirX = Math.cos(transform.rotation);
+        const dirY = Math.sin(transform.rotation);
+
+        context.spawnProjectile(
+            transform.x + dirX * 1.5, 
+            transform.y + dirY * 1.5, 
+            dirX * this.projectileSpeed, 
+            dirY * this.projectileSpeed, 
+            undefined, 
+            this.configId, 
+            entity.id as number
+        );
+
+        context.playSound('fx_enemy_fire', transform.x);
+        
+        // Recoil Kick
+        if (motion) {
+            motion.vx = -dirX * 5.0;
+            motion.vy = -dirY * 5.0;
+        }
+
+        context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+
+        return NodeState.SUCCESS;
+    }
+
+    return NodeState.RUNNING;
   }
 }
+
+// Deprecated nodes kept for type compatibility if needed elsewhere
+export class FaceTarget extends BTNode { tick() { return NodeState.SUCCESS; } }
+export class FireProjectile extends BTNode { constructor(a:any, b:any){super();} tick() { return NodeState.SUCCESS; } }
+export class ExhaustFX extends BTNode { tick() { return NodeState.SUCCESS; } }

@@ -1,6 +1,7 @@
 import { Component } from '@/engine/ecs/Component';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AIBehaviorState, AI_STATE } from '@/engine/ai/AIStateTypes';
+import { AIBlackboard } from '@/engine/ai/AIBlackboard';
 
 export class AIStateData extends Component {
   readonly _type = ComponentType.State;
@@ -8,8 +9,8 @@ export class AIStateData extends Component {
   constructor(
     public current: AIBehaviorState = AI_STATE.IDLE,
     public timers: Record<string, number> = {},
-    public data: Record<string, any> = {},
-    public treeState: any = null,
+    public data: AIBlackboard = {},
+    public treeState: Record<string, number> = {},
     public stunTimer: number = 0
   ) {
     super();
@@ -19,7 +20,7 @@ export class AIStateData extends Component {
     this.current = data.current ?? AI_STATE.IDLE;
     this.timers = data.timers ?? {};
     this.data = data.data ?? {};
-    this.treeState = data.treeState ?? null;
+    this.treeState = data.treeState ?? {};
     this.stunTimer = data.stunTimer ?? 0;
     return this;
   }

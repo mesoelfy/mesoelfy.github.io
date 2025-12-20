@@ -11,7 +11,7 @@ import { IsTargetInRange } from './nodes/conditions';
 
 // Specifics
 import { DrillAttack } from './nodes/drillerNodes';
-import { HoverDrift, FaceTarget, FireProjectile, ExhaustFX } from './nodes/hunterNodes';
+import { HoverDrift, AimAndFire } from './nodes/hunterNodes';
 import { OrbitControl, ChargeMechanic, FireDaemonShot, HasTargetLock, DaemonAim } from './nodes/daemonNodes';
 
 type NodeConstructor = new (...args: any[]) => BTNode;
@@ -44,9 +44,7 @@ class NodeRegistry {
 
     // Hunter
     this.register('HoverDrift', HoverDrift);
-    this.register('FaceTarget', FaceTarget);
-    this.register('FireProjectile', FireProjectile);
-    this.register('ExhaustFX', ExhaustFX);
+    this.register('AimAndFire', AimAndFire); // NEW
 
     // Daemon
     this.register('OrbitControl', OrbitControl);

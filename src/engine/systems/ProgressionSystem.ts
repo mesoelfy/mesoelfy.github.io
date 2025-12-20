@@ -3,6 +3,7 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { GameStream } from '@/engine/state/GameStream';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { UpgradeOption } from '@/engine/types/game.types';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -10,14 +11,12 @@ export class ProgressionSystem implements IGameSystem {
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
-  public activeUpgrades: Record<string, number> = {
-    'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
-    'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
-  };
+  
+  public activeUpgrades: Partial<Record<UpgradeOption, number>> = {};
 
   constructor(private events: IGameEventService) {
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        this.applyUpgrade(p.option);
+        this.applyUpgrade(p.option as UpgradeOption);
     });
     
     this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
@@ -44,7 +43,7 @@ export class ProgressionSystem implements IGameSystem {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
-        this.syncStore(); // Level up is rare, safe to sync to React
+        this.syncStore(); 
     }
     
     GameStream.set('XP', this.xp);
@@ -52,14 +51,17 @@ export class ProgressionSystem implements IGameSystem {
     GameStream.set('LEVEL', this.level);
   }
 
-  public applyUpgrade(option: string) {
+  public applyUpgrade(option: UpgradeOption) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
+          
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
               this.syncStore(); 
               return;
           }
-          this.activeUpgrades[option] = (this.activeUpgrades[option] || 0) + 1;
+          
+          const current = this.activeUpgrades[option] || 0;
+          this.activeUpgrades[option] = current + 1;
           this.syncStore();
       }
   }

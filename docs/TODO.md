@@ -666,3 +666,4 @@ Have a pop-up like wikipedia does asking for money $2.75 / $4.20 / $6.66 / $7.77
 
 sniffer is broken
 daemon ally persists after game over state
+double max sound threshold or add 100
