@@ -102,12 +102,21 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
     
-    // Hide Reticle on Game Over so the Cursor can take over
+    // Logic:
+    // 1. If Intro Not Done: Hide (0)
+    // 2. If Zen Mode: Show (1)
+    // 3. If System Failure (Game Over) AND Not Zen Mode: Hide (0) - to let Cursor take over
+    // 4. Otherwise: Show (1)
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
-    const targetScale = (introDone && !isSystemFailure) ? 1 : 0;
+    const isZenMode = useGameStore.getState().isZenMode;
+    const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
     
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
-    if (animScale.current < 0.01) { containerRef.current.visible = false; return; }
+    
+    if (animScale.current < 0.01) { 
+        containerRef.current.visible = false; 
+        return; 
+    }
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
@@ -129,7 +138,7 @@ export const PlayerActor = () => {
     const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
-    const isDeadState = isPlayerDead || isSystemFailure;
+    const isDeadState = (isPlayerDead || isSystemFailure) && !isZenMode;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
     
@@ -137,20 +146,45 @@ export const PlayerActor = () => {
         if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25; 
         else reticleRef.current.rotation.z = -renderTrans.rotation;
         
-        let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
-        
-        tempColor.current.lerp(targetColor, 0.2); 
-        
-        if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
-        else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
-        else reticleColor.current.lerp(tempColor.current, 0.2);
+        // --- COLOR LOGIC ---
+        if (isZenMode) {
+            const time = state.clock.elapsedTime * 0.2; // Slower base cycle
+            
+            // 1. Center Dot (Leading, almost white)
+            tempColor.current.setHSL(time % 1, 1.0, 0.9);
+            
+            // 2. Reticle Ring (Delayed by 0.1, saturated)
+            reticleColor.current.setHSL((time - 0.1) % 1, 0.9, 0.6);
+            
+            // 3. Backing Circle (Delayed by 0.2, darker)
+            backingMaterial.uniforms.uColor.value.setHSL((time - 0.2) % 1, 0.8, 0.5);
+            
+            // 4. Ambient Glow (Delayed by 0.3, creating the trail)
+            ambientMaterial.uniforms.uColor.value.setHSL((time - 0.3) % 1, 0.8, 0.4);
 
-        if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
+        } else {
+            // Standard Logic
+            let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+            
+            tempColor.current.lerp(targetColor, 0.2); 
+            
+            if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
+            else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
+            else reticleColor.current.lerp(tempColor.current, 0.2);
+
+            if (hitFlash.current > 0.01) { 
+                tempColor.current.lerp(COL_HIT, hitFlash.current); 
+                reticleColor.current.lerp(COL_HIT, hitFlash.current); 
+            }
+            
+            // Apply to Materials
+            ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
+            backingMaterial.uniforms.uColor.value.copy(tempColor.current);
+        }
+
+        // Apply calculated colors to Meshes
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
-        
-        ambientMaterial.uniforms.uColor.value.copy(tempColor.current);
-        backingMaterial.uniforms.uColor.value.copy(tempColor.current);
         
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current);
         centerDotRef.current.geometry = centerGeo;
