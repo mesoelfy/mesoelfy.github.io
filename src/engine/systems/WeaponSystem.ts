@@ -4,6 +4,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -131,6 +132,7 @@ export class WeaponSystem implements IGameSystem {
         }
         if (shot.isHoming) {
             bullet.addComponent(new IdentityData('BULLET')); 
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
         }
     });
 

@@ -89,7 +89,11 @@ export class RenderSystem implements IGameSystem {
                 effect.flash = Math.max(0, effect.flash - (delta * CFG.FLASH_DECAY));
                 if (transform) transform.scale = 1.0 + (effect.flash * 0.25);
             } else {
-                if (transform && transform.scale !== 1.0) transform.scale = 1.0;
+                // BUGFIX: Only reset scale if entity is fully spawned.
+                // Prevents overriding 0.0 scale during spawn phase.
+                if (transform && transform.scale !== 1.0 && effect.spawnProgress >= 1.0) {
+                    transform.scale = 1.0;
+                }
             }
         }
     }

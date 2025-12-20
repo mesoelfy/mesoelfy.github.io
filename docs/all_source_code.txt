@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 12:10:37 CST 2025
+Generated on: Sat Dec 20 13:48:43 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -2235,8 +2235,6 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { useState } from 'react';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { IPanelSystem } from '@/engine/interfaces';
 
 export const ZenBomb = () => {
   const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
@@ -2247,17 +2245,21 @@ export const ZenBomb = () => {
   if (!isGameOver || isZenMode) return null;
 
   const handleClick = () => {
-    setClicked(true); AudioSystem.playClick();
+    setClicked(true); 
+    AudioSystem.playClick();
+    
+    // 1. Trigger the Purge FX immediately (Audio + Visual Blast)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
     AudioSystem.playSound('syn_bass_drop');
-    setTimeout(() => {
-        GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: 'UI_PURGE_TRIGGER' }); 
-        try {
-            const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-            if (panels) panels.destroyAll();
-        } catch (e) { console.warn(e); }
-    }, 500);
-    setTimeout(() => { activateZenMode(); AudioSystem.playAmbience('ambience_core'); }, 5500);
+
+    // 2. HOLD STATE (3 Seconds)
+    // We do nothing here. The user sits with the broken UI and the blast FX.
+    
+    // 3. Transition to Zen Mode
+    setTimeout(() => { 
+        activateZenMode(); 
+        AudioSystem.playAmbience('ambience_core'); 
+    }, 3000);
   };
 
   return (
@@ -2974,6 +2976,10 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const visualRef = useReactRef<HTMLDivElement>(null);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
+  
+  // Game Over is strictly strictly integrity <= 0.
+  // We use this to force the shattered state, even if Zen Mode has technically activated in the store.
+  // Because integrity is NOT reset by Zen Mode activation (only by resetGame), this persists.
   const isGameOver = Math.floor(systemIntegrity) <= 0;
 
   if (gameId) {
@@ -2998,7 +3004,12 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
   useReactEffect(() => {
-      isGameOver ? shakeControls.start("shattered") : shakeControls.start("visible");
+      // Prioritize Shattered state above all else if integrity is 0
+      if (isGameOver) {
+          shakeControls.start("shattered");
+      } else {
+          shakeControls.start("visible");
+      }
   }, [isGameOver, shakeControls]);
 
   useReactEffect(() => {
@@ -9666,8 +9677,6 @@ import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { GameProvider } from '@/engine/state/GameContext';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DOM_ID } from '@/ui/config/DOMConfig';
@@ -9691,24 +9700,13 @@ export default function Home() {
   const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
-  const isGameOver = systemIntegrity <= 0;
   const isSandbox = bootState === 'sandbox';
   const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
-  const [showPanels, setShowPanels] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-      const unsub = GameEventBus.subscribe(GameEvents.LOG_DEBUG, (p) => {
-          if (p.msg === 'UI_PURGE_TRIGGER') {
-              setShowPanels(false);
-          }
-      });
-      return unsub;
-  }, []);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -9859,12 +9857,13 @@ export default function Home() {
                   >
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
-                          {!isZenMode && showPanels && (
+                          {!isZenMode && (
                           <motion.div 
                               className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
                               initial="hidden"
                               animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.8 } }} // Slow dissolve
+                              // LONG EXIT DURATION FOR GRACEFUL FADE
+                              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
                               variants={{
                               hidden: { opacity: 0 },
                               visible: { 
@@ -10240,7 +10239,7 @@ export const SYS_LIMITS = {
   SPATIAL_GRID_SIZE: 4096,
   SPATIAL_CELL_SIZE: 4,
   EVENT_BUFFER_SIZE: 4096,
-  MAX_POLYPHONY: 100,
+  MAX_POLYPHONY: 200,
   SAMPLE_RATE: 44100,
 } as const;
 
@@ -16744,7 +16743,7 @@ import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
-import { TargetData } from '@/engine/ecs/components/TargetData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -16773,7 +16772,15 @@ export class WeaponSystem implements IGameSystem {
     if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
 
     let playerEntity = null;
-    for (const p of this.registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
+    const players = this.registry.getByTag(Tag.PLAYER);
+    for (const p of players) {
+        const id = p.getComponent<IdentityData>(ComponentType.Identity);
+        if (id && id.variant === 'PLAYER') {
+            playerEntity = p; 
+            break; 
+        }
+    }
+    
     if (!playerEntity) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
@@ -16794,22 +16801,46 @@ export class WeaponSystem implements IGameSystem {
   private triggerPurge() {
       let startX = 0, startY = 0;
       
-      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
-      if (player) {
-          const t = player.getComponent<TransformData>(ComponentType.Transform);
-          if (t) { startX = t.x; startY = t.y; }
+      const players = this.registry.getByTag(Tag.PLAYER);
+      for (const p of players) {
+          const id = p.getComponent<IdentityData>(ComponentType.Identity);
+          if (id && id.variant === 'PLAYER') {
+              const t = p.getComponent<TransformData>(ComponentType.Transform);
+              if (t) { startX = t.x; startY = t.y; }
+              break;
+          }
       }
 
-      const count = 360; 
-      const speed = 45; 
-      const damage = 100;
-      
+      // 1. CLEANUP: Destroy all existing bullets to prevent visual artifacts
+      const bullets = this.registry.getByTag(Tag.BULLET);
+      // Create a copy of the list to avoid modification issues during iteration
+      const bulletsToKill = Array.from(bullets); 
+      for (const b of bulletsToKill) {
+          this.registry.destroyEntity(b.id);
+      }
+
+      // 2. FX
       this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, startX * 100, startY * 100, 0);
       this.fastEvents.emit(FastEventType.CAM_SHAKE, 100); 
 
+      // 3. SPAWN RING
+      const count = 360; 
+      const speed = 45; 
+      const damage = 100;
+      const life = 0.8; 
+      
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, Faction.FRIENDLY, 3.0, damage, 'PLAYER_PURGE');
+          this.spawner.spawnBullet(
+              startX, 
+              startY, 
+              Math.cos(angle) * speed, 
+              Math.sin(angle) * speed, 
+              Faction.FRIENDLY, 
+              life, 
+              damage, 
+              'PLAYER_PURGE'
+          );
       }
   }
 
@@ -16839,7 +16870,7 @@ export class WeaponSystem implements IGameSystem {
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
         if (shot.isHoming) {
-            bullet.addComponent(new TargetData(null, 'ENEMY'));
+            bullet.addComponent(new IdentityData('BULLET')); 
         }
     });
 
@@ -18174,6 +18205,7 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
+  private isPurging = false;
 
   constructor(
     private spawner: IEntitySpawner,
@@ -18182,6 +18214,13 @@ export class WaveSystem implements IGameSystem {
   ) {
     this.reset();
     this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
+    
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this.isPurging = true;
+            this.spawnQueue = [];
+        }
+    });
   }
 
   private reset() {
@@ -18191,9 +18230,11 @@ export class WaveSystem implements IGameSystem {
     this.loopCount = 0;
     this.scenarioInit = false;
     this.hasStressTested = false;
+    this.isPurging = false;
   }
 
   update(delta: number, time: number): void {
+    if (this.isPurging) return;
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
@@ -18220,7 +18261,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   private triggerStressTest() {
-      if (this.hasStressTested) return;
+      if (this.hasStressTested || this.isPurging) return;
       this.hasStressTested = true;
 
       const { width, height } = ViewportHelper.viewport;
@@ -18232,7 +18273,15 @@ export class WaveSystem implements IGameSystem {
           for(let i = 0; i < countPerType; i++) {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
-              this.spawner.spawnEnemy(type, x, y);
+              
+              // USE GENERIC SPAWN TO FORCE ZERO SCALE INITIALIZATION
+              this.spawner.spawn(type, {
+                  [ComponentType.Transform]: { x, y },
+                  // Crucial: Set RenderTransform scale to 0 to prevent 1-frame flash before logic runs
+                  [ComponentType.RenderTransform]: { scale: 0.0 },
+                  // Crucial: Initialize spawn progress to 0
+                  [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
+              });
           }
       });
   }
@@ -18414,6 +18463,17 @@ export class LifeCycleSystem implements IGameSystem {
     this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.purgeHostiles();
     });
+
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.purgeSummons();
+    });
+
+    // NEW: Also purge hostiles immediately when PURGE is clicked to prevent lingering enemies
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this.purgeHostiles();
+        }
+    });
   }
 
   update(delta: number, time: number): void {
@@ -18437,16 +18497,21 @@ export class LifeCycleSystem implements IGameSystem {
           const transform = entity.getComponent<TransformData>(ComponentType.Transform);
           
           if (identity && transform) {
-             this.events.emit(GameEvents.ENEMY_DESTROYED, { 
-                id: entity.id as number, 
-                type: identity.variant, 
-                x: transform.x, 
-                y: transform.y 
-             });
+             const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
+             
+             if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
+                 this.events.emit(GameEvents.ENEMY_DESTROYED, { 
+                    id: entity.id as number, 
+                    type: identity.variant, 
+                    x: transform.x, 
+                    y: transform.y 
+                 });
+             }
              
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
+             else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
              
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
@@ -18457,13 +18522,26 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   private purgeHostiles() {
-      // Destroy everything EXCEPT the player
-      // This keeps the reticle moving and the camera logic working
+      // Destroy everything EXCEPT the player tag
       const allEntities = this.registry.getAll();
       for (const entity of allEntities) {
           if (!entity.hasTag(Tag.PLAYER)) {
-              // Optional: Spawn disappearing FX for enemies?
-              // For now, just silent wipe to be instant
+              this.registry.destroyEntity(entity.id);
+          }
+      }
+  }
+
+  private purgeSummons() {
+      const allies = this.registry.getByTag(Tag.PLAYER);
+      for (const entity of allies) {
+          if (!entity.active) continue;
+          
+          const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+          if (identity && identity.variant === EnemyTypes.DAEMON) {
+              const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+              if (transform) {
+                  this.events.emit(GameEvents.SPAWN_FX, { type: 'IMPACT_WHITE', x: transform.x, y: transform.y });
+              }
               this.registry.destroyEntity(entity.id);
           }
       }
