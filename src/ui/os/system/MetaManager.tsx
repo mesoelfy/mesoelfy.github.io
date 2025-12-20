@@ -34,7 +34,6 @@ export const MetaManager = () => {
       CONSOLE_STYLES.CYAN
     );
 
-    // RESTORED: Debug Hint
     console.log(
       `%c[DEV_HINT] To silence YouTube/AdBlock errors, paste this filter above:\n` +
       `%c-source:www-embed-player.js -source:base.js -ERR_BLOCKED_BY_CLIENT`,
@@ -49,7 +48,9 @@ export const MetaManager = () => {
       const unsub = GameEventBus.subscribe(GameEvents.BOOT_LOG, (p) => {
           setLastLog(p.message);
           
-          let foundKey = 'INIT';
+          let foundKey: string | null = null;
+          
+          // Strict matching against constants
           for (const [textMatch, code] of Object.entries(BOOT_KEYS)) {
               if (p.message.includes(textMatch)) { 
                   foundKey = code;
@@ -57,10 +58,10 @@ export const MetaManager = () => {
               }
           }
           
-          setBootKey(prev => {
-              if (prev !== foundKey) return foundKey;
-              return prev;
-          });
+          // Only update if we found a match, to prevent falling back to INIT accidentally
+          if (foundKey) {
+              setBootKey(foundKey);
+          }
       });
       return unsub;
   }, []);

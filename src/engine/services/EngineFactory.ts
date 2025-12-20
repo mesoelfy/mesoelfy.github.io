@@ -4,7 +4,7 @@ import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { EntitySpawner } from './EntitySpawner';
 import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
-import { GameEventService } from '@/engine/signals/GameEventBus';
+import { SharedGameEventBus } from '@/engine/signals/GameEventBus'; // IMPORT SHARED
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
@@ -52,7 +52,10 @@ export class EngineFactory {
   public static create(mode: EngineMode): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
-    const eventBus = new GameEventService();
+    
+    // USE SHARED BUS (Do not create new)
+    const eventBus = SharedGameEventBus; 
+    
     const fastEventBus = new FastEventBusImpl();
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
@@ -67,7 +70,7 @@ export class EngineFactory {
     ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
-    ServiceLocator.register('HUDService', hudService); // Explicitly Registered Here
+    ServiceLocator.register('HUDService', hudService);
 
     // 3. Content Registration
     registerAllComponents();
@@ -119,7 +122,7 @@ export class EngineFactory {
 
     // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
-    register(inputSystem, SystemPhase.INPUT); // Already registered globally, so no name needed
+    register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     
     if (mode === 'DESKTOP') {
@@ -170,7 +173,7 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(feedbackBridge, SystemPhase.STATE); 
-    register(hudService, SystemPhase.STATE); // No name passed, avoids overwrite
+    register(hudService, SystemPhase.STATE);
 
     // PHASE 5: RENDER
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
