@@ -1,7 +1,7 @@
 'use client';
 
 import { Canvas } from '@react-three/fiber';
-import { MatrixGrid } from '@/ui/sim/vfx/MatrixGrid';
+import { WireframeFloor } from '@/ui/sim/vfx/WireframeFloor';
 import { Suspense } from 'react';
 import { clsx } from 'clsx';
 
@@ -21,7 +21,7 @@ export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />
-        <MatrixGrid />
+        <WireframeFloor />
         <ambientLight intensity={0.2} />
         <Suspense fallback={null}>
            {children}

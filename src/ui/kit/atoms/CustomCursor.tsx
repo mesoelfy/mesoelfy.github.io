@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/engine/state/global/useStore';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 import { clsx } from 'clsx';
 
 export const CustomCursor = () => {
@@ -10,10 +11,18 @@ export const CustomCursor = () => {
   const [isOnScrollbar, setIsOnScrollbar] = useState(false);
   
   const { bootState, activeModal, isDebugOpen, isBreaching } = useStore();
+  const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
   const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown') && !isOnScrollbar;
+  const isGameOver = systemIntegrity <= 0;
+
+  // Show Cursor if:
+  // 1. Not in Game
+  // 2. OR Menu is Open
+  // 3. OR Mobile Lockdown
+  // 4. OR Game Over (This allows clicking the Purge Button)
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown' || isGameOver) && !isOnScrollbar;
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -44,7 +53,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching]);
+  }, [isGameActive, isMenuOpen, isBreaching, isGameOver]);
 
   return (
     <>

@@ -8,14 +8,12 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
-  // Array of Arrays for Phased Execution [Phase0[], Phase1[], ...]
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
   
   public registry: IEntityRegistry; 
   private accumulator: number = 0;
   private simulationTime: number = 0;
 
-  // Core System References (Injected)
   private panelSystem: IPanelSystem | null = null;
   private gameSystem: IGameStateSystem | null = null;
   private timeSystem: TimeSystem | null = null;
@@ -49,16 +47,14 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // Game Over Logic
+    // --- GAME OVER LOGIC CHANGE ---
+    // Instead of returning (stopping the loop), we just flag it.
+    // This allows physics (projectiles) and rendering to continue.
     if (this.gameSystem && this.panelSystem) {
         if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
             gameStore.stopGame();
             GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
             this.gameSystem.isGameOver = true; 
-            return;
-        }
-        if (!gameStore.isPlaying) {
-            this.gameSystem.isGameOver = true;
         }
     }
 
@@ -80,13 +76,6 @@ export class GameEngineCore implements IGameSystem {
     const fixedStep = WorldConfig.time.fixedDelta;
 
     while (this.accumulator >= fixedStep) {
-        // Clear Fast Event Buffer at START of simulation step
-        // This ensures events generated in previous step (or render) are gone?
-        // Actually, we want to clear at end of frame or start of frame.
-        // If we clear here, we clear accumulated events from previous ticks?
-        // Let's clear at the very end of the update loop.
-        
-        // Iterate Phases 0 to 5
         for (let phase = 0; phase < this.systems.length; phase++) {
             const phaseSystems = this.systems[phase];
             for (let i = 0; i < phaseSystems.length; i++) {
@@ -101,7 +90,6 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
-    // Clear Fast Bus after all systems (including Render) have run
     if (this.fastEventBus) {
         this.fastEventBus.clear();
     }

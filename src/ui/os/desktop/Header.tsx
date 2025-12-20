@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Music, Activity, Wind, Settings } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useEffect, useState, useRef } from 'react';
@@ -41,6 +41,7 @@ export const Header = () => {
   const { audioSettings, toggleMaster, toggleMusic, toggleSfx, toggleAmbience, toggleSettings } = useStore();
   const audio = useAudio();
   const isPlaying = useGameStore(state => state.isPlaying);
+  const isZenMode = useGameStore(state => state.isZenMode);
   
   // -- STREAM BINDINGS --
   const scoreRef = useRef<HTMLSpanElement>(null);
@@ -51,16 +52,8 @@ export const Header = () => {
   useStreamText('SCORE', scoreRef, (v) => v.toString().padStart(4, '0'));
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
-      // Update Bar Width directly
-      if (barRef.current) {
-          barRef.current.style.width = `${val}%`;
-      }
-      // Update Text directly
-      if (integrityRef.current) {
-          integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
-      }
-      // Only re-render React if status tier changes to avoid churn
-      // This keeps the "colors" correct without re-rendering every frame for width
+      if (barRef.current) barRef.current.style.width = `${val}%`;
+      if (integrityRef.current) integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
       setIntegrityState(val);
   });
 
@@ -72,16 +65,27 @@ export const Header = () => {
   const isGameOver = integrityState <= 0;
   
   let statusColor = "text-primary-green";
-  if (isCritical) statusColor = "text-critical-red";
+  if (isZenMode) statusColor = "text-white";
+  else if (isCritical) statusColor = "text-critical-red";
   else if (isWarning) statusColor = "text-alert-yellow";
 
   const heartbeatControls = useHeartbeat();
 
   return (
     <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
+      
+      {/* Zen Gradient Overlay */}
+      {isZenMode && (
+          <motion.div 
+            className="absolute inset-x-0 bottom-0 h-[2px] z-50 bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+            animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+          />
+      )}
+
       <div className="flex items-center gap-4">
         <motion.span 
-            animate={isCritical ? heartbeatControls : "idle"} 
+            animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },
                 heartbeat: { 
@@ -92,13 +96,18 @@ export const Header = () => {
             }} 
             className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
         >
-          MESOELFY_OS
+          {isZenMode ? (
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
+                  ZEN_OS
+              </span>
+          ) : "MESOELFY_OS"}
         </motion.span>
+        
         {mounted && (
           <div className={`hidden md:flex items-center gap-4 text-xs font-mono border-l border-white/10 pl-4 ${statusColor}`}>
-            <Radar active={isPlaying} panic={isCritical || (isPlaying && isCritical)} color={statusColor} />
+            <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={statusColor} />
             <div className="flex flex-col leading-none">
-                <span className="text-[8px] opacity-60 tracking-wider">THREAT_NEUTRALIZED</span>
+                <span className="text-[8px] opacity-60 tracking-wider">{isZenMode ? "PEACE_PROTOCOL" : "THREAT_NEUTRALIZED"}</span>
                 <span ref={scoreRef} className="font-bold text-lg tabular-nums tracking-widest">0000</span>
             </div>
           </div>
@@ -109,19 +118,16 @@ export const Header = () => {
             <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
             <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
             <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
-            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
-            
             <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            
             <button onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} className={clsx("flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm hover:text-alert-yellow hover:bg-white/5", statusColor)}>
                 <Settings size={14} className="animate-spin-slow" />
             </button>
         </div>
       </div>
-      {!isGameOver && (
+      
+      {!isGameOver && !isZenMode && (
         <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
           <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
               <motion.div 
@@ -136,9 +142,10 @@ export const Header = () => {
           </div>
         </div>
       )}
-      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim")}>
-        <Activity size={8} className={isCritical ? "animate-pulse" : ""} />
-        <span ref={integrityRef}>OS_INTEGRITY: 100%</span>
+      
+      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
+        {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
+        <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
       </div>
     </header>
   );

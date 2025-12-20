@@ -3,13 +3,13 @@ import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEvents } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
@@ -51,19 +51,24 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
-      if (!player) return;
-      const t = player.getComponent<TransformData>(ComponentType.Transform);
-      if (!t) return;
-
-      const count = 360; const speed = 45; const damage = 100;
+      let startX = 0, startY = 0;
       
-      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, t.x * 100, t.y * 100, 0);
+      const player = Array.from(this.registry.getByTag(Tag.PLAYER))[0];
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) { startX = t.x; startY = t.y; }
+      }
+
+      const count = 360; 
+      const speed = 45; 
+      const damage = 100;
+      
+      this.fastEvents.emit(FastEvents.SPAWN_FX, 13, startX * 100, startY * 100, 0);
       this.fastEvents.emit(FastEvents.CAM_SHAKE, 100); 
 
       for (let i = 0; i < count; i++) {
           const angle = (Math.PI * 2 * i) / count;
-          this.spawner.spawnBullet(t.x, t.y, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 2.0, damage, 'PLAYER_PURGE');
+          this.spawner.spawnBullet(startX, startY, Math.cos(angle) * speed, Math.sin(angle) * speed, false, 3.0, damage, 'PLAYER_PURGE');
       }
   }
 
@@ -92,7 +97,9 @@ export class WeaponSystem implements IGameSystem {
             const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
-        if (shot.isHoming) bullet.addComponent(new TargetData(null, 'ENEMY'));
+        if (shot.isHoming) {
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
+        }
     });
 
     this.fastEvents.emit(FastEvents.PLAY_SOUND, 1, pPos.x * 100);

@@ -1,8 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bomb, Skull } from 'lucide-react';
+import { Bomb, Skull, Infinity as InfinityIcon } from 'lucide-react';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { useState } from 'react';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IPanelSystem } from '@/engine/interfaces';
 
 export const ZenBomb = () => {
   const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
@@ -15,10 +19,22 @@ export const ZenBomb = () => {
   const handleClick = () => {
     setClicked(true);
     AudioSystem.playClick();
-    
+    AudioSystem.playSound('fx_reboot_success'); 
+
+    // 1. Fire Weapon to kill entities visually
+    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
+
+    // 2. Clear Panels silently so they don't obstruct the view
+    try {
+        const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+        if (panels) panels.destroyAll();
+    } catch (e) { console.warn(e); }
+
+    // 3. Wait 5 seconds (Game Loop still running physics for sparks/bullets)
     setTimeout(() => {
         activateZenMode();
-    }, 800);
+        AudioSystem.playAmbience('ambience_core'); 
+    }, 5000);
   };
 
   return (
@@ -31,8 +47,10 @@ export const ZenBomb = () => {
           transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
           
           onClick={handleClick}
-          // UPDATED: Z-120 to sit above System Failure Screens (Z-100)
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-pointer"
+          // Z-INDEX 120 (Below Custom Cursor at 20000)
+          // cursor-none ensures browser cursor doesn't appear
+          // pointer-events-auto is key
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-[120] flex flex-col items-center group cursor-none outline-none pointer-events-auto"
         >
           {/* CONNECTOR LINE */}
           <motion.div 
@@ -63,13 +81,13 @@ export const ZenBomb = () => {
           <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-critical-red/10 border border-critical-red/50 backdrop-blur-md z-10">
              <Skull size={10} className="text-critical-red animate-pulse" />
              <span className="text-[10px] font-mono font-black text-critical-red tracking-widest uppercase group-hover:text-white transition-colors">
-                PURGE_SYSTEM
+                SYSTEM_PURGE
              </span>
              <Skull size={10} className="text-critical-red animate-pulse" />
           </div>
           
-          <span className="text-[8px] text-critical-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            [ ENABLE_ZEN_MODE ]
+          <span className="text-[8px] text-critical-red/60 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+            <InfinityIcon size={8} /> [ ENTER_ZEN_MODE ]
           </span>
         </motion.button>
       )}

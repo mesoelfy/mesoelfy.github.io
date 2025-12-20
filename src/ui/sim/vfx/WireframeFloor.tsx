@@ -9,7 +9,7 @@ import { Tag } from '@/engine/ecs/types';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
-export const MatrixGrid = () => {
+export const WireframeFloor = () => {
   const { registry } = useGameContext();
   const groupRef = useRef<THREE.Group>(null);
   const gridRef = useRef<any>(null);
@@ -33,12 +33,31 @@ export const MatrixGrid = () => {
         if (render) groupRef.current.position.z = render.rotation % 5;
     }
 
-    const integrity = useGameStore.getState().systemIntegrity;
+    const { systemIntegrity, isZenMode } = useGameStore.getState();
     const bootState = useStore.getState().bootState;
 
-    let target = bootState === 'sandbox' ? colors.sandbox : (integrity < 30 ? colors.critical : (integrity < 60 ? colors.warning : colors.safe));
-    currentSectionColor.current.lerp(target.section, delta * 3.0);
-    currentCellColor.current.lerp(target.cell, delta * 3.0);
+    if (isZenMode) {
+        // Prismatic Flow
+        const time = state.clock.elapsedTime * 0.1;
+        currentSectionColor.current.setHSL(time % 1, 0.8, 0.1);
+        currentCellColor.current.setHSL((time + 0.1) % 1, 0.9, 0.5);
+    } else {
+        // Strict Priority: Sandbox -> Critical (Game Over) -> Warning -> Safe
+        let target = colors.safe;
+        
+        if (bootState === 'sandbox') {
+            target = colors.sandbox;
+        } else if (systemIntegrity <= 0) {
+            target = colors.critical; // Game Over / Purge Wait
+        } else if (systemIntegrity < 30) {
+            target = colors.critical;
+        } else if (systemIntegrity < 60) {
+            target = colors.warning;
+        }
+
+        currentSectionColor.current.lerp(target.section, delta * 3.0);
+        currentCellColor.current.lerp(target.cell, delta * 3.0);
+    }
 
     if (gridRef.current && gridRef.current.material) {
         const mat = gridRef.current.material;

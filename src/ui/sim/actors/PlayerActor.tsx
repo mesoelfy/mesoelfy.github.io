@@ -4,7 +4,6 @@ import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { IInteractionSystem } from '@/engine/interfaces';
@@ -102,7 +101,11 @@ export const PlayerActor = () => {
 
   useFrame((state, delta) => {
     if (!containerRef.current) return;
-    const targetScale = introDone ? 1 : 0;
+    
+    // Hide Reticle on Game Over so the Cursor can take over
+    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
+    const targetScale = (introDone && !isSystemFailure) ? 1 : 0;
+    
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     if (animScale.current < 0.01) { containerRef.current.visible = false; return; }
     containerRef.current.visible = true;
@@ -126,7 +129,6 @@ export const PlayerActor = () => {
     const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     
     const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
-    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     const isDeadState = isPlayerDead || isSystemFailure;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
