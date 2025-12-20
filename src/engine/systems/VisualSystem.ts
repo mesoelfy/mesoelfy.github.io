@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
@@ -9,6 +9,7 @@ import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import * as THREE from 'three';
 
 export class VisualSystem implements IGameSystem {
@@ -17,8 +18,18 @@ export class VisualSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem
-  ) {}
+    private interactionSystem: IInteractionSystem,
+    events: IGameEventService
+  ) {
+    // RESTORED: Flash logic moved from RenderSystem
+    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
+        const entity = this.registry.getEntity(p.id);
+        if (entity) {
+            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+            if (effect) effect.flash = 1.0; 
+        }
+    });
+  }
 
   update(delta: number, time: number): void {
     const CFG = VISUAL_CONFIG.DEFORMATION;
@@ -77,8 +88,7 @@ export class VisualSystem implements IGameSystem {
           model.b = this.tempColor.b;
       }
 
-      // 3. DYNAMIC SCALING (Pulse, Deform, Pop)
-      // Initialize with neutral 1.0
+      // 3. DYNAMIC SCALING
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
@@ -96,7 +106,7 @@ export class VisualSystem implements IGameSystem {
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
-          // Elasticity (Velocity Stretching)
+          // Elasticity
           if (motion && effect.elasticity > 0.01) {
               const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
               const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
@@ -137,7 +147,6 @@ export class VisualSystem implements IGameSystem {
           }
       }
 
-      // Write to Dynamic Scale (Non-Destructive)
       render.dynamicScaleX = dX;
       render.dynamicScaleY = dY;
       render.dynamicScaleZ = dZ;

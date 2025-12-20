@@ -17,6 +17,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   private entityMap = new Map<string, Entity>();
   private observer: ResizeObserver | null = null;
   private elements = new Map<string, HTMLElement>();
+  private rectCache = new Map<PanelId, WorldRect>();
 
   public get systemIntegrity() {
       return useGameStore.getState().systemIntegrity;
@@ -60,6 +61,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       this.observer?.disconnect();
       this.entityMap.clear();
       this.elements.clear();
+      this.rectCache.clear();
   }
 
   public register(id: PanelId, element: HTMLElement) {
@@ -89,6 +91,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       const el = this.elements.get(id);
       if (el) this.observer?.unobserve(el);
       this.elements.delete(id);
+      this.rectCache.delete(id);
       
       useGameStore.getState().unregisterPanel(id);
 
@@ -102,19 +105,23 @@ export class PanelRegistrySystem implements IPanelSystem {
   private syncEntity(id: PanelId, rect: DOMRect | { width: number, height: number }) {
       const entity = this.entityMap.get(id);
       const el = this.elements.get(id);
-      if (!entity || !el) return;
+      if (!el) return;
 
       const fullRect = el.getBoundingClientRect();
       const worldRect = ViewportHelper.domToWorld(id, fullRect);
+      
+      this.rectCache.set(id, worldRect);
 
-      const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-      const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
+      if (entity) {
+          const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+          const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
 
-      if (transform && collider) {
-          transform.x = worldRect.x;
-          transform.y = worldRect.y;
-          collider.width = worldRect.width;
-          collider.height = worldRect.height;
+          if (transform && collider) {
+              transform.x = worldRect.x;
+              transform.y = worldRect.y;
+              collider.width = worldRect.width;
+              collider.height = worldRect.height;
+          }
       }
   }
 
@@ -147,23 +154,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   public getPanelRect(id: PanelId): WorldRect | undefined {
-      const entity = this.entityMap.get(id);
-      if (entity) {
-          const t = entity.getComponent<TransformData>(ComponentType.Transform);
-          const c = entity.getComponent<ColliderData>(ComponentType.Collider);
-          if (t && c) {
-              const halfW = c.width / 2;
-              const halfH = c.height / 2;
-              return {
-                  id,
-                  x: t.x, y: t.y,
-                  width: c.width, height: c.height,
-                  left: t.x - halfW, right: t.x + halfW,
-                  top: t.y + halfH, bottom: t.y - halfH
-              };
-          }
-      }
-      return undefined;
+      return this.rectCache.get(id);
   }
 
   public getPanelState(id: PanelId) {
@@ -176,14 +167,22 @@ export class PanelRegistrySystem implements IPanelSystem {
       const results = [];
       const state = useGameStore.getState();
       
-      for(const [id, entity] of this.entityMap) {
+      for(const [id, rect] of this.rectCache) {
           const pid = id as PanelId;
-          const rect = this.getPanelRect(pid);
           const panel = state.panels[pid];
-          if (rect && panel) {
+          if (panel) {
               results.push({ ...rect, health: panel.health, isDestroyed: panel.isDestroyed });
           }
       }
       return results;
+  }
+
+  public getPanelAt(x: number, y: number): PanelId | null {
+      for (const [id, rect] of this.rectCache) {
+          if (x >= rect.left && x <= rect.right && y >= rect.bottom && y <= rect.top) {
+              return id;
+          }
+      }
+      return null;
   }
 }

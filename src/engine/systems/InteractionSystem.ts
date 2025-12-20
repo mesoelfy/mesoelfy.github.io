@@ -2,11 +2,6 @@ import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IIn
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { Tag } from '@/engine/ecs/types';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 
@@ -87,48 +82,32 @@ export class InteractionSystem implements IInteractionSystem {
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panels = this.registry.getByTag(Tag.OBSTACLE);
+    // Direct lookup via optimized PanelSystem cache
+    const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
 
-    for (const entity of panels) {
-        if (!entity.active) continue;
+    if (panelId) {
+        this.hoveringPanelId = panelId;
 
-        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
-        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+        const panelState = this.panelSystem.getPanelState(panelId);
+        if (!panelState) return;
 
-        if (!transform || !collider || !identity) continue;
+        // Skip if healthy
+        if (!panelState.isDestroyed && panelState.health >= 100) return;
 
-        const halfW = collider.width / 2;
-        const halfH = collider.height / 2;
-        
-        const inX = cursor.x >= transform.x - halfW && cursor.x <= transform.x + halfW;
-        const inY = cursor.y >= transform.y - halfH && cursor.y <= transform.y + halfH;
+        this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
 
-        if (inX && inY) {
-            const panelId = identity.variant as PanelId;
-            this.hoveringPanelId = panelId;
+        if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+            this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
+            this.lastRepairTime = time;
 
-            const panelState = this.panelSystem.getPanelState(panelId);
-            if (!panelState) continue;
-
-            if (!panelState.isDestroyed && panelState.health >= 100) continue;
-
-            this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
-
-            if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
-                this.lastRepairTime = time;
-
-                if (panelState.isDestroyed) {
-                    AudioSystem.playSound('loop_reboot');
-                } else {
-                    this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
-                }
-
-                const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
-                this.spawnRepairParticles(cursor, color);
+            if (panelState.isDestroyed) {
+                AudioSystem.playSound('loop_reboot');
+            } else {
+                this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
-            break; 
+
+            const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+            this.spawnRepairParticles(cursor, color);
         }
     }
   }

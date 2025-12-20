@@ -189,4 +189,5 @@ export interface IPanelSystem extends IGameSystem {
   getPanelRect(id: PanelId): WorldRect | undefined;
   getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
+  getPanelAt(x: number, y: number): PanelId | null;
 }
