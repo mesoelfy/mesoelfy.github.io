@@ -107,9 +107,9 @@ export class WeaponSystem implements IGameSystem {
   private processPurgeFrame(originX: number, originY: number) {
       const SHOTS_PER_FRAME = 3;
       const ANGLE_INCREMENT = 0.4; 
-      const SPEED = 24; // REDUCED: Was 35
+      const SPEED = 24; 
       const DAMAGE = 50;
-      const LIFE = 1.2;
+      const LIFE = 2.4; // DOUBLED (Was 1.2)
 
       for (let i = 0; i < SHOTS_PER_FRAME; i++) {
           if (this.purgeState.shotsRemaining <= 0) {
