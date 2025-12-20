@@ -12,9 +12,21 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
+interface PurgeState {
+    active: boolean;
+    shotsRemaining: number;
+    currentAngle: number;
+}
+
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubPurge: () => void;
+  
+  private purgeState: PurgeState = {
+      active: false,
+      shotsRemaining: 0,
+      currentAngle: 0
+  };
 
   constructor(
     private spawner: IEntitySpawner,
@@ -30,7 +42,11 @@ export class WeaponSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+
+    if (isDead && !this.purgeState.active) {
+        return;
+    }
 
     let playerEntity = null;
     const players = this.registry.getByTag(Tag.PLAYER);
@@ -43,6 +59,17 @@ export class WeaponSystem implements IGameSystem {
     }
     
     if (!playerEntity) return;
+
+    // --- HANDLE PURGE SEQUENCE ---
+    if (this.purgeState.active) {
+        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+        if (transform) {
+            this.processPurgeFrame(transform.x, transform.y);
+        }
+    }
+
+    // --- HANDLE NORMAL FIRE ---
+    if (this.purgeState.active || isDead) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
@@ -60,48 +87,55 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      let startX = 0, startY = 0;
-      
-      const players = this.registry.getByTag(Tag.PLAYER);
-      for (const p of players) {
-          const id = p.getComponent<IdentityData>(ComponentType.Identity);
-          if (id && id.variant === 'PLAYER') {
-              const t = p.getComponent<TransformData>(ComponentType.Transform);
-              if (t) { startX = t.x; startY = t.y; }
-              break;
+      // 60 fps * 2 seconds * 3 shots per frame = 360 shots
+      this.purgeState = {
+          active: true,
+          shotsRemaining: 360, 
+          currentAngle: 0
+      };
+
+      const player = this.getPlayerEntity();
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) {
+              this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, t.x * 100, t.y * 100, 0);
+              this.fastEvents.emit(FastEventType.CAM_SHAKE, 50); 
           }
       }
+  }
 
-      // 1. CLEANUP: Destroy all existing bullets to prevent visual artifacts
-      const bullets = this.registry.getByTag(Tag.BULLET);
-      // Create a copy of the list to avoid modification issues during iteration
-      const bulletsToKill = Array.from(bullets); 
-      for (const b of bulletsToKill) {
-          this.registry.destroyEntity(b.id);
-      }
+  private processPurgeFrame(originX: number, originY: number) {
+      const SHOTS_PER_FRAME = 3;
+      const ANGLE_INCREMENT = 0.4; 
+      const SPEED = 24; // REDUCED: Was 35
+      const DAMAGE = 50;
+      const LIFE = 1.2;
 
-      // 2. FX
-      this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, startX * 100, startY * 100, 0);
-      this.fastEvents.emit(FastEventType.CAM_SHAKE, 100); 
+      for (let i = 0; i < SHOTS_PER_FRAME; i++) {
+          if (this.purgeState.shotsRemaining <= 0) {
+              this.purgeState.active = false;
+              break;
+          }
 
-      // 3. SPAWN RING
-      const count = 360; 
-      const speed = 45; 
-      const damage = 100;
-      const life = 0.8; 
-      
-      for (let i = 0; i < count; i++) {
-          const angle = (Math.PI * 2 * i) / count;
+          const angle = this.purgeState.currentAngle;
+          const vx = Math.cos(angle) * SPEED;
+          const vy = Math.sin(angle) * SPEED;
+
           this.spawner.spawnBullet(
-              startX, 
-              startY, 
-              Math.cos(angle) * speed, 
-              Math.sin(angle) * speed, 
+              originX, originY, 
+              vx, vy, 
               Faction.FRIENDLY, 
-              life, 
-              damage, 
+              LIFE, 
+              DAMAGE, 
               'PLAYER_PURGE'
           );
+
+          if (this.purgeState.shotsRemaining % 5 === 0) {
+             this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
+          }
+
+          this.purgeState.currentAngle += ANGLE_INCREMENT;
+          this.purgeState.shotsRemaining--;
       }
   }
 
@@ -138,6 +172,15 @@ export class WeaponSystem implements IGameSystem {
 
     this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, pPos.x * 100);
     this.lastFireTime = time;
+  }
+
+  private getPlayerEntity() {
+      const players = this.registry.getByTag(Tag.PLAYER);
+      for (const p of players) {
+          const id = p.getComponent<IdentityData>(ComponentType.Identity);
+          if (id && id.variant === 'PLAYER') return p;
+      }
+      return null;
   }
 
   teardown(): void {

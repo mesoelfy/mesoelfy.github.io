@@ -15,7 +15,8 @@ const GEO_MAP: Record<string, string> = {
     'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
     'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
     'RING': GEOMETRY_IDS.PRJ_RING,
-    'ARROW': GEOMETRY_IDS.PRJ_ARROW
+    'ARROW': GEOMETRY_IDS.PRJ_ARROW,
+    'CHEVRON': GEOMETRY_IDS.PRJ_CHEVRON
 };
 
 export class EntitySpawner implements IEntitySpawner {
@@ -76,6 +77,9 @@ export class EntitySpawner implements IEntitySpawner {
     const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
     const s = config ? config.scale : [1,1,1]; 
 
+    // Disable stretching for Purge projectiles to keep them beefy
+    const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
+
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
@@ -91,7 +95,7 @@ export class EntitySpawner implements IEntitySpawner {
             scale: 1.0,
             baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: { elasticity: 2.0 },
+        [ComponentType.RenderEffect]: { elasticity },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     

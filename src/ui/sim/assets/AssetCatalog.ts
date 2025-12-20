@@ -29,4 +29,27 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
+
+  // --- CHEVRON GENERATOR ---
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CHEVRON, () => {
+      const shape = new THREE.Shape();
+      const w = 0.8; 
+      const h = 0.8; 
+      const t = 0.3; // Thickness of the V arms
+      
+      shape.moveTo(0, h);           // Tip
+      shape.lineTo(w, -h);          // Right Bottom Outer
+      shape.lineTo(w - t, -h);      // Right Bottom Inner
+      shape.lineTo(0, h - (t*2.5)); // Crotch (Inner V point)
+      shape.lineTo(-(w - t), -h);   // Left Bottom Inner
+      shape.lineTo(-w, -h);         // Left Bottom Outer
+      shape.lineTo(0, h);           // Back to Tip
+
+      const extrudeSettings = { depth: 0.2, bevelEnabled: false };
+      const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      geo.center(); // Center pivot
+      // Rotate to point forward (Up in Y is forward in our game logic usually, but Extrude implies Z depth)
+      // Actually standard rotation logic handles Y-up orientation well.
+      return geo;
+  });
 };

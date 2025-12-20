@@ -6,7 +6,8 @@ export const ProjectileGeometry = {
   DIAMOND: 'DIAMOND',
   PYRAMID: 'PYRAMID',
   RING: 'RING',
-  ARROW: 'ARROW'
+  ARROW: 'ARROW',
+  CHEVRON: 'CHEVRON'
 } as const;
 
 export type GeometryType = keyof typeof ProjectileGeometry;
@@ -54,13 +55,13 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
     spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
   },
   'PLAYER_PURGE': {
-    geometry: 'DIAMOND',
-    color: [10, 10, 10], // Pure bright white intensity
-    // Increased Width (X/Z) for a wider "blade" effect
-    scale: [1.8, 0.5, 1.8], 
-    spinSpeed: 20.0, 
+    geometry: 'CHEVRON',
+    color: [10, 10, 10], 
+    // [Width, Length/Forward, Thickness]
+    scale: [2.5, 0.7, 1.5], 
+    spinSpeed: 0, 
     pulseSpeed: 0, 
-    faceVelocity: false
+    faceVelocity: true 
   },
   'ENEMY_HUNTER': {
     geometry: 'ARROW',

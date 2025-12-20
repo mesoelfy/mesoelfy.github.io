@@ -1,11 +1,17 @@
 import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { Tag } from '@/engine/ecs/types';
+import { GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import * as THREE from 'three';
 
 const KEYS = [
-    'GEO_PRJ_SPHERE', 'GEO_PRJ_CAPSULE', 'GEO_PRJ_DIAMOND', 
-    'GEO_PRJ_PYRAMID', 'GEO_PRJ_RING', 'GEO_PRJ_ARROW'
+    GEOMETRY_IDS.PRJ_SPHERE, 
+    GEOMETRY_IDS.PRJ_CAPSULE, 
+    GEOMETRY_IDS.PRJ_DIAMOND, 
+    GEOMETRY_IDS.PRJ_PYRAMID, 
+    GEOMETRY_IDS.PRJ_RING, 
+    GEOMETRY_IDS.PRJ_ARROW,
+    GEOMETRY_IDS.PRJ_CHEVRON // NEW
 ];
 
 export const ProjectileActor = () => {

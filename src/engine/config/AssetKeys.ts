@@ -14,7 +14,8 @@ export const GEOMETRY_IDS = {
   PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
   PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
   PRJ_RING: 'GEO_PRJ_RING',
-  PRJ_ARROW: 'GEO_PRJ_ARROW'
+  PRJ_ARROW: 'GEO_PRJ_ARROW',
+  PRJ_CHEVRON: 'GEO_PRJ_CHEVRON' // NEW
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
