@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 13:48:43 CST 2025
+Generated on: Sat Dec 20 14:45:19 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -9007,11 +9007,17 @@ FILE: ./src/ui/sim/actors/ProjectileActor.tsx
 import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { Tag } from '@/engine/ecs/types';
+import { GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import * as THREE from 'three';
 
 const KEYS = [
-    'GEO_PRJ_SPHERE', 'GEO_PRJ_CAPSULE', 'GEO_PRJ_DIAMOND', 
-    'GEO_PRJ_PYRAMID', 'GEO_PRJ_RING', 'GEO_PRJ_ARROW'
+    GEOMETRY_IDS.PRJ_SPHERE, 
+    GEOMETRY_IDS.PRJ_CAPSULE, 
+    GEOMETRY_IDS.PRJ_DIAMOND, 
+    GEOMETRY_IDS.PRJ_PYRAMID, 
+    GEOMETRY_IDS.PRJ_RING, 
+    GEOMETRY_IDS.PRJ_ARROW,
+    GEOMETRY_IDS.PRJ_CHEVRON // NEW
 ];
 
 export const ProjectileActor = () => {
@@ -9586,6 +9592,29 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(GEOMETRY_IDS.PRJ_ARROW, () => new THREE.ConeGeometry(0.5, 1, 4));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
+
+  // --- CHEVRON GENERATOR ---
+  AssetService.registerGenerator(GEOMETRY_IDS.PRJ_CHEVRON, () => {
+      const shape = new THREE.Shape();
+      const w = 0.8; 
+      const h = 0.8; 
+      const t = 0.3; // Thickness of the V arms
+      
+      shape.moveTo(0, h);           // Tip
+      shape.lineTo(w, -h);          // Right Bottom Outer
+      shape.lineTo(w - t, -h);      // Right Bottom Inner
+      shape.lineTo(0, h - (t*2.5)); // Crotch (Inner V point)
+      shape.lineTo(-(w - t), -h);   // Left Bottom Inner
+      shape.lineTo(-w, -h);         // Left Bottom Outer
+      shape.lineTo(0, h);           // Back to Tip
+
+      const extrudeSettings = { depth: 0.2, bevelEnabled: false };
+      const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      geo.center(); // Center pivot
+      // Rotate to point forward (Up in Y is forward in our game logic usually, but Extrude implies Z depth)
+      // Actually standard rotation logic handles Y-up orientation well.
+      return geo;
+  });
 };
 
 
@@ -10113,7 +10142,8 @@ export const ProjectileGeometry = {
   DIAMOND: 'DIAMOND',
   PYRAMID: 'PYRAMID',
   RING: 'RING',
-  ARROW: 'ARROW'
+  ARROW: 'ARROW',
+  CHEVRON: 'CHEVRON'
 } as const;
 
 export type GeometryType = keyof typeof ProjectileGeometry;
@@ -10161,10 +10191,12 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
     spinSpeed: -2.0, pulseSpeed: 2.0, faceVelocity: false
   },
   'PLAYER_PURGE': {
-    geometry: 'DIAMOND',
-    color: [10, 10, 10],
-    scale: [0.6, 0.6, 0.6],
-    spinSpeed: 20.0, pulseSpeed: 0, faceVelocity: false
+    geometry: 'CHEVRON',
+    color: [10, 10, 10], 
+    scale: [2.5, 0.7, 1.5], 
+    spinSpeed: 0, 
+    pulseSpeed: 0, 
+    faceVelocity: true 
   },
   'ENEMY_HUNTER': {
     geometry: 'ARROW',
@@ -10820,7 +10852,8 @@ export const GEOMETRY_IDS = {
   PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
   PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
   PRJ_RING: 'GEO_PRJ_RING',
-  PRJ_ARROW: 'GEO_PRJ_ARROW'
+  PRJ_ARROW: 'GEO_PRJ_ARROW',
+  PRJ_CHEVRON: 'GEO_PRJ_CHEVRON' // NEW
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
@@ -16744,6 +16777,7 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -16751,9 +16785,21 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 
+interface PurgeState {
+    active: boolean;
+    shotsRemaining: number;
+    currentAngle: number;
+}
+
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubPurge: () => void;
+  
+  private purgeState: PurgeState = {
+      active: false,
+      shotsRemaining: 0,
+      currentAngle: 0
+  };
 
   constructor(
     private spawner: IEntitySpawner,
@@ -16769,7 +16815,11 @@ export class WeaponSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+
+    if (isDead && !this.purgeState.active) {
+        return;
+    }
 
     let playerEntity = null;
     const players = this.registry.getByTag(Tag.PLAYER);
@@ -16782,6 +16832,17 @@ export class WeaponSystem implements IGameSystem {
     }
     
     if (!playerEntity) return;
+
+    // --- HANDLE PURGE SEQUENCE ---
+    if (this.purgeState.active) {
+        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+        if (transform) {
+            this.processPurgeFrame(transform.x, transform.y);
+        }
+    }
+
+    // --- HANDLE NORMAL FIRE ---
+    if (this.purgeState.active || isDead) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
@@ -16799,48 +16860,55 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      let startX = 0, startY = 0;
-      
-      const players = this.registry.getByTag(Tag.PLAYER);
-      for (const p of players) {
-          const id = p.getComponent<IdentityData>(ComponentType.Identity);
-          if (id && id.variant === 'PLAYER') {
-              const t = p.getComponent<TransformData>(ComponentType.Transform);
-              if (t) { startX = t.x; startY = t.y; }
-              break;
+      // 60 fps * 2 seconds * 3 shots per frame = 360 shots
+      this.purgeState = {
+          active: true,
+          shotsRemaining: 360, 
+          currentAngle: 0
+      };
+
+      const player = this.getPlayerEntity();
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) {
+              this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, t.x * 100, t.y * 100, 0);
+              this.fastEvents.emit(FastEventType.CAM_SHAKE, 50); 
           }
       }
+  }
 
-      // 1. CLEANUP: Destroy all existing bullets to prevent visual artifacts
-      const bullets = this.registry.getByTag(Tag.BULLET);
-      // Create a copy of the list to avoid modification issues during iteration
-      const bulletsToKill = Array.from(bullets); 
-      for (const b of bulletsToKill) {
-          this.registry.destroyEntity(b.id);
-      }
+  private processPurgeFrame(originX: number, originY: number) {
+      const SHOTS_PER_FRAME = 3;
+      const ANGLE_INCREMENT = 0.4; 
+      const SPEED = 24; 
+      const DAMAGE = 50;
+      const LIFE = 2.4; // DOUBLED (Was 1.2)
 
-      // 2. FX
-      this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, startX * 100, startY * 100, 0);
-      this.fastEvents.emit(FastEventType.CAM_SHAKE, 100); 
+      for (let i = 0; i < SHOTS_PER_FRAME; i++) {
+          if (this.purgeState.shotsRemaining <= 0) {
+              this.purgeState.active = false;
+              break;
+          }
 
-      // 3. SPAWN RING
-      const count = 360; 
-      const speed = 45; 
-      const damage = 100;
-      const life = 0.8; 
-      
-      for (let i = 0; i < count; i++) {
-          const angle = (Math.PI * 2 * i) / count;
+          const angle = this.purgeState.currentAngle;
+          const vx = Math.cos(angle) * SPEED;
+          const vy = Math.sin(angle) * SPEED;
+
           this.spawner.spawnBullet(
-              startX, 
-              startY, 
-              Math.cos(angle) * speed, 
-              Math.sin(angle) * speed, 
+              originX, originY, 
+              vx, vy, 
               Faction.FRIENDLY, 
-              life, 
-              damage, 
+              LIFE, 
+              DAMAGE, 
               'PLAYER_PURGE'
           );
+
+          if (this.purgeState.shotsRemaining % 5 === 0) {
+             this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
+          }
+
+          this.purgeState.currentAngle += ANGLE_INCREMENT;
+          this.purgeState.shotsRemaining--;
       }
   }
 
@@ -16871,11 +16939,21 @@ export class WeaponSystem implements IGameSystem {
         }
         if (shot.isHoming) {
             bullet.addComponent(new IdentityData('BULLET')); 
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
         }
     });
 
     this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, pPos.x * 100);
     this.lastFireTime = time;
+  }
+
+  private getPlayerEntity() {
+      const players = this.registry.getByTag(Tag.PLAYER);
+      for (const p of players) {
+          const id = p.getComponent<IdentityData>(ComponentType.Identity);
+          if (id && id.variant === 'PLAYER') return p;
+      }
+      return null;
   }
 
   teardown(): void {
@@ -17063,7 +17141,11 @@ export class RenderSystem implements IGameSystem {
                 effect.flash = Math.max(0, effect.flash - (delta * CFG.FLASH_DECAY));
                 if (transform) transform.scale = 1.0 + (effect.flash * 0.25);
             } else {
-                if (transform && transform.scale !== 1.0) transform.scale = 1.0;
+                // BUGFIX: Only reset scale if entity is fully spawned.
+                // Prevents overriding 0.0 scale during spawn phase.
+                if (transform && transform.scale !== 1.0 && effect.spawnProgress >= 1.0) {
+                    transform.scale = 1.0;
+                }
             }
         }
     }
@@ -18205,7 +18287,6 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
-  private isPurging = false;
 
   constructor(
     private spawner: IEntitySpawner,
@@ -18214,13 +18295,6 @@ export class WaveSystem implements IGameSystem {
   ) {
     this.reset();
     this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
-    
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.isPurging = true;
-            this.spawnQueue = [];
-        }
-    });
   }
 
   private reset() {
@@ -18230,14 +18304,14 @@ export class WaveSystem implements IGameSystem {
     this.loopCount = 0;
     this.scenarioInit = false;
     this.hasStressTested = false;
-    this.isPurging = false;
   }
 
   update(delta: number, time: number): void {
-    if (this.isPurging) return;
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
+    // Normal waves stop at Game Over (integrity <= 0)
+    // The "Huge Wave" (Stress Test) is triggered via event listener below
     if (this.panelSystem.systemIntegrity <= 0) return;
 
     if (!this.scenarioInit) {
@@ -18261,7 +18335,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   private triggerStressTest() {
-      if (this.hasStressTested || this.isPurging) return;
+      if (this.hasStressTested) return;
       this.hasStressTested = true;
 
       const { width, height } = ViewportHelper.viewport;
@@ -18466,13 +18540,6 @@ export class LifeCycleSystem implements IGameSystem {
 
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.purgeSummons();
-    });
-
-    // NEW: Also purge hostiles immediately when PURGE is clicked to prevent lingering enemies
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this.purgeHostiles();
-        }
     });
   }
 
@@ -19612,7 +19679,8 @@ const GEO_MAP: Record<string, string> = {
     'DIAMOND': GEOMETRY_IDS.PRJ_DIAMOND,
     'PYRAMID': GEOMETRY_IDS.PRJ_PYRAMID,
     'RING': GEOMETRY_IDS.PRJ_RING,
-    'ARROW': GEOMETRY_IDS.PRJ_ARROW
+    'ARROW': GEOMETRY_IDS.PRJ_ARROW,
+    'CHEVRON': GEOMETRY_IDS.PRJ_CHEVRON
 };
 
 export class EntitySpawner implements IEntitySpawner {
@@ -19673,6 +19741,9 @@ export class EntitySpawner implements IEntitySpawner {
     const geoId = GEO_MAP[shape] || GEOMETRY_IDS.PRJ_CAPSULE;
     const s = config ? config.scale : [1,1,1]; 
 
+    // Disable stretching for Purge projectiles to keep them beefy
+    const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
+
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
         [ComponentType.Motion]: { vx, vy },
@@ -19688,7 +19759,7 @@ export class EntitySpawner implements IEntitySpawner {
             scale: 1.0,
             baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
-        [ComponentType.RenderEffect]: { elasticity: 2.0 },
+        [ComponentType.RenderEffect]: { elasticity },
         [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     

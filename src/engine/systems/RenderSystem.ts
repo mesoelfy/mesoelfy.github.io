@@ -50,7 +50,10 @@ export class RenderSystem implements IGameSystem {
         const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
         
         if (!model) continue;
-        const isPlayer = entity.hasTag(Tag.PLAYER) && (!identity || identity.variant === 'PLAYER');
+        
+        // FIX: Explicitly exclude bullets from player state logic
+        const isPlayer = entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.BULLET) && (!identity || identity.variant === 'PLAYER');
+        
         if (isPlayer) {
             let targetCol = COL_BASE;
             let spinSpeed = 0.02; 

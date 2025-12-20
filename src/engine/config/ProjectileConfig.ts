@@ -56,7 +56,7 @@ export const PROJECTILE_CONFIG: Record<string, ProjectileDef> = {
   },
   'PLAYER_PURGE': {
     geometry: 'CHEVRON',
-    color: [10, 10, 10], 
+    color: neon(PALETTE.YELLOW.ORANGE, 3.0), // UPDATED: Orange Neon
     scale: [2.5, 0.7, 1.5], 
     spinSpeed: 0, 
     pulseSpeed: 0, 
