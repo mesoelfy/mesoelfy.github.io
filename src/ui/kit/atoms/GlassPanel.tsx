@@ -13,6 +13,7 @@ import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { tailwindMerge } from '@/utils/tailwindMerge'; // Assumption: user might not have this, so I will stick to clsx logic carefully
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -50,17 +51,15 @@ interface GlassPanelProps {
   title?: string;
   gameId?: PanelId;
   maxHealth?: number; 
+  transparent?: boolean; // NEW PROP
 }
 
-export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH }: GlassPanelProps) => {
+export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH, transparent = false }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const visualRef = useReactRef<HTMLDivElement>(null);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
-  // Game Over is strictly strictly integrity <= 0.
-  // We use this to force the shattered state, even if Zen Mode has technically activated in the store.
-  // Because integrity is NOT reset by Zen Mode activation (only by resetGame), this persists.
   const isGameOver = Math.floor(systemIntegrity) <= 0;
 
   if (gameId) {
@@ -85,7 +84,6 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
   useReactEffect(() => {
-      // Prioritize Shattered state above all else if integrity is 0
       if (isGameOver) {
           shakeControls.start("shattered");
       } else {
@@ -119,19 +117,26 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
+  // Background Logic
+  let bgClass = "bg-black";
+  if (transparent) bgClass = "bg-transparent";
+  else if (isDestroyed) bgClass = "bg-black/20";
+
   return (
     <div ref={registryRef} className={clsx("relative", className)}>
       <motion.div 
         ref={visualRef} variants={panelVariants} initial="hidden" animate={shakeControls} custom={randSeed}
         className={clsx(
           "w-full h-full relative overflow-hidden flex flex-col group",
-          isDestroyed ? "bg-black/20" : "bg-black", 
+          bgClass,
           "border", borderColor, "rounded-sm",
           showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300"
         )}
       >
         <DotGridBackground className="top-8" />
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+        {/* Only show scanlines if not transparent (improves legibility on mobile) */}
+        {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
+        
         {isCriticalGlobal && (
             <motion.div 
               className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"

@@ -18,11 +18,13 @@ export const CustomCursor = () => {
   const { bootState, activeModal, isDebugOpen, isBreaching, sessionId } = useStore();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
-  const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
+  const isGameActive = bootState === 'active';
+  const isMobile = bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown' || isGameOver) && !isOnScrollbar;
+  // FIX: Explicitly disable custom cursor in mobile_lockdown
+  const showCustomCursor = !isMobile && ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
 
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
@@ -43,7 +45,9 @@ export const CustomCursor = () => {
       setIsHovering(!!target.closest(`button, a, input, label, [${DOM_ATTR.INTERACTIVE}="true"]`));
       const onScroll = e.clientX >= window.innerWidth - 14 || e.clientY >= window.innerHeight - 14;
       setIsOnScrollbar(onScroll);
-      if (onScroll) {
+      
+      // Force native cursor if we are on scrollbar OR if logic dictates (like mobile)
+      if (onScroll || !showCustomCursor) {
           document.body.style.setProperty('cursor', 'auto', 'important');
       } else {
           document.body.style.setProperty('cursor', 'none', 'important');
@@ -60,7 +64,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching, isGameOver]);
+  }, [isGameActive, isMenuOpen, isBreaching, isGameOver, showCustomCursor, isMobile]);
 
   const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
   const cursorShadow = isHit 

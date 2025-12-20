@@ -1,22 +1,27 @@
-import { Frown } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 
 export const SadMac = ({ className }: { className?: string }) => (
-  <div className={`relative w-24 h-24 ${className}`}>
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)]">
-      <path 
-        d="M10 20 C10 10 20 10 30 10 L70 10 C80 10 90 10 90 20 L90 80 C90 90 80 95 50 95 C20 95 10 90 10 80 Z" 
-        fill="none" 
-        stroke="#FF003C" 
-        strokeWidth="4"
-      />
-      <line x1="10" y1="20" x2="25" y2="20" stroke="#FF003C" strokeWidth="4" />
-      <line x1="75" y1="20" x2="90" y2="20" stroke="#FF003C" strokeWidth="4" />
-      <circle cx="35" cy="40" r="4" fill="#FF003C" />
-      <circle cx="65" cy="40" r="4" fill="#FF003C" />
-      <path d="M50 45 L45 60 L55 60 Z" fill="#FF003C" />
+  <div className={`relative w-32 h-32 ${className}`}>
+    <svg viewBox="0 0 120 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)] overflow-visible">
+      
+      {/* Monitor Base */}
+      <rect x="10" y="5" width="100" height="60" rx="4" fill="none" stroke="#FF003C" strokeWidth="2" />
+      <rect x="16" y="11" width="88" height="48" fill="#FF003C" fillOpacity="0.1" />
+      
+      {/* Stand */}
+      <path d="M50 65 L50 75 L40 85 H80 L70 75 L70 65" fill="none" stroke="#FF003C" strokeWidth="2" />
+      
+      {/* Keyboard */}
+      <path d="M20 90 L15 95 H105 L100 90 Z" fill="none" stroke="#FF003C" strokeWidth="2" />
+      <line x1="30" y1="92" x2="90" y2="92" stroke="#FF003C" strokeWidth="2" strokeDasharray="4 4" />
+
+      {/* Screen Glitch */}
+      <path d="M30 35 L90 35" stroke="#FF003C" strokeWidth="2" />
+      <path d="M30 45 L70 45" stroke="#FF003C" strokeWidth="2" />
+      <path d="M45 25 L55 35 L45 45" stroke="#FF003C" strokeWidth="2" fill="none" />
     </svg>
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-critical-red">
-        <Frown size={24} strokeWidth={2.5} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full text-critical-red animate-pulse">
+        <Monitor size={24} strokeWidth={3} />
     </div>
   </div>
 );
