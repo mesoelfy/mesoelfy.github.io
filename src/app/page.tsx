@@ -62,22 +62,22 @@ export default function Home() {
   
   // Mobile Gate Logic
   const [showMobileGate, setShowMobileGate] = useState(false);
-  const [hasMobileGateShown, setHasMobileGateShown] = useState(false);
+  const [mobileCheckDone, setMobileCheckDone] = useState(false);
 
   useEffect(() => {
     // Only run on client mount
     if (typeof window === 'undefined') return;
     
     // Check width immediate
-    if (window.innerWidth <= 1024 && !hasMobileGateShown) {
+    if (window.innerWidth <= 1024) {
         setShowMobileGate(true);
-        setHasMobileGateShown(true);
     }
-  }, [hasMobileGateShown]);
+    setMobileCheckDone(true);
+  }, []);
 
   const handleMobileOverride = () => {
       AudioSystem.playSound('ui_click');
-      AudioSystem.playRebootZap(); // Flavor sound
+      AudioSystem.playRebootZap(); 
       setShowMobileGate(false);
   };
 
@@ -202,7 +202,11 @@ export default function Home() {
               </>
           )}
 
-          {bootState === 'standby' && (
+          {/* 
+            Wait for client-side check (mobileCheckDone) AND ensure Gate isn't showing.
+            This prevents the intro from running behind the modal on mobile.
+          */}
+          {mobileCheckDone && bootState === 'standby' && !showMobileGate && (
             <MatrixBootSequence 
                onComplete={handleBootComplete} 
                onBreachStart={handleBreachStart} 
