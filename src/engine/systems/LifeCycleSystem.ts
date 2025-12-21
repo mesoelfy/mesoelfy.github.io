@@ -10,17 +10,14 @@ import { Tag } from '@/engine/ecs/types';
 import { Query } from '@/engine/ecs/Query';
 
 export class LifeCycleSystem implements IGameSystem {
-  // CACHED QUERY
   private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
 
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService
   ) {
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        this.purgeHostiles();
-    });
-
+    // ZEN_MODE_ENABLED purgeHostiles() call removed to allow Nova to handle destruction.
+    
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.purgeSummons();
     });
@@ -31,7 +28,6 @@ export class LifeCycleSystem implements IGameSystem {
 
     for (const entity of mortals) {
       if (!entity.active) continue;
-
       const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -40,52 +36,30 @@ export class LifeCycleSystem implements IGameSystem {
           continue;
         }
       }
-
       const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-          
           if (identity && transform) {
              const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
-             
              if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
-                 this.events.emit(GameEvents.ENEMY_DESTROYED, { 
-                    id: entity.id as number, 
-                    type: identity.variant, 
-                    x: transform.x, 
-                    y: transform.y 
-                 });
+                 this.events.emit(GameEvents.ENEMY_DESTROYED, { id: entity.id as number, type: identity.variant, x: transform.x, y: transform.y });
              }
-             
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
              else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
-             
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
-          
           this.registry.destroyEntity(entity.id);
       }
     }
-  }
-
-  private purgeHostiles() {
-      // Destroy everything EXCEPT the player tag
-      const allEntities = this.registry.getAll();
-      for (const entity of allEntities) {
-          if (!entity.hasTag(Tag.PLAYER)) {
-              this.registry.destroyEntity(entity.id);
-          }
-      }
   }
 
   private purgeSummons() {
       const allies = this.registry.getByTag(Tag.PLAYER);
       for (const entity of allies) {
           if (!entity.active) continue;
-          
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity && identity.variant === EnemyTypes.DAEMON) {
               const transform = entity.getComponent<TransformData>(ComponentType.Transform);

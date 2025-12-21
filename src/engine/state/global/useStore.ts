@@ -26,23 +26,10 @@ interface AudioSettings {
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
-  master: true,
-  music: false,
-  sfx: true,
-  ambience: true,
-  volumeMaster: 1.0,
-  volumeMusic: 1.0,
-  volumeSfx: 1.0,
-  volumeAmbience: 1.0,
-  ambFilter: 0.5,
-  ambSpeed: 0.5,
-  ambWidth: 0.5,
-  ambModSpeed: 0.5, 
-  ambModDepth: 0.5, 
-  fxReverbMix: 0.2,     
-  fxDelayMix: 0.1,      
-  fxDelayTime: 0.25,    
-  fxDelayFeedback: 0.3  
+  master: true, music: false, sfx: true, ambience: true,
+  volumeMaster: 1.0, volumeMusic: 1.0, volumeSfx: 1.0, volumeAmbience: 1.0,
+  ambFilter: 0.5, ambSpeed: 0.5, ambWidth: 0.5, ambModSpeed: 0.5, ambModDepth: 0.5, 
+  fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
@@ -64,6 +51,7 @@ interface AppState {
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
+  isMetamorphosizing: boolean; // NEW
   activeModal: ModalType;
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
@@ -109,6 +97,7 @@ export const useStore = create<AppState>()(
       bootState: 'standby',
       introDone: false,
       isBreaching: false,
+      isMetamorphosizing: false,
       activeModal: 'none',
       isSimulationPaused: false,
       sandboxView: 'lab',
@@ -120,18 +109,9 @@ export const useStore = create<AppState>()(
       screenShakeStrength: 1.0, 
       isDebugOpen: false,
       isDebugMinimized: false,
-      debugFlags: {
-        godMode: false,
-        panelGodMode: false,
-        peaceMode: false,
-        showHitboxes: false,
-        timeScale: 1.0,
-      },
+      debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 },
 
-      setBootState: (bs) => set({ 
-          bootState: bs,
-          isBreaching: bs === 'active' ? false : get().isBreaching 
-      }),
+      setBootState: (bs) => set({ bootState: bs, isBreaching: bs === 'active' ? false : get().isBreaching }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
       setSandboxView: (view) => set({ sandboxView: view }),
@@ -154,6 +134,7 @@ export const useStore = create<AppState>()(
               bootState: 'standby',
               introDone: false,
               isBreaching: false,
+              isMetamorphosizing: false,
               activeModal: 'none',
               isDebugOpen: false,
               isDebugMinimized: false,

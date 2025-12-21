@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bomb, Skull, Infinity as InfinityIcon } from 'lucide-react';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
@@ -18,25 +19,41 @@ export const ZenBomb = () => {
     setClicked(true); 
     AudioSystem.playClick();
     
-    // 1. Trigger the Purge FX immediately (Audio + Visual Blast)
+    // 1. TRIGGER IMMEDIATE SPIRAL & VOID STATE
+    // The cursor will fade out immediately because isMetamorphosizing becomes true
+    useStore.setState({ isMetamorphosizing: true });
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
-    AudioSystem.playSound('syn_bass_drop');
-
-    // 2. HOLD STATE (3 Seconds)
-    // We do nothing here. The user sits with the broken UI and the blast FX.
     
-    // 3. Transition to Zen Mode
+    // 2. THE NOVA CATALYST (1 Second later)
     setTimeout(() => { 
-        activateZenMode(); 
+        // Trigger high-damage concentric ring wave
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'NOVA' });
+        
+        AudioSystem.playSound('syn_bass_drop');
         AudioSystem.playAmbience('ambience_core'); 
-    }, 3000);
+        
+        // Transition to Zen Mode State
+        activateZenMode(); 
+        
+        // 3. REBIRTH (Metamorphosis Ends)
+        // Short delay after the explosion for the prismatic cursor to appear
+        setTimeout(() => {
+            useStore.setState({ isMetamorphosizing: false });
+        }, 500);
+
+    }, 1000);
   };
 
   return (
     <AnimatePresence>
       {!clicked && (
-        <motion.button initial={{ y: -200, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ scale: 3, opacity: 0, filter: "blur(20px)" }} transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
-          onClick={handleClick} className="fixed top-24 left-1/2 -translate-x-1/2 z-bomb flex flex-col items-center group cursor-none outline-none pointer-events-auto"
+        <motion.button 
+          initial={{ y: -200, opacity: 0 }} 
+          animate={{ y: 0, opacity: 1 }} 
+          exit={{ scale: 3, opacity: 0, filter: "blur(20px)" }} 
+          transition={{ type: "spring", stiffness: 100, damping: 15, delay: 1.0 }} 
+          onClick={handleClick} 
+          className="fixed top-24 left-1/2 -translate-x-1/2 z-bomb flex flex-col items-center group cursor-none outline-none pointer-events-auto"
         >
           <motion.div initial={{ height: 0 }} animate={{ height: 160 }} transition={{ delay: 1.0, duration: 0.8, ease: "easeOut" }} className="w-[2px] bg-critical-red/80 absolute -top-64 left-1/2 -translate-x-1/2 shadow-[0_0_8px_#FF003C]" />
           <div className="relative p-1 border border-critical-red bg-black/90 backdrop-blur-md shadow-[0_0_20px_#FF003C] overflow-hidden group-hover:shadow-[0_0_40px_#FF003C] transition-shadow duration-300 z-10">
