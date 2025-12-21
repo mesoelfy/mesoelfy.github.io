@@ -13,23 +13,23 @@ export const ZenBomb = () => {
   const activateZenMode = useGameStore(state => state.activateZenMode);
   const [clicked, setClicked] = useState(false);
 
-  // Hook into the engine's purge completion signal
   useEffect(() => {
     if (!clicked) return;
 
     const unsub = GameEventBus.subscribe(GameEvents.PURGE_COMPLETE, () => {
-        // THE NOVA CATALYST (Happens instantly after spiral finishes)
-        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'NOVA' });
-        
-        AudioSystem.playSound('syn_bass_drop');
-        AudioSystem.playAmbience('ambience_core'); 
-        
-        // Final transition to Zen Mode
-        activateZenMode(); 
-        
-        // Fade the prismatic ship back in as the cursor
+        // TIGHTENED DELAY: 0.5 Seconds after spiral
         setTimeout(() => {
-            useStore.setState({ isMetamorphosizing: false });
+            // THE PRISMATIC NOVA CATALYST
+            GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'NOVA' });
+            
+            AudioSystem.playSound('syn_bass_drop');
+            AudioSystem.playAmbience('ambience_core'); 
+            
+            activateZenMode(); 
+            
+            setTimeout(() => {
+                useStore.setState({ isMetamorphosizing: false });
+            }, 500);
         }, 500);
     });
 
@@ -42,7 +42,6 @@ export const ZenBomb = () => {
     setClicked(true); 
     AudioSystem.playClick();
     
-    // 1. VOID STATE & SPIRAL START
     useStore.setState({ isMetamorphosizing: true });
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
   };

@@ -87,18 +87,25 @@ export class WeaponSystem implements IGameSystem {
       const t = player.getComponent<TransformData>(ComponentType.Transform);
       if (!t) return;
 
-      const bulletCount = 72;
-      const speed = 40.0;
+      const bulletCount = 80; 
+      const speed = 42.0;
       const damage = 999;
 
       for (let i = 0; i < bulletCount; i++) {
-          const angle = (i / bulletCount) * Math.PI * 2;
+          const ratio = i / bulletCount;
+          const angle = ratio * Math.PI * 2;
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
           
           const b = this.spawner.spawnBullet(t.x, t.y, vx, vy, Faction.FRIENDLY, 2.0, damage, WeaponIDs.PLAYER_PURGE);
           const model = b.getComponent<RenderModel>(ComponentType.RenderModel);
-          if (model) { model.setColor('#FFFFFF'); }
+          
+          if (model) { 
+              this.tempColor.setHSL(ratio, 0.9, 0.6);
+              model.r = this.tempColor.r;
+              model.g = this.tempColor.g;
+              model.b = this.tempColor.b;
+          }
       }
       this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.8 });
   }
@@ -111,7 +118,7 @@ export class WeaponSystem implements IGameSystem {
           this.purgeState.accumulator -= 1.0;
           if (this.purgeState.shotsRemaining <= 0) { 
               this.purgeState.active = false; 
-              this.events.emit(GameEvents.PURGE_COMPLETE, null); // EMIT SIGNAL
+              this.events.emit(GameEvents.PURGE_COMPLETE, null); 
               break; 
           }
           const angle = this.purgeState.currentAngle;
