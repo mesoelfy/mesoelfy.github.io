@@ -1,7 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { GpuConfigPanel } from '@/ui/os/apps/settings/components/GpuConfigPanel';
 import { clsx } from 'clsx';
 import { BootHeader } from './atoms/BootHeader';
 import { CoreHeader } from './atoms/CoreHeader';
@@ -31,8 +30,9 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
       layout
       onClick={onClick}
       onMouseEnter={() => AudioSystem.playHover()}
+      // CURSOR FIX: Added cursor-none to override default button pointer
       className={clsx(
-        "relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left",
+        "relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left cursor-none",
         active 
           ? `${borderColor} bg-black ${glow}` 
           : "border-white/10 bg-white/5 hover:border-white/30"
@@ -161,120 +161,133 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         
                         <motion.div layout className="px-4 pb-4 pt-3 md:px-6 md:pb-6 md:pt-5 flex flex-col items-center gap-6 relative z-10">
                             
-                            {/* 1. ASCII ART */}
-                            <AsciiRenderer />
+                            {/* 1. ASCII ART - Infected when warning appears */}
+                            <AsciiRenderer isInfected={showWarningBox} />
 
                             {/* 2. WARNING BOX (Conditional) */}
-                            {showWarningBox && !showButton && (
-                                <motion.div 
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ 
-                                        opacity: 1, 
-                                        scale: 1,
-                                        boxShadow: [
-                                            "0 0 10px rgba(255,0,60,0.3)", 
-                                            "0 0 50px rgba(255,0,60,0.8)", 
-                                            "0 0 10px rgba(255,0,60,0.3)"
-                                        ]
-                                    }}
-                                    transition={{ 
-                                        opacity: { duration: 0.3 }, 
-                                        scale: { duration: 0.3 },
-                                        boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-                                    }}
-                                    className="border border-critical-red bg-critical-red/20 px-6 py-2 flex items-center gap-4 relative overflow-hidden"
-                                >
-                                    {/* SCROLLING HAZARD STRIPES (VISUALLY RESTORED) */}
+                            <AnimatePresence mode="wait">
+                                {showWarningBox && !showButton && (
                                     <motion.div 
-                                        className="absolute inset-0"
-                                        style={{ 
-                                            backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" 
+                                        key="warning-box"
+                                        initial={{ opacity: 0, scale: 0.9, height: 0 }}
+                                        animate={{ 
+                                            opacity: 1, 
+                                            scale: 1,
+                                            height: "auto",
+                                            boxShadow: [
+                                                "0 0 10px rgba(255,0,60,0.3)", 
+                                                "0 0 50px rgba(255,0,60,0.8)", 
+                                                "0 0 10px rgba(255,0,60,0.3)"
+                                            ]
                                         }}
-                                        animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                    />
-                                    
-                                    <motion.div 
-                                        animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
-                                        transition={{ duration: 0.5, repeat: Infinity }}
+                                        exit={{ 
+                                            opacity: 0, 
+                                            scale: 0.9, 
+                                            height: 0,
+                                            transition: { duration: 0.3 } 
+                                        }}
+                                        transition={{ 
+                                            opacity: { duration: 0.3 }, 
+                                            scale: { duration: 0.3 },
+                                            boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                                        }}
+                                        className="border border-critical-red bg-critical-red/20 px-6 py-2 flex items-center gap-4 relative overflow-hidden shrink-0"
                                     >
-                                        <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
+                                        <motion.div 
+                                            className="absolute inset-0"
+                                            style={{ 
+                                                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" 
+                                            }}
+                                            animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        />
+                                        
+                                        <motion.div 
+                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
+                                            transition={{ duration: 0.5, repeat: Infinity }}
+                                        >
+                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
+                                        </motion.div>
+                                        
+                                        <span className="text-xs font-bold font-header tracking-[0.2em] text-critical-red drop-shadow-sm relative z-10 whitespace-nowrap">
+                                            UNSAFE CONNECTION
+                                        </span>
+                                        
+                                        <motion.div 
+                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
+                                            transition={{ duration: 0.5, repeat: Infinity, delay: 0.1 }}
+                                        >
+                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
+                                        </motion.div>
                                     </motion.div>
-                                    
-                                    <span className="text-xs font-bold font-header tracking-[0.2em] text-critical-red drop-shadow-sm relative z-10">
-                                        UNSAFE CONNECTION
-                                    </span>
-                                    
-                                    <motion.div 
-                                        animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
-                                        transition={{ duration: 0.5, repeat: Infinity, delay: 0.1 }}
-                                    >
-                                        <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
-                                    </motion.div>
-                                </motion.div>
-                            )}
+                                )}
+                            </AnimatePresence>
 
                             {/* 3. CONFIG & INITIALIZE (Final Step) */}
-                            {showButton && (
-                                <motion.div 
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.5, delay: 0.2 }}
-                                    className="w-full flex flex-col gap-6 pt-2 border-t border-white/10"
-                                >
-                                    
-                                    {/* GPU Selector Grid */}
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex items-center justify-between text-[9px] font-mono text-gray-500 uppercase tracking-widest px-1">
-                                            <span className="flex items-center gap-2"><Cpu size={10} /> Graphics_Kernel</span>
-                                            <span>Select Profile</span>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <GpuCard 
-                                                mode="HIGH" 
-                                                label="HIGH_VOLTAGE" 
-                                                sub="MAX_FIDELITY // BLOOM // PARTICLES" 
-                                                icon={Zap} 
-                                                active={graphicsMode === 'HIGH'} 
-                                                onClick={() => handleGpuSelect('HIGH')} 
-                                            />
-                                            <GpuCard 
-                                                mode="POTATO" 
-                                                label="POTATO_MODE" 
-                                                sub="PERFORMANCE // RETRO // FAST" 
-                                                icon={ZapOff} 
-                                                active={graphicsMode === 'POTATO'} 
-                                                onClick={() => handleGpuSelect('POTATO')} 
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Big Initialize Button */}
-                                    <button 
-                                        onClick={handleWrapperClick} 
-                                        onMouseEnter={() => AudioSystem.playHover()} 
-                                        className="group relative w-full py-4 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-pointer"
+                            <AnimatePresence>
+                                {showButton && (
+                                    <motion.div 
+                                        key="config-grid"
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        transition={{ duration: 0.5, delay: 0.2 }}
+                                        className="w-full flex flex-col gap-6 pt-2 border-t border-white/10"
                                     >
-                                        {/* Scanline Sweep */}
-                                        <div className="absolute inset-0 bg-primary-green translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out opacity-20" />
                                         
-                                        {/* Button Content */}
-                                        <div className="relative z-10 flex flex-col items-center gap-1">
-                                            <div className="flex items-center gap-3">
-                                                <Activity size={16} className="text-primary-green animate-pulse" />
-                                                <span className="font-header font-black text-xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
-                                                    INITIALIZE_SYSTEM
-                                                </span>
-                                                <Activity size={16} className="text-primary-green animate-pulse" />
+                                        {/* GPU Selector Grid */}
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center justify-between text-[9px] font-mono text-gray-500 uppercase tracking-widest px-1">
+                                                <span className="flex items-center gap-2"><Cpu size={10} /> Graphics_Kernel</span>
+                                                <span>Select Profile</span>
                                             </div>
-                                            <span className="text-[9px] font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
-                                                CLICK TO INJECT PAYLOAD
-                                            </span>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <GpuCard 
+                                                    mode="HIGH" 
+                                                    label="HIGH_VOLTAGE" 
+                                                    sub="MAX_FIDELITY // BLOOM // PARTICLES" 
+                                                    icon={Zap} 
+                                                    active={graphicsMode === 'HIGH'} 
+                                                    onClick={() => handleGpuSelect('HIGH')} 
+                                                />
+                                                <GpuCard 
+                                                    mode="POTATO" 
+                                                    label="POTATO_MODE" 
+                                                    sub="PERFORMANCE // RETRO // FAST" 
+                                                    icon={ZapOff} 
+                                                    active={graphicsMode === 'POTATO'} 
+                                                    onClick={() => handleGpuSelect('POTATO')} 
+                                                />
+                                            </div>
                                         </div>
-                                    </button>
 
-                                </motion.div>
-                            )}
+                                        {/* Big Initialize Button */}
+                                        <button 
+                                            onClick={handleWrapperClick} 
+                                            onMouseEnter={() => AudioSystem.playHover()} 
+                                            // CURSOR FIX
+                                            className="group relative w-full py-4 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none"
+                                        >
+                                            {/* Scanline Sweep */}
+                                            <div className="absolute inset-0 bg-primary-green translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out opacity-20" />
+                                            
+                                            {/* Button Content */}
+                                            <div className="relative z-10 flex flex-col items-center gap-1">
+                                                <div className="flex items-center gap-3">
+                                                    <Activity size={16} className="text-primary-green animate-pulse" />
+                                                    <span className="font-header font-black text-xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
+                                                        INITIALIZE_SYSTEM
+                                                    </span>
+                                                    <Activity size={16} className="text-primary-green animate-pulse" />
+                                                </div>
+                                                <span className="text-[9px] font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
+                                                    CLICK TO INJECT PAYLOAD
+                                                </span>
+                                            </div>
+                                        </button>
+
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                         </motion.div>
                     </div>

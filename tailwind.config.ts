@@ -68,6 +68,7 @@ const config: Config = {
         'spin-diamond': 'spin-diamond 3s linear infinite',
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
+        'matrix-red': 'matrix-red 0.5s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
         'restore-flash': 'restore-flash 1.2s ease-out forwards',
       },
@@ -84,6 +85,10 @@ const config: Config = {
           '0%, 100%': { color: '#9E4EA5' }, 
           '33%': { color: '#BC86BA' },      
           '66%': { color: '#350E3A' },      
+        },
+        'matrix-red': {
+          '0%, 100%': { color: '#FF003C' }, 
+          '50%': { color: '#800010' },      
         },
         'cursor-blink': {
           '0%, 30%': { opacity: '1' }, 
