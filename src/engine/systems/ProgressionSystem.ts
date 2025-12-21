@@ -1,9 +1,7 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
-import { GameStream } from '@/engine/state/GameStream';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -31,8 +29,6 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    GameStream.set('SCORE', this.score);
-    useGameStore.getState().setScore(this.score);
   }
 
   public addXp(amount: number) {
@@ -44,40 +40,21 @@ export class ProgressionSystem implements IGameSystem {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
-        this.syncStore(); 
     }
-    
-    this.syncStore();
   }
 
   public applyUpgrade(option: UpgradeOption) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           
+          // Instant-use options don't increment a level counter
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
-              this.syncStore(); 
               return;
           }
           
           const current = this.activeUpgrades[option] || 0;
           this.activeUpgrades[option] = current + 1;
-          this.syncStore();
       }
-  }
-
-  private syncStore() {
-      // 1. Update Stream
-      GameStream.set('XP', this.xp);
-      GameStream.set('XP_NEXT', this.xpToNextLevel);
-      GameStream.set('LEVEL', this.level);
-      
-      // 2. Update Persisted State
-      useGameStore.getState().setProgressionData({
-          xp: this.xp,
-          level: this.level,
-          nextXp: this.xpToNextLevel,
-          points: this.upgradePoints
-      });
   }
 
   public reset() {
@@ -90,11 +67,6 @@ export class ProgressionSystem implements IGameSystem {
         'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
-      
-      GameStream.set('SCORE', 0);
-      this.syncStore();
-      
-      useGameStore.getState().setScore(0);
   }
 
   teardown(): void {}

@@ -34,6 +34,7 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
+import { StateSyncSystem } from '@/engine/systems/StateSyncSystem'; // NEW
 
 // Desktop Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
@@ -108,6 +109,9 @@ export class EngineFactory {
     const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
+    // NEW: State Sync
+    const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
+
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -151,6 +155,7 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(hudService, SystemPhase.STATE);
+    register(stateSyncSystem, SystemPhase.STATE); // <--- SYNC HERE
 
     // PHASE 5: RENDER
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
