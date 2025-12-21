@@ -5,6 +5,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DamageOptions } from '@/engine/interfaces';
+import { GameStream } from '@/engine/state/GameStream';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -40,7 +41,8 @@ const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed
 
 const updateIntegrity = (state: GameState, panels: any) => {
     const integrity = calculateIntegrity(panels);
-    // GameStream update removed (Handled by subscription in useGameStore)
+    // Direct Stream Update
+    GameStream.set('SYSTEM_INTEGRITY', integrity);
     state.setSystemIntegrity(integrity);
 };
 
@@ -192,7 +194,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
       );
       set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
-      // Manual reset for GameStream removed (handled by state update)
+      GameStream.set('SYSTEM_INTEGRITY', 100);
       get().setSystemIntegrity(100);
   }
 });
