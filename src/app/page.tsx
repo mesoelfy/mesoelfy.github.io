@@ -29,7 +29,7 @@ import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop';
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
-import { MobileGateModal } from '@/ui/os/overlays/MobileGateModal';
+import { MobileGateModal, GateVariant } from '@/ui/os/overlays/MobileGateModal';
 import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -60,25 +60,30 @@ export default function Home() {
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Mobile Gate Logic
-  const [showMobileGate, setShowMobileGate] = useState(false);
-  const [mobileCheckDone, setMobileCheckDone] = useState(false);
+  // Gate Logic
+  const [showGate, setShowGate] = useState(false);
+  const [gateVariant, setGateVariant] = useState<GateVariant>('MOBILE');
+  const [checkDone, setCheckDone] = useState(false);
 
   useEffect(() => {
-    // Only run on client mount
     if (typeof window === 'undefined') return;
     
-    // Check width immediate
-    if (window.innerWidth <= 1024) {
-        setShowMobileGate(true);
+    // Check Hardware
+    const w = window.innerWidth;
+    if (w <= 1100) { // Catch small laptops / tablets
+        setGateVariant('MOBILE');
+        setShowGate(true);
+    } else if (w > 2500) { // Catch 4K / Ultrawide
+        setGateVariant('ULTRAWIDE');
+        setShowGate(true);
     }
-    setMobileCheckDone(true);
+    setCheckDone(true);
   }, []);
 
-  const handleMobileOverride = () => {
+  const handleGateOverride = () => {
       AudioSystem.playSound('ui_click');
       AudioSystem.playRebootZap(); 
-      setShowMobileGate(false);
+      setShowGate(false);
   };
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export default function Home() {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
 
-        if (isMenuOpen || isDebugActive || showMobileGate) {
+        if (isMenuOpen || isDebugActive || showGate) {
             setSimulationPaused(true);
         } else {
             setSimulationPaused(false);
@@ -133,7 +138,7 @@ export default function Home() {
     checkPauseState();
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
-  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showMobileGate]);
+  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showGate]);
 
   useEffect(() => {
       AudioSystem.init();
@@ -163,7 +168,7 @@ export default function Home() {
         <CustomCursor />
         <GlobalBackdrop />
         <DebugOverlay />
-        <MobileGateModal isOpen={showMobileGate} onOverride={handleMobileOverride} />
+        <MobileGateModal isOpen={showGate} variant={gateVariant} onOverride={handleGateOverride} />
 
         <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
           
@@ -202,11 +207,8 @@ export default function Home() {
               </>
           )}
 
-          {/* 
-            Wait for client-side check (mobileCheckDone) AND ensure Gate isn't showing.
-            This prevents the intro from running behind the modal on mobile.
-          */}
-          {mobileCheckDone && bootState === 'standby' && !showMobileGate && (
+          {/* Wait for check to complete, and gate to be closed/resolved */}
+          {checkDone && bootState === 'standby' && !showGate && (
             <MatrixBootSequence 
                onComplete={handleBootComplete} 
                onBreachStart={handleBreachStart} 
