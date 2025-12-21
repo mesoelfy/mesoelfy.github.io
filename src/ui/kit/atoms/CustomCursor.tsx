@@ -23,10 +23,14 @@ export const CustomCursor = () => {
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  // HIDE LOGIC:
-  // 1. Hide if isMetamorphosizing is true (the "void" gap)
-  // 2. Otherwise show if game is inactive, menu is open, it's game over, or we are in Zen mode.
-  const showCustomCursor = !isMetamorphosizing && ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode) || isZenMode) && !isOnScrollbar;
+  // VISUAL LOGIC REFINED:
+  // We remove the static Zen triangle. 
+  // Custom Cursor (The Green Arrow) only shows if:
+  // 1. Not metamorphosizing
+  // 2. We are in a Menu, the Boot Screen, or standard Game Over (not Zen).
+  const showCustomCursor = !isMetamorphosizing && 
+    ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode)) && 
+    !isOnScrollbar;
 
   const hideSystemCursor = !isOnScrollbar;
 
@@ -84,39 +88,22 @@ export const CustomCursor = () => {
   return (
     <motion.div
       className={clsx("fixed top-0 left-0 pointer-events-none z-cursor", (isHovering && showCustomCursor && !isHit) ? "mix-blend-difference" : "" )}
-      animate={{ x: pos.x - (isZenMode ? 16 : 5.5), y: pos.y - (isZenMode ? 16 : 3.2) }}
+      animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
       transition={{ type: "tween", ease: "linear", duration: 0 }}
     >
       <AnimatePresence mode="wait">
         {showCustomCursor && (
           <motion.div 
-            key={isZenMode ? "zen-cursor" : "standard-cursor"} 
+            key="custom-cursor" 
             initial={{ opacity: 0, scale: 0 }} 
             animate={{ opacity: 1, scale: 1 }} 
             exit={{ opacity: 0, scale: 0 }} 
-            transition={{ duration: 0.3 }} 
+            transition={{ duration: 0.2 }} 
             className="relative"
           >
-            {isZenMode ? (
-                <motion.div 
-                    className="flex items-center justify-center w-8 h-8"
-                    animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"], scale: [1, 1.15, 1], rotate: [0, 360] }}
-                    transition={{ 
-                      filter: { duration: 4, repeat: Infinity, ease: "linear" }, 
-                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                      rotate: { duration: 10, repeat: Infinity, ease: "linear" }
-                    }}
-                >
-                    {/* PRISMATIC TRIANGLE */}
-                    <svg width="28" height="28" viewBox="0 0 24 24" style={{ fill: "#FFFFFF", filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))' }}>
-                         <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" />
-                    </svg>
-                </motion.div>
-            ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'} ${isHit ? 'scale-125' : ''}`} style={{ filter: cursorShadow, fill: cursorColor, transition: 'fill 0.1s ease, filter 0.1s ease' }}>
-                    <path d="M5.5 3.21l12.32 12.32-4.5 1.12 3.5 3.5-2.12 2.12-3.5-3.5-1.12 4.5z" />
-                </svg>
-            )}
+             <svg width="24" height="24" viewBox="0 0 24 24" className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'} ${isHit ? 'scale-125' : ''}`} style={{ filter: cursorShadow, fill: cursorColor, transition: 'fill 0.1s ease, filter 0.1s ease' }}>
+                <path d="M5.5 3.21l12.32 12.32-4.5 1.12 3.5 3.5-2.12 2.12-3.5-3.5-1.12 4.5z" />
+             </svg>
           </motion.div>
         )}
       </AnimatePresence>
