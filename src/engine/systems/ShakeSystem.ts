@@ -1,4 +1,4 @@
-import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { noise } from '@/engine/math/Noise';
 import { useStore } from '@/engine/state/global/useStore';
@@ -11,11 +11,13 @@ export class ShakeSystem implements IGameSystem {
   
   private cleanupListeners: (() => void) | null = null;
 
-  constructor(
-      private events: IGameEventService,
-      private fastEvents: IFastEventService
-  ) {
-    const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
+  constructor(private events: IGameEventService) {
+    // Only subscribe to SLOW path events. 
+    // High-freq shakes (explosions) come via VFXSystem reading the FastBus.
+    const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => {
+        this.addTrauma(p.amount);
+    });
+    
     const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const amount = p.damage >= 5 ? 0.4 : 0.3;
         this.addTrauma(amount);

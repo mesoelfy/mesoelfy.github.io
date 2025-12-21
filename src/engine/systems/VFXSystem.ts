@@ -1,4 +1,5 @@
-import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem, IGameEventService, IPanelSystem } from '@/engine/interfaces';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, FX_LOOKUP, FXCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
@@ -12,8 +13,7 @@ export class VFXSystem implements IGameSystem {
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private panelSystem: IPanelSystem,
     private timeSystem: TimeSystem
   ) {
@@ -46,26 +46,28 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-      // Fast Bus Events (High Frequency)
-      this.fastEvents.process((id, a1, a2, a3, a4) => {
-          if (id === FastEventType.SPAWN_FX) {
-              const key = FX_LOOKUP[a1 as FXCode];
-              if (key) {
-                  this.executeRecipe(
-                      key, 
-                      a2 / FLOAT_SCALAR, 
-                      a3 / FLOAT_SCALAR, 
-                      a4 / FLOAT_SCALAR
-                  );
+      const unified = this.events as UnifiedEventService;
+      if (unified && typeof unified.processFastEvents === 'function') {
+          unified.processFastEvents((id, a1, a2, a3, a4) => {
+              if (id === FastEventType.SPAWN_FX) {
+                  const key = FX_LOOKUP[a1 as FXCode];
+                  if (key) {
+                      this.executeRecipe(
+                          key, 
+                          a2 / FLOAT_SCALAR, 
+                          a3 / FLOAT_SCALAR, 
+                          a4 / FLOAT_SCALAR
+                      );
+                  }
               }
-          }
-          else if (id === FastEventType.CAM_SHAKE) {
-              this.shakeSystem.addTrauma(a1 / FLOAT_SCALAR);
-          }
-          else if (id === FastEventType.HIT_STOP) {
-              this.timeSystem.freeze(a1 / 1000); // MS is not scaled by FLOAT_SCALAR
-          }
-      });
+              else if (id === FastEventType.CAM_SHAKE) {
+                  this.shakeSystem.addTrauma(a1 / FLOAT_SCALAR);
+              }
+              else if (id === FastEventType.HIT_STOP) {
+                  this.timeSystem.freeze(a1 / 1000); 
+              }
+          });
+      }
   }
 
   private getPanelX(panelId: PanelId): number {

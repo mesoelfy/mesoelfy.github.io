@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
@@ -8,13 +8,12 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
+import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified Bus
     private audio: IAudioService
   ) {}
 
@@ -39,11 +38,8 @@ export class CombatSystem implements IGameSystem {
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
-              const typeId = getFXCode(type);
-              if (typeId) {
-                  // NEW TYPED METHOD
-                  this.fastEvents.spawnFX(typeId, x, y, 0);
-              }
+              // Simplified: Just emit. UnifiedService handles fast routing.
+              this.events.emit(GameEvents.SPAWN_FX, { type, x, y, angle: 0 });
           },
           spawnImpact: (x, y, r, g, b, angle) => {
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
@@ -51,22 +47,13 @@ export class CombatSystem implements IGameSystem {
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
           playAudio: (key) => {
-              const keyId = getSoundCode(key.toLowerCase());
-              if (keyId) {
-                  // NEW TYPED METHOD
-                  this.fastEvents.playSound(keyId, 0);
-              }
+              this.events.emit(GameEvents.PLAY_SOUND, { key });
           },
           playSpatialAudio: (key, x) => {
-              const keyId = getSoundCode(key.toLowerCase());
-              if (keyId) {
-                  // NEW TYPED METHOD
-                  this.fastEvents.playSound(keyId, x);
-              }
+              this.events.emit(GameEvents.PLAY_SOUND, { key, x });
           },
           addTrauma: (amount) => {
-              // NEW TYPED METHOD
-              this.fastEvents.camShake(amount);
+              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
           },
           flashEntity: (id) => {
               this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
@@ -108,11 +95,12 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          const fxId = getFXCode(finalFX);
-          if (fxId) {
-              // NEW TYPED METHOD
-              this.fastEvents.spawnFX(fxId, transform.x, transform.y, angleToUse);
-          }
+          this.events.emit(GameEvents.SPAWN_FX, { 
+              type: finalFX, 
+              x: transform.x, 
+              y: transform.y, 
+              angle: angleToUse 
+          });
       }
   }
 

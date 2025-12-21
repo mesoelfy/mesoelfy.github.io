@@ -6,13 +6,14 @@ import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
 import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { SystemPhase } from '@/engine/interfaces';
 
-// Common Systems
+// Systems
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
@@ -34,9 +35,7 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
-import { StateSyncSystem } from '@/engine/systems/StateSyncSystem'; // NEW
-
-// Desktop Systems
+import { StateSyncSystem } from '@/engine/systems/StateSyncSystem';
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
 import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { CollisionSystem } from '@/engine/systems/CollisionSystem';
@@ -48,8 +47,12 @@ export class EngineFactory {
   public static create(): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
-    const eventBus = SharedGameEventBus; 
-    const fastEventBus = new FastEventBusImpl();
+    const rawSlowBus = SharedGameEventBus; 
+    const rawFastBus = new FastEventBusImpl();
+    
+    // UNIFIED BUS
+    const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
+
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
     const hudService = new HUDService(); 
@@ -58,8 +61,12 @@ export class EngineFactory {
     // 2. Global Registration
     ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
+    // Replace specific bus registrations with the Unified one
     ServiceLocator.register('GameEventService', eventBus);
-    ServiceLocator.register('FastEventService', fastEventBus);
+    ServiceLocator.register('FastEventService', rawFastBus); // Keep raw access for legacy/direct checks if needed? Or remove?
+    // Actually, we should try to use Unified everywhere. But Directors might need the raw fast bus interface
+    // unless we typecast. Let's register Unified as the primary IGameEventService.
+    
     ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
@@ -74,7 +81,8 @@ export class EngineFactory {
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
-    const shakeSystem = new ShakeSystem(eventBus, fastEventBus);
+    // ShakeSystem consumes events
+    const shakeSystem = new ShakeSystem(eventBus); 
     
     const panelSystem = new PanelRegistrySystem(eventBus, audioService);
     const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
@@ -91,47 +99,43 @@ export class EngineFactory {
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
-    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
+    // Pass Unified Bus to Behavior
+    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
-    // Directors
-    const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
-    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus, panelSystem, timeSystem);
+    // Directors need to consume Fast Events. UnifiedEventService exposes processFastEvents.
+    const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
+    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    // Refactored Visual Pipeline (Updated Constructor)
     const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const renderSystem = new RenderSystem(registry);
 
-    // Desktop Specifics
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
-    const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
+    
+    // Producers use Unified Bus
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+    const combatSystem = new CombatSystem(registry, eventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
-    // NEW: State Sync
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-    engine.injectFastEventBus(fastEventBus);
+    engine.injectFastEventBus(rawFastBus); // Engine cleans the raw buffer
 
-    // 6. System Registration Helpers
+    // 6. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
     };
 
-    // --- PIPELINE CONSTRUCTION ---
-
-    // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
     register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     register(movementSystem, SystemPhase.INPUT);
 
-    // PHASE 1: LOGIC
     register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
     register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
     register(targetingSystem, SystemPhase.LOGIC);
@@ -140,24 +144,20 @@ export class EngineFactory {
     register(behaviorSystem, SystemPhase.LOGIC); 
     register(weaponSystem, SystemPhase.LOGIC);   
 
-    // PHASE 2: PHYSICS
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
     register(guidanceSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
 
-    // PHASE 3: COLLISION
     register(collisionSystem, SystemPhase.COLLISION);
     register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
 
-    // PHASE 4: STATE
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(hudService, SystemPhase.STATE);
-    register(stateSyncSystem, SystemPhase.STATE); // <--- SYNC HERE
+    register(stateSyncSystem, SystemPhase.STATE);
 
-    // PHASE 5: RENDER
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
@@ -166,10 +166,7 @@ export class EngineFactory {
     register(worldSystem, SystemPhase.RENDER, 'WorldSystem');
     register(audioDirector, SystemPhase.RENDER);
 
-    // 7. Final Setup
     engine.setup(ServiceLocator);
-
-    // 8. Player Spawn
     spawner.spawnPlayer();
 
     return engine;

@@ -1,12 +1,10 @@
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
 import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { getSoundCode, getFXCode, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
@@ -37,8 +35,7 @@ export class WeaponSystem implements IGameSystem {
     private spawner: IEntitySpawner,
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private config: typeof ConfigService
   ) {
     this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
@@ -101,8 +98,8 @@ export class WeaponSystem implements IGameSystem {
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              this.fastEvents.spawnFX(FXCode.PURGE_BLAST, t.x, t.y, 0);
-              this.fastEvents.camShake(0.5);
+              this.events.emit(GameEvents.SPAWN_FX, { type: 'PURGE_BLAST', x: t.x, y: t.y, angle: 0 });
+              this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
           }
       }
   }
@@ -148,7 +145,7 @@ export class WeaponSystem implements IGameSystem {
           }
 
           if (this.purgeState.shotsRemaining % 5 === 0) {
-             this.fastEvents.playSound(SoundCode.FX_PLAYER_FIRE, originX);
+             this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: originX });
           }
 
           this.purgeState.currentAngle += ANGLE_INCREMENT;
@@ -187,7 +184,7 @@ export class WeaponSystem implements IGameSystem {
         }
     });
 
-    this.fastEvents.playSound(SoundCode.FX_PLAYER_FIRE, pPos.x);
+    this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
   }
 

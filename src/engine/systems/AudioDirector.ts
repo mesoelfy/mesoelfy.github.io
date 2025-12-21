@@ -1,4 +1,5 @@
-import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
 import { FastEventType, SOUND_LOOKUP, SoundCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -9,8 +10,7 @@ export class AudioDirector implements IGameSystem {
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private audio: IAudioService
   ) {
     this.setupSubscriptions();
@@ -40,28 +40,36 @@ export class AudioDirector implements IGameSystem {
         this.audio.playSound('fx_level_up');
     });
 
+    // We no longer subscribe to PLAY_SOUND here for slow path,
+    // because UnifiedEventService routes standard playSound calls to the fast bus if they match a SoundCode.
+    // However, if we emit a sound that IS NOT in the SoundCode list (unlikely for game logic),
+    // it would fall through to the slow bus.
+    // For completeness, we can keep it as a fallback:
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
+        // Only play if it wasn't handled by fast path (optimization)
+        // In this architecture, UnifiedService only emits slow event if NOT fast code.
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
     });
   }
 
   update(delta: number, time: number): void {
-    // Poll Fast Bus for High-Frequency Combat Audio
-    this.fastEvents.process((id, a1, a2, a3, a4) => {
-        if (id === FastEventType.PLAY_SOUND) {
-            // a1: SoundCode, a2: Pan * SCALAR
-            const key = SOUND_LOOKUP[a1 as SoundCode];
-            if (key) {
-                const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
-                this.audio.playSound(key as AudioKey, pan);
+    // Cast to access the optimized polling method
+    const unified = this.events as UnifiedEventService;
+    if (unified.processFastEvents) {
+        unified.processFastEvents((id, a1, a2, a3, a4) => {
+            if (id === FastEventType.PLAY_SOUND) {
+                const key = SOUND_LOOKUP[a1 as SoundCode];
+                if (key) {
+                    const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
+                    this.audio.playSound(key as AudioKey, pan);
+                }
             }
-        }
-        else if (id === FastEventType.DUCK_MUSIC) {
-            // a1: Intensity, a2: Duration
-            this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
-        }
-    });
+            else if (id === FastEventType.DUCK_MUSIC) {
+                this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
+            }
+        });
+    }
   }
 
   private playSpatial(panelId: PanelId, key: AudioKey) {

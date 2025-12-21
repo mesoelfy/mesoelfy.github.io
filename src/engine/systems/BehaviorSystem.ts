@@ -1,10 +1,9 @@
-import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService } from '@/engine/interfaces';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
-import { getSoundCode, getFXCode } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -12,6 +11,7 @@ import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Faction } from '@/engine/ecs/types';
+import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
   constructor(
@@ -21,8 +21,7 @@ export class BehaviorSystem implements IGameSystem {
     private panelSystem: IPanelSystem,
     private particleSystem: IParticleSystem,
     private audio: IAudioService,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService
+    private events: IGameEventService // Unified
   ) {
     events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -59,10 +58,7 @@ export class BehaviorSystem implements IGameSystem {
           return bullet;
       },
       spawnFX: (type, x, y, angle) => {
-          const id = getFXCode(type);
-          if (id) {
-              this.fastEvents.spawnFX(id, x, y, angle || 0);
-          }
+          this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: angle || 0 });
       },
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
@@ -70,15 +66,7 @@ export class BehaviorSystem implements IGameSystem {
       damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
-          const pan = x !== undefined && halfWidth > 0 
-            ? Math.max(-1, Math.min(1, x / halfWidth)) 
-            : 0;
-          const id = getSoundCode(key.toLowerCase());
-          if (id) {
-              this.fastEvents.playSound(id, pan);
-          } else {
-              this.audio.playSound(key as any, pan);
-          }
+          this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
       config: this.config

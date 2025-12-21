@@ -681,3 +681,4 @@ What if the solution is to manually resize them past the breakopint to how they 
 
 shift the Driller's geometry so (0,0,0) is exactly at the Tip of the Drill. (When the driller spins, it will now pivot around its tip (like a real drill) rather than its center.) - - - can we do the same with hunter?
 
+music audio ducking needs fine tuning, especially when hit by a ton of enemies it shouldn't mute completely. instead of volume could we cut frequencies, cutting more and more high frequenices as damage increases?
