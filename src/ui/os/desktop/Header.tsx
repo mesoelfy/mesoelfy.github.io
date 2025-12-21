@@ -9,7 +9,6 @@ import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 import { useGameStream } from '@/ui/hooks/useGameStream';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -49,18 +48,11 @@ export const Header = () => {
   const barRef = useRef<HTMLDivElement>(null);
   const [integrityState, setIntegrityState] = useState(100);
 
-  useEffect(() => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.bindScore(scoreRef.current);
-      } catch {}
-  }, []);
-  
+  // --- REFACTOR: DIRECT DOM UPDATE (No Service Locator dependency) ---
   useGameStream('SCORE', (v) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateScore(v);
-      } catch {}
+      if (scoreRef.current) {
+          scoreRef.current.innerText = Math.floor(v).toString().padStart(4, '0');
+      }
   });
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
