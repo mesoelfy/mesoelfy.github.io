@@ -4,6 +4,7 @@ import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export class VoiceManager {
   private activeCount = 0;
@@ -85,11 +86,13 @@ export class VoiceManager {
     this.currentAmbienceKey = key;
   }
 
-  public startMusic(url: string) {
+  public startMusic(url?: string) {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.musicGain || this.musicElement) return;
 
-    this.musicElement = new Audio(url);
+    const targetUrl = url || EXTERNAL_CONFIG.ASSETS.AUDIO.BG_MUSIC;
+
+    this.musicElement = new Audio(targetUrl);
     this.musicElement.loop = true; 
     this.musicElement.crossOrigin = "anonymous";
     

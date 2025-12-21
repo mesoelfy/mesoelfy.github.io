@@ -3,8 +3,9 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
-const UPDATE_INTERVAL = 500; // Slower tick for visibility
+const UPDATE_INTERVAL = 500; 
 
 export const useFavicon = (bootKey: string) => {
   const linkRef = useRef<HTMLLinkElement | null>(null);
@@ -15,11 +16,9 @@ export const useFavicon = (bootKey: string) => {
   const isZenMode = useGameStore(s => s.isZenMode);
   const [tick, setTick] = useState(false);
 
-  // 1. Setup Link Reference
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Prioritize existing 'icon' or 'shortcut icon'
     let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
     if (!link) { 
         link = document.createElement('link'); 
@@ -28,22 +27,19 @@ export const useFavicon = (bootKey: string) => {
     }
     linkRef.current = link;
 
-    // Cache default favicon
-    fetch('/favicon.ico').then(res => res.blob()).then(blob => {
+    fetch(EXTERNAL_CONFIG.ASSETS.ICONS.FAVICON).then(res => res.blob()).then(blob => {
         const reader = new FileReader();
         reader.onloadend = () => { if (typeof reader.result === 'string') defaultIconDataRef.current = reader.result; };
         reader.readAsDataURL(blob);
     }).catch(() => {});
   }, []);
 
-  // 2. Loop
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).electron) return;
     const interval = setInterval(() => { setTick(t => !t); }, UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Update Logic (Reactive)
   useEffect(() => {
     if (!linkRef.current) return;
     

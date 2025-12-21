@@ -4,15 +4,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { clsx } from 'clsx';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export const ContactModal = () => {
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT' | 'ERROR'>('IDLE');
   const [signalStrength, setSignalStrength] = useState(0);
 
   const handleInput = () => {
-      // Fluctuate signal on typing
       setSignalStrength(Math.floor(Math.random() * 40) + 60);
-      AudioSystem.playSound('ui_hover'); // Subtle chirp
+      AudioSystem.playSound('ui_hover');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -25,7 +25,7 @@ export const ContactModal = () => {
       const data = new FormData(form);
       
       try {
-          const res = await fetch("https://formspree.io/f/xkgdbkpz", {
+          const res = await fetch(EXTERNAL_CONFIG.API.FORMSPREE, {
               method: "POST",
               body: data,
               headers: { 'Accept': 'application/json' }
@@ -48,13 +48,11 @@ export const ContactModal = () => {
     <ModalContainer title="SECURE_UPLINK // TERMINAL_01" type="contact">
       <div className="max-w-3xl mx-auto h-full flex flex-col relative overflow-hidden">
         
-        {/* DECORATIVE BACKGROUND */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-cyan rounded-full blur-[100px]" />
         </div>
 
-        {/* STATUS BAR */}
         <div className="flex items-center justify-between p-4 border-b border-primary-green/20 bg-black/40 backdrop-blur-sm z-10 shrink-0">
             <div className="flex items-center gap-3">
                 <div className={clsx("w-3 h-3 rounded-full animate-pulse", status === 'ERROR' ? "bg-critical-red" : "bg-primary-green")} />
@@ -68,9 +66,7 @@ export const ContactModal = () => {
             </div>
         </div>
 
-        {/* MAIN TERMINAL */}
         <div className="flex-1 relative p-6 md:p-12 overflow-y-auto z-10">
-            
             <AnimatePresence mode="wait">
                 {status === 'SENT' ? (
                     <motion.div 
@@ -102,95 +98,46 @@ export const ContactModal = () => {
                         onSubmit={handleSubmit}
                         className="space-y-8 max-w-xl mx-auto"
                     >
-                        {/* TERMINAL HEADER */}
                         <div className="font-mono text-primary-green text-sm mb-8 opacity-70">
                             <p>&gt; ESTABLISHING SECURE TUNNEL...</p>
                             <p>&gt; ENCRYPTION KEY: RSA-4096</p>
                             <p>&gt; READY FOR INPUT.</p>
                         </div>
 
-                        {/* INPUT: NAME */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 CODENAME (Required)
                             </label>
                             <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
-                                <input 
-                                    type="text" 
-                                    name="name"
-                                    required
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 uppercase"
-                                    placeholder="ENTER_IDENTITY"
-                                />
+                                <input type="text" name="name" required onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 uppercase" placeholder="ENTER_IDENTITY" />
                             </div>
                         </div>
 
-                        {/* INPUT: EMAIL */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 RETURN_ADDRESS (Required)
                             </label>
                             <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
-                                <input 
-                                    type="email" 
-                                    name="email"
-                                    required
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700"
-                                    placeholder="user@netscape.com"
-                                />
+                                <input type="email" name="email" required onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700" placeholder="user@netscape.com" />
                             </div>
                         </div>
 
-                        {/* INPUT: MESSAGE */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 PAYLOAD (Message)
                             </label>
                             <div className="flex items-start border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50 mt-1">&gt;</span>
-                                <textarea 
-                                    name="message"
-                                    required
-                                    rows={4}
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 resize-none"
-                                    placeholder="Type your transmission here..."
-                                />
+                                <textarea name="message" required rows={4} onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 resize-none" placeholder="Type your transmission here..." />
                             </div>
                         </div>
 
-                        {/* ACTION BAR */}
                         <div className="pt-6">
-                            <button 
-                                type="submit"
-                                disabled={status === 'SENDING'}
-                                className={clsx(
-                                    "w-full py-4 font-header font-black text-lg tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-4 relative overflow-hidden group btn-glitch",
-                                    status === 'SENDING' 
-                                        ? "bg-primary-green/20 text-primary-green cursor-wait" 
-                                        : "bg-primary-green text-black hover:bg-white"
-                                )}
-                            >
-                                {status === 'SENDING' ? (
-                                    <>
-                                        <Terminal size={20} className="animate-spin" />
-                                        UPLOADING...
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>INITIATE_UPLINK</span>
-                                        <Send size={20} className="group-hover:translate-x-2 transition-transform" />
-                                    </>
-                                )}
-                                
-                                {/* Button Scanline */}
-                                {!status && (
-                                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
-                                )}
+                            <button type="submit" disabled={status === 'SENDING'} className={clsx("w-full py-4 font-header font-black text-lg tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-4 relative overflow-hidden group btn-glitch", status === 'SENDING' ? "bg-primary-green/20 text-primary-green cursor-wait" : "bg-primary-green text-black hover:bg-white")}>
+                                {status === 'SENDING' ? (<><Terminal size={20} className="animate-spin" /> UPLOADING...</>) : (<><span>INITIATE_UPLINK</span><Send size={20} className="group-hover:translate-x-2 transition-transform" /></>)}
+                                {!status && (<div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />)}
                             </button>
                         </div>
                     </motion.form>

@@ -21,7 +21,6 @@ export class VisualSystem implements IGameSystem {
     private interactionSystem: IInteractionSystem,
     events: IGameEventService
   ) {
-    // RESTORED: Flash logic moved from RenderSystem
     events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
         const entity = this.registry.getEntity(p.id);
         if (entity) {
@@ -33,6 +32,8 @@ export class VisualSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const CFG = VISUAL_CONFIG.DEFORMATION;
+    const RENDER_CFG = VISUAL_CONFIG.RENDER;
+    
     const isZenMode = useGameStore.getState().isZenMode;
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
@@ -92,10 +93,10 @@ export class VisualSystem implements IGameSystem {
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // Effect Decay
-          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * 15.0));
+          // Effect Decay (Now using Config)
+          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
-              effect.flash = Math.max(0, effect.flash - (delta * 6.0));
+              effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
           }

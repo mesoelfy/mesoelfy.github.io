@@ -1,5 +1,6 @@
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { PhysicsConfig } from '@/engine/config/PhysicsConfig';
 import { ParticleShape } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
@@ -30,6 +31,9 @@ export class ParticleSystem implements IParticleSystem {
   update(delta: number, time: number): void {
     if (this.count === 0) return;
 
+    // Use centralized constant
+    const friction = PhysicsConfig.PARTICLES.FRICTION;
+
     let i = 0;
     while (i < this.count) {
       this.life[i] -= delta;
@@ -43,8 +47,8 @@ export class ParticleSystem implements IParticleSystem {
       this.x[i] += this.vx[i] * delta;
       this.y[i] += this.vy[i] * delta;
       
-      this.vx[i] *= 0.95;
-      this.vy[i] *= 0.95;
+      this.vx[i] *= friction;
+      this.vy[i] *= friction;
 
       i++;
     }
