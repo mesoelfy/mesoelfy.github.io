@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { clsx } from 'clsx';
@@ -26,11 +26,9 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
   const glow = isHigh ? 'shadow-[0_0_20px_rgba(120,246,84,0.2)]' : 'shadow-[0_0_20px_rgba(234,231,71,0.2)]';
   
   return (
-    <motion.button
-      layout
+    <button
       onClick={onClick}
       onMouseEnter={() => AudioSystem.playHover()}
-      // CURSOR FIX: Added cursor-none to override default button pointer
       className={clsx(
         "relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left cursor-none",
         active 
@@ -38,7 +36,6 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
           : "border-white/10 bg-white/5 hover:border-white/30"
       )}
     >
-        {/* Active Scanline Background */}
         {active && (
             <div className={clsx(
                 "absolute inset-0 opacity-10 pointer-events-none",
@@ -48,7 +45,6 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
             )} />
         )}
 
-        {/* Animated Brackets & Icon */}
         <div className="flex items-center gap-2 relative z-10 shrink-0">
             <motion.span 
                 animate={active ? { x: -3, opacity: 1 } : { x: 0, opacity: 0.3 }}
@@ -67,7 +63,6 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
             </motion.span>
         </div>
 
-        {/* Text Info */}
         <div className="flex flex-col relative z-10 min-w-0">
             <span className={clsx("font-header font-black tracking-widest text-sm transition-colors", active ? "text-white" : "text-gray-400 group-hover:text-white")}>
                 {label}
@@ -77,9 +72,8 @@ const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
             </span>
         </div>
 
-        {/* Corner Accent */}
         {active && <div className={clsx("absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2", borderColor)} />}
-    </motion.button>
+    </button>
   );
 };
 
@@ -94,7 +88,29 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   } = useBootSequence({ onComplete, onBreachStart });
 
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
-  useSmartScroll(containerRef);
+
+  // --- RESPONSIVE SCALING LOGIC ---
+  const [uiScale, setUiScale] = useState(1.0);
+
+  useEffect(() => {
+    const handleResize = () => {
+        // Base dimensions of the UI stack (approx 42rem width)
+        const BASE_WIDTH = 680; 
+        const BASE_HEIGHT = 850; 
+
+        const widthScale = window.innerWidth / BASE_WIDTH;
+        const heightScale = window.innerHeight / BASE_HEIGHT;
+
+        // Fill screen up to 96%
+        const fitScale = Math.min(widthScale, heightScale) * 0.96;
+        
+        setUiScale(Math.max(0.5, fitScale));
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleWrapperClick = () => {
       coreInitialize();
@@ -113,41 +129,43 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
       transition={{ duration: 0.5, ease: "easeOut" }}
       className={clsx(
-          "fixed inset-0 z-boot font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black cursor-none",
-          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
+          "fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden"
       )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
       
-      <div className="min-h-full min-w-min w-full flex flex-col items-center justify-center p-4 md:p-8 relative z-10">
+      <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
         
         {/* --- MAIN STACK --- */}
         <motion.div 
-            layout 
-            className="flex flex-col gap-4 w-full max-w-[42rem]"
-            animate={isBreaching ? { scale: 2.2, opacity: 0, filter: "blur(10px)" } : { scale: 2.0, opacity: 1, filter: "blur(0px)" }}
-            initial={{ opacity: 0, scale: 2.0 }}
-            transition={{ duration: 0.5, ease: "easeIn" }}
+            className="flex flex-col gap-4 w-[680px] origin-center"
+            // Apply Dynamic Scale
+            style={{ 
+                transform: `scale(${isBreaching ? uiScale * 1.1 : uiScale})`,
+                filter: isBreaching ? "blur(10px)" : "blur(0px)",
+                opacity: isBreaching ? 0 : 1,
+                transition: "transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.5s ease-in, filter 0.5s ease-in"
+            }}
         >
             
             {/* PANEL 1: BOOT LOADER */}
-            <motion.div layout className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
+            <div className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                 <BootHeader step={step} />
                 <div className="relative w-full flex-1">
                     <DotGridBackground /> 
-                    <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
+                    {/* HEIGHT INCREASED: h-40 -> h-44 to fix cutoff */}
+                    <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
                         {logsToShow.map((line, i) => (
                             <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
                         ))}
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* PANEL 2: UNIFIED CORE (Payload + GPU) */}
             <AnimatePresence mode="wait">
             {showPayloadWindow && (
                 <motion.div 
-                    layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 100, damping: 20 }}
@@ -159,9 +177,10 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     <div className="relative w-full">
                         <DotGridBackground /> 
                         
-                        <motion.div layout className="px-4 pb-4 pt-3 md:px-6 md:pb-6 md:pt-5 flex flex-col items-center gap-6 relative z-10">
+                        {/* PADDING INCREASED: pt-3 -> pt-6 */}
+                        <div className="px-4 pb-4 pt-5 flex flex-col items-center gap-6 relative z-10">
                             
-                            {/* 1. ASCII ART - Infected when warning appears */}
+                            {/* 1. ASCII ART */}
                             <AsciiRenderer isInfected={showWarningBox} />
 
                             {/* 2. WARNING BOX (Conditional) */}
@@ -191,7 +210,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                             scale: { duration: 0.3 },
                                             boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
                                         }}
-                                        className="border border-critical-red bg-critical-red/20 px-6 py-2 flex items-center gap-4 relative overflow-hidden shrink-0"
+                                        className="border border-critical-red bg-critical-red/20 px-6 py-3 flex items-center gap-4 relative overflow-hidden shrink-0"
                                     >
                                         <motion.div 
                                             className="absolute inset-0"
@@ -230,21 +249,20 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                         key="config-grid"
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: "auto" }}
-                                        transition={{ duration: 0.5, delay: 0.2 }}
+                                        transition={{ duration: 0.2 }}
                                         className="w-full flex flex-col gap-6 pt-2 border-t border-white/10"
                                     >
                                         
-                                        {/* GPU Selector Grid */}
                                         <div className="flex flex-col gap-2">
-                                            <div className="flex items-center justify-between text-[9px] font-mono text-gray-500 uppercase tracking-widest px-1">
-                                                <span className="flex items-center gap-2"><Cpu size={10} /> Graphics_Kernel</span>
+                                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
+                                                <span className="flex items-center gap-2"><Cpu size={12} /> Graphics_Kernel</span>
                                                 <span>Select Profile</span>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <GpuCard 
                                                     mode="HIGH" 
                                                     label="HIGH_VOLTAGE" 
-                                                    sub="MAX_FIDELITY // BLOOM // PARTICLES" 
+                                                    sub="MAX_FIDELITY // BLOOM" 
                                                     icon={Zap} 
                                                     active={graphicsMode === 'HIGH'} 
                                                     onClick={() => handleGpuSelect('HIGH')} 
@@ -252,7 +270,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                                 <GpuCard 
                                                     mode="POTATO" 
                                                     label="POTATO_MODE" 
-                                                    sub="PERFORMANCE // RETRO // FAST" 
+                                                    sub="PERFORMANCE // RETRO" 
                                                     icon={ZapOff} 
                                                     active={graphicsMode === 'POTATO'} 
                                                     onClick={() => handleGpuSelect('POTATO')} 
@@ -260,26 +278,21 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                             </div>
                                         </div>
 
-                                        {/* Big Initialize Button */}
                                         <button 
                                             onClick={handleWrapperClick} 
                                             onMouseEnter={() => AudioSystem.playHover()} 
-                                            // CURSOR FIX
-                                            className="group relative w-full py-4 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none"
+                                            className="group relative w-full py-5 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none"
                                         >
-                                            {/* Scanline Sweep */}
                                             <div className="absolute inset-0 bg-primary-green translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out opacity-20" />
-                                            
-                                            {/* Button Content */}
                                             <div className="relative z-10 flex flex-col items-center gap-1">
                                                 <div className="flex items-center gap-3">
-                                                    <Activity size={16} className="text-primary-green animate-pulse" />
-                                                    <span className="font-header font-black text-xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
+                                                    <Activity size={20} className="text-primary-green animate-pulse" />
+                                                    <span className="font-header font-black text-2xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
                                                         INITIALIZE_SYSTEM
                                                     </span>
-                                                    <Activity size={16} className="text-primary-green animate-pulse" />
+                                                    <Activity size={20} className="text-primary-green animate-pulse" />
                                                 </div>
-                                                <span className="text-[9px] font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
+                                                <span className="text-xs font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
                                                     CLICK TO INJECT PAYLOAD
                                                 </span>
                                             </div>
@@ -289,7 +302,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                 )}
                             </AnimatePresence>
 
-                        </motion.div>
+                        </div>
                     </div>
                 </motion.div>
             )}

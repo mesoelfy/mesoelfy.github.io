@@ -17,13 +17,14 @@ export const AsciiRenderer = ({ isInfected }: Props) => {
   }, []);
 
   return (
-    <div className="font-mono font-bold leading-[0.95] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
+    // SIZE UPDATE: text-[9px] -> text-[11px]
+    <div className="font-mono font-bold leading-[0.95] whitespace-pre text-center select-none overflow-hidden text-[11px] shrink-0">
       {rows.map((row, rowIndex) => (
         <motion.div
           key={rowIndex}
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: rowIndex * 0.05 }} // Staggered reveal
+          transition={{ duration: 0.3, delay: rowIndex * 0.05 }}
         >
           {row.split('').map((char, charIndex) => {
             if (char === ' ') return <span key={charIndex}> </span>;
@@ -31,10 +32,7 @@ export const AsciiRenderer = ({ isInfected }: Props) => {
             let baseClass = 'transition-colors duration-300 ';
             let animClass = '';
             
-            // Randomly infect characters if flag is set
-            // Using a deterministic random based on index to keep React happy during re-renders, 
-            // but allowing "infection" to override.
-            const isRed = isInfected && Math.random() > 0.7; // 30% chance to turn red
+            const isRed = isInfected && Math.random() > 0.7;
 
             if (isRed) {
                 baseClass += 'text-critical-red';
