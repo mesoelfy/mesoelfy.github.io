@@ -109,7 +109,8 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         {/* Body Wrapper */}
                         <div className="relative w-full">
                             <DotGridBackground /> 
-                            <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
+                            {/* UPDATED PADDING: pt-3 (mobile) / pt-5 (desktop) */}
+                            <div className="px-4 pb-4 pt-3 md:px-6 md:pb-6 md:pt-5 flex flex-col items-center gap-4 relative z-10">
                                 <AsciiRenderer />
                                 {showWarningBox && (
                                 <motion.div 

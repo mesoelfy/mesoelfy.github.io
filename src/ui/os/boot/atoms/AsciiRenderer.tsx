@@ -7,7 +7,10 @@ export const AsciiRenderer = () => {
   const isHigh = graphicsMode === 'HIGH';
 
   const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
+    // Trim leading newline to prevent layout jump at top
+    const cleanTitle = ASCII_TITLE.replace(/^\n/, '');
+    
+    return cleanTitle.split('').map((char, i) => {
       if (char === '\n') return <br key={i} />;
       if (char === ' ') return <span key={i}> </span>;
 
@@ -36,8 +39,8 @@ export const AsciiRenderer = () => {
   }, [isHigh]); 
 
   return (
-    // UPDATE: text-[4px] ensures fit on 360px screens (Galaxy S8+)
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
+    // Tighter leading (0.95) to compact the block and removed extra top whitespace
+    <div className="font-mono font-bold leading-[0.95] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
       {renderedChars}
     </div>
   );
