@@ -1,36 +1,26 @@
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
+import { Sequence, Parallel, MemSequence } from '@/engine/ai/behavior/composites';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { Wait } from '@/engine/ai/nodes/actions';
+import { OrbitControl, DaemonAim, ChargeMechanic, HasTargetLock, FireDaemonShot } from '@/engine/ai/nodes/daemonNodes';
 
-const DAEMON_DEF: NodeDef = {
-  type: 'Sequence',
-  children: [
-    { type: 'SpawnPhase', args: [1.0] },
-    {
-        type: 'Parallel',
-        children: [
-            { type: 'OrbitControl', args: ['ACTIVE'] },
-            { type: 'DaemonAim' },
-            {
-                type: 'MemSequence',
-                id: 'daemon_cycle',
-                children: [
-                    { type: 'ChargeMechanic', args: [2.0] },
-                    { type: 'HasTargetLock' },
-                    { type: 'FireDaemonShot', args: [35.0, 20] },
-                    { type: 'Wait', args: [0.5] }
-                ]
-            }
-        ]
-    }
-  ]
-};
-
-let treeRoot: any = null;
+const DAEMON_TREE = new Sequence([
+  new SpawnPhase(1.0),
+  new Parallel([
+    new OrbitControl('ACTIVE'),
+    new DaemonAim(),
+    new MemSequence([
+      new ChargeMechanic(2.0),
+      new HasTargetLock(),
+      new FireDaemonShot(35.0, 20),
+      new Wait(0.5)
+    ], 'daemon_cycle')
+  ])
+]);
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
-    treeRoot.tick(e, ctx);
+    DAEMON_TREE.tick(e, ctx);
   }
 };
