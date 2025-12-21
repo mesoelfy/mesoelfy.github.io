@@ -19,7 +19,7 @@ export enum GameEvents {
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
   UPGRADE_SELECTED = 'UPGRADE_SELECTED',
   ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED',
-  PURGE_COMPLETE = 'PURGE_COMPLETE', // NEW: Signals end of spiral
+  PURGE_COMPLETE = 'PURGE_COMPLETE',
   
   DEBUG_SPAWN = 'DEBUG_SPAWN',
   LOG_DEBUG = 'LOG_DEBUG',
@@ -55,7 +55,7 @@ export type FXVariant =
   | 'EXPLOSION_RED_DIR';
 
 export interface GameEventPayloads {
-  [GameEvents.PLAYER_FIRED]: { x: number; y: number };
+  [GameEvents.PLAYER_FIRED]: { x: number; y: number; angle: number }; // ANGLE ADDED
   [GameEvents.PLAYER_HIT]: { damage: number };
   [GameEvents.ENEMY_SPAWNED]: { type: string; id: number };
   [GameEvents.ENEMY_DAMAGED]: { id: number; damage?: number; type?: string };
@@ -73,7 +73,7 @@ export interface GameEventPayloads {
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
   [GameEvents.UPGRADE_SELECTED]: { option: string };
   [GameEvents.ZEN_MODE_ENABLED]: null;
-  [GameEvents.PURGE_COMPLETE]: null; // NEW
+  [GameEvents.PURGE_COMPLETE]: null;
   
   [GameEvents.DEBUG_SPAWN]: { type: string; count: number };
   [GameEvents.LOG_DEBUG]: { msg: string; source?: string };

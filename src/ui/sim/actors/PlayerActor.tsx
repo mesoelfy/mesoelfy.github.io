@@ -15,29 +15,19 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import * as THREE from 'three';
 
-/**
- * THE NEW CORE: A sharp, concave 3-point geometry (Plectrum-style shuriken)
- */
 const createCurvedTriangleGeo = () => {
     const shape = new THREE.Shape();
-    const R = 0.11;       // Radius of points
-    const curveR = 0.10;  // How far the sides pull inward toward center
-    
-    // Equilateral Vertices (90deg, 210deg, 330deg)
+    const R = 0.11; const curveR = 0.10;  
     const p1 = [0, R];
     const p2 = [R * Math.cos(Math.PI * 7/6), R * Math.sin(Math.PI * 7/6)];
     const p3 = [R * Math.cos(Math.PI * 11/6), R * Math.sin(Math.PI * 11/6)];
-    
-    // Mid-angles for the control points (150deg, 270deg, 30deg)
     const cp12 = [curveR * Math.cos(Math.PI * 150/180), curveR * Math.sin(Math.PI * 150/180)];
     const cp23 = [curveR * Math.cos(Math.PI * 270/180), curveR * Math.sin(Math.PI * 270/180)];
     const cp31 = [curveR * Math.cos(Math.PI * 30/180), curveR * Math.sin(Math.PI * 30/180)];
-
     shape.moveTo(p1[0], p1[1]);
     shape.quadraticCurveTo(cp12[0], cp12[1], p2[0], p2[1]);
     shape.quadraticCurveTo(cp23[0], cp23[1], p3[0], p3[1]);
     shape.quadraticCurveTo(cp31[0], cp31[1], p1[0], p1[1]);
-    
     return new THREE.ShapeGeometry(shape);
 };
 
@@ -89,16 +79,21 @@ export const PlayerActor = () => {
   const reticleRef = useRef<THREE.Mesh>(null);
   const backingCircleRef = useRef<THREE.Mesh>(null);
   const ambientGlowRef = useRef<THREE.Mesh>(null);
-  const { introDone } = useStore(); 
   
+  const { introDone } = useStore(); 
+  const isZenMode = useGameStore(state => state.isZenMode);
+
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
-  
   const zenStartTime = useRef(-1);
-  const isZenMode = useGameStore(state => state.isZenMode);
+
+  // --- AIM STATE ---
+  const lastFireTimeRef = useRef(-100);
+  const targetAimAngle = useRef(0);
+  const rotationOffsetRef = useRef(0);
 
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
@@ -125,27 +120,28 @@ export const PlayerActor = () => {
       return mat;
   }, []);
 
-  useEffect(() => events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }), [events]);
+  useEffect(() => {
+      const u1 = events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; });
+      const u2 = events.subscribe(GameEvents.PLAYER_FIRED, (p) => { 
+          lastFireTimeRef.current = performance.now() / 1000;
+          // Compensate for 3D coordinate system (Top point of triangle is Y+ which is PI/2)
+          targetAimAngle.current = p.angle - Math.PI/2; 
+      });
+      return () => { u1(); u2(); };
+  }, [events]);
 
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     
-    if (!isZenMode) {
-        zenStartTime.current = -1;
-    } else if (zenStartTime.current === -1) {
-        zenStartTime.current = state.clock.elapsedTime;
-    }
+    if (!isZenMode) zenStartTime.current = -1;
+    else if (zenStartTime.current === -1) zenStartTime.current = state.clock.elapsedTime;
 
     let targetScale = 0;
     if (introDone) {
         if (isZenMode) {
-            if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) {
-                targetScale = 1;
-            }
-        } else if (!isSystemFailure) {
-            targetScale = 1;
-        }
+            if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) targetScale = 1;
+        } else if (!isSystemFailure) targetScale = 1;
     }
 
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
@@ -179,11 +175,23 @@ export const PlayerActor = () => {
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
         const time = state.clock.elapsedTime;
 
-        // --- GLOBAL CORE LOGIC ---
-        centerDotRef.current.geometry = coreGeo; 
-        centerDotRef.current.rotation.z = -time * (Math.PI * 2 / 10);
+        // --- CORE ROTATION ENGINE ---
+        const timeSinceFire = time - lastFireTimeRef.current;
+        const idleSpeed = (Math.PI * 2 / 10);
         
-        // REDUCED PULSE: 50% intensity (0.15 -> 0.075)
+        centerDotRef.current.geometry = coreGeo;
+
+        if (timeSinceFire < 0.25) {
+            // LOCK ON TARGET
+            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, 0.4);
+            // Anchor the offset for a smooth resume
+            rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * idleSpeed);
+        } else {
+            // EASE BACK TO IDLE
+            const targetIdle = -time * idleSpeed + rotationOffsetRef.current;
+            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetIdle, 0.08);
+        }
+
         const pulse = 1.0 + Math.sin(time * Math.PI) * 0.075;
         centerDotRef.current.scale.setScalar(pulse);
 

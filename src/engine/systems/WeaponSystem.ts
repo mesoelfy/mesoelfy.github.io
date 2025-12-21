@@ -99,12 +99,9 @@ export class WeaponSystem implements IGameSystem {
           
           const b = this.spawner.spawnBullet(t.x, t.y, vx, vy, Faction.FRIENDLY, 2.0, damage, WeaponIDs.PLAYER_PURGE);
           const model = b.getComponent<RenderModel>(ComponentType.RenderModel);
-          
           if (model) { 
               this.tempColor.setHSL(ratio, 0.9, 0.6);
-              model.r = this.tempColor.r;
-              model.g = this.tempColor.g;
-              model.b = this.tempColor.b;
+              model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b;
           }
       }
       this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.8 });
@@ -124,10 +121,13 @@ export class WeaponSystem implements IGameSystem {
           const angle = this.purgeState.currentAngle;
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
+          
+          // --- RESTORED PRISMATIC SPIRAL LOGIC ---
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.6); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
+
           if (this.purgeState.shotsRemaining % 5 === 0) { this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: originX }); }
           this.purgeState.currentAngle += ANGLE_INCREMENT;
           this.purgeState.shotsRemaining--;
@@ -147,19 +147,26 @@ export class WeaponSystem implements IGameSystem {
       if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
     }
     if (!targetEnemy) return;
+
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
+    const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
+    
     const shots = calculatePlayerShots({ x: pPos.x, y: pPos.y }, { x: tPos.x, y: tPos.y }, upgrades);
     shots.forEach(shot => {
         const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, Faction.FRIENDLY, shot.life, shot.damage, shot.configId);
+        
+        if (shot.isHoming) {
+            bullet.addComponent(new TargetData(null, 'ENEMY'));
+            this.registry.updateCache(bullet); 
+        }
+
         if (pRender) {
             const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
             if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
         }
-        if (shot.isHoming) {
-            bullet.addComponent(new IdentityData('BULLET')); 
-            bullet.addComponent(new TargetData(null, 'ENEMY'));
-        }
     });
+
+    this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });
     this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
   }
