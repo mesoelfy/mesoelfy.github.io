@@ -12,6 +12,9 @@ export class AudioMixer {
   public compressor!: DynamicsCompressorNode;
   public analyser!: AnalyserNode;
 
+  private musicFilter!: BiquadFilterNode;
+  private masterFilter!: BiquadFilterNode;
+
   private reverbNode!: ConvolverNode;
   private reverbSend!: GainNode;
   private delayNode!: DelayNode;
@@ -28,6 +31,9 @@ export class AudioMixer {
   private _targetMusicVol: number = 0;
   private _isMusicMuted: boolean = true;
 
+  private readonly MAX_FREQ = 20000;
+  private readonly MIN_FREQ = 350;
+
   constructor(manager: AudioContextManager) {
     this.ctxManager = manager;
   }
@@ -40,12 +46,24 @@ export class AudioMixer {
     this.sfxGain = ctx.createGain();
     this.musicGain = ctx.createGain();
     this.ambienceGain = ctx.createGain();
+    
+    this.musicFilter = ctx.createBiquadFilter();
+    this.musicFilter.type = 'lowpass';
+    this.musicFilter.frequency.value = this.MAX_FREQ;
+
+    this.masterFilter = ctx.createBiquadFilter();
+    this.masterFilter.type = 'lowpass';
+    this.masterFilter.frequency.value = this.MAX_FREQ;
+
     this.compressor = ctx.createDynamicsCompressor();
     this.analyser = ctx.createAnalyser();
 
-    this.compressor.threshold.value = -12; this.compressor.knee.value = 30;       
-    this.compressor.ratio.value = 12; this.compressor.attack.value = 0.003;  
-    this.compressor.release.value = 0.25; this.analyser.fftSize = 64; 
+    this.compressor.threshold.value = -12; 
+    this.compressor.knee.value = 30;       
+    this.compressor.ratio.value = 12; 
+    this.compressor.attack.value = 0.003;  
+    this.compressor.release.value = 0.25; 
+    this.analyser.fftSize = 64; 
     this.analyser.smoothingTimeConstant = 0.8;
 
     this.reverbNode = ctx.createConvolver();
@@ -60,12 +78,17 @@ export class AudioMixer {
     this.delayNode.connect(this.masterGain);
     this.reverbNode.connect(this.masterGain);
 
-    this.musicGain.connect(this.masterGain);
-    this.sfxGain.connect(this.masterGain);
+    this.musicGain.connect(this.musicFilter);
+    this.musicFilter.connect(this.masterFilter);
+
+    this.sfxGain.connect(this.masterFilter);
     this.sfxGain.connect(this.reverbSend);
     this.sfxGain.connect(this.delaySend);
+
     this.reverbSend.connect(this.reverbNode);
     this.delaySend.connect(this.delayNode);
+
+    this.masterFilter.connect(this.masterGain);
     this.masterGain.connect(this.compressor);
     this.compressor.connect(this.analyser);
     this.analyser.connect(ctx.destination);
@@ -79,7 +102,7 @@ export class AudioMixer {
 
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner); 
-    this.ambiencePanner.connect(this.masterGain);
+    this.ambiencePanner.connect(this.masterFilter); 
     this.ambienceLFO.type = 'sine';
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
@@ -95,7 +118,6 @@ export class AudioMixer {
     this._isMusicMuted = !settings.music;
     this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
-    this.musicGain.gain.cancelScheduledValues(this.ctxManager.ctx!.currentTime);
     this.musicGain.gain.value = this._targetMusicVol;
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
@@ -109,23 +131,44 @@ export class AudioMixer {
     if (this.reverbSend) {
         this.reverbSend.gain.value = settings.fxReverbMix ?? 0.2;
         this.delaySend.gain.value = settings.fxDelayMix ?? 0.1;
-        this.delayNode.delayTime.value = 0.1 + ((Number.isFinite(settings.fxDelayTime) ? settings.fxDelayTime : 0.25) * 0.9);
+        this.delayNode.delayTime.value = 0.1 + ((settings.fxDelayTime ?? 0.25) * 0.9);
         this.delayFeedback.gain.value = settings.fxDelayFeedback ?? 0.3;
     }
   }
 
   public duckMusic(intensity: number, duration: number) {
-    if (!this.musicGain || this._isMusicMuted) return;
+    if (!this.musicFilter || this._isMusicMuted) return;
     const ctx = this.ctxManager.ctx;
-    const baseVol = this._targetMusicVol;
-    if (!ctx || baseVol < 0.001) return;
+    if (!ctx) return;
     const now = ctx.currentTime;
-    const targetVol = Math.max(0, baseVol * (1.0 - intensity));
-    this.musicGain.gain.cancelScheduledValues(now);
-    this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
-    this.musicGain.gain.linearRampToValueAtTime(targetVol, now + 0.05);
-    this.musicGain.gain.exponentialRampToValueAtTime(baseVol, now + duration);
+    const targetFreq = this.MAX_FREQ * Math.pow(this.MIN_FREQ / this.MAX_FREQ, intensity);
+    this.musicFilter.frequency.cancelScheduledValues(now);
+    this.musicFilter.frequency.setValueAtTime(this.musicFilter.frequency.value, now);
+    this.musicFilter.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.04);
+    this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
   }
-  
+
+  public updateMasterFilter(integrity: number) {
+      if (!this.masterFilter) return;
+      const ctx = this.ctxManager.ctx;
+      if (!ctx) return;
+
+      const threshold = 0.3;
+      if (integrity >= 1.0) {
+          // IMMEDIATE RESURRECTION (Snap filter open faster than normal healing)
+          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.05);
+          return;
+      }
+
+      if (integrity > threshold) {
+          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
+          return;
+      }
+
+      const dangerLevel = 1.0 - (integrity / threshold); 
+      const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, dangerLevel);
+      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
+  }
+
   public getByteFrequencyData(array: Uint8Array) { if (this.analyser) this.analyser.getByteFrequencyData(array); }
 }

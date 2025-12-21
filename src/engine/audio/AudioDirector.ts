@@ -5,18 +5,25 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { AudioMixer } from './modules/AudioMixer';
 
 export class AudioDirector implements IGameSystem {
+  private _isPurging: boolean = false;
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService, // Unified Bus
+    private events: IGameEventService,
     private audio: IAudioService
   ) {
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        const intensity = Math.min(0.9, 0.3 + (p.damage * 0.05));
+        this.audio.duckMusic(intensity, 1.2);
+    });
+
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
     });
@@ -28,19 +35,30 @@ export class AudioDirector implements IGameSystem {
 
     this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
-        this.audio.duckMusic(0.8, 1.5); 
+        this.audio.duckMusic(0.95, 2.5); 
     });
 
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
-        this.audio.duckMusic(1.0, 3.0);
+        this.audio.duckMusic(1.0, 5.0);
+        this._isPurging = false; // Reset flag in case of repeat game overs
     });
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'PURGE') {
+            this._isPurging = true; // TRIGGER AUDIO RESURRECTION
+        }
         this.audio.playSound('fx_level_up');
     });
 
-    // Fallback for events sent via slow path (not mapped to SoundCode)
+    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+        this._isPurging = false;
+    });
+
+    this.events.subscribe(GameEvents.GAME_START, () => {
+        this._isPurging = false;
+    });
+
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
@@ -48,9 +66,17 @@ export class AudioDirector implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Cast to access the optimized polling method exposed by UnifiedEventService
-    const unified = this.events as UnifiedEventService;
+    // 1. Process Global Master Filter
+    // If we are purging, we force integrity to 1.0 to "open" the filter.
+    const integrity = this._isPurging ? 1.0 : (this.panelSystem.systemIntegrity / 100);
     
+    const mixer = (this.audio as any).mixer as AudioMixer;
+    if (mixer) {
+        mixer.updateMasterFilter(integrity);
+    }
+
+    // 2. Process Fast Events
+    const unified = this.events as UnifiedEventService;
     if (unified && typeof unified.processFastEvents === 'function') {
         unified.processFastEvents((id, a1, a2, a3, a4) => {
             if (id === FastEventType.PLAY_SOUND) {
