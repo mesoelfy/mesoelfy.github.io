@@ -190,7 +190,8 @@ export default function Home() {
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
 
-                <div className="flex-1 min-h-0 relative w-full overflow-hidden">
+                {/* MODIFIED: overflow-y-auto enabled for mobile, hidden for large screens */}
+                <div className="flex-1 min-h-0 relative w-full overflow-y-auto lg:overflow-hidden">
                   <div 
                       className="w-full origin-top transition-transform duration-300 ease-out"
                       style={{ 
