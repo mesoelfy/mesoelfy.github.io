@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 17:23:20 CST 2025
+Generated on: Sat Dec 20 17:45:44 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -2314,11 +2314,13 @@ export const CustomCursor = () => {
   const { bootState, activeModal, isDebugOpen, isBreaching, sessionId } = useStore();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
-  const isGameActive = bootState === 'active' || bootState === 'mobile_lockdown';
+  const isGameActive = bootState === 'active';
+  const isMobile = bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || bootState === 'mobile_lockdown' || isGameOver) && !isOnScrollbar;
+  // FIX: Explicitly disable custom cursor in mobile_lockdown
+  const showCustomCursor = !isMobile && ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
 
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
@@ -2339,7 +2341,9 @@ export const CustomCursor = () => {
       setIsHovering(!!target.closest(`button, a, input, label, [${DOM_ATTR.INTERACTIVE}="true"]`));
       const onScroll = e.clientX >= window.innerWidth - 14 || e.clientY >= window.innerHeight - 14;
       setIsOnScrollbar(onScroll);
-      if (onScroll) {
+      
+      // Force native cursor if we are on scrollbar OR if logic dictates (like mobile)
+      if (onScroll || !showCustomCursor) {
           document.body.style.setProperty('cursor', 'auto', 'important');
       } else {
           document.body.style.setProperty('cursor', 'none', 'important');
@@ -2356,7 +2360,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching, isGameOver]);
+  }, [isGameActive, isMenuOpen, isBreaching, isGameOver, showCustomCursor, isMobile]);
 
   const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
   const cursorShadow = isHit 
@@ -2939,6 +2943,7 @@ import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { tailwindMerge } from '@/utils/tailwindMerge'; // Assumption: user might not have this, so I will stick to clsx logic carefully
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -2976,17 +2981,15 @@ interface GlassPanelProps {
   title?: string;
   gameId?: PanelId;
   maxHealth?: number; 
+  transparent?: boolean; // NEW PROP
 }
 
-export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH }: GlassPanelProps) => {
+export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH, transparent = false }: GlassPanelProps) => {
   const registryRef = gameId ? usePanelRegistry(gameId) : null;
   const visualRef = useReactRef<HTMLDivElement>(null);
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
-  // Game Over is strictly strictly integrity <= 0.
-  // We use this to force the shattered state, even if Zen Mode has technically activated in the store.
-  // Because integrity is NOT reset by Zen Mode activation (only by resetGame), this persists.
   const isGameOver = Math.floor(systemIntegrity) <= 0;
 
   if (gameId) {
@@ -3011,7 +3014,6 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const randSeed = (title?.length || 5) % 2 === 0 ? 1 : -1;
 
   useReactEffect(() => {
-      // Prioritize Shattered state above all else if integrity is 0
       if (isGameOver) {
           shakeControls.start("shattered");
       } else {
@@ -3045,19 +3047,26 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
+  // Background Logic
+  let bgClass = "bg-black";
+  if (transparent) bgClass = "bg-transparent";
+  else if (isDestroyed) bgClass = "bg-black/20";
+
   return (
     <div ref={registryRef} className={clsx("relative", className)}>
       <motion.div 
         ref={visualRef} variants={panelVariants} initial="hidden" animate={shakeControls} custom={randSeed}
         className={clsx(
           "w-full h-full relative overflow-hidden flex flex-col group",
-          isDestroyed ? "bg-black/20" : "bg-black", 
+          bgClass,
           "border", borderColor, "rounded-sm",
           showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300"
         )}
       >
         <DotGridBackground className="top-8" />
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />
+        {/* Only show scanlines if not transparent (improves legibility on mobile) */}
+        {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
+        
         {isCriticalGlobal && (
             <motion.div 
               className="absolute inset-0 pointer-events-none z-50 border-2 border-critical-red/60 shadow-[inset_0_0_30px_#FF003C]"
@@ -6925,25 +6934,30 @@ export const VisualLab = () => {
 =====================================
 FILE: ./src/ui/os/apps/mobile/SadMac.tsx
 =====================================
-import { Frown } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 
 export const SadMac = ({ className }: { className?: string }) => (
-  <div className={`relative w-24 h-24 ${className}`}>
-    <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)]">
-      <path 
-        d="M10 20 C10 10 20 10 30 10 L70 10 C80 10 90 10 90 20 L90 80 C90 90 80 95 50 95 C20 95 10 90 10 80 Z" 
-        fill="none" 
-        stroke="#FF003C" 
-        strokeWidth="4"
-      />
-      <line x1="10" y1="20" x2="25" y2="20" stroke="#FF003C" strokeWidth="4" />
-      <line x1="75" y1="20" x2="90" y2="20" stroke="#FF003C" strokeWidth="4" />
-      <circle cx="35" cy="40" r="4" fill="#FF003C" />
-      <circle cx="65" cy="40" r="4" fill="#FF003C" />
-      <path d="M50 45 L45 60 L55 60 Z" fill="#FF003C" />
+  <div className={`relative w-32 h-32 ${className}`}>
+    <svg viewBox="0 0 120 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)] overflow-visible">
+      
+      {/* Monitor Base */}
+      <rect x="10" y="5" width="100" height="60" rx="4" fill="none" stroke="#FF003C" strokeWidth="2" />
+      <rect x="16" y="11" width="88" height="48" fill="#FF003C" fillOpacity="0.1" />
+      
+      {/* Stand */}
+      <path d="M50 65 L50 75 L40 85 H80 L70 75 L70 65" fill="none" stroke="#FF003C" strokeWidth="2" />
+      
+      {/* Keyboard */}
+      <path d="M20 90 L15 95 H105 L100 90 Z" fill="none" stroke="#FF003C" strokeWidth="2" />
+      <line x1="30" y1="92" x2="90" y2="92" stroke="#FF003C" strokeWidth="2" strokeDasharray="4 4" />
+
+      {/* Screen Glitch */}
+      <path d="M30 35 L90 35" stroke="#FF003C" strokeWidth="2" />
+      <path d="M30 45 L70 45" stroke="#FF003C" strokeWidth="2" />
+      <path d="M45 25 L55 35 L45 45" stroke="#FF003C" strokeWidth="2" fill="none" />
     </svg>
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-critical-red">
-        <Frown size={24} strokeWidth={2.5} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full text-critical-red animate-pulse">
+        <Monitor size={24} strokeWidth={3} />
     </div>
   </div>
 );
@@ -7257,7 +7271,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Monitor, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Monitor, ExternalLink, AlertTriangle, MousePointer2 } from 'lucide-react';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -7275,6 +7289,12 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
   const [showFailureModal, setShowFailureModal] = useState(false);
   const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
 
+  // Force cursor hidden at root
+  useEffect(() => {
+      document.body.style.cursor = 'none';
+      return () => { document.body.style.cursor = 'auto'; };
+  }, []);
+
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
           if (p.id === PanelId.SOCIAL) {
@@ -7290,7 +7310,7 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
   }, [setIntegrity]);
 
   return (
-    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black">
+    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black cursor-none">
         {phase === 'intro' && (
             <div className="pointer-events-auto w-full h-full relative z-50">
                 <MobileRejectionModal onComplete={() => setPhase('game')} />
@@ -7298,7 +7318,7 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
         )}
         {phase === 'game' && (
             <>
-                {/* LAYER 0: THE SIMULATION (Visuals & Input Logic) */}
+                {/* LAYER 0: THE SIMULATION */}
                 <div className="absolute inset-0 z-0 pointer-events-none">
                     <Canvas
                         orthographic
@@ -7311,30 +7331,25 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
                         {/* 3D Panel Backing */}
                         <MobilePanelBase />
                         
-                        {/* Ripples appear ON TOP of the 3D panel backing */}
+                        {/* Ripples */}
                         <TouchRipple />
                         
-                        {/* Enemies render here */}
+                        {/* Enemies */}
                         <RenderDirector />
                         
-                        {/* Invisible Controller catches Global Window Taps */}
+                        {/* Input */}
                         <MobileInputController />
                     </Canvas>
                 </div>
                 
-                {/* LAYER 1: THE INTERFACE (Links & HUD) */}
+                {/* LAYER 1: THE INTERFACE */}
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
                     <div className="w-full max-w-sm pointer-events-auto">
-                        {/* 
-                           We use a transparent GlassPanel so the 3D backing + Ripples show through.
-                           pointer-events-auto ensures Links are clickable.
-                           The Canvas InputController listens to WINDOW events, so it catches taps 
-                           that miss the buttons.
-                        */}
                         <GlassPanel 
                             title="SOCIAL_UPLINK" 
                             gameId={PanelId.SOCIAL} 
-                            className="bg-transparent/10 shadow-none border-primary-green/30" 
+                            transparent={true} // Allow ripples to show through
+                            className="shadow-none border-primary-green/30" 
                             maxHealth={MOBILE_PANEL_HP}
                         >
                             <SocialRow layout="column" />
@@ -7343,23 +7358,23 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
                 </div>
 
                 {!showFailureModal && (
-                    <div className="absolute bottom-10 w-full text-center animate-pulse z-20 pointer-events-none">
-                        <span className="bg-black/80 px-4 py-1 text-xs font-mono border border-primary-green/30">
+                    <div className="absolute bottom-12 w-full text-center animate-pulse z-20 pointer-events-none">
+                        <span className="bg-black/80 px-4 py-1 text-[10px] font-mono border border-primary-green/30 tracking-widest">
                             TAP HOSTILES TO PURGE
                         </span>
                     </div>
                 )}
 
-                {/* LAYER 2: GAME OVER OVERLAY */}
+                {/* LAYER 2: GAME OVER */}
                 <AnimatePresence>
                     {showFailureModal && (
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
-                            className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto"
+                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto"
                         >
                             <motion.div 
                                 initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }}
-                                className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_50px_rgba(255,0,60,0.4)] overflow-hidden flex flex-col"
+                                className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_80px_rgba(255,0,60,0.3)] overflow-hidden flex flex-col"
                             >
                                 <div className="bg-critical-red px-4 py-2 flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-black font-black tracking-widest">
@@ -7375,24 +7390,24 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
                                     <motion.div 
                                         initial={{ scale: 0 }} animate={{ scale: 1 }} 
                                         transition={{ type: 'spring', stiffness: 200, damping: 12 }}
-                                        className="mb-8"
+                                        className="mb-6"
                                     >
                                         <SadMac />
                                     </motion.div>
 
-                                    <h1 className="text-3xl font-black text-critical-red tracking-widest mb-2">SYSTEM HALTED</h1>
-                                    <p className="text-[10px] font-mono text-critical-red/70 mb-8 uppercase leading-relaxed">
-                                        MOBILE_CORE_DUMPED.<br/>
-                                        PLEASE MIGRATE TO DESKTOP<br/>
-                                        FOR FULL NEURAL LINK.
+                                    <h1 className="text-3xl font-black text-critical-red tracking-widest mb-2">MOBILE CORE DUMP</h1>
+                                    <p className="text-[10px] font-mono text-white/70 mb-8 uppercase leading-relaxed max-w-[200px]">
+                                        <span className="text-critical-red font-bold">NEURAL LINK SEVERED.</span><br/>
+                                        THE SIMULATION REQUIRES<br/>
+                                        HIGHER COMPUTATIONAL POWER.
                                     </p>
 
                                     <a 
                                         href="https://mesoelfy.github.io" 
-                                        className="group block w-full py-3 bg-critical-red text-black font-bold tracking-widest hover:bg-white transition-all flex items-center justify-center gap-2"
+                                        className="group w-full py-4 bg-critical-red text-black font-header font-black text-sm tracking-[0.15em] hover:bg-white transition-all flex items-center justify-center gap-3"
                                     >
-                                        <Monitor size={16} />
-                                        <span>REBOOT SEQUENCE</span>
+                                        <MousePointer2 size={18} className="fill-current" />
+                                        <span>FULL TERMINAL REQUIRED</span>
                                         <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
                                     </a>
                                 </div>
@@ -8655,7 +8670,7 @@ import { Tag } from '@/engine/ecs/types';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { screenToWorld } from '@/engine/math/coords';
 
-const TAP_RADIUS = 2.0;
+const TAP_RADIUS = 2.5; // Increased hit radius for better mobile feel
 
 export const MobileInputController = () => {
   const { registry, events } = useGameContext();
@@ -8663,19 +8678,16 @@ export const MobileInputController = () => {
   useEffect(() => {
     const handleWindowTap = (e: PointerEvent) => {
         // 1. Convert Screen -> World
-        // We use the global ViewportHelper which is updated by MobileGameDirector
         const { width, height } = ViewportHelper.screenSize;
         if (width === 0 || height === 0) return;
 
         const worldPos = screenToWorld(e.clientX, e.clientY, width, height);
         
-        // 2. Dispatch Visual Ripple
+        // 2. Dispatch Visual Ripple (Handled by TouchRipple.tsx)
         window.dispatchEvent(new CustomEvent('mobile-spatial-tap', { detail: worldPos }));
 
-        // 3. Audio Feedback
-        AudioSystem.playSound('ui_click');
-
-        // 4. Hit Test Enemies
+        // 3. Hit Test Enemies
+        // We query the live registry via the Context Proxy
         const enemies = registry.getByTag(Tag.ENEMY);
         let hitFound = false;
 
@@ -8683,27 +8695,37 @@ export const MobileInputController = () => {
             if (!enemy.active) continue;
             
             const t = enemy.getComponent<TransformData>(ComponentType.Transform);
+            
+            // Use entity collider radius or default to a generous touch target
             const c = enemy.getComponent<ColliderData>(ComponentType.Collider);
+            const entityRadius = c ? c.radius : 0.8;
             
             if (t) {
                 const dx = t.x - worldPos.x;
                 const dy = t.y - worldPos.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                const hitThreshold = (c ? c.radius : 0.5) + TAP_RADIUS;
+                const hitThreshold = entityRadius + TAP_RADIUS;
                 
                 if (dist <= hitThreshold) {
+                    // 4. Register Hit
                     events.emit(GameEvents.ENEMY_DAMAGED, { 
                         id: enemy.id as number, 
-                        damage: 9999, 
+                        damage: 9999, // Instant Kill on Tap
                         type: 'TAP' 
                     });
                     hitFound = true;
+                    // Break after one hit? No, multikill feels good.
                 }
             }
         }
 
+        // 5. Feedback
         if (hitFound) {
-            AudioSystem.playSound('fx_impact_light');
+            // Impact sound handled by CombatSystem usually, but we can layer a UI sound
+            AudioSystem.playSound('ui_chirp'); 
+        } else {
+            // Miss sound
+            AudioSystem.playSound('ui_click');
         }
     };
 
@@ -12917,7 +12939,7 @@ export const GameStream = new GameStreamService();
 =====================================
 FILE: ./src/engine/state/GameContext.tsx
 =====================================
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { 
   IAudioService, 
   IInputService, 
@@ -12939,18 +12961,20 @@ interface GameContextProps {
   events: IGameEventService;
   registry: IEntityRegistry;
   spawner: IEntitySpawner;
-  // Generic accessor for specific systems (e.g. ShakeSystem)
   getSystem: <T extends IGameSystem>(id: string) => T | null;
 }
 
-// Fallbacks for initial render (before EngineFactory runs)
+// Fallbacks for SSR / Initial Mount
 const mockRegistry = new EntityRegistry();
 const mockSpawner = new EntitySpawner(mockRegistry);
+const mockEvents = new GameEventService();
+const mockInput = new InputSystem();
+const mockAudio = new AudioServiceImpl();
 
 const defaultContext: GameContextProps = {
-  audio: new AudioServiceImpl(),
-  input: new InputSystem(),
-  events: new GameEventService(),
+  audio: mockAudio,
+  input: mockInput,
+  events: mockEvents,
   registry: mockRegistry,
   spawner: mockSpawner,
   getSystem: () => null
@@ -12959,32 +12983,35 @@ const defaultContext: GameContextProps = {
 const GameContext = createContext<GameContextProps>(defaultContext);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  // We grab references from ServiceLocator ONCE during provider mount.
-  // This bridges the imperative Engine world to the declarative React world.
+  // CRITICAL ARCHITECTURE FIX:
+  // We use getters to proxy calls to the ServiceLocator.
+  // This ensures that when the Engine restarts (ServiceLocator.reset()),
+  // React components immediately interact with the NEW instances
+  // without needing a full context re-mount or forceUpdate.
   
-  let audio: IAudioService;
-  let input: IInputService;
-  let events: IGameEventService;
-  let registry: IEntityRegistry;
-  let spawner: IEntitySpawner;
-
-  // Safe retrieval with fallbacks
-  const safeGet = <T,>(id: string, fallback: T): T => {
-      try { return ServiceLocator.get<T>(id); } catch { return fallback; }
-  };
-
-  audio = safeGet('AudioService', new AudioServiceImpl());
-  input = safeGet('InputSystem', new InputSystem());
-  events = safeGet('GameEventService', new GameEventService());
-  registry = safeGet('EntityRegistry', mockRegistry);
-  spawner = safeGet('EntitySpawner', mockSpawner);
-
-  const getSystem = <T extends IGameSystem>(id: string): T | null => {
+  const contextValue = useMemo(() => ({
+    get audio() { 
+      try { return ServiceLocator.getAudioService(); } catch { return mockAudio; } 
+    },
+    get input() { 
+      try { return ServiceLocator.getInputService(); } catch { return mockInput; } 
+    },
+    get events() { 
+      try { return ServiceLocator.getGameEventBus(); } catch { return mockEvents; } 
+    },
+    get registry() { 
+      try { return ServiceLocator.getRegistry(); } catch { return mockRegistry; } 
+    },
+    get spawner() { 
+      try { return ServiceLocator.getSpawner(); } catch { return mockSpawner; } 
+    },
+    getSystem: <T extends IGameSystem>(id: string): T | null => {
       try { return ServiceLocator.getSystem<T>(id); } catch { return null; }
-  };
+    }
+  }), []);
 
   return (
-    <GameContext.Provider value={{ audio, input, events, registry, spawner, getSystem }}>
+    <GameContext.Provider value={contextValue}>
       {children}
     </GameContext.Provider>
   );
@@ -17026,12 +17053,17 @@ export class OrbitalSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/MobileCombatSystem.ts
 =====================================
-import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { FastEventType, FXCode } from '@/engine/signals/FastEventBus';
 import { Entity } from '@/engine/ecs/Entity';
 import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { CollisionLayers } from '@/engine/config/PhysicsConfig';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class MobileCombatSystem implements IGameSystem, ICombatSystem {
     constructor(
@@ -17040,26 +17072,120 @@ export class MobileCombatSystem implements IGameSystem, ICombatSystem {
         private fastEvents: IFastEventService,
         private audio: IAudioService
     ) {
+        // Player Input Hits (Taps)
         this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
             const entity = this.registry.getEntity(p.id);
             if (entity && entity.active) {
-                this.kill(entity);
+                this.killEnemy(entity, 'TAP');
             }
         });
     }
     
-    update() {}
-    teardown() {}
-    resolveCollision() {}
+    update(delta: number, time: number) {
+        // Manual Collision Check for Mobile (Simple AABB/Circle vs Box)
+        // Since we don't have the full desktop CollisionMatrix overhead here
+        const enemies = this.registry.getByTag('ENEMY');
+        const panels = this.registry.getByTag('OBSTACLE'); // Panels are obstacles
 
-    private kill(entity: Entity) {
-        const t = entity.getComponent<TransformData>(ComponentType.Transform);
-        if (t) {
-            this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.EXPLOSION_PURPLE, t.x * 100, t.y * 100, 0); 
-            this.audio.playSound('fx_impact_light');
+        // We assume only one panel in mobile usually (Social), but generic support is safer
+        for (const enemy of enemies) {
+            if (!enemy.active) continue;
+            
+            const eCol = enemy.getComponent<ColliderData>(ComponentType.Collider);
+            const ePos = enemy.getComponent<TransformData>(ComponentType.Transform);
+            
+            if (!eCol || !ePos) continue;
+
+            for (const panel of panels) {
+                const pCol = panel.getComponent<ColliderData>(ComponentType.Collider);
+                const pPos = panel.getComponent<TransformData>(ComponentType.Transform);
+                const pId = panel.getComponent<IdentityData>(ComponentType.Identity);
+
+                if (!pCol || !pPos || !pId) continue;
+
+                if (this.checkCollision(ePos, eCol, pPos, pCol)) {
+                    // HIT!
+                    this.resolveCollision(enemy, panel);
+                }
+            }
         }
-        this.registry.destroyEntity(entity.id);
     }
+
+    public resolveCollision(enemy: Entity, panel: Entity) {
+        // Ensure it's Enemy vs Panel
+        const eId = enemy.getComponent<IdentityData>(ComponentType.Identity);
+        const pId = panel.getComponent<IdentityData>(ComponentType.Identity);
+        
+        if (eId && pId) {
+            // 1. Damage the panel
+            const panelSystem = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
+            if (panelSystem) {
+                const dmg = 10; // Fixed damage for mobile
+                const t = enemy.getComponent<TransformData>(ComponentType.Transform);
+                
+                panelSystem.damagePanel(pId.variant as PanelId, dmg, { 
+                    source: t ? { x: t.x, y: t.y } : undefined 
+                });
+            }
+
+            // 2. Destroy the enemy (Crash)
+            this.killEnemy(enemy, 'CRASH');
+        }
+    }
+
+    private checkCollision(tA: TransformData, cA: ColliderData, tB: TransformData, cB: ColliderData): boolean {
+        // Enemy is Circle, Panel is Box
+        const circle = { t: tA, c: cA };
+        const box = { t: tB, c: cB };
+
+        const boxHalfW = box.c.width / 2;
+        const boxHalfH = box.c.height / 2;
+
+        const distX = Math.abs(circle.t.x - box.t.x);
+        const distY = Math.abs(circle.t.y - box.t.y);
+
+        if (distX > (boxHalfW + circle.c.radius)) return false;
+        if (distY > (boxHalfH + circle.c.radius)) return false;
+
+        if (distX <= boxHalfW) return true; 
+        if (distY <= boxHalfH) return true;
+
+        const dx = distX - boxHalfW;
+        const dy = distY - boxHalfH;
+        return (dx*dx + dy*dy <= (circle.c.radius * circle.c.radius));
+    }
+
+    private killEnemy(entity: Entity, reason: 'TAP' | 'CRASH') {
+        const t = entity.getComponent<TransformData>(ComponentType.Transform);
+        
+        if (t) {
+            // Visuals
+            const fx = reason === 'TAP' ? FXCode.EXPLOSION_PURPLE : FXCode.EXPLOSION_RED;
+            this.fastEvents.emit(FastEventType.SPAWN_FX, fx, t.x * 100, t.y * 100, 0);
+            
+            // Audio
+            if (reason === 'TAP') {
+                this.audio.playSound('fx_impact_light');
+                this.audio.playSound('fx_reboot_success'); // Satisfaction
+            } else {
+                this.audio.playSound('fx_impact_heavy');
+            }
+        }
+        
+        this.registry.destroyEntity(entity.id);
+        
+        // Only give score for Taps
+        if (reason === 'TAP') {
+            this.events.emit(GameEvents.ENEMY_DESTROYED, { 
+                id: entity.id as number, 
+                type: 'DRILLER', 
+                x: t?.x || 0, 
+                y: t?.y || 0 
+            });
+        }
+    }
+
+    teardown() {}
 }
 
 
@@ -18338,18 +18464,16 @@ import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
-
-// Dynamic offset from the new definition
-const DRILLER_OFFSET = (ENEMIES.driller.visual.height || 1.0) / 2; 
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class MobileWaveSystem implements IGameSystem {
   private time = 0;
   private nextSpawn = 0;
   
   // Difficulty Config
-  private readonly START_INTERVAL = 1.2;
-  private readonly MIN_INTERVAL = 0.4;
-  private readonly RAMP_DURATION = 60.0;
+  private readonly START_INTERVAL = 1.0;
+  private readonly MIN_INTERVAL = 0.3;
+  private readonly RAMP_DURATION = 45.0; 
 
   constructor(private spawner: IEntitySpawner) {}
 
@@ -18368,11 +18492,13 @@ export class MobileWaveSystem implements IGameSystem {
 
   private spawnDriller() {
       const { width, height } = ViewportHelper.viewport;
-      const pad = 3.0; 
-      
+      if (width <= 1 || height <= 1) return;
+
+      const pad = 4.0; 
       const isTop = Math.random() > 0.5;
       
-      let x = (Math.random() - 0.5) * (width * 0.6); 
+      const spawnWidth = width * 0.5; 
+      let x = (Math.random() - 0.5) * spawnWidth; 
       let y = 0;
 
       if (isTop) { 
@@ -18381,11 +18507,13 @@ export class MobileWaveSystem implements IGameSystem {
           y = -(height / 2) - pad;
       }
 
+      const angle = Math.atan2(-y, -x);
+
       this.spawner.spawn(EnemyTypes.DRILLER, {
           [ComponentType.Transform]: { 
               x, y, 
               scale: 1.0, 
-              rotation: Math.atan2(isTop ? -1 : 1, 0) // Point towards center
+              rotation: angle 
           },
           [ComponentType.State]: { 
               current: 'ACTIVE',
@@ -18393,6 +18521,11 @@ export class MobileWaveSystem implements IGameSystem {
                   spawn: 0,
                   drillAudio: Math.random() * 0.2 
               } 
+          },
+          [ComponentType.Target]: {
+              type: 'PANEL',
+              id: PanelId.SOCIAL, // FIX: Explicitly target the social panel
+              locked: true 
           },
           [ComponentType.RenderTransform]: { 
               scale: 1.0 

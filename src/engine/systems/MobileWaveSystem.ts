@@ -2,16 +2,15 @@ import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { PanelId } from '@/engine/config/PanelConfig';
 
 export class MobileWaveSystem implements IGameSystem {
   private time = 0;
-  private nextSpawn = 0;
+  private nextSpawn = 2.0; // Start with 2s delay
   
   // Difficulty Config
-  private readonly START_INTERVAL = 1.0;
-  private readonly MIN_INTERVAL = 0.3;
+  private readonly START_INTERVAL = 1.2;
+  private readonly MIN_INTERVAL = 0.4;
   private readonly RAMP_DURATION = 45.0; 
 
   constructor(private spawner: IEntitySpawner) {}
@@ -63,7 +62,7 @@ export class MobileWaveSystem implements IGameSystem {
           },
           [ComponentType.Target]: {
               type: 'PANEL',
-              id: PanelId.SOCIAL, // FIX: Explicitly target the social panel
+              id: PanelId.SOCIAL, 
               locked: true 
           },
           [ComponentType.RenderTransform]: { 

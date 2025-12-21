@@ -52,7 +52,6 @@ export default function Home() {
   } = useStore(); 
   
   const startGame = useGameStore(s => s.startGame);
-  const systemIntegrity = useGameStore(s => s.systemIntegrity);
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isSandbox = bootState === 'sandbox';
@@ -103,9 +102,9 @@ export default function Home() {
   useEffect(() => {
       const handleDebugKeys = (e: KeyboardEvent) => {
           if (e.key === '1') {
-              AudioSystem.init(); // Initialize audio context
+              AudioSystem.init(); 
               setIntroDone(true);
-              setMobileSkip(true); // Force game phase in MobileExperience
+              setMobileSkip(true); 
               setBootState('mobile_lockdown');
           }
       };
@@ -161,7 +160,7 @@ export default function Home() {
         
         <MetaManager />
         {!isMobileLockdown && <RotationLock />}
-        <CustomCursor />
+        {!isMobileLockdown && <CustomCursor />}
         <GlobalBackdrop />
         <DebugOverlay />
 

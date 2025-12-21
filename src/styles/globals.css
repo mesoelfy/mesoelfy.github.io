@@ -13,10 +13,11 @@ html, body {
   background-color: #000000;
   overscroll-behavior: none; 
   touch-action: none; 
-  cursor: none !important;
 }
 
-* {
+/* Force override for cursor management */
+body.cursor-none, 
+body.cursor-none * {
   cursor: none !important;
 }
 

@@ -34,17 +34,24 @@ export const TouchRipple = () => {
         uniform float uProgress; 
         
         void main() {
-          float d = distance(vUv, vec2(0.5));
-          // Expanding ring logic: thickness and expansion
-          float ring = smoothstep(uProgress - 0.1, uProgress, d) - smoothstep(uProgress, uProgress + 0.02, d);
-          // Fade out as progress increases
-          float alpha = ring * (1.0 - uProgress * 2.0);
+          vec2 center = vec2(0.5);
+          float d = distance(vUv, center);
+          
+          // Sharp hollow ring logic
+          float radius = uProgress * 0.5;
+          float thickness = 0.03 * (1.0 - uProgress); // Gets thinner as it expands
+          
+          float ring = smoothstep(radius - thickness, radius, d) - smoothstep(radius, radius + 0.01, d);
+          
+          // Fade out
+          float alpha = ring * (1.0 - (uProgress * uProgress));
           
           if (alpha < 0.01) discard;
           
-          // Electric Green #78F654
-          vec3 color = vec3(0.47, 0.96, 0.33); 
-          gl_FragColor = vec4(color * 1.5, alpha);
+          // Color: Green to White
+          vec3 color = mix(vec3(0.47, 0.96, 0.33), vec3(1.0), ring);
+          
+          gl_FragColor = vec4(color, alpha);
         }
       `,
       uniforms: {
@@ -55,23 +62,25 @@ export const TouchRipple = () => {
 
   useFrame((state, delta) => {
     setRipples(prev => prev
-      .map(r => ({ ...r, time: r.time + delta * 2.5 }))
-      .filter(r => r.time < 0.5)
+      .map(r => ({ ...r, time: r.time + delta * 1.5 })) // Speed 1.5
+      .filter(r => r.time < 1.0)
     );
   });
 
+  // renderOrder 100 ensures it draws ON TOP of enemies (renderOrder 0) and floor
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} renderOrder={100}>
       {ripples.map((r) => (
-        <mesh key={r.id} position={[r.x, r.y, 1]} scale={[4, 4, 1]}>
+        <mesh key={r.id} position={[r.x, r.y, 5]} scale={[8, 8, 1]}>
           <planeGeometry />
           <primitive 
             object={rippleMaterial.clone()} 
             attach="material" 
             uniforms-uProgress-value={r.time}
             transparent
-            blending={THREE.AdditiveBlending}
+            depthTest={false}
             depthWrite={false}
+            blending={THREE.AdditiveBlending}
           />
         </mesh>
       ))}

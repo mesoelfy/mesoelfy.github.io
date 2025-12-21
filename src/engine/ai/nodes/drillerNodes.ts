@@ -8,12 +8,8 @@ import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
-import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class DrillAttack extends BTNode {
-  // Use a slightly larger offset to ensure visual overlap
-  private readonly TIP_OFFSET = ENEMIES.driller.params?.spawnOffset || 0.32;
-  
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -25,34 +21,37 @@ export class DrillAttack extends BTNode {
 
     if (!target || !state || !transform) return NodeState.FAILURE;
 
-    // TARGET LATCH LOGIC:
-    // If we have a target panel, snap our destination to its edge
-    let destX = target.x;
-    let destY = target.y;
-    
-    // Force re-acquisition of panel rect if possible
+    // --- SAFETY CHECK: WAIT IF PANEL NOT FOUND ---
+    let rect = undefined;
     if (target.type === 'PANEL' && target.id) {
-        const rect = context.getPanelRect(target.id as PanelId);
-        if (rect) {
-            // Find closest point on panel rect to current position
-            destX = Math.max(rect.left, Math.min(transform.x, rect.right));
-            destY = Math.max(rect.bottom, Math.min(transform.y, rect.top));
-        } else {
-            // Fallback: If registry empty (mobile init race), target 0,0 (center)
-            // This explains the "aiming for center" bug if registry fails
-        }
+        rect = context.getPanelRect(target.id as PanelId);
     }
+
+    if (!rect) {
+        // If we can't see the panel, idle in place (don't crash into center)
+        if (motion) {
+            motion.vx *= 0.9;
+            motion.vy *= 0.9;
+        }
+        return NodeState.RUNNING;
+    }
+
+    // --- TARGET LATCH LOGIC ---
+    // 1. Clamp X to horizontal bounds
+    const destX = Math.max(rect.left, Math.min(transform.x, rect.right));
+    
+    // 2. Snap Y to CLOSEST EDGE (Top or Bottom)
+    const distTop = Math.abs(transform.y - rect.top);
+    const distBottom = Math.abs(transform.y - rect.bottom);
+    const destY = distTop < distBottom ? rect.top : rect.bottom;
 
     const dx = destX - transform.x;
     const dy = destY - transform.y;
     const angle = Math.atan2(dy, dx);
-    const dist = Math.sqrt(dx*dx + dy*dy);
+    const distSq = dx*dx + dy*dy;
     
-    // Snap to position logic
-    if (dist > 0.05) {
-        // Still moving into position
-        // This node usually runs AFTER MoveToTarget succeeds, so we should be close.
-        // We gently lerp to the drill spot
+    // Snap to position if close enough (Drilling State)
+    if (distSq > 0.01) {
         transform.x += dx * 0.1;
         transform.y += dy * 0.1;
         transform.rotation = angle;
@@ -79,12 +78,11 @@ export class DrillAttack extends BTNode {
                 source: { x: transform.x, y: transform.y } 
             });
             state.timers[AITimerID.DRILL_DMG] = this.interval;
-        } else {
-            state.timers[AITimerID.DRILL_DMG] = this.interval;
         }
     } else {
         state.timers[AITimerID.DRILL_DMG] -= context.delta;
     }
+    
     return NodeState.RUNNING;
   }
 }

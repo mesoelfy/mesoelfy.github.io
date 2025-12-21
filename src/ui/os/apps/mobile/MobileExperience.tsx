@@ -5,14 +5,17 @@ import { MobileGameDirector } from '@/ui/sim/MobileGameDirector';
 import { RenderDirector } from '@/ui/sim/RenderDirector';
 import { CameraRig } from '@/ui/sim/vfx/CameraRig';
 import { TouchRipple } from '@/ui/sim/vfx/TouchRipple';
+import { WireframeFloor } from '@/ui/sim/vfx/WireframeFloor';
 import { MobileInputController } from '@/ui/sim/MobileInputController';
 import { MobilePanelBase } from '@/ui/sim/props/MobilePanelBase';
 import { SocialRow } from '@/ui/kit/molecules/SocialRow';
+import { MobileHeader } from '@/ui/kit/molecules/MobileHeader';
+import { MobileFooter } from '@/ui/kit/molecules/MobileFooter';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Monitor, ExternalLink, AlertTriangle, MousePointer2 } from 'lucide-react';
+import { ExternalLink, AlertTriangle, MousePointer2 } from 'lucide-react';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -30,10 +33,14 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
   const [showFailureModal, setShowFailureModal] = useState(false);
   const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
 
-  // Force cursor hidden at root
+  // Force cursor hidden
   useEffect(() => {
+      document.body.classList.add('cursor-none');
       document.body.style.cursor = 'none';
-      return () => { document.body.style.cursor = 'auto'; };
+      return () => { 
+          document.body.classList.remove('cursor-none');
+          document.body.style.cursor = 'auto'; 
+      };
   }, []);
 
   useEffect(() => {
@@ -51,7 +58,7 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
   }, [setIntegrity]);
 
   return (
-    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black cursor-none">
+    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black cursor-none touch-none">
         {phase === 'intro' && (
             <div className="pointer-events-auto w-full h-full relative z-50">
                 <MobileRejectionModal onComplete={() => setPhase('game')} />
@@ -59,59 +66,67 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
         )}
         {phase === 'game' && (
             <>
+                {/* Z-Index 90 is higher than Canvas (0) and GlassPanel (10) */}
+                <MobileHeader />
+                
                 {/* LAYER 0: THE SIMULATION */}
-                <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 z-0 pointer-events-auto">
                     <Canvas
                         orthographic
-                        camera={{ zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 0, 100] }}
-                        gl={{ alpha: true, antialias: true }}
+                        camera={{ zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 5, 100] }}
+                        gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
+                        style={{ cursor: 'none' }}
                     >
+                        <color attach="background" args={['#050505']} />
+                        <ambientLight intensity={0.5} />
+                        
                         <MobileGameDirector />
                         <CameraRig />
                         
-                        {/* 3D Panel Backing */}
+                        <WireframeFloor />
                         <MobilePanelBase />
                         
-                        {/* Ripples */}
+                        {/* Enemies and Ripples */}
+                        <RenderDirector />
                         <TouchRipple />
                         
-                        {/* Enemies */}
-                        <RenderDirector />
-                        
-                        {/* Input */}
                         <MobileInputController />
                     </Canvas>
                 </div>
                 
-                {/* LAYER 1: THE INTERFACE */}
+                {/* LAYER 1: THE INTERFACE (Floaty Panel) */}
                 <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
-                    <div className="w-full max-w-sm pointer-events-auto">
+                    <div className="w-full max-w-sm pointer-events-auto mt-8">
                         <GlassPanel 
                             title="SOCIAL_UPLINK" 
                             gameId={PanelId.SOCIAL} 
-                            transparent={true} // Allow ripples to show through
-                            className="shadow-none border-primary-green/30" 
+                            transparent={true} 
+                            className="shadow-[0_0_30px_rgba(0,0,0,0.5)] border-primary-green/30 bg-black/40 backdrop-blur-sm" 
                             maxHealth={MOBILE_PANEL_HP}
                         >
-                            <SocialRow layout="column" />
+                            <div className="p-2">
+                                <SocialRow layout="column" />
+                            </div>
                         </GlassPanel>
                     </div>
                 </div>
 
                 {!showFailureModal && (
-                    <div className="absolute bottom-12 w-full text-center animate-pulse z-20 pointer-events-none">
-                        <span className="bg-black/80 px-4 py-1 text-[10px] font-mono border border-primary-green/30 tracking-widest">
+                    <div className="absolute bottom-20 w-full text-center animate-pulse z-20 pointer-events-none">
+                        <span className="bg-black/80 px-4 py-1 text-[10px] font-mono border border-primary-green/30 tracking-widest text-primary-green">
                             TAP HOSTILES TO PURGE
                         </span>
                     </div>
                 )}
+
+                <MobileFooter />
 
                 {/* LAYER 2: GAME OVER */}
                 <AnimatePresence>
                     {showFailureModal && (
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
-                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto"
+                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto cursor-auto"
                         >
                             <motion.div 
                                 initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }}
@@ -145,7 +160,7 @@ export const MobileExperience = ({ skipIntro = false }: Props) => {
 
                                     <a 
                                         href="https://mesoelfy.github.io" 
-                                        className="group w-full py-4 bg-critical-red text-black font-header font-black text-sm tracking-[0.15em] hover:bg-white transition-all flex items-center justify-center gap-3"
+                                        className="group w-full py-4 bg-critical-red text-black font-header font-black text-sm tracking-[0.15em] hover:bg-white transition-all flex items-center justify-center gap-3 cursor-pointer"
                                     >
                                         <MousePointer2 size={18} className="fill-current" />
                                         <span>FULL TERMINAL REQUIRED</span>
