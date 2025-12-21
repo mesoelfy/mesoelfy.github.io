@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 21 16:36:08 CST 2025
+Generated on: Sun Dec 21 16:48:35 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -3866,305 +3866,94 @@ import { TypedLog } from './atoms/TypedLog';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
-import { useSmartScroll } from './hooks/useSmartScroll';
 import { Zap, ZapOff, Activity, Cpu, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
-interface Props {
-  onComplete: () => void;
-  onBreachStart: () => void;
-}
-
-// --- SUB-COMPONENT: GPU SELECTION CARD ---
 const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
-  const isHigh = mode === 'HIGH';
-  const color = isHigh ? 'text-primary-green' : 'text-alert-yellow';
-  const borderColor = isHigh ? 'border-primary-green' : 'border-alert-yellow';
-  const glow = isHigh ? 'shadow-[0_0_20px_rgba(120,246,84,0.2)]' : 'shadow-[0_0_20px_rgba(234,231,71,0.2)]';
-  
+  const isHigh = mode === 'HIGH', color = isHigh ? 'text-primary-green' : 'text-alert-yellow', borderColor = isHigh ? 'border-primary-green' : 'border-alert-yellow';
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => AudioSystem.playHover()}
-      className={clsx(
-        "relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left cursor-none",
-        active 
-          ? `${borderColor} bg-black ${glow}` 
-          : "border-white/10 bg-white/5 hover:border-white/30"
-      )}
-    >
-        {active && (
-            <div className={clsx(
-                "absolute inset-0 opacity-10 pointer-events-none",
-                isHigh 
-                  ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" 
-                  : "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#eae747_10px,#eae747_12px)]"
-            )} />
-        )}
-
+    <button onClick={onClick} onMouseEnter={() => AudioSystem.playHover()} className={clsx("relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left cursor-none", active ? `${borderColor} bg-black shadow-[0_0_20px_rgba(0,0,0,0.2)]` : "border-white/10 bg-white/5 hover:border-white/30")}>
+        {active && <div className={clsx("absolute inset-0 opacity-10 pointer-events-none", isHigh ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" : "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#eae747_10px,#eae747_12px)]")} />}
         <div className="flex items-center gap-2 relative z-10 shrink-0">
-            <motion.span 
-                animate={active ? { x: -3, opacity: 1 } : { x: 0, opacity: 0.3 }}
-                className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}
-            >
-                [
-            </motion.span>
-            
+            <motion.span animate={active ? { x: -3, opacity: 1 } : { x: 0, opacity: 0.3 }} className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}>[</motion.span>
             <Icon size={24} className={clsx("transition-transform duration-300", active ? `${color} scale-110` : "text-gray-500 group-hover:text-white")} />
-            
-            <motion.span 
-                animate={active ? { x: 3, opacity: 1 } : { x: 0, opacity: 0.3 }}
-                className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}
-            >
-                ]
-            </motion.span>
+            <motion.span animate={active ? { x: 3, opacity: 1 } : { x: 0, opacity: 0.3 }} className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}>]</motion.span>
         </div>
-
         <div className="flex flex-col relative z-10 min-w-0">
-            <span className={clsx("font-header font-black tracking-widest text-sm transition-colors", active ? "text-white" : "text-gray-400 group-hover:text-white")}>
-                {label}
-            </span>
-            <span className={clsx("font-mono text-[9px] tracking-wider truncate", active ? color : "text-gray-600")}>
-                {sub}
-            </span>
+            <span className={clsx("font-header font-black tracking-widest text-sm transition-colors", active ? "text-white" : "text-gray-400 group-hover:text-white")}>{label}</span>
+            <span className={clsx("font-mono text-[9px] tracking-wider truncate", active ? color : "text-gray-600")}>{sub}</span>
         </div>
-
         {active && <div className={clsx("absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2", borderColor)} />}
     </button>
   );
 };
 
-export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  const { graphicsMode, setGraphicsMode } = useStore();
-  const { 
-    step, isBreaching, handleInitialize: coreInitialize, logsToShow,
-    showMatrix, showPayloadWindow, showWarningBox, showButton
-  } = useBootSequence({ onComplete, onBreachStart });
-
+export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: () => void, onBreachStart: () => void }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null), { graphicsMode, setGraphicsMode } = useStore(), [uiScale, setUiScale] = useState(1.0);
+  const { step, isBreaching, handleInitialize, logsToShow, showMatrix, showPayloadWindow, showWarningBox, showButton } = useBootSequence({ onComplete, onBreachStart });
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
 
-  // --- RESPONSIVE SCALING LOGIC ---
-  const [uiScale, setUiScale] = useState(1.0);
-
   useEffect(() => {
-    const handleResize = () => {
-        // Base dimensions of the UI stack (approx 42rem width)
-        const BASE_WIDTH = 680; 
-        const BASE_HEIGHT = 850; 
-
-        const widthScale = window.innerWidth / BASE_WIDTH;
-        const heightScale = window.innerHeight / BASE_HEIGHT;
-
-        // Fill screen up to 96%
-        const fitScale = Math.min(widthScale, heightScale) * 0.96;
-        
-        setUiScale(Math.max(0.5, fitScale));
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const res = () => { setUiScale(Math.max(0.5, Math.min(window.innerWidth/680, window.innerHeight/850) * 0.96)); };
+    res(); window.addEventListener('resize', res); return () => window.removeEventListener('resize', res);
   }, []);
 
-  const handleWrapperClick = () => {
-      coreInitialize();
-  };
-
-  const handleGpuSelect = (mode: 'HIGH' | 'POTATO') => {
-      if (graphicsMode !== mode) {
-          setGraphicsMode(mode);
-          AudioSystem.playClick();
-      }
-  };
-
   return (
-    <motion.div 
-      ref={containerRef}
-      animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className={clsx(
-          "fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden"
-      )}
-    >
+    <motion.div animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }} className="fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden">
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
-      
       <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
-        
-        {/* --- MAIN STACK --- */}
-        <motion.div 
-            className="flex flex-col gap-4 w-[680px] origin-center"
-            // Apply Dynamic Scale
-            style={{ 
-                transform: `scale(${isBreaching ? uiScale * 1.1 : uiScale})`,
-                filter: isBreaching ? "blur(10px)" : "blur(0px)",
-                opacity: isBreaching ? 0 : 1,
-                transition: "transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.5s ease-in, filter 0.5s ease-in"
-            }}
-        >
-            
-            {/* PANEL 1: BOOT LOADER */}
+        <motion.div className="flex flex-col gap-4 w-[680px] origin-center" style={{ transform: `scale(${isBreaching ? uiScale*1.1 : uiScale})`, filter: isBreaching ? "blur(10px)" : "blur(0px)", opacity: isBreaching ? 0 : 1, transition: "transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.5s ease-in, filter 0.5s ease-in" }}>
             <div className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                 <BootHeader step={step} />
                 <div className="relative w-full flex-1">
                     <DotGridBackground /> 
-                    {/* HEIGHT INCREASED: h-40 -> h-44 to fix cutoff */}
                     <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
-                        {logsToShow.map((line, i) => (
-                            <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-                        ))}
+                        {logsToShow.map((line, i) => <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />)}
                     </div>
                 </div>
             </div>
-
-            {/* PANEL 2: UNIFIED CORE (Payload + GPU) */}
             <AnimatePresence mode="wait">
             {showPayloadWindow && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                    className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20 flex flex-col"
-                >
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <CoreHeader step={step} />
-                    
-                    {/* Content Container */}
-                    <div className="relative w-full">
-                        <DotGridBackground /> 
-                        
-                        {/* PADDING INCREASED: pt-3 -> pt-5 */}
+                    <div className="relative w-full"><DotGridBackground /> 
                         <div className="px-4 pb-4 pt-5 flex flex-col items-center gap-6 relative z-10">
-                            
-                            {/* 1. ASCII ART */}
                             <AsciiRenderer isInfected={showWarningBox} />
-
-                            {/* 2. WARNING BOX (Conditional) */}
                             <AnimatePresence mode="wait">
                                 {showWarningBox && !showButton && (
-                                    <motion.div 
-                                        key="warning-box"
-                                        initial={{ opacity: 0, scale: 0.9, height: 0 }}
-                                        animate={{ 
-                                            opacity: 1, 
-                                            scale: 1,
-                                            height: "auto",
-                                            boxShadow: [
-                                                "0 0 10px rgba(255,0,60,0.3)", 
-                                                "0 0 50px rgba(255,0,60,0.8)", 
-                                                "0 0 10px rgba(255,0,60,0.3)"
-                                            ]
-                                        }}
-                                        exit={{ 
-                                            opacity: 0, 
-                                            scale: 0.9, 
-                                            height: 0,
-                                            transition: { duration: 0.3 } 
-                                        }}
-                                        transition={{ 
-                                            opacity: { duration: 0.3 }, 
-                                            scale: { duration: 0.3 },
-                                            boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-                                        }}
-                                        className="border border-critical-red bg-critical-red/20 px-6 py-3 flex items-center gap-4 relative overflow-hidden shrink-0"
-                                    >
-                                        <motion.div 
-                                            className="absolute inset-0"
-                                            style={{ 
-                                                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" 
-                                            }}
-                                            animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        />
-                                        
-                                        <motion.div 
-                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
-                                            transition={{ duration: 0.5, repeat: Infinity }}
-                                        >
-                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
-                                        </motion.div>
-                                        
-                                        <span className="text-xs font-bold font-header tracking-[0.2em] text-critical-red drop-shadow-sm relative z-10 whitespace-nowrap">
-                                            UNSAFE CONNECTION
-                                        </span>
-                                        
-                                        <motion.div 
-                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
-                                            transition={{ duration: 0.5, repeat: Infinity, delay: 0.1 }}
-                                        >
-                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
-                                        </motion.div>
+                                    <motion.div key="warning" initial={{ opacity: 0, scale: 0.9, height: 0 }} animate={{ opacity: 1, scale: 1, height: "auto" }} exit={{ opacity: 0, scale: 0.9, height: 0 }} className="border border-critical-red bg-critical-red/20 px-6 py-3 flex items-center gap-4 relative overflow-hidden shrink-0 shadow-[0_0_50px_rgba(255,0,60,0.4)]">
+                                        <motion.div className="absolute inset-0" style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" }} animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
+                                        <motion.div animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity }}><AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" /></motion.div>
+                                        <span className="text-xs font-bold font-header tracking-[0.2em] text-critical-red relative z-10 whitespace-nowrap">UNSAFE CONNECTION</span>
+                                        <motion.div animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity, delay: 0.1 }}><AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" /></motion.div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-
-                            {/* 3. CONFIG & INITIALIZE (Final Step) */}
                             <AnimatePresence>
                                 {showButton && (
-                                    <motion.div 
-                                        key="config-grid"
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: "auto" }}
-                                        transition={{ duration: 0.2 }}
-                                        className="w-full flex flex-col gap-6 pt-2 border-t border-white/10"
-                                    >
-                                        
+                                    <motion.div key="config" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="w-full flex flex-col gap-6 pt-2 border-t border-white/10">
                                         <div className="flex flex-col gap-2">
-                                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
-                                                <span className="flex items-center gap-2"><Cpu size={12} /> Graphics_Kernel</span>
-                                                <span>Select Profile</span>
-                                            </div>
+                                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1"><span className="flex items-center gap-2"><Cpu size={12} /> Graphics_Kernel</span><span>Select Profile</span></div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <GpuCard 
-                                                    mode="HIGH" 
-                                                    label="HIGH_VOLTAGE" 
-                                                    sub="MAX_FIDELITY // BLOOM" 
-                                                    icon={Zap} 
-                                                    active={graphicsMode === 'HIGH'} 
-                                                    onClick={() => handleGpuSelect('HIGH')} 
-                                                />
-                                                <GpuCard 
-                                                    mode="POTATO" 
-                                                    label="POTATO_MODE" 
-                                                    sub="PERFORMANCE // RETRO" 
-                                                    icon={ZapOff} 
-                                                    active={graphicsMode === 'POTATO'} 
-                                                    onClick={() => handleGpuSelect('POTATO')} 
-                                                />
+                                                <GpuCard mode="HIGH" label="HIGH_VOLTAGE" sub="MAX_FIDELITY // BLOOM" icon={Zap} active={graphicsMode === 'HIGH'} onClick={() => { setGraphicsMode('HIGH'); AudioSystem.playClick(); }} />
+                                                <GpuCard mode="POTATO" label="POTATO_MODE" sub="PERFORMANCE // RETRO" icon={ZapOff} active={graphicsMode === 'POTATO'} onClick={() => { setGraphicsMode('POTATO'); AudioSystem.playClick(); }} />
                                             </div>
                                         </div>
-
-                                        <button 
-                                            onClick={handleWrapperClick} 
-                                            onMouseEnter={() => AudioSystem.playHover()} 
-                                            className="group relative w-full py-5 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none"
-                                        >
+                                        <button onClick={handleInitialize} onMouseEnter={() => AudioSystem.playHover()} className="group relative w-full py-5 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none">
                                             <div className="absolute inset-0 bg-primary-green translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out opacity-20" />
                                             <div className="relative z-10 flex flex-col items-center gap-1">
-                                                <div className="flex items-center gap-3">
-                                                    <Activity size={20} className="text-primary-green animate-pulse" />
-                                                    <span className="font-header font-black text-2xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
-                                                        INITIALIZE_SYSTEM
-                                                    </span>
-                                                    <Activity size={20} className="text-primary-green animate-pulse" />
-                                                </div>
-                                                <span className="text-xs font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
-                                                    CLICK TO INJECT PAYLOAD
-                                                </span>
+                                                <div className="flex items-center gap-3"><Activity size={20} className="text-primary-green animate-pulse" /><span className="font-header font-black text-2xl tracking-[0.2em] text-white group-hover:text-primary-green">INITIALIZE_SYSTEM</span><Activity size={20} className="text-primary-green animate-pulse" /></div>
+                                                <span className="text-xs font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green">CLICK TO INJECT PAYLOAD</span>
                                             </div>
                                         </button>
-
                                     </motion.div>
                                 )}
                             </AnimatePresence>
-
                         </div>
                     </div>
                 </motion.div>
             )}
             </AnimatePresence>
-
         </motion.div>
       </div>
     </motion.div>
@@ -8125,12 +7914,8 @@ export const UISyncDirector = () => {
     const halfH = size.height / 2;
 
     for (const [id, el] of elements) {
-        // 1. Resolve Entity ID (Cache for performance)
         let eid = entityCache.current.get(id);
         if (eid === undefined) {
-            // Find entity with matching Identity
-            // Optimization: In a huge game, we wouldn't iterate all. 
-            // Since we have < 20 panels, this is negligible once cached.
             for (const e of registry.getAll()) {
                 const identity = e.getComponent<IdentityData>(ComponentType.Identity);
                 if (identity && identity.variant === id) {
@@ -8140,12 +7925,10 @@ export const UISyncDirector = () => {
                 }
             }
         }
-
         if (eid === undefined) continue;
 
         const entity = registry.getEntity(eid);
         if (!entity || !entity.active) {
-            // Invalidate cache if entity died/pooled
             entityCache.current.delete(id);
             continue;
         }
@@ -8155,22 +7938,14 @@ export const UISyncDirector = () => {
         const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
         if (transform && collider) {
-            let x = transform.x;
-            let y = transform.y;
+            let x = transform.x, y = transform.y;
+            if (render) { x += render.offsetX; y += render.offsetY; }
 
-            // Apply visual shake/shudder from RenderSystem
-            if (render) {
-                x += render.offsetX;
-                y += render.offsetY;
-            }
-
-            // 2. Project Center to Screen
             vec.set(x, y, 0);
             vec.project(camera);
             const cx = vec.x * halfW + halfW;
             const cy = -vec.y * halfH + halfH;
 
-            // 3. Project Corner to determine Size (Handles Zoom/Perspective)
             vec.set(x + collider.width / 2, y + collider.height / 2, 0);
             vec.project(camera);
             const cornerX = vec.x * halfW + halfW;
@@ -8178,8 +7953,6 @@ export const UISyncDirector = () => {
 
             const width = Math.abs(cornerX - cx) * 2;
             const height = Math.abs(cornerY - cy) * 2;
-
-            // 4. Update DOM
             const left = cx - (width / 2);
             const top = cy - (height / 2);
 
@@ -8189,7 +7962,6 @@ export const UISyncDirector = () => {
         }
     }
   });
-
   return null;
 };
 
@@ -8630,224 +8402,120 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import * as THREE from 'three';
 
-const createCurvedTriangleGeo = () => {
+const createCoreGeo = () => {
     const shape = new THREE.Shape();
-    const R = 0.11; const curveR = 0.10;  
-    const p1 = [0, R];
-    const p2 = [R * Math.cos(Math.PI * 7/6), R * Math.sin(Math.PI * 7/6)];
-    const p3 = [R * Math.cos(Math.PI * 11/6), R * Math.sin(Math.PI * 11/6)];
-    const cp12 = [curveR * Math.cos(Math.PI * 150/180), curveR * Math.sin(Math.PI * 150/180)];
-    const cp23 = [curveR * Math.cos(Math.PI * 270/180), curveR * Math.sin(Math.PI * 270/180)];
-    const cp31 = [curveR * Math.cos(Math.PI * 30/180), curveR * Math.sin(Math.PI * 30/180)];
+    const R = 0.11, cR = 0.10;  
+    const p1 = [0, R], p2 = [R*Math.cos(Math.PI*7/6), R*Math.sin(Math.PI*7/6)], p3 = [R*Math.cos(Math.PI*11/6), R*Math.sin(Math.PI*11/6)];
     shape.moveTo(p1[0], p1[1]);
-    shape.quadraticCurveTo(cp12[0], cp12[1], p2[0], p2[1]);
-    shape.quadraticCurveTo(cp23[0], cp23[1], p3[0], p3[1]);
-    shape.quadraticCurveTo(cp31[0], cp31[1], p1[0], p1[1]);
+    shape.quadraticCurveTo(cR*Math.cos(Math.PI*150/180), cR*Math.sin(Math.PI*150/180), p2[0], p2[1]);
+    shape.quadraticCurveTo(cR*Math.cos(Math.PI*270/180), cR*Math.sin(Math.PI*270/180), p3[0], p3[1]);
+    shape.quadraticCurveTo(cR*Math.cos(Math.PI*30/180), cR*Math.sin(Math.PI*30/180), p1[0], p1[1]);
     return new THREE.ShapeGeometry(shape);
 };
 
-const coreGeo = createCurvedTriangleGeo();
-const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-
-const createStarRingGeo = () => {
-    const points = 4;
-    const outerRadius = 0.65;
-    const innerRadius = 0.35;
-    const indentFactor = 0.60; 
-    const twistAngle = 0.55; 
-    const shape = new THREE.Shape();
-    const step = (Math.PI * 2) / points;
-    const halfStep = step / 2;
-    for (let i = 0; i < points; i++) {
-        const theta = i * step;
-        const tipA = theta - twistAngle;
-        if (i === 0) shape.moveTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
-        else shape.lineTo(Math.cos(tipA) * outerRadius, Math.sin(tipA) * outerRadius);
-        const rValley = outerRadius * (1.0 - indentFactor);
-        shape.lineTo(Math.cos(theta + halfStep) * rValley, Math.sin(theta + halfStep) * rValley);
+const createReticleGeo = () => {
+    const pts = 4, oR = 0.65, iR = 0.35, iF = 0.60, tA = 0.55; 
+    const shape = new THREE.Shape(), step = (Math.PI*2)/pts;
+    for (let i=0; i<pts; i++) {
+        const theta = i*step, tip = theta-tA;
+        if (i===0) shape.moveTo(Math.cos(tip)*oR, Math.sin(tip)*oR); else shape.lineTo(Math.cos(tip)*oR, Math.sin(tip)*oR);
+        shape.lineTo(Math.cos(theta+step/2)*(oR*(1-iF)), Math.sin(theta+step/2)*(oR*(1-iF)));
     }
     const hole = new THREE.Path();
-    for (let i = 0; i < points; i++) {
-        const theta = i * step;
-        const tipA = theta - (twistAngle * 0.5);
-        if (i === 0) hole.moveTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
-        else hole.lineTo(Math.cos(tipA) * innerRadius, Math.sin(tipA) * innerRadius);
-        const rValley = innerRadius * (1.0 - indentFactor);
-        hole.lineTo(Math.cos(theta + halfStep) * rValley, Math.sin(theta + halfStep) * rValley);
+    for (let i=0; i<pts; i++) {
+        const theta = i*step, tip = theta-(tA*0.5);
+        if (i===0) hole.moveTo(Math.cos(tip)*iR, Math.sin(tip)*iR); else hole.lineTo(Math.cos(tip)*iR, Math.sin(tip)*iR);
+        hole.lineTo(Math.cos(theta+step/2)*(iR*(1-iF)), Math.sin(theta+step/2)*(iR*(1-iF)));
     }
     shape.holes.push(hole);
     return new THREE.ShapeGeometry(shape);
 };
-const reticleGeo = createStarRingGeo();
 
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
-const COL_DEAD = new THREE.Color('#FF003C');
-const COL_HIT = new THREE.Color('#FF003C'); 
-const COL_RETICLE_HEAL = new THREE.Color('#257171');
+const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C'), COL_RET_HEAL = new THREE.Color('#257171');
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
-  const containerRef = useRef<THREE.Group>(null);
-  const centerDotRef = useRef<THREE.Mesh>(null);
-  const reticleRef = useRef<THREE.Mesh>(null);
-  const backingCircleRef = useRef<THREE.Mesh>(null);
-  const ambientGlowRef = useRef<THREE.Mesh>(null);
-  
+  const containerRef = useRef<THREE.Group>(null), centerDotRef = useRef<THREE.Mesh>(null), reticleRef = useRef<THREE.Mesh>(null), ambientGlowRef = useRef<THREE.Mesh>(null);
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
-
-  const animScale = useRef(0);
-  const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
-  const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
-  const currentEnergy = useRef(0.0);
-  const hitFlash = useRef(0.0); 
-  const zenStartTime = useRef(-1);
-
-  // --- AIM STATE ---
-  const lastFireTimeRef = useRef(-100);
-  const targetAimAngle = useRef(0);
-  const rotationOffsetRef = useRef(0);
+  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
   const ambientMaterial = useMemo(() => {
-      const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
-          ...ShaderLib.presets.playerAmbient,
-          uniforms: { 
-              [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
-              [Uniforms.OPACITY]: { value: 0.6 }, 
-              [Uniforms.ENERGY]: { value: 0.0 } 
-          }
-      });
-      mat.blending = THREE.AdditiveBlending;
-      return mat;
+      const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', { ...ShaderLib.presets.playerAmbient, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.6 }, [Uniforms.ENERGY]: { value: 0.0 } } });
+      mat.blending = THREE.AdditiveBlending; return mat;
   }, []);
 
   const backingMaterial = useMemo(() => {
-      const mat = MaterialFactory.create('MAT_PLAYER_BACKING', {
-          ...ShaderLib.presets.playerBacking,
-          uniforms: { 
-              [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, 
-              [Uniforms.OPACITY]: { value: 0.5 } 
-          }
-      });
-      mat.blending = THREE.NormalBlending;
-      return mat;
+      const mat = MaterialFactory.create('MAT_PLAYER_BACKING', { ...ShaderLib.presets.playerBacking, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.5 } } });
+      mat.blending = THREE.NormalBlending; return mat;
   }, []);
 
   useEffect(() => {
       const u1 = events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; });
-      const u2 = events.subscribe(GameEvents.PLAYER_FIRED, (p) => { 
-          lastFireTimeRef.current = performance.now() / 1000;
-          // Compensate for 3D coordinate system (Top point of triangle is Y+ which is PI/2)
-          targetAimAngle.current = p.angle - Math.PI/2; 
-      });
+      const u2 = events.subscribe(GameEvents.PLAYER_FIRED, (p) => { lastFireTimeRef.current = performance.now()/1000; targetAimAngle.current = p.angle - Math.PI/2; });
       return () => { u1(); u2(); };
   }, [events]);
 
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
-    const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
-    
-    if (!isZenMode) zenStartTime.current = -1;
-    else if (zenStartTime.current === -1) zenStartTime.current = state.clock.elapsedTime;
+    const isSysFail = useGameStore.getState().systemIntegrity <= 0;
+    if (!isZenMode) zenStartTime.current = -1; else if (zenStartTime.current === -1) zenStartTime.current = state.clock.elapsedTime;
 
-    let targetScale = 0;
-    if (introDone) {
-        if (isZenMode) {
-            if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) targetScale = 1;
-        } else if (!isSystemFailure) targetScale = 1;
-    }
-
+    let targetScale = (introDone && (isZenMode ? (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) : !isSysFail)) ? 1 : 0;
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     if (animScale.current < 0.01) { containerRef.current.visible = false; return; }
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
-
-    let interactState = 'IDLE';
-    const interact = getSystem<IInteractionSystem>('InteractionSystem');
-    if (interact) interactState = interact.repairState;
-
-    const isActive = (interactState === 'HEALING' || interactState === 'REBOOTING') || isZenMode;
+    const iState = getSystem<IInteractionSystem>('InteractionSystem')?.repairState || 'IDLE';
+    const isActive = iState === 'HEALING' || iState === 'REBOOTING' || isZenMode;
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
-    
-    if (ambientMaterial.uniforms[Uniforms.ENERGY]) {
-        ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
-    }
+    if (ambientMaterial.uniforms[Uniforms.ENERGY]) ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
-    let playerEntity;
-    for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
+    let playerEntity; for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
     if (!playerEntity) return;
-
-    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-    const renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    const isPlayerDead = useGameStore.getState().playerHealth <= 0; 
-    const isDeadState = (isPlayerDead || isSystemFailure) && !isZenMode;
-
+    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform), renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const isPlayerDead = useGameStore.getState().playerHealth <= 0, isDeadState = (isPlayerDead || isSysFail) && !isZenMode;
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
 
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
-        const time = state.clock.elapsedTime;
-
-        // --- CORE ROTATION ENGINE ---
-        const timeSinceFire = time - lastFireTimeRef.current;
-        const idleSpeed = (Math.PI * 2 / 10);
-        
-        centerDotRef.current.geometry = coreGeo;
-
-        if (timeSinceFire < 0.25) {
-            // LOCK ON TARGET
+        const time = state.clock.elapsedTime, tFire = time - lastFireTimeRef.current, iSpd = Math.PI*0.2;
+        if (tFire < 0.25) {
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, 0.4);
-            // Anchor the offset for a smooth resume
-            rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * idleSpeed);
-        } else {
-            // EASE BACK TO IDLE
-            const targetIdle = -time * idleSpeed + rotationOffsetRef.current;
-            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetIdle, 0.08);
-        }
+            rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * iSpd);
+        } else centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, -time * iSpd + rotationOffsetRef.current, 0.08);
 
-        const pulse = 1.0 + Math.sin(time * Math.PI) * 0.075;
-        centerDotRef.current.scale.setScalar(pulse);
-
-        if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25;
-        else reticleRef.current.rotation.z = -renderTrans.rotation;
+        centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
+        reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
         
         if (isZenMode) {
-            tempColor.current.setHSL((time * 0.1) % 1, 1.0, 0.9);
-            reticleColor.current.setHSL((time * 0.1 - 0.1) % 1, 0.9, 0.6);
-            backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time * 0.1 - 0.2) % 1, 0.8, 0.5);
-            ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time * 0.1 - 0.3) % 1, 0.8, 0.4);
+            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
+            backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
+            ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
         } else {
-            let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
-            tempColor.current.lerp(targetColor, 0.2);
+            let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+            tempColor.current.lerp(target, 0.2);
             if (isDeadState) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
-            else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
+            else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
-            
-            if (hitFlash.current > 0.01) { 
-                tempColor.current.lerp(COL_HIT, hitFlash.current);
-                reticleColor.current.lerp(COL_HIT, hitFlash.current); 
-            }
+            if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
         }
-
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
-        
-        const zenScale = isZenMode ? 3.0 : 1.0;
-        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * zenScale);
+        containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * (isZenMode ? 3.0 : 1.0));
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }
   });
 
   return (
     <group ref={containerRef}>
-      <mesh ref={centerDotRef} renderOrder={3}><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
-      <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}><meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} /></mesh>
-      <mesh ref={backingCircleRef} material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3, 1.3, 1]} renderOrder={1} />
-      <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6, 6, 1]} renderOrder={0} />
+      <mesh ref={centerDotRef} geometry={coreGeo} renderOrder={3}><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
+      <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0,0,Math.PI/12]} renderOrder={2}><meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} /></mesh>
+      <mesh material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3,1.3,1]} renderOrder={1} />
+      <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6,6,1]} renderOrder={0} />
     </group>
   );
 };
@@ -11209,23 +10877,17 @@ export const BOOT_SEQUENCE = {
 FILE: ./src/engine/signals/UnifiedEventService.ts
 =====================================
 import { IGameEventService, IFastEventService } from '@/engine/interfaces';
-import { GameEvents, GameEventPayloads, FXVariant } from './GameEvents';
-import { FastEventType, SoundCode, FXCode, FLOAT_SCALAR, getFXCode, getSoundCode } from './FastEventBus';
-import { PanelId } from '@/engine/config/PanelConfig';
+import { GameEvents, GameEventPayloads } from './GameEvents';
+import { SoundCode, FXCode, getFXCode, getSoundCode } from './FastEventBus';
 
 export class UnifiedEventService implements IGameEventService {
-  constructor(
-    private slowBus: IGameEventService,
-    private fastBus: IFastEventService
-  ) {}
+  constructor(private slowBus: IGameEventService, private fastBus: IFastEventService) {}
 
   public subscribe<T extends GameEvents>(event: T, handler: (payload: GameEventPayloads[T]) => void): () => void {
     return this.slowBus.subscribe(event, handler);
   }
 
   public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void {
-    // --- FAST PATH ROUTING ---
-    
     if (event === GameEvents.SPAWN_FX) {
         const p = payload as GameEventPayloads[GameEvents.SPAWN_FX];
         const code = getFXCode(p.type);
@@ -11234,31 +10896,19 @@ export class UnifiedEventService implements IGameEventService {
             return;
         }
     }
-
     if (event === GameEvents.PLAY_SOUND) {
         const p = payload as GameEventPayloads[GameEvents.PLAY_SOUND];
         const code = getSoundCode(p.key);
         if (code !== SoundCode.NONE) {
-            // We interpret 'x' as pan info if provided, else 0
-            const pan = p.x !== undefined ? p.x : 0; 
-            // Note: The FastBus usually expects a pan value, but we might need to 
-            // recalculate pan in the consumer if we only pass X. 
-            // However, the original fastBus.playSound took 'pan'. 
-            // We will assume 'x' here needs to be processed by the consumer or 
-            // passed as raw pan if pre-calculated. 
-            // To be safe and compatible with legacy FastBus usage:
-            this.fastBus.playSound(code, pan);
+            this.fastBus.playSound(code, p.x !== undefined ? p.x : 0);
             return;
         }
     }
-
     if (event === GameEvents.TRAUMA_ADDED) {
         const p = payload as GameEventPayloads[GameEvents.TRAUMA_ADDED];
         this.fastBus.camShake(p.amount);
         return;
     }
-
-    // --- SLOW PATH (Default) ---
     this.slowBus.emit(event, payload);
   }
 
@@ -11267,8 +10917,6 @@ export class UnifiedEventService implements IGameEventService {
     this.fastBus.clear();
   }
 
-  // --- EXPOSE FAST BUS FOR CONSUMERS (READERS) ---
-  // Readers (Directors) still need to poll the buffer efficiently
   public processFastEvents(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void) {
       this.fastBus.process(callback);
   }
@@ -11422,184 +11070,59 @@ import { IFastEventService } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 
-// --- CONSTANTS ---
-// The "Magic Number" is now a defined constant.
-// We scale floats by 100 to store them as integers (2 decimal precision).
 export const FLOAT_SCALAR = 100;
+const EVENT_STRIDE = 5;
 
-export enum FastEventType {
-  NONE = 0,
-  PLAY_SOUND = 1,
-  SPAWN_FX = 2,
-  CAM_SHAKE = 3,
-  HIT_STOP = 4,
-  DUCK_MUSIC = 5
-}
-
-export enum SoundCode {
-  NONE = 0,
-  FX_PLAYER_FIRE = 1,
-  FX_IMPACT_LIGHT = 2,
-  FX_IMPACT_HEAVY = 3,
-  FX_ENEMY_FIRE = 4,
-  UI_CLICK = 5,
-  UI_HOVER = 6,
-  LOOP_DRILL = 7,
-  FX_REBOOT_SUCCESS = 8,
-  FX_LEVEL_UP = 9,
-  LOOP_HEAL = 10,
-  LOOP_WARNING = 11,
-  FX_TELEPORT = 12,
-  FX_EXHAUST_SIZZLE = 13,
-  FX_PLAYER_DEATH = 14
-}
-
-export enum FXCode {
-  NONE = 0,
-  EXPLOSION_PURPLE = 1,
-  EXPLOSION_YELLOW = 2,
-  EXPLOSION_RED = 3,
-  IMPACT_WHITE = 4,
-  IMPACT_RED = 5,
-  DRILL_SPARKS = 6,
-  HUNTER_RECOIL = 7,
-  CLASH_YELLOW = 8,
-  EXPLOSION_PURPLE_DIR = 9,
-  EXPLOSION_YELLOW_DIR = 10,
-  EXPLOSION_RED_DIR = 11,
-  REBOOT_HEAL = 12,
-  PURGE_BLAST = 13,
-  ENGINE_FLARE = 14
-}
+export enum FastEventType { NONE = 0, PLAY_SOUND = 1, SPAWN_FX = 2, CAM_SHAKE = 3, HIT_STOP = 4, DUCK_MUSIC = 5 }
+export enum SoundCode { NONE = 0, FX_PLAYER_FIRE = 1, FX_IMPACT_LIGHT = 2, FX_IMPACT_HEAVY = 3, FX_ENEMY_FIRE = 4, UI_CLICK = 5, UI_HOVER = 6, LOOP_DRILL = 7, FX_REBOOT_SUCCESS = 8, FX_LEVEL_UP = 9, LOOP_HEAL = 10, LOOP_WARNING = 11, FX_TELEPORT = 12, FX_EXHAUST_SIZZLE = 13, FX_PLAYER_DEATH = 14 }
+export enum FXCode { NONE = 0, EXPLOSION_PURPLE = 1, EXPLOSION_YELLOW = 2, EXPLOSION_RED = 3, IMPACT_WHITE = 4, IMPACT_RED = 5, DRILL_SPARKS = 6, HUNTER_RECOIL = 7, CLASH_YELLOW = 8, EXPLOSION_PURPLE_DIR = 9, EXPLOSION_YELLOW_DIR = 10, EXPLOSION_RED_DIR = 11, REBOOT_HEAL = 12, PURGE_BLAST = 13, ENGINE_FLARE = 14 }
 
 export const SOUND_LOOKUP: Record<SoundCode, AudioKey | null> = {
-  [SoundCode.NONE]: null,
-  [SoundCode.FX_PLAYER_FIRE]: 'fx_player_fire',
-  [SoundCode.FX_IMPACT_LIGHT]: 'fx_impact_light',
-  [SoundCode.FX_IMPACT_HEAVY]: 'fx_impact_heavy',
-  [SoundCode.FX_ENEMY_FIRE]: 'fx_enemy_fire',
-  [SoundCode.UI_CLICK]: 'ui_click',
-  [SoundCode.UI_HOVER]: 'ui_hover',
-  [SoundCode.LOOP_DRILL]: 'loop_drill',
-  [SoundCode.FX_REBOOT_SUCCESS]: 'fx_reboot_success',
-  [SoundCode.FX_LEVEL_UP]: 'fx_level_up',
-  [SoundCode.LOOP_HEAL]: 'loop_heal',
-  [SoundCode.LOOP_WARNING]: 'loop_warning',
-  [SoundCode.FX_TELEPORT]: 'fx_teleport',
-  [SoundCode.FX_EXHAUST_SIZZLE]: 'fx_exhaust_sizzle',
-  [SoundCode.FX_PLAYER_DEATH]: 'fx_player_death'
+  [SoundCode.NONE]: null, [SoundCode.FX_PLAYER_FIRE]: 'fx_player_fire', [SoundCode.FX_IMPACT_LIGHT]: 'fx_impact_light', [SoundCode.FX_IMPACT_HEAVY]: 'fx_impact_heavy', [SoundCode.FX_ENEMY_FIRE]: 'fx_enemy_fire', [SoundCode.UI_CLICK]: 'ui_click', [SoundCode.UI_HOVER]: 'ui_hover', [SoundCode.LOOP_DRILL]: 'loop_drill', [SoundCode.FX_REBOOT_SUCCESS]: 'fx_reboot_success', [SoundCode.FX_LEVEL_UP]: 'fx_level_up', [SoundCode.LOOP_HEAL]: 'loop_heal', [SoundCode.LOOP_WARNING]: 'loop_warning', [SoundCode.FX_TELEPORT]: 'fx_teleport', [SoundCode.FX_EXHAUST_SIZZLE]: 'fx_exhaust_sizzle', [SoundCode.FX_PLAYER_DEATH]: 'fx_player_death'
 };
 
 export const FX_LOOKUP: Record<FXCode, VFXKey | null> = {
-  [FXCode.NONE]: null,
-  [FXCode.EXPLOSION_PURPLE]: 'EXPLOSION_PURPLE',
-  [FXCode.EXPLOSION_YELLOW]: 'EXPLOSION_YELLOW',
-  [FXCode.EXPLOSION_RED]: 'EXPLOSION_RED',
-  [FXCode.IMPACT_WHITE]: 'IMPACT_WHITE',
-  [FXCode.IMPACT_RED]: 'IMPACT_RED',
-  [FXCode.DRILL_SPARKS]: 'DRILL_SPARKS',
-  [FXCode.HUNTER_RECOIL]: 'HUNTER_RECOIL',
-  [FXCode.CLASH_YELLOW]: 'CLASH_YELLOW',
-  [FXCode.EXPLOSION_PURPLE_DIR]: 'EXPLOSION_PURPLE_DIR',
-  [FXCode.EXPLOSION_YELLOW_DIR]: 'EXPLOSION_YELLOW_DIR',
-  [FXCode.EXPLOSION_RED_DIR]: 'EXPLOSION_RED_DIR',
-  [FXCode.REBOOT_HEAL]: 'REBOOT_HEAL',
-  [FXCode.PURGE_BLAST]: 'PURGE_BLAST',
-  [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE'
+  [FXCode.NONE]: null, [FXCode.EXPLOSION_PURPLE]: 'EXPLOSION_PURPLE', [FXCode.EXPLOSION_YELLOW]: 'EXPLOSION_YELLOW', [FXCode.EXPLOSION_RED]: 'EXPLOSION_RED', [FXCode.IMPACT_WHITE]: 'IMPACT_WHITE', [FXCode.IMPACT_RED]: 'IMPACT_RED', [FXCode.DRILL_SPARKS]: 'DRILL_SPARKS', [FXCode.HUNTER_RECOIL]: 'HUNTER_RECOIL', [FXCode.CLASH_YELLOW]: 'CLASH_YELLOW', [FXCode.EXPLOSION_PURPLE_DIR]: 'EXPLOSION_PURPLE_DIR', [FXCode.EXPLOSION_YELLOW_DIR]: 'EXPLOSION_YELLOW_DIR', [FXCode.EXPLOSION_RED_DIR]: 'EXPLOSION_RED_DIR', [FXCode.REBOOT_HEAL]: 'REBOOT_HEAL', [FXCode.PURGE_BLAST]: 'PURGE_BLAST', [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE'
 };
 
 export const getSoundCode = (key: string): SoundCode => {
-    // Reverse lookup (Optimization: Could be cached map if perf becomes issue)
-    for (const [code, val] of Object.entries(SOUND_LOOKUP)) {
-        if (val === key) return Number(code) as SoundCode;
-    }
+    for (const [code, val] of Object.entries(SOUND_LOOKUP)) if (val === key) return Number(code) as SoundCode;
     return SoundCode.NONE;
 };
 
 export const getFXCode = (key: string): FXCode => {
-    for (const [code, val] of Object.entries(FX_LOOKUP)) {
-        if (val === key) return Number(code) as FXCode;
-    }
+    for (const [code, val] of Object.entries(FX_LOOKUP)) if (val === key) return Number(code) as FXCode;
     return FXCode.NONE;
 };
-
-const EVENT_STRIDE = 5;
 
 export class FastEventBusImpl implements IFastEventService {
   private buffer = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
   private cursor = 0;
 
-  // --- PRIMITIVE ACCESS (Internal) ---
   private emitRaw(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
     if (this.cursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
-
     this.buffer[this.cursor++] = eventId;
-    this.buffer[this.cursor++] = a1;
-    this.buffer[this.cursor++] = a2;
-    this.buffer[this.cursor++] = a3;
-    this.buffer[this.cursor++] = a4;
+    this.buffer[this.cursor++] = a1; this.buffer[this.cursor++] = a2;
+    this.buffer[this.cursor++] = a3; this.buffer[this.cursor++] = a4;
   }
 
-  // --- TYPED FACADE (Public) ---
-  
   public spawnFX(code: FXCode, x: number, y: number, angle: number = 0) {
-    this.emitRaw(
-      FastEventType.SPAWN_FX, 
-      code, 
-      Math.round(x * FLOAT_SCALAR), 
-      Math.round(y * FLOAT_SCALAR), 
-      Math.round(angle * FLOAT_SCALAR)
-    );
+    this.emitRaw(FastEventType.SPAWN_FX, code, Math.round(x * FLOAT_SCALAR), Math.round(y * FLOAT_SCALAR), Math.round(angle * FLOAT_SCALAR));
   }
-
   public playSound(code: SoundCode, pan: number = 0) {
-    this.emitRaw(
-      FastEventType.PLAY_SOUND, 
-      code, 
-      Math.round(pan * FLOAT_SCALAR)
-    );
+    this.emitRaw(FastEventType.PLAY_SOUND, code, Math.round(pan * FLOAT_SCALAR));
   }
-
   public camShake(amount: number) {
-    this.emitRaw(
-      FastEventType.CAM_SHAKE, 
-      Math.round(amount * FLOAT_SCALAR)
-    );
+    this.emitRaw(FastEventType.CAM_SHAKE, Math.round(amount * FLOAT_SCALAR));
   }
-
-  public hitStop(ms: number) {
-    // MS is an integer, no scaling needed usually, but keeping raw for consistency if needed later
-    this.emitRaw(FastEventType.HIT_STOP, ms);
-  }
-
+  public hitStop(ms: number) { this.emitRaw(FastEventType.HIT_STOP, ms); }
   public duckMusic(intensity: number, duration: number) {
-    this.emitRaw(
-      FastEventType.DUCK_MUSIC, 
-      Math.round(intensity * FLOAT_SCALAR), 
-      Math.round(duration * FLOAT_SCALAR)
-    );
+    this.emitRaw(FastEventType.DUCK_MUSIC, Math.round(intensity * FLOAT_SCALAR), Math.round(duration * FLOAT_SCALAR));
   }
-
-  // --- PROCESSING ---
-
-  public getCursor(): number {
-    return this.cursor;
-  }
-
-  public clear() {
-    this.cursor = 0;
-  }
-  
+  public getCursor(): number { return this.cursor; }
+  public clear() { this.cursor = 0; }
   public process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void) {
-      for(let i=0; i<this.cursor; i+=EVENT_STRIDE) {
-          callback(
-              this.buffer[i],
-              this.buffer[i+1],
-              this.buffer[i+2],
-              this.buffer[i+3],
-              this.buffer[i+4]
-          );
-      }
+      for(let i=0; i<this.cursor; i+=EVENT_STRIDE) callback(this.buffer[i], this.buffer[i+1], this.buffer[i+2], this.buffer[i+3], this.buffer[i+4]);
   }
 }
 
@@ -11705,7 +11228,6 @@ export class Entity {
   public readonly tags = new Set<Tag>();
   public active = true;
   public pooled = false;
-
   public components = new Map<ComponentType, Component>();
 
   constructor(id: EntityID) {
@@ -11723,7 +11245,7 @@ export class Entity {
   
   public requireComponent<T extends Component>(type: ComponentType): T {
     const c = this.components.get(type);
-    if (!c) throw new Error(`Entity ${this.id} missing required component: ${type}`);
+    if (!c) throw new Error(`E_${this.id} MISSING_${type}`);
     return c as T;
   }
 
@@ -11751,11 +11273,9 @@ export class Entity {
   public release() {
       this.active = false;
       this.pooled = true;
-      
       for (const component of this.components.values()) {
           ComponentPoolManager.release(component);
       }
-      
       this.components.clear(); 
       this.tags.clear();
   }
@@ -12346,18 +11866,12 @@ class ComponentRegistryController {
 
   public create(type: ComponentType, data: any = {}): Component {
     const Cls = this.classes.get(type);
-    if (!Cls) {
-        throw new Error(`[ComponentRegistry] Unknown component type: ${type}`);
-    }
+    if (!Cls) throw new Error(`ERR_UNKNOWN_COMP: ${type}`);
 
-    // Try Pool or Instantiate
     const component = ComponentPoolManager.acquire(type) || new Cls();
-    
-    // Generic Hydration: Assumes 'reset' accepts a data object
     if ('reset' in component && typeof (component as any).reset === 'function') {
         (component as any).reset(data);
     }
-    
     return component;
   }
 }
@@ -12459,17 +11973,11 @@ FILE: ./src/engine/ecs/SpatialGrid.ts
 import { EntityID } from './types';
 import { MAX_ENTITIES, SPATIAL_GRID_SIZE, SPATIAL_CELL_SIZE } from './Constants';
 
-// Primes for Hashing
 const HASH_X = 73856093;
 const HASH_Y = 19349663;
 
 export class SpatialGrid {
-  // Head of the linked list for each cell
-  // cellHead[cellHash] = firstEntityId (or -1 if empty)
   private cellHead = new Int32Array(SPATIAL_GRID_SIZE);
-
-  // Next pointer for each entity
-  // entityNext[entityId] = nextEntityId (or -1 if end of list)
   private entityNext = new Int32Array(MAX_ENTITIES);
 
   constructor() {
@@ -12478,7 +11986,6 @@ export class SpatialGrid {
   }
 
   public clear() {
-    // Only reset heads. entityNext is overwritten on insert.
     this.cellHead.fill(-1);
   }
 
@@ -12490,51 +11997,30 @@ export class SpatialGrid {
 
   public insert(id: EntityID, x: number, y: number) {
     const eid = id as number;
-    // Bounds check
     if (eid >= MAX_ENTITIES || eid < 0) return;
-
     const hash = this.getHash(x, y);
-
-    // Prepend to linked list
     this.entityNext[eid] = this.cellHead[hash];
     this.cellHead[hash] = eid;
   }
 
-  /**
-   * Zero-GC Query
-   * Writes results into 'outArray'.
-   * Returns the number of results found.
-   */
   public query(x: number, y: number, radius: number, outArray: Int32Array): number {
     let count = 0;
     const max = outArray.length;
-    
-    // Scan range
     const startX = Math.floor((x - radius) / SPATIAL_CELL_SIZE);
     const endX = Math.floor((x + radius) / SPATIAL_CELL_SIZE);
     const startY = Math.floor((y - radius) / SPATIAL_CELL_SIZE);
     const endY = Math.floor((y + radius) / SPATIAL_CELL_SIZE);
 
-    // To prevent duplicates if an entity spans multiple cells,
-    // we strictly rely on the fact that insert() puts an entity in ONE cell (center point).
-    // This implies point-based spatial hashing (buckets), not bounds-based.
-    // So we check all buckets the query radius touches.
-    
     for (let cy = startY; cy <= endY; cy++) {
       for (let cx = startX; cx <= endX; cx++) {
         const hash = ((cx * HASH_X) ^ (cy * HASH_Y)) & (SPATIAL_GRID_SIZE - 1);
-        
         let id = this.cellHead[hash];
-        
         while (id !== -1) {
-          if (count < max) {
-            outArray[count++] = id;
-          }
+          if (count < max) outArray[count++] = id;
           id = this.entityNext[id];
         }
       }
     }
-    
     return count;
   }
 }
@@ -12554,33 +12040,21 @@ export class EntityRegistry implements IEntityRegistry {
   private entities = new Map<EntityID, Entity>();
   private nextId = 0;
   private freeIds: number[] = []; 
-  
   private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
-
   private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
       this.entityPool = new ObjectPool<Entity>(
           () => new Entity(createEntityID(0)),
-          (e) => {}, 
+          () => {}, 
           1000 
       );
   }
 
   public createEntity(): Entity {
-    let idNum: number;
-    if (this.freeIds.length > 0) {
-        idNum = this.freeIds.pop()!;
-    } else {
-        idNum = ++this.nextId;
-    }
-
-    if (idNum >= MAX_ENTITIES) {
-        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}).`);
-    }
-
+    let idNum = this.freeIds.length > 0 ? this.freeIds.pop()! : ++this.nextId;
     const newId = createEntityID(idNum);
     const entity = this.entityPool.acquire();
     entity.reset(newId);
@@ -12591,15 +12065,11 @@ export class EntityRegistry implements IEntityRegistry {
   public destroyEntity(id: number) {
     const eid = id as EntityID;
     const entity = this.entities.get(eid);
-    
     if (!entity || !entity.active) return;
-
     entity.active = false;
-    
     this.removeFromCache(entity);
     this.entities.delete(eid);
     this.freeIds.push(id);
-    
     entity.release();
     this.entityPool.release(entity);
   }
@@ -12613,25 +12083,16 @@ export class EntityRegistry implements IEntityRegistry {
   }
 
   public getByTag(tag: string): Iterable<Entity> {
-    const t = tag as Tag;
-    return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
+    return this.tagCache.get(tag as Tag) || EntityRegistry.EMPTY_SET;
   }
 
-  // --- OPTIMIZED QUERY LOGIC ---
   public query(defOrQuery: QueryDef | Query): Iterable<Entity> {
-    // If passed a Query object, use it directly. Otherwise create temporary wrapper.
-    // Creating 'new Query' handles the ID generation (sorting components etc).
     const query = defOrQuery instanceof Query ? defOrQuery : new Query(defOrQuery);
-    
     let cache = this.activeQueries.get(query.id);
-    
     if (!cache) {
         const results = new Set<Entity>();
-        // Only run scan if this is the first time we see this query signature
         for (const entity of this.entities.values()) {
-            if (entity.active && query.matches(entity)) {
-                results.add(entity);
-            }
+            if (entity.active && query.matches(entity)) results.add(entity);
         }
         cache = { query, results };
         this.activeQueries.set(query.id, cache);
@@ -12645,19 +12106,14 @@ export class EntityRegistry implements IEntityRegistry {
           this.tagCache.get(tag)!.add(entity);
       }
       for (const cache of this.activeQueries.values()) {
-          if (cache.query.matches(entity)) {
-              cache.results.add(entity);
-          } else {
-              cache.results.delete(entity);
-          }
+          if (cache.query.matches(entity)) cache.results.add(entity);
+          else cache.results.delete(entity);
       }
   }
 
   private removeFromCache(entity: Entity) {
       for (const tag of entity.tags) {
-          if (this.tagCache.has(tag)) {
-              this.tagCache.get(tag)!.delete(entity);
-          }
+          if (this.tagCache.has(tag)) this.tagCache.get(tag)!.delete(entity);
       }
       for (const cache of this.activeQueries.values()) {
           cache.results.delete(entity);
@@ -13696,7 +13152,7 @@ export const domRectToWorldRect = (rect: { x: number, y: number, width: number, 
 FILE: ./src/engine/audio/AudioService.ts
 =====================================
 import { useStore } from '@/engine/state/global/useStore';
-import { AUDIO_MANIFEST, SoundDef } from '@/engine/config/assets/AudioManifest';
+import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { IAudioService } from '@/engine/interfaces';
 import { AudioContextManager } from './modules/AudioContextManager';
 import { AudioSynthesizer } from './modules/AudioSynthesizer';
@@ -13705,91 +13161,61 @@ import { SoundBank } from './modules/SoundBank';
 import { VoiceManager } from './modules/VoiceManager';
 import { AudioKey } from '@/engine/config/AssetKeys';
 
-// Sounds needed immediately for the UI/Menu
-const CRITICAL_SOUNDS: AudioKey[] = [
-    'ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 
-    'fx_boot_sequence', 'ambience_core'
-];
+const CRITICAL_SOUNDS: AudioKey[] = ['ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 'fx_boot_sequence', 'ambience_core'];
 
 export class AudioServiceImpl implements IAudioService {
   private ctxManager = new AudioContextManager();
   private mixer = new AudioMixer(this.ctxManager);
   private bank = new SoundBank();
   private voices = new VoiceManager(this.ctxManager, this.bank, this.mixer);
-  
   public isReady = false;
   private hasInteracted = false; 
   private _autoStartAmbience = false; 
-  
-  // Generation Queue
   private genQueue: AudioKey[] = [];
   private isGenerating = false;
-  
-  // Playback Queue (for sounds triggered during init)
   private pendingSounds: { key: AudioKey, pan: number }[] = [];
 
   public async init() {
     if (this.isReady) { this.ctxManager.resume(); return; }
     const ctx = this.ctxManager.init();
     if (!ctx) return;
-
     this.mixer.init();
     this.updateVolumes();
-    
-    // 1. Generate Critical Sounds (Blocking)
     await this.generateList(CRITICAL_SOUNDS);
-    
-    // 2. Queue the rest (Non-blocking)
     const allKeys = Object.keys(AUDIO_MANIFEST) as AudioKey[];
     this.genQueue = allKeys.filter(k => !this.bank.has(k));
     this.processQueue();
-
     this.setupGlobalInteraction();
     this.isReady = true;
-
-    // 3. Flush Pending Playback
     if (this.pendingSounds.length > 0) {
         this.pendingSounds.forEach(s => this.playSound(s.key, s.pan));
         this.pendingSounds = [];
     }
-
-    if (this._autoStartAmbience) {
-        this.playAmbience('ambience_core');
-    }
+    if (this._autoStartAmbience) this.playAmbience('ambience_core');
   }
 
   private async generateList(keys: AudioKey[]) {
-      const promises = keys.map(key => this.generateSingle(key));
-      await Promise.all(promises);
+      await Promise.all(keys.map(key => this.generateSingle(key)));
   }
 
   private async generateSingle(key: AudioKey) {
       if (this.bank.has(key)) return;
-      
       const recipe = AUDIO_MANIFEST[key];
       if (!recipe) return;
-
       const buffer = await AudioSynthesizer.generate(recipe);
       if (buffer) this.bank.add(key, buffer);
   }
 
   private processQueue() {
-      if (this.genQueue.length === 0) return;
-      if (this.isGenerating) return;
-
+      if (this.genQueue.length === 0 || this.isGenerating) return;
       this.isGenerating = true;
-
       const nextKey = this.genQueue.shift();
       if (nextKey) {
-          // Process one, then schedule next
           this.generateSingle(nextKey).then(() => {
               this.isGenerating = false;
-              // Small delay to let UI breathe
               setTimeout(() => this.processQueue(), 10);
           });
-      } else {
-          this.isGenerating = false;
-      }
+      } else this.isGenerating = false;
   }
 
   private setupGlobalInteraction() {
@@ -13811,48 +13237,27 @@ export class AudioServiceImpl implements IAudioService {
 
   public playSound(key: AudioKey, pan: number = 0) {
       if (this.isReady) {
-          if (this.bank.has(key)) {
-              this.voices.playSFX(key, pan);
-          }
-      } else {
-          // If we are still booting, queue critical UI sounds so they play the moment we are ready
-          if (CRITICAL_SOUNDS.includes(key)) {
-              this.pendingSounds.push({ key, pan });
-          }
+          if (this.bank.has(key)) this.voices.playSFX(key, pan);
+      } else if (CRITICAL_SOUNDS.includes(key)) {
+          this.pendingSounds.push({ key, pan });
       }
   }
 
   public playAmbience(key: AudioKey) {
       if (!this.isReady) return;
-      
-      if (this.bank.has(key)) {
-          this.voices.playAmbience(key);
-      } else {
-          this.generateSingle(key).then(() => {
-              this.voices.playAmbience(key);
-          });
-      }
+      if (this.bank.has(key)) this.voices.playAmbience(key);
+      else this.generateSingle(key).then(() => this.voices.playAmbience(key));
   }
 
   public startMusic() {
     this.ctxManager.resume();
     this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
-    
-    if (this.isReady && this.bank.has('ambience_core')) {
-        this.playAmbience('ambience_core');
-    } else {
-        this._autoStartAmbience = true;
-    }
+    if (this.isReady && this.bank.has('ambience_core')) this.playAmbience('ambience_core');
+    else this._autoStartAmbience = true;
   }
   
-  public duckMusic(intensity: number, duration: number) { 
-      this.mixer.duckMusic(intensity, duration); 
-  }
-  
-  public getFrequencyData(array: Uint8Array) { 
-      this.mixer.getByteFrequencyData(array); 
-  }
-  
+  public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
+  public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
   public stopAll() {
       this.voices.stopAll();
       this._autoStartAmbience = false;
@@ -14056,83 +13461,51 @@ import { AudioMixer } from './modules/AudioMixer';
 export class AudioDirector implements IGameSystem {
   private _isPurging: boolean = false;
   
-  constructor(
-    private panelSystem: IPanelSystem,
-    private events: IGameEventService,
-    private audio: IAudioService
-  ) {
+  constructor(private panelSystem: IPanelSystem, private events: IGameEventService, private audio: IAudioService) {
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
     this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
-        const intensity = Math.min(0.9, 0.3 + (p.damage * 0.05));
-        this.audio.duckMusic(intensity, 1.2);
+        this.audio.duckMusic(Math.min(0.9, 0.3 + (p.damage * 0.05)), 1.2);
     });
-
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        this.playSpatial(p.id, 'loop_heal');
-    });
-
+    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => this.playSpatial(p.id, 'loop_heal'));
     this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
         else this.playSpatial(p.id, 'fx_reboot_success');
     });
-
     this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
         this.audio.duckMusic(0.95, 2.5); 
     });
-
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 5.0);
-        this._isPurging = false; // Reset flag in case of repeat game overs
+        this._isPurging = false;
     });
-
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') {
-            this._isPurging = true; // TRIGGER AUDIO RESURRECTION
-        }
+        if (p.option === 'PURGE') this._isPurging = true;
         this.audio.playSound('fx_level_up');
     });
-
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
-        this._isPurging = false;
-    });
-
-    this.events.subscribe(GameEvents.GAME_START, () => {
-        this._isPurging = false;
-    });
-
+    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => this._isPurging = false);
+    this.events.subscribe(GameEvents.GAME_START, () => this._isPurging = false);
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
-        const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
-        this.audio.playSound(p.key as AudioKey, pan);
+        this.audio.playSound(p.key as AudioKey, p.x !== undefined ? this.calculatePan(p.x) : 0);
     });
   }
 
   update(delta: number, time: number): void {
-    // 1. Process Global Master Filter
-    // If we are purging, we force integrity to 1.0 to "open" the filter.
     const integrity = this._isPurging ? 1.0 : (this.panelSystem.systemIntegrity / 100);
-    
     const mixer = (this.audio as any).mixer as AudioMixer;
-    if (mixer) {
-        mixer.updateMasterFilter(integrity);
-    }
+    if (mixer) mixer.updateMasterFilter(integrity);
 
-    // 2. Process Fast Events
     const unified = this.events as UnifiedEventService;
     if (unified && typeof unified.processFastEvents === 'function') {
-        unified.processFastEvents((id, a1, a2, a3, a4) => {
+        unified.processFastEvents((id, a1, a2) => {
             if (id === FastEventType.PLAY_SOUND) {
                 const key = SOUND_LOOKUP[a1 as SoundCode];
-                if (key) {
-                    const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
-                    this.audio.playSound(key as AudioKey, pan);
-                }
-            }
-            else if (id === FastEventType.DUCK_MUSIC) {
+                if (key) this.audio.playSound(key as AudioKey, this.calculatePan(a2 / FLOAT_SCALAR));
+            } else if (id === FastEventType.DUCK_MUSIC) {
                 this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
             }
         });
@@ -14141,14 +13514,12 @@ export class AudioDirector implements IGameSystem {
 
   private playSpatial(panelId: PanelId, key: AudioKey) {
       const rect = this.panelSystem.getPanelRect(panelId);
-      const x = rect ? rect.x : 0;
-      this.audio.playSound(key, this.calculatePan(x));
+      this.audio.playSound(key, this.calculatePan(rect ? rect.x : 0));
   }
 
   private calculatePan(worldX: number): number {
       const halfWidth = ViewportHelper.viewport.width / 2;
-      if (halfWidth === 0) return 0;
-      return Math.max(-1, Math.min(1, worldX / halfWidth));
+      return halfWidth === 0 ? 0 : Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
   teardown(): void {}
@@ -14159,10 +13530,7 @@ export class AudioDirector implements IGameSystem {
 FILE: ./src/engine/audio/modules/AudioMixer.ts
 =====================================
 import { AudioContextManager } from './AudioContextManager';
-import { 
-  getAmbienceFilterHz, getAmbiencePanFreq, getAmbienceModFreq, 
-  getAmbienceModDepth, getAmbienceStereoGain, generateImpulseResponse
-} from '../AudioMath';
+import { getAmbienceFilterHz, getAmbiencePanFreq, getAmbienceModFreq, getAmbienceModDepth, getAmbienceStereoGain, generateImpulseResponse } from '../AudioMath';
 
 export class AudioMixer {
   public masterGain!: GainNode;
@@ -14171,10 +13539,8 @@ export class AudioMixer {
   public ambienceGain!: GainNode;
   public compressor!: DynamicsCompressorNode;
   public analyser!: AnalyserNode;
-
   private musicFilter!: BiquadFilterNode;
   private masterFilter!: BiquadFilterNode;
-
   private reverbNode!: ConvolverNode;
   private reverbSend!: GainNode;
   private delayNode!: DelayNode;
@@ -14186,88 +13552,67 @@ export class AudioMixer {
   private ambienceFilter!: BiquadFilterNode;
   private ambienceDepthLFO!: OscillatorNode;
   private ambienceDepthGain!: GainNode;
-
   private ctxManager: AudioContextManager;
   private _targetMusicVol: number = 0;
   private _isMusicMuted: boolean = true;
-
   private readonly MAX_FREQ = 20000;
   private readonly MIN_FREQ = 350;
 
-  constructor(manager: AudioContextManager) {
-    this.ctxManager = manager;
-  }
+  constructor(manager: AudioContextManager) { this.ctxManager = manager; }
 
   public init() {
     const ctx = this.ctxManager.ctx;
     if (!ctx) return;
-
     this.masterGain = ctx.createGain();
     this.sfxGain = ctx.createGain();
     this.musicGain = ctx.createGain();
     this.ambienceGain = ctx.createGain();
-    
     this.musicFilter = ctx.createBiquadFilter();
     this.musicFilter.type = 'lowpass';
     this.musicFilter.frequency.value = this.MAX_FREQ;
-
     this.masterFilter = ctx.createBiquadFilter();
     this.masterFilter.type = 'lowpass';
     this.masterFilter.frequency.value = this.MAX_FREQ;
-
     this.compressor = ctx.createDynamicsCompressor();
     this.analyser = ctx.createAnalyser();
-
     this.compressor.threshold.value = -12; 
     this.compressor.knee.value = 30;       
     this.compressor.ratio.value = 12; 
     this.compressor.attack.value = 0.003;  
     this.compressor.release.value = 0.25; 
     this.analyser.fftSize = 64; 
-    this.analyser.smoothingTimeConstant = 0.8;
-
     this.reverbNode = ctx.createConvolver();
     this.reverbNode.buffer = generateImpulseResponse(ctx, 1.5, 2.0);
     this.reverbSend = ctx.createGain(); 
     this.delayNode = ctx.createDelay(1.0);
     this.delayFeedback = ctx.createGain();
     this.delaySend = ctx.createGain(); 
-
     this.delayNode.connect(this.delayFeedback);
     this.delayFeedback.connect(this.delayNode);
     this.delayNode.connect(this.masterGain);
     this.reverbNode.connect(this.masterGain);
-
     this.musicGain.connect(this.musicFilter);
     this.musicFilter.connect(this.masterFilter);
-
     this.sfxGain.connect(this.masterFilter);
     this.sfxGain.connect(this.reverbSend);
     this.sfxGain.connect(this.delaySend);
-
     this.reverbSend.connect(this.reverbNode);
     this.delaySend.connect(this.delayNode);
-
     this.masterFilter.connect(this.masterGain);
     this.masterGain.connect(this.compressor);
     this.compressor.connect(this.analyser);
     this.analyser.connect(ctx.destination);
-
     this.ambiencePanner = ctx.createStereoPanner();
     this.ambienceFilter = ctx.createBiquadFilter();
     this.ambienceLFO = ctx.createOscillator();
     this.ambiencePanConstraint = ctx.createGain();
     this.ambienceDepthLFO = ctx.createOscillator();
     this.ambienceDepthGain = ctx.createGain();
-
     this.ambienceGain.connect(this.ambienceFilter);
     this.ambienceFilter.connect(this.ambiencePanner); 
     this.ambiencePanner.connect(this.masterFilter); 
-    this.ambienceLFO.type = 'sine';
     this.ambienceLFO.connect(this.ambiencePanConstraint);
     this.ambiencePanConstraint.connect(this.ambiencePanner.pan);
-    this.ambienceFilter.type = 'lowpass';
-    this.ambienceDepthLFO.type = 'sine';
     this.ambienceDepthLFO.connect(this.ambienceDepthGain);
     this.ambienceDepthGain.connect(this.ambienceFilter.frequency);
     this.ambienceLFO.start(); this.ambienceDepthLFO.start();
@@ -14281,19 +13626,15 @@ export class AudioMixer {
     this.musicGain.gain.value = this._targetMusicVol;
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
     this.ambienceGain.gain.value = settings.ambience ? settings.volumeAmbience : 0.0;
-
     this.ambienceFilter.frequency.value = getAmbienceFilterHz(settings.ambFilter ?? 0.5);
     this.ambienceLFO.frequency.value = getAmbiencePanFreq(settings.ambSpeed ?? 0.5);
     this.ambiencePanConstraint.gain.value = getAmbienceStereoGain(settings.ambWidth ?? 0.5);
     this.ambienceDepthLFO.frequency.value = getAmbienceModFreq(settings.ambModSpeed ?? 0.5);
     this.ambienceDepthGain.gain.value = getAmbienceModDepth(settings.ambModDepth ?? 0.5);
-
-    if (this.reverbSend) {
-        this.reverbSend.gain.value = settings.fxReverbMix ?? 0.2;
-        this.delaySend.gain.value = settings.fxDelayMix ?? 0.1;
-        this.delayNode.delayTime.value = 0.1 + ((settings.fxDelayTime ?? 0.25) * 0.9);
-        this.delayFeedback.gain.value = settings.fxDelayFeedback ?? 0.3;
-    }
+    this.reverbSend.gain.value = settings.fxReverbMix ?? 0.2;
+    this.delaySend.gain.value = settings.fxDelayMix ?? 0.1;
+    this.delayNode.delayTime.value = 0.1 + ((settings.fxDelayTime ?? 0.25) * 0.9);
+    this.delayFeedback.gain.value = settings.fxDelayFeedback ?? 0.3;
   }
 
   public duckMusic(intensity: number, duration: number) {
@@ -14311,22 +13652,15 @@ export class AudioMixer {
   public updateMasterFilter(integrity: number) {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
-      if (!ctx) return;
-
-      const threshold = 0.3;
-      if (integrity >= 1.0) {
-          // IMMEDIATE RESURRECTION (Snap filter open faster than normal healing)
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.05);
+      if (!ctx || integrity >= 1.0) {
+          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, 0.05);
           return;
       }
-
-      if (integrity > threshold) {
+      if (integrity > 0.3) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
           return;
       }
-
-      const dangerLevel = 1.0 - (integrity / threshold); 
-      const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, dangerLevel);
+      const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, 1.0 - (integrity / 0.3));
       this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
   }
 
@@ -14544,73 +13878,48 @@ import { SoundDef } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class AudioSynthesizer {
-  
   public static async generate(recipe: SoundDef): Promise<AudioBuffer | null> {
     if (typeof window === 'undefined') return null;
-
     const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return null;
-
     const OfflineContextClass = (window as any).OfflineAudioContext || (window as any).webkitOfflineAudioContext;
-    if (!OfflineContextClass) return null;
-
+    if (!AudioContextClass || !OfflineContextClass) return null;
     const sampleRate = SYS_LIMITS.SAMPLE_RATE;
     const length = Math.ceil(sampleRate * recipe.duration);
-    
     if (length <= 0) return null;
-
     const offline = new OfflineContextClass(1, length, sampleRate);
-
     const mainGain = offline.createGain();
     mainGain.connect(offline.destination);
-    
     const attack = recipe.attack || 0.005; 
-    
     mainGain.gain.setValueAtTime(0, 0);
     mainGain.gain.linearRampToValueAtTime(recipe.volume, attack);
-    
-    if (recipe.duration < 10.0) {
-        mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
-    } else {
-        mainGain.gain.setValueAtTime(recipe.volume, recipe.duration);
-    }
-
+    if (recipe.duration < 10.0) mainGain.gain.exponentialRampToValueAtTime(0.01, recipe.duration);
+    else mainGain.gain.setValueAtTime(recipe.volume, recipe.duration);
     let outputNode: AudioNode = mainGain;
-
     if (recipe.distortion) {
         const shaper = offline.createWaveShaper();
         shaper.curve = this.makeDistortionCurve(recipe.distortion);
         shaper.connect(outputNode);
         outputNode = shaper; 
     }
-
     if (recipe.tremolo) {
         const tremoloNode = offline.createGain();
         tremoloNode.connect(outputNode);
         outputNode = tremoloNode;
-
         const lfo = offline.createOscillator();
         lfo.type = recipe.tremolo.wave || 'sine';
         lfo.frequency.value = recipe.tremolo.rate;
-        
         const lfoGain = offline.createGain();
         lfoGain.gain.value = recipe.tremolo.depth; 
-        
         tremoloNode.gain.value = 1.0 - (recipe.tremolo.depth / 2);
         lfo.connect(lfoGain);
         lfoGain.connect(tremoloNode.gain);
-        
         lfo.start();
     }
-
     if (recipe.type === 'oscillator') {
         const osc = offline.createOscillator();
         osc.type = recipe.wave || 'sine';
         osc.frequency.setValueAtTime(recipe.frequency[0], 0);
-        if (recipe.frequency[1] !== recipe.frequency[0]) {
-            osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
-        }
-
+        if (recipe.frequency[1] !== recipe.frequency[0]) osc.frequency.exponentialRampToValueAtTime(recipe.frequency[1], recipe.duration);
         if (recipe.fm) {
            const modOsc = offline.createOscillator();
            const modGain = offline.createGain();
@@ -14621,20 +13930,14 @@ export class AudioSynthesizer {
            modGain.connect(osc.frequency); 
            modOsc.start();
         }
-
         osc.connect(outputNode);
         osc.start();
-    } 
-    else if (recipe.type === 'noise') {
-        const bufferSize = length;
-        const noiseBuffer = offline.createBuffer(1, bufferSize, sampleRate);
+    } else if (recipe.type === 'noise') {
+        const noiseBuffer = offline.createBuffer(1, length, sampleRate);
         const data = noiseBuffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
         const noise = offline.createBufferSource();
         noise.buffer = noiseBuffer;
-
         if (recipe.filter) {
             const filter = offline.createBiquadFilter();
             filter.type = 'lowpass';
@@ -14642,23 +13945,19 @@ export class AudioSynthesizer {
             filter.frequency.exponentialRampToValueAtTime(recipe.filter[1], recipe.duration);
             noise.connect(filter);
             filter.connect(outputNode);
-        } else {
-            noise.connect(outputNode);
-        }
+        } else noise.connect(outputNode);
         noise.start();
     }
-
     return await offline.startRendering();
   }
 
   private static makeDistortionCurve(amount: number) {
-    const k = typeof amount === 'number' ? amount : 50;
     const n_samples = SYS_LIMITS.SAMPLE_RATE;
     const curve = new Float32Array(n_samples);
     const deg = Math.PI / 180;
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
-      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
     }
     return curve;
   }
@@ -14776,109 +14075,60 @@ import { BTNode, NodeState } from './types';
 import { Entity } from '@/engine/ecs/Entity';
 import { AIContext } from '@/engine/handlers/ai/types';
 
-/**
- * Runs children in order. 
- * Returns RUNNING if a child is running.
- * Returns FAILURE if a child fails (and stops).
- * Returns SUCCESS if all children succeed.
- */
 export class Sequence extends BTNode {
   constructor(private children: BTNode[]) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     for (const child of this.children) {
       const status = child.tick(entity, context);
-      if (status !== NodeState.SUCCESS) {
-        return status;
-      }
+      if (status !== NodeState.SUCCESS) return status;
     }
     return NodeState.SUCCESS;
   }
 }
 
-/**
- * Runs children in order.
- * Returns SUCCESS if a child succeeds (and stops).
- * Returns RUNNING if a child is running.
- * Returns FAILURE if all children fail.
- */
 export class Selector extends BTNode {
   constructor(private children: BTNode[]) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     for (const child of this.children) {
       const status = child.tick(entity, context);
-      if (status !== NodeState.FAILURE) {
-        return status;
-      }
+      if (status !== NodeState.FAILURE) return status;
     }
     return NodeState.FAILURE;
   }
 }
 
-/**
- * Runs ALL children every tick.
- * Returns FAILURE if any child fails.
- * Returns RUNNING if any child is running.
- * Returns SUCCESS if all children succeed.
- */
 export class Parallel extends BTNode {
   constructor(private children: BTNode[]) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     let anyRunning = false;
-
     for (const child of this.children) {
       const status = child.tick(entity, context);
-      
-      if (status === NodeState.FAILURE) {
-        return NodeState.FAILURE;
-      }
-      
-      if (status === NodeState.RUNNING) {
-        anyRunning = true;
-      }
+      if (status === NodeState.FAILURE) return NodeState.FAILURE;
+      if (status === NodeState.RUNNING) anyRunning = true;
     }
-
     return anyRunning ? NodeState.RUNNING : NodeState.SUCCESS;
   }
 }
 
-/**
- * Stateful Sequence (Memory Sequence).
- * Remembers the running child index and resumes from there.
- * Resets index to 0 only when the whole sequence Succeeds or Fails.
- */
 export class MemSequence extends BTNode {
   constructor(private children: BTNode[], private id: string) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
-    const state = entity.getComponent<any>('State'); // Generic access
+    const state = entity.getComponent<any>('State');
     if (!state) return NodeState.FAILURE;
-
-    // Initialize Tree State if missing
     if (!state.treeState) state.treeState = {};
-    
-    // Get running index (default 0)
     let startIndex = state.treeState[this.id] || 0;
-
     for (let i = startIndex; i < this.children.length; i++) {
-      const child = this.children[i];
-      const status = child.tick(entity, context);
-
+      const status = this.children[i].tick(entity, context);
       if (status === NodeState.RUNNING) {
-        state.treeState[this.id] = i; // Remember this child is running
+        state.treeState[this.id] = i;
         return NodeState.RUNNING;
       }
-
       if (status === NodeState.FAILURE) {
-        state.treeState[this.id] = 0; // Reset on failure
+        state.treeState[this.id] = 0;
         return NodeState.FAILURE;
       }
     }
-
-    // All children succeeded
-    state.treeState[this.id] = 0; // Reset on success
+    state.treeState[this.id] = 0;
     return NodeState.SUCCESS;
   }
 }
@@ -15279,9 +14529,7 @@ import { getNearestPointOnRect } from '@/engine/math/GeometryUtils';
 export class DrillAttack extends BTNode {
   private readonly DETACH_THRESHOLD = 0.8;
   private readonly SPRING_STRENGTH = 12.0;
-
   constructor(private interval: number) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
@@ -15289,84 +14537,60 @@ export class DrillAttack extends BTNode {
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const combat = entity.getComponent<CombatData>(ComponentType.Combat);
-
     if (!target || !state || !transform || !visual) return NodeState.FAILURE;
-
     if (target.type !== 'PANEL' || !target.id) {
         state.data.drillTarget = undefined;
         return NodeState.FAILURE;
     }
-
     const rect = context.getPanelRect(target.id as PanelId);
     if (!rect) {
         state.data.drillTarget = undefined;
         return NodeState.FAILURE;
     }
-
-    // 1. Target Acquisition & Latch Refresh
     if (!state.data.drillTarget || state.data.drillTarget.panelId !== target.id) {
         const { x, y, angle } = getNearestPointOnRect(transform.x, transform.y, rect);
         state.data.drillTarget = { x, y, angle: angle + Math.PI, panelId: target.id };
     }
-
-    // 2. Dynamic Repathing (Threshold Check)
     const currentEdge = getNearestPointOnRect(state.data.drillTarget.x, state.data.drillTarget.y, rect);
     const driftSq = (currentEdge.x - state.data.drillTarget.x)**2 + (currentEdge.y - state.data.drillTarget.y)**2;
-    if (driftSq > this.DETACH_THRESHOLD * this.DETACH_THRESHOLD) {
+    if (driftSq > this.DETACH_THRESHOLD ** 2) {
         state.data.drillTarget = undefined;
         return NodeState.FAILURE; 
     }
-
     const { x: tX, y: tY, angle: tA } = state.data.drillTarget;
     const distSq = (tX - transform.x)**2 + (tY - transform.y)**2;
-
-    // 3. Magnetic Latch Physics
     if (distSq > 0.005) {
-        // Move towards latch point
         transform.x += (tX - transform.x) * this.SPRING_STRENGTH * context.delta;
         transform.y += (tY - transform.y) * this.SPRING_STRENGTH * context.delta;
-        
-        // Face the wall
         let diff = tA - transform.rotation;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         transform.rotation += diff * 10.0 * context.delta;
     } else {
-        // --- LOCKED & GRINDING ---
         transform.x = tX; transform.y = tY; transform.rotation = tA;
-
-        // Parent vibration to Panel Stress
         const panelStress = context.getPanelStress(target.id as PanelId);
         if (panelStress > 0.1) {
             visual.offsetX = (Math.random() - 0.5) * panelStress * 0.15;
             visual.offsetY = (Math.random() - 0.5) * panelStress * 0.15;
         }
-
         context.spawnFX('DRILL_SPARKS', tX, tY, tA);
         this.handleAudio(state, transform.x, context);
         this.handleDamage(state, target.id as PanelId, transform, combat, context);
     }
-
     if (motion) { motion.vx = 0; motion.vy = 0; }
     return NodeState.RUNNING;
   }
-
   private handleAudio(state: AIStateData, x: number, context: AIContext) {
       if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
           context.playSound('loop_drill', x);
           state.timers[AITimerID.DRILL_AUDIO] = 0.25;
-      } else {
-          state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
-      }
+      } else state.timers[AITimerID.DRILL_AUDIO]! -= context.delta;
   }
-
   private handleDamage(state: AIStateData, id: PanelId, t: TransformData, c: CombatData | undefined, ctx: AIContext) {
       if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
           ctx.damagePanel(id, c ? c.damage : 1, { source: { x: t.x, y: t.y } });
           state.timers[AITimerID.DRILL_DMG] = this.interval;
-      } else {
-          state.timers[AITimerID.DRILL_DMG] -= ctx.delta;
-      }
+      } else state.timers[AITimerID.DRILL_DMG]! -= ctx.delta;
   }
 }
 
@@ -15502,21 +14726,17 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class MoveToTarget extends BTNode {
   constructor(private speed: number, private stopDistance: number = 0) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
-
     if (!transform || !motion || !target) return NodeState.FAILURE;
     if (state && state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
     }
-
-    let tx = target.x;
-    let ty = target.y;
+    let tx = target.x, ty = target.y;
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
@@ -15524,41 +14744,30 @@ export class MoveToTarget extends BTNode {
             ty = Math.max(rect.bottom, Math.min(transform.y, rect.top));
         }
     }
-
-    const dx = tx - transform.x;
-    const dy = ty - transform.y;
+    const dx = tx - transform.x, dy = ty - transform.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     if (dist <= this.stopDistance) {
-        motion.vx = 0;
-        motion.vy = 0;
+        motion.vx = 0; motion.vy = 0;
         return NodeState.SUCCESS;
     }
-
-    const nx = dx / dist;
-    const ny = dy / dist;
-    motion.vx = nx * this.speed;
-    motion.vy = ny * this.speed;
+    motion.vx = (dx / dist) * this.speed;
+    motion.vy = (dy / dist) * this.speed;
     transform.rotation = Math.atan2(dy, dx);
     return NodeState.RUNNING;
   }
 }
 
 export class Wait extends BTNode {
-  private min: number;
-  private max: number;
+  private min: number; private max: number;
   constructor(min: number, max?: number) { 
-    super(); 
-    this.min = min;
-    this.max = max ?? min;
+    super(); this.min = min; this.max = max ?? min;
   }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
     if (state.timers[AITimerID.WAIT] === undefined) {
         state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
     }
-
     state.timers[AITimerID.WAIT]! -= context.delta;
     if (state.timers[AITimerID.WAIT]! <= 0) {
         state.timers[AITimerID.WAIT] = undefined;
@@ -15572,9 +14781,7 @@ export class SpinVisual extends BTNode {
   constructor(private speed: number) { super(); }
   tick(entity: Entity, context: AIContext): NodeState {
       const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      if (visual) {
-          visual.rotation += context.delta * this.speed;
-      }
+      if (visual) visual.rotation += context.delta * this.speed;
       return NodeState.SUCCESS;
   }
 }
@@ -15603,34 +14810,22 @@ export type AIBehaviorState = typeof AI_STATE[keyof typeof AI_STATE];
 =====================================
 FILE: ./src/engine/ai/AIBlackboard.ts
 =====================================
-/**
- * STRICT TYPING FOR AI MEMORY
- * Eliminates "Magic Strings" in logic handlers.
- */
-
 export interface AIBlackboard {
-  // --- DAEMON (Boss/Summon) ---
-  chargeProgress?: number; // 0.0 to 1.0
-  shieldHP?: number;       // Hit points for shield state
-  lastFireTime?: number;   // Timestamp
-  wasHit?: boolean;        // Reaction trigger
-
-  // --- HUNTER (Ranged) ---
-  driftX?: number;         // Hover target offset X
-  driftY?: number;         // Hover target offset Y
-
-  // --- DRILLER (Melee) ---
-  // Locked coordinates for the drill attack
+  chargeProgress?: number;
+  shieldHP?: number;
+  lastFireTime?: number;
+  wasHit?: boolean;
+  driftX?: number;
+  driftY?: number;
   drillTarget?: { 
       x: number; 
       y: number; 
       angle: number; 
       panelId: string;
   };
-
-  // --- GENERAL / SHARED ---
-  spawnOriginX?: number;   // For returning to post
+  spawnOriginX?: number;
   spawnOriginY?: number;
+  spinVel?: number;
 }
 
 
@@ -20136,7 +19331,6 @@ import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
-
   constructor(registry: IEntityRegistry) {
     this.registry = registry as EntityRegistry;
   }
@@ -20144,28 +19338,18 @@ export class EntitySpawner implements IEntitySpawner {
   public spawn(archetypeId: ArchetypeID, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
     if (!blueprint) {
-        console.error(`[EntitySpawner] Archetype not found: ${archetypeId}`);
+        console.error(`ERR_NO_ARCHETYPE: ${archetypeId}`);
         return this.registry.createEntity();
     }
-
     const e = this.registry.createEntity();
-    
-    // 1. Tags
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
-    // 2. Components (Merge Blueprint Data with Runtime Overrides)
     for (const compDef of blueprint.components) {
-        const blueprintData = compDef.data || {};
-        const runtimeData = overrides[compDef.type] || {};
-        
-        // Shallow merge is usually sufficient for flat component data
-        const mergedData = { ...blueprintData, ...runtimeData };
-        
+        const mergedData = { ...(compDef.data || {}), ...(overrides[compDef.type] || {}) };
         e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
 
-    // 3. Asset Metadata (Legacy support for old rendering systems)
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
@@ -20173,72 +19357,38 @@ export class EntitySpawner implements IEntitySpawner {
             render.materialId = blueprint.assets.material;
         }
     }
-
     this.registry.updateCache(e);
     return e;
   }
 
   public spawnPlayer(): Entity { return this.spawn(ArchetypeIDs.PLAYER); }
-  
   public spawnEnemy(type: ArchetypeID, x: number, y: number): Entity {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(
-      x: number, y: number, 
-      vx: number, vy: number, 
-      faction: Faction, 
-      life: number, 
-      damage: number = 1, 
-      projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, 
-      ownerId?: number
-  ): Entity {
-    // Map abstract faction types to specific IDs if generic provided
+  public spawnBullet(x: number, y: number, vx: number, vy: number, faction: Faction, life: number, damage: number = 1, projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, ownerId?: number): Entity {
     let id = projectileId;
     if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-
-    // Calculate rotation based on velocity
-    const rotation = Math.atan2(vy, vx);
-
-    // Prepare Runtime Overrides
-    // We ONLY set what is dynamic. Visuals, Colliders, Elasticity etc come from the Archetype.
-    const overrides: Record<string, any> = {
-        [ComponentType.Transform]: { x, y, rotation }, 
+    const overrides = {
+        [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
         [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
-    
-    // Spawn using the Blueprint
     return this.spawn(id, overrides);
   }
 
-  public spawnParticle(
-      x: number, y: number, 
-      color: string, 
-      vx: number, vy: number, 
-      life: number, 
-      size: number = 1.0, 
-      shape: ParticleShape = ParticleShape.CIRCLE
-  ): void {
-    // Particles are transient and simple, so we construct them manually to avoid overhead of Archetype lookup
-    // (Though we could make a PARTICLE archetype, direct creation is faster for high-frequency low-logic entities)
+  public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: ParticleShape = ParticleShape.CIRCLE): void {
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
-    
     e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
     e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
     e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
     e.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: color }));
-    
-    e.addComponent(ComponentRegistry.create(ComponentType.RenderModel, {
-        geometryId: GEOMETRY_IDS.PARTICLE,
-        materialId: MATERIAL_IDS.PARTICLE
-    }));
-    
+    e.addComponent(ComponentRegistry.create(ComponentType.RenderModel, { geometryId: GEOMETRY_IDS.PARTICLE, materialId: MATERIAL_IDS.PARTICLE }));
     this.registry.updateCache(e);
   }
 }
@@ -20344,11 +19494,9 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
-  
   public registry: IEntityRegistry; 
   private accumulator: number = 0;
   private simulationTime: number = 0;
-
   private panelSystem: IPanelSystem | null = null;
   private gameSystem: IGameStateSystem | null = null;
   private timeSystem: TimeSystem | null = null;
@@ -20382,9 +19530,6 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // --- GAME OVER LOGIC CHANGE ---
-    // Instead of returning (stopping the loop), we just flag it.
-    // This allows physics (projectiles) and rendering to continue.
     if (this.gameSystem && this.panelSystem) {
         if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
             gameStore.stopGame();
@@ -20393,7 +19538,6 @@ export class GameEngineCore implements IGameSystem {
         }
     }
 
-    // Time Management
     let timeScale = 1.0;
     if (this.timeSystem) {
         this.timeSystem.tickRealTime(renderDelta);
@@ -20409,7 +19553,6 @@ export class GameEngineCore implements IGameSystem {
     }
 
     const fixedStep = WorldConfig.time.fixedDelta;
-
     while (this.accumulator >= fixedStep) {
         for (let phase = 0; phase < this.systems.length; phase++) {
             const phaseSystems = this.systems[phase];
@@ -20417,7 +19560,7 @@ export class GameEngineCore implements IGameSystem {
                 try {
                     phaseSystems[i].update(fixedStep, this.simulationTime);
                 } catch (e: any) {
-                    console.error(`System Update Error [Phase ${phase}]:`, e);
+                    console.error(`ERR_PHASE_${phase}:`, e);
                 }
             }
         }
@@ -20425,29 +19568,20 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
-    if (this.fastEventBus) {
-        this.fastEventBus.clear();
-    }
+    if (this.fastEventBus) this.fastEventBus.clear();
   }
 
   teardown(): void {
     for (const phase of this.systems) {
-        for (const sys of phase) {
-            sys.teardown();
-        }
+        for (const sys of phase) sys.teardown();
     }
     this.systems = [[], [], [], [], [], []];
-    this.panelSystem = null;
-    this.gameSystem = null;
-    this.timeSystem = null;
-    this.fastEventBus = null;
+    this.panelSystem = null; this.gameSystem = null; this.timeSystem = null; this.fastEventBus = null;
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
-    if (this.panelSystem) {
-        this.panelSystem.refreshAll();
-    }
+    if (this.panelSystem) this.panelSystem.refreshAll();
   }
 }
 

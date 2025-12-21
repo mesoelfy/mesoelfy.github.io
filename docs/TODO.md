@@ -675,8 +675,6 @@ player cursor explodes a second wave of projectiles, one blast 360 degrees at on
 add framer motion to github page
 https://framermotionexamples.com/examples?s=all
 
-the ASCII shimmering appears to be the same short pattern cycle. I'd like it to be more varied and random for the purple and green shimmer red infection.
-
 
 
 

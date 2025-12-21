@@ -118,17 +118,28 @@ export class AudioMixer {
     this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
   }
 
-  public updateMasterFilter(integrity: number) {
+  /**
+   * Updates the global low-pass filter based on system integrity.
+   * @param integrity 0.0 (Destroyed) to 1.0 (Healthy)
+   * @param transitionTime How fast to reach target frequency (seconds)
+   */
+  public updateMasterFilter(integrity: number, transitionTime: number = 0.05) {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
+      
+      // If healthy or missing context, open filter
       if (!ctx || integrity >= 1.0) {
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, 0.05);
+          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, transitionTime);
           return;
       }
+
+      // If moderately damaged, start closing slightly
       if (integrity > 0.3) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
           return;
       }
+
+      // Critical state: Muffle sound significantly
       const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, 1.0 - (integrity / 0.3));
       this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
   }
