@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
@@ -64,11 +64,16 @@ export const PlayerActor = () => {
   const backingCircleRef = useRef<THREE.Mesh>(null);
   const ambientGlowRef = useRef<THREE.Mesh>(null);
   const { introDone } = useStore(); 
+  
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
+  
+  // FIX: Use R3F clock reference instead of performance.now()
+  const zenStartTime = useRef(-1);
+  const isZenMode = useGameStore(state => state.isZenMode);
 
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
@@ -100,8 +105,30 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
-    const isZenMode = useGameStore.getState().isZenMode;
-    const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
+    
+    // --- ZEN MODE TIMING FIX ---
+    if (!isZenMode) {
+        // Reset timer if we leave Zen Mode (or haven't entered yet)
+        zenStartTime.current = -1;
+    } else if (zenStartTime.current === -1) {
+        // Capture exact simulation time when Zen Mode starts
+        zenStartTime.current = state.clock.elapsedTime;
+    }
+
+    let targetScale = 0;
+    
+    if (introDone) {
+        if (isZenMode) {
+            // Check against consistent simulation time
+            // 1.5s delay
+            if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) {
+                targetScale = 1;
+            }
+        } else if (!isSystemFailure) {
+            targetScale = 1;
+        }
+    }
+
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
     if (animScale.current < 0.01) { 

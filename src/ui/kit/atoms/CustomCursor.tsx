@@ -17,26 +17,19 @@ export const CustomCursor = () => {
   
   const { bootState, activeModal, isDebugOpen, isBreaching, sessionId } = useStore();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isZenMode = useGameStore(state => state.isZenMode);
   
-  // Game Logic States
   const isGameActive = bootState === 'active';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  // LOGIC SPLIT:
-  
-  // 1. When to render the Custom Green Arrow?
-  // Only during Boot, Menus, or Game Over.
-  // NEVER during active gameplay (Player uses 3D Reticle).
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
+  // LOGIC UPDATE:
+  // Explicitly hide Custom Cursor if Zen Mode is active.
+  // This allows the "Game Over" cursor to fade out when Zen starts.
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode)) && !isOnScrollbar;
 
-  // 2. When to hide the System Cursor (Glove/Arrow)?
-  // ALWAYS, unless we are on the scrollbar.
-  // This ensures that during gameplay, we see NO cursor (only 3D Reticle),
-  // and during menus, we see ONLY the Custom Cursor.
   const hideSystemCursor = !isOnScrollbar;
 
-  // --- Effect: Handle Hit Feedback ---
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
           setIsHit(true);
@@ -49,7 +42,6 @@ export const CustomCursor = () => {
       };
   }, [sessionId, bootState]);
 
-  // --- Effect: Enforce System Cursor Hiding ---
   useEffect(() => {
       if (hideSystemCursor) {
           document.body.classList.add('cursor-none');
@@ -65,7 +57,6 @@ export const CustomCursor = () => {
       };
   }, [hideSystemCursor]);
 
-  // --- Effect: Track Mouse ---
   useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
