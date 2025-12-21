@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Monitor, AlertTriangle, ChevronRight, XCircle, CheckCircle2 } from 'lucide-react';
+import { Smartphone, Monitor, AlertTriangle, ChevronRight, XCircle, CheckCircle2, Maximize, ZoomIn } from 'lucide-react';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { clsx } from 'clsx';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 
 interface Props {
@@ -115,14 +114,42 @@ export const MobileGateModal = ({ isOpen, onOverride }: Props) => {
                     </motion.div>
                 </div>
 
-                {/* 2. WARNING TEXT */}
-                <motion.div variants={itemVariants} className="relative z-10 text-center space-y-2">
+                {/* 2. WARNING TEXT & INSTRUCTION ANIMATION */}
+                <motion.div variants={itemVariants} className="relative z-10 text-center space-y-4">
                     <h2 className="text-xl font-header font-black text-white tracking-widest">
                         NARROW BANDWIDTH DETECTED
                     </h2>
-                    <p className="text-xs font-mono text-gray-400 max-w-xs mx-auto leading-relaxed">
-                        The Neural Lace requires a wide viewport for optimal synchronization. Proceeding on mobile may result in visual cramping and reduced immersion.
-                    </p>
+                    
+                    {/* Animated Bracket Instructions */}
+                    <div className="flex items-center justify-center gap-4 text-primary-green py-2">
+                        <motion.span 
+                            animate={{ x: [-5, -15, -5], opacity: [0.5, 1, 0.5] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            className="text-5xl font-light font-mono"
+                        >
+                            [
+                        </motion.span>
+                        
+                        <div className="flex flex-col gap-2 min-w-[140px]">
+                            <div className="flex items-center justify-between gap-2 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-primary-green/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 animate-pulse" />
+                                <ZoomIn size={12} className="text-primary-green" />
+                                <span>ZOOM: 100%</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden">
+                                <Maximize size={12} className="text-primary-green" />
+                                <span>FULLSCREEN</span>
+                            </div>
+                        </div>
+
+                        <motion.span 
+                            animate={{ x: [5, 15, 5], opacity: [0.5, 1, 0.5] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            className="text-5xl font-light font-mono"
+                        >
+                            ]
+                        </motion.span>
+                    </div>
                 </motion.div>
 
                 {/* 3. OVERRIDE BUTTON */}
