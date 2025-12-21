@@ -6,7 +6,7 @@ import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
+import { getSoundCode, getFXCode, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
@@ -64,7 +64,6 @@ export class WeaponSystem implements IGameSystem {
     
     if (!playerEntity) return;
 
-    // --- HANDLE PURGE SEQUENCE ---
     if (this.purgeState.active) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         if (transform) {
@@ -72,7 +71,6 @@ export class WeaponSystem implements IGameSystem {
         }
     }
 
-    // --- HANDLE NORMAL FIRE ---
     if (this.purgeState.active || isDead) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
@@ -91,7 +89,6 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      // 50% Fewer Shots (Was 360, Now 180)
       this.purgeState = {
           active: true,
           shotsRemaining: 180, 
@@ -103,8 +100,8 @@ export class WeaponSystem implements IGameSystem {
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, t.x * 100, t.y * 100, 0);
-              this.fastEvents.emit(FastEventType.CAM_SHAKE, 50); 
+              this.fastEvents.spawnFX(FXCode.PURGE_BLAST, t.x, t.y, 0);
+              this.fastEvents.camShake(0.5);
           }
       }
   }
@@ -114,8 +111,6 @@ export class WeaponSystem implements IGameSystem {
       const SPEED = 24; 
       const DAMAGE = 50;
       const LIFE = 2.4;
-      
-      // Target Rate: 164 shots/sec (approx 10% slower than 60fps * 3 = 180)
       const FIRE_RATE = 164; 
 
       this.purgeState.accumulator += delta * FIRE_RATE;
@@ -141,7 +136,6 @@ export class WeaponSystem implements IGameSystem {
               'PLAYER_PURGE'
           );
 
-          // --- PRISMATIC COLOR LOGIC ---
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.6); 
           
@@ -151,11 +145,9 @@ export class WeaponSystem implements IGameSystem {
               model.g = this.tempColor.g;
               model.b = this.tempColor.b;
           }
-          // ----------------------------
 
-          // Audio: Play every 5th shot
           if (this.purgeState.shotsRemaining % 5 === 0) {
-             this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
+             this.fastEvents.playSound(SoundCode.FX_PLAYER_FIRE, originX);
           }
 
           this.purgeState.currentAngle += ANGLE_INCREMENT;
@@ -194,7 +186,7 @@ export class WeaponSystem implements IGameSystem {
         }
     });
 
-    this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, pPos.x * 100);
+    this.fastEvents.playSound(SoundCode.FX_PLAYER_FIRE, pPos.x);
     this.lastFireTime = time;
   }
 

@@ -2,6 +2,11 @@ import { IFastEventService } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 
+// --- CONSTANTS ---
+// The "Magic Number" is now a defined constant.
+// We scale floats by 100 to store them as integers (2 decimal precision).
+export const FLOAT_SCALAR = 100;
+
 export enum FastEventType {
   NONE = 0,
   PLAY_SOUND = 1,
@@ -44,8 +49,7 @@ export enum FXCode {
   EXPLOSION_RED_DIR = 11,
   REBOOT_HEAL = 12,
   PURGE_BLAST = 13,
-  ENGINE_FLARE = 14,
-  IMPACT_YELLOW = 4 
+  ENGINE_FLARE = 14
 }
 
 export const SOUND_LOOKUP: Record<SoundCode, AudioKey | null> = {
@@ -81,11 +85,11 @@ export const FX_LOOKUP: Record<FXCode, VFXKey | null> = {
   [FXCode.EXPLOSION_RED_DIR]: 'EXPLOSION_RED_DIR',
   [FXCode.REBOOT_HEAL]: 'REBOOT_HEAL',
   [FXCode.PURGE_BLAST]: 'PURGE_BLAST',
-  [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE',
-  [FXCode.IMPACT_YELLOW]: 'IMPACT_WHITE'
+  [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE'
 };
 
 export const getSoundCode = (key: string): SoundCode => {
+    // Reverse lookup (Optimization: Could be cached map if perf becomes issue)
     for (const [code, val] of Object.entries(SOUND_LOOKUP)) {
         if (val === key) return Number(code) as SoundCode;
     }
@@ -105,7 +109,8 @@ export class FastEventBusImpl implements IFastEventService {
   private buffer = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
   private cursor = 0;
 
-  public emit(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
+  // --- PRIMITIVE ACCESS (Internal) ---
+  private emitRaw(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
     if (this.cursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
 
     this.buffer[this.cursor++] = eventId;
@@ -114,6 +119,48 @@ export class FastEventBusImpl implements IFastEventService {
     this.buffer[this.cursor++] = a3;
     this.buffer[this.cursor++] = a4;
   }
+
+  // --- TYPED FACADE (Public) ---
+  
+  public spawnFX(code: FXCode, x: number, y: number, angle: number = 0) {
+    this.emitRaw(
+      FastEventType.SPAWN_FX, 
+      code, 
+      Math.round(x * FLOAT_SCALAR), 
+      Math.round(y * FLOAT_SCALAR), 
+      Math.round(angle * FLOAT_SCALAR)
+    );
+  }
+
+  public playSound(code: SoundCode, pan: number = 0) {
+    this.emitRaw(
+      FastEventType.PLAY_SOUND, 
+      code, 
+      Math.round(pan * FLOAT_SCALAR)
+    );
+  }
+
+  public camShake(amount: number) {
+    this.emitRaw(
+      FastEventType.CAM_SHAKE, 
+      Math.round(amount * FLOAT_SCALAR)
+    );
+  }
+
+  public hitStop(ms: number) {
+    // MS is an integer, no scaling needed usually, but keeping raw for consistency if needed later
+    this.emitRaw(FastEventType.HIT_STOP, ms);
+  }
+
+  public duckMusic(intensity: number, duration: number) {
+    this.emitRaw(
+      FastEventType.DUCK_MUSIC, 
+      Math.round(intensity * FLOAT_SCALAR), 
+      Math.round(duration * FLOAT_SCALAR)
+    );
+  }
+
+  // --- PROCESSING ---
 
   public getCursor(): number {
     return this.cursor;

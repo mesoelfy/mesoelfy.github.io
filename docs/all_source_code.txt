@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 20 18:30:01 CST 2025
+Generated on: Sun Dec 21 10:16:23 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -163,8 +163,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   └── types.ts
 │   │   │   └── weapons
 │   │   │       └── WeaponLogic.ts
-│   │   ├── input
-│   │   │   └── VirtualJoystickService.ts
 │   │   ├── interfaces.ts
 │   │   ├── math
 │   │   │   ├── GeometryUtils.ts
@@ -180,7 +178,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── GameBootstrapper.ts
 │   │   │   ├── GameEngine.ts
 │   │   │   ├── HUDService.ts
-│   │   │   ├── MobileBootstrapper.ts
 │   │   │   └── ServiceLocator.ts
 │   │   ├── signals
 │   │   │   ├── FastEventBus.ts
@@ -208,8 +205,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
 │   │   │   ├── LifeCycleSystem.ts
-│   │   │   ├── MobileCombatSystem.ts
-│   │   │   ├── MobileWaveSystem.ts
 │   │   │   ├── OrbitalSystem.ts
 │   │   │   ├── PanelRegistrySystem.ts
 │   │   │   ├── ParticleSystem.ts
@@ -240,7 +235,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   └── useGameStream.ts
 │       ├── kit
 │       │   ├── atoms
-│       │   │   ├── ActionButton.tsx
 │       │   │   ├── CustomCursor.tsx
 │       │   │   ├── DotGridBackground.tsx
 │       │   │   ├── GlassPanel.tsx
@@ -249,7 +243,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   ├── SafePanelContent.tsx
 │       │   │   ├── StatsRadar.tsx
 │       │   │   ├── ToggleButton.tsx
-│       │   │   ├── VirtualJoystick.tsx
 │       │   │   ├── VitalsRing.tsx
 │       │   │   └── ZenBomb.tsx
 │       │   ├── hooks
@@ -261,8 +254,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       │       ├── IdentityFooter.tsx
 │       │       ├── IdentityHUD.tsx
 │       │       ├── LiveArtGrid.tsx
-│       │       ├── MobileFooter.tsx
-│       │       ├── MobileHeader.tsx
 │       │       ├── SocialRow.tsx
 │       │       ├── SystemOps.tsx
 │       │       ├── UpgradeTerminal.tsx
@@ -288,10 +279,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   │   └── GalleryModal.tsx
 │       │   │   ├── identity
 │       │   │   │   └── AboutModal.tsx
-│       │   │   ├── mobile
-│       │   │   │   ├── MobileExperience.tsx
-│       │   │   │   ├── MobileRejectionModal.tsx
-│       │   │   │   └── SadMac.tsx
 │       │   │   ├── sandbox
 │       │   │   │   ├── ArenaLab.tsx
 │       │   │   │   ├── AudioMatrix.tsx
@@ -330,8 +317,8 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   ├── overlays
 │       │   │   ├── ErrorBoundary.tsx
 │       │   │   ├── GlobalBackdrop.tsx
-│       │   │   ├── ModalContainer.tsx
-│       │   │   └── RotationLock.tsx
+│       │   │   ├── MobileGateModal.tsx
+│       │   │   └── ModalContainer.tsx
 │       │   └── system
 │       │       ├── MetaManager.tsx
 │       │       ├── faviconGenerator.ts
@@ -344,8 +331,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       └── sim
 │           ├── GameCanvas.tsx
 │           ├── GameDirector.tsx
-│           ├── MobileGameDirector.tsx
-│           ├── MobileInputController.tsx
 │           ├── RenderDirector.tsx
 │           ├── SceneCanvas.tsx
 │           ├── actors
@@ -363,13 +348,11 @@ PROJECT DIRECTORY STRUCTURE:
 │           ├── experiments
 │           │   └── GlitchGhost.tsx
 │           ├── hooks
-│           │   ├── useDeviceType.ts
 │           │   ├── useHeartbeat.ts
 │           │   ├── usePanelRegistry.ts
 │           │   └── useWindowFocus.ts
 │           ├── props
-│           │   ├── MiniCrystalCanvas.tsx
-│           │   └── MobilePanelBase.tsx
+│           │   └── MiniCrystalCanvas.tsx
 │           ├── registry
 │           │   ├── RenderCatalog.ts
 │           │   └── RenderRegistry.ts
@@ -379,12 +362,11 @@ PROJECT DIRECTORY STRUCTURE:
 │           └── vfx
 │               ├── CameraRig.tsx
 │               ├── PostProcessing.tsx
-│               ├── TouchRipple.tsx
 │               └── WireframeFloor.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-83 directories, 293 files
+81 directories, 277 files
 
 =====================================
 FILE: ./next.config.js
@@ -647,6 +629,7 @@ const config: Config = {
         'spin-diamond': 'spin-diamond 3s linear infinite',
         'matrix-green': 'matrix-green 4s ease-in-out infinite',
         'matrix-purple': 'matrix-purple 2s ease-in-out infinite',
+        'matrix-red': 'matrix-red 0.5s ease-in-out infinite',
         'cursor-blink': 'cursor-blink 1.2s ease-in-out infinite',
         'restore-flash': 'restore-flash 1.2s ease-out forwards',
       },
@@ -663,6 +646,10 @@ const config: Config = {
           '0%, 100%': { color: '#9E4EA5' }, 
           '33%': { color: '#BC86BA' },      
           '66%': { color: '#350E3A' },      
+        },
+        'matrix-red': {
+          '0%, 100%': { color: '#FF003C' }, 
+          '50%': { color: '#800010' },      
         },
         'cursor-blink': {
           '0%, 30%': { opacity: '1' }, 
@@ -1867,68 +1854,6 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
 
 
 =====================================
-FILE: ./src/ui/kit/molecules/MobileFooter.tsx
-=====================================
-import { useStore } from '@/engine/state/global/useStore';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { LogOut } from 'lucide-react';
-
-export const MobileFooter = () => {
-  const { resetApplication } = useStore();
-
-  const handleExit = () => {
-    AudioSystem.playClick();
-    resetApplication();
-  };
-
-  return (
-    <div className="absolute bottom-0 left-0 w-full h-16 flex items-center justify-center z-[90] pointer-events-auto select-none bg-gradient-to-t from-black/90 to-transparent">
-        <button 
-            onClick={handleExit}
-            className="flex items-center gap-2 px-8 py-2 border border-critical-red/30 bg-black/60 rounded-sm text-critical-red text-xs font-bold tracking-widest active:scale-95 transition-transform backdrop-blur-md"
-        >
-            <LogOut size={12} /> DISCONNECT_UPLINK
-        </button>
-    </div>
-  );
-};
-
-
-=====================================
-FILE: ./src/ui/kit/molecules/MobileHeader.tsx
-=====================================
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { clsx } from 'clsx';
-import { Activity, Signal, Zap } from 'lucide-react';
-
-export const MobileHeader = () => {
-  const integrity = useGameStore(s => s.systemIntegrity);
-  const score = useGameStore(s => s.score);
-  
-  const isCritical = integrity < 30;
-  
-  return (
-    <div className="absolute top-0 left-0 w-full h-14 flex items-center justify-between px-4 z-[90] pointer-events-none select-none bg-gradient-to-b from-black/90 to-transparent">
-      {/* Integrity */}
-      <div className={clsx("flex items-center gap-2 font-mono text-xs font-bold", isCritical ? "text-critical-red animate-pulse" : "text-primary-green")}>
-        <Activity size={16} />
-        <div className="flex flex-col leading-none">
-            <span>SYS_INT</span>
-            <span className="text-lg">{Math.floor(integrity)}%</span>
-        </div>
-      </div>
-
-      {/* Score */}
-      <div className="flex flex-col items-end font-header font-black tracking-widest text-service-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]">
-        <span className="text-[10px] opacity-60">SCORE</span>
-        <span className="text-lg leading-none">{score.toString().padStart(6, '0')}</span>
-      </div>
-    </div>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/kit/molecules/VideoPlaylistService.ts
 =====================================
 const VIDEO_POOL = [
@@ -2379,12 +2304,10 @@ export const CustomCursor = () => {
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
   
   const isGameActive = bootState === 'active';
-  const isMobile = bootState === 'mobile_lockdown';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  // FIX: Explicitly disable custom cursor in mobile_lockdown
-  const showCustomCursor = !isMobile && ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
 
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
@@ -2406,7 +2329,6 @@ export const CustomCursor = () => {
       const onScroll = e.clientX >= window.innerWidth - 14 || e.clientY >= window.innerHeight - 14;
       setIsOnScrollbar(onScroll);
       
-      // Force native cursor if we are on scrollbar OR if logic dictates (like mobile)
       if (onScroll || !showCustomCursor) {
           document.body.style.setProperty('cursor', 'auto', 'important');
       } else {
@@ -2424,7 +2346,7 @@ export const CustomCursor = () => {
       window.removeEventListener('mouseup', up);
       document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching, isGameOver, showCustomCursor, isMobile]);
+  }, [isGameActive, isMenuOpen, isBreaching, isGameOver, showCustomCursor]);
 
   const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
   const cursorShadow = isHit 
@@ -2454,45 +2376,6 @@ export const CustomCursor = () => {
 
 
 =====================================
-FILE: ./src/ui/kit/atoms/VirtualJoystick.tsx
-=====================================
-import { useState, useRef } from 'react';
-import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
-import { UI_METRICS } from '@/engine/config/constants/UIConstants';
-
-export const VirtualJoystick = () => {
-  const [active, setActive] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const stickRef = useRef<HTMLDivElement>(null);
-  const MAX_RADIUS = UI_METRICS.JOYSTICK.MAX_RADIUS;
-
-  const handlePointerDown = (e: React.PointerEvent) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); setActive(true); };
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!active) return;
-    const rect = stickRef.current?.parentElement?.getBoundingClientRect();
-    if (!rect) return;
-    const centerX = rect.left + rect.width / 2; const centerY = rect.top + rect.height / 2;
-    const dx = e.clientX - centerX; const dy = e.clientY - centerY;
-    const distance = Math.sqrt(dx*dx + dy*dy); const clampedDist = Math.min(distance, MAX_RADIUS);
-    const angle = Math.atan2(dy, dx); const x = Math.cos(angle) * clampedDist; const y = Math.sin(angle) * clampedDist;
-    setPos({ x, y });
-    const normX = x / MAX_RADIUS; const normY = -(y / MAX_RADIUS); 
-    VirtualJoystickService.setVector(normX, normY);
-  };
-  const handlePointerUp = () => { setActive(false); setPos({ x: 0, y: 0 }); VirtualJoystickService.setVector(0, 0); };
-
-  return (
-    <div className="fixed bottom-8 left-8 w-32 h-32 z-joystick touch-none select-none">
-      <div className="w-full h-full rounded-full border-2 border-primary-green/30 bg-black/50 backdrop-blur-sm relative flex items-center justify-center" ref={stickRef}>
-        <div className="w-12 h-12 rounded-full bg-primary-green/80 shadow-[0_0_15px_#78F654] absolute cursor-pointer transition-transform duration-75 ease-linear" style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} />
-      </div>
-      <div className="absolute -top-6 w-full text-center text-[10px] text-primary-green/50 font-mono tracking-widest">[ NAV ]</div>
-    </div>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/kit/atoms/DotGridBackground.tsx
 =====================================
 import { clsx } from 'clsx';
@@ -2511,42 +2394,6 @@ export const DotGridBackground = ({ className, color = '#15530A' }: Props) => (
     }} 
   />
 );
-
-
-=====================================
-FILE: ./src/ui/kit/atoms/ActionButton.tsx
-=====================================
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Crosshair } from 'lucide-react';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-
-export const ActionButton = () => {
-  const [pressed, setPressed] = useState(false);
-
-  const handleDown = (e: React.PointerEvent) => {
-    e.preventDefault(); setPressed(true); AudioSystem.playClick();
-    try {
-        const input = ServiceLocator.getInputService(); const cursor = input.getCursor(); 
-        const ZOOM = 40; const screenX = (cursor.x * ZOOM) + (window.innerWidth / 2); const screenY = -(cursor.y * ZOOM) + (window.innerHeight / 2);
-        const el = document.elementFromPoint(screenX, screenY) as HTMLElement;
-        if (el) { el.click(); el.classList.add('active:scale-95'); setTimeout(() => el.classList.remove('active:scale-95'), 150); }
-    } catch (err) { console.warn("Action Button Failed:", err); }
-  };
-  const handleUp = () => { setPressed(false); };
-
-  return (
-    <div className="fixed bottom-8 right-8 z-joystick touch-none select-none">
-      <motion.button onPointerDown={handleDown} onPointerUp={handleUp} onPointerLeave={handleUp} animate={{ scale: pressed ? 0.9 : 1.0 }} className="w-24 h-24 rounded-full border-2 border-primary-green/50 bg-black/50 backdrop-blur-sm flex items-center justify-center relative group active:border-primary-green active:bg-primary-green/20 transition-colors cursor-pointer">
-        <div className="absolute inset-2 rounded-full border border-primary-green/20" />
-        <Crosshair size={32} className={`text-primary-green transition-all duration-100 ${pressed ? 'scale-90 opacity-100' : 'opacity-80'}`} />
-        {pressed && ( <motion.div initial={{ scale: 1, opacity: 0.5 }} animate={{ scale: 1.5, opacity: 0 }} transition={{ duration: 0.3 }} className="absolute inset-0 rounded-full bg-primary-green" /> )}
-      </motion.button>
-      <div className="absolute -top-6 w-full text-center text-[10px] text-primary-green/50 font-mono tracking-widest">[ ACT ]</div>
-    </div>
-  );
-};
 
 
 =====================================
@@ -3595,22 +3442,23 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
-  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
     <motion.div 
       className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
-        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
-        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(255,0,60,0.6)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
+        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(255,0,60,0.15)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
       } : {}}
-      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      // SPEED UPDATE: 1.5 -> 2.0
+      transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
     >
       <motion.span 
         className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
         animate={isCaution ? {
-            color: ['#78F654', '#eae747', '#78F654']
+            color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654']
         } : {}}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+        // SPEED UPDATE: 1.5 -> 2.0
+        transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
       >
         MESOELFY_CORE
       </motion.span>
@@ -3681,11 +3529,18 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 >
                     <motion.div
                        animate={{
-                           filter: ['drop-shadow(0 0 8px rgba(120,246,84,0.8))', 'drop-shadow(0 0 15px rgba(234,231,71,1))', 'drop-shadow(0 0 8px rgba(120,246,84,0.8))'],
-                           color: ['#78F654', '#eae747', '#78F654'],
-                           rotate: [0, 8, -8, 0] 
+                           filter: [
+                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))', 
+                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
+                               'drop-shadow(0 0 20px rgba(255,0,60,1))', 
+                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
+                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))'
+                           ],
+                           color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654'],
+                           rotate: [0, 5, 0, -5, 0] 
                        }}
-                       transition={{ duration: 2.0, repeat: Infinity, ease: "easeInOut" }}
+                       // SPEED UPDATE: 1.5 -> 2.0
+                       transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
                     >
                          <Skull size={18} />
                     </motion.div>
@@ -3847,44 +3702,63 @@ FILE: ./src/ui/os/boot/atoms/AsciiRenderer.tsx
 import { useMemo } from 'react';
 import { useStore } from '@/engine/state/global/useStore';
 import { ASCII_TITLE } from '@/engine/config/TextAssets';
+import { motion } from 'framer-motion';
 
-export const AsciiRenderer = () => {
+interface Props {
+  isInfected: boolean;
+}
+
+export const AsciiRenderer = ({ isInfected }: Props) => {
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isHigh = graphicsMode === 'HIGH';
 
-  const renderedChars = useMemo(() => {
-    return ASCII_TITLE.split('').map((char, i) => {
-      if (char === '\n') return <br key={i} />;
-      if (char === ' ') return <span key={i}> </span>;
-
-      let baseClass = 'transition-colors duration-300 ';
-      let animClass = '';
-      
-      if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-        baseClass += 'text-primary-green-dark';
-        animClass = 'animate-matrix-green';
-      } else if (['░', '▒', '▓'].includes(char)) {
-        baseClass += 'text-latent-purple';
-        animClass = 'animate-matrix-purple';
-      } else {
-        baseClass += 'text-primary-green-dark';
-      }
-
-      const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;
-      const style = isHigh ? { animationDelay: Math.random() * 2 + 's' } : {};
-
-      return (
-        <span key={i} className={finalClass} style={style}>
-          {char}
-        </span>
-      );
-    });
-  }, [isHigh]); 
+  const rows = useMemo(() => {
+    const cleanTitle = ASCII_TITLE.replace(/^\n/, '');
+    return cleanTitle.split('\n');
+  }, []);
 
   return (
-    // UPDATE: text-[4px] ensures fit on 360px screens (Galaxy S8+)
-    <div className="font-mono font-bold leading-[1.1] whitespace-pre text-center select-none overflow-hidden text-[4px] xs:text-[6px] sm:text-[9px] md:text-[11px] shrink-0">
-      {renderedChars}
+    // SIZE UPDATE: text-[9px] -> text-[11px]
+    <div className="font-mono font-bold leading-[0.95] whitespace-pre text-center select-none overflow-hidden text-[11px] shrink-0">
+      {rows.map((row, rowIndex) => (
+        <motion.div
+          key={rowIndex}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: rowIndex * 0.05 }}
+        >
+          {row.split('').map((char, charIndex) => {
+            if (char === ' ') return <span key={charIndex}> </span>;
+
+            let baseClass = 'transition-colors duration-300 ';
+            let animClass = '';
+            
+            const isRed = isInfected && Math.random() > 0.7;
+
+            if (isRed) {
+                baseClass += 'text-critical-red';
+                animClass = 'animate-matrix-red';
+            } else if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+                baseClass += 'text-primary-green-dark';
+                animClass = 'animate-matrix-green';
+            } else if (['░', '▒', '▓'].includes(char)) {
+                baseClass += 'text-latent-purple';
+                animClass = 'animate-matrix-purple';
+            } else {
+                baseClass += 'text-primary-green-dark';
+            }
+
+            const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;
+            const style = isHigh ? { animationDelay: Math.random() * 2 + 's' } : {};
+
+            return (
+              <span key={charIndex} className={finalClass} style={style}>
+                {char}
+              </span>
+            );
+          })}
+        </motion.div>
+      ))}
     </div>
   );
 };
@@ -3941,10 +3815,9 @@ export const TypedLog = ({ text, color, speed = 20, showDots = false, isActive =
 =====================================
 FILE: ./src/ui/os/boot/MatrixBootSequence.tsx
 =====================================
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { GpuConfigPanel } from '@/ui/os/apps/settings/components/GpuConfigPanel';
 import { clsx } from 'clsx';
 import { BootHeader } from './atoms/BootHeader';
 import { CoreHeader } from './atoms/CoreHeader';
@@ -3954,7 +3827,7 @@ import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
-import { useDeviceType } from '@/ui/sim/hooks/useDeviceType';
+import { Zap, ZapOff, Activity, Cpu, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
 interface Props {
@@ -3962,36 +3835,108 @@ interface Props {
   onBreachStart: () => void;
 }
 
+// --- SUB-COMPONENT: GPU SELECTION CARD ---
+const GpuCard = ({ mode, active, onClick, icon: Icon, label, sub }: any) => {
+  const isHigh = mode === 'HIGH';
+  const color = isHigh ? 'text-primary-green' : 'text-alert-yellow';
+  const borderColor = isHigh ? 'border-primary-green' : 'border-alert-yellow';
+  const glow = isHigh ? 'shadow-[0_0_20px_rgba(120,246,84,0.2)]' : 'shadow-[0_0_20px_rgba(234,231,71,0.2)]';
+  
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => AudioSystem.playHover()}
+      className={clsx(
+        "relative group flex items-center gap-4 p-4 border transition-all duration-300 overflow-hidden w-full text-left cursor-none",
+        active 
+          ? `${borderColor} bg-black ${glow}` 
+          : "border-white/10 bg-white/5 hover:border-white/30"
+      )}
+    >
+        {active && (
+            <div className={clsx(
+                "absolute inset-0 opacity-10 pointer-events-none",
+                isHigh 
+                  ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" 
+                  : "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#eae747_10px,#eae747_12px)]"
+            )} />
+        )}
+
+        <div className="flex items-center gap-2 relative z-10 shrink-0">
+            <motion.span 
+                animate={active ? { x: -3, opacity: 1 } : { x: 0, opacity: 0.3 }}
+                className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}
+            >
+                [
+            </motion.span>
+            
+            <Icon size={24} className={clsx("transition-transform duration-300", active ? `${color} scale-110` : "text-gray-500 group-hover:text-white")} />
+            
+            <motion.span 
+                animate={active ? { x: 3, opacity: 1 } : { x: 0, opacity: 0.3 }}
+                className={clsx("text-2xl font-light font-mono", active ? color : "text-gray-600")}
+            >
+                ]
+            </motion.span>
+        </div>
+
+        <div className="flex flex-col relative z-10 min-w-0">
+            <span className={clsx("font-header font-black tracking-widest text-sm transition-colors", active ? "text-white" : "text-gray-400 group-hover:text-white")}>
+                {label}
+            </span>
+            <span className={clsx("font-mono text-[9px] tracking-wider truncate", active ? color : "text-gray-600")}>
+                {sub}
+            </span>
+        </div>
+
+        {active && <div className={clsx("absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2", borderColor)} />}
+    </button>
+  );
+};
+
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mainStackRef = useRef<HTMLDivElement>(null);
-  const device = useDeviceType();
-  const { setBootState, setIntroDone, setInitialClickPos } = useStore();
-
+  
+  const { graphicsMode, setGraphicsMode } = useStore();
   const { 
-    step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
+    step, isBreaching, handleInitialize: coreInitialize, logsToShow,
     showMatrix, showPayloadWindow, showWarningBox, showButton
   } = useBootSequence({ onComplete, onBreachStart });
 
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
-  useSmartScroll(containerRef);
+
+  // --- RESPONSIVE SCALING LOGIC ---
+  const [uiScale, setUiScale] = useState(1.0);
 
   useEffect(() => {
-    if (showGpuPanel && mainStackRef.current) {
-        mainStackRef.current.scrollIntoView({ inline: 'center', behavior: 'smooth' });
-    }
-  }, [showGpuPanel]);
+    const handleResize = () => {
+        // Base dimensions of the UI stack (approx 42rem width)
+        const BASE_WIDTH = 680; 
+        const BASE_HEIGHT = 850; 
 
-  const handleWrapperClick = (e: React.MouseEvent) => {
-      setInitialClickPos({ x: e.clientX, y: e.clientY });
-      if (device === 'mobile') {
-          AudioSystem.init();
-          AudioSystem.playSound('ui_error');
-          setIntroDone(true);
-          setBootState('mobile_lockdown');
-      } else {
-          coreInitialize();
+        const widthScale = window.innerWidth / BASE_WIDTH;
+        const heightScale = window.innerHeight / BASE_HEIGHT;
+
+        // Fill screen up to 96%
+        const fitScale = Math.min(widthScale, heightScale) * 0.96;
+        
+        setUiScale(Math.max(0.5, fitScale));
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleWrapperClick = () => {
+      coreInitialize();
+  };
+
+  const handleGpuSelect = (mode: 'HIGH' | 'POTATO') => {
+      if (graphicsMode !== mode) {
+          setGraphicsMode(mode);
+          AudioSystem.playClick();
       }
   };
 
@@ -3999,96 +3944,187 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     <motion.div 
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
       className={clsx(
-          "fixed inset-0 z-boot font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-          isBreaching ? "overflow-hidden cursor-none" : "overflow-y-auto overflow-x-auto cursor-auto"
+          "fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden"
       )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
-      <div className="min-h-full min-w-min w-full flex items-center p-2 md:p-8 relative z-10">
+      
+      <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
+        
+        {/* --- MAIN STACK --- */}
         <motion.div 
-            className={clsx(
-                "flex flex-col gap-4 transition-all duration-500 ease-out m-auto", 
-                "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
-                showGpuPanel && !isBreaching ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" : ""
-            )}
-            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { opacity: 1, filter: "blur(0px)" }}
-            initial={{ opacity: 0 }}
-            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+            className="flex flex-col gap-4 w-[680px] origin-center"
+            // Apply Dynamic Scale
+            style={{ 
+                transform: `scale(${isBreaching ? uiScale * 1.1 : uiScale})`,
+                filter: isBreaching ? "blur(10px)" : "blur(0px)",
+                opacity: isBreaching ? 0 : 1,
+                transition: "transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.5s ease-in, filter 0.5s ease-in"
+            }}
         >
-            <AnimatePresence>
-                {showGpuPanel && !isBreaching && (
-                    <motion.div 
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                        className="w-full lg:w-72 lg:col-start-1 lg:row-start-1 relative z-10 lg:justify-self-end order-2 lg:order-1"
-                    >
-                        <GpuConfigPanel />
-                        <div className="mt-2 text-[10px] font-mono text-gray-500 text-center uppercase tracking-widest md:text-left absolute top-full w-full hidden md:block">
-                            &gt;&gt; CAN BE CHANGED LATER.
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            
+            {/* PANEL 1: BOOT LOADER */}
+            <div className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
+                <BootHeader step={step} />
+                <div className="relative w-full flex-1">
+                    <DotGridBackground /> 
+                    {/* HEIGHT INCREASED: h-40 -> h-44 to fix cutoff */}
+                    <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
+                        {logsToShow.map((line, i) => (
+                            <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
+                        ))}
+                    </div>
+                </div>
+            </div>
 
-            <div ref={mainStackRef} className="w-full lg:w-[42rem] lg:col-start-2 lg:row-start-1 flex flex-col gap-4 order-1 lg:order-2">
-                
-                {/* PANEL 1: BOOT LOADER */}
-                <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
-                    <BootHeader step={step} />
+            {/* PANEL 2: UNIFIED CORE (Payload + GPU) */}
+            <AnimatePresence mode="wait">
+            {showPayloadWindow && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                    className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20 flex flex-col"
+                >
+                    <CoreHeader step={step} />
                     
-                    {/* Body Wrapper: Holds Background & Content separated */}
-                    <div className="relative w-full flex-1">
-                        <DotGridBackground /> {/* Fills this wrapper edge-to-edge, below header */}
-                        <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
-                            {logsToShow.map((line, i) => (
-                                <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
-                            ))}
+                    {/* Content Container */}
+                    <div className="relative w-full">
+                        <DotGridBackground /> 
+                        
+                        {/* PADDING INCREASED: pt-3 -> pt-5 */}
+                        <div className="px-4 pb-4 pt-5 flex flex-col items-center gap-6 relative z-10">
+                            
+                            {/* 1. ASCII ART */}
+                            <AsciiRenderer isInfected={showWarningBox} />
+
+                            {/* 2. WARNING BOX (Conditional) */}
+                            <AnimatePresence mode="wait">
+                                {showWarningBox && !showButton && (
+                                    <motion.div 
+                                        key="warning-box"
+                                        initial={{ opacity: 0, scale: 0.9, height: 0 }}
+                                        animate={{ 
+                                            opacity: 1, 
+                                            scale: 1,
+                                            height: "auto",
+                                            boxShadow: [
+                                                "0 0 10px rgba(255,0,60,0.3)", 
+                                                "0 0 50px rgba(255,0,60,0.8)", 
+                                                "0 0 10px rgba(255,0,60,0.3)"
+                                            ]
+                                        }}
+                                        exit={{ 
+                                            opacity: 0, 
+                                            scale: 0.9, 
+                                            height: 0,
+                                            transition: { duration: 0.3 } 
+                                        }}
+                                        transition={{ 
+                                            opacity: { duration: 0.3 }, 
+                                            scale: { duration: 0.3 },
+                                            boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                                        }}
+                                        className="border border-critical-red bg-critical-red/20 px-6 py-3 flex items-center gap-4 relative overflow-hidden shrink-0"
+                                    >
+                                        <motion.div 
+                                            className="absolute inset-0"
+                                            style={{ 
+                                                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" 
+                                            }}
+                                            animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        />
+                                        
+                                        <motion.div 
+                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
+                                            transition={{ duration: 0.5, repeat: Infinity }}
+                                        >
+                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
+                                        </motion.div>
+                                        
+                                        <span className="text-xs font-bold font-header tracking-[0.2em] text-critical-red drop-shadow-sm relative z-10 whitespace-nowrap">
+                                            UNSAFE CONNECTION
+                                        </span>
+                                        
+                                        <motion.div 
+                                            animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
+                                            transition={{ duration: 0.5, repeat: Infinity, delay: 0.1 }}
+                                        >
+                                            <AlertTriangle size={24} className="text-critical-red drop-shadow-[0_0_10px_#FF003C]" />
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* 3. CONFIG & INITIALIZE (Final Step) */}
+                            <AnimatePresence>
+                                {showButton && (
+                                    <motion.div 
+                                        key="config-grid"
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: "auto" }}
+                                        transition={{ duration: 0.2 }}
+                                        className="w-full flex flex-col gap-6 pt-2 border-t border-white/10"
+                                    >
+                                        
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center justify-between text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
+                                                <span className="flex items-center gap-2"><Cpu size={12} /> Graphics_Kernel</span>
+                                                <span>Select Profile</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <GpuCard 
+                                                    mode="HIGH" 
+                                                    label="HIGH_VOLTAGE" 
+                                                    sub="MAX_FIDELITY // BLOOM" 
+                                                    icon={Zap} 
+                                                    active={graphicsMode === 'HIGH'} 
+                                                    onClick={() => handleGpuSelect('HIGH')} 
+                                                />
+                                                <GpuCard 
+                                                    mode="POTATO" 
+                                                    label="POTATO_MODE" 
+                                                    sub="PERFORMANCE // RETRO" 
+                                                    icon={ZapOff} 
+                                                    active={graphicsMode === 'POTATO'} 
+                                                    onClick={() => handleGpuSelect('POTATO')} 
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            onClick={handleWrapperClick} 
+                                            onMouseEnter={() => AudioSystem.playHover()} 
+                                            className="group relative w-full py-5 overflow-hidden border border-primary-green bg-black hover:shadow-[0_0_30px_rgba(0,255,65,0.4)] transition-all cursor-none"
+                                        >
+                                            <div className="absolute inset-0 bg-primary-green translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out opacity-20" />
+                                            <div className="relative z-10 flex flex-col items-center gap-1">
+                                                <div className="flex items-center gap-3">
+                                                    <Activity size={20} className="text-primary-green animate-pulse" />
+                                                    <span className="font-header font-black text-2xl tracking-[0.2em] text-white group-hover:text-primary-green transition-colors">
+                                                        INITIALIZE_SYSTEM
+                                                    </span>
+                                                    <Activity size={20} className="text-primary-green animate-pulse" />
+                                                </div>
+                                                <span className="text-xs font-mono text-primary-green-dim tracking-[0.3em] group-hover:text-primary-green transition-colors">
+                                                    CLICK TO INJECT PAYLOAD
+                                                </span>
+                                            </div>
+                                        </button>
+
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                         </div>
                     </div>
                 </motion.div>
+            )}
+            </AnimatePresence>
 
-                {/* PANEL 2: CORE PAYLOAD */}
-                <AnimatePresence>
-                {showPayloadWindow && (
-                    <motion.div initial={{ y: 50, opacity: 0, height: 0 }} animate={{ y: 0, opacity: 1, height: "auto" }} transition={{ type: "spring", stiffness: 120, damping: 20 }} className="w-full bg-black/90 border border-primary-green shadow-[0_0_40px_rgba(0,255,65,0.15)] overflow-hidden shrink-0 relative z-20">
-                        <CoreHeader step={step} />
-                        
-                        {/* Body Wrapper */}
-                        <div className="relative w-full">
-                            <DotGridBackground /> {/* Fills this wrapper edge-to-edge */}
-                            <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
-                                <AsciiRenderer />
-                                {showWarningBox && (
-                                <motion.div 
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1, boxShadow: ["0 0 10px rgba(255, 0, 60, 0.2)", "0 0 40px rgba(255, 0, 60, 0.6)", "0 0 10px rgba(255, 0, 60, 0.2)"] }}
-                                    transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.3 }, boxShadow: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } }}
-                                    className="relative border border-critical-red bg-critical-red/10 w-auto mx-auto flex items-center justify-center gap-2 md:gap-4 py-2 px-3 md:px-6 select-none shrink-0 max-w-full"
-                                >
-                                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
-                                    <span className="text-[9px] md:text-sm font-header font-black tracking-widest text-center text-critical-red whitespace-nowrap pb-0.5">UNSAFE CONNECTION DETECTED</span>
-                                    <motion.span animate={{ opacity: [1, 0.2, 1] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }} className="text-xl md:text-3xl text-critical-red">⚠</motion.span>
-                                </motion.div>
-                                )}
-                                {showButton && (
-                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }} className="shrink-0 w-full md:w-auto">
-                                    <button onClick={handleWrapperClick} onMouseEnter={() => AudioSystem.playHover()} className="group relative w-full md:w-auto px-8 py-3 md:py-2 overflow-hidden border border-primary-green transition-all hover:shadow-[0_0_30px_rgba(0,255,65,0.6)] cursor-pointer">
-                                    <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                                    <span className="relative z-10 font-mono font-bold text-sm md:text-3xl text-primary-green group-hover:text-black transition-colors block tracking-widest whitespace-nowrap text-center">[ INITIALIZE_SYSTEM ]</span>
-                                    </button>
-                                </motion.div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-                </AnimatePresence>
-            </div>
-            {showGpuPanel && !isBreaching && <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />}
         </motion.div>
       </div>
     </motion.div>
@@ -4303,6 +4339,242 @@ export const LOG_DATA = [
 
 
 =====================================
+FILE: ./src/ui/os/overlays/MobileGateModal.tsx
+=====================================
+import { motion, AnimatePresence } from 'framer-motion';
+import { Smartphone, Monitor, AlertTriangle, ChevronRight, XCircle, CheckCircle2, Maximize, ZoomIn, Scan } from 'lucide-react';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
+import { clsx } from 'clsx';
+
+export type GateVariant = 'MOBILE' | 'ULTRAWIDE';
+
+interface Props {
+  isOpen: boolean;
+  variant: GateVariant;
+  onOverride: () => void;
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { 
+    opacity: 1,
+    transition: { staggerChildren: 0.15, delayChildren: 0.2 }
+  },
+  exit: { 
+    opacity: 0, 
+    filter: "blur(10px)",
+    transition: { duration: 0.5 } 
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 200, damping: 20 } }
+};
+
+export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
+  const isMobile = variant === 'MOBILE';
+  const isUltrawide = variant === 'ULTRAWIDE';
+  
+  // Content Config
+  const title = isMobile ? 'NARROW BANDWIDTH DETECTED' : 'SIGNAL DILUTED // WIDE FIELD';
+
+  const leftLabel = isMobile ? "MOBILE" : "ULTRAWIDE";
+  const leftSub = isMobile 
+    ? <>LIMITED_VIEW<br/>TOUCH_CONTROLS</>
+    : <>PIXEL_DENSITY<br/>TOO_SPARSE</>;
+
+  const rightLabel = isMobile ? "DESKTOP" : "OPTIMIZED";
+  const rightSub = isMobile
+    ? <>FULL_IMMERSION<br/>PRECISION_INPUT</>
+    : <>SCALE_UP<br/>BROWSER_ZOOM</>;
+
+  const zoomText = isMobile ? "ZOOM: 100%" : "ZOOM: 125%+";
+
+  // Scaling Classes
+  const sizeConfig = isUltrawide ? {
+    icon: 80,
+    badgeIcon: 24,
+    mainTitle: "text-4xl",
+    matrixTitle: "text-lg",
+    matrixText: "text-sm",
+    buttonText: "text-xl",
+    container: "max-w-4xl" 
+  } : {
+    icon: 48,
+    badgeIcon: 12,
+    mainTitle: "text-xl",
+    matrixTitle: "text-xs",
+    matrixText: "text-[9px]",
+    buttonText: "text-sm",
+    container: "max-w-2xl"
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl cursor-none">
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className={clsx(
+                "relative w-full bg-[#050505] border border-primary-green/30 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden rounded-sm cursor-none",
+                sizeConfig.container
+            )}
+          >
+            {/* --- DECORATIVE HEADER --- */}
+            <div className="h-1 bg-gradient-to-r from-critical-red via-alert-yellow to-primary-green" />
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle size={14} className="animate-pulse text-alert-yellow" />
+                    <span className="text-[10px] font-header font-black tracking-widest text-white/80">
+                        HARDWARE_CHECK // ANOMALY
+                    </span>
+                </div>
+                <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-critical-red/50" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-alert-yellow/50" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary-green/50" />
+                </div>
+            </div>
+
+            {/* --- MAIN CONTENT --- */}
+            <div className={clsx("relative flex flex-col", isUltrawide ? "p-12 gap-12" : "p-6 md:p-8 gap-8")}>
+                <DotGridBackground className="opacity-10" />
+                
+                {/* 1. THE COMPARISON MATRIX */}
+                <div className="relative z-10 grid grid-cols-2 gap-4">
+                    
+                    {/* LEFT SIDE (PROBLEM - ALWAYS RED) */}
+                    <motion.div 
+                        variants={itemVariants}
+                        className="flex flex-col items-center gap-3 p-4 border border-critical-red/20 bg-critical-red/5 rounded-sm relative group overflow-hidden"
+                    >
+                        <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,0,60,0.05)_10px,rgba(255,0,60,0.05)_12px)] pointer-events-none" />
+                        
+                        <motion.div 
+                            animate={isMobile ? { x: [-2, 2, -2, 2, 0], rotate: [-2, 2, -2, 0] } : { scale: 0.8, opacity: 0.5 }}
+                            transition={isMobile ? { repeat: Infinity, duration: 0.5, repeatDelay: 2 } : { duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                            className="relative"
+                        >
+                            {isMobile ? <Smartphone size={sizeConfig.icon} className="text-critical-red opacity-80" /> : <Scan size={sizeConfig.icon} className="text-critical-red opacity-80" />}
+                            <div className="absolute -top-2 -right-2 bg-black border border-critical-red rounded-full p-0.5">
+                                <XCircle size={16} className="text-critical-red fill-black" />
+                            </div>
+                        </motion.div>
+                        
+                        <div className="text-center">
+                            <h3 className={clsx("font-black font-header text-critical-red tracking-widest mb-1", sizeConfig.matrixTitle)}>{leftLabel}</h3>
+                            <p className={clsx("font-mono text-critical-red/70", sizeConfig.matrixText)}>
+                                {leftSub}<br/>
+                                <span className="font-bold">SUB-OPTIMAL</span>
+                            </p>
+                        </div>
+                    </motion.div>
+
+                    {/* RIGHT SIDE (SOLUTION - ALWAYS GREEN) */}
+                    <motion.div 
+                        variants={itemVariants}
+                        className="flex flex-col items-center gap-3 p-4 border border-primary-green/20 bg-primary-green/5 rounded-sm relative overflow-hidden"
+                    >
+                        <motion.div 
+                            animate={{ scale: [1, 1.1, 1], filter: ["drop-shadow(0 0 0px #78F654)", "drop-shadow(0 0 15px #78F654)", "drop-shadow(0 0 0px #78F654)"] }}
+                            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                            className="relative"
+                        >
+                            <Monitor size={sizeConfig.icon} className="text-primary-green" />
+                            <div className="absolute -top-2 -right-2 bg-black border border-primary-green rounded-full p-0.5">
+                                <CheckCircle2 size={16} className="text-primary-green fill-black" />
+                            </div>
+                        </motion.div>
+
+                        <div className="text-center">
+                            <h3 className={clsx("font-black font-header text-primary-green tracking-widest mb-1", sizeConfig.matrixTitle)}>{rightLabel}</h3>
+                            <p className={clsx("font-mono text-primary-green/70", sizeConfig.matrixText)}>
+                                {rightSub}<br/>
+                                <span className="font-bold">RECOMMENDED</span>
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+
+                {/* 2. WARNING TEXT & INSTRUCTION ANIMATION */}
+                <motion.div variants={itemVariants} className="relative z-10 text-center space-y-4">
+                    <h2 className={clsx("font-header font-black text-white tracking-widest", sizeConfig.mainTitle)}>
+                        {title}
+                    </h2>
+                    
+                    {/* Animated Bracket Instructions */}
+                    <div className="flex items-center justify-center gap-4 text-primary-green py-2">
+                        <motion.span 
+                            animate={{ x: [-5, -15, -5], opacity: [0.5, 1, 0.5] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            className="text-5xl font-light font-mono"
+                        >
+                            [
+                        </motion.span>
+                        
+                        <div className="flex flex-col gap-2 min-w-[140px]">
+                            <div className={clsx("flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden group", sizeConfig.matrixText)}>
+                                <div className="absolute inset-0 bg-primary-green/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 animate-pulse" />
+                                <ZoomIn size={sizeConfig.badgeIcon} className="text-primary-green" />
+                                <span className={isUltrawide ? "text-lg" : ""}>{zoomText}</span>
+                            </div>
+                            <div className={clsx("flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden", sizeConfig.matrixText)}>
+                                <Maximize size={sizeConfig.badgeIcon} className="text-primary-green" />
+                                <span className={isUltrawide ? "text-lg" : ""}>FULLSCREEN</span>
+                            </div>
+                        </div>
+
+                        <motion.span 
+                            animate={{ x: [5, 15, 5], opacity: [0.5, 1, 0.5] }} 
+                            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                            className="text-5xl font-light font-mono"
+                        >
+                            ]
+                        </motion.span>
+                    </div>
+                </motion.div>
+
+                {/* 3. OVERRIDE BUTTON */}
+                <motion.div variants={itemVariants} className="relative z-10 pt-2">
+                    <button
+                        onClick={onOverride}
+                        className={clsx(
+                            "group w-full relative overflow-hidden py-4 bg-transparent border transition-colors cursor-none",
+                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-cyan/30 hover:border-service-cyan"
+                        )}
+                        onMouseEnter={() => AudioSystem.playHover()}
+                    >
+                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-cyan/10")} />
+                        
+                        <div className="relative flex items-center justify-center gap-3">
+                            <span className="text-alert-yellow font-mono text-[10px] animate-pulse">⚠</span>
+                            <span className={clsx("font-header font-black tracking-[0.2em] text-white group-hover:text-alert-yellow transition-colors", sizeConfig.buttonText)}>
+                                ENTER ANYWAY?!
+                            </span>
+                            <ChevronRight size={16} className="text-white/50 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </button>
+                    <div className="text-center mt-2">
+                        <span className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
+                            Override Authorization Code: {isMobile ? "ID_10_T" : "W1D3_L04D"}
+                        </span>
+                    </div>
+                </motion.div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
+=====================================
 FILE: ./src/ui/os/overlays/GlobalBackdrop.tsx
 =====================================
 import { motion, AnimatePresence } from 'framer-motion';
@@ -4324,77 +4596,6 @@ export const GlobalBackdrop = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} onClick={handleDismiss} className="fixed inset-0 z-backdrop bg-black/60 backdrop-blur-sm cursor-pointer" />
       )}
     </AnimatePresence>
-  );
-};
-
-
-=====================================
-FILE: ./src/ui/os/overlays/RotationLock.tsx
-=====================================
-import { motion } from 'framer-motion';
-import { Smartphone, RotateCcw } from 'lucide-react';
-import { useStore } from '@/engine/state/global/useStore';
-
-export const RotationLock = () => {
-  const { bootState } = useStore();
-
-  // Don't render anything if we are still in the intro sequence
-  if (bootState === 'standby') return null;
-
-  // VISUAL ONLY:
-  // The actual pausing logic is now handled centrally in page.tsx 
-  // to prevent conflicts with menus/modals.
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black flex-col items-center justify-center gap-8 hidden portrait:flex md:portrait:hidden pointer-events-auto">
-      
-      {/* ANIMATION CONTAINER */}
-      <div className="relative w-32 h-32 flex items-center justify-center">
-        {/* The Phone */}
-        <motion.div
-          animate={{ rotate: -90 }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 2.5, 
-            ease: "easeInOut", 
-            repeatDelay: 1 
-          }}
-          className="relative z-10"
-        >
-          <Smartphone size={64} className="text-primary-green drop-shadow-[0_0_15px_rgba(120,246,84,0.5)]" strokeWidth={1.5} />
-        </motion.div>
-
-        {/* The Arrow Hint */}
-        <motion.div
-          animate={{ opacity: [0, 1, 0], rotate: -90 }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 2.5, 
-            ease: "easeInOut", 
-            repeatDelay: 1 
-          }}
-          className="absolute inset-0 flex items-center justify-center"
-        >
-           <RotateCcw size={100} className="text-primary-green-dim/30" />
-        </motion.div>
-      </div>
-
-      {/* TEXT */}
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-header font-black text-primary-green tracking-widest uppercase">
-          Orientation<br/>Lock
-        </h2>
-        <p className="text-xs font-mono text-primary-green-dim max-w-[200px] mx-auto leading-relaxed">
-          // SYSTEM_REQ:<br/>
-          PLEASE ROTATE DEVICE TO<br/>
-          LANDSCAPE MODE
-        </p>
-      </div>
-
-      {/* DECORATIVE LINES */}
-      <div className="absolute bottom-8 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-green/50 to-transparent opacity-50" />
-      <div className="absolute top-8 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary-green/50 to-transparent opacity-50" />
-
-    </div>
   );
 };
 
@@ -6996,512 +7197,6 @@ export const VisualLab = () => {
 
 
 =====================================
-FILE: ./src/ui/os/apps/mobile/SadMac.tsx
-=====================================
-import { Monitor } from 'lucide-react';
-
-export const SadMac = ({ className }: { className?: string }) => (
-  <div className={`relative w-32 h-32 ${className}`}>
-    <svg viewBox="0 0 120 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,60,0.5)] overflow-visible">
-      
-      {/* Monitor Base */}
-      <rect x="10" y="5" width="100" height="60" rx="4" fill="none" stroke="#FF003C" strokeWidth="2" />
-      <rect x="16" y="11" width="88" height="48" fill="#FF003C" fillOpacity="0.1" />
-      
-      {/* Stand */}
-      <path d="M50 65 L50 75 L40 85 H80 L70 75 L70 65" fill="none" stroke="#FF003C" strokeWidth="2" />
-      
-      {/* Keyboard */}
-      <path d="M20 90 L15 95 H105 L100 90 Z" fill="none" stroke="#FF003C" strokeWidth="2" />
-      <line x1="30" y1="92" x2="90" y2="92" stroke="#FF003C" strokeWidth="2" strokeDasharray="4 4" />
-
-      {/* Screen Glitch */}
-      <path d="M30 35 L90 35" stroke="#FF003C" strokeWidth="2" />
-      <path d="M30 45 L70 45" stroke="#FF003C" strokeWidth="2" />
-      <path d="M45 25 L55 35 L45 45" stroke="#FF003C" strokeWidth="2" fill="none" />
-    </svg>
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full text-critical-red animate-pulse">
-        <Monitor size={24} strokeWidth={3} />
-    </div>
-  </div>
-);
-
-
-=====================================
-FILE: ./src/ui/os/apps/mobile/MobileRejectionModal.tsx
-=====================================
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Cpu, Scan, Biohazard, Waves, Ban, Skull, AlertTriangle, Terminal } from 'lucide-react';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
-import { clsx } from 'clsx';
-
-interface Props {
-  onComplete: () => void;
-}
-
-const STEPS = [
-  { id: 'SCAN', duration: 2000, color: 'text-primary-green', border: 'border-primary-green' },
-  { id: 'HARDWARE', duration: 2500, color: 'text-alert-yellow', border: 'border-alert-yellow' },
-  { id: 'GPU', duration: 2500, color: 'text-critical-red', border: 'border-critical-red' },
-  { id: 'ENV', duration: 3500, color: 'text-latent-purple', border: 'border-latent-purple' },
-  { id: 'DENIED', duration: 3000, color: 'text-critical-red', border: 'border-critical-red' },
-];
-
-export const MobileRejectionModal = ({ onComplete }: Props) => {
-  const [stepIndex, setStepIndex] = useState(0);
-  const currentStep = STEPS[stepIndex];
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    const advance = () => {
-      if (stepIndex < STEPS.length - 1) {
-        setStepIndex(prev => prev + 1);
-        
-        // Audio Logic per step
-        const nextId = STEPS[stepIndex + 1].id;
-        if (nextId === 'DENIED') AudioSystem.playSound('ui_error');
-        else if (nextId === 'ENV') AudioSystem.playSound('ui_chirp');
-        else AudioSystem.playClick();
-        
-      } else {
-        AudioSystem.playSound('fx_boot_sequence'); 
-        onComplete();
-      }
-    };
-
-    timer = setTimeout(advance, currentStep.duration);
-    return () => clearTimeout(timer);
-  }, [stepIndex, onComplete, currentStep]);
-
-  return (
-    <div className="absolute inset-0 flex items-center justify-center p-4 md:p-0">
-      
-      {/* Main Container Frame */}
-      <motion.div 
-        initial={{ scaleY: 0, opacity: 0 }}
-        animate={{ scaleY: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className={clsx(
-            "relative w-full max-w-sm bg-black/90 backdrop-blur-md border-y-2 overflow-hidden transition-colors duration-500 flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)]",
-            currentStep.border
-        )}
-      >
-        {/* Background Texture Layers */}
-        <DotGridBackground color={currentStep.id === 'DENIED' ? '#FF003C' : '#15530A'} />
-        
-        {/* Animated Stripes Background */}
-        <div className={clsx(
-            "absolute inset-0 opacity-10 pointer-events-none transition-colors duration-500",
-            stepIndex >= 2 ? "bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,currentColor_10px,currentColor_12px)]" : ""
-        )} style={{ color: stepIndex >= 4 ? '#FF003C' : '#9E4EA5' }} />
-
-        {/* HEADER */}
-        <div className={clsx("flex items-center justify-between px-4 py-2 border-b bg-black/50 transition-colors duration-500", currentStep.border)}>
-            <div className="flex items-center gap-2">
-                <Terminal size={14} className={currentStep.color} />
-                <span className={clsx("text-[10px] font-header font-black tracking-widest uppercase", currentStep.color)}>
-                    SYS_ANALYSIS_TOOL
-                </span>
-            </div>
-            <div className="text-[9px] font-mono opacity-50">v.MOBILE.0.1</div>
-        </div>
-
-        {/* CONTENT AREA */}
-        <div className="relative z-10 py-12 px-6 min-h-[320px] flex flex-col items-center justify-center">
-            <AnimatePresence mode="wait">
-            
-            {/* STEP 1: SCANNING */}
-            {currentStep.id === 'SCAN' && (
-                <motion.div 
-                key="scan"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-                className="flex flex-col items-center gap-6 w-full"
-                >
-                <div className="relative w-24 h-24 border border-primary-green/30 bg-primary-green/5 flex items-center justify-center">
-                    <Scan size={48} className="text-primary-green animate-pulse" />
-                    <motion.div 
-                        className="absolute inset-0 border-b-2 border-primary-green shadow-[0_0_15px_#78F654]"
-                        animate={{ top: ['0%', '100%', '0%'] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                    />
-                    {/* Corner Accents */}
-                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary-green" />
-                    <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-primary-green" />
-                    <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-primary-green" />
-                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary-green" />
-                </div>
-                
-                <div className="flex flex-col items-center gap-1">
-                    <span className="text-primary-green font-bold tracking-widest animate-pulse text-sm">
-                        SCANNING_FINGERPRINT...
-                    </span>
-                    <span className="text-[10px] text-primary-green-dim font-mono">
-                        [ USER_AGENT_PARSING ]
-                    </span>
-                </div>
-                </motion.div>
-            )}
-
-            {/* STEP 2: HARDWARE */}
-            {currentStep.id === 'HARDWARE' && (
-                <motion.div 
-                key="hw"
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                className="flex flex-col items-center gap-6 text-center w-full"
-                >
-                <div className="w-24 h-24 rounded-full border border-alert-yellow/30 bg-alert-yellow/5 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 animate-spin-slow border-t border-alert-yellow opacity-50 rounded-full" />
-                    <Smartphone size={40} className="text-alert-yellow drop-shadow-[0_0_10px_rgba(247,210,119,0.5)]" />
-                </div>
-
-                <div className="flex flex-col w-full border-l-2 border-alert-yellow pl-4 text-left bg-gradient-to-r from-alert-yellow/10 to-transparent py-2">
-                    <span className="text-[9px] text-alert-yellow opacity-70 uppercase tracking-widest mb-1">HARDWARE_ID_FOUND</span>
-                    <span className="text-xl text-alert-yellow font-black tracking-wider leading-none">
-                    POCKET_DEVICE
-                    </span>
-                    <span className="text-[10px] text-white/60 font-mono mt-1">
-                    CLASS: CONSUMER_GRADE
-                    </span>
-                </div>
-                </motion.div>
-            )}
-
-            {/* STEP 3: GPU */}
-            {currentStep.id === 'GPU' && (
-                <motion.div 
-                key="gpu"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.5 }}
-                className="flex flex-col items-center gap-6 text-center w-full"
-                >
-                <div className="relative">
-                    <Cpu size={64} className="text-critical-red animate-pulse" />
-                    <AlertTriangle size={24} className="absolute -top-2 -right-2 text-critical-red bg-black rounded-full" />
-                </div>
-
-                <div className="flex flex-col items-center w-full px-4">
-                    <span className="text-[10px] text-critical-red/70 uppercase tracking-widest mb-2">COMPUTE_POWER_ANALYSIS</span>
-                    <span className="text-3xl text-critical-red font-black tracking-widest glitch-text drop-shadow-[0_0_10px_#FF003C]">
-                    LAUGHABLE
-                    </span>
-                    
-                    {/* Tech Bar */}
-                    <div className="w-full bg-gray-900 h-3 mt-4 skew-x-[-12deg] overflow-hidden border border-critical-red/30 p-0.5">
-                        <div className="h-full bg-critical-red w-[2%] shadow-[0_0_10px_#FF003C] animate-pulse" />
-                    </div>
-                    <span className="text-[9px] text-critical-red mt-1 font-mono w-full text-right">CAPACITY: 1.2%</span>
-                </div>
-                </motion.div>
-            )}
-
-            {/* STEP 4: THE TOILET BIT */}
-            {currentStep.id === 'ENV' && (
-                <motion.div 
-                key="env"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="flex flex-col items-center gap-8 text-center w-full"
-                >
-                {/* Composite Icon Animation */}
-                <div className="relative w-32 h-32 flex items-center justify-center bg-black/50 border border-latent-purple/30 rounded-full">
-                    <motion.div 
-                        animate={{ y: [0, -5, 0] }} 
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        className="z-10"
-                    >
-                        <Smartphone size={48} className="text-latent-purple" />
-                    </motion.div>
-                    
-                    <motion.div 
-                        className="absolute bottom-4 text-service-cyan opacity-50"
-                        animate={{ scaleX: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }} 
-                        transition={{ duration: 3, repeat: Infinity }}
-                    >
-                        <Waves size={64} />
-                    </motion.div>
-
-                    <motion.div 
-                        className="absolute top-0 right-0 text-alert-yellow bg-black rounded-full p-1 border border-alert-yellow"
-                        animate={{ scale: [1, 1.2, 1] }} 
-                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}
-                    >
-                        <Biohazard size={20} />
-                    </motion.div>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                    <span className="text-[10px] text-latent-purple-light uppercase tracking-widest">GPS_TRIANGULATION_COMPLETE</span>
-                    <span className="text-xs font-bold text-gray-400">ENVIRONMENT DETECTED:</span>
-                    <div className="relative mt-1">
-                        <div className="absolute inset-0 bg-latent-purple blur-lg opacity-20" />
-                        <span className="relative z-10 text-2xl font-black text-latent-purple tracking-widest uppercase">
-                        CERAMIC_THRONE
-                        </span>
-                    </div>
-                </div>
-                </motion.div>
-            )}
-
-            {/* STEP 5: DENIED */}
-            {currentStep.id === 'DENIED' && (
-                <motion.div 
-                key="denied"
-                initial={{ opacity: 0, scale: 1.2 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, filter: "blur(20px)" }}
-                transition={{ type: "spring", stiffness: 300, damping: 15 }}
-                className="flex flex-col items-center gap-6 text-center w-full"
-                >
-                <div className="relative p-6 border-2 border-critical-red bg-critical-red/5">
-                    <Ban size={64} className="text-critical-red animate-pulse" />
-                    <Skull size={32} className="text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                    
-                    {/* Glitch Overlay */}
-                    <div className="absolute inset-0 bg-critical-red/10 mix-blend-overlay animate-pulse" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 10%, 0 10%)' }} />
-                </div>
-                
-                <div className="flex flex-col gap-3 w-full">
-                    <h1 className="text-3xl font-black text-critical-red tracking-widest bg-black border-y border-critical-red py-2">
-                    ACCESS DENIED
-                    </h1>
-                    <p className="text-xs text-gray-400 font-mono max-w-[240px] mx-auto leading-relaxed border-l-2 border-critical-red pl-3 text-left">
-                    You cannot hack the mainframe from the bathroom.
-                    </p>
-                    <div className="mt-4 pt-4 border-t border-white/10 w-full">
-                        <div className="flex items-center justify-between text-[10px] font-mono text-primary-green">
-                            <span className="animate-pulse">LOADING: DOOMSCROLL_PROTOCOL</span>
-                            <span>[ 99% ]</span>
-                        </div>
-                        <div className="h-1 w-full bg-gray-800 mt-1">
-                            <motion.div 
-                                className="h-full bg-primary-green" 
-                                initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
-                                transition={{ duration: 2.0, ease: "circOut" }}
-                            />
-                        </div>
-                    </div>
-                </div>
-                </motion.div>
-            )}
-
-            </AnimatePresence>
-        </div>
-
-        {/* FOOTER */}
-        <div className={clsx("px-4 py-2 border-t bg-black/80 flex justify-between items-center text-[9px] font-mono transition-colors duration-500", currentStep.border)}>
-            <span className={currentStep.color}>{currentStep.id}_MODULE_ACTIVE</span>
-            <span className="opacity-50">SECURE_CHANNEL: FALSE</span>
-        </div>
-
-        {/* Progress Bar (Global) */}
-        <div className="absolute bottom-0 left-0 h-0.5 bg-gray-900 w-full z-20">
-            <motion.div 
-                className={clsx("h-full transition-colors duration-500", currentStep.id === 'DENIED' ? "bg-critical-red" : "bg-primary-green")}
-                initial={{ width: "0%" }}
-                animate={{ width: `${((stepIndex + 1) / STEPS.length) * 100}%` }}
-                transition={{ duration: 0.5 }}
-            />
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-
-=====================================
-FILE: ./src/ui/os/apps/mobile/MobileExperience.tsx
-=====================================
-import { useState, useEffect } from 'react';
-import { MobileRejectionModal } from './MobileRejectionModal';
-import { Canvas } from '@react-three/fiber';
-import { MobileGameDirector } from '@/ui/sim/MobileGameDirector';
-import { RenderDirector } from '@/ui/sim/RenderDirector';
-import { CameraRig } from '@/ui/sim/vfx/CameraRig';
-import { TouchRipple } from '@/ui/sim/vfx/TouchRipple';
-import { WireframeFloor } from '@/ui/sim/vfx/WireframeFloor';
-import { MobileInputController } from '@/ui/sim/MobileInputController';
-import { MobilePanelBase } from '@/ui/sim/props/MobilePanelBase';
-import { SocialRow } from '@/ui/kit/molecules/SocialRow';
-import { MobileHeader } from '@/ui/kit/molecules/MobileHeader';
-import { MobileFooter } from '@/ui/kit/molecules/MobileFooter';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { ExternalLink, AlertTriangle, MousePointer2 } from 'lucide-react';
-import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
-import { motion, AnimatePresence } from 'framer-motion';
-import { PanelId } from '@/engine/config/PanelConfig';
-import { CAMERA_CONFIG } from '@/engine/config/CameraConfig';
-import { SadMac } from './SadMac';
-
-const MOBILE_PANEL_HP = 100;
-
-interface Props {
-  skipIntro?: boolean;
-}
-
-export const MobileExperience = ({ skipIntro = false }: Props) => {
-  const [phase, setPhase] = useState<'intro' | 'game'>(skipIntro ? 'game' : 'intro');
-  const [showFailureModal, setShowFailureModal] = useState(false);
-  const setIntegrity = useGameStore(s => (val: number) => useGameStore.setState({ systemIntegrity: val }));
-
-  // Force cursor hidden
-  useEffect(() => {
-      document.body.classList.add('cursor-none');
-      document.body.style.cursor = 'none';
-      return () => { 
-          document.body.classList.remove('cursor-none');
-          document.body.style.cursor = 'auto'; 
-      };
-  }, []);
-
-  useEffect(() => {
-      const unsub = GameEventBus.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
-          if (p.id === PanelId.SOCIAL) {
-              AudioSystem.playSound('fx_player_death');
-              setIntegrity(0);
-              setTimeout(() => {
-                  setShowFailureModal(true);
-                  AudioSystem.playSound('fx_impact_heavy');
-              }, 2000);
-          }
-      });
-      return unsub;
-  }, [setIntegrity]);
-
-  return (
-    <div className="absolute inset-0 z-[80] w-full h-full overflow-hidden text-primary-green select-none bg-black cursor-none touch-none">
-        {phase === 'intro' && (
-            <div className="pointer-events-auto w-full h-full relative z-50">
-                <MobileRejectionModal onComplete={() => setPhase('game')} />
-            </div>
-        )}
-        {phase === 'game' && (
-            <>
-                {/* Z-Index 90 is higher than Canvas (0) and GlassPanel (10) */}
-                <MobileHeader />
-                
-                {/* LAYER 0: THE SIMULATION */}
-                <div className="absolute inset-0 z-0 pointer-events-auto">
-                    <Canvas
-                        orthographic
-                        camera={{ zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 5, 100] }}
-                        gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-                        style={{ cursor: 'none' }}
-                    >
-                        <color attach="background" args={['#050505']} />
-                        <ambientLight intensity={0.5} />
-                        
-                        <MobileGameDirector />
-                        <CameraRig />
-                        
-                        <WireframeFloor />
-                        <MobilePanelBase />
-                        
-                        {/* Enemies and Ripples */}
-                        <RenderDirector />
-                        <TouchRipple />
-                        
-                        <MobileInputController />
-                    </Canvas>
-                </div>
-                
-                {/* LAYER 1: THE INTERFACE (Floaty Panel) */}
-                <div className="absolute inset-0 z-10 flex items-center justify-center p-4 pointer-events-none">
-                    <div className="w-full max-w-sm pointer-events-auto mt-8">
-                        <GlassPanel 
-                            title="SOCIAL_UPLINK" 
-                            gameId={PanelId.SOCIAL} 
-                            transparent={true} 
-                            className="shadow-[0_0_30px_rgba(0,0,0,0.5)] border-primary-green/30 bg-black/40 backdrop-blur-sm" 
-                            maxHealth={MOBILE_PANEL_HP}
-                        >
-                            <div className="p-2">
-                                <SocialRow layout="column" />
-                            </div>
-                        </GlassPanel>
-                    </div>
-                </div>
-
-                {!showFailureModal && (
-                    <div className="absolute bottom-20 w-full text-center animate-pulse z-20 pointer-events-none">
-                        <span className="bg-black/80 px-4 py-1 text-[10px] font-mono border border-primary-green/30 tracking-widest text-primary-green">
-                            TAP HOSTILES TO PURGE
-                        </span>
-                    </div>
-                )}
-
-                <MobileFooter />
-
-                {/* LAYER 2: GAME OVER */}
-                <AnimatePresence>
-                    {showFailureModal && (
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} 
-                            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 pointer-events-auto cursor-auto"
-                        >
-                            <motion.div 
-                                initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }}
-                                className="w-full max-w-sm border-2 border-critical-red bg-black shadow-[0_0_80px_rgba(255,0,60,0.3)] overflow-hidden flex flex-col"
-                            >
-                                <div className="bg-critical-red px-4 py-2 flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-black font-black tracking-widest">
-                                        <AlertTriangle size={18} />
-                                        <span>FATAL_EXCEPTION</span>
-                                    </div>
-                                    <div className="w-3 h-3 bg-black rounded-full" />
-                                </div>
-                                
-                                <div className="p-8 flex flex-col items-center text-center relative">
-                                    <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,#FF003C_2px,#FF003C_3px)] pointer-events-none" />
-                                    
-                                    <motion.div 
-                                        initial={{ scale: 0 }} animate={{ scale: 1 }} 
-                                        transition={{ type: 'spring', stiffness: 200, damping: 12 }}
-                                        className="mb-6"
-                                    >
-                                        <SadMac />
-                                    </motion.div>
-
-                                    <h1 className="text-3xl font-black text-critical-red tracking-widest mb-2">MOBILE CORE DUMP</h1>
-                                    <p className="text-[10px] font-mono text-white/70 mb-8 uppercase leading-relaxed max-w-[200px]">
-                                        <span className="text-critical-red font-bold">NEURAL LINK SEVERED.</span><br/>
-                                        THE SIMULATION REQUIRES<br/>
-                                        HIGHER COMPUTATIONAL POWER.
-                                    </p>
-
-                                    <a 
-                                        href="https://mesoelfy.github.io" 
-                                        className="group w-full py-4 bg-critical-red text-black font-header font-black text-sm tracking-[0.15em] hover:bg-white transition-all flex items-center justify-center gap-3 cursor-pointer"
-                                    >
-                                        <MousePointer2 size={18} className="fill-current" />
-                                        <span>FULL TERMINAL REQUIRED</span>
-                                        <ExternalLink size={14} className="opacity-50 group-hover:opacity-100" />
-                                    </a>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </>
-        )}
-    </div>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/os/apps/feed/FeedModal.tsx
 =====================================
 import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
@@ -8030,40 +7725,6 @@ export const DebugOverlay = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/MobileGameDirector.tsx
-=====================================
-import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect, useRef } from 'react';
-import { MobileBootstrapper } from '@/engine/services/MobileBootstrapper';
-import { GameEngineCore } from '@/engine/services/GameEngine';
-
-export const MobileGameDirector = () => {
-  const { viewport, size } = useThree();
-  const engineRef = useRef<GameEngineCore | null>(null);
-
-  useEffect(() => {
-    const engine = MobileBootstrapper();
-    engineRef.current = engine;
-    
-    engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
-
-    return () => {
-      engine.teardown();
-      engineRef.current = null;
-    };
-  }, []);
-
-  useFrame((state, delta) => {
-    if (engineRef.current) {
-        engineRef.current.update(delta, state.clock.elapsedTime);
-    }
-  });
-
-  return null;
-};
-
-
-=====================================
 FILE: ./src/ui/sim/SceneCanvas.tsx
 =====================================
 'use client';
@@ -8383,44 +8044,6 @@ export const MiniCrystalCanvas = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/props/MobilePanelBase.tsx
-=====================================
-import { useMemo } from 'react';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { PanelId } from '@/engine/config/PanelConfig';
-import * as THREE from 'three';
-
-export const MobilePanelBase = () => {
-  const panel = useGameStore(s => s.panels[PanelId.SOCIAL]);
-  const isDead = panel ? panel.isDestroyed : false;
-
-  // We render a plane at roughly the same dimensions as the CSS panel
-  // CSS Panel is max-w-sm (approx 24rem = 384px)
-  // In our Ortho camera (Zoom 40), 384px is approx 9.6 world units width.
-  // Height is set to fit content, approx 13 world units.
-  
-  const width = 9.6;
-  const height = 13;
-
-  return (
-    <mesh position={[0, 0, -1]}>
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial 
-        color={isDead ? "#1a0505" : "#000500"} 
-        transparent 
-        opacity={0.9} 
-      />
-      {/* Grid Overlay */}
-      <lineSegments position={[0, 0, 0.01]}>
-        <edgesGeometry args={[new THREE.PlaneGeometry(width, height)]} />
-        <lineBasicMaterial color={isDead ? "#FF003C" : "#78F654"} transparent opacity={0.3} />
-      </lineSegments>
-    </mesh>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/sim/experiments/GlitchGhost.tsx
 =====================================
 import { useRef, useMemo } from 'react';
@@ -8600,100 +8223,6 @@ export const WireframeFloor = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/vfx/TouchRipple.tsx
-=====================================
-import { useRef, useMemo, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
-import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
-
-const RIPPLE_COUNT = 8;
-
-export const TouchRipple = () => {
-  const groupRef = useRef<THREE.Group>(null);
-  const [ripples, setRipples] = useState<any[]>([]);
-
-  useMemo(() => {
-    if (typeof window === 'undefined') return;
-    const handleTap = (e: any) => {
-      const { x, y } = e.detail;
-      setRipples(prev => [
-        ...prev.slice(-RIPPLE_COUNT), 
-        { x, y, time: 0, id: Math.random() }
-      ]);
-    };
-    window.addEventListener('mobile-spatial-tap', handleTap);
-    return () => window.removeEventListener('mobile-spatial-tap', handleTap);
-  }, []);
-
-  const rippleMaterial = useMemo(() => {
-    return MaterialFactory.create('MAT_TOUCH_RIPPLE', {
-      vertex: `
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragment: `
-        uniform float uProgress; 
-        
-        void main() {
-          vec2 center = vec2(0.5);
-          float d = distance(vUv, center);
-          
-          // Sharp hollow ring logic
-          float radius = uProgress * 0.5;
-          float thickness = 0.03 * (1.0 - uProgress); // Gets thinner as it expands
-          
-          float ring = smoothstep(radius - thickness, radius, d) - smoothstep(radius, radius + 0.01, d);
-          
-          // Fade out
-          float alpha = ring * (1.0 - (uProgress * uProgress));
-          
-          if (alpha < 0.01) discard;
-          
-          // Color: Green to White
-          vec3 color = mix(vec3(0.47, 0.96, 0.33), vec3(1.0), ring);
-          
-          gl_FragColor = vec4(color, alpha);
-        }
-      `,
-      uniforms: {
-        uProgress: { value: 0 }
-      }
-    });
-  }, []);
-
-  useFrame((state, delta) => {
-    setRipples(prev => prev
-      .map(r => ({ ...r, time: r.time + delta * 1.5 })) // Speed 1.5
-      .filter(r => r.time < 1.0)
-    );
-  });
-
-  // renderOrder 100 ensures it draws ON TOP of enemies (renderOrder 0) and floor
-  return (
-    <group ref={groupRef} renderOrder={100}>
-      {ripples.map((r) => (
-        <mesh key={r.id} position={[r.x, r.y, 5]} scale={[8, 8, 1]}>
-          <planeGeometry />
-          <primitive 
-            object={rippleMaterial.clone()} 
-            attach="material" 
-            uniforms-uProgress-value={r.time}
-            transparent
-            depthTest={false}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/sim/vfx/PostProcessing.tsx
 =====================================
 import { useThree, extend, useFrame } from '@react-three/fiber';
@@ -8741,87 +8270,6 @@ export const EffectsLayer = () => {
       <shaderPass args={[VignetteShader]} uniforms-offset-value={0.9} uniforms-darkness-value={0.6} />
     </Effects>
   );
-};
-
-
-=====================================
-FILE: ./src/ui/sim/MobileInputController.tsx
-=====================================
-import { useEffect } from 'react';
-import { useGameContext } from '@/engine/state/GameContext';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { Tag } from '@/engine/ecs/types';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { screenToWorld } from '@/engine/math/coords';
-
-const TAP_RADIUS = 2.5; // Increased hit radius for better mobile feel
-
-export const MobileInputController = () => {
-  const { registry, events } = useGameContext();
-
-  useEffect(() => {
-    const handleWindowTap = (e: PointerEvent) => {
-        // 1. Convert Screen -> World
-        const { width, height } = ViewportHelper.screenSize;
-        if (width === 0 || height === 0) return;
-
-        const worldPos = screenToWorld(e.clientX, e.clientY, width, height);
-        
-        // 2. Dispatch Visual Ripple (Handled by TouchRipple.tsx)
-        window.dispatchEvent(new CustomEvent('mobile-spatial-tap', { detail: worldPos }));
-
-        // 3. Hit Test Enemies
-        // We query the live registry via the Context Proxy
-        const enemies = registry.getByTag(Tag.ENEMY);
-        let hitFound = false;
-
-        for (const enemy of enemies) {
-            if (!enemy.active) continue;
-            
-            const t = enemy.getComponent<TransformData>(ComponentType.Transform);
-            
-            // Use entity collider radius or default to a generous touch target
-            const c = enemy.getComponent<ColliderData>(ComponentType.Collider);
-            const entityRadius = c ? c.radius : 0.8;
-            
-            if (t) {
-                const dx = t.x - worldPos.x;
-                const dy = t.y - worldPos.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                const hitThreshold = entityRadius + TAP_RADIUS;
-                
-                if (dist <= hitThreshold) {
-                    // 4. Register Hit
-                    events.emit(GameEvents.ENEMY_DAMAGED, { 
-                        id: enemy.id as number, 
-                        damage: 9999, // Instant Kill on Tap
-                        type: 'TAP' 
-                    });
-                    hitFound = true;
-                    // Break after one hit? No, multikill feels good.
-                }
-            }
-        }
-
-        // 5. Feedback
-        if (hitFound) {
-            // Impact sound handled by CombatSystem usually, but we can layer a UI sound
-            AudioSystem.playSound('ui_chirp'); 
-        } else {
-            // Miss sound
-            AudioSystem.playSound('ui_click');
-        }
-    };
-
-    window.addEventListener('pointerdown', handleWindowTap);
-    return () => window.removeEventListener('pointerdown', handleWindowTap);
-  }, [registry, events]);
-
-  return null;
 };
 
 
@@ -8898,43 +8346,6 @@ export const usePanelRegistry = (id: string) => {
   }, [id, registerPanel, unregisterPanel]);
 
   return elementRef;
-};
-
-
-=====================================
-FILE: ./src/ui/sim/hooks/useDeviceType.ts
-=====================================
-import { useState, useEffect } from 'react';
-
-type DeviceType = 'mobile' | 'tablet' | 'desktop';
-
-export const useDeviceType = () => {
-  const [device, setDevice] = useState<DeviceType>('desktop');
-
-  useEffect(() => {
-    const checkDevice = () => {
-      const width = window.innerWidth;
-      
-      // Basic width checkpoints
-      // < 768px: Usually Phones
-      // 768px - 1024px: Tablets / Small Laptops
-      // > 1024px: Desktop
-      
-      if (width < 768) {
-        setDevice('mobile');
-      } else if (width < 1024) {
-        setDevice('tablet');
-      } else {
-        setDevice('desktop');
-      }
-    };
-
-    checkDevice();
-    window.addEventListener('resize', checkDevice);
-    return () => window.removeEventListener('resize', checkDevice);
-  }, []);
-
-  return device;
 };
 
 
@@ -9690,23 +9101,12 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useStore } from '@/engine/state/global/useStore';
 
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
-  const isMobileRef = useRef(false);
-  const initialClickPos = useStore(state => state.initialClickPos);
 
   useEffect(() => {
-    const checkMobile = () => {
-        isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
-                              ('ontouchstart' in window) || 
-                              (navigator.maxTouchPoints > 0);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
     const engine = GameBootstrapper();
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
@@ -9729,24 +9129,12 @@ export const GameDirector = memo(() => {
     }, 100);
 
     return () => {
-      window.removeEventListener('resize', checkMobile);
       clearInterval(refreshInterval);
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
     };
   }, []); 
-
-  useEffect(() => {
-      if (!initialClickPos || isMobileRef.current || !engineRef.current) return;
-      try {
-          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          input.updateBounds(viewport.width, viewport.height);
-          const wx = (initialClickPos.x / size.width) * viewport.width - (viewport.width / 2);
-          const wy = -((initialClickPos.y / size.height) * viewport.height - (viewport.height / 2));
-          input.updateCursor(wx, wy);
-      } catch {}
-  }, [initialClickPos, viewport, size]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -9762,11 +9150,10 @@ export const GameDirector = memo(() => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          if (!isMobileRef.current) {
-              const x = (state.pointer.x * viewport.width) / 2;
-              const y = (state.pointer.y * viewport.height) / 2;
-              input.updateCursor(x, y);
-          }
+          const x = (state.pointer.x * viewport.width) / 2;
+          const y = (state.pointer.y * viewport.height) / 2;
+          input.updateCursor(x, y);
+          
           engineRef.current.update(delta, state.clock.elapsedTime);
       } catch (e: any) {
           console.error("Game Loop Critical Failure:", e);
@@ -9792,8 +9179,6 @@ import { CameraRig } from './vfx/CameraRig';
 import { GalleryStage } from './stages/GalleryStage';
 import { LabStage } from './stages/LabStage';
 import { RenderDirector } from './RenderDirector';
-import { VirtualJoystick } from '@/ui/kit/atoms/VirtualJoystick';
-import { ActionButton } from '@/ui/kit/atoms/ActionButton';
 import { useStore } from '@/engine/state/global/useStore';
 import { useEffect, useState, useLayoutEffect } from 'react';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
@@ -9803,9 +9188,7 @@ export const GameOverlay = () => {
   const { bootState, sandboxView } = useStore();
   const isGallery = bootState === 'sandbox' && sandboxView === 'gallery';
   const isLab = bootState === 'sandbox' && sandboxView === 'lab';
-  const isMobileExperience = bootState === 'mobile_lockdown';
   
-  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [assetsReady, setAssetsReady] = useState(false);
 
@@ -9816,59 +9199,41 @@ export const GameOverlay = () => {
 
   useEffect(() => {
       setMounted(true);
-      const checkMobile = () => {
-        const isCoarse = window.matchMedia('(pointer: coarse)').matches;
-        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        setIsMobile(isCoarse || isTouch);
-      };
-      
-      checkMobile();
-      window.addEventListener('resize', checkMobile);
-      return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (!mounted || !assetsReady || isMobileExperience) return null;
+  if (!mounted || !assetsReady) return null;
 
   return (
-    <>
-        <div className="fixed inset-0 z-[60] w-full h-full pointer-events-none overflow-hidden">
-          <Canvas
-            orthographic={!isGallery && !isLab}
-            camera={
-                isGallery ? { position: [5, 5, 10], fov: 45 } : 
-                isLab ? { position: [0, 0, 10], fov: 50 } :
-                { zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 0, 100] }
-            }
-            gl={{ 
-              alpha: true, 
-              antialias: true,
-              stencil: false,
-              powerPreference: "high-performance"
-            }}
-            eventSource={typeof document !== 'undefined' ? document.body : undefined}
-            eventPrefix="client"
-          >
-            {isLab ? (
-                <LabStage />
-            ) : isGallery ? (
-                <GalleryStage />
-            ) : (
-                <>
-                    <GameDirector />
-                    <CameraRig />
-                    <RenderDirector />
-                </>
-            )}
-          </Canvas>
-        </div>
-        
-        {isMobile && !isGallery && !isLab && (
+    <div className="fixed inset-0 z-[60] w-full h-full pointer-events-none overflow-hidden">
+      <Canvas
+        orthographic={!isGallery && !isLab}
+        camera={
+            isGallery ? { position: [5, 5, 10], fov: 45 } : 
+            isLab ? { position: [0, 0, 10], fov: 50 } :
+            { zoom: CAMERA_CONFIG.BASE_ZOOM, position: [0, 0, 100] }
+        }
+        gl={{ 
+          alpha: true, 
+          antialias: true,
+          stencil: false,
+          powerPreference: "high-performance"
+        }}
+        eventSource={typeof document !== 'undefined' ? document.body : undefined}
+        eventPrefix="client"
+      >
+        {isLab ? (
+            <LabStage />
+        ) : isGallery ? (
+            <GalleryStage />
+        ) : (
             <>
-                <VirtualJoystick />
-                <ActionButton />
+                <GameDirector />
+                <CameraRig />
+                <RenderDirector />
             </>
         )}
-    </>
+      </Canvas>
+    </div>
   );
 };
 
@@ -10051,7 +9416,6 @@ import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
-import { MobileExperience } from '@/ui/os/apps/mobile/MobileExperience'; 
 import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
@@ -10063,9 +9427,9 @@ import { SimulationHUD } from '@/ui/os/apps/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/os/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
-import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
+import { MobileGateModal, GateVariant } from '@/ui/os/overlays/MobileGateModal';
 import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -10090,13 +9454,42 @@ export default function Home() {
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isSandbox = bootState === 'sandbox';
-  const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
-  const [mobileSkip, setMobileSkip] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Gate Logic
+  const [showGate, setShowGate] = useState(false);
+  const [gateVariant, setGateVariant] = useState<GateVariant>('MOBILE');
+  const [checkDone, setCheckDone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Check Hardware
+    const w = window.innerWidth;
+    
+    // Low Threshold: 1100px (Tablets/Mobile)
+    if (w <= 1100) {
+        setGateVariant('MOBILE');
+        setShowGate(true);
+    } 
+    // High Threshold: 3000px (4K/Ultrawide)
+    // Raised from 2500 to avoid flagging standard 1440p (2560px) monitors
+    else if (w > 3000) {
+        setGateVariant('ULTRAWIDE');
+        setShowGate(true);
+    }
+    setCheckDone(true);
+  }, []);
+
+  const handleGateOverride = () => {
+      AudioSystem.playSound('ui_click');
+      AudioSystem.playRebootZap(); 
+      setShowGate(false);
+  };
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -10133,31 +9526,14 @@ export default function Home() {
     };
   }, [bootState]); 
 
-  // --- DEBUG SHORTCUT: '1' for Mobile Quickstart ---
-  useEffect(() => {
-      const handleDebugKeys = (e: KeyboardEvent) => {
-          if (e.key === '1') {
-              AudioSystem.init(); 
-              setIntroDone(true);
-              setMobileSkip(true); 
-              setBootState('mobile_lockdown');
-          }
-      };
-      window.addEventListener('keydown', handleDebugKeys);
-      return () => window.removeEventListener('keydown', handleDebugKeys);
-  }, [setIntroDone, setBootState]);
-
   useEffect(() => {
     if (bootState !== 'active') return;
 
     const checkPauseState = () => {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
-        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        const isSmallScreen = window.innerWidth < 768;
-        const isRotationLocked = isPortrait && isSmallScreen;
 
-        if (isMenuOpen || isDebugActive || isRotationLocked) {
+        if (isMenuOpen || isDebugActive || showGate) {
             setSimulationPaused(true);
         } else {
             setSimulationPaused(false);
@@ -10167,7 +9543,7 @@ export default function Home() {
     checkPauseState();
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
-  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused]);
+  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showGate]);
 
   useEffect(() => {
       AudioSystem.init();
@@ -10184,7 +9560,7 @@ export default function Home() {
       setIntroDone(true);
       AudioSystem.startMusic(); 
       startGame();
-    }, 200);
+    }, 0);
   };
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
@@ -10194,10 +9570,10 @@ export default function Home() {
       <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black">
         
         <MetaManager />
-        {!isMobileLockdown && <RotationLock />}
-        {!isMobileLockdown && <CustomCursor />}
+        <CustomCursor />
         <GlobalBackdrop />
         <DebugOverlay />
+        <MobileGateModal isOpen={showGate} variant={gateVariant} onOverride={handleGateOverride} />
 
         <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
           
@@ -10216,18 +9592,16 @@ export default function Home() {
           </AnimatePresence>
 
           <WebGLErrorBoundary key={sessionId}>
-              <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
+              <SceneCanvas className={clsx("blur-0 transition-opacity duration-[500ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
               
-              {!isMobileLockdown && (
-                  <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
-                      <GameOverlay />
-                  </div>
-              )}
+              <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[500ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
+                  <GameOverlay />
+              </div>
           </WebGLErrorBoundary>
 
           {isSandbox && <SimulationHUD />}
 
-          {!isSandbox && !isMobileLockdown && (
+          {!isSandbox && (
               <>
                   <AboutModal />
                   <FeedModal />
@@ -10238,20 +9612,18 @@ export default function Home() {
               </>
           )}
 
-          {bootState === 'standby' && (
+          {checkDone && bootState === 'standby' && !showGate && (
             <MatrixBootSequence 
                onComplete={handleBootComplete} 
                onBreachStart={handleBreachStart} 
             />
           )}
 
-          {isMobileLockdown && <MobileExperience skipIntro={mobileSkip} />}
-
-          {!isSandbox && !isMobileLockdown && (
+          {!isSandbox && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
 
-                <div className="flex-1 min-h-0 relative w-full overflow-hidden">
+                <div className="flex-1 min-h-0 relative w-full overflow-y-auto lg:overflow-hidden">
                   <div 
                       className="w-full origin-top transition-transform duration-300 ease-out"
                       style={{ 
@@ -10562,10 +9934,6 @@ export const UI_METRICS = {
     STROKE: 4,
     THRESHOLD_CRITICAL: 0.3,
     THRESHOLD_WARNING: 0.6
-  },
-  JOYSTICK: {
-    MAX_RADIUS: 40,
-    SENSITIVITY: 30.0
   }
 } as const;
 
@@ -10686,11 +10054,7 @@ export const COLOR_SETS = {
 =====================================
 FILE: ./src/engine/config/InputConfig.ts
 =====================================
-export const INPUT_SETTINGS = {
-  VIRTUAL_CURSOR: {
-    SPEED: 30.0,
-  }
-} as const;
+export const INPUT_SETTINGS = {} as const;
 
 
 =====================================
@@ -11556,33 +10920,9 @@ export const BOOT_SEQUENCE = {
     DECRYPT: 11500,
     READY: 13500
   },
-  COMPLETION_DELAY: 800
+  // Reduced to 500ms for a snappy transition
+  COMPLETION_DELAY: 500
 };
-
-
-=====================================
-FILE: ./src/engine/input/VirtualJoystickService.ts
-=====================================
-export class VirtualJoystickServiceController {
-  private _vector = { x: 0, y: 0 };
-  private _isActive = false;
-
-  public setVector(x: number, y: number) {
-    this._vector.x = x;
-    this._vector.y = y;
-    this._isActive = (x !== 0 || y !== 0);
-  }
-
-  public getVector() {
-    return this._vector;
-  }
-
-  public get isActive() {
-    return this._isActive;
-  }
-}
-
-export const VirtualJoystickService = new VirtualJoystickServiceController();
 
 
 =====================================
@@ -13559,7 +12899,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
-type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
+type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
 export type LabExperiment = 'NONE' | 'GLITCH';
@@ -13579,7 +12919,6 @@ interface AppState {
   isBreaching: boolean;
   activeModal: ModalType;
   isSimulationPaused: boolean;
-  initialClickPos: { x: number, y: number } | null;
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
   galleryTarget: string;
@@ -13614,7 +12953,6 @@ interface AppState {
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
   resetDebugFlags: () => void;
   setSimulationPaused: (paused: boolean) => void;
-  setInitialClickPos: (pos: { x: number, y: number } | null) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -13626,7 +12964,6 @@ export const useStore = create<AppState>()(
       isBreaching: false,
       activeModal: 'none',
       isSimulationPaused: false,
-      initialClickPos: null,
       sandboxView: 'lab',
       labExperiment: 'NONE',
       galleryTarget: EnemyTypes.DRILLER,
@@ -13646,7 +12983,7 @@ export const useStore = create<AppState>()(
 
       setBootState: (bs) => set({ 
           bootState: bs,
-          isBreaching: bs === 'active' || bs === 'mobile_lockdown' ? false : get().isBreaching 
+          isBreaching: bs === 'active' ? false : get().isBreaching 
       }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
@@ -13677,8 +13014,7 @@ export const useStore = create<AppState>()(
               labExperiment: 'NONE',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
-              isSimulationPaused: false,
-              initialClickPos: null
+              isSimulationPaused: false
           }));
       },
       toggleMaster: () => {
@@ -13722,8 +13058,7 @@ export const useStore = create<AppState>()(
       resetDebugFlags: () => set({
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
       }),
-      setSimulationPaused: (paused) => set({ isSimulationPaused: paused }),
-      setInitialClickPos: (pos) => set({ initialClickPos: pos })
+      setSimulationPaused: (paused) => set({ isSimulationPaused: paused })
     }),
     {
       name: STORAGE_KEYS.UI_SETTINGS, 
@@ -17137,145 +16472,6 @@ export class OrbitalSystem implements IGameSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/MobileCombatSystem.ts
-=====================================
-import { IGameSystem, ICombatSystem, IGameEventService, IFastEventService, IAudioService, IEntityRegistry, IPanelSystem } from '@/engine/interfaces';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, FXCode } from '@/engine/signals/FastEventBus';
-import { Entity } from '@/engine/ecs/Entity';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { CollisionLayers } from '@/engine/config/PhysicsConfig';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { PanelId } from '@/engine/config/PanelConfig';
-
-export class MobileCombatSystem implements IGameSystem, ICombatSystem {
-    constructor(
-        private registry: IEntityRegistry,
-        private events: IGameEventService,
-        private fastEvents: IFastEventService,
-        private audio: IAudioService
-    ) {
-        // Player Input Hits (Taps)
-        this.events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-            const entity = this.registry.getEntity(p.id);
-            if (entity && entity.active) {
-                this.killEnemy(entity, 'TAP');
-            }
-        });
-    }
-    
-    update(delta: number, time: number) {
-        // Manual Collision Check for Mobile (Simple AABB/Circle vs Box)
-        // Since we don't have the full desktop CollisionMatrix overhead here
-        const enemies = this.registry.getByTag('ENEMY');
-        const panels = this.registry.getByTag('OBSTACLE'); // Panels are obstacles
-
-        // We assume only one panel in mobile usually (Social), but generic support is safer
-        for (const enemy of enemies) {
-            if (!enemy.active) continue;
-            
-            const eCol = enemy.getComponent<ColliderData>(ComponentType.Collider);
-            const ePos = enemy.getComponent<TransformData>(ComponentType.Transform);
-            
-            if (!eCol || !ePos) continue;
-
-            for (const panel of panels) {
-                const pCol = panel.getComponent<ColliderData>(ComponentType.Collider);
-                const pPos = panel.getComponent<TransformData>(ComponentType.Transform);
-                const pId = panel.getComponent<IdentityData>(ComponentType.Identity);
-
-                if (!pCol || !pPos || !pId) continue;
-
-                if (this.checkCollision(ePos, eCol, pPos, pCol)) {
-                    // HIT!
-                    this.resolveCollision(enemy, panel);
-                }
-            }
-        }
-    }
-
-    public resolveCollision(enemy: Entity, panel: Entity) {
-        // Ensure it's Enemy vs Panel
-        const eId = enemy.getComponent<IdentityData>(ComponentType.Identity);
-        const pId = panel.getComponent<IdentityData>(ComponentType.Identity);
-        
-        if (eId && pId) {
-            // 1. Damage the panel
-            const panelSystem = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-            if (panelSystem) {
-                const dmg = 10; // Fixed damage for mobile
-                const t = enemy.getComponent<TransformData>(ComponentType.Transform);
-                
-                panelSystem.damagePanel(pId.variant as PanelId, dmg, { 
-                    source: t ? { x: t.x, y: t.y } : undefined 
-                });
-            }
-
-            // 2. Destroy the enemy (Crash)
-            this.killEnemy(enemy, 'CRASH');
-        }
-    }
-
-    private checkCollision(tA: TransformData, cA: ColliderData, tB: TransformData, cB: ColliderData): boolean {
-        // Enemy is Circle, Panel is Box
-        const circle = { t: tA, c: cA };
-        const box = { t: tB, c: cB };
-
-        const boxHalfW = box.c.width / 2;
-        const boxHalfH = box.c.height / 2;
-
-        const distX = Math.abs(circle.t.x - box.t.x);
-        const distY = Math.abs(circle.t.y - box.t.y);
-
-        if (distX > (boxHalfW + circle.c.radius)) return false;
-        if (distY > (boxHalfH + circle.c.radius)) return false;
-
-        if (distX <= boxHalfW) return true; 
-        if (distY <= boxHalfH) return true;
-
-        const dx = distX - boxHalfW;
-        const dy = distY - boxHalfH;
-        return (dx*dx + dy*dy <= (circle.c.radius * circle.c.radius));
-    }
-
-    private killEnemy(entity: Entity, reason: 'TAP' | 'CRASH') {
-        const t = entity.getComponent<TransformData>(ComponentType.Transform);
-        
-        if (t) {
-            // Visuals
-            const fx = reason === 'TAP' ? FXCode.EXPLOSION_PURPLE : FXCode.EXPLOSION_RED;
-            this.fastEvents.emit(FastEventType.SPAWN_FX, fx, t.x * 100, t.y * 100, 0);
-            
-            // Audio
-            if (reason === 'TAP') {
-                this.audio.playSound('fx_impact_light');
-                this.audio.playSound('fx_reboot_success'); // Satisfaction
-            } else {
-                this.audio.playSound('fx_impact_heavy');
-            }
-        }
-        
-        this.registry.destroyEntity(entity.id);
-        
-        // Only give score for Taps
-        if (reason === 'TAP') {
-            this.events.emit(GameEvents.ENEMY_DESTROYED, { 
-                id: entity.id as number, 
-                type: 'DRILLER', 
-                x: t?.x || 0, 
-                y: t?.y || 0 
-            });
-        }
-    }
-
-    teardown() {}
-}
-
-
-=====================================
 FILE: ./src/engine/systems/TimeSystem.ts
 =====================================
 import { IGameSystem } from '@/engine/interfaces';
@@ -18002,31 +17198,15 @@ export class AudioDirector implements IGameSystem {
 FILE: ./src/engine/systems/InputSystem.ts
 =====================================
 import { IGameSystem, IInputService } from '@/engine/interfaces';
-import { VirtualJoystickService } from '@/engine/input/VirtualJoystickService';
-import { INPUT_SETTINGS } from '@/engine/config/InputConfig';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
   
-  // Bounds for clamping (updated by GameEngine/ViewportHelper)
+  // Bounds for clamping
   private _bounds = { width: 30, height: 20 }; 
 
   update(delta: number, time: number): void {
-    // Poll Providers
-    if (VirtualJoystickService.isActive) {
-        const joyVector = VirtualJoystickService.getVector();
-        const speed = INPUT_SETTINGS.VIRTUAL_CURSOR.SPEED; 
-        
-        this._cursor.x += joyVector.x * speed * delta;
-        this._cursor.y += joyVector.y * speed * delta;
-
-        // Clamp to logical world bounds
-        const halfW = this._bounds.width / 2;
-        const halfH = this._bounds.height / 2;
-        
-        this._cursor.x = Math.max(-halfW, Math.min(halfW, this._cursor.x));
-        this._cursor.y = Math.max(-halfH, Math.min(halfH, this._cursor.y));
-    }
+    // No-op for desktop mouse input (handled via updateCursor event in GameDirector)
   }
 
   teardown(): void {}
@@ -18034,11 +17214,8 @@ export class InputSystem implements IGameSystem, IInputService {
   // --- IInputService Implementation ---
   
   public updateCursor(x: number, y: number) {
-    // Mouse movement takes precedence over joystick relative motion
-    if (!VirtualJoystickService.isActive) {
-        this._cursor.x = x;
-        this._cursor.y = y;
-    }
+    this._cursor.x = x;
+    this._cursor.y = y;
   }
   
   public updateBounds(width: number, height: number) {
@@ -18256,15 +17433,12 @@ export * from './AudioDirector';
 export * from './BehaviorSystem';
 export * from './CollisionSystem';
 export * from './CombatSystem';
-export * from './FeedbackBridgeSystem';
 export * from './GameStateSystem';
 export * from './GuidanceSystem';
 export * from './HealthSystem';
 export * from './InputSystem';
 export * from './InteractionSystem';
 export * from './LifeCycleSystem';
-export * from './MobileCombatSystem';
-export * from './MobileWaveSystem';
 export * from './OrbitalSystem';
 export * from './PanelRegistrySystem';
 export * from './ParticleSystem';
@@ -18536,86 +17710,6 @@ export class WorldSystem implements IGameSystem {
     model.r = this.currentColor.r;
     model.g = this.currentColor.g;
     model.b = this.currentColor.b;
-  }
-
-  teardown(): void {}
-}
-
-
-=====================================
-FILE: ./src/engine/systems/MobileWaveSystem.ts
-=====================================
-import { IGameSystem, IEntitySpawner } from '@/engine/interfaces';
-import { EnemyTypes } from '@/engine/config/Identifiers';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { PanelId } from '@/engine/config/PanelConfig';
-
-export class MobileWaveSystem implements IGameSystem {
-  private time = 0;
-  private nextSpawn = 2.0; // Start with 2s delay
-  
-  // Difficulty Config
-  private readonly START_INTERVAL = 1.2;
-  private readonly MIN_INTERVAL = 0.4;
-  private readonly RAMP_DURATION = 45.0; 
-
-  constructor(private spawner: IEntitySpawner) {}
-
-  update(delta: number, time: number): void {
-    this.time += delta;
-
-    if (this.time >= this.nextSpawn) {
-        this.spawnDriller();
-        
-        const progress = Math.min(1.0, this.time / this.RAMP_DURATION);
-        const currentInterval = this.START_INTERVAL - (progress * (this.START_INTERVAL - this.MIN_INTERVAL));
-        
-        this.nextSpawn = this.time + currentInterval;
-    }
-  }
-
-  private spawnDriller() {
-      const { width, height } = ViewportHelper.viewport;
-      if (width <= 1 || height <= 1) return;
-
-      const pad = 4.0; 
-      const isTop = Math.random() > 0.5;
-      
-      const spawnWidth = width * 0.5; 
-      let x = (Math.random() - 0.5) * spawnWidth; 
-      let y = 0;
-
-      if (isTop) { 
-          y = (height / 2) + pad;
-      } else { 
-          y = -(height / 2) - pad;
-      }
-
-      const angle = Math.atan2(-y, -x);
-
-      this.spawner.spawn(EnemyTypes.DRILLER, {
-          [ComponentType.Transform]: { 
-              x, y, 
-              scale: 1.0, 
-              rotation: angle 
-          },
-          [ComponentType.State]: { 
-              current: 'ACTIVE',
-              timers: { 
-                  spawn: 0,
-                  drillAudio: Math.random() * 0.2 
-              } 
-          },
-          [ComponentType.Target]: {
-              type: 'PANEL',
-              id: PanelId.SOCIAL, 
-              locked: true 
-          },
-          [ComponentType.RenderTransform]: { 
-              scale: 1.0 
-          }
-      });
   }
 
   teardown(): void {}
@@ -20030,16 +19124,6 @@ export const registerAllBehaviors = () => {
 
 
 =====================================
-FILE: ./src/engine/services/MobileBootstrapper.ts
-=====================================
-import { EngineFactory } from './EngineFactory';
-
-export const MobileBootstrapper = () => {
-  return EngineFactory.create('MOBILE');
-};
-
-
-=====================================
 FILE: ./src/engine/services/EngineFactory.ts
 =====================================
 import { ServiceLocator } from './ServiceLocator';
@@ -20079,20 +19163,16 @@ import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
 
-// Mode Specific Systems
+// Desktop Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
 import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
-import { MobileWaveSystem } from '@/engine/systems/MobileWaveSystem';
-import { MobileCombatSystem } from '@/engine/systems/MobileCombatSystem';
-
-export type EngineMode = 'DESKTOP' | 'MOBILE';
 
 export class EngineFactory {
-  public static create(mode: EngineMode): GameEngineCore {
+  public static create(): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
     const eventBus = SharedGameEventBus; 
@@ -20148,6 +19228,14 @@ export class EngineFactory {
     const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const renderSystem = new RenderSystem(registry);
 
+    // Desktop Specifics
+    const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
+    const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
+    const structureSystem = new StructureSystem(panelSystem);
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
+    const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
+    const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
+
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -20165,31 +19253,16 @@ export class EngineFactory {
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
     register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
-    
-    if (mode === 'DESKTOP') {
-        const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
-        register(movementSystem, SystemPhase.INPUT);
-    }
+    register(movementSystem, SystemPhase.INPUT);
 
     // PHASE 1: LOGIC
     register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
     register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
     register(targetingSystem, SystemPhase.LOGIC);
-    
-    if (mode === 'DESKTOP') {
-        const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
-        const structureSystem = new StructureSystem(panelSystem);
-        const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
-        
-        register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
-        register(structureSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); 
-        register(weaponSystem, SystemPhase.LOGIC);   
-    } else {
-        const mobileWaveSystem = new MobileWaveSystem(spawner);
-        register(mobileWaveSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); 
-    }
+    register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
+    register(structureSystem, SystemPhase.LOGIC);
+    register(behaviorSystem, SystemPhase.LOGIC); 
+    register(weaponSystem, SystemPhase.LOGIC);   
 
     // PHASE 2: PHYSICS
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
@@ -20198,16 +19271,8 @@ export class EngineFactory {
     register(projectileSystem, SystemPhase.PHYSICS);
 
     // PHASE 3: COLLISION
-    if (mode === 'DESKTOP') {
-        const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
-        const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
-        
-        register(collisionSystem, SystemPhase.COLLISION);
-        register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
-    } else {
-        const mobileCombat = new MobileCombatSystem(registry, eventBus, fastEventBus, audioService);
-        register(mobileCombat, SystemPhase.COLLISION);
-    }
+    register(collisionSystem, SystemPhase.COLLISION);
+    register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
 
     // PHASE 4: STATE
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
@@ -20227,10 +19292,8 @@ export class EngineFactory {
     // 7. Final Setup
     engine.setup(ServiceLocator);
 
-    // 8. Player Spawn (Desktop Only)
-    if (mode === 'DESKTOP') {
-        spawner.spawnPlayer();
-    }
+    // 8. Player Spawn
+    spawner.spawnPlayer();
 
     return engine;
   }
@@ -20243,7 +19306,7 @@ FILE: ./src/engine/services/GameBootstrapper.ts
 import { EngineFactory } from './EngineFactory';
 
 export const GameBootstrapper = () => {
-  return EngineFactory.create('DESKTOP');
+  return EngineFactory.create();
 };
 
 

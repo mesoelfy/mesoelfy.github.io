@@ -1,6 +1,6 @@
 import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus';
+import { FastEventType, FX_LOOKUP, FXCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
@@ -21,7 +21,6 @@ export class VFXSystem implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    // 1. Slow Bus Events
     this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
     });
@@ -47,19 +46,24 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-      // 2. Fast Bus Events (High Frequency)
+      // Fast Bus Events (High Frequency)
       this.fastEvents.process((id, a1, a2, a3, a4) => {
           if (id === FastEventType.SPAWN_FX) {
               const key = FX_LOOKUP[a1 as FXCode];
               if (key) {
-                  this.executeRecipe(key, a2 / 100, a3 / 100, a4 / 100);
+                  this.executeRecipe(
+                      key, 
+                      a2 / FLOAT_SCALAR, 
+                      a3 / FLOAT_SCALAR, 
+                      a4 / FLOAT_SCALAR
+                  );
               }
           }
           else if (id === FastEventType.CAM_SHAKE) {
-              this.shakeSystem.addTrauma(a1 / 100);
+              this.shakeSystem.addTrauma(a1 / FLOAT_SCALAR);
           }
           else if (id === FastEventType.HIT_STOP) {
-              this.timeSystem.freeze(a1 / 1000); // Convert ms to seconds
+              this.timeSystem.freeze(a1 / 1000); // MS is not scaled by FLOAT_SCALAR
           }
       });
   }

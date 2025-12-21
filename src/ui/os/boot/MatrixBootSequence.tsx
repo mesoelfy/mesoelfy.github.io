@@ -177,7 +177,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                     <div className="relative w-full">
                         <DotGridBackground /> 
                         
-                        {/* PADDING INCREASED: pt-3 -> pt-6 */}
+                        {/* PADDING INCREASED: pt-3 -> pt-5 */}
                         <div className="px-4 pb-4 pt-5 flex flex-col items-center gap-6 relative z-10">
                             
                             {/* 1. ASCII ART */}

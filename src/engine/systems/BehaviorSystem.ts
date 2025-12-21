@@ -4,7 +4,7 @@ import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
-import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
+import { getSoundCode, getFXCode } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -60,7 +60,10 @@ export class BehaviorSystem implements IGameSystem {
       },
       spawnFX: (type, x, y, angle) => {
           const id = getFXCode(type);
-          if (id) this.fastEvents.emit(FastEventType.SPAWN_FX, id, x * 100, y * 100, (angle || 0) * 100);
+          if (id) {
+              // NEW TYPED METHOD
+              this.fastEvents.spawnFX(id, x, y, angle || 0);
+          }
       },
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
@@ -73,7 +76,8 @@ export class BehaviorSystem implements IGameSystem {
             : 0;
           const id = getSoundCode(key.toLowerCase());
           if (id) {
-              this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan * 100);
+              // NEW TYPED METHOD
+              this.fastEvents.playSound(id, pan);
           } else {
               this.audio.playSound(key as any, pan);
           }

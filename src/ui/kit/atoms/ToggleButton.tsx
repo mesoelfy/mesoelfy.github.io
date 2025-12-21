@@ -29,7 +29,7 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
-  // 1. PANEL VARIANT (Settings Menu) - Unchanged
+  // 1. PANEL VARIANT (Settings Menu)
   if (variant === 'panel') {
       return (
         <button
@@ -55,16 +55,15 @@ export const ToggleButton = ({
       );
   }
 
-  // 2. ICON VARIANT (Header) - Updated with Invert Logic
+  // 2. ICON VARIANT (Header)
   return (
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
       className={clsx(
-        "group flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
-        // Base Dynamic Color (e.g. text-primary-green, text-critical-red)
+        "group flex items-center justify-center h-7 transition-all duration-200 border rounded-sm",
+        "w-8", // Uniform width for both Icons and Text labels (SFX)
         color || 'text-white',
-        // Hover: Background becomes the text color
         "hover:bg-current hover:border-transparent",
         active 
           ? "bg-white/5 border-white/20 opacity-100"
@@ -72,13 +71,12 @@ export const ToggleButton = ({
       )}
     >
       <div className={clsx(
-          "flex items-center justify-center transition-colors duration-200",
-          // Default: Inherit color. Hover: Force BLACK to contrast against the colored background
+          "flex items-center justify-center w-full h-full transition-colors duration-200",
           "text-current group-hover:text-black",
           active ? "" : "opacity-80"
       )}>
           {label ? (
-            <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">
+            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[4px]">
                 {label}
             </span> 
           ) : (

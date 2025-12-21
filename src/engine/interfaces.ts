@@ -7,6 +7,7 @@ import { Tag, Faction, ParticleShape } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -50,7 +51,14 @@ export interface IHUDService extends IGameSystem {
 }
 
 export interface IFastEventService {
-  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
+  // Typed Facade Methods
+  spawnFX(code: FXCode, x: number, y: number, angle?: number): void;
+  playSound(code: SoundCode, pan?: number): void;
+  camShake(amount: number): void;
+  hitStop(ms: number): void;
+  duckMusic(intensity: number, duration: number): void;
+
+  // Processing Methods
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
   clear(): void;
   getCursor(): number;

@@ -8,7 +8,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
+import { getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
 
 export class CombatSystem implements IGameSystem {
   constructor(
@@ -41,7 +41,8 @@ export class CombatSystem implements IGameSystem {
           spawnFX: (type, x, y) => {
               const typeId = getFXCode(type);
               if (typeId) {
-                  this.fastEvents.emit(FastEventType.SPAWN_FX, typeId, x * 100, y * 100, 0);
+                  // NEW TYPED METHOD
+                  this.fastEvents.spawnFX(typeId, x, y, 0);
               }
           },
           spawnImpact: (x, y, r, g, b, angle) => {
@@ -51,16 +52,21 @@ export class CombatSystem implements IGameSystem {
           },
           playAudio: (key) => {
               const keyId = getSoundCode(key.toLowerCase());
-              if (keyId) this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, 0);
+              if (keyId) {
+                  // NEW TYPED METHOD
+                  this.fastEvents.playSound(keyId, 0);
+              }
           },
           playSpatialAudio: (key, x) => {
               const keyId = getSoundCode(key.toLowerCase());
               if (keyId) {
-                  this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, (x || 0) * 100);
+                  // NEW TYPED METHOD
+                  this.fastEvents.playSound(keyId, x);
               }
           },
           addTrauma: (amount) => {
-              this.fastEvents.emit(FastEventType.CAM_SHAKE, amount * 100);
+              // NEW TYPED METHOD
+              this.fastEvents.camShake(amount);
           },
           flashEntity: (id) => {
               this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
@@ -104,7 +110,8 @@ export class CombatSystem implements IGameSystem {
           
           const fxId = getFXCode(finalFX);
           if (fxId) {
-              this.fastEvents.emit(FastEventType.SPAWN_FX, fxId, transform.x * 100, transform.y * 100, angleToUse * 100);
+              // NEW TYPED METHOD
+              this.fastEvents.spawnFX(fxId, transform.x, transform.y, angleToUse);
           }
       }
   }
