@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { GpuConfigPanel } from '@/ui/os/apps/settings/components/GpuConfigPanel';
 import { clsx } from 'clsx';
 import { BootHeader } from './atoms/BootHeader';
 import { CoreHeader } from './atoms/CoreHeader';
@@ -183,7 +184,15 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                                     }}
                                     className="border border-critical-red bg-critical-red/20 px-6 py-2 flex items-center gap-4 relative overflow-hidden"
                                 >
-                                    <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,0,60,0.1)_10px,rgba(255,0,60,0.1)_20px)] animate-pulse" />
+                                    {/* SCROLLING HAZARD STRIPES (VISUALLY RESTORED) */}
+                                    <motion.div 
+                                        className="absolute inset-0"
+                                        style={{ 
+                                            backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 0, 60, 0.1) 10px, rgba(255, 0, 60, 0.1) 20px)" 
+                                        }}
+                                        animate={{ backgroundPosition: ["0px 0px", "-28px 0px"] }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    />
                                     
                                     <motion.div 
                                         animate={{ opacity: [1, 0.5, 1], scale: [1, 1.2, 1] }} 
