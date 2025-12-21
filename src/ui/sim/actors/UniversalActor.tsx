@@ -19,10 +19,8 @@ export const UniversalActor = () => {
     const uniqueGroups = new Map<string, RenderGroup>();
 
     Object.values(ARCHETYPES).forEach(blueprint => {
-      // 1. Only process Enemy tags
       if (!blueprint.tags.includes(Tag.ENEMY)) return;
 
-      // 2. Resolve IDs (Check new 'assets' field, then fallback to component data)
       let geometryId = blueprint.assets?.geometry;
       let materialId = blueprint.assets?.material;
 

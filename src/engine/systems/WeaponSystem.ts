@@ -11,6 +11,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -133,7 +134,7 @@ export class WeaponSystem implements IGameSystem {
               Faction.FRIENDLY, 
               LIFE, 
               DAMAGE, 
-              'PLAYER_PURGE'
+              WeaponIDs.PLAYER_PURGE
           );
 
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 

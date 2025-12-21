@@ -1,9 +1,7 @@
-import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { GAME_MATH } from '@/engine/config/constants/MathConstants';
+import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 
 export interface ShotDef {
   x: number;
@@ -12,7 +10,7 @@ export interface ShotDef {
   vy: number;
   damage: number;
   life: number;
-  configId: string;
+  configId: ArchetypeID;
   isHoming: boolean;
 }
 
@@ -40,8 +38,8 @@ export const calculatePlayerShots = (
   const dy = target.y - origin.y;
   const baseAngle = Math.atan2(dy, dx);
 
-  let configId = 'PLAYER_STANDARD';
-  if (forkLevel > 0) configId = 'PLAYER_FORK';
+  let configId: ArchetypeID = WeaponIDs.PLAYER_STANDARD;
+  if (forkLevel > 0) configId = WeaponIDs.PLAYER_FORK;
   
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
@@ -79,7 +77,7 @@ export const calculatePlayerShots = (
           vy: Math.sin(rearAngle) * speed,
           damage,
           life,
-          configId: 'PLAYER_BACKDOOR',
+          configId: WeaponIDs.PLAYER_BACKDOOR,
           isHoming: false
       });
   }
@@ -90,7 +88,6 @@ export const calculatePlayerShots = (
       for (let i = 0; i < snifferLevel; i++) {
           const angle = i * angleStep;
           
-          // FIX: Use MUZZLE_OFFSET instead of hardcoded 10
           const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
           const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
           
@@ -101,7 +98,7 @@ export const calculatePlayerShots = (
               vy: Math.sin(angle) * speed * 0.5,
               damage: damage * 0.5,
               life: life * 2,
-              configId: 'PLAYER_SNIFFER',
+              configId: WeaponIDs.PLAYER_SNIFFER,
               isHoming: true
           });
       }

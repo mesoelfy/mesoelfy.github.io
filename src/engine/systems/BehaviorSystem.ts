@@ -2,7 +2,7 @@ import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegi
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
 import { getSoundCode, getFXCode } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
@@ -45,11 +45,11 @@ export class BehaviorSystem implements IGameSystem {
       spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
           let bullet;
           if (damage) {
-              const finalConfig = configId || 'DAEMON_ORB';
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
               bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
-              const finalConfig = configId || 'ENEMY_HUNTER';
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
               bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
           if (ownerId !== undefined) {
@@ -61,7 +61,6 @@ export class BehaviorSystem implements IGameSystem {
       spawnFX: (type, x, y, angle) => {
           const id = getFXCode(type);
           if (id) {
-              // NEW TYPED METHOD
               this.fastEvents.spawnFX(id, x, y, angle || 0);
           }
       },
@@ -76,7 +75,6 @@ export class BehaviorSystem implements IGameSystem {
             : 0;
           const id = getSoundCode(key.toLowerCase());
           if (id) {
-              // NEW TYPED METHOD
               this.fastEvents.playSound(id, pan);
           } else {
               this.audio.playSound(key as any, pan);

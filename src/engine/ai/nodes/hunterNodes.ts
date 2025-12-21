@@ -32,6 +32,7 @@ export class HoverDrift extends BTNode {
 
     if (!state.timers[AITimerID.HOVER]) {
         state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
+        // Type-safe blackboard access
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -114,7 +115,8 @@ export class AimAndFire extends BTNode {
         const py = transform.y + Math.sin(rearAngle) * offset;
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, ParticleShape.SQUARE);
+        // Using "Square" particle shape for retro tech look
+        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, 1);
     }
 
     state.timers[AITimerID.AIM]! -= context.delta;

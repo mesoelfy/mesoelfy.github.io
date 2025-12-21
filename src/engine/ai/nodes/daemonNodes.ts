@@ -27,6 +27,7 @@ export class ChargeMechanic extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
+    // Type-safe access to 'chargeProgress' defined in AIBlackboard
     const currentProgress = state.data.chargeProgress || 0;
 
     if (currentProgress < 1.0) {
@@ -80,6 +81,7 @@ export class FireDaemonShot extends BTNode {
     context.spawnFX('IMPACT_WHITE', transform.x, transform.y);
     context.playSound('fx_teleport', transform.x);
 
+    // Type-safe reset
     state.data.chargeProgress = 0;
     state.data.lastFireTime = context.time;
     state.current = AI_STATE.ORBIT;

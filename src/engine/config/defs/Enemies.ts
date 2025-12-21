@@ -1,9 +1,10 @@
 import { EnemyDef } from './types';
 import { PALETTE } from '@/engine/config/Palette';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 
-export const ENEMIES: Record<string, EnemyDef> = {
-  'driller': {
-    id: 'driller',
+export const ENEMIES: Record<EnemyType, EnemyDef> = {
+  [EnemyTypes.DRILLER]: {
+    id: EnemyTypes.DRILLER,
     health: 1, damage: 1, score: 100, xp: 10,
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
@@ -16,8 +17,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     },
     params: { spawnOffset: 0.32 }
   },
-  'kamikaze': {
-    id: 'kamikaze',
+  [EnemyTypes.KAMIKAZE]: {
+    id: EnemyTypes.KAMIKAZE,
     health: 2, damage: 3, score: 200, xp: 20,
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
@@ -29,8 +30,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
       radius: 0.69, detail: 0 
     }
   },
-  'hunter': {
-    id: 'hunter',
+  [EnemyTypes.HUNTER]: {
+    id: EnemyTypes.HUNTER,
     health: 3, damage: 10, score: 300, xp: 30,
     ai: 'hunter',
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
@@ -41,8 +42,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
       material: 'ENEMY_BASE'
     }
   },
-  'daemon': {
-    id: 'daemon',
+  [EnemyTypes.DAEMON]: {
+    id: EnemyTypes.DAEMON,
     health: 100, damage: 0, score: 0, xp: 0,
     ai: 'daemon',
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },

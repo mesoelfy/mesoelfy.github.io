@@ -8,6 +8,7 @@ import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
+import { ArchetypeID } from '@/engine/config/Identifiers';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -51,14 +52,11 @@ export interface IHUDService extends IGameSystem {
 }
 
 export interface IFastEventService {
-  // Typed Facade Methods
   spawnFX(code: FXCode, x: number, y: number, angle?: number): void;
   playSound(code: SoundCode, pan?: number): void;
   camShake(amount: number): void;
   hitStop(ms: number): void;
   duckMusic(intensity: number, duration: number): void;
-
-  // Processing Methods
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
   clear(): void;
   getCursor(): number;
@@ -108,16 +106,16 @@ export interface IEntityRegistry {
 }
 
 export interface IEntitySpawner {
-  spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
+  spawn(archetypeId: ArchetypeID, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
-  spawnEnemy(type: string, x: number, y: number): Entity;
+  spawnEnemy(type: ArchetypeID, x: number, y: number): Entity;
   spawnBullet(
       x: number, y: number, 
       vx: number, vy: number, 
       faction: Faction, 
       life: number, 
       damage?: number, 
-      projectileId?: string, 
+      projectileId?: ArchetypeID, 
       ownerId?: number
   ): Entity;
   spawnParticle(

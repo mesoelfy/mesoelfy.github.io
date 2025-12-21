@@ -6,10 +6,12 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class AIStateData extends Component {
   readonly _type = ComponentType.State;
+  
   constructor(
     public current: AIBehaviorState = AI_STATE.IDLE,
     public timers: Partial<Record<AITimerID, number>> = {},
-    public data: AIBlackboard = {},
+    // STRICT TYPING APPLIED HERE:
+    public data: AIBlackboard = {}, 
     public treeState: Record<string, number> = {},
     public stunTimer: number = 0
   ) {

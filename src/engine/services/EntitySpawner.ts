@@ -4,7 +4,7 @@ import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
-import { ArchetypeIDs } from '@/engine/config/Identifiers';
+import { ArchetypeIDs, ArchetypeID, WeaponIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
@@ -17,9 +17,12 @@ export class EntitySpawner implements IEntitySpawner {
     this.registry = registry as EntityRegistry;
   }
 
-  public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
+  public spawn(archetypeId: ArchetypeID, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
-    if (!blueprint) return this.registry.createEntity();
+    if (!blueprint) {
+        console.error(`[EntitySpawner] Archetype not found: ${archetypeId}`);
+        return this.registry.createEntity();
+    }
 
     const e = this.registry.createEntity();
     blueprint.tags.forEach(tag => e.addTag(tag));
@@ -45,7 +48,8 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnPlayer(): Entity { return this.spawn(ArchetypeIDs.PLAYER); }
-  public spawnEnemy(type: string, x: number, y: number): Entity {
+  
+  public spawnEnemy(type: ArchetypeID, x: number, y: number): Entity {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -55,21 +59,25 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: string = 'PLAYER_STANDARD', 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, 
       ownerId?: number
   ): Entity {
     const isEnemy = faction === Faction.HOSTILE;
-    const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
+    // Map abstract faction types to specific IDs if generic provided
+    // This allows WeaponLogic to still be generic
+    let id = projectileId;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
+    if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
+
     const rotation = Math.atan2(vy, vx);
-    const config = PROJECTILE_CONFIG[projectileId];
+    const config = PROJECTILE_CONFIG[id];
     
-    // Geometry Key is now derived directly from the ID (See Archetypes.ts Phase 4)
-    const geoId = `GEO_${projectileId}`; 
+    const geoId = `GEO_${id}`; 
     const color = config ? config.color : [1, 1, 1];
     const s = config ? config.scale : [1,1,1]; 
     const pulseSpeed = config ? config.pulseSpeed : 0;
 
-    const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
+    const elasticity = id === WeaponIDs.PLAYER_PURGE ? 0.0 : 2.0;
 
     const overrides: Record<string, any> = {
         [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
@@ -87,9 +95,10 @@ export class EntitySpawner implements IEntitySpawner {
             baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
         },
         [ComponentType.RenderEffect]: { elasticity, pulseSpeed },
-        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+        [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
+    // We pass the specific ID here so ARCHETYPES[id] lookup works
     const entity = this.spawn(id, overrides);
 
     if (config && config.spinSpeed !== 0) {

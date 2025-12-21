@@ -1,7 +1,7 @@
 import { IGameSystem, IEntitySpawner, IPanelSystem, IGameEventService } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, ArchetypeID } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
@@ -19,7 +19,7 @@ interface WaveDef {
 export class WaveSystem implements IGameSystem {
   private waveTime = 0;
   private currentWaveIndex = 0;
-  private spawnQueue: { type: string, time: number }[] = [];
+  private spawnQueue: { type: ArchetypeID, time: number }[] = [];
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
@@ -112,8 +112,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   private spawnDrillerOn(panel: any, count: number) {
-      // Replaced MODEL_CONFIG with ENEMIES def
-      const offset = ENEMIES.driller.params?.spawnOffset || 0.32;
+      const offset = ENEMIES[EnemyTypes.DRILLER].params?.spawnOffset || 0.32;
 
       for(let i=0; i<count; i++) {
           const side = Math.floor(Math.random() * 4);
@@ -221,9 +220,13 @@ export class WaveSystem implements IGameSystem {
 
   private queueSpawns(wave: WaveDef) {
     const count = wave.count + (this.loopCount * 2);
+    // Cast string type from JSON to ArchetypeID
+    // Note: This is the one place we trust JSON data, assuming waves.json uses valid keys
+    const typeKey = wave.type as ArchetypeID; 
+    
     for (let i = 0; i < count; i++) {
         this.spawnQueue.push({
-            type: wave.type,
+            type: typeKey,
             time: this.waveTime + (i * wave.interval)
         });
     }

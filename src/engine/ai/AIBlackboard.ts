@@ -1,17 +1,29 @@
-export interface DaemonBlackboard {
-  chargeProgress?: number;
-  shieldHP?: number;
-  lastFireTime?: number;
-  wasHit?: boolean;
-}
+/**
+ * STRICT TYPING FOR AI MEMORY
+ * Eliminates "Magic Strings" in logic handlers.
+ */
 
-export interface HunterBlackboard {
-  driftX?: number;
-  driftY?: number;
-}
+export interface AIBlackboard {
+  // --- DAEMON (Boss/Summon) ---
+  chargeProgress?: number; // 0.0 to 1.0
+  shieldHP?: number;       // Hit points for shield state
+  lastFireTime?: number;   // Timestamp
+  wasHit?: boolean;        // Reaction trigger
 
-export interface DrillerBlackboard {
-  penetrationDepth?: number;
-}
+  // --- HUNTER (Ranged) ---
+  driftX?: number;         // Hover target offset X
+  driftY?: number;         // Hover target offset Y
 
-export type AIBlackboard = DaemonBlackboard & HunterBlackboard & DrillerBlackboard & Record<string, any>;
+  // --- DRILLER (Melee) ---
+  // Locked coordinates for the drill attack
+  drillTarget?: { 
+      x: number; 
+      y: number; 
+      angle: number; 
+      panelId: string;
+  };
+
+  // --- GENERAL / SHARED ---
+  spawnOriginX?: number;   // For returning to post
+  spawnOriginY?: number;
+}

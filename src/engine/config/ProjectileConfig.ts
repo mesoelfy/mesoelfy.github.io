@@ -1,8 +1,4 @@
 import { WEAPONS } from './defs/Weapons';
-import { ProjectileDef } from './defs/types';
-
-// Adapting the new structure to the old ProjectileConfig interface
-// to maintain compatibility with existing systems (WeaponLogic, Spawner)
 
 export interface LegacyProjectileDef {
   geometry: string;
