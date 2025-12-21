@@ -13,18 +13,12 @@ class ComponentRegistryController {
 
   public create(type: ComponentType, data: any = {}): Component {
     const Cls = this.classes.get(type);
-    if (!Cls) {
-        throw new Error(`[ComponentRegistry] Unknown component type: ${type}`);
-    }
+    if (!Cls) throw new Error(`ERR_UNKNOWN_COMP: ${type}`);
 
-    // Try Pool or Instantiate
     const component = ComponentPoolManager.acquire(type) || new Cls();
-    
-    // Generic Hydration: Assumes 'reset' accepts a data object
     if ('reset' in component && typeof (component as any).reset === 'function') {
         (component as any).reset(data);
     }
-    
     return component;
   }
 }

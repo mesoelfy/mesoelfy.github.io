@@ -25,12 +25,8 @@ export const UISyncDirector = () => {
     const halfH = size.height / 2;
 
     for (const [id, el] of elements) {
-        // 1. Resolve Entity ID (Cache for performance)
         let eid = entityCache.current.get(id);
         if (eid === undefined) {
-            // Find entity with matching Identity
-            // Optimization: In a huge game, we wouldn't iterate all. 
-            // Since we have < 20 panels, this is negligible once cached.
             for (const e of registry.getAll()) {
                 const identity = e.getComponent<IdentityData>(ComponentType.Identity);
                 if (identity && identity.variant === id) {
@@ -40,12 +36,10 @@ export const UISyncDirector = () => {
                 }
             }
         }
-
         if (eid === undefined) continue;
 
         const entity = registry.getEntity(eid);
         if (!entity || !entity.active) {
-            // Invalidate cache if entity died/pooled
             entityCache.current.delete(id);
             continue;
         }
@@ -55,22 +49,14 @@ export const UISyncDirector = () => {
         const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
         if (transform && collider) {
-            let x = transform.x;
-            let y = transform.y;
+            let x = transform.x, y = transform.y;
+            if (render) { x += render.offsetX; y += render.offsetY; }
 
-            // Apply visual shake/shudder from RenderSystem
-            if (render) {
-                x += render.offsetX;
-                y += render.offsetY;
-            }
-
-            // 2. Project Center to Screen
             vec.set(x, y, 0);
             vec.project(camera);
             const cx = vec.x * halfW + halfW;
             const cy = -vec.y * halfH + halfH;
 
-            // 3. Project Corner to determine Size (Handles Zoom/Perspective)
             vec.set(x + collider.width / 2, y + collider.height / 2, 0);
             vec.project(camera);
             const cornerX = vec.x * halfW + halfW;
@@ -78,8 +64,6 @@ export const UISyncDirector = () => {
 
             const width = Math.abs(cornerX - cx) * 2;
             const height = Math.abs(cornerY - cy) * 2;
-
-            // 4. Update DOM
             const left = cx - (width / 2);
             const top = cy - (height / 2);
 
@@ -89,6 +73,5 @@ export const UISyncDirector = () => {
         }
     }
   });
-
   return null;
 };

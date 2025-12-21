@@ -8,7 +8,6 @@ export class Entity {
   public readonly tags = new Set<Tag>();
   public active = true;
   public pooled = false;
-
   public components = new Map<ComponentType, Component>();
 
   constructor(id: EntityID) {
@@ -26,7 +25,7 @@ export class Entity {
   
   public requireComponent<T extends Component>(type: ComponentType): T {
     const c = this.components.get(type);
-    if (!c) throw new Error(`Entity ${this.id} missing required component: ${type}`);
+    if (!c) throw new Error(`E_${this.id} MISSING_${type}`);
     return c as T;
   }
 
@@ -54,11 +53,9 @@ export class Entity {
   public release() {
       this.active = false;
       this.pooled = true;
-      
       for (const component of this.components.values()) {
           ComponentPoolManager.release(component);
       }
-      
       this.components.clear(); 
       this.tags.clear();
   }

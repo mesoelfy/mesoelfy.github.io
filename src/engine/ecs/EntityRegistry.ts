@@ -9,33 +9,21 @@ export class EntityRegistry implements IEntityRegistry {
   private entities = new Map<EntityID, Entity>();
   private nextId = 0;
   private freeIds: number[] = []; 
-  
   private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
-
   private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
       this.entityPool = new ObjectPool<Entity>(
           () => new Entity(createEntityID(0)),
-          (e) => {}, 
+          () => {}, 
           1000 
       );
   }
 
   public createEntity(): Entity {
-    let idNum: number;
-    if (this.freeIds.length > 0) {
-        idNum = this.freeIds.pop()!;
-    } else {
-        idNum = ++this.nextId;
-    }
-
-    if (idNum >= MAX_ENTITIES) {
-        console.warn(`[EntityRegistry] Max Entities Reached (${MAX_ENTITIES}).`);
-    }
-
+    let idNum = this.freeIds.length > 0 ? this.freeIds.pop()! : ++this.nextId;
     const newId = createEntityID(idNum);
     const entity = this.entityPool.acquire();
     entity.reset(newId);
@@ -46,15 +34,11 @@ export class EntityRegistry implements IEntityRegistry {
   public destroyEntity(id: number) {
     const eid = id as EntityID;
     const entity = this.entities.get(eid);
-    
     if (!entity || !entity.active) return;
-
     entity.active = false;
-    
     this.removeFromCache(entity);
     this.entities.delete(eid);
     this.freeIds.push(id);
-    
     entity.release();
     this.entityPool.release(entity);
   }
@@ -68,25 +52,16 @@ export class EntityRegistry implements IEntityRegistry {
   }
 
   public getByTag(tag: string): Iterable<Entity> {
-    const t = tag as Tag;
-    return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
+    return this.tagCache.get(tag as Tag) || EntityRegistry.EMPTY_SET;
   }
 
-  // --- OPTIMIZED QUERY LOGIC ---
   public query(defOrQuery: QueryDef | Query): Iterable<Entity> {
-    // If passed a Query object, use it directly. Otherwise create temporary wrapper.
-    // Creating 'new Query' handles the ID generation (sorting components etc).
     const query = defOrQuery instanceof Query ? defOrQuery : new Query(defOrQuery);
-    
     let cache = this.activeQueries.get(query.id);
-    
     if (!cache) {
         const results = new Set<Entity>();
-        // Only run scan if this is the first time we see this query signature
         for (const entity of this.entities.values()) {
-            if (entity.active && query.matches(entity)) {
-                results.add(entity);
-            }
+            if (entity.active && query.matches(entity)) results.add(entity);
         }
         cache = { query, results };
         this.activeQueries.set(query.id, cache);
@@ -100,19 +75,14 @@ export class EntityRegistry implements IEntityRegistry {
           this.tagCache.get(tag)!.add(entity);
       }
       for (const cache of this.activeQueries.values()) {
-          if (cache.query.matches(entity)) {
-              cache.results.add(entity);
-          } else {
-              cache.results.delete(entity);
-          }
+          if (cache.query.matches(entity)) cache.results.add(entity);
+          else cache.results.delete(entity);
       }
   }
 
   private removeFromCache(entity: Entity) {
       for (const tag of entity.tags) {
-          if (this.tagCache.has(tag)) {
-              this.tagCache.get(tag)!.delete(entity);
-          }
+          if (this.tagCache.has(tag)) this.tagCache.get(tag)!.delete(entity);
       }
       for (const cache of this.activeQueries.values()) {
           cache.results.delete(entity);

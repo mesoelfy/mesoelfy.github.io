@@ -9,11 +9,9 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
-  
   public registry: IEntityRegistry; 
   private accumulator: number = 0;
   private simulationTime: number = 0;
-
   private panelSystem: IPanelSystem | null = null;
   private gameSystem: IGameStateSystem | null = null;
   private timeSystem: TimeSystem | null = null;
@@ -47,9 +45,6 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // --- GAME OVER LOGIC CHANGE ---
-    // Instead of returning (stopping the loop), we just flag it.
-    // This allows physics (projectiles) and rendering to continue.
     if (this.gameSystem && this.panelSystem) {
         if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
             gameStore.stopGame();
@@ -58,7 +53,6 @@ export class GameEngineCore implements IGameSystem {
         }
     }
 
-    // Time Management
     let timeScale = 1.0;
     if (this.timeSystem) {
         this.timeSystem.tickRealTime(renderDelta);
@@ -74,7 +68,6 @@ export class GameEngineCore implements IGameSystem {
     }
 
     const fixedStep = WorldConfig.time.fixedDelta;
-
     while (this.accumulator >= fixedStep) {
         for (let phase = 0; phase < this.systems.length; phase++) {
             const phaseSystems = this.systems[phase];
@@ -82,7 +75,7 @@ export class GameEngineCore implements IGameSystem {
                 try {
                     phaseSystems[i].update(fixedStep, this.simulationTime);
                 } catch (e: any) {
-                    console.error(`System Update Error [Phase ${phase}]:`, e);
+                    console.error(`ERR_PHASE_${phase}:`, e);
                 }
             }
         }
@@ -90,28 +83,19 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
-    if (this.fastEventBus) {
-        this.fastEventBus.clear();
-    }
+    if (this.fastEventBus) this.fastEventBus.clear();
   }
 
   teardown(): void {
     for (const phase of this.systems) {
-        for (const sys of phase) {
-            sys.teardown();
-        }
+        for (const sys of phase) sys.teardown();
     }
     this.systems = [[], [], [], [], [], []];
-    this.panelSystem = null;
-    this.gameSystem = null;
-    this.timeSystem = null;
-    this.fastEventBus = null;
+    this.panelSystem = null; this.gameSystem = null; this.timeSystem = null; this.fastEventBus = null;
   }
   
   public updateViewport(vpW: number, vpH: number, screenW: number, screenH: number) {
     ViewportHelper.update(vpW, vpH, screenW, screenH);
-    if (this.panelSystem) {
-        this.panelSystem.refreshAll();
-    }
+    if (this.panelSystem) this.panelSystem.refreshAll();
   }
 }
