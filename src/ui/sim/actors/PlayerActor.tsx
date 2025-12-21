@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect, useState } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
@@ -15,8 +15,35 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import * as THREE from 'three';
 
-const centerGeo = new THREE.CircleGeometry(0.1, 16);
+/**
+ * THE NEW CORE: A sharp, concave 3-point geometry (Plectrum-style shuriken)
+ */
+const createCurvedTriangleGeo = () => {
+    const shape = new THREE.Shape();
+    const R = 0.11;       // Radius of points
+    const curveR = 0.10;  // How far the sides pull inward toward center
+    
+    // Equilateral Vertices (90deg, 210deg, 330deg)
+    const p1 = [0, R];
+    const p2 = [R * Math.cos(Math.PI * 7/6), R * Math.sin(Math.PI * 7/6)];
+    const p3 = [R * Math.cos(Math.PI * 11/6), R * Math.sin(Math.PI * 11/6)];
+    
+    // Mid-angles for the control points (150deg, 270deg, 30deg)
+    const cp12 = [curveR * Math.cos(Math.PI * 150/180), curveR * Math.sin(Math.PI * 150/180)];
+    const cp23 = [curveR * Math.cos(Math.PI * 270/180), curveR * Math.sin(Math.PI * 270/180)];
+    const cp31 = [curveR * Math.cos(Math.PI * 30/180), curveR * Math.sin(Math.PI * 30/180)];
+
+    shape.moveTo(p1[0], p1[1]);
+    shape.quadraticCurveTo(cp12[0], cp12[1], p2[0], p2[1]);
+    shape.quadraticCurveTo(cp23[0], cp23[1], p3[0], p3[1]);
+    shape.quadraticCurveTo(cp31[0], cp31[1], p1[0], p1[1]);
+    
+    return new THREE.ShapeGeometry(shape);
+};
+
+const coreGeo = createCurvedTriangleGeo();
 const glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
+
 const createStarRingGeo = () => {
     const points = 4;
     const outerRadius = 0.65;
@@ -52,7 +79,6 @@ const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair);
 const COL_REBOOT = new THREE.Color('#9E4EA5');
 const COL_DEAD = new THREE.Color('#FF003C');
-const COL_DEAD_DARK = new THREE.Color('#76000C');
 const COL_HIT = new THREE.Color('#FF003C'); 
 const COL_RETICLE_HEAL = new THREE.Color('#257171');
 
@@ -71,7 +97,6 @@ export const PlayerActor = () => {
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
   
-  // FIX: Use R3F clock reference instead of performance.now()
   const zenStartTime = useRef(-1);
   const isZenMode = useGameStore(state => state.isZenMode);
 
@@ -103,24 +128,18 @@ export const PlayerActor = () => {
   useEffect(() => events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; }), [events]);
 
   useFrame((state, delta) => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !centerDotRef.current) return;
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
     
-    // --- ZEN MODE TIMING FIX ---
     if (!isZenMode) {
-        // Reset timer if we leave Zen Mode (or haven't entered yet)
         zenStartTime.current = -1;
     } else if (zenStartTime.current === -1) {
-        // Capture exact simulation time when Zen Mode starts
         zenStartTime.current = state.clock.elapsedTime;
     }
 
     let targetScale = 0;
-    
     if (introDone) {
         if (isZenMode) {
-            // Check against consistent simulation time
-            // 1.5s delay
             if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) {
                 targetScale = 1;
             }
@@ -130,11 +149,7 @@ export const PlayerActor = () => {
     }
 
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
-    
-    if (animScale.current < 0.01) { 
-        containerRef.current.visible = false; 
-        return; 
-    }
+    if (animScale.current < 0.01) { containerRef.current.visible = false; return; }
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
@@ -160,22 +175,33 @@ export const PlayerActor = () => {
     const isDeadState = (isPlayerDead || isSystemFailure) && !isZenMode;
 
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
+
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
+        const time = state.clock.elapsedTime;
+
+        // --- GLOBAL CORE LOGIC ---
+        centerDotRef.current.geometry = coreGeo; 
+        centerDotRef.current.rotation.z = -time * (Math.PI * 2 / 10);
+        
+        // REDUCED PULSE: 50% intensity (0.15 -> 0.075)
+        const pulse = 1.0 + Math.sin(time * Math.PI) * 0.075;
+        centerDotRef.current.scale.setScalar(pulse);
+
         if (isDeadState && interactState !== 'REBOOTING') reticleRef.current.rotation.z = Math.PI * 0.25;
         else reticleRef.current.rotation.z = -renderTrans.rotation;
         
         if (isZenMode) {
-            const time = state.clock.elapsedTime * 0.1;
-            tempColor.current.setHSL(time % 1, 1.0, 0.9);
-            reticleColor.current.setHSL((time - 0.1) % 1, 0.9, 0.6);
-            backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time - 0.2) % 1, 0.8, 0.5);
-            ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time - 0.3) % 1, 0.8, 0.4);
+            tempColor.current.setHSL((time * 0.1) % 1, 1.0, 0.9);
+            reticleColor.current.setHSL((time * 0.1 - 0.1) % 1, 0.9, 0.6);
+            backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time * 0.1 - 0.2) % 1, 0.8, 0.5);
+            ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time * 0.1 - 0.3) % 1, 0.8, 0.4);
         } else {
             let targetColor = isDeadState ? COL_DEAD : (interactState === 'HEALING' ? COL_REPAIR : (interactState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
             tempColor.current.lerp(targetColor, 0.2);
-            if (isDeadState) reticleColor.current.lerp(COL_DEAD_DARK, 0.2);
+            if (isDeadState) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
             else if (interactState === 'HEALING') reticleColor.current.lerp(COL_RETICLE_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
+            
             if (hitFlash.current > 0.01) { 
                 tempColor.current.lerp(COL_HIT, hitFlash.current);
                 reticleColor.current.lerp(COL_HIT, hitFlash.current); 
@@ -183,18 +209,19 @@ export const PlayerActor = () => {
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
         }
+
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
         const zenScale = isZenMode ? 3.0 : 1.0;
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * zenScale);
-        centerDotRef.current.geometry = centerGeo;
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }
   });
 
   return (
     <group ref={containerRef}>
-      <mesh ref={centerDotRef} renderOrder={3}><bufferGeometry /><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
+      <mesh ref={centerDotRef} renderOrder={3}><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
       <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0, 0, Math.PI / 12]} renderOrder={2}><meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} /></mesh>
       <mesh ref={backingCircleRef} material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3, 1.3, 1]} renderOrder={1} />
       <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6, 6, 1]} renderOrder={0} />
