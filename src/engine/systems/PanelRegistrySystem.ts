@@ -13,11 +13,19 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { PanelId } from '@/engine/config/PanelConfig';
 
+interface PanelRuntime {
+  id: PanelId;
+  element: HTMLElement;
+  entityId: number;
+  stress: number; 
+}
+
 export class PanelRegistrySystem implements IPanelSystem {
   private entityMap = new Map<string, Entity>();
   private observer: ResizeObserver | null = null;
   private elements = new Map<string, HTMLElement>();
   private rectCache = new Map<PanelId, WorldRect>();
+  private stressMap = new Map<PanelId, number>();
 
   public get systemIntegrity() {
       return useGameStore.getState().systemIntegrity;
@@ -40,6 +48,11 @@ export class PanelRegistrySystem implements IPanelSystem {
         });
     }
 
+    this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+        const current = this.stressMap.get(p.id) || 0;
+        this.stressMap.set(p.id, Math.min(3.0, current + 0.5));
+    });
+
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = useGameStore.getState().restoreAllPanels();
@@ -55,13 +68,25 @@ export class PanelRegistrySystem implements IPanelSystem {
     });
   }
 
-  update(delta: number, time: number): void {}
+  update(delta: number, time: number): void {
+      // Decay stress over time
+      for (const [id, stress] of this.stressMap.entries()) {
+          if (stress > 0) {
+              this.stressMap.set(id, Math.max(0, stress * 0.9));
+          }
+      }
+  }
+
+  public getPanelStress(id: PanelId): number {
+      return this.stressMap.get(id) || 0;
+  }
 
   teardown(): void {
       this.observer?.disconnect();
       this.entityMap.clear();
       this.elements.clear();
       this.rectCache.clear();
+      this.stressMap.clear();
   }
 
   public register(id: PanelId, element: HTMLElement) {
@@ -92,6 +117,7 @@ export class PanelRegistrySystem implements IPanelSystem {
       if (el) this.observer?.unobserve(el);
       this.elements.delete(id);
       this.rectCache.delete(id);
+      this.stressMap.delete(id);
       
       useGameStore.getState().unregisterPanel(id);
 

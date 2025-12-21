@@ -99,10 +99,7 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Iterable<Entity>; 
-  
-  // Updated Signature: Accepts raw Query objects
   query(def: QueryDef | Query): Iterable<Entity>;
-  
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
   updateCache(entity: Entity): void; 
@@ -199,4 +196,5 @@ export interface IPanelSystem extends IGameSystem {
   getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
   getPanelAt(x: number, y: number): PanelId | null;
+  getPanelStress(id: PanelId): number; // NEW
 }

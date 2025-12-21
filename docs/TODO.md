@@ -675,14 +675,10 @@ player cursor explodes a second wave of projectiles, one blast 360 degrees at on
 add framer motion to github page
 https://framermotionexamples.com/examples?s=all
 
-the ASCII shimmering appears to be the same short pattern cycle. I'd like it to be more varied and random for th purple and green shimmer red infection.
-
-What if the solution is to manually resize them past the breakopint to how they worked before?
-
-shift the Driller's geometry so (0,0,0) is exactly at the Tip of the Drill. (When the driller spins, it will now pivot around its tip (like a real drill) rather than its center.) - - - can we do the same with hunter?
-
-music audio ducking needs fine tuning, especially when hit by a ton of enemies it shouldn't mute completely. instead of volume could we cut frequencies, cutting more and more high frequenices as damage increases?
+the ASCII shimmering appears to be the same short pattern cycle. I'd like it to be more varied and random for the purple and green shimmer red infection.
 
 
-when drillers latch close enough to a panel corner, they jump to the exact corner instead of maintaining the panel edge position they were originally aiming for.
+
+
+
 

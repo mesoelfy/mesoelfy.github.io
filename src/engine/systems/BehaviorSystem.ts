@@ -21,7 +21,7 @@ export class BehaviorSystem implements IGameSystem {
     private panelSystem: IPanelSystem,
     private particleSystem: IParticleSystem,
     private audio: IAudioService,
-    private events: IGameEventService // Unified
+    private events: IGameEventService
   ) {
     events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -36,7 +36,6 @@ export class BehaviorSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const upgrades = useGameStore.getState().activeUpgrades;
-    const halfWidth = ViewportHelper.viewport.width / 2;
 
     const aiContext: AIContext = {
       delta,
@@ -65,6 +64,7 @@ export class BehaviorSystem implements IGameSystem {
       },
       damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
+      getPanelStress: (id) => this.panelSystem.getPanelStress(id), // INJECTED
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },

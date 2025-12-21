@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 21 14:31:48 CST 2025
+Generated on: Sun Dec 21 14:56:02 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -13532,12 +13532,13 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) 
 export const createHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.25; 
-  const wingWidth = 0.4;
+  const length = 1.4; 
+  const wingWidth = 0.45;
   const wingThickness = 0.05;
 
-  const tipY = length / 2;
-  const baseY = -length / 2;
+  // PIVOT REFACTOR: Tip is at 0, Body extends backward along negative Y
+  const tipY = 0;
+  const baseY = -length;
 
   const rotateY = (x: number, y: number, z: number, rad: number) => {
     return [
@@ -13572,13 +13573,10 @@ export const createHunterSpear = () => {
   return addBarycentricCoordinates(geometry);
 };
 
-// --- NEW HELPER ---
 export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => {
-    // Clamp to AABB
     const cx = Math.max(rect.left, Math.min(x, rect.right));
     const cy = Math.max(rect.bottom, Math.min(y, rect.top));
 
-    // Determine distance to each edge
     const dl = Math.abs(cx - rect.left);
     const dr = Math.abs(cx - rect.right);
     const dt = Math.abs(cy - rect.top);
@@ -13590,19 +13588,18 @@ export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => 
     let edgeY = cy;
     let normalAngle = 0;
 
-    // Snap to closest edge and define "Normal" (direction OUT of the panel)
     if (min === dl) { 
         edgeX = rect.left; 
-        normalAngle = Math.PI; // Point Left
+        normalAngle = Math.PI;
     } else if (min === dr) { 
         edgeX = rect.right; 
-        normalAngle = 0; // Point Right
+        normalAngle = 0;
     } else if (min === dt) { 
         edgeY = rect.top; 
-        normalAngle = Math.PI / 2; // Point Up
+        normalAngle = Math.PI / 2;
     } else { 
         edgeY = rect.bottom; 
-        normalAngle = -Math.PI / 2; // Point Down
+        normalAngle = -Math.PI / 2;
     }
 
     return { x: edgeX, y: edgeY, angle: normalAngle };
@@ -14848,9 +14845,13 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { ParticleShape } from '@/engine/ecs/types';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import * as THREE from 'three';
+
+const IDLE_SPIN_TARGET = -2.5;  // CW
+const CHARGE_SPIN_TARGET = 22.0; // CCW
 
 export class HoverDrift extends BTNode {
   private minDur: number;
@@ -14863,11 +14864,18 @@ export class HoverDrift extends BTNode {
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
-    if (!transform || !motion || !target || !state) return NodeState.FAILURE;
+    if (!transform || !motion || !target || !state || !visual) return NodeState.FAILURE;
+    
+    let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
     if (state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
@@ -14875,7 +14883,6 @@ export class HoverDrift extends BTNode {
 
     if (!state.timers[AITimerID.HOVER]) {
         state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
-        // Type-safe blackboard access
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -14890,6 +14897,7 @@ export class HoverDrift extends BTNode {
     const dy = target.y - transform.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
+    
     if (dist < 0.001) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -14911,6 +14919,7 @@ export class HoverDrift extends BTNode {
     motion.vx += (tx - motion.vx) * context.delta * 2.0;
     motion.vy += (ty - motion.vy) * context.delta * 2.0;
     transform.rotation = angleToTarget;
+    
     return NodeState.RUNNING;
   }
 }
@@ -14920,11 +14929,18 @@ export class AimAndFire extends BTNode {
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
-    if (!transform || !target || !state) return NodeState.FAILURE;
+    if (!transform || !target || !state || !visual) return NodeState.FAILURE;
+    
+    let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
     if (state.timers[AITimerID.AIM] === undefined) {
         state.timers[AITimerID.AIM] = this.aimDuration;
     }
@@ -14946,20 +14962,20 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    const offset = 0.5;
-    const spreadAngle = 0.2; 
+    // OFFSET_TWEAK: 1.6 -> 1.3
+    const offset = 1.3;
+    const spreadAngle = 0.25; 
     const density = 2; 
 
     for (let i = 0; i < density; i++) {
         const spread = (Math.random() - 0.5) * spreadAngle;
         const angle = rearAngle + spread;
-        const speed = 15.0 + (Math.random() * 10.0);
+        const speed = 12.0 + (Math.random() * 8.0);
         const px = transform.x + Math.cos(rearAngle) * offset;
         const py = transform.y + Math.sin(rearAngle) * offset;
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
-        // Using "Square" particle shape for retro tech look
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, 1);
+        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.2 + (Math.random() * 0.3), 0.8, 1);
     }
 
     state.timers[AITimerID.AIM]! -= context.delta;
@@ -18715,6 +18731,8 @@ import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { AITimerID } from '@/engine/ai/AITimerID';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -18791,8 +18809,13 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
+              // INJECTION: Use SPAWN state with randomized durations for staggered pop-in effect
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
+                  [ComponentType.State]: { 
+                      current: AI_STATE.SPAWN,
+                      timers: { [AITimerID.SPAWN]: 0.5 + Math.random() * 2.5 }
+                  },
                   [ComponentType.RenderTransform]: { scale: 0.0 },
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
               });
@@ -18928,8 +18951,6 @@ export class WaveSystem implements IGameSystem {
 
   private queueSpawns(wave: WaveDef) {
     const count = wave.count + (this.loopCount * 2);
-    // Cast string type from JSON to ArchetypeID
-    // Note: This is the one place we trust JSON data, assuming waves.json uses valid keys
     const typeKey = wave.type as ArchetypeID; 
     
     for (let i = 0; i < count; i++) {
@@ -19654,7 +19675,8 @@ const HUNTER_TREE = new Sequence([
     new HoverDrift(10.0, 18.0, 0.8, 1.5),
     
     // 2. Aim & Fire (AimDuration, Speed, ConfigID)
-    new AimAndFire(0.5, 40.0, 'ENEMY_HUNTER'),
+    // BUFF: Increased duration from 0.5 to 1.2
+    new AimAndFire(1.2, 40.0, 'ENEMY_HUNTER'),
     
     // 3. Cooldown
     new Wait(0.3, 0.6)
