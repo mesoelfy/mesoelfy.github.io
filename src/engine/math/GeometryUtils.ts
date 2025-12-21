@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WorldRect } from './ViewportHelper';
 
 export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) => {
   const geometry = bufferGeometry.index ? bufferGeometry.toNonIndexed() : bufferGeometry.clone();
@@ -27,7 +28,7 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) 
 export const createHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.25; // Tuned value from Worker
+  const length = 1.25; 
   const wingWidth = 0.4;
   const wingThickness = 0.05;
 
@@ -65,4 +66,40 @@ export const createHunterSpear = () => {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
   return addBarycentricCoordinates(geometry);
+};
+
+// --- NEW HELPER ---
+export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => {
+    // Clamp to AABB
+    const cx = Math.max(rect.left, Math.min(x, rect.right));
+    const cy = Math.max(rect.bottom, Math.min(y, rect.top));
+
+    // Determine distance to each edge
+    const dl = Math.abs(cx - rect.left);
+    const dr = Math.abs(cx - rect.right);
+    const dt = Math.abs(cy - rect.top);
+    const db = Math.abs(cy - rect.bottom);
+    
+    const min = Math.min(dl, dr, dt, db);
+    
+    let edgeX = cx;
+    let edgeY = cy;
+    let normalAngle = 0;
+
+    // Snap to closest edge and define "Normal" (direction OUT of the panel)
+    if (min === dl) { 
+        edgeX = rect.left; 
+        normalAngle = Math.PI; // Point Left
+    } else if (min === dr) { 
+        edgeX = rect.right; 
+        normalAngle = 0; // Point Right
+    } else if (min === dt) { 
+        edgeY = rect.top; 
+        normalAngle = Math.PI / 2; // Point Up
+    } else { 
+        edgeY = rect.bottom; 
+        normalAngle = -Math.PI / 2; // Point Down
+    }
+
+    return { x: edgeX, y: edgeY, angle: normalAngle };
 };

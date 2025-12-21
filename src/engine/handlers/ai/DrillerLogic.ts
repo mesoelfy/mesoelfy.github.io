@@ -14,14 +14,16 @@ const DRILLER_TREE = new Sequence([
     new Succeeder(new SpinVisual(5.0)),
     
     new Selector([
-      // A. Attack Sequence if close
+      // A. Attack Sequence
       new Sequence([
         new IsTargetInRange(1.5),
         new Succeeder(new SpinVisual(15.0)), // Spin faster when drilling
-        new DrillAttack(0.2)
+        // Updated Interval: 0.08s (12.5Hz) for sustained panel shake
+        new DrillAttack(0.08) 
       ]),
-      // B. Approach if far
-      new MoveToTarget(8, 1.2) // Speed 8, StopDistance 1.2
+      
+      // B. Approach (Fallback / Repath)
+      new MoveToTarget(8, 1.2)
     ])
   ])
 ]);

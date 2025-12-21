@@ -6,6 +6,7 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
@@ -19,27 +20,45 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
-  // 2. Static Geometries (Player/Particles)
+  // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
   // 3. Dynamic Registration (Enemies)
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+      AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
   // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
-      // Check if visual is reused or new
-      // For simplicity in this engine, we register a unique geo per weapon ID to allow distinct shapes
       const key = `GEO_${def.id}`;
       AssetService.registerGenerator(key, () => createGeometry(def.visual));
   });
 };
 
+const createEnemyGeometry = (id: string, visual: any) => {
+    if (id === EnemyTypes.DRILLER) {
+        // FIXED: Restore bulk (Radius 0.5) and keep Y-Axis alignment for correct spinning
+        const height = 0.64;
+        const radius = 0.5; // Restored size
+        
+        const geo = new THREE.ConeGeometry(radius, height, 4);
+        
+        // Translate Tip to Origin (0,0,0)
+        // Default Cone: Center 0,0,0. Tip at +height/2. Base at -height/2.
+        // We move Down on Y by height/2 to bring Tip to 0.
+        // Now: Tip at 0, Body extends down to -height.
+        geo.translate(0, -height / 2, 0);
+        
+        return addBarycentricCoordinates(geo);
+    }
+    return createGeometry(visual);
+};
+
 const createGeometry = (visual: any) => {
     switch (visual.model) {
+        // Legacy fallback: Use 0.5 radius default if not specified, matching old code behavior
         case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
         case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
         case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);

@@ -9,11 +9,12 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
-
-// Visual offset to keep the body outside the panel
-const DRILL_OFFSET = 0.35; 
+import { getNearestPointOnRect } from '@/engine/math/GeometryUtils';
 
 export class DrillAttack extends BTNode {
+  // Latch tolerance: How far the wall can move before we let go (World Units)
+  private readonly DETACH_THRESHOLD = 0.5;
+
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -25,117 +26,120 @@ export class DrillAttack extends BTNode {
 
     if (!target || !state || !transform) return NodeState.FAILURE;
 
-    // 1. Validate Target
+    // 1. Validate Target Panel Existence
     if (target.type !== 'PANEL' || !target.id) {
-        // Lost target or invalid type
         state.data.drillTarget = undefined;
         return NodeState.FAILURE;
     }
 
-    // 2. Validate Panel Existence
     const rect = context.getPanelRect(target.id as PanelId);
     if (!rect) {
-        // Panel destroyed or missing
         state.data.drillTarget = undefined;
         return NodeState.FAILURE;
     }
 
-    // 3. Initialize / Retrieve Lock
-    // We lock onto a specific point on the panel edge to prevent "sliding"
+    // 2. Validate Latch Integrity (Handle Resize)
+    if (state.data.drillTarget) {
+        // Check if our current target point is still on the panel edge
+        const { x, y } = state.data.drillTarget;
+        
+        // Calculate where the edge is NOW
+        const currentEdge = getNearestPointOnRect(x, y, rect);
+        const driftSq = (currentEdge.x - x)**2 + (currentEdge.y - y)**2;
+
+        // If the wall moved away significantly, break lock
+        if (driftSq > this.DETACH_THRESHOLD * this.DETACH_THRESHOLD) {
+            state.data.drillTarget = undefined;
+            // Returning FAILURE causes the Selector to fall back to 'MoveToTarget',
+            // which naturally handles re-pathing to the new edge.
+            return NodeState.FAILURE;
+        }
+    }
+
+    // 3. Acquire Latch Point (If missing)
     if (!state.data.drillTarget || state.data.drillTarget.panelId !== target.id) {
+        const { x, y, angle } = getNearestPointOnRect(transform.x, transform.y, rect);
         
-        // --- Calculate Closest Point on AABB ---
-        // Clamp current position to the rectangle bounds
-        const cx = Math.max(rect.left, Math.min(transform.x, rect.right));
-        const cy = Math.max(rect.bottom, Math.min(transform.y, rect.top));
-
-        // Determine which edge we are on (or closest to if inside)
-        const dl = Math.abs(cx - rect.left);
-        const dr = Math.abs(cx - rect.right);
-        const dt = Math.abs(cy - rect.top);
-        const db = Math.abs(cy - rect.bottom);
-        
-        const min = Math.min(dl, dr, dt, db);
-        
-        let latchX = cx;
-        let latchY = cy;
-        let angle = 0;
-
-        // Snap to the specific edge
-        if (min === dl) { latchX = rect.left; angle = 0; }          // Left Edge -> Face Right (0)
-        else if (min === dr) { latchX = rect.right; angle = Math.PI; } // Right Edge -> Face Left (PI)
-        else if (min === dt) { latchY = rect.top; angle = -Math.PI/2; } // Top Edge -> Face Down (-90)
-        else { latchY = rect.bottom; angle = Math.PI/2; }           // Bottom Edge -> Face Up (90)
-
-        // Save to blackboard
+        // Align drill rotation to face INTO the wall (+X geometry)
         state.data.drillTarget = {
-            x: latchX,
-            y: latchY,
-            angle: angle,
+            x,
+            y,
+            angle: angle + Math.PI, 
             panelId: target.id
         };
     }
 
-    const { x: latchX, y: latchY, angle: drillAngle } = state.data.drillTarget;
+    const { x: targetX, y: targetY, angle: targetAngle } = state.data.drillTarget;
 
-    // --- 4. Execution ---
-    
-    // Calculate final standing position (Tip at latch point, Body offset back)
-    const standX = latchX - (Math.cos(drillAngle) * DRILL_OFFSET);
-    const standY = latchY - (Math.sin(drillAngle) * DRILL_OFFSET);
-
-    const dx = standX - transform.x;
-    const dy = standY - transform.y;
+    // 4. Execution Logic
+    const dx = targetX - transform.x;
+    const dy = targetY - transform.y;
     const distSq = dx*dx + dy*dy;
 
-    // Movement Logic
     if (distSq > 0.01) {
-        // Approaching
+        // --- APPROACHING ---
         const approachAngle = Math.atan2(dy, dx);
-        transform.x += Math.cos(approachAngle) * 0.2;
-        transform.y += Math.sin(approachAngle) * 0.2;
         
-        // Smooth rotation blend
-        if (distSq < 1.0) {
-            let diff = drillAngle - transform.rotation;
-            while (diff > Math.PI) diff -= Math.PI * 2;
-            while (diff < -Math.PI) diff += Math.PI * 2;
-            transform.rotation += diff * 0.25;
-        } else {
-            transform.rotation = approachAngle;
-        }
+        // Lerp towards latch point
+        transform.x += (targetX - transform.x) * 5.0 * context.delta;
+        transform.y += (targetY - transform.y) * 5.0 * context.delta;
+        
+        // Rotate towards movement direction
+        transform.rotation = approachAngle;
     } else {
-        // Arrived / Drilling
-        transform.x = standX;
-        transform.y = standY;
-        transform.rotation = drillAngle;
-
-        // Visuals & Damage
-        context.spawnFX('DRILL_SPARKS', latchX, latchY, drillAngle);
+        // --- LATCHED & DRILLING ---
         
-        if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
-            context.playSound('loop_drill', transform.x);
-            state.timers[AITimerID.DRILL_AUDIO] = 0.25;
-        } else {
-            state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
-        }
+        // Snap to exact edge
+        transform.x = targetX;
+        transform.y = targetY;
+        
+        // Face into wall
+        transform.rotation = targetAngle;
 
-        if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
-            const damage = combat ? combat.damage : 1;
-            context.damagePanel(target.id as PanelId, damage, { 
-                source: { x: transform.x, y: transform.y } 
-            });
-            state.timers[AITimerID.DRILL_DMG] = this.interval;
-        } else {
-            state.timers[AITimerID.DRILL_DMG] -= context.delta;
-        }
+        // VFX & SFX
+        context.spawnFX('DRILL_SPARKS', targetX, targetY, targetAngle);
+        
+        this.handleAudio(state, transform.x, context);
+        this.handleDamage(state, target.id as PanelId, transform, combat, context);
     }
 
+    // Kill physics velocity while controlled by logic
     if (motion) {
         motion.vx = 0;
         motion.vy = 0;
     }
 
     return NodeState.RUNNING;
+  }
+
+  private handleAudio(state: AIStateData, x: number, context: AIContext) {
+      if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
+          context.playSound('loop_drill', x);
+          // Audio loop matches damage frequency roughly for sync feel
+          state.timers[AITimerID.DRILL_AUDIO] = 0.25;
+      } else {
+          state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
+      }
+  }
+
+  private handleDamage(
+      state: AIStateData, 
+      panelId: PanelId, 
+      transform: TransformData, 
+      combat: CombatData | undefined, 
+      context: AIContext
+  ) {
+      if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
+          const damage = combat ? combat.damage : 1;
+          
+          context.damagePanel(panelId, damage, { 
+              source: { x: transform.x, y: transform.y } 
+          });
+          
+          // Reset timer
+          state.timers[AITimerID.DRILL_DMG] = this.interval;
+      } else {
+          state.timers[AITimerID.DRILL_DMG] -= context.delta;
+      }
   }
 }
