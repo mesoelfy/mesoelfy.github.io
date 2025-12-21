@@ -686,4 +686,3 @@ music audio ducking needs fine tuning, especially when hit by a ton of enemies i
 
 when drillers latch close enough to a panel corner, they jump to the exact corner instead of maintaining the panel edge position they were originally aiming for.
 
-Hunters need their rotating re-factored. Their pivot should be at their tip. They should have a slow clockwise idle rotation. When charging and emitting exhaust they should increase speed and change rotation direction to counter clockwise. When launching spear projectile rotation should relax back into idle clockwise rotatin.

@@ -12,7 +12,8 @@ const HUNTER_TREE = new Sequence([
     new HoverDrift(10.0, 18.0, 0.8, 1.5),
     
     // 2. Aim & Fire (AimDuration, Speed, ConfigID)
-    new AimAndFire(0.5, 40.0, 'ENEMY_HUNTER'),
+    // BUFF: Increased duration from 0.5 to 1.2
+    new AimAndFire(1.2, 40.0, 'ENEMY_HUNTER'),
     
     // 3. Cooldown
     new Wait(0.3, 0.6)

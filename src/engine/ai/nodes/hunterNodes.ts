@@ -5,9 +5,13 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { ParticleShape } from '@/engine/ecs/types';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import * as THREE from 'three';
+
+const IDLE_SPIN_TARGET = -2.5;  // CW
+const CHARGE_SPIN_TARGET = 22.0; // CCW
 
 export class HoverDrift extends BTNode {
   private minDur: number;
@@ -20,11 +24,18 @@ export class HoverDrift extends BTNode {
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
-    if (!transform || !motion || !target || !state) return NodeState.FAILURE;
+    if (!transform || !motion || !target || !state || !visual) return NodeState.FAILURE;
+    
+    let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
     if (state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
@@ -32,7 +43,6 @@ export class HoverDrift extends BTNode {
 
     if (!state.timers[AITimerID.HOVER]) {
         state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
-        // Type-safe blackboard access
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -47,6 +57,7 @@ export class HoverDrift extends BTNode {
     const dy = target.y - transform.y;
     const distSq = dx*dx + dy*dy;
     const dist = Math.sqrt(distSq);
+    
     if (dist < 0.001) {
         motion.vx *= 0.9;
         motion.vy *= 0.9;
@@ -68,6 +79,7 @@ export class HoverDrift extends BTNode {
     motion.vx += (tx - motion.vx) * context.delta * 2.0;
     motion.vy += (ty - motion.vy) * context.delta * 2.0;
     transform.rotation = angleToTarget;
+    
     return NodeState.RUNNING;
   }
 }
@@ -77,11 +89,18 @@ export class AimAndFire extends BTNode {
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
-    if (!transform || !target || !state) return NodeState.FAILURE;
+    if (!transform || !target || !state || !visual) return NodeState.FAILURE;
+    
+    let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
     if (state.timers[AITimerID.AIM] === undefined) {
         state.timers[AITimerID.AIM] = this.aimDuration;
     }
@@ -103,20 +122,20 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    const offset = 0.5;
-    const spreadAngle = 0.2; 
+    // OFFSET_TWEAK: 1.6 -> 1.3
+    const offset = 1.3;
+    const spreadAngle = 0.25; 
     const density = 2; 
 
     for (let i = 0; i < density; i++) {
         const spread = (Math.random() - 0.5) * spreadAngle;
         const angle = rearAngle + spread;
-        const speed = 15.0 + (Math.random() * 10.0);
+        const speed = 12.0 + (Math.random() * 8.0);
         const px = transform.x + Math.cos(rearAngle) * offset;
         const py = transform.y + Math.sin(rearAngle) * offset;
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
-        // Using "Square" particle shape for retro tech look
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, 1);
+        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.2 + (Math.random() * 0.3), 0.8, 1);
     }
 
     state.timers[AITimerID.AIM]! -= context.delta;

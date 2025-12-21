@@ -7,6 +7,8 @@ import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { AITimerID } from '@/engine/ai/AITimerID';
 import waves from '@/engine/config/static/waves.json';
 
 interface WaveDef {
@@ -83,8 +85,13 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
+              // INJECTION: Use SPAWN state with randomized durations for staggered pop-in effect
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
+                  [ComponentType.State]: { 
+                      current: AI_STATE.SPAWN,
+                      timers: { [AITimerID.SPAWN]: 0.5 + Math.random() * 2.5 }
+                  },
                   [ComponentType.RenderTransform]: { scale: 0.0 },
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
               });
@@ -220,8 +227,6 @@ export class WaveSystem implements IGameSystem {
 
   private queueSpawns(wave: WaveDef) {
     const count = wave.count + (this.loopCount * 2);
-    // Cast string type from JSON to ArchetypeID
-    // Note: This is the one place we trust JSON data, assuming waves.json uses valid keys
     const typeKey = wave.type as ArchetypeID; 
     
     for (let i = 0; i < count; i++) {

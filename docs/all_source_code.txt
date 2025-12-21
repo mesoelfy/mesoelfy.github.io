@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 21 10:16:23 CST 2025
+Generated on: Sun Dec 21 14:31:48 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -43,8 +43,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── AIBlackboard.ts
 │   │   │   ├── AIStateTypes.ts
 │   │   │   ├── AITimerID.ts
-│   │   │   ├── BehaviorNodeRegistry.ts
-│   │   │   ├── BehaviorTreeBuilder.ts
 │   │   │   ├── StateMachine.ts
 │   │   │   ├── behavior
 │   │   │   │   ├── composites.ts
@@ -66,6 +64,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── hooks
 │   │   │   │   └── useAudioVisualizer.ts
 │   │   │   └── modules
+│   │   │       ├── AudioChannel.ts
 │   │   │       ├── AudioContextManager.ts
 │   │   │       ├── AudioMixer.ts
 │   │   │       ├── AudioSynthesizer.ts
@@ -77,9 +76,11 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── AudioConfig.ts
 │   │   │   ├── BootConfig.ts
 │   │   │   ├── CameraConfig.ts
+│   │   │   ├── ExternalConfig.ts
 │   │   │   ├── GameplayConfig.ts
 │   │   │   ├── Identifiers.ts
 │   │   │   ├── InputConfig.ts
+│   │   │   ├── LayoutConfig.ts
 │   │   │   ├── Palette.ts
 │   │   │   ├── PanelConfig.ts
 │   │   │   ├── PhysicsConfig.ts
@@ -182,7 +183,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── signals
 │   │   │   ├── FastEventBus.ts
 │   │   │   ├── GameEventBus.ts
-│   │   │   └── GameEvents.ts
+│   │   │   ├── GameEvents.ts
+│   │   │   └── UnifiedEventService.ts
 │   │   ├── state
 │   │   │   ├── GameContext.tsx
 │   │   │   ├── GameStream.ts
@@ -207,6 +209,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── LifeCycleSystem.ts
 │   │   │   ├── OrbitalSystem.ts
 │   │   │   ├── PanelRegistrySystem.ts
+│   │   │   ├── PanelSystem.ts
 │   │   │   ├── ParticleSystem.ts
 │   │   │   ├── PhysicsSystem.ts
 │   │   │   ├── PlayerMovementSystem.ts
@@ -214,6 +217,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── ProjectileSystem.ts
 │   │   │   ├── RenderSystem.ts
 │   │   │   ├── ShakeSystem.ts
+│   │   │   ├── StateSyncSystem.ts
 │   │   │   ├── StructureSystem.ts
 │   │   │   ├── TargetingSystem.ts
 │   │   │   ├── TimeSystem.ts
@@ -350,10 +354,12 @@ PROJECT DIRECTORY STRUCTURE:
 │           ├── hooks
 │           │   ├── useHeartbeat.ts
 │           │   ├── usePanelRegistry.ts
+│           │   ├── usePanelTracker.ts
 │           │   └── useWindowFocus.ts
 │           ├── props
 │           │   └── MiniCrystalCanvas.tsx
 │           ├── registry
+│           │   ├── PanelElementRegistry.ts
 │           │   ├── RenderCatalog.ts
 │           │   └── RenderRegistry.ts
 │           ├── stages
@@ -362,11 +368,12 @@ PROJECT DIRECTORY STRUCTURE:
 │           └── vfx
 │               ├── CameraRig.tsx
 │               ├── PostProcessing.tsx
+│               ├── UISyncDirector.tsx
 │               └── WireframeFloor.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-81 directories, 277 files
+81 directories, 284 files
 
 =====================================
 FILE: ./next.config.js
@@ -2302,12 +2309,18 @@ export const CustomCursor = () => {
   
   const { bootState, activeModal, isDebugOpen, isBreaching, sessionId } = useStore();
   const systemIntegrity = useGameStore(state => state.systemIntegrity);
+  const isZenMode = useGameStore(state => state.isZenMode);
   
   const isGameActive = bootState === 'active';
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || isGameOver) && !isOnScrollbar;
+  // LOGIC UPDATE:
+  // Explicitly hide Custom Cursor if Zen Mode is active.
+  // This allows the "Game Over" cursor to fade out when Zen starts.
+  const showCustomCursor = ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode)) && !isOnScrollbar;
+
+  const hideSystemCursor = !isOnScrollbar;
 
   useEffect(() => {
       const unsub = GameEventBus.subscribe(GameEvents.PLAYER_HIT, () => {
@@ -2322,31 +2335,44 @@ export const CustomCursor = () => {
   }, [sessionId, bootState]);
 
   useEffect(() => {
+      if (hideSystemCursor) {
+          document.body.classList.add('cursor-none');
+          document.body.style.cursor = 'none';
+      } else {
+          document.body.classList.remove('cursor-none');
+          document.body.style.cursor = 'auto';
+      }
+      
+      return () => {
+          document.body.classList.remove('cursor-none');
+          document.body.style.cursor = 'auto';
+      };
+  }, [hideSystemCursor]);
+
+  useEffect(() => {
     const move = (e: MouseEvent) => {
       setPos({ x: e.clientX, y: e.clientY });
+      
       const target = e.target as HTMLElement;
       setIsHovering(!!target.closest(`button, a, input, label, [${DOM_ATTR.INTERACTIVE}="true"]`));
+      
       const onScroll = e.clientX >= window.innerWidth - 14 || e.clientY >= window.innerHeight - 14;
       setIsOnScrollbar(onScroll);
-      
-      if (onScroll || !showCustomCursor) {
-          document.body.style.setProperty('cursor', 'auto', 'important');
-      } else {
-          document.body.style.setProperty('cursor', 'none', 'important');
-      }
     };
+
     const down = () => setIsClicking(true);
     const up = () => setIsClicking(false);
+
     window.addEventListener('mousemove', move);
     window.addEventListener('mousedown', down);
     window.addEventListener('mouseup', up);
+
     return () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mousedown', down);
       window.removeEventListener('mouseup', up);
-      document.body.style.cursor = 'auto'; 
     };
-  }, [isGameActive, isMenuOpen, isBreaching, isGameOver, showCustomCursor]);
+  }, []);
 
   const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
   const cursorShadow = isHit 
@@ -2354,23 +2380,21 @@ export const CustomCursor = () => {
     : (isHovering ? 'drop-shadow(0 0 12px #eae747)' : 'drop-shadow(0 0 8px #78F654)');
 
   return (
-    <>
-      <motion.div
-        className={clsx("fixed top-0 left-0 pointer-events-none z-cursor", (isHovering && showCustomCursor && !isHit) ? "mix-blend-difference" : "" )}
-        animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
-        transition={{ type: "tween", ease: "linear", duration: 0 }}
-      >
-        <AnimatePresence mode="wait">
-          {showCustomCursor && (
-            <motion.div key="custom-cursor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'} ${isHit ? 'scale-125' : ''}`} style={{ filter: cursorShadow, fill: cursorColor, transition: 'fill 0.1s ease, filter 0.1s ease' }}>
-                <path d="M5.5 3.21l12.32 12.32-4.5 1.12 3.5 3.5-2.12 2.12-3.5-3.5-1.12 4.5z" />
-              </svg>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </>
+    <motion.div
+      className={clsx("fixed top-0 left-0 pointer-events-none z-cursor", (isHovering && showCustomCursor && !isHit) ? "mix-blend-difference" : "" )}
+      animate={{ x: pos.x - 5.5, y: pos.y - 3.2 }}
+      transition={{ type: "tween", ease: "linear", duration: 0 }}
+    >
+      <AnimatePresence mode="wait">
+        {showCustomCursor && (
+          <motion.div key="custom-cursor" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="relative">
+            <svg width="24" height="24" viewBox="0 0 24 24" className={`transition-transform duration-100 ${isClicking ? 'scale-90' : 'scale-100'} ${isHit ? 'scale-125' : ''}`} style={{ filter: cursorShadow, fill: cursorColor, transition: 'fill 0.1s ease, filter 0.1s ease' }}>
+              <path d="M5.5 3.21l12.32 12.32-4.5 1.12 3.5 3.5-2.12 2.12-3.5-3.5-1.12 4.5z" />
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 
@@ -2401,6 +2425,7 @@ FILE: ./src/ui/kit/atoms/StatsRadar.tsx
 =====================================
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface StatsRadarProps {
   stats: Record<string, number>;
@@ -2408,7 +2433,7 @@ interface StatsRadarProps {
   size?: number;
 }
 
-export const StatsRadar = ({ stats, color = "#78F654", size = 200 }: StatsRadarProps) => {
+export const StatsRadar = ({ stats, color = PALETTE.GREEN.PRIMARY, size = 200 }: StatsRadarProps) => {
   const keys = Object.keys(stats);
   const total = keys.length;
   const radius = size / 2;
@@ -2432,13 +2457,6 @@ export const StatsRadar = ({ stats, color = "#78F654", size = 200 }: StatsRadarP
       return `${x},${y}`;
     }).join(' ');
   }, [stats]);
-
-  const bgPoints = useMemo(() => {
-    return keys.map((_, i) => {
-      const { x, y } = getPoint(i, 100); // Full scale
-      return `${x},${y}`;
-    }).join(' ');
-  }, [keys]);
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -2630,7 +2648,7 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
-  // 1. PANEL VARIANT (Settings Menu) - Unchanged
+  // 1. PANEL VARIANT (Settings Menu)
   if (variant === 'panel') {
       return (
         <button
@@ -2656,16 +2674,15 @@ export const ToggleButton = ({
       );
   }
 
-  // 2. ICON VARIANT (Header) - Updated with Invert Logic
+  // 2. ICON VARIANT (Header)
   return (
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
       className={clsx(
-        "group flex items-center justify-center w-8 h-7 transition-all duration-200 border rounded-sm",
-        // Base Dynamic Color (e.g. text-primary-green, text-critical-red)
+        "group flex items-center justify-center h-7 transition-all duration-200 border rounded-sm",
+        "w-8", // Uniform width for both Icons and Text labels (SFX)
         color || 'text-white',
-        // Hover: Background becomes the text color
         "hover:bg-current hover:border-transparent",
         active 
           ? "bg-white/5 border-white/20 opacity-100"
@@ -2673,13 +2690,12 @@ export const ToggleButton = ({
       )}
     >
       <div className={clsx(
-          "flex items-center justify-center transition-colors duration-200",
-          // Default: Inherit color. Hover: Force BLACK to contrast against the colored background
+          "flex items-center justify-center w-full h-full transition-colors duration-200",
           "text-current group-hover:text-black",
           active ? "" : "opacity-80"
       )}>
           {label ? (
-            <span className="text-[10px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2">
+            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[4px]">
                 {label}
             </span> 
           ) : (
@@ -4830,7 +4846,6 @@ import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 import { useGameStream } from '@/ui/hooks/useGameStream';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
@@ -4870,18 +4885,11 @@ export const Header = () => {
   const barRef = useRef<HTMLDivElement>(null);
   const [integrityState, setIntegrityState] = useState(100);
 
-  useEffect(() => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.bindScore(scoreRef.current);
-      } catch {}
-  }, []);
-  
+  // --- REFACTOR: DIRECT DOM UPDATE (No Service Locator dependency) ---
   useGameStream('SCORE', (v) => {
-      try {
-          const hud = ServiceLocator.getHUDService();
-          if (hud) hud.updateScore(v);
-      } catch {}
+      if (scoreRef.current) {
+          scoreRef.current.innerText = Math.floor(v).toString().padStart(4, '0');
+      }
   });
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
@@ -5241,8 +5249,9 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { generateHealthIcon, generateBreachIcon, generateBootIcon, generatePausedIcon } from './faviconGenerator';
 import { COLORS } from './metaConstants';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
-const UPDATE_INTERVAL = 500; // Slower tick for visibility
+const UPDATE_INTERVAL = 500; 
 
 export const useFavicon = (bootKey: string) => {
   const linkRef = useRef<HTMLLinkElement | null>(null);
@@ -5253,11 +5262,9 @@ export const useFavicon = (bootKey: string) => {
   const isZenMode = useGameStore(s => s.isZenMode);
   const [tick, setTick] = useState(false);
 
-  // 1. Setup Link Reference
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Prioritize existing 'icon' or 'shortcut icon'
     let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
     if (!link) { 
         link = document.createElement('link'); 
@@ -5266,22 +5273,19 @@ export const useFavicon = (bootKey: string) => {
     }
     linkRef.current = link;
 
-    // Cache default favicon
-    fetch('/favicon.ico').then(res => res.blob()).then(blob => {
+    fetch(EXTERNAL_CONFIG.ASSETS.ICONS.FAVICON).then(res => res.blob()).then(blob => {
         const reader = new FileReader();
         reader.onloadend = () => { if (typeof reader.result === 'string') defaultIconDataRef.current = reader.result; };
         reader.readAsDataURL(blob);
     }).catch(() => {});
   }, []);
 
-  // 2. Loop
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as any).electron) return;
     const interval = setInterval(() => { setTick(t => !t); }, UPDATE_INTERVAL);
     return () => clearInterval(interval);
   }, []);
 
-  // 3. Update Logic (Reactive)
   useEffect(() => {
     if (!linkRef.current) return;
     
@@ -6151,15 +6155,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { clsx } from 'clsx';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export const ContactModal = () => {
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT' | 'ERROR'>('IDLE');
   const [signalStrength, setSignalStrength] = useState(0);
 
   const handleInput = () => {
-      // Fluctuate signal on typing
       setSignalStrength(Math.floor(Math.random() * 40) + 60);
-      AudioSystem.playSound('ui_hover'); // Subtle chirp
+      AudioSystem.playSound('ui_hover');
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -6172,7 +6176,7 @@ export const ContactModal = () => {
       const data = new FormData(form);
       
       try {
-          const res = await fetch("https://formspree.io/f/xkgdbkpz", {
+          const res = await fetch(EXTERNAL_CONFIG.API.FORMSPREE, {
               method: "POST",
               body: data,
               headers: { 'Accept': 'application/json' }
@@ -6195,13 +6199,11 @@ export const ContactModal = () => {
     <ModalContainer title="SECURE_UPLINK // TERMINAL_01" type="contact">
       <div className="max-w-3xl mx-auto h-full flex flex-col relative overflow-hidden">
         
-        {/* DECORATIVE BACKGROUND */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-cyan rounded-full blur-[100px]" />
         </div>
 
-        {/* STATUS BAR */}
         <div className="flex items-center justify-between p-4 border-b border-primary-green/20 bg-black/40 backdrop-blur-sm z-10 shrink-0">
             <div className="flex items-center gap-3">
                 <div className={clsx("w-3 h-3 rounded-full animate-pulse", status === 'ERROR' ? "bg-critical-red" : "bg-primary-green")} />
@@ -6215,9 +6217,7 @@ export const ContactModal = () => {
             </div>
         </div>
 
-        {/* MAIN TERMINAL */}
         <div className="flex-1 relative p-6 md:p-12 overflow-y-auto z-10">
-            
             <AnimatePresence mode="wait">
                 {status === 'SENT' ? (
                     <motion.div 
@@ -6249,95 +6249,46 @@ export const ContactModal = () => {
                         onSubmit={handleSubmit}
                         className="space-y-8 max-w-xl mx-auto"
                     >
-                        {/* TERMINAL HEADER */}
                         <div className="font-mono text-primary-green text-sm mb-8 opacity-70">
                             <p>&gt; ESTABLISHING SECURE TUNNEL...</p>
                             <p>&gt; ENCRYPTION KEY: RSA-4096</p>
                             <p>&gt; READY FOR INPUT.</p>
                         </div>
 
-                        {/* INPUT: NAME */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 CODENAME (Required)
                             </label>
                             <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
-                                <input 
-                                    type="text" 
-                                    name="name"
-                                    required
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 uppercase"
-                                    placeholder="ENTER_IDENTITY"
-                                />
+                                <input type="text" name="name" required onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 uppercase" placeholder="ENTER_IDENTITY" />
                             </div>
                         </div>
 
-                        {/* INPUT: EMAIL */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 RETURN_ADDRESS (Required)
                             </label>
                             <div className="flex items-center border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50">&gt;</span>
-                                <input 
-                                    type="email" 
-                                    name="email"
-                                    required
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700"
-                                    placeholder="user@netscape.com"
-                                />
+                                <input type="email" name="email" required onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700" placeholder="user@netscape.com" />
                             </div>
                         </div>
 
-                        {/* INPUT: MESSAGE */}
                         <div className="group relative">
                             <label className="absolute -top-3 left-0 text-[10px] font-bold text-primary-green/50 font-mono tracking-widest uppercase bg-black px-1 group-focus-within:text-primary-green transition-colors">
                                 PAYLOAD (Message)
                             </label>
                             <div className="flex items-start border-b border-primary-green/30 group-focus-within:border-primary-green transition-colors py-2">
                                 <span className="text-primary-green mr-2 font-mono opacity-50 mt-1">&gt;</span>
-                                <textarea 
-                                    name="message"
-                                    required
-                                    rows={4}
-                                    onKeyDown={handleInput}
-                                    className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 resize-none"
-                                    placeholder="Type your transmission here..."
-                                />
+                                <textarea name="message" required rows={4} onKeyDown={handleInput} className="w-full bg-transparent text-white font-mono focus:outline-none placeholder:text-gray-700 resize-none" placeholder="Type your transmission here..." />
                             </div>
                         </div>
 
-                        {/* ACTION BAR */}
                         <div className="pt-6">
-                            <button 
-                                type="submit"
-                                disabled={status === 'SENDING'}
-                                className={clsx(
-                                    "w-full py-4 font-header font-black text-lg tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-4 relative overflow-hidden group btn-glitch",
-                                    status === 'SENDING' 
-                                        ? "bg-primary-green/20 text-primary-green cursor-wait" 
-                                        : "bg-primary-green text-black hover:bg-white"
-                                )}
-                            >
-                                {status === 'SENDING' ? (
-                                    <>
-                                        <Terminal size={20} className="animate-spin" />
-                                        UPLOADING...
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>INITIATE_UPLINK</span>
-                                        <Send size={20} className="group-hover:translate-x-2 transition-transform" />
-                                    </>
-                                )}
-                                
-                                {/* Button Scanline */}
-                                {!status && (
-                                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
-                                )}
+                            <button type="submit" disabled={status === 'SENDING'} className={clsx("w-full py-4 font-header font-black text-lg tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-4 relative overflow-hidden group btn-glitch", status === 'SENDING' ? "bg-primary-green/20 text-primary-green cursor-wait" : "bg-primary-green text-black hover:bg-white")}>
+                                {status === 'SENDING' ? (<><Terminal size={20} className="animate-spin" /> UPLOADING...</>) : (<><span>INITIATE_UPLINK</span><Send size={20} className="group-hover:translate-x-2 transition-transform" /></>)}
+                                {!status && (<div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />)}
                             </button>
                         </div>
                     </motion.form>
@@ -7946,14 +7897,15 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { PALETTE } from '@/engine/config/Palette';
 
 const COLORS = {
-  SAFE: new THREE.Color("#78F654"),
-  WARN: new THREE.Color("#F7D277"),
-  CRIT: new THREE.Color("#FF4D6D"), 
-  EMISSIVE_SAFE: new THREE.Color("#15530A"),
+  SAFE: new THREE.Color(PALETTE.GREEN.PRIMARY),
+  WARN: new THREE.Color(PALETTE.YELLOW.SOFT),
+  CRIT: new THREE.Color(PALETTE.RED.LIGHT), 
+  EMISSIVE_SAFE: new THREE.Color(PALETTE.GREEN.DARK),
   EMISSIVE_WARN: new THREE.Color("#5e4b00"),
-  EMISSIVE_CRIT: new THREE.Color("#FF003C"), 
+  EMISSIVE_CRIT: new THREE.Color(PALETTE.RED.DIM), 
 };
 
 const SpinningGem = () => {
@@ -8013,8 +7965,8 @@ const SpinningGem = () => {
         <octahedronGeometry args={[1, 0]} />
         <MeshDistortMaterial
           ref={materialRef}
-          color="#78F654"
-          emissive="#15530A"
+          color={PALETTE.GREEN.PRIMARY}
+          emissive={PALETTE.GREEN.DARK}
           roughness={0.1}
           metalness={0.8}
           distort={0.3}
@@ -8035,7 +7987,7 @@ export const MiniCrystalCanvas = () => {
         style={{ background: '#000000' }}
       >
         <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#C2FE9A" />
+        <pointLight position={[10, 10, 10]} intensity={1} color={PALETTE.GREEN.GLOW} />
         <SpinningGem />
       </Canvas>
     </div>
@@ -8116,6 +8068,105 @@ export const RenderDirector = () => {
       ))}
     </>
   );
+};
+
+
+=====================================
+FILE: ./src/ui/sim/vfx/UISyncDirector.tsx
+=====================================
+import { useFrame, useThree } from '@react-three/fiber';
+import { PanelElementRegistry } from '../registry/PanelElementRegistry';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PanelId } from '@/engine/config/PanelConfig';
+import * as THREE from 'three';
+import { useRef } from 'react';
+
+const vec = new THREE.Vector3();
+
+export const UISyncDirector = () => {
+  const { size, camera } = useThree();
+  const entityCache = useRef(new Map<PanelId, number>());
+
+  useFrame(() => {
+    const registry = ServiceLocator.getRegistry();
+    if (!registry) return;
+
+    const elements = PanelElementRegistry.getAll();
+    const halfW = size.width / 2;
+    const halfH = size.height / 2;
+
+    for (const [id, el] of elements) {
+        // 1. Resolve Entity ID (Cache for performance)
+        let eid = entityCache.current.get(id);
+        if (eid === undefined) {
+            // Find entity with matching Identity
+            // Optimization: In a huge game, we wouldn't iterate all. 
+            // Since we have < 20 panels, this is negligible once cached.
+            for (const e of registry.getAll()) {
+                const identity = e.getComponent<IdentityData>(ComponentType.Identity);
+                if (identity && identity.variant === id) {
+                    eid = e.id;
+                    entityCache.current.set(id, eid);
+                    break;
+                }
+            }
+        }
+
+        if (eid === undefined) continue;
+
+        const entity = registry.getEntity(eid);
+        if (!entity || !entity.active) {
+            // Invalidate cache if entity died/pooled
+            entityCache.current.delete(id);
+            continue;
+        }
+
+        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
+        const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+
+        if (transform && collider) {
+            let x = transform.x;
+            let y = transform.y;
+
+            // Apply visual shake/shudder from RenderSystem
+            if (render) {
+                x += render.offsetX;
+                y += render.offsetY;
+            }
+
+            // 2. Project Center to Screen
+            vec.set(x, y, 0);
+            vec.project(camera);
+            const cx = vec.x * halfW + halfW;
+            const cy = -vec.y * halfH + halfH;
+
+            // 3. Project Corner to determine Size (Handles Zoom/Perspective)
+            vec.set(x + collider.width / 2, y + collider.height / 2, 0);
+            vec.project(camera);
+            const cornerX = vec.x * halfW + halfW;
+            const cornerY = -vec.y * halfH + halfH;
+
+            const width = Math.abs(cornerX - cx) * 2;
+            const height = Math.abs(cornerY - cy) * 2;
+
+            // 4. Update DOM
+            const left = cx - (width / 2);
+            const top = cy - (height / 2);
+
+            el.style.transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0)`;
+            el.style.width = `${width.toFixed(1)}px`;
+            el.style.height = `${height.toFixed(1)}px`;
+        }
+    }
+  });
+
+  return null;
 };
 
 
@@ -8350,6 +8401,30 @@ export const usePanelRegistry = (id: string) => {
 
 
 =====================================
+FILE: ./src/ui/sim/hooks/usePanelTracker.ts
+=====================================
+import { useEffect, useRef } from 'react';
+import { PanelId } from '@/engine/config/PanelConfig';
+import { PanelElementRegistry } from '../registry/PanelElementRegistry';
+
+export const usePanelTracker = (id: PanelId) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (elementRef.current) {
+      PanelElementRegistry.register(id, elementRef.current);
+    }
+
+    return () => {
+      PanelElementRegistry.unregister(id);
+    };
+  }, [id]);
+
+  return elementRef;
+};
+
+
+=====================================
 FILE: ./src/ui/sim/hooks/useWindowFocus.ts
 =====================================
 import { useEffect } from 'react';
@@ -8514,7 +8589,7 @@ export const ParticleActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/PlayerActor.tsx
 =====================================
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
@@ -8580,11 +8655,16 @@ export const PlayerActor = () => {
   const backingCircleRef = useRef<THREE.Mesh>(null);
   const ambientGlowRef = useRef<THREE.Mesh>(null);
   const { introDone } = useStore(); 
+  
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const reticleColor = useRef(new THREE.Color(GAME_THEME.turret.base));
   const currentEnergy = useRef(0.0);
   const hitFlash = useRef(0.0); 
+  
+  // FIX: Use R3F clock reference instead of performance.now()
+  const zenStartTime = useRef(-1);
+  const isZenMode = useGameStore(state => state.isZenMode);
 
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', {
@@ -8616,8 +8696,30 @@ export const PlayerActor = () => {
   useFrame((state, delta) => {
     if (!containerRef.current) return;
     const isSystemFailure = useGameStore.getState().systemIntegrity <= 0;
-    const isZenMode = useGameStore.getState().isZenMode;
-    const targetScale = (introDone && (isZenMode || !isSystemFailure)) ? 1 : 0;
+    
+    // --- ZEN MODE TIMING FIX ---
+    if (!isZenMode) {
+        // Reset timer if we leave Zen Mode (or haven't entered yet)
+        zenStartTime.current = -1;
+    } else if (zenStartTime.current === -1) {
+        // Capture exact simulation time when Zen Mode starts
+        zenStartTime.current = state.clock.elapsedTime;
+    }
+
+    let targetScale = 0;
+    
+    if (introDone) {
+        if (isZenMode) {
+            // Check against consistent simulation time
+            // 1.5s delay
+            if (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) {
+                targetScale = 1;
+            }
+        } else if (!isSystemFailure) {
+            targetScale = 1;
+        }
+    }
+
     animScale.current = THREE.MathUtils.lerp(animScale.current, targetScale, delta * 2.0);
     
     if (animScale.current < 0.01) { 
@@ -8716,10 +8818,8 @@ export const UniversalActor = () => {
     const uniqueGroups = new Map<string, RenderGroup>();
 
     Object.values(ARCHETYPES).forEach(blueprint => {
-      // 1. Only process Enemy tags
       if (!blueprint.tags.includes(Tag.ENEMY)) return;
 
-      // 2. Resolve IDs (Check new 'assets' field, then fallback to component data)
       let geometryId = blueprint.assets?.geometry;
       let materialId = blueprint.assets?.material;
 
@@ -9038,6 +9138,34 @@ export const InstancedActor = ({
 
 
 =====================================
+FILE: ./src/ui/sim/registry/PanelElementRegistry.ts
+=====================================
+import { PanelId } from '@/engine/config/PanelConfig';
+
+class PanelElementRegistryController {
+  private elements = new Map<PanelId, HTMLElement>();
+
+  public register(id: PanelId, element: HTMLElement) {
+    this.elements.set(id, element);
+  }
+
+  public unregister(id: PanelId) {
+    this.elements.delete(id);
+  }
+
+  public get(id: PanelId) {
+    return this.elements.get(id);
+  }
+
+  public getAll() {
+    return this.elements;
+  }
+}
+
+export const PanelElementRegistry = new PanelElementRegistryController();
+
+
+=====================================
 FILE: ./src/ui/sim/registry/RenderCatalog.ts
 =====================================
 import { RenderRegistry } from './RenderRegistry';
@@ -9286,6 +9414,7 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
@@ -9299,27 +9428,45 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
-  // 2. Static Geometries (Player/Particles)
+  // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
   // 3. Dynamic Registration (Enemies)
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+      AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
   // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
-      // Check if visual is reused or new
-      // For simplicity in this engine, we register a unique geo per weapon ID to allow distinct shapes
       const key = `GEO_${def.id}`;
       AssetService.registerGenerator(key, () => createGeometry(def.visual));
   });
 };
 
+const createEnemyGeometry = (id: string, visual: any) => {
+    if (id === EnemyTypes.DRILLER) {
+        // FIXED: Restore bulk (Radius 0.5) and keep Y-Axis alignment for correct spinning
+        const height = 0.64;
+        const radius = 0.5; // Restored size
+        
+        const geo = new THREE.ConeGeometry(radius, height, 4);
+        
+        // Translate Tip to Origin (0,0,0)
+        // Default Cone: Center 0,0,0. Tip at +height/2. Base at -height/2.
+        // We move Down on Y by height/2 to bring Tip to 0.
+        // Now: Tip at 0, Body extends down to -height.
+        geo.translate(0, -height / 2, 0);
+        
+        return addBarycentricCoordinates(geo);
+    }
+    return createGeometry(visual);
+};
+
 const createGeometry = (visual: any) => {
     switch (visual.model) {
+        // Legacy fallback: Use 0.5 radius default if not specified, matching old code behavior
         case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
         case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
         case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);
@@ -9841,10 +9988,6 @@ export interface Entity {
 FILE: ./src/engine/config/ProjectileConfig.ts
 =====================================
 import { WEAPONS } from './defs/Weapons';
-import { ProjectileDef } from './defs/types';
-
-// Adapting the new structure to the old ProjectileConfig interface
-// to maintain compatibility with existing systems (WeaponLogic, Spawner)
 
 export interface LegacyProjectileDef {
   geometry: string;
@@ -9876,6 +10019,44 @@ Object.values(WEAPONS).forEach(def => {
         faceVelocity: def.behavior?.faceVelocity ?? true
     };
 });
+
+
+=====================================
+FILE: ./src/engine/config/LayoutConfig.ts
+=====================================
+import { PanelId } from './PanelConfig';
+
+export interface PanelLayoutDef {
+  id: PanelId;
+  x: number;      // 0.0 (Left) to 1.0 (Right)
+  y: number;      // 0.0 (Top) to 1.0 (Bottom)
+  w: number;      // Width %
+  h: number;      // Height %
+  anchorX: number; // 0.0 (Left), 0.5 (Center), 1.0 (Right)
+  anchorY: number; // 0.0 (Top), 0.5 (Center), 1.0 (Bottom)
+}
+
+export const LAYOUT_DESKTOP: PanelLayoutDef[] = [
+  // LEFT COL
+  { id: PanelId.IDENTITY, x: 0.02, y: 0.05, w: 0.28, h: 0.60, anchorX: 0, anchorY: 0 },
+  { id: PanelId.SOCIAL,   x: 0.02, y: 0.67, w: 0.28, h: 0.25, anchorX: 0, anchorY: 0 },
+  
+  // CENTER/RIGHT
+  { id: PanelId.FEED,     x: 0.32, y: 0.05, w: 0.66, h: 0.35, anchorX: 0, anchorY: 0 },
+  
+  // BOTTOM ROW
+  { id: PanelId.ART,      x: 0.32, y: 0.42, w: 0.32, h: 0.50, anchorX: 0, anchorY: 0 },
+  { id: PanelId.VIDEO,    x: 0.66, y: 0.42, w: 0.32, h: 0.50, anchorX: 0, anchorY: 0 },
+];
+
+export const LAYOUT_MOBILE: PanelLayoutDef[] = [
+  // Stacked Vertically with gap
+  { id: PanelId.IDENTITY, x: 0.5, y: 0.02, w: 0.94, h: 0.35, anchorX: 0.5, anchorY: 0 },
+  { id: PanelId.SOCIAL,   x: 0.5, y: 0.39, w: 0.94, h: 0.10, anchorX: 0.5, anchorY: 0 },
+  { id: PanelId.FEED,     x: 0.5, y: 0.51, w: 0.94, h: 0.15, anchorX: 0.5, anchorY: 0 },
+  { id: PanelId.ART,      x: 0.5, y: 0.68, w: 0.94, h: 0.15, anchorX: 0.5, anchorY: 0 },
+  { id: PanelId.VIDEO,    x: 0.5, y: 0.85, w: 0.94, h: 0.12, anchorX: 0.5, anchorY: 0 },
+];
 
 
 =====================================
@@ -10202,6 +10383,24 @@ export const AUDIO_CURVES = {
 
 
 =====================================
+FILE: ./src/engine/config/ExternalConfig.ts
+=====================================
+export const EXTERNAL_CONFIG = {
+  API: {
+    FORMSPREE: "https://formspree.io/f/xkgdbkpz"
+  },
+  ASSETS: {
+    AUDIO: {
+      BG_MUSIC: '/assets/audio/bg_music_placeholder.mp3'
+    },
+    ICONS: {
+      FAVICON: '/favicon.ico'
+    }
+  }
+} as const;
+
+
+=====================================
 FILE: ./src/engine/config/Identifiers.ts
 =====================================
 import { GameEvents as Events } from '@/engine/signals/GameEvents';
@@ -10213,15 +10412,34 @@ export const EnemyTypes = {
   DAEMON: 'daemon',
 } as const;
 
+export const WeaponIDs = {
+  // Player
+  PLAYER_STANDARD: 'PLAYER_STANDARD',
+  PLAYER_FORK: 'PLAYER_FORK',
+  PLAYER_SNIFFER: 'PLAYER_SNIFFER',
+  PLAYER_BACKDOOR: 'PLAYER_BACKDOOR',
+  PLAYER_PURGE: 'PLAYER_PURGE',
+  
+  // Enemies
+  ENEMY_HUNTER: 'ENEMY_HUNTER',
+  DAEMON_ORB: 'DAEMON_ORB',
+} as const;
+
 export const ArchetypeIDs = {
   PLAYER: 'PLAYER',
+  
+  // Expand Flattened Types
+  ...EnemyTypes,
+  ...WeaponIDs,
+
+  // Legacy/Generic Fallbacks (Mapped in Spawner)
   BULLET_PLAYER: 'BULLET_PLAYER',
   BULLET_ENEMY: 'BULLET_ENEMY',
-  ...EnemyTypes
 } as const;
 
 export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
-export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs] | string;
+export type WeaponID = typeof WeaponIDs[keyof typeof WeaponIDs];
+export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs];
 
 // Direct re-export for cleaner imports
 export const GameEvents = Events;
@@ -10287,8 +10505,8 @@ export const CollisionLayers = {
 export const PhysicsConfig = {
   HITBOX: {
     PLAYER: 0.6,
-    DRILLER: 0.4, // Reduced (was 0.5)
-    KAMIKAZE: 0.7, // Increased (was 0.6)
+    DRILLER: 0.4, 
+    KAMIKAZE: 0.7, 
     HUNTER: 0.74, 
     BULLET: 0.25,
     HUNTER_BULLET: 0.4
@@ -10298,6 +10516,9 @@ export const PhysicsConfig = {
     ENEMY: 5,
     PLAYER_PROJECTILE: 10,
     ENEMY_PROJECTILE: 1
+  },
+  PARTICLES: {
+    FRICTION: 0.95 // Was hardcoded in ParticleSystem
   }
 };
 
@@ -10521,7 +10742,7 @@ export const STORAGE_KEYS = {
 =====================================
 FILE: ./src/engine/config/assets/VFXManifest.ts
 =====================================
-import { COLOR_SETS } from '../Palette';
+import { COLOR_SETS, PALETTE } from '../Palette';
 
 export type VFXPattern = 'RADIAL' | 'DIRECTIONAL';
 
@@ -10537,7 +10758,6 @@ export interface VFXRecipe {
   omniChance?: number; 
 }
 
-// --- FACTORY ---
 const createExplosion = (
     colors: string[], 
     isDirectional: boolean,
@@ -10565,15 +10785,15 @@ const createExplosion = (
 };
 
 export const VFX_MANIFEST: Record<string, VFXRecipe> = {
-  // Driller: Medium Count, Medium Speed
+  // Driller
   'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
   'EXPLOSION_PURPLE_DIR': createExplosion(COLOR_SETS.PURPLE, true,  [20, 30], [5, 10]),
   
-  // Hunter: Lower Count, Higher Speed (Snappy)
+  // Hunter
   'EXPLOSION_YELLOW':     createExplosion(COLOR_SETS.YELLOW, false, [15, 25], [10, 18]),
   'EXPLOSION_YELLOW_DIR': createExplosion(COLOR_SETS.YELLOW, true,  [15, 25], [10, 18]),
   
-  // Kamikaze: Max Count, Max Speed (Violent)
+  // Kamikaze
   'EXPLOSION_RED':        createExplosion(COLOR_SETS.RED, false, [20, 35], [12, 22]),
   'EXPLOSION_RED_DIR':    createExplosion(COLOR_SETS.RED, true,  [20, 35], [12, 22]),
 
@@ -10597,7 +10817,7 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   
   'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
-    colors: [COLOR_SETS.YELLOW[0], COLOR_SETS.WHITE[0]], 
+    colors: [PALETTE.YELLOW.SOFT, PALETTE.MONO.WHITE], 
     count: [3, 5], 
     speed: [15, 25], 
     life: [0.1, 0.2], 
@@ -10605,7 +10825,7 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   },
   
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
-  'PURGE_BLAST': { pattern: 'RADIAL', colors: ['#FFFFFF', '#FF003C'], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
+  'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };
 
 
@@ -10735,40 +10955,40 @@ FILE: ./src/engine/config/defs/Weapons.ts
 import { WeaponDef } from './types';
 import { Tag } from '@/engine/ecs/types';
 import { PALETTE } from '@/engine/config/Palette';
+import { WeaponIDs } from '@/engine/config/Identifiers';
 
-export const WEAPONS: Record<string, WeaponDef> = {
+export const WEAPONS: Record<WeaponID, WeaponDef> = {
   // --- PLAYER WEAPONS ---
-  'PLAYER_STANDARD': {
-    id: 'PLAYER_STANDARD',
+  [WeaponIDs.PLAYER_STANDARD]: {
+    id: WeaponIDs.PLAYER_STANDARD,
     damage: 1, speed: 45, life: 1.5,
     visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
-  'PLAYER_FORK': {
-    id: 'PLAYER_FORK',
+  [WeaponIDs.PLAYER_FORK]: {
+    id: WeaponIDs.PLAYER_FORK,
     damage: 1, speed: 45, life: 1.5,
     visual: { model: 'TETRA', color: PALETTE.YELLOW.SOFT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
     behavior: { faceVelocity: true, spinSpeed: 5.0 },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
-  'PLAYER_SNIFFER': {
-    id: 'PLAYER_SNIFFER',
+  [WeaponIDs.PLAYER_SNIFFER]: {
+    id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    // FIX: Added radius: 1.0 to restore original size (default was 0.5)
     visual: { model: 'OCTA', color: PALETTE.CYAN.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
-  'PLAYER_BACKDOOR': {
-    id: 'PLAYER_BACKDOOR',
+  [WeaponIDs.PLAYER_BACKDOOR]: {
+    id: WeaponIDs.PLAYER_BACKDOOR,
     damage: 1, speed: 45, life: 1.5,
     visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
-  'PLAYER_PURGE': {
-    id: 'PLAYER_PURGE',
+  [WeaponIDs.PLAYER_PURGE]: {
+    id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
     visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.YELLOW.ORANGE, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
@@ -10776,19 +10996,19 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
 
   // --- ENEMY WEAPONS ---
-  'ENEMY_HUNTER': {
-    id: 'ENEMY_HUNTER',
+  [WeaponIDs.ENEMY_HUNTER]: {
+    id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
     visual: { model: 'CONE', color: PALETTE.YELLOW.ORANGE, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.ENEMY]
   },
-  'DAEMON_ORB': {
-    id: 'DAEMON_ORB',
+  [WeaponIDs.DAEMON_ORB]: {
+    id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
-    visual: { model: 'SPHERE', color: '#0088FF', scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.CYAN.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
-    tags: [Tag.BULLET, Tag.PLAYER] // Daemon is friendly
+    tags: [Tag.BULLET, Tag.PLAYER] 
   }
 };
 
@@ -10852,10 +11072,11 @@ FILE: ./src/engine/config/defs/Enemies.ts
 =====================================
 import { EnemyDef } from './types';
 import { PALETTE } from '@/engine/config/Palette';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 
-export const ENEMIES: Record<string, EnemyDef> = {
-  'driller': {
-    id: 'driller',
+export const ENEMIES: Record<EnemyType, EnemyDef> = {
+  [EnemyTypes.DRILLER]: {
+    id: EnemyTypes.DRILLER,
     health: 1, damage: 1, score: 100, xp: 10,
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
@@ -10868,8 +11089,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
     },
     params: { spawnOffset: 0.32 }
   },
-  'kamikaze': {
-    id: 'kamikaze',
+  [EnemyTypes.KAMIKAZE]: {
+    id: EnemyTypes.KAMIKAZE,
     health: 2, damage: 3, score: 200, xp: 20,
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
@@ -10881,8 +11102,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
       radius: 0.69, detail: 0 
     }
   },
-  'hunter': {
-    id: 'hunter',
+  [EnemyTypes.HUNTER]: {
+    id: EnemyTypes.HUNTER,
     health: 3, damage: 10, score: 300, xp: 30,
     ai: 'hunter',
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
@@ -10893,8 +11114,8 @@ export const ENEMIES: Record<string, EnemyDef> = {
       material: 'ENEMY_BASE'
     }
   },
-  'daemon': {
-    id: 'daemon',
+  [EnemyTypes.DAEMON]: {
+    id: EnemyTypes.DAEMON,
     health: 100, damage: 0, score: 0, xp: 0,
     ai: 'daemon',
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
@@ -10923,6 +11144,76 @@ export const BOOT_SEQUENCE = {
   // Reduced to 500ms for a snappy transition
   COMPLETION_DELAY: 500
 };
+
+
+=====================================
+FILE: ./src/engine/signals/UnifiedEventService.ts
+=====================================
+import { IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { GameEvents, GameEventPayloads, FXVariant } from './GameEvents';
+import { FastEventType, SoundCode, FXCode, FLOAT_SCALAR, getFXCode, getSoundCode } from './FastEventBus';
+import { PanelId } from '@/engine/config/PanelConfig';
+
+export class UnifiedEventService implements IGameEventService {
+  constructor(
+    private slowBus: IGameEventService,
+    private fastBus: IFastEventService
+  ) {}
+
+  public subscribe<T extends GameEvents>(event: T, handler: (payload: GameEventPayloads[T]) => void): () => void {
+    return this.slowBus.subscribe(event, handler);
+  }
+
+  public emit<T extends GameEvents>(event: T, payload: GameEventPayloads[T]): void {
+    // --- FAST PATH ROUTING ---
+    
+    if (event === GameEvents.SPAWN_FX) {
+        const p = payload as GameEventPayloads[GameEvents.SPAWN_FX];
+        const code = getFXCode(p.type);
+        if (code !== FXCode.NONE) {
+            this.fastBus.spawnFX(code, p.x, p.y, p.angle || 0);
+            return;
+        }
+    }
+
+    if (event === GameEvents.PLAY_SOUND) {
+        const p = payload as GameEventPayloads[GameEvents.PLAY_SOUND];
+        const code = getSoundCode(p.key);
+        if (code !== SoundCode.NONE) {
+            // We interpret 'x' as pan info if provided, else 0
+            const pan = p.x !== undefined ? p.x : 0; 
+            // Note: The FastBus usually expects a pan value, but we might need to 
+            // recalculate pan in the consumer if we only pass X. 
+            // However, the original fastBus.playSound took 'pan'. 
+            // We will assume 'x' here needs to be processed by the consumer or 
+            // passed as raw pan if pre-calculated. 
+            // To be safe and compatible with legacy FastBus usage:
+            this.fastBus.playSound(code, pan);
+            return;
+        }
+    }
+
+    if (event === GameEvents.TRAUMA_ADDED) {
+        const p = payload as GameEventPayloads[GameEvents.TRAUMA_ADDED];
+        this.fastBus.camShake(p.amount);
+        return;
+    }
+
+    // --- SLOW PATH (Default) ---
+    this.slowBus.emit(event, payload);
+  }
+
+  public clear() {
+    this.slowBus.clear();
+    this.fastBus.clear();
+  }
+
+  // --- EXPOSE FAST BUS FOR CONSUMERS (READERS) ---
+  // Readers (Directors) still need to poll the buffer efficiently
+  public processFastEvents(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void) {
+      this.fastBus.process(callback);
+  }
+}
 
 
 =====================================
@@ -11071,6 +11362,11 @@ import { IFastEventService } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 
+// --- CONSTANTS ---
+// The "Magic Number" is now a defined constant.
+// We scale floats by 100 to store them as integers (2 decimal precision).
+export const FLOAT_SCALAR = 100;
+
 export enum FastEventType {
   NONE = 0,
   PLAY_SOUND = 1,
@@ -11113,8 +11409,7 @@ export enum FXCode {
   EXPLOSION_RED_DIR = 11,
   REBOOT_HEAL = 12,
   PURGE_BLAST = 13,
-  ENGINE_FLARE = 14,
-  IMPACT_YELLOW = 4 
+  ENGINE_FLARE = 14
 }
 
 export const SOUND_LOOKUP: Record<SoundCode, AudioKey | null> = {
@@ -11150,11 +11445,11 @@ export const FX_LOOKUP: Record<FXCode, VFXKey | null> = {
   [FXCode.EXPLOSION_RED_DIR]: 'EXPLOSION_RED_DIR',
   [FXCode.REBOOT_HEAL]: 'REBOOT_HEAL',
   [FXCode.PURGE_BLAST]: 'PURGE_BLAST',
-  [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE',
-  [FXCode.IMPACT_YELLOW]: 'IMPACT_WHITE'
+  [FXCode.ENGINE_FLARE]: 'ENGINE_FLARE'
 };
 
 export const getSoundCode = (key: string): SoundCode => {
+    // Reverse lookup (Optimization: Could be cached map if perf becomes issue)
     for (const [code, val] of Object.entries(SOUND_LOOKUP)) {
         if (val === key) return Number(code) as SoundCode;
     }
@@ -11174,7 +11469,8 @@ export class FastEventBusImpl implements IFastEventService {
   private buffer = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
   private cursor = 0;
 
-  public emit(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
+  // --- PRIMITIVE ACCESS (Internal) ---
+  private emitRaw(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
     if (this.cursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
 
     this.buffer[this.cursor++] = eventId;
@@ -11183,6 +11479,48 @@ export class FastEventBusImpl implements IFastEventService {
     this.buffer[this.cursor++] = a3;
     this.buffer[this.cursor++] = a4;
   }
+
+  // --- TYPED FACADE (Public) ---
+  
+  public spawnFX(code: FXCode, x: number, y: number, angle: number = 0) {
+    this.emitRaw(
+      FastEventType.SPAWN_FX, 
+      code, 
+      Math.round(x * FLOAT_SCALAR), 
+      Math.round(y * FLOAT_SCALAR), 
+      Math.round(angle * FLOAT_SCALAR)
+    );
+  }
+
+  public playSound(code: SoundCode, pan: number = 0) {
+    this.emitRaw(
+      FastEventType.PLAY_SOUND, 
+      code, 
+      Math.round(pan * FLOAT_SCALAR)
+    );
+  }
+
+  public camShake(amount: number) {
+    this.emitRaw(
+      FastEventType.CAM_SHAKE, 
+      Math.round(amount * FLOAT_SCALAR)
+    );
+  }
+
+  public hitStop(ms: number) {
+    // MS is an integer, no scaling needed usually, but keeping raw for consistency if needed later
+    this.emitRaw(FastEventType.HIT_STOP, ms);
+  }
+
+  public duckMusic(intensity: number, duration: number) {
+    this.emitRaw(
+      FastEventType.DUCK_MUSIC, 
+      Math.round(intensity * FLOAT_SCALAR), 
+      Math.round(duration * FLOAT_SCALAR)
+    );
+  }
+
+  // --- PROCESSING ---
 
   public getCursor(): number {
     return this.cursor;
@@ -11842,10 +12180,12 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class AIStateData extends Component {
   readonly _type = ComponentType.State;
+  
   constructor(
     public current: AIBehaviorState = AI_STATE.IDLE,
     public timers: Partial<Record<AITimerID, number>> = {},
-    public data: AIBlackboard = {},
+    // STRICT TYPING APPLIED HERE:
+    public data: AIBlackboard = {}, 
     public treeState: Record<string, number> = {},
     public stunTimer: number = 0
   ) {
@@ -12152,18 +12492,13 @@ import { MAX_ENTITIES } from './Constants';
 
 export class EntityRegistry implements IEntityRegistry {
   private entities = new Map<EntityID, Entity>();
-  
-  // ID Management
   private nextId = 0;
   private freeIds: number[] = []; 
   
-  // OPTIMIZATION: Cache Sets of Entities directly, not IDs.
-  // This avoids O(N) lookups and Array allocations during getByTag()
   private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
 
-  // Reusable empty set to prevent null checks in loops
   private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
@@ -12176,7 +12511,6 @@ export class EntityRegistry implements IEntityRegistry {
 
   public createEntity(): Entity {
     let idNum: number;
-
     if (this.freeIds.length > 0) {
         idNum = this.freeIds.pop()!;
     } else {
@@ -12223,34 +12557,33 @@ export class EntityRegistry implements IEntityRegistry {
     return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
   }
 
-  public query(def: QueryDef): Iterable<Entity> {
-    // We create a temporary query object to generate the ID string
-    // This is lightweight compared to array allocation
-    const tempQ = new Query(def);
-    let cache = this.activeQueries.get(tempQ.id);
+  // --- OPTIMIZED QUERY LOGIC ---
+  public query(defOrQuery: QueryDef | Query): Iterable<Entity> {
+    // If passed a Query object, use it directly. Otherwise create temporary wrapper.
+    // Creating 'new Query' handles the ID generation (sorting components etc).
+    const query = defOrQuery instanceof Query ? defOrQuery : new Query(defOrQuery);
+    
+    let cache = this.activeQueries.get(query.id);
     
     if (!cache) {
         const results = new Set<Entity>();
-        const q = new Query(def); 
+        // Only run scan if this is the first time we see this query signature
         for (const entity of this.entities.values()) {
-            if (entity.active && q.matches(entity)) {
+            if (entity.active && query.matches(entity)) {
                 results.add(entity);
             }
         }
-        cache = { query: q, results };
-        this.activeQueries.set(q.id, cache);
+        cache = { query, results };
+        this.activeQueries.set(query.id, cache);
     }
     return cache.results;
   }
   
   public updateCache(entity: Entity) {
-      // 1. Update Tag Cache
       for (const tag of entity.tags) {
           if (!this.tagCache.has(tag)) this.tagCache.set(tag, new Set());
           this.tagCache.get(tag)!.add(entity);
       }
-      
-      // 2. Update Query Cache
       for (const cache of this.activeQueries.values()) {
           if (cache.query.matches(entity)) {
               cache.results.add(entity);
@@ -12279,7 +12612,6 @@ export class EntityRegistry implements IEntityRegistry {
       this.entities.clear();
       this.tagCache.clear();
       this.activeQueries.clear();
-      
       this.nextId = 0;
       this.freeIds = [];
   }
@@ -12594,6 +12926,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DamageOptions } from '@/engine/interfaces';
+import { GameStream } from '@/engine/state/GameStream';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -12629,7 +12962,8 @@ const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed
 
 const updateIntegrity = (state: GameState, panels: any) => {
     const integrity = calculateIntegrity(panels);
-    // GameStream update removed (Handled by subscription in useGameStore)
+    // Direct Stream Update
+    GameStream.set('SYSTEM_INTEGRITY', integrity);
     state.setSystemIntegrity(integrity);
 };
 
@@ -12781,7 +13115,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
       );
       set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
-      // Manual reset for GameStream removed (handled by state update)
+      GameStream.set('SYSTEM_INTEGRITY', 100);
       get().setSystemIntegrity(100);
   }
 });
@@ -12793,7 +13127,6 @@ FILE: ./src/engine/state/game/useGameStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { STORAGE_KEYS } from '@/engine/config/StorageConfig';
-import { GameStream } from '@/engine/state/GameStream';
 
 import { createCombatSlice, CombatSlice } from './slices/createCombatSlice';
 import { createProgressionSlice, ProgressionSlice } from './slices/createProgressionSlice';
@@ -12833,19 +13166,6 @@ export const useGameStore = create<GameState>()(
     }
   )
 );
-
-// --- REACTIVE BRIDGE ---
-// Automatically syncs Zustand State -> GameStream (DOM/High-Freq)
-useGameStore.subscribe((state) => {
-  GameStream.set('PLAYER_HEALTH', state.playerHealth);
-  GameStream.set('PLAYER_MAX_HEALTH', state.maxPlayerHealth);
-  GameStream.set('PLAYER_REBOOT', state.playerRebootProgress);
-  GameStream.set('SYSTEM_INTEGRITY', state.systemIntegrity);
-  GameStream.set('SCORE', state.score);
-  GameStream.set('XP', state.xp);
-  GameStream.set('XP_NEXT', state.xpToNextLevel);
-  GameStream.set('LEVEL', state.level);
-});
 
 
 =====================================
@@ -13183,6 +13503,7 @@ export const ViewportHelper = new ViewportHelperCore();
 FILE: ./src/engine/math/GeometryUtils.ts
 =====================================
 import * as THREE from 'three';
+import { WorldRect } from './ViewportHelper';
 
 export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) => {
   const geometry = bufferGeometry.index ? bufferGeometry.toNonIndexed() : bufferGeometry.clone();
@@ -13211,7 +13532,7 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) 
 export const createHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.25; // Tuned value from Worker
+  const length = 1.25; 
   const wingWidth = 0.4;
   const wingThickness = 0.05;
 
@@ -13249,6 +13570,42 @@ export const createHunterSpear = () => {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
   return addBarycentricCoordinates(geometry);
+};
+
+// --- NEW HELPER ---
+export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => {
+    // Clamp to AABB
+    const cx = Math.max(rect.left, Math.min(x, rect.right));
+    const cy = Math.max(rect.bottom, Math.min(y, rect.top));
+
+    // Determine distance to each edge
+    const dl = Math.abs(cx - rect.left);
+    const dr = Math.abs(cx - rect.right);
+    const dt = Math.abs(cy - rect.top);
+    const db = Math.abs(cy - rect.bottom);
+    
+    const min = Math.min(dl, dr, dt, db);
+    
+    let edgeX = cx;
+    let edgeY = cy;
+    let normalAngle = 0;
+
+    // Snap to closest edge and define "Normal" (direction OUT of the panel)
+    if (min === dl) { 
+        edgeX = rect.left; 
+        normalAngle = Math.PI; // Point Left
+    } else if (min === dr) { 
+        edgeX = rect.right; 
+        normalAngle = 0; // Point Right
+    } else if (min === dt) { 
+        edgeY = rect.top; 
+        normalAngle = Math.PI / 2; // Point Up
+    } else { 
+        edgeY = rect.bottom; 
+        normalAngle = -Math.PI / 2; // Point Down
+    }
+
+    return { x: edgeX, y: edgeY, angle: normalAngle };
 };
 
 
@@ -13649,8 +14006,9 @@ export const useAudioVisualizer = (fftSize: number = 32) => {
 =====================================
 FILE: ./src/engine/audio/AudioDirector.ts
 =====================================
-import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
-import { FastEventType, SOUND_LOOKUP, SoundCode } from '@/engine/signals/FastEventBus';
+import { IGameSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType, SOUND_LOOKUP, SoundCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
@@ -13660,15 +14018,13 @@ export class AudioDirector implements IGameSystem {
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified Bus
     private audio: IAudioService
   ) {
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
-    // 1. Panel Events (Spatial Audio)
     this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
     });
@@ -13683,7 +14039,6 @@ export class AudioDirector implements IGameSystem {
         this.audio.duckMusic(0.8, 1.5); 
     });
 
-    // 2. Global Game State
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
@@ -13693,7 +14048,7 @@ export class AudioDirector implements IGameSystem {
         this.audio.playSound('fx_level_up');
     });
 
-    // 3. Generic Play Trigger (Slow Bus Fallback)
+    // Fallback for events sent via slow path (not mapped to SoundCode)
     this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
@@ -13701,21 +14056,23 @@ export class AudioDirector implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Poll Fast Bus for High-Frequency Combat Audio (Machine guns, etc)
-    this.fastEvents.process((id, a1, a2, a3, a4) => {
-        if (id === FastEventType.PLAY_SOUND) {
-            // a1: SoundCode, a2: Pan * 100
-            const key = SOUND_LOOKUP[a1 as SoundCode];
-            if (key) {
-                const pan = this.calculatePan(a2 / 100); // Convert back from Int representation
-                this.audio.playSound(key as AudioKey, pan);
+    // Cast to access the optimized polling method exposed by UnifiedEventService
+    const unified = this.events as UnifiedEventService;
+    
+    if (unified && typeof unified.processFastEvents === 'function') {
+        unified.processFastEvents((id, a1, a2, a3, a4) => {
+            if (id === FastEventType.PLAY_SOUND) {
+                const key = SOUND_LOOKUP[a1 as SoundCode];
+                if (key) {
+                    const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
+                    this.audio.playSound(key as AudioKey, pan);
+                }
             }
-        }
-        else if (id === FastEventType.DUCK_MUSIC) {
-            // a1: Intensity * 100, a2: Duration * 100
-            this.audio.duckMusic(a1 / 100, a2 / 100);
-        }
-    });
+            else if (id === FastEventType.DUCK_MUSIC) {
+                this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
+            }
+        });
+    }
   }
 
   private playSpatial(panelId: PanelId, key: AudioKey) {
@@ -13727,7 +14084,6 @@ export class AudioDirector implements IGameSystem {
   private calculatePan(worldX: number): number {
       const halfWidth = ViewportHelper.viewport.width / 2;
       if (halfWidth === 0) return 0;
-      // Map world position to -1.0 to 1.0 stereo field
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
@@ -13872,6 +14228,84 @@ export class AudioMixer {
 
 
 =====================================
+FILE: ./src/engine/audio/modules/AudioChannel.ts
+=====================================
+export class AudioChannel {
+  public readonly panner: StereoPannerNode;
+  public readonly gain: GainNode;
+  
+  private _isBusy: boolean = false;
+  private currentSource: AudioBufferSourceNode | null = null;
+  private onRelease: (channel: AudioChannel) => void;
+
+  constructor(ctx: AudioContext, destination: AudioNode, onRelease: (c: AudioChannel) => void) {
+    this.onRelease = onRelease;
+    
+    // Create persistent graph nodes
+    this.panner = ctx.createStereoPanner();
+    this.gain = ctx.createGain();
+
+    // Wire them up: Panner -> Gain -> Destination (Mixer)
+    this.panner.connect(this.gain);
+    this.gain.connect(destination);
+  }
+
+  public get isBusy() { return this._isBusy; }
+
+  public play(
+    ctx: AudioContext, 
+    buffer: AudioBuffer, 
+    volume: number, 
+    pan: number, 
+    pitchVariance: number
+  ) {
+    // 1. Reset State
+    this._isBusy = true;
+    
+    // 2. Configure Reusable Nodes
+    // Smooth transitions to prevent clicking if reusing rapidly
+    this.panner.pan.setValueAtTime(pan, ctx.currentTime);
+    this.gain.gain.setValueAtTime(volume, ctx.currentTime);
+
+    // 3. Create Ephemeral Source (Web Audio Requirement)
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+
+    if (pitchVariance > 0) {
+        source.detune.value = (Math.random() * pitchVariance * 2) - pitchVariance;
+    }
+
+    // 4. Connect to our persistent channel
+    source.connect(this.panner);
+
+    // 5. Cleanup Logic
+    source.onended = () => {
+        source.disconnect();
+        this._isBusy = false;
+        this.currentSource = null;
+        this.onRelease(this);
+    };
+
+    this.currentSource = source;
+    source.start();
+  }
+
+  public stop() {
+    if (this.currentSource) {
+        try {
+            this.currentSource.stop();
+            this.currentSource.disconnect();
+        } catch (e) {
+            // Ignore errors if already stopped
+        }
+        this.currentSource = null;
+    }
+    this._isBusy = false;
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/audio/modules/VoiceManager.ts
 =====================================
 import { AudioContextManager } from './AudioContextManager';
@@ -13880,6 +14314,7 @@ import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export class VoiceManager {
   private activeCount = 0;
@@ -13961,11 +14396,13 @@ export class VoiceManager {
     this.currentAmbienceKey = key;
   }
 
-  public startMusic(url: string) {
+  public startMusic(url?: string) {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.musicGain || this.musicElement) return;
 
-    this.musicElement = new Audio(url);
+    const targetUrl = url || EXTERNAL_CONFIG.ASSETS.AUDIO.BG_MUSIC;
+
+    this.musicElement = new Audio(targetUrl);
     this.musicElement.loop = true; 
     this.musicElement.crossOrigin = "anonymous";
     
@@ -14438,6 +14875,7 @@ export class HoverDrift extends BTNode {
 
     if (!state.timers[AITimerID.HOVER]) {
         state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
+        // Type-safe blackboard access
         state.data.driftX = (Math.random() - 0.5) * 4;
         state.data.driftY = (Math.random() - 0.5) * 4;
     }
@@ -14520,7 +14958,8 @@ export class AimAndFire extends BTNode {
         const py = transform.y + Math.sin(rearAngle) * offset;
         const vx = Math.cos(angle) * speed;
         const vy = Math.sin(angle) * speed;
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, ParticleShape.SQUARE);
+        // Using "Square" particle shape for retro tech look
+        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.3 + (Math.random() * 0.2), 1.0, 1);
     }
 
     state.timers[AITimerID.AIM]! -= context.delta;
@@ -14585,6 +15024,7 @@ export class ChargeMechanic extends BTNode {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     if (!state) return NodeState.FAILURE;
 
+    // Type-safe access to 'chargeProgress' defined in AIBlackboard
     const currentProgress = state.data.chargeProgress || 0;
 
     if (currentProgress < 1.0) {
@@ -14638,6 +15078,7 @@ export class FireDaemonShot extends BTNode {
     context.spawnFX('IMPACT_WHITE', transform.x, transform.y);
     context.playSound('fx_teleport', transform.x);
 
+    // Type-safe reset
     state.data.chargeProgress = 0;
     state.data.lastFireTime = context.time;
     state.current = AI_STATE.ORBIT;
@@ -14703,84 +15144,141 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { getNearestPointOnRect } from '@/engine/math/GeometryUtils';
 
 export class DrillAttack extends BTNode {
+  // Latch tolerance: How far the wall can move before we let go (World Units)
+  private readonly DETACH_THRESHOLD = 0.5;
+
   constructor(private interval: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
-    const state = entity.getComponent<any>(ComponentType.State);
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const combat = entity.getComponent<CombatData>(ComponentType.Combat);
 
     if (!target || !state || !transform) return NodeState.FAILURE;
 
-    // --- SAFETY CHECK: WAIT IF PANEL NOT FOUND ---
-    let rect = undefined;
-    if (target.type === 'PANEL' && target.id) {
-        rect = context.getPanelRect(target.id as PanelId);
+    // 1. Validate Target Panel Existence
+    if (target.type !== 'PANEL' || !target.id) {
+        state.data.drillTarget = undefined;
+        return NodeState.FAILURE;
     }
 
+    const rect = context.getPanelRect(target.id as PanelId);
     if (!rect) {
-        // If we can't see the panel, idle in place (don't crash into center)
-        if (motion) {
-            motion.vx *= 0.9;
-            motion.vy *= 0.9;
+        state.data.drillTarget = undefined;
+        return NodeState.FAILURE;
+    }
+
+    // 2. Validate Latch Integrity (Handle Resize)
+    if (state.data.drillTarget) {
+        // Check if our current target point is still on the panel edge
+        const { x, y } = state.data.drillTarget;
+        
+        // Calculate where the edge is NOW
+        const currentEdge = getNearestPointOnRect(x, y, rect);
+        const driftSq = (currentEdge.x - x)**2 + (currentEdge.y - y)**2;
+
+        // If the wall moved away significantly, break lock
+        if (driftSq > this.DETACH_THRESHOLD * this.DETACH_THRESHOLD) {
+            state.data.drillTarget = undefined;
+            // Returning FAILURE causes the Selector to fall back to 'MoveToTarget',
+            // which naturally handles re-pathing to the new edge.
+            return NodeState.FAILURE;
         }
-        return NodeState.RUNNING;
     }
 
-    // --- TARGET LATCH LOGIC ---
-    // 1. Clamp X to horizontal bounds
-    const destX = Math.max(rect.left, Math.min(transform.x, rect.right));
-    
-    // 2. Snap Y to CLOSEST EDGE (Top or Bottom)
-    const distTop = Math.abs(transform.y - rect.top);
-    const distBottom = Math.abs(transform.y - rect.bottom);
-    const destY = distTop < distBottom ? rect.top : rect.bottom;
+    // 3. Acquire Latch Point (If missing)
+    if (!state.data.drillTarget || state.data.drillTarget.panelId !== target.id) {
+        const { x, y, angle } = getNearestPointOnRect(transform.x, transform.y, rect);
+        
+        // Align drill rotation to face INTO the wall (+X geometry)
+        state.data.drillTarget = {
+            x,
+            y,
+            angle: angle + Math.PI, 
+            panelId: target.id
+        };
+    }
 
-    const dx = destX - transform.x;
-    const dy = destY - transform.y;
-    const angle = Math.atan2(dy, dx);
+    const { x: targetX, y: targetY, angle: targetAngle } = state.data.drillTarget;
+
+    // 4. Execution Logic
+    const dx = targetX - transform.x;
+    const dy = targetY - transform.y;
     const distSq = dx*dx + dy*dy;
-    
-    // Snap to position if close enough (Drilling State)
+
     if (distSq > 0.01) {
-        transform.x += dx * 0.1;
-        transform.y += dy * 0.1;
-        transform.rotation = angle;
+        // --- APPROACHING ---
+        const approachAngle = Math.atan2(dy, dx);
+        
+        // Lerp towards latch point
+        transform.x += (targetX - transform.x) * 5.0 * context.delta;
+        transform.y += (targetY - transform.y) * 5.0 * context.delta;
+        
+        // Rotate towards movement direction
+        transform.rotation = approachAngle;
+    } else {
+        // --- LATCHED & DRILLING ---
+        
+        // Snap to exact edge
+        transform.x = targetX;
+        transform.y = targetY;
+        
+        // Face into wall
+        transform.rotation = targetAngle;
+
+        // VFX & SFX
+        context.spawnFX('DRILL_SPARKS', targetX, targetY, targetAngle);
+        
+        this.handleAudio(state, transform.x, context);
+        this.handleDamage(state, target.id as PanelId, transform, combat, context);
     }
 
+    // Kill physics velocity while controlled by logic
     if (motion) {
         motion.vx = 0;
         motion.vy = 0;
     }
 
-    context.spawnFX('DRILL_SPARKS', destX, destY, transform.rotation);
-    
-    if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
-        context.playSound('loop_drill', transform.x);
-        state.timers[AITimerID.DRILL_AUDIO] = 0.25;
-    } else {
-        state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
-    }
-
-    if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
-        const damage = combat ? combat.damage : 1;
-        if (target.type === 'PANEL' && target.id) {
-            context.damagePanel(target.id as PanelId, damage, { 
-                source: { x: transform.x, y: transform.y } 
-            });
-            state.timers[AITimerID.DRILL_DMG] = this.interval;
-        }
-    } else {
-        state.timers[AITimerID.DRILL_DMG] -= context.delta;
-    }
-    
     return NodeState.RUNNING;
+  }
+
+  private handleAudio(state: AIStateData, x: number, context: AIContext) {
+      if (!state.timers[AITimerID.DRILL_AUDIO] || state.timers[AITimerID.DRILL_AUDIO] <= 0) {
+          context.playSound('loop_drill', x);
+          // Audio loop matches damage frequency roughly for sync feel
+          state.timers[AITimerID.DRILL_AUDIO] = 0.25;
+      } else {
+          state.timers[AITimerID.DRILL_AUDIO] -= context.delta;
+      }
+  }
+
+  private handleDamage(
+      state: AIStateData, 
+      panelId: PanelId, 
+      transform: TransformData, 
+      combat: CombatData | undefined, 
+      context: AIContext
+  ) {
+      if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
+          const damage = combat ? combat.damage : 1;
+          
+          context.damagePanel(panelId, damage, { 
+              source: { x: transform.x, y: transform.y } 
+          });
+          
+          // Reset timer
+          state.timers[AITimerID.DRILL_DMG] = this.interval;
+      } else {
+          state.timers[AITimerID.DRILL_DMG] -= context.delta;
+      }
   }
 }
 
@@ -15015,154 +15513,37 @@ export type AIBehaviorState = typeof AI_STATE[keyof typeof AI_STATE];
 
 
 =====================================
-FILE: ./src/engine/ai/BehaviorTreeBuilder.ts
-=====================================
-import { BehaviorNodeRegistry } from './BehaviorNodeRegistry';
-import { BTNode } from './behavior/types';
-
-export interface NodeDef {
-  type: string;
-  args?: any[];
-  children?: NodeDef[];
-  id?: string; // For MemSequence
-}
-
-export class BehaviorTreeBuilder {
-  
-  public static build(def: NodeDef): BTNode {
-    const Ctor = BehaviorNodeRegistry.get(def.type);
-    
-    if (!Ctor) {
-      throw new Error(`[BehaviorTreeBuilder] Unknown node type: ${def.type}`);
-    }
-
-    // 1. Build Children recursively
-    let childrenInstances: BTNode[] = [];
-    if (def.children) {
-      childrenInstances = def.children.map(childDef => this.build(childDef));
-    }
-
-    // 2. Construct Instance
-    // Case A: Composites (Sequence, Selector, Parallel) take children as first arg
-    // Case B: Decorators (Inverter, Succeeder) take single child as first arg
-    // Case C: Leafs take args...
-    
-    const isComposite = ['Sequence', 'Selector', 'Parallel', 'MemSequence'].includes(def.type);
-    const isDecorator = ['Inverter', 'Succeeder'].includes(def.type);
-
-    if (isComposite) {
-        if (def.type === 'MemSequence') {
-             // MemSequence(children, id)
-             return new Ctor(childrenInstances, def.id || 'default_mem_seq');
-        }
-        return new Ctor(childrenInstances);
-    } 
-    else if (isDecorator) {
-        if (childrenInstances.length === 0) {
-            throw new Error(`[BehaviorTreeBuilder] Decorator ${def.type} requires a child.`);
-        }
-        return new Ctor(childrenInstances[0]);
-    } 
-    else {
-        // Leaf Node
-        const args = def.args || [];
-        return new Ctor(...args);
-    }
-  }
-}
-
-
-=====================================
 FILE: ./src/engine/ai/AIBlackboard.ts
 =====================================
-export interface DaemonBlackboard {
-  chargeProgress?: number;
-  shieldHP?: number;
-  lastFireTime?: number;
-  wasHit?: boolean;
+/**
+ * STRICT TYPING FOR AI MEMORY
+ * Eliminates "Magic Strings" in logic handlers.
+ */
+
+export interface AIBlackboard {
+  // --- DAEMON (Boss/Summon) ---
+  chargeProgress?: number; // 0.0 to 1.0
+  shieldHP?: number;       // Hit points for shield state
+  lastFireTime?: number;   // Timestamp
+  wasHit?: boolean;        // Reaction trigger
+
+  // --- HUNTER (Ranged) ---
+  driftX?: number;         // Hover target offset X
+  driftY?: number;         // Hover target offset Y
+
+  // --- DRILLER (Melee) ---
+  // Locked coordinates for the drill attack
+  drillTarget?: { 
+      x: number; 
+      y: number; 
+      angle: number; 
+      panelId: string;
+  };
+
+  // --- GENERAL / SHARED ---
+  spawnOriginX?: number;   // For returning to post
+  spawnOriginY?: number;
 }
-
-export interface HunterBlackboard {
-  driftX?: number;
-  driftY?: number;
-}
-
-export interface DrillerBlackboard {
-  penetrationDepth?: number;
-}
-
-export type AIBlackboard = DaemonBlackboard & HunterBlackboard & DrillerBlackboard & Record<string, any>;
-
-
-=====================================
-FILE: ./src/engine/ai/BehaviorNodeRegistry.ts
-=====================================
-import { BTNode } from './behavior/types';
-import { Sequence, Selector, Parallel, MemSequence } from './behavior/composites';
-import { Inverter, Succeeder } from './behavior/decorators';
-
-// Actions
-import { MoveToTarget, Wait, SpinVisual } from './nodes/actions';
-import { SpawnPhase } from './nodes/logic';
-
-// Conditions
-import { IsTargetInRange } from './nodes/conditions';
-
-// Specifics
-import { DrillAttack } from './nodes/drillerNodes';
-import { HoverDrift, AimAndFire } from './nodes/hunterNodes';
-import { OrbitControl, ChargeMechanic, FireDaemonShot, HasTargetLock, DaemonAim } from './nodes/daemonNodes';
-
-type NodeConstructor = new (...args: any[]) => BTNode;
-
-class NodeRegistry {
-  private map = new Map<string, NodeConstructor>();
-
-  constructor() {
-    // Composites
-    this.register('Sequence', Sequence);
-    this.register('Selector', Selector);
-    this.register('Parallel', Parallel);
-    this.register('MemSequence', MemSequence);
-
-    // Decorators
-    this.register('Inverter', Inverter);
-    this.register('Succeeder', Succeeder);
-
-    // Common Actions
-    this.register('MoveToTarget', MoveToTarget);
-    this.register('Wait', Wait);
-    this.register('SpinVisual', SpinVisual);
-    this.register('SpawnPhase', SpawnPhase);
-
-    // Conditions
-    this.register('IsTargetInRange', IsTargetInRange);
-
-    // Driller
-    this.register('DrillAttack', DrillAttack);
-
-    // Hunter
-    this.register('HoverDrift', HoverDrift);
-    this.register('AimAndFire', AimAndFire); // NEW
-
-    // Daemon
-    this.register('OrbitControl', OrbitControl);
-    this.register('ChargeMechanic', ChargeMechanic);
-    this.register('FireDaemonShot', FireDaemonShot);
-    this.register('HasTargetLock', HasTargetLock);
-    this.register('DaemonAim', DaemonAim);
-  }
-
-  public register(key: string, ctor: NodeConstructor) {
-    this.map.set(key, ctor);
-  }
-
-  public get(key: string): NodeConstructor | undefined {
-    return this.map.get(key);
-  }
-}
-
-export const BehaviorNodeRegistry = new NodeRegistry();
 
 
 =====================================
@@ -15686,10 +16067,14 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { Query } from '@/engine/ecs/Query';
 
 export class CollisionSystem implements IGameSystem {
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   private handledPairs = new Set<number>(); 
+  
+  // CACHED QUERY
+  private collisionQuery = new Query({ all: [ComponentType.Collider, ComponentType.Transform] });
 
   constructor(
     private physicsSystem: IPhysicsSystem,
@@ -15699,7 +16084,8 @@ export class CollisionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
-    const collidables = this.registry.query({ all: [ComponentType.Collider, ComponentType.Transform] });
+    const collidables = this.registry.query(this.collisionQuery);
+    
     this.handledPairs.clear();
 
     for (const entity of collidables) {
@@ -15797,7 +16183,6 @@ import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/e
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
 import { useStore } from '@/engine/state/global/useStore';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -15826,8 +16211,6 @@ export class HealthSystem implements IGameSystem {
         this.isGameOver = true;
         this.events.emit(GameEvents.GAME_OVER, { score: 0 });
         this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
-        
-        useGameStore.setState({ systemIntegrity: 0 });
     }
   }
 
@@ -15838,55 +16221,40 @@ export class HealthSystem implements IGameSystem {
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);
-        useGameStore.setState({ playerHealth: this.playerHealth });
         
         if (this.playerHealth <= 0) {
             this.audio.playSound('fx_player_death');
         }
     } else {
+        // Damage while down reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
-        useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
     }
   }
 
   public healPlayer(amount: number) {
     this.playerHealth = Math.min(this.maxPlayerHealth, this.playerHealth + amount);
-    useGameStore.setState({ playerHealth: this.playerHealth });
   }
 
   public tickReboot(amount: number) {
     if (this.playerHealth > 0) return;
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
-    useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
     
     if (this.playerRebootProgress >= 100) {
         this.playerHealth = this.maxPlayerHealth; 
         this.playerRebootProgress = 0;
         this.audio.playSound('fx_reboot_success');
-        
-        useGameStore.setState({ 
-            playerHealth: this.playerHealth, 
-            playerRebootProgress: 0 
-        });
     }
   }
 
   public decayReboot(amount: number) {
       if (this.playerHealth > 0) return; 
       this.playerRebootProgress = Math.max(0, this.playerRebootProgress - amount);
-      useGameStore.setState({ playerRebootProgress: this.playerRebootProgress });
   }
 
   public reset() {
       this.playerHealth = this.maxPlayerHealth;
       this.playerRebootProgress = 0;
       this.isGameOver = false;
-      
-      useGameStore.setState({ 
-          playerHealth: this.maxPlayerHealth,
-          playerRebootProgress: 0,
-          systemIntegrity: 100 
-      });
   }
 
   teardown(): void {}
@@ -15902,6 +16270,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { PALETTE } from '@/engine/config/Palette';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -15974,13 +16343,12 @@ export class InteractionSystem implements IInteractionSystem {
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
-            this.spawnRepairParticles(cursor, '#9E4EA5');
+            this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
         }
     }
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    // Direct lookup via optimized PanelSystem cache
     const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
 
     if (panelId) {
@@ -15989,7 +16357,6 @@ export class InteractionSystem implements IInteractionSystem {
         const panelState = this.panelSystem.getPanelState(panelId);
         if (!panelState) return;
 
-        // Skip if healthy
         if (!panelState.isDestroyed && panelState.health >= 100) return;
 
         this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
@@ -16004,7 +16371,7 @@ export class InteractionSystem implements IInteractionSystem {
                 this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
 
-            const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.CYAN.PRIMARY;
             this.spawnRepairParticles(cursor, color);
         }
     }
@@ -16028,13 +16395,16 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
+import { Query } from '@/engine/ecs/Query';
 
 export class ProjectileSystem implements IGameSystem {
+  // CACHED QUERY
+  private chargeQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform] });
+
   constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
-    const entities = this.registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });
+    const entities = this.registry.query(this.chargeQuery);
 
     for (const entity of entities) {
         if (!entity.active) continue;
@@ -16067,7 +16437,6 @@ export class ProjectileSystem implements IGameSystem {
                 if (motion) { motion.vx = 0; motion.vy = 0; }
             }
         }
-        // Flight logic (Rotation) is now handled by VisualSystem + AutoRotate component
     }
   }
 
@@ -16078,9 +16447,10 @@ export class ProjectileSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/VFXSystem.ts
 =====================================
-import { IGameSystem, IParticleSystem, IGameEventService, IFastEventService, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IParticleSystem, IGameEventService, IPanelSystem } from '@/engine/interfaces';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, FX_LOOKUP, FXCode } from '@/engine/signals/FastEventBus';
+import { FastEventType, FX_LOOKUP, FXCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
 import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
@@ -16092,8 +16462,7 @@ export class VFXSystem implements IGameSystem {
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private panelSystem: IPanelSystem,
     private timeSystem: TimeSystem
   ) {
@@ -16101,7 +16470,6 @@ export class VFXSystem implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    // 1. Slow Bus Events
     this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
     });
@@ -16127,21 +16495,28 @@ export class VFXSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-      // 2. Fast Bus Events (High Frequency)
-      this.fastEvents.process((id, a1, a2, a3, a4) => {
-          if (id === FastEventType.SPAWN_FX) {
-              const key = FX_LOOKUP[a1 as FXCode];
-              if (key) {
-                  this.executeRecipe(key, a2 / 100, a3 / 100, a4 / 100);
+      const unified = this.events as UnifiedEventService;
+      if (unified && typeof unified.processFastEvents === 'function') {
+          unified.processFastEvents((id, a1, a2, a3, a4) => {
+              if (id === FastEventType.SPAWN_FX) {
+                  const key = FX_LOOKUP[a1 as FXCode];
+                  if (key) {
+                      this.executeRecipe(
+                          key, 
+                          a2 / FLOAT_SCALAR, 
+                          a3 / FLOAT_SCALAR, 
+                          a4 / FLOAT_SCALAR
+                      );
+                  }
               }
-          }
-          else if (id === FastEventType.CAM_SHAKE) {
-              this.shakeSystem.addTrauma(a1 / 100);
-          }
-          else if (id === FastEventType.HIT_STOP) {
-              this.timeSystem.freeze(a1 / 1000); // Convert ms to seconds
-          }
-      });
+              else if (id === FastEventType.CAM_SHAKE) {
+                  this.shakeSystem.addTrauma(a1 / FLOAT_SCALAR);
+              }
+              else if (id === FastEventType.HIT_STOP) {
+                  this.timeSystem.freeze(a1 / 1000); 
+              }
+          });
+      }
   }
 
   private getPanelX(panelId: PanelId): number {
@@ -16312,6 +16687,7 @@ FILE: ./src/engine/systems/ParticleSystem.ts
 =====================================
 import { IGameSystem, IParticleSystem } from '@/engine/interfaces';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { PhysicsConfig } from '@/engine/config/PhysicsConfig';
 import { ParticleShape } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
@@ -16342,6 +16718,9 @@ export class ParticleSystem implements IParticleSystem {
   update(delta: number, time: number): void {
     if (this.count === 0) return;
 
+    // Use centralized constant
+    const friction = PhysicsConfig.PARTICLES.FRICTION;
+
     let i = 0;
     while (i < this.count) {
       this.life[i] -= delta;
@@ -16355,8 +16734,8 @@ export class ParticleSystem implements IParticleSystem {
       this.x[i] += this.vx[i] * delta;
       this.y[i] += this.vy[i] * delta;
       
-      this.vx[i] *= 0.95;
-      this.vy[i] *= 0.95;
+      this.vx[i] *= friction;
+      this.vy[i] *= friction;
 
       i++;
     }
@@ -16420,6 +16799,230 @@ export class ParticleSystem implements IParticleSystem {
 
   teardown(): void {
     this.count = 0;
+  }
+}
+
+
+=====================================
+FILE: ./src/engine/systems/PanelSystem.ts
+=====================================
+import { IPanelSystem, IGameEventService, IAudioService, DamageOptions } from '@/engine/interfaces';
+import { GameEvents } from '@/engine/signals/GameEvents';
+import { WorldRect, ViewportHelper } from '@/engine/math/ViewportHelper';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStore } from '@/engine/state/global/useStore';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { CollisionLayers } from '@/engine/config/PhysicsConfig';
+import { TransformData } from '@/engine/ecs/components/TransformData';
+import { ColliderData } from '@/engine/ecs/components/ColliderData';
+import { Tag } from '@/engine/ecs/types';
+import { PanelId } from '@/engine/config/PanelConfig';
+import { DOM_ID } from '@/ui/config/DOMConfig';
+
+interface PanelRuntime {
+  id: PanelId;
+  element: HTMLElement;
+  entityId: number;
+  stress: number; 
+}
+
+export class PanelSystem implements IPanelSystem {
+  private panels = new Map<PanelId, PanelRuntime>();
+  private resizeObserver: ResizeObserver;
+  private mutationObserver: MutationObserver;
+  private rectCache = new Map<PanelId, WorldRect>();
+
+  constructor(
+    private events: IGameEventService,
+    private audio: IAudioService
+  ) {
+    this.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const id = (entry.target as HTMLElement).getAttribute('data-panel-id') as PanelId;
+        if (id && this.panels.has(id)) {
+          this.syncEntity(id);
+        }
+      }
+    });
+
+    this.mutationObserver = new MutationObserver(() => this.scanDOM());
+
+    this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+       const panel = this.panels.get(p.id);
+       if (panel) panel.stress = Math.min(3.0, panel.stress + 0.5);
+    });
+
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'RESTORE') {
+            const count = useGameStore.getState().restoreAllPanels();
+            if (count > 0) {
+                this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
+                this.audio.playSound('fx_reboot_success'); 
+            }
+        }
+    });
+
+    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => this.destroyAll());
+    
+    setTimeout(() => this.scanDOM(), 100);
+  }
+
+  public get systemIntegrity() {
+      return useGameStore.getState().systemIntegrity;
+  }
+
+  update(delta: number, time: number): void {
+    for (const panel of this.panels.values()) {
+        if (panel.stress > 0.01) {
+            panel.stress *= 0.9; 
+            if (panel.stress < 0.01) panel.stress = 0;
+
+            const shake = panel.stress * 2.0;
+            const jx = (Math.random() - 0.5) * shake;
+            const jy = (Math.random() - 0.5) * shake;
+            
+            panel.element.style.transform = `translate3d(${jx.toFixed(1)}px, ${jy.toFixed(1)}px, 0)`;
+        } else if (panel.element.style.transform !== '') {
+            panel.element.style.transform = '';
+        }
+    }
+  }
+
+  private scanDOM() {
+    const root = document.getElementById(DOM_ID.APP_ROOT);
+    if (!root) return;
+
+    this.mutationObserver.disconnect();
+    this.mutationObserver.observe(root, { childList: true, subtree: true });
+
+    const nodes = document.querySelectorAll('[data-panel-id]');
+    const foundIds = new Set<string>();
+
+    nodes.forEach((node) => {
+        const el = node as HTMLElement;
+        const id = el.getAttribute('data-panel-id') as PanelId;
+        foundIds.add(id);
+
+        if (!this.panels.has(id)) {
+            this.register(id, el);
+        }
+    });
+
+    for (const id of this.panels.keys()) {
+        if (!foundIds.has(id)) {
+            this.unregister(id);
+        }
+    }
+  }
+
+  public register(id: PanelId, element: HTMLElement) {
+      if (this.panels.has(id)) return;
+
+      const registry = ServiceLocator.getRegistry();
+      const entity = registry.createEntity();
+      entity.addTag(Tag.OBSTACLE); 
+      
+      entity.addComponent(ComponentRegistry.create(ComponentType.Transform));
+      entity.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: id })); 
+      entity.addComponent(ComponentRegistry.create(ComponentType.Collider, {
+          shape: 'BOX', layer: CollisionLayers.PANEL, mask: 0 
+      }));
+
+      this.panels.set(id, { id, element, entityId: entity.id as number, stress: 0 });
+      this.resizeObserver.observe(element);
+      
+      registry.updateCache(entity);
+      useGameStore.getState().registerPanel(id, element);
+      this.syncEntity(id);
+  }
+
+  public unregister(id: PanelId) {
+      const p = this.panels.get(id);
+      if (!p) return;
+
+      this.resizeObserver.unobserve(p.element);
+      ServiceLocator.getRegistry().destroyEntity(p.entityId);
+      this.panels.delete(id);
+      this.rectCache.delete(id);
+      useGameStore.getState().unregisterPanel(id);
+  }
+
+  private syncEntity(id: PanelId) {
+      const p = this.panels.get(id);
+      if (!p) return;
+
+      const rect = p.element.getBoundingClientRect();
+      const worldRect = ViewportHelper.domToWorld(id, rect);
+      this.rectCache.set(id, worldRect);
+
+      const entity = ServiceLocator.getRegistry().getEntity(p.entityId);
+      if (entity) {
+          const t = entity.getComponent<TransformData>(ComponentType.Transform);
+          const c = entity.getComponent<ColliderData>(ComponentType.Collider);
+          if (t && c) {
+              t.x = worldRect.x;
+              t.y = worldRect.y;
+              c.width = worldRect.width;
+              c.height = worldRect.height;
+          }
+      }
+  }
+
+  public refreshAll() { this.scanDOM(); }
+  public refreshSingle(id: PanelId) { this.syncEntity(id); }
+
+  public damagePanel(id: PanelId, amount: number, options?: DamageOptions) {
+      if (useStore.getState().debugFlags.panelGodMode) return;
+      useGameStore.getState().damagePanel(id, amount, options);
+  }
+
+  public healPanel(id: PanelId, amount: number, sourceX?: number) {
+      useGameStore.getState().healPanel(id, amount, sourceX);
+  }
+  
+  public decayPanel(id: PanelId, amount: number) {
+      useGameStore.getState().decayPanel(id, amount);
+  }
+
+  public destroyAll() { 
+      useGameStore.getState().destroyAllPanels();
+  }
+
+  public getPanelRect(id: PanelId): WorldRect | undefined {
+      return this.rectCache.get(id);
+  }
+
+  public getPanelState(id: PanelId) {
+      const panel = useGameStore.getState().panels[id];
+      if (!panel) return undefined;
+      return { health: panel.health, isDestroyed: panel.isDestroyed };
+  }
+  
+  public getAllPanels() {
+      const results = [];
+      const state = useGameStore.getState();
+      for(const [id, rect] of this.rectCache) {
+          const pid = id as PanelId;
+          const panel = state.panels[pid];
+          if (panel) results.push({ ...rect, health: panel.health, isDestroyed: panel.isDestroyed });
+      }
+      return results;
+  }
+
+  public getPanelAt(x: number, y: number): PanelId | null {
+      for (const [id, rect] of this.rectCache) {
+          if (x >= rect.left && x <= rect.right && y >= rect.bottom && y <= rect.top) return id;
+      }
+      return null;
+  }
+
+  teardown(): void {
+      this.resizeObserver.disconnect();
+      this.mutationObserver.disconnect();
+      this.panels.clear();
+      this.rectCache.clear();
   }
 }
 
@@ -16550,19 +17153,19 @@ export class TimeSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/WeaponSystem.ts
 =====================================
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
 import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
+import { TargetData } from '@/engine/ecs/components/TargetData'; // <--- ADDED
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -16588,8 +17191,7 @@ export class WeaponSystem implements IGameSystem {
     private spawner: IEntitySpawner,
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private config: typeof ConfigService
   ) {
     this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
@@ -16616,7 +17218,6 @@ export class WeaponSystem implements IGameSystem {
     
     if (!playerEntity) return;
 
-    // --- HANDLE PURGE SEQUENCE ---
     if (this.purgeState.active) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         if (transform) {
@@ -16624,7 +17225,6 @@ export class WeaponSystem implements IGameSystem {
         }
     }
 
-    // --- HANDLE NORMAL FIRE ---
     if (this.purgeState.active || isDead) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
@@ -16643,7 +17243,6 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
-      // 50% Fewer Shots (Was 360, Now 180)
       this.purgeState = {
           active: true,
           shotsRemaining: 180, 
@@ -16655,8 +17254,8 @@ export class WeaponSystem implements IGameSystem {
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              this.fastEvents.emit(FastEventType.SPAWN_FX, FXCode.PURGE_BLAST, t.x * 100, t.y * 100, 0);
-              this.fastEvents.emit(FastEventType.CAM_SHAKE, 50); 
+              this.events.emit(GameEvents.SPAWN_FX, { type: 'PURGE_BLAST', x: t.x, y: t.y, angle: 0 });
+              this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
           }
       }
   }
@@ -16666,8 +17265,6 @@ export class WeaponSystem implements IGameSystem {
       const SPEED = 24; 
       const DAMAGE = 50;
       const LIFE = 2.4;
-      
-      // Target Rate: 164 shots/sec (approx 10% slower than 60fps * 3 = 180)
       const FIRE_RATE = 164; 
 
       this.purgeState.accumulator += delta * FIRE_RATE;
@@ -16690,10 +17287,9 @@ export class WeaponSystem implements IGameSystem {
               Faction.FRIENDLY, 
               LIFE, 
               DAMAGE, 
-              'PLAYER_PURGE'
+              WeaponIDs.PLAYER_PURGE
           );
 
-          // --- PRISMATIC COLOR LOGIC ---
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.6); 
           
@@ -16703,11 +17299,9 @@ export class WeaponSystem implements IGameSystem {
               model.g = this.tempColor.g;
               model.b = this.tempColor.b;
           }
-          // ----------------------------
 
-          // Audio: Play every 5th shot
           if (this.purgeState.shotsRemaining % 5 === 0) {
-             this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, originX * 100);
+             this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: originX });
           }
 
           this.purgeState.currentAngle += ANGLE_INCREMENT;
@@ -16746,7 +17340,7 @@ export class WeaponSystem implements IGameSystem {
         }
     });
 
-    this.fastEvents.emit(FastEventType.PLAY_SOUND, SoundCode.FX_PLAYER_FIRE, pPos.x * 100);
+    this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
   }
 
@@ -16768,7 +17362,7 @@ export class WeaponSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/ShakeSystem.ts
 =====================================
-import { IGameSystem, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { noise } from '@/engine/math/Noise';
 import { useStore } from '@/engine/state/global/useStore';
@@ -16781,11 +17375,13 @@ export class ShakeSystem implements IGameSystem {
   
   private cleanupListeners: (() => void) | null = null;
 
-  constructor(
-      private events: IGameEventService,
-      private fastEvents: IFastEventService
-  ) {
-    const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => this.addTrauma(p.amount));
+  constructor(private events: IGameEventService) {
+    // Only subscribe to SLOW path events. 
+    // High-freq shakes (explosions) come via VFXSystem reading the FastBus.
+    const unsub1 = this.events.subscribe(GameEvents.TRAUMA_ADDED, (p) => {
+        this.addTrauma(p.amount);
+    });
+    
     const unsub2 = this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const amount = p.damage >= 5 ? 0.4 : 0.3;
         this.addTrauma(amount);
@@ -16862,6 +17458,7 @@ import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
 const axisY = new THREE.Vector3(0, 1, 0); 
@@ -16871,13 +17468,19 @@ const qAim = new THREE.Quaternion();
 const qFinal = new THREE.Quaternion();
 
 export class RenderSystem implements IGameSystem {
+  // CACHED QUERY
+  private renderQuery = new Query({ 
+      all: [ComponentType.Transform, ComponentType.RenderModel] 
+  });
+
   constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
     RenderBuffer.reset();
 
-    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
+    // Use cached query
+    const entities = this.registry.query(this.renderQuery);
 
     for (const entity of entities) {
       if (!entity.active) continue;
@@ -16912,7 +17515,6 @@ export class RenderSystem implements IGameSystem {
       }
 
       // --- 2. Scale ---
-      // Compose: Transform (World) * Visual (Multiplier) * Base (Static Config) * Dynamic (Frame Deformation)
       let sX = transform.scale;
       let sY = transform.scale;
       let sZ = transform.scale;
@@ -17028,7 +17630,7 @@ export class GuidanceSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/CombatSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
@@ -17038,13 +17640,12 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
+import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified Bus
     private audio: IAudioService
   ) {}
 
@@ -17069,10 +17670,8 @@ export class CombatSystem implements IGameSystem {
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
           spawnFX: (type, x, y) => {
-              const typeId = getFXCode(type);
-              if (typeId) {
-                  this.fastEvents.emit(FastEventType.SPAWN_FX, typeId, x * 100, y * 100, 0);
-              }
+              // Simplified: Just emit. UnifiedService handles fast routing.
+              this.events.emit(GameEvents.SPAWN_FX, { type, x, y, angle: 0 });
           },
           spawnImpact: (x, y, r, g, b, angle) => {
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
@@ -17080,17 +17679,13 @@ export class CombatSystem implements IGameSystem {
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
           playAudio: (key) => {
-              const keyId = getSoundCode(key.toLowerCase());
-              if (keyId) this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, 0);
+              this.events.emit(GameEvents.PLAY_SOUND, { key });
           },
           playSpatialAudio: (key, x) => {
-              const keyId = getSoundCode(key.toLowerCase());
-              if (keyId) {
-                  this.fastEvents.emit(FastEventType.PLAY_SOUND, keyId, (x || 0) * 100);
-              }
+              this.events.emit(GameEvents.PLAY_SOUND, { key, x });
           },
           addTrauma: (amount) => {
-              this.fastEvents.emit(FastEventType.CAM_SHAKE, amount * 100);
+              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
           },
           flashEntity: (id) => {
               this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
@@ -17132,10 +17727,12 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          const fxId = getFXCode(finalFX);
-          if (fxId) {
-              this.fastEvents.emit(FastEventType.SPAWN_FX, fxId, transform.x * 100, transform.y * 100, angleToUse * 100);
-          }
+          this.events.emit(GameEvents.SPAWN_FX, { 
+              type: finalFX, 
+              x: transform.x, 
+              y: transform.y, 
+              angle: angleToUse 
+          });
       }
   }
 
@@ -17146,42 +17743,84 @@ export class CombatSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/AudioDirector.ts
 =====================================
-import { IGameSystem, IPanelSystem, IGameEventService, IFastEventService, IAudioService } from '@/engine/interfaces';
-import { FastEvents, SOUND_ID_MAP } from '@/engine/signals/FastEventBus';
+import { IGameSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType, SOUND_LOOKUP, SoundCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 export class AudioDirector implements IGameSystem {
-  private readCursor = 0;
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService,
+    private events: IGameEventService, // Unified
     private audio: IAudioService
   ) {
-    this.readCursor = this.fastEvents.getCursor();
+    this.setupSubscriptions();
+  }
+
+  private setupSubscriptions() {
+    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+        this.playSpatial(p.id, 'loop_heal');
+    });
+
+    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+        if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
+        else this.playSpatial(p.id, 'fx_reboot_success');
+    });
+
+    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+        this.playSpatial(p.id, 'fx_impact_heavy');
+        this.audio.duckMusic(0.8, 1.5); 
+    });
+
+    this.events.subscribe(GameEvents.GAME_OVER, () => {
+        this.audio.playSound('fx_player_death');
+        this.audio.duckMusic(1.0, 3.0);
+    });
+
+    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+        this.audio.playSound('fx_level_up');
+    });
+
+    // We no longer subscribe to PLAY_SOUND here for slow path,
+    // because UnifiedEventService routes standard playSound calls to the fast bus if they match a SoundCode.
+    // However, if we emit a sound that IS NOT in the SoundCode list (unlikely for game logic),
+    // it would fall through to the slow bus.
+    // For completeness, we can keep it as a fallback:
+    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
+        // Only play if it wasn't handled by fast path (optimization)
+        // In this architecture, UnifiedService only emits slow event if NOT fast code.
+        const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
+        this.audio.playSound(p.key as AudioKey, pan);
+    });
   }
 
   update(delta: number, time: number): void {
-    // READ ONLY FROM FAST BUS
-    // Logic -> Bridge -> FastBus -> AudioDirector
-    // Combat -> FastBus -> AudioDirector
-    
-    this.readCursor = this.fastEvents.readEvents(this.readCursor, (id, a1, a2, a3, a4) => {
-        if (id === FastEvents.PLAY_SOUND) {
-            // a1: SoundID, a2: Pan * 100
-            const key = SOUND_ID_MAP[a1];
-            if (key) {
-                const pan = this.calculatePan(a2 / 100); 
-                this.audio.playSound(key as AudioKey, pan);
+    // Cast to access the optimized polling method
+    const unified = this.events as UnifiedEventService;
+    if (unified.processFastEvents) {
+        unified.processFastEvents((id, a1, a2, a3, a4) => {
+            if (id === FastEventType.PLAY_SOUND) {
+                const key = SOUND_LOOKUP[a1 as SoundCode];
+                if (key) {
+                    const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
+                    this.audio.playSound(key as AudioKey, pan);
+                }
             }
-        }
-        else if (id === FastEvents.DUCK_MUSIC) {
-            // a1: Intensity * 100, a2: Duration * 100
-            this.audio.duckMusic(a1 / 100, a2 / 100);
-        }
-    });
+            else if (id === FastEventType.DUCK_MUSIC) {
+                this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
+            }
+        });
+    }
+  }
+
+  private playSpatial(panelId: PanelId, key: AudioKey) {
+      const rect = this.panelSystem.getPanelRect(panelId);
+      const x = rect ? rect.x : 0;
+      this.audio.playSound(key, this.calculatePan(x));
   }
 
   private calculatePan(worldX: number): number {
@@ -17464,7 +18103,6 @@ FILE: ./src/engine/systems/ProgressionSystem.ts
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import { UpgradeOption } from '@/engine/types/game.types';
 
 export class ProgressionSystem implements IGameSystem {
@@ -17493,7 +18131,6 @@ export class ProgressionSystem implements IGameSystem {
 
   public addScore(amount: number) {
     this.score += amount;
-    useGameStore.getState().setScore(this.score);
   }
 
   public addXp(amount: number) {
@@ -17505,34 +18142,21 @@ export class ProgressionSystem implements IGameSystem {
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
-        this.syncStore(); 
     }
-    
-    this.syncStore();
   }
 
   public applyUpgrade(option: UpgradeOption) {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           
+          // Instant-use options don't increment a level counter
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
-              this.syncStore(); 
               return;
           }
           
           const current = this.activeUpgrades[option] || 0;
           this.activeUpgrades[option] = current + 1;
-          this.syncStore();
       }
-  }
-
-  private syncStore() {
-      useGameStore.getState().setProgressionData({
-          xp: this.xp,
-          level: this.level,
-          nextXp: this.xpToNextLevel,
-          points: this.upgradePoints
-      });
   }
 
   public reset() {
@@ -17545,9 +18169,6 @@ export class ProgressionSystem implements IGameSystem {
         'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
         'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
       };
-      
-      useGameStore.getState().setScore(0);
-      this.syncStore();
   }
 
   teardown(): void {}
@@ -17874,13 +18495,12 @@ export class TargetingSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/BehaviorSystem.ts
 =====================================
-import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService, IFastEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService } from '@/engine/interfaces';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
-import { FastEventType, getFXCode, getSoundCode } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
@@ -17888,6 +18508,7 @@ import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Faction } from '@/engine/ecs/types';
+import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
   constructor(
@@ -17897,8 +18518,7 @@ export class BehaviorSystem implements IGameSystem {
     private panelSystem: IPanelSystem,
     private particleSystem: IParticleSystem,
     private audio: IAudioService,
-    private events: IGameEventService,
-    private fastEvents: IFastEventService
+    private events: IGameEventService // Unified
   ) {
     events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -17921,11 +18541,11 @@ export class BehaviorSystem implements IGameSystem {
       spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
           let bullet;
           if (damage) {
-              const finalConfig = configId || 'DAEMON_ORB';
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
               bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
-              const finalConfig = configId || 'ENEMY_HUNTER';
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
               bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
           if (ownerId !== undefined) {
@@ -17935,8 +18555,7 @@ export class BehaviorSystem implements IGameSystem {
           return bullet;
       },
       spawnFX: (type, x, y, angle) => {
-          const id = getFXCode(type);
-          if (id) this.fastEvents.emit(FastEventType.SPAWN_FX, id, x * 100, y * 100, (angle || 0) * 100);
+          this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: angle || 0 });
       },
       spawnParticle: (x, y, color, vx, vy, life, size) => {
           this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
@@ -17944,15 +18563,7 @@ export class BehaviorSystem implements IGameSystem {
       damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
       playSound: (key, x) => {
-          const pan = x !== undefined && halfWidth > 0 
-            ? Math.max(-1, Math.min(1, x / halfWidth)) 
-            : 0;
-          const id = getSoundCode(key.toLowerCase());
-          if (id) {
-              this.fastEvents.emit(FastEventType.PLAY_SOUND, id, pan * 100);
-          } else {
-              this.audio.playSound(key as any, pan);
-          }
+          this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
       config: this.config
@@ -17975,12 +18586,130 @@ export class BehaviorSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/StateSyncSystem.ts
+=====================================
+import { IGameSystem, IPanelSystem } from '@/engine/interfaces';
+import { HealthSystem } from './HealthSystem';
+import { ProgressionSystem } from './ProgressionSystem';
+import { GameStream } from '@/engine/state/GameStream';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+
+export class StateSyncSystem implements IGameSystem {
+  private cache = {
+    health: -1,
+    maxHealth: -1,
+    reboot: -1,
+    integrity: -1,
+    score: -1,
+    xp: -1,
+    xpNext: -1,
+    level: -1,
+    points: -1
+  };
+
+  constructor(
+    private healthSys: HealthSystem,
+    private progSys: ProgressionSystem,
+    private panelSys: IPanelSystem
+  ) {}
+
+  update(delta: number, time: number): void {
+    this.syncHealth();
+    this.syncProgression();
+    this.syncIntegrity();
+  }
+
+  private syncHealth() {
+    const hp = this.healthSys.playerHealth;
+    const max = this.healthSys.maxPlayerHealth;
+    const reboot = this.healthSys.playerRebootProgress;
+
+    // 1. Health
+    if (hp !== this.cache.health) {
+      GameStream.set('PLAYER_HEALTH', hp);
+      // We use getState().set... to allow the slice to handle any side-effects if needed,
+      // or direct setState if the slice just sets the value. 
+      // Using direct setState here for raw data sync to match previous logic.
+      useGameStore.setState({ playerHealth: hp });
+      this.cache.health = hp;
+    }
+
+    // 2. Max Health
+    if (max !== this.cache.maxHealth) {
+      GameStream.set('PLAYER_MAX_HEALTH', max);
+      useGameStore.setState({ maxPlayerHealth: max });
+      this.cache.maxHealth = max;
+    }
+
+    // 3. Reboot Progress
+    if (reboot !== this.cache.reboot) {
+      GameStream.set('PLAYER_REBOOT', reboot);
+      useGameStore.setState({ playerRebootProgress: reboot });
+      this.cache.reboot = reboot;
+    }
+  }
+
+  private syncProgression() {
+    const score = this.progSys.score;
+    const xp = this.progSys.xp;
+    const level = this.progSys.level;
+    const next = this.progSys.xpToNextLevel;
+    const points = this.progSys.upgradePoints;
+
+    // 1. Score
+    if (score !== this.cache.score) {
+      GameStream.set('SCORE', score);
+      // Use the slice action for score to handle High Score logic
+      useGameStore.getState().setScore(score);
+      this.cache.score = score;
+    }
+
+    // 2. XP & Leveling
+    if (xp !== this.cache.xp || level !== this.cache.level || next !== this.cache.xpNext || points !== this.cache.points) {
+      GameStream.set('XP', xp);
+      GameStream.set('XP_NEXT', next);
+      GameStream.set('LEVEL', level);
+      
+      useGameStore.getState().setProgressionData({
+        xp,
+        level,
+        nextXp: next,
+        points
+      });
+
+      this.cache.xp = xp;
+      this.cache.level = level;
+      this.cache.xpNext = next;
+      this.cache.points = points;
+    }
+  }
+
+  private syncIntegrity() {
+    // PanelRegistrySystem usually handles its own store updates for Panel Registration,
+    // but the aggregate Integrity score is a calculated value we want to stream.
+    const integrity = this.panelSys.systemIntegrity;
+    
+    if (integrity !== this.cache.integrity) {
+        GameStream.set('SYSTEM_INTEGRITY', integrity);
+        // Note: PanelSystem might update the store directly during damage calculations,
+        // but syncing here ensures GameStream is always 1:1 with the simulation frame.
+        this.cache.integrity = integrity;
+    }
+  }
+
+  teardown(): void {
+    // No cleanup needed for pure sync
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/systems/WaveSystem.ts
 =====================================
 import { IGameSystem, IEntitySpawner, IPanelSystem, IGameEventService } from '@/engine/interfaces';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStore } from '@/engine/state/global/useStore';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, ArchetypeID } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
@@ -17998,7 +18727,7 @@ interface WaveDef {
 export class WaveSystem implements IGameSystem {
   private waveTime = 0;
   private currentWaveIndex = 0;
-  private spawnQueue: { type: string, time: number }[] = [];
+  private spawnQueue: { type: ArchetypeID, time: number }[] = [];
   private loopCount = 0;
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
@@ -18091,8 +18820,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   private spawnDrillerOn(panel: any, count: number) {
-      // Replaced MODEL_CONFIG with ENEMIES def
-      const offset = ENEMIES.driller.params?.spawnOffset || 0.32;
+      const offset = ENEMIES[EnemyTypes.DRILLER].params?.spawnOffset || 0.32;
 
       for(let i=0; i<count; i++) {
           const side = Math.floor(Math.random() * 4);
@@ -18200,9 +18928,13 @@ export class WaveSystem implements IGameSystem {
 
   private queueSpawns(wave: WaveDef) {
     const count = wave.count + (this.loopCount * 2);
+    // Cast string type from JSON to ArchetypeID
+    // Note: This is the one place we trust JSON data, assuming waves.json uses valid keys
+    const typeKey = wave.type as ArchetypeID; 
+    
     for (let i = 0; i < count; i++) {
         this.spawnQueue.push({
-            type: wave.type,
+            type: typeKey,
             time: this.waveTime + (i * wave.interval)
         });
     }
@@ -18240,8 +18972,12 @@ import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
+import { Query } from '@/engine/ecs/Query';
 
 export class LifeCycleSystem implements IGameSystem {
+  // CACHED QUERY
+  private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService
@@ -18256,7 +18992,7 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const mortals = this.registry.query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+    const mortals = this.registry.query(this.mortalQuery);
 
     for (const entity of mortals) {
       if (!entity.active) continue;
@@ -18335,7 +19071,6 @@ FILE: ./src/engine/systems/VisualSystem.ts
 =====================================
 import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
@@ -18345,10 +19080,14 @@ import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
 export class VisualSystem implements IGameSystem {
   private tempColor = new THREE.Color();
+  
+  // CACHED QUERY
+  private visualQuery = new Query({ all: [ComponentType.RenderTransform] });
 
   constructor(
     private registry: IEntityRegistry,
@@ -18356,7 +19095,6 @@ export class VisualSystem implements IGameSystem {
     private interactionSystem: IInteractionSystem,
     events: IGameEventService
   ) {
-    // RESTORED: Flash logic moved from RenderSystem
     events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
         const entity = this.registry.getEntity(p.id);
         if (entity) {
@@ -18368,11 +19106,13 @@ export class VisualSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const CFG = VISUAL_CONFIG.DEFORMATION;
+    const RENDER_CFG = VISUAL_CONFIG.RENDER;
+    
     const isZenMode = useGameStore.getState().isZenMode;
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
 
-    const entities = this.registry.query({ all: [ComponentType.RenderTransform] });
+    const entities = this.registry.query(this.visualQuery);
 
     for (const entity of entities) {
       if (!entity.active) continue;
@@ -18428,9 +19168,9 @@ export class VisualSystem implements IGameSystem {
 
       if (effect) {
           // Effect Decay
-          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * 15.0));
+          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
-              effect.flash = Math.max(0, effect.flash - (delta * 6.0));
+              effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
           }
@@ -18499,13 +19239,17 @@ import { IPhysicsSystem, IEntityRegistry } from '@/engine/interfaces';
 import { SpatialGrid } from '@/engine/ecs/SpatialGrid';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Query } from '@/engine/ecs/Query';
 
 export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
   private registry: EntityRegistry;
+
+  // CACHED QUERIES
+  private motionQuery = new Query({ all: [ComponentType.Transform, ComponentType.Motion] });
+  private colliderQuery = new Query({ all: [ComponentType.Transform, ComponentType.Collider] });
 
   constructor(registry: IEntityRegistry) {
     this.spatialGrid = new SpatialGrid();
@@ -18516,9 +19260,8 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    // 1. INTEGRATION STEP (Movement)
-    // Only entities with Motion need position updates
-    const movables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Motion] });
+    // 1. INTEGRATION STEP
+    const movables = this.registry.query(this.motionQuery);
     
     for (const entity of movables) {
       if (!entity.active) continue;
@@ -18537,15 +19280,12 @@ export class PhysicsSystem implements IPhysicsSystem {
       }
     }
 
-    // 2. BROADPHASE STEP (Spatial Hashing)
-    // Insert ALL colliders (Static + Dynamic) into the grid
-    const collidables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Collider] });
+    // 2. BROADPHASE STEP
+    const collidables = this.registry.query(this.colliderQuery);
 
     for (const entity of collidables) {
         if (!entity.active) continue;
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        // We don't need the Collider component to insert, just the position, 
-        // but we filter by Collider existence to avoid inserting pure visual effects.
         if (transform) {
             this.spatialGrid.insert(entity.id, transform.x, transform.y);
         }
@@ -18759,12 +19499,10 @@ export type CollisionHandler = (entityA: Entity, entityB: Entity, ctx: CombatCon
 =====================================
 FILE: ./src/engine/handlers/weapons/WeaponLogic.ts
 =====================================
-import { Entity } from '@/engine/ecs/Entity';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { GAME_MATH } from '@/engine/config/constants/MathConstants';
+import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 
 export interface ShotDef {
   x: number;
@@ -18773,7 +19511,7 @@ export interface ShotDef {
   vy: number;
   damage: number;
   life: number;
-  configId: string;
+  configId: ArchetypeID;
   isHoming: boolean;
 }
 
@@ -18801,8 +19539,8 @@ export const calculatePlayerShots = (
   const dy = target.y - origin.y;
   const baseAngle = Math.atan2(dy, dx);
 
-  let configId = 'PLAYER_STANDARD';
-  if (forkLevel > 0) configId = 'PLAYER_FORK';
+  let configId: ArchetypeID = WeaponIDs.PLAYER_STANDARD;
+  if (forkLevel > 0) configId = WeaponIDs.PLAYER_FORK;
   
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
@@ -18840,7 +19578,7 @@ export const calculatePlayerShots = (
           vy: Math.sin(rearAngle) * speed,
           damage,
           life,
-          configId: 'PLAYER_BACKDOOR',
+          configId: WeaponIDs.PLAYER_BACKDOOR,
           isHoming: false
       });
   }
@@ -18851,7 +19589,6 @@ export const calculatePlayerShots = (
       for (let i = 0; i < snifferLevel; i++) {
           const angle = i * angleStep;
           
-          // FIX: Use MUZZLE_OFFSET instead of hardcoded 10
           const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
           const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
           
@@ -18862,7 +19599,7 @@ export const calculatePlayerShots = (
               vy: Math.sin(angle) * speed * 0.5,
               damage: damage * 0.5,
               life: life * 2,
-              configId: 'PLAYER_SNIFFER',
+              configId: WeaponIDs.PLAYER_SNIFFER,
               isHoming: true
           });
       }
@@ -18877,33 +19614,25 @@ FILE: ./src/engine/handlers/ai/KamikazeLogic.ts
 =====================================
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
+import { Sequence, Parallel } from '@/engine/ai/behavior/composites';
+import { Succeeder } from '@/engine/ai/behavior/decorators';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { SpinVisual, MoveToTarget } from '@/engine/ai/nodes/actions';
 
-const KAMIKAZE_DEF: NodeDef = {
-  type: 'Sequence',
-  children: [
-    { type: 'SpawnPhase', args: [1.5] },
-    {
-      type: 'Parallel',
-      children: [
-        { 
-            type: 'Succeeder', 
-            children: [{ type: 'SpinVisual', args: [10.0] }] 
-        },
-        { type: 'MoveToTarget', args: [12] } // Speed
-      ]
-    }
-  ]
-};
-
-let treeRoot: any = null;
+// Direct Instantiation: Type-safe and clearer
+const KAMIKAZE_TREE = new Sequence([
+  new SpawnPhase(1.5),
+  new Parallel([
+    new Succeeder(
+      new SpinVisual(10.0)
+    ),
+    new MoveToTarget(12) // Speed
+  ])
+]);
 
 export const KamikazeLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) {
-        treeRoot = BehaviorTreeBuilder.build(KAMIKAZE_DEF);
-    }
-    treeRoot.tick(e, ctx);
+    KAMIKAZE_TREE.tick(e, ctx);
   }
 };
 
@@ -18913,38 +19642,28 @@ FILE: ./src/engine/handlers/ai/HunterLogic.ts
 =====================================
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
+import { Sequence, MemSequence } from '@/engine/ai/behavior/composites';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { HoverDrift, AimAndFire } from '@/engine/ai/nodes/hunterNodes';
+import { Wait } from '@/engine/ai/nodes/actions';
 
-const HUNTER_DEF: NodeDef = {
-  type: 'Sequence',
-  children: [
-    { type: 'SpawnPhase', args: [1.5] },
-    {
-        type: 'MemSequence',
-        id: 'hunter_tactics',
-        children: [
-            // 1. Approach & Drift
-            { type: 'HoverDrift', args: [10.0, 18.0, 0.8, 1.5] },
-            
-            // 2. Aim & Fire (Atomic Operation)
-            // AimDuration, ProjectileSpeed, ConfigID
-            { type: 'AimAndFire', args: [0.5, 40.0, 'ENEMY_HUNTER'] },
-            
-            // 3. Cooldown
-            { type: 'Wait', args: [0.3, 0.6] }
-        ]
-    }
-  ]
-};
-
-let treeRoot: any = null;
+const HUNTER_TREE = new Sequence([
+  new SpawnPhase(1.5),
+  new MemSequence([
+    // 1. Approach & Drift (MinRange, MaxRange, MinDur, MaxDur)
+    new HoverDrift(10.0, 18.0, 0.8, 1.5),
+    
+    // 2. Aim & Fire (AimDuration, Speed, ConfigID)
+    new AimAndFire(0.5, 40.0, 'ENEMY_HUNTER'),
+    
+    // 3. Cooldown
+    new Wait(0.3, 0.6)
+  ], 'hunter_tactics')
+]);
 
 export const HunterLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) {
-        treeRoot = BehaviorTreeBuilder.build(HUNTER_DEF);
-    }
-    treeRoot.tick(e, ctx);
+    HUNTER_TREE.tick(e, ctx);
   }
 };
 
@@ -18993,38 +19712,28 @@ FILE: ./src/engine/handlers/ai/DaemonLogic.ts
 =====================================
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
+import { Sequence, Parallel, MemSequence } from '@/engine/ai/behavior/composites';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { Wait } from '@/engine/ai/nodes/actions';
+import { OrbitControl, DaemonAim, ChargeMechanic, HasTargetLock, FireDaemonShot } from '@/engine/ai/nodes/daemonNodes';
 
-const DAEMON_DEF: NodeDef = {
-  type: 'Sequence',
-  children: [
-    { type: 'SpawnPhase', args: [1.0] },
-    {
-        type: 'Parallel',
-        children: [
-            { type: 'OrbitControl', args: ['ACTIVE'] },
-            { type: 'DaemonAim' },
-            {
-                type: 'MemSequence',
-                id: 'daemon_cycle',
-                children: [
-                    { type: 'ChargeMechanic', args: [2.0] },
-                    { type: 'HasTargetLock' },
-                    { type: 'FireDaemonShot', args: [35.0, 20] },
-                    { type: 'Wait', args: [0.5] }
-                ]
-            }
-        ]
-    }
-  ]
-};
-
-let treeRoot: any = null;
+const DAEMON_TREE = new Sequence([
+  new SpawnPhase(1.0),
+  new Parallel([
+    new OrbitControl('ACTIVE'),
+    new DaemonAim(),
+    new MemSequence([
+      new ChargeMechanic(2.0),
+      new HasTargetLock(),
+      new FireDaemonShot(35.0, 20),
+      new Wait(0.5)
+    ], 'daemon_cycle')
+  ])
+]);
 
 export const DaemonLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DAEMON_DEF);
-    treeRoot.tick(e, ctx);
+    DAEMON_TREE.tick(e, ctx);
   }
 };
 
@@ -19059,42 +19768,37 @@ FILE: ./src/engine/handlers/ai/DrillerLogic.ts
 =====================================
 import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
-import { BehaviorTreeBuilder, NodeDef } from '@/engine/ai/BehaviorTreeBuilder';
+import { Sequence, Selector } from '@/engine/ai/behavior/composites';
+import { Succeeder } from '@/engine/ai/behavior/decorators';
+import { SpawnPhase } from '@/engine/ai/nodes/logic';
+import { SpinVisual, MoveToTarget } from '@/engine/ai/nodes/actions';
+import { IsTargetInRange } from '@/engine/ai/nodes/conditions';
+import { DrillAttack } from '@/engine/ai/nodes/drillerNodes';
 
-// Increased Range check from 0.5 to 1.5 to ensure they stop and drill even if slightly offset
-const DRILLER_DEF: NodeDef = {
-  type: 'Sequence',
-  children: [
-    { type: 'SpawnPhase', args: [1.5] },
-    {
-      type: 'Sequence',
-      children: [
-        { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [5.0] }] },
-        {
-          type: 'Selector',
-          children: [
-            {
-              type: 'Sequence',
-              children: [
-                { type: 'IsTargetInRange', args: [1.5] }, 
-                { type: 'Succeeder', children: [{ type: 'SpinVisual', args: [15.0] }] },
-                { type: 'DrillAttack', args: [0.2] }
-              ]
-            },
-            { type: 'MoveToTarget', args: [8, 1.2] } // Speed 8, StopDistance 1.2
-          ]
-        }
-      ]
-    }
-  ]
-};
-
-let treeRoot: any = null;
+const DRILLER_TREE = new Sequence([
+  new SpawnPhase(1.5),
+  new Sequence([
+    // Always spin slowly while moving
+    new Succeeder(new SpinVisual(5.0)),
+    
+    new Selector([
+      // A. Attack Sequence
+      new Sequence([
+        new IsTargetInRange(1.5),
+        new Succeeder(new SpinVisual(15.0)), // Spin faster when drilling
+        // Updated Interval: 0.08s (12.5Hz) for sustained panel shake
+        new DrillAttack(0.08) 
+      ]),
+      
+      // B. Approach (Fallback / Repath)
+      new MoveToTarget(8, 1.2)
+    ])
+  ])
+]);
 
 export const DrillerLogic: EnemyLogic = {
   update: (e: Entity, ctx: AIContext) => {
-    if (!treeRoot) treeRoot = BehaviorTreeBuilder.build(DRILLER_DEF);
-    treeRoot.tick(e, ctx);
+    DRILLER_TREE.tick(e, ctx);
   }
 };
 
@@ -19134,13 +19838,14 @@ import { ConfigService } from './ConfigService';
 import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
 import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
 import { SystemPhase } from '@/engine/interfaces';
 
-// Common Systems
+// Systems
 import { TimeSystem } from '@/engine/systems/TimeSystem';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { PhysicsSystem } from '@/engine/systems/PhysicsSystem';
@@ -19162,8 +19867,7 @@ import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
-
-// Desktop Systems
+import { StateSyncSystem } from '@/engine/systems/StateSyncSystem';
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
 import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { CollisionSystem } from '@/engine/systems/CollisionSystem';
@@ -19175,8 +19879,12 @@ export class EngineFactory {
   public static create(): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
-    const eventBus = SharedGameEventBus; 
-    const fastEventBus = new FastEventBusImpl();
+    const rawSlowBus = SharedGameEventBus; 
+    const rawFastBus = new FastEventBusImpl();
+    
+    // UNIFIED BUS
+    const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
+
     const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
     const hudService = new HUDService(); 
@@ -19185,8 +19893,12 @@ export class EngineFactory {
     // 2. Global Registration
     ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
+    // Replace specific bus registrations with the Unified one
     ServiceLocator.register('GameEventService', eventBus);
-    ServiceLocator.register('FastEventService', fastEventBus);
+    ServiceLocator.register('FastEventService', rawFastBus); // Keep raw access for legacy/direct checks if needed? Or remove?
+    // Actually, we should try to use Unified everywhere. But Directors might need the raw fast bus interface
+    // unless we typecast. Let's register Unified as the primary IGameEventService.
+    
     ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
@@ -19201,7 +19913,8 @@ export class EngineFactory {
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
-    const shakeSystem = new ShakeSystem(eventBus, fastEventBus);
+    // ShakeSystem consumes events
+    const shakeSystem = new ShakeSystem(eventBus); 
     
     const panelSystem = new PanelRegistrySystem(eventBus, audioService);
     const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
@@ -19218,44 +19931,43 @@ export class EngineFactory {
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
-    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, fastEventBus);
+    // Pass Unified Bus to Behavior
+    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
-    // Directors
-    const audioDirector = new AudioDirector(panelSystem, eventBus, fastEventBus, audioService);
-    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, fastEventBus, panelSystem, timeSystem);
+    // Directors need to consume Fast Events. UnifiedEventService exposes processFastEvents.
+    const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
+    const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    // Refactored Visual Pipeline (Updated Constructor)
     const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const renderSystem = new RenderSystem(registry);
 
-    // Desktop Specifics
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
-    const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
+    
+    // Producers use Unified Bus
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+    const combatSystem = new CombatSystem(registry, eventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
+
+    const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-    engine.injectFastEventBus(fastEventBus);
+    engine.injectFastEventBus(rawFastBus); // Engine cleans the raw buffer
 
-    // 6. System Registration Helpers
+    // 6. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
     };
 
-    // --- PIPELINE CONSTRUCTION ---
-
-    // PHASE 0: INPUT
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
     register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
     register(movementSystem, SystemPhase.INPUT);
 
-    // PHASE 1: LOGIC
     register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
     register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
     register(targetingSystem, SystemPhase.LOGIC);
@@ -19264,23 +19976,20 @@ export class EngineFactory {
     register(behaviorSystem, SystemPhase.LOGIC); 
     register(weaponSystem, SystemPhase.LOGIC);   
 
-    // PHASE 2: PHYSICS
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
     register(guidanceSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
 
-    // PHASE 3: COLLISION
     register(collisionSystem, SystemPhase.COLLISION);
     register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
 
-    // PHASE 4: STATE
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(hudService, SystemPhase.STATE);
+    register(stateSyncSystem, SystemPhase.STATE);
 
-    // PHASE 5: RENDER
     register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
@@ -19289,10 +19998,7 @@ export class EngineFactory {
     register(worldSystem, SystemPhase.RENDER, 'WorldSystem');
     register(audioDirector, SystemPhase.RENDER);
 
-    // 7. Final Setup
     engine.setup(ServiceLocator);
-
-    // 8. Player Spawn
     spawner.spawnPlayer();
 
     return engine;
@@ -19349,11 +20055,9 @@ import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
-import { ArchetypeIDs } from '@/engine/config/Identifiers';
+import { ArchetypeIDs, ArchetypeID, WeaponIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
-import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -19362,21 +20066,31 @@ export class EntitySpawner implements IEntitySpawner {
     this.registry = registry as EntityRegistry;
   }
 
-  public spawn(archetypeId: string, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
+  public spawn(archetypeId: ArchetypeID, overrides: Record<string, any> = {}, extraTags: Tag[] = []): Entity {
     const blueprint = ARCHETYPES[archetypeId];
-    if (!blueprint) return this.registry.createEntity();
+    if (!blueprint) {
+        console.error(`[EntitySpawner] Archetype not found: ${archetypeId}`);
+        return this.registry.createEntity();
+    }
 
     const e = this.registry.createEntity();
+    
+    // 1. Tags
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
+    // 2. Components (Merge Blueprint Data with Runtime Overrides)
     for (const compDef of blueprint.components) {
-        const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
+        const blueprintData = compDef.data || {};
         const runtimeData = overrides[compDef.type] || {};
+        
+        // Shallow merge is usually sufficient for flat component data
         const mergedData = { ...blueprintData, ...runtimeData };
+        
         e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
 
+    // 3. Asset Metadata (Legacy support for old rendering systems)
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
@@ -19390,7 +20104,8 @@ export class EntitySpawner implements IEntitySpawner {
   }
 
   public spawnPlayer(): Entity { return this.spawn(ArchetypeIDs.PLAYER); }
-  public spawnEnemy(type: string, x: number, y: number): Entity {
+  
+  public spawnEnemy(type: ArchetypeID, x: number, y: number): Entity {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
@@ -19400,48 +20115,30 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: string = 'PLAYER_STANDARD', 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, 
       ownerId?: number
   ): Entity {
-    const isEnemy = faction === Faction.HOSTILE;
-    const id = isEnemy ? ArchetypeIDs.BULLET_ENEMY : ArchetypeIDs.BULLET_PLAYER;
+    // Map abstract faction types to specific IDs if generic provided
+    let id = projectileId;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
+    if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
+
+    // Calculate rotation based on velocity
     const rotation = Math.atan2(vy, vx);
-    const config = PROJECTILE_CONFIG[projectileId];
-    
-    // Geometry Key is now derived directly from the ID (See Archetypes.ts Phase 4)
-    const geoId = `GEO_${projectileId}`; 
-    const color = config ? config.color : [1, 1, 1];
-    const s = config ? config.scale : [1,1,1]; 
-    const pulseSpeed = config ? config.pulseSpeed : 0;
 
-    const elasticity = projectileId === 'PLAYER_PURGE' ? 0.0 : 2.0;
-
+    // Prepare Runtime Overrides
+    // We ONLY set what is dynamic. Visuals, Colliders, Elasticity etc come from the Archetype.
     const overrides: Record<string, any> = {
-        [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
+        [ComponentType.Transform]: { x, y, rotation }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.RenderModel]: {
-            geometryId: geoId,
-            materialId: MATERIAL_IDS.PROJECTILE,
-            r: color[0], g: color[1], b: color[2],
-        },
-        [ComponentType.RenderTransform]: {
-            scale: 1.0,
-            baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
-        },
-        [ComponentType.RenderEffect]: { elasticity, pulseSpeed },
-        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+        [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
-    const entity = this.spawn(id, overrides);
-
-    if (config && config.spinSpeed !== 0) {
-        entity.addComponent(new AutoRotate(config.spinSpeed));
-    }
-
-    return entity;
+    // Spawn using the Blueprint
+    return this.spawn(id, overrides);
   }
 
   public spawnParticle(
@@ -19452,8 +20149,11 @@ export class EntitySpawner implements IEntitySpawner {
       size: number = 1.0, 
       shape: ParticleShape = ParticleShape.CIRCLE
   ): void {
+    // Particles are transient and simple, so we construct them manually to avoid overhead of Archetype lookup
+    // (Though we could make a PARTICLE archetype, direct creation is faster for high-frequency low-logic entities)
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
+    
     e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
     e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
     e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
@@ -19474,46 +20174,23 @@ FILE: ./src/engine/services/HUDService.ts
 =====================================
 import { IGameSystem } from '@/engine/interfaces';
 
+/**
+ * @deprecated
+ * UI Updates are now handled reactively via GameStream.
+ * This service is kept for interface compatibility until full removal.
+ */
 export class HUDService implements IGameSystem {
-  private scoreNode: HTMLElement | null = null;
-  private vitalsContainer: HTMLElement | null = null;
-  private levelTextNode: Element | null = null;
-
   update(delta: number, time: number): void {}
-  teardown(): void {
-      this.scoreNode = null;
-      this.vitalsContainer = null;
-      this.levelTextNode = null;
-  }
+  teardown(): void {}
 
-  public bindScore(el: HTMLElement | null) { this.scoreNode = el; }
-  public bindVitals(el: HTMLElement | null) { this.vitalsContainer = el; }
-  public bindLevelText(el: Element | null) { this.levelTextNode = el; }
-
-  public updateScore(val: number) {
-    if (this.scoreNode) {
-        this.scoreNode.innerText = val.toString().padStart(4, '0');
-    }
-  }
-
-  public updateHealth(percent: number, color: string) {
-    if (this.vitalsContainer) {
-        this.vitalsContainer.style.setProperty('--hp-progress', String(percent));
-        this.vitalsContainer.style.setProperty('--hp-color', color);
-    }
-  }
-
-  public updateXP(percent: number) {
-    if (this.vitalsContainer) {
-        this.vitalsContainer.style.setProperty('--xp-progress', String(percent));
-    }
-  }
-
-  public updateLevel(level: number) {
-    if (this.levelTextNode) {
-        this.levelTextNode.textContent = `LVL_${level.toString().padStart(2, '0')}`;
-    }
-  }
+  // Stubs for backward compatibility if any legacy code calls these
+  public bindScore(el: HTMLElement | null) {}
+  public bindVitals(el: HTMLElement | null) {}
+  public bindLevelText(el: Element | null) {}
+  public updateScore(val: number) {}
+  public updateHealth(percent: number, color: string) {}
+  public updateXP(percent: number) {}
+  public updateLevel(level: number) {}
 }
 
 
@@ -19707,11 +20384,13 @@ import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { QueryDef } from './ecs/Query';
+import { QueryDef, Query } from './ecs/Query';
 import { Tag, Faction, ParticleShape } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
+import { ArchetypeID } from '@/engine/config/Identifiers';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -19755,7 +20434,11 @@ export interface IHUDService extends IGameSystem {
 }
 
 export interface IFastEventService {
-  emit(eventId: number, a1?: number, a2?: number, a3?: number, a4?: number): void;
+  spawnFX(code: FXCode, x: number, y: number, angle?: number): void;
+  playSound(code: SoundCode, pan?: number): void;
+  camShake(amount: number): void;
+  hitStop(ms: number): void;
+  duckMusic(intensity: number, duration: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
   clear(): void;
   getCursor(): number;
@@ -19798,23 +20481,26 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Iterable<Entity>; 
-  query(def: QueryDef): Iterable<Entity>;
+  
+  // Updated Signature: Accepts raw Query objects
+  query(def: QueryDef | Query): Iterable<Entity>;
+  
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
   updateCache(entity: Entity): void; 
 }
 
 export interface IEntitySpawner {
-  spawn(archetypeId: string, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
+  spawn(archetypeId: ArchetypeID, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
-  spawnEnemy(type: string, x: number, y: number): Entity;
+  spawnEnemy(type: ArchetypeID, x: number, y: number): Entity;
   spawnBullet(
       x: number, y: number, 
       vx: number, vy: number, 
       faction: Faction, 
       life: number, 
       damage?: number, 
-      projectileId?: string, 
+      projectileId?: ArchetypeID, 
       ownerId?: number
   ): Entity;
   spawnParticle(

@@ -28,12 +28,13 @@ export const addBarycentricCoordinates = (bufferGeometry: THREE.BufferGeometry) 
 export const createHunterSpear = () => {
   const positions: number[] = [];
   const numWings = 3;
-  const length = 1.25; 
-  const wingWidth = 0.4;
+  const length = 1.4; 
+  const wingWidth = 0.45;
   const wingThickness = 0.05;
 
-  const tipY = length / 2;
-  const baseY = -length / 2;
+  // PIVOT REFACTOR: Tip is at 0, Body extends backward along negative Y
+  const tipY = 0;
+  const baseY = -length;
 
   const rotateY = (x: number, y: number, z: number, rad: number) => {
     return [
@@ -68,13 +69,10 @@ export const createHunterSpear = () => {
   return addBarycentricCoordinates(geometry);
 };
 
-// --- NEW HELPER ---
 export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => {
-    // Clamp to AABB
     const cx = Math.max(rect.left, Math.min(x, rect.right));
     const cy = Math.max(rect.bottom, Math.min(y, rect.top));
 
-    // Determine distance to each edge
     const dl = Math.abs(cx - rect.left);
     const dr = Math.abs(cx - rect.right);
     const dt = Math.abs(cy - rect.top);
@@ -86,19 +84,18 @@ export const getNearestPointOnRect = (x: number, y: number, rect: WorldRect) => 
     let edgeY = cy;
     let normalAngle = 0;
 
-    // Snap to closest edge and define "Normal" (direction OUT of the panel)
     if (min === dl) { 
         edgeX = rect.left; 
-        normalAngle = Math.PI; // Point Left
+        normalAngle = Math.PI;
     } else if (min === dr) { 
         edgeX = rect.right; 
-        normalAngle = 0; // Point Right
+        normalAngle = 0;
     } else if (min === dt) { 
         edgeY = rect.top; 
-        normalAngle = Math.PI / 2; // Point Up
+        normalAngle = Math.PI / 2;
     } else { 
         edgeY = rect.bottom; 
-        normalAngle = -Math.PI / 2; // Point Down
+        normalAngle = -Math.PI / 2;
     }
 
     return { x: edgeX, y: edgeY, angle: normalAngle };
