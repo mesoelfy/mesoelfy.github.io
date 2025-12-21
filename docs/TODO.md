@@ -682,3 +682,8 @@ What if the solution is to manually resize them past the breakopint to how they 
 shift the Driller's geometry so (0,0,0) is exactly at the Tip of the Drill. (When the driller spins, it will now pivot around its tip (like a real drill) rather than its center.) - - - can we do the same with hunter?
 
 music audio ducking needs fine tuning, especially when hit by a ton of enemies it shouldn't mute completely. instead of volume could we cut frequencies, cutting more and more high frequenices as damage increases?
+
+
+when drillers latch close enough to a panel corner, they jump to the exact corner instead of maintaining the panel edge position they were originally aiming for.
+
+Hunters need their rotating re-factored. Their pivot should be at their tip. They should have a slow clockwise idle rotation. When charging and emitting exhaust they should increase speed and change rotation direction to counter clockwise. When launching spear projectile rotation should relax back into idle clockwise rotatin.

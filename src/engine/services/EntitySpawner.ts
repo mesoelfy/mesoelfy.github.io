@@ -6,9 +6,7 @@ import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs, ArchetypeID, WeaponIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
 import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
-import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -25,16 +23,23 @@ export class EntitySpawner implements IEntitySpawner {
     }
 
     const e = this.registry.createEntity();
+    
+    // 1. Tags
     blueprint.tags.forEach(tag => e.addTag(tag));
     extraTags.forEach(tag => e.addTag(tag));
 
+    // 2. Components (Merge Blueprint Data with Runtime Overrides)
     for (const compDef of blueprint.components) {
-        const blueprintData = JSON.parse(JSON.stringify(compDef.data || {}));
+        const blueprintData = compDef.data || {};
         const runtimeData = overrides[compDef.type] || {};
+        
+        // Shallow merge is usually sufficient for flat component data
         const mergedData = { ...blueprintData, ...runtimeData };
+        
         e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
 
+    // 3. Asset Metadata (Legacy support for old rendering systems)
     if (blueprint.assets) {
         const render: any = e.getComponent(ComponentType.RenderModel);
         if (render) {
@@ -62,50 +67,27 @@ export class EntitySpawner implements IEntitySpawner {
       projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, 
       ownerId?: number
   ): Entity {
-    const isEnemy = faction === Faction.HOSTILE;
     // Map abstract faction types to specific IDs if generic provided
-    // This allows WeaponLogic to still be generic
     let id = projectileId;
     if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
 
+    // Calculate rotation based on velocity
     const rotation = Math.atan2(vy, vx);
-    const config = PROJECTILE_CONFIG[id];
-    
-    const geoId = `GEO_${id}`; 
-    const color = config ? config.color : [1, 1, 1];
-    const s = config ? config.scale : [1,1,1]; 
-    const pulseSpeed = config ? config.pulseSpeed : 0;
 
-    const elasticity = id === WeaponIDs.PLAYER_PURGE ? 0.0 : 2.0;
-
+    // Prepare Runtime Overrides
+    // We ONLY set what is dynamic. Visuals, Colliders, Elasticity etc come from the Archetype.
     const overrides: Record<string, any> = {
-        [ComponentType.Transform]: { x, y, rotation, scale: 1.0 }, 
+        [ComponentType.Transform]: { x, y, rotation }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.RenderModel]: {
-            geometryId: geoId,
-            materialId: MATERIAL_IDS.PROJECTILE,
-            r: color[0], g: color[1], b: color[2],
-        },
-        [ComponentType.RenderTransform]: {
-            scale: 1.0,
-            baseScaleX: s[0], baseScaleY: s[1], baseScaleZ: s[2]
-        },
-        [ComponentType.RenderEffect]: { elasticity, pulseSpeed },
         [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
     
-    // We pass the specific ID here so ARCHETYPES[id] lookup works
-    const entity = this.spawn(id, overrides);
-
-    if (config && config.spinSpeed !== 0) {
-        entity.addComponent(new AutoRotate(config.spinSpeed));
-    }
-
-    return entity;
+    // Spawn using the Blueprint
+    return this.spawn(id, overrides);
   }
 
   public spawnParticle(
@@ -116,8 +98,11 @@ export class EntitySpawner implements IEntitySpawner {
       size: number = 1.0, 
       shape: ParticleShape = ParticleShape.CIRCLE
   ): void {
+    // Particles are transient and simple, so we construct them manually to avoid overhead of Archetype lookup
+    // (Though we could make a PARTICLE archetype, direct creation is faster for high-frequency low-logic entities)
     const e = this.registry.createEntity();
     e.addTag(Tag.PARTICLE);
+    
     e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
     e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
     e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
