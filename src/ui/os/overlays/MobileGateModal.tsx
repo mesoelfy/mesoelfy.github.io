@@ -57,7 +57,7 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
     matrixTitle: "text-lg",
     matrixText: "text-sm",
     buttonText: "text-xl",
-    container: "max-w-4xl" // Wider container for ultrawide
+    container: "max-w-4xl" 
   } : {
     icon: 48,
     badgeIcon: 12,
@@ -71,14 +71,14 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl cursor-none">
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
             className={clsx(
-                "relative w-full bg-[#050505] border border-primary-green/30 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden rounded-sm",
+                "relative w-full bg-[#050505] border border-primary-green/30 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden rounded-sm cursor-none",
                 sizeConfig.container
             )}
           >
@@ -175,12 +175,12 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
                         </motion.span>
                         
                         <div className="flex flex-col gap-2 min-w-[140px]">
-                            <div className="flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden group">
+                            <div className={clsx("flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden group", sizeConfig.matrixText)}>
                                 <div className="absolute inset-0 bg-primary-green/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 animate-pulse" />
                                 <ZoomIn size={sizeConfig.badgeIcon} className="text-primary-green" />
                                 <span className={isUltrawide ? "text-lg" : ""}>{zoomText}</span>
                             </div>
-                            <div className="flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden">
+                            <div className={clsx("flex items-center justify-between gap-4 text-xs font-bold tracking-widest text-white border border-primary-green/30 bg-primary-green/10 px-3 py-1.5 rounded relative overflow-hidden", sizeConfig.matrixText)}>
                                 <Maximize size={sizeConfig.badgeIcon} className="text-primary-green" />
                                 <span className={isUltrawide ? "text-lg" : ""}>FULLSCREEN</span>
                             </div>
@@ -200,10 +200,13 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
                 <motion.div variants={itemVariants} className="relative z-10 pt-2">
                     <button
                         onClick={onOverride}
-                        className="group w-full relative overflow-hidden py-4 bg-transparent border border-white/20 hover:border-alert-yellow/50 transition-colors"
+                        className={clsx(
+                            "group w-full relative overflow-hidden py-4 bg-transparent border transition-colors cursor-none",
+                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-cyan/30 hover:border-service-cyan"
+                        )}
                         onMouseEnter={() => AudioSystem.playHover()}
                     >
-                        <div className="absolute inset-0 bg-alert-yellow/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-cyan/10")} />
                         
                         <div className="relative flex items-center justify-center gap-3">
                             <span className="text-alert-yellow font-mono text-[10px] animate-pulse">⚠</span>
@@ -212,10 +215,6 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
                             </span>
                             <ChevronRight size={16} className="text-white/50 group-hover:translate-x-1 transition-transform" />
                         </div>
-
-                        {/* Glitch lines on button */}
-                        <div className="absolute top-0 left-0 w-1 h-full bg-alert-yellow/50 opacity-0 group-hover:opacity-100" />
-                        <div className="absolute top-0 right-0 w-1 h-full bg-alert-yellow/50 opacity-0 group-hover:opacity-100" />
                     </button>
                     <div className="text-center mt-2">
                         <span className="text-[8px] font-mono text-gray-600 uppercase tracking-widest">
