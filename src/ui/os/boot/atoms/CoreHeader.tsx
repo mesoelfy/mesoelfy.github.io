@@ -25,22 +25,21 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
-  // FIXED: Removed 'mb-2' to allow body content to sit flush against the header border
   return (
     <motion.div 
       className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
-        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
-        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(255,0,60,0.6)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
+        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(255,0,60,0.15)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
       } : {}}
-      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      transition={{ duration: 3.0, repeat: Infinity, ease: "linear" }}
     >
       <motion.span 
         className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
         animate={isCaution ? {
-            color: ['#78F654', '#eae747', '#78F654']
+            color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654']
         } : {}}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 3.0, repeat: Infinity, ease: "linear" }}
       >
         MESOELFY_CORE
       </motion.span>
@@ -111,11 +110,17 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 >
                     <motion.div
                        animate={{
-                           filter: ['drop-shadow(0 0 8px rgba(120,246,84,0.8))', 'drop-shadow(0 0 15px rgba(234,231,71,1))', 'drop-shadow(0 0 8px rgba(120,246,84,0.8))'],
-                           color: ['#78F654', '#eae747', '#78F654'],
-                           rotate: [0, 8, -8, 0] 
+                           filter: [
+                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))', 
+                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
+                               'drop-shadow(0 0 20px rgba(255,0,60,1))', 
+                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
+                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))'
+                           ],
+                           color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654'],
+                           rotate: [0, 5, 0, -5, 0] 
                        }}
-                       transition={{ duration: 2.0, repeat: Infinity, ease: "easeInOut" }}
+                       transition={{ duration: 3.0, repeat: Infinity, ease: "linear" }}
                     >
                          <Skull size={18} />
                     </motion.div>
