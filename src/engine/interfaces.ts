@@ -2,7 +2,7 @@ import { Entity } from './ecs/Entity';
 import { SpatialGrid } from './ecs/SpatialGrid';
 import { WorldRect } from '@/engine/math/ViewportHelper';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { QueryDef } from './ecs/Query';
+import { QueryDef, Query } from './ecs/Query';
 import { Tag, Faction, ParticleShape } from './ecs/types';
 import { GameEvents, GameEventPayloads } from '@/engine/signals/GameEvents';
 import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
@@ -99,7 +99,10 @@ export interface IEntityRegistry {
   getEntity(id: number): Entity | undefined;
   getAll(): IterableIterator<Entity>;
   getByTag(tag: string): Iterable<Entity>; 
-  query(def: QueryDef): Iterable<Entity>;
+  
+  // Updated Signature: Accepts raw Query objects
+  query(def: QueryDef | Query): Iterable<Entity>;
+  
   clear(): void;
   getStats(): { active: number; pooled: number; totalAllocated: number };
   updateCache(entity: Entity): void; 

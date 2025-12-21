@@ -3,13 +3,16 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { PROJECTILE_CONFIG } from '@/engine/config/ProjectileConfig';
+import { Query } from '@/engine/ecs/Query';
 
 export class ProjectileSystem implements IGameSystem {
+  // CACHED QUERY
+  private chargeQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform] });
+
   constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
-    const entities = this.registry.query({ all: [ComponentType.Projectile, ComponentType.Transform] });
+    const entities = this.registry.query(this.chargeQuery);
 
     for (const entity of entities) {
         if (!entity.active) continue;
@@ -42,7 +45,6 @@ export class ProjectileSystem implements IGameSystem {
                 if (motion) { motion.vx = 0; motion.vy = 0; }
             }
         }
-        // Flight logic (Rotation) is now handled by VisualSystem + AutoRotate component
     }
   }
 

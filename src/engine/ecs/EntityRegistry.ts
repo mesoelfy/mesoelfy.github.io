@@ -7,18 +7,13 @@ import { MAX_ENTITIES } from './Constants';
 
 export class EntityRegistry implements IEntityRegistry {
   private entities = new Map<EntityID, Entity>();
-  
-  // ID Management
   private nextId = 0;
   private freeIds: number[] = []; 
   
-  // OPTIMIZATION: Cache Sets of Entities directly, not IDs.
-  // This avoids O(N) lookups and Array allocations during getByTag()
   private tagCache = new Map<Tag, Set<Entity>>();
   private activeQueries = new Map<string, { query: Query, results: Set<Entity> }>();
   private entityPool: ObjectPool<Entity>;
 
-  // Reusable empty set to prevent null checks in loops
   private static readonly EMPTY_SET = new Set<Entity>();
 
   constructor() {
@@ -31,7 +26,6 @@ export class EntityRegistry implements IEntityRegistry {
 
   public createEntity(): Entity {
     let idNum: number;
-
     if (this.freeIds.length > 0) {
         idNum = this.freeIds.pop()!;
     } else {
@@ -78,34 +72,33 @@ export class EntityRegistry implements IEntityRegistry {
     return this.tagCache.get(t) || EntityRegistry.EMPTY_SET;
   }
 
-  public query(def: QueryDef): Iterable<Entity> {
-    // We create a temporary query object to generate the ID string
-    // This is lightweight compared to array allocation
-    const tempQ = new Query(def);
-    let cache = this.activeQueries.get(tempQ.id);
+  // --- OPTIMIZED QUERY LOGIC ---
+  public query(defOrQuery: QueryDef | Query): Iterable<Entity> {
+    // If passed a Query object, use it directly. Otherwise create temporary wrapper.
+    // Creating 'new Query' handles the ID generation (sorting components etc).
+    const query = defOrQuery instanceof Query ? defOrQuery : new Query(defOrQuery);
+    
+    let cache = this.activeQueries.get(query.id);
     
     if (!cache) {
         const results = new Set<Entity>();
-        const q = new Query(def); 
+        // Only run scan if this is the first time we see this query signature
         for (const entity of this.entities.values()) {
-            if (entity.active && q.matches(entity)) {
+            if (entity.active && query.matches(entity)) {
                 results.add(entity);
             }
         }
-        cache = { query: q, results };
-        this.activeQueries.set(q.id, cache);
+        cache = { query, results };
+        this.activeQueries.set(query.id, cache);
     }
     return cache.results;
   }
   
   public updateCache(entity: Entity) {
-      // 1. Update Tag Cache
       for (const tag of entity.tags) {
           if (!this.tagCache.has(tag)) this.tagCache.set(tag, new Set());
           this.tagCache.get(tag)!.add(entity);
       }
-      
-      // 2. Update Query Cache
       for (const cache of this.activeQueries.values()) {
           if (cache.query.matches(entity)) {
               cache.results.add(entity);
@@ -134,7 +127,6 @@ export class EntityRegistry implements IEntityRegistry {
       this.entities.clear();
       this.tagCache.clear();
       this.activeQueries.clear();
-      
       this.nextId = 0;
       this.freeIds = [];
   }

@@ -2,13 +2,17 @@ import { IPhysicsSystem, IEntityRegistry } from '@/engine/interfaces';
 import { SpatialGrid } from '@/engine/ecs/SpatialGrid';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Query } from '@/engine/ecs/Query';
 
 export class PhysicsSystem implements IPhysicsSystem {
   public spatialGrid: SpatialGrid;
   private registry: EntityRegistry;
+
+  // CACHED QUERIES
+  private motionQuery = new Query({ all: [ComponentType.Transform, ComponentType.Motion] });
+  private colliderQuery = new Query({ all: [ComponentType.Transform, ComponentType.Collider] });
 
   constructor(registry: IEntityRegistry) {
     this.spatialGrid = new SpatialGrid();
@@ -19,9 +23,8 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    // 1. INTEGRATION STEP (Movement)
-    // Only entities with Motion need position updates
-    const movables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Motion] });
+    // 1. INTEGRATION STEP
+    const movables = this.registry.query(this.motionQuery);
     
     for (const entity of movables) {
       if (!entity.active) continue;
@@ -40,15 +43,12 @@ export class PhysicsSystem implements IPhysicsSystem {
       }
     }
 
-    // 2. BROADPHASE STEP (Spatial Hashing)
-    // Insert ALL colliders (Static + Dynamic) into the grid
-    const collidables = this.registry.query({ all: [ComponentType.Transform, ComponentType.Collider] });
+    // 2. BROADPHASE STEP
+    const collidables = this.registry.query(this.colliderQuery);
 
     for (const entity of collidables) {
         if (!entity.active) continue;
         const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        // We don't need the Collider component to insert, just the position, 
-        // but we filter by Collider existence to avoid inserting pure visual effects.
         if (transform) {
             this.spatialGrid.insert(entity.id, transform.x, transform.y);
         }

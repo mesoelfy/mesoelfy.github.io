@@ -4,10 +4,14 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { Query } from '@/engine/ecs/Query';
 
 export class CollisionSystem implements IGameSystem {
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   private handledPairs = new Set<number>(); 
+  
+  // CACHED QUERY
+  private collisionQuery = new Query({ all: [ComponentType.Collider, ComponentType.Transform] });
 
   constructor(
     private physicsSystem: IPhysicsSystem,
@@ -17,7 +21,8 @@ export class CollisionSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const spatial = this.physicsSystem.spatialGrid;
-    const collidables = this.registry.query({ all: [ComponentType.Collider, ComponentType.Transform] });
+    const collidables = this.registry.query(this.collisionQuery);
+    
     this.handledPairs.clear();
 
     for (const entity of collidables) {

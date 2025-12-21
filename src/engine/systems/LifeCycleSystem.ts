@@ -7,8 +7,12 @@ import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
+import { Query } from '@/engine/ecs/Query';
 
 export class LifeCycleSystem implements IGameSystem {
+  // CACHED QUERY
+  private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService
@@ -23,7 +27,7 @@ export class LifeCycleSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const mortals = this.registry.query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+    const mortals = this.registry.query(this.mortalQuery);
 
     for (const entity of mortals) {
       if (!entity.active) continue;

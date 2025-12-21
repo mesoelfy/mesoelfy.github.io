@@ -678,3 +678,6 @@ https://framermotionexamples.com/examples?s=all
 the ASCII shimmering appears to be the same short pattern cycle. I'd like it to be more varied and random for th purple and green shimmer red infection.
 
 What if the solution is to manually resize them past the breakopint to how they worked before?
+
+shift the Driller's geometry so (0,0,0) is exactly at the Tip of the Drill. (When the driller spins, it will now pivot around its tip (like a real drill) rather than its center.) - - - can we do the same with hunter?
+

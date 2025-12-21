@@ -1,6 +1,5 @@
 import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { TransformData } from '@/engine/ecs/components/TransformData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
@@ -10,10 +9,14 @@ import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
 export class VisualSystem implements IGameSystem {
   private tempColor = new THREE.Color();
+  
+  // CACHED QUERY
+  private visualQuery = new Query({ all: [ComponentType.RenderTransform] });
 
   constructor(
     private registry: IEntityRegistry,
@@ -38,7 +41,7 @@ export class VisualSystem implements IGameSystem {
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
 
-    const entities = this.registry.query({ all: [ComponentType.RenderTransform] });
+    const entities = this.registry.query(this.visualQuery);
 
     for (const entity of entities) {
       if (!entity.active) continue;
@@ -93,7 +96,7 @@ export class VisualSystem implements IGameSystem {
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // Effect Decay (Now using Config)
+          // Effect Decay
           if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
               effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));

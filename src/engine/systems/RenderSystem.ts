@@ -7,6 +7,7 @@ import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
 const axisY = new THREE.Vector3(0, 1, 0); 
@@ -16,13 +17,19 @@ const qAim = new THREE.Quaternion();
 const qFinal = new THREE.Quaternion();
 
 export class RenderSystem implements IGameSystem {
+  // CACHED QUERY
+  private renderQuery = new Query({ 
+      all: [ComponentType.Transform, ComponentType.RenderModel] 
+  });
+
   constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
     MaterialFactory.updateUniforms(time);
     RenderBuffer.reset();
 
-    const entities = this.registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] });
+    // Use cached query
+    const entities = this.registry.query(this.renderQuery);
 
     for (const entity of entities) {
       if (!entity.active) continue;
@@ -57,7 +64,6 @@ export class RenderSystem implements IGameSystem {
       }
 
       // --- 2. Scale ---
-      // Compose: Transform (World) * Visual (Multiplier) * Base (Static Config) * Dynamic (Frame Deformation)
       let sX = transform.scale;
       let sY = transform.scale;
       let sZ = transform.scale;
