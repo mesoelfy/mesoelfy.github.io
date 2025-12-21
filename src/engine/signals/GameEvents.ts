@@ -19,12 +19,12 @@ export enum GameEvents {
   THREAT_LEVEL_UP = 'THREAT_LEVEL_UP',
   UPGRADE_SELECTED = 'UPGRADE_SELECTED',
   ZEN_MODE_ENABLED = 'ZEN_MODE_ENABLED',
+  PURGE_COMPLETE = 'PURGE_COMPLETE', // NEW: Signals end of spiral
   
   DEBUG_SPAWN = 'DEBUG_SPAWN',
   LOG_DEBUG = 'LOG_DEBUG',
   BOOT_LOG = 'BOOT_LOG',
   
-  // VFX & Audio (Migrated from FastEvents)
   TRAUMA_ADDED = 'TRAUMA_ADDED',
   SPAWN_FX = 'SPAWN_FX',
   SPAWN_IMPACT = 'SPAWN_IMPACT',
@@ -73,6 +73,7 @@ export interface GameEventPayloads {
   [GameEvents.THREAT_LEVEL_UP]: { level: number };
   [GameEvents.UPGRADE_SELECTED]: { option: string };
   [GameEvents.ZEN_MODE_ENABLED]: null;
+  [GameEvents.PURGE_COMPLETE]: null; // NEW
   
   [GameEvents.DEBUG_SPAWN]: { type: string; count: number };
   [GameEvents.LOG_DEBUG]: { msg: string; source?: string };

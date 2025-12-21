@@ -38,7 +38,7 @@ export class WeaponSystem implements IGameSystem {
   ) {
     this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
-        if (p.option === 'NOVA') this.triggerNova(); // NEW EVENT TYPE
+        if (p.option === 'NOVA') this.triggerNova();
     });
   }
 
@@ -87,9 +87,9 @@ export class WeaponSystem implements IGameSystem {
       const t = player.getComponent<TransformData>(ComponentType.Transform);
       if (!t) return;
 
-      const bulletCount = 72; // Dense ring
+      const bulletCount = 72;
       const speed = 40.0;
-      const damage = 999; // Total destruction
+      const damage = 999;
 
       for (let i = 0; i < bulletCount; i++) {
           const angle = (i / bulletCount) * Math.PI * 2;
@@ -109,7 +109,11 @@ export class WeaponSystem implements IGameSystem {
       this.purgeState.accumulator += delta * FIRE_RATE;
       while (this.purgeState.accumulator >= 1.0) {
           this.purgeState.accumulator -= 1.0;
-          if (this.purgeState.shotsRemaining <= 0) { this.purgeState.active = false; break; }
+          if (this.purgeState.shotsRemaining <= 0) { 
+              this.purgeState.active = false; 
+              this.events.emit(GameEvents.PURGE_COMPLETE, null); // EMIT SIGNAL
+              break; 
+          }
           const angle = this.purgeState.currentAngle;
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);

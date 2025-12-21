@@ -5,7 +5,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export const ZenBomb = () => {
   const isGameOver = useGameStore(state => state.systemIntegrity <= 0);
@@ -13,35 +13,38 @@ export const ZenBomb = () => {
   const activateZenMode = useGameStore(state => state.activateZenMode);
   const [clicked, setClicked] = useState(false);
 
+  // Hook into the engine's purge completion signal
+  useEffect(() => {
+    if (!clicked) return;
+
+    const unsub = GameEventBus.subscribe(GameEvents.PURGE_COMPLETE, () => {
+        // THE NOVA CATALYST (Happens instantly after spiral finishes)
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'NOVA' });
+        
+        AudioSystem.playSound('syn_bass_drop');
+        AudioSystem.playAmbience('ambience_core'); 
+        
+        // Final transition to Zen Mode
+        activateZenMode(); 
+        
+        // Fade the prismatic ship back in as the cursor
+        setTimeout(() => {
+            useStore.setState({ isMetamorphosizing: false });
+        }, 500);
+    });
+
+    return () => unsub();
+  }, [clicked, activateZenMode]);
+
   if (!isGameOver || isZenMode) return null;
 
   const handleClick = () => {
     setClicked(true); 
     AudioSystem.playClick();
     
-    // 1. TRIGGER IMMEDIATE SPIRAL & VOID STATE
-    // The cursor will fade out immediately because isMetamorphosizing becomes true
+    // 1. VOID STATE & SPIRAL START
     useStore.setState({ isMetamorphosizing: true });
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'PURGE' });
-    
-    // 2. THE NOVA CATALYST (1 Second later)
-    setTimeout(() => { 
-        // Trigger high-damage concentric ring wave
-        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: 'NOVA' });
-        
-        AudioSystem.playSound('syn_bass_drop');
-        AudioSystem.playAmbience('ambience_core'); 
-        
-        // Transition to Zen Mode State
-        activateZenMode(); 
-        
-        // 3. REBIRTH (Metamorphosis Ends)
-        // Short delay after the explosion for the prismatic cursor to appear
-        setTimeout(() => {
-            useStore.setState({ isMetamorphosizing: false });
-        }, 500);
-
-    }, 1000);
   };
 
   return (
