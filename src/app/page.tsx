@@ -29,6 +29,7 @@ import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop';
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
+import { MobileGateModal } from '@/ui/os/overlays/MobileGateModal';
 import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -58,6 +59,27 @@ export default function Home() {
 
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Mobile Gate Logic
+  const [showMobileGate, setShowMobileGate] = useState(false);
+  const [hasMobileGateShown, setHasMobileGateShown] = useState(false);
+
+  useEffect(() => {
+    // Only run on client mount
+    if (typeof window === 'undefined') return;
+    
+    // Check width immediate
+    if (window.innerWidth <= 1024 && !hasMobileGateShown) {
+        setShowMobileGate(true);
+        setHasMobileGateShown(true);
+    }
+  }, [hasMobileGateShown]);
+
+  const handleMobileOverride = () => {
+      AudioSystem.playSound('ui_click');
+      AudioSystem.playRebootZap(); // Flavor sound
+      setShowMobileGate(false);
+  };
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -101,7 +123,7 @@ export default function Home() {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
 
-        if (isMenuOpen || isDebugActive) {
+        if (isMenuOpen || isDebugActive || showMobileGate) {
             setSimulationPaused(true);
         } else {
             setSimulationPaused(false);
@@ -111,7 +133,7 @@ export default function Home() {
     checkPauseState();
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
-  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused]);
+  }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showMobileGate]);
 
   useEffect(() => {
       AudioSystem.init();
@@ -141,6 +163,7 @@ export default function Home() {
         <CustomCursor />
         <GlobalBackdrop />
         <DebugOverlay />
+        <MobileGateModal isOpen={showMobileGate} onOverride={handleMobileOverride} />
 
         <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
           
