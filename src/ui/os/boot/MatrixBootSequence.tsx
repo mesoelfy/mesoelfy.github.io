@@ -142,8 +142,13 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
 
   useEffect(() => {
-    const res = () => { setUiScale(Math.max(0.5, Math.min(window.innerWidth/680, window.innerHeight/850) * 0.96)); };
-    res(); window.addEventListener('resize', res); return () => window.removeEventListener('resize', res);
+    // Immediate calculation to minimize flash
+    const calc = () => Math.max(0.5, Math.min(window.innerWidth/680, window.innerHeight/850) * 0.96);
+    setUiScale(calc());
+    
+    const res = () => { setUiScale(calc()); };
+    window.addEventListener('resize', res); 
+    return () => window.removeEventListener('resize', res);
   }, []);
 
   return (
@@ -157,15 +162,18 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                 transform: `scale(${isBreaching ? uiScale*1.1 : uiScale})`, 
                 filter: isBreaching ? "blur(20px)" : "blur(0px)", 
                 opacity: isBreaching ? 0 : 1, 
-                transition: "transform 0.8s cubic-bezier(0.7, 0, 0.84, 0), opacity 0.5s ease-in, filter 0.5s ease-in" 
+                // CRITICAL FIX: Only animate transform during breach to prevent initial resize pop
+                transition: isBreaching 
+                    ? "transform 0.8s cubic-bezier(0.7, 0, 0.84, 0), opacity 0.5s ease-in, filter 0.5s ease-in" 
+                    : "none"
             }}
         >
-            {/* TERMINAL LOG - RESTORED ORIGINAL LAYOUT */}
+            {/* TERMINAL LOG */}
             <div className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                 <BootHeader step={step} />
                 <div className="relative w-full flex-1">
                     <DotGridBackground /> 
-                    {/* Restored: p-4 pt-2, h-44, justify-start */}
+                    {/* Fixed Height Layout */}
                     <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
                         {logsToShow.map((line, i) => <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />)}
                     </div>
@@ -176,9 +184,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
             <AnimatePresence mode="wait">
             {showPayloadWindow && (
                 <motion.div 
-                    initial={{ opacity: 0, y: 40 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    transition={{ duration: 0.3 }}
                     className="w-full bg-black/90 border border-primary-green shadow-[0_0_50px_rgba(0,255,65,0.1)] relative z-20 flex flex-col"
                 >
                     <CoreHeader step={step} />
@@ -189,13 +197,14 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                         <div className="relative z-10 flex flex-col items-center gap-6">
                             <AsciiRenderer isInfected={showWarningBox} />
                             
+                            {/* CONTROLS - SIMPLE FADE IN */}
                             <AnimatePresence>
                                 {showButton && (
                                     <motion.div 
                                         key="controls" 
-                                        initial={{ opacity: 0, height: 0 }} 
-                                        animate={{ opacity: 1, height: "auto" }} 
-                                        transition={{ duration: 0.5, ease: "circOut" }}
+                                        initial={{ opacity: 0 }} 
+                                        animate={{ opacity: 1 }} 
+                                        transition={{ duration: 0.5, delay: 0.2 }}
                                         className="w-full flex flex-col gap-6 pt-4 border-t border-white/10"
                                     >
                                         <div className="flex flex-col gap-3">
