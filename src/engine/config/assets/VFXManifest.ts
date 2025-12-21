@@ -1,4 +1,4 @@
-import { COLOR_SETS } from '../Palette';
+import { COLOR_SETS, PALETTE } from '../Palette';
 
 export type VFXPattern = 'RADIAL' | 'DIRECTIONAL';
 
@@ -14,7 +14,6 @@ export interface VFXRecipe {
   omniChance?: number; 
 }
 
-// --- FACTORY ---
 const createExplosion = (
     colors: string[], 
     isDirectional: boolean,
@@ -42,15 +41,15 @@ const createExplosion = (
 };
 
 export const VFX_MANIFEST: Record<string, VFXRecipe> = {
-  // Driller: Medium Count, Medium Speed
+  // Driller
   'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
   'EXPLOSION_PURPLE_DIR': createExplosion(COLOR_SETS.PURPLE, true,  [20, 30], [5, 10]),
   
-  // Hunter: Lower Count, Higher Speed (Snappy)
+  // Hunter
   'EXPLOSION_YELLOW':     createExplosion(COLOR_SETS.YELLOW, false, [15, 25], [10, 18]),
   'EXPLOSION_YELLOW_DIR': createExplosion(COLOR_SETS.YELLOW, true,  [15, 25], [10, 18]),
   
-  // Kamikaze: Max Count, Max Speed (Violent)
+  // Kamikaze
   'EXPLOSION_RED':        createExplosion(COLOR_SETS.RED, false, [20, 35], [12, 22]),
   'EXPLOSION_RED_DIR':    createExplosion(COLOR_SETS.RED, true,  [20, 35], [12, 22]),
 
@@ -74,7 +73,7 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   
   'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
-    colors: [COLOR_SETS.YELLOW[0], COLOR_SETS.WHITE[0]], 
+    colors: [PALETTE.YELLOW.SOFT, PALETTE.MONO.WHITE], 
     count: [3, 5], 
     speed: [15, 25], 
     life: [0.1, 0.2], 
@@ -82,5 +81,5 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   },
   
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
-  'PURGE_BLAST': { pattern: 'RADIAL', colors: ['#FFFFFF', '#FF003C'], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
+  'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };

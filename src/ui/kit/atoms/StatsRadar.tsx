@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface StatsRadarProps {
   stats: Record<string, number>;
@@ -7,7 +8,7 @@ interface StatsRadarProps {
   size?: number;
 }
 
-export const StatsRadar = ({ stats, color = "#78F654", size = 200 }: StatsRadarProps) => {
+export const StatsRadar = ({ stats, color = PALETTE.GREEN.PRIMARY, size = 200 }: StatsRadarProps) => {
   const keys = Object.keys(stats);
   const total = keys.length;
   const radius = size / 2;
@@ -31,13 +32,6 @@ export const StatsRadar = ({ stats, color = "#78F654", size = 200 }: StatsRadarP
       return `${x},${y}`;
     }).join(' ');
   }, [stats]);
-
-  const bgPoints = useMemo(() => {
-    return keys.map((_, i) => {
-      const { x, y } = getPoint(i, 100); // Full scale
-      return `${x},${y}`;
-    }).join(' ');
-  }, [keys]);
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>

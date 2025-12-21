@@ -21,7 +21,6 @@ export const WEAPONS: Record<string, WeaponDef> = {
   'PLAYER_SNIFFER': {
     id: 'PLAYER_SNIFFER',
     damage: 0.5, speed: 22, life: 3.0,
-    // FIX: Added radius: 1.0 to restore original size (default was 0.5)
     visual: { model: 'OCTA', color: PALETTE.CYAN.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
@@ -52,8 +51,8 @@ export const WEAPONS: Record<string, WeaponDef> = {
   'DAEMON_ORB': {
     id: 'DAEMON_ORB',
     damage: 20, speed: 35, life: 2.0,
-    visual: { model: 'SPHERE', color: '#0088FF', scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.CYAN.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
-    tags: [Tag.BULLET, Tag.PLAYER] // Daemon is friendly
+    tags: [Tag.BULLET, Tag.PLAYER] 
   }
 };

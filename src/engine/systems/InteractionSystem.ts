@@ -4,6 +4,7 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { PALETTE } from '@/engine/config/Palette';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -76,13 +77,12 @@ export class InteractionSystem implements IInteractionSystem {
             this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
             this.lastRepairTime = time;
             AudioSystem.playSound('loop_reboot'); 
-            this.spawnRepairParticles(cursor, '#9E4EA5');
+            this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
         }
     }
   }
 
   private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    // Direct lookup via optimized PanelSystem cache
     const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
 
     if (panelId) {
@@ -91,7 +91,6 @@ export class InteractionSystem implements IInteractionSystem {
         const panelState = this.panelSystem.getPanelState(panelId);
         if (!panelState) return;
 
-        // Skip if healthy
         if (!panelState.isDestroyed && panelState.health >= 100) return;
 
         this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
@@ -106,7 +105,7 @@ export class InteractionSystem implements IInteractionSystem {
                 this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
 
-            const color = panelState.isDestroyed ? '#9E4EA5' : '#00F0FF';
+            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.CYAN.PRIMARY;
             this.spawnRepairParticles(cursor, color);
         }
     }

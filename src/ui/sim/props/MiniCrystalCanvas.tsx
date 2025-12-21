@@ -6,14 +6,15 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { PALETTE } from '@/engine/config/Palette';
 
 const COLORS = {
-  SAFE: new THREE.Color("#78F654"),
-  WARN: new THREE.Color("#F7D277"),
-  CRIT: new THREE.Color("#FF4D6D"), 
-  EMISSIVE_SAFE: new THREE.Color("#15530A"),
+  SAFE: new THREE.Color(PALETTE.GREEN.PRIMARY),
+  WARN: new THREE.Color(PALETTE.YELLOW.SOFT),
+  CRIT: new THREE.Color(PALETTE.RED.LIGHT), 
+  EMISSIVE_SAFE: new THREE.Color(PALETTE.GREEN.DARK),
   EMISSIVE_WARN: new THREE.Color("#5e4b00"),
-  EMISSIVE_CRIT: new THREE.Color("#FF003C"), 
+  EMISSIVE_CRIT: new THREE.Color(PALETTE.RED.DIM), 
 };
 
 const SpinningGem = () => {
@@ -73,8 +74,8 @@ const SpinningGem = () => {
         <octahedronGeometry args={[1, 0]} />
         <MeshDistortMaterial
           ref={materialRef}
-          color="#78F654"
-          emissive="#15530A"
+          color={PALETTE.GREEN.PRIMARY}
+          emissive={PALETTE.GREEN.DARK}
           roughness={0.1}
           metalness={0.8}
           distort={0.3}
@@ -95,7 +96,7 @@ export const MiniCrystalCanvas = () => {
         style={{ background: '#000000' }}
       >
         <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} intensity={1} color="#C2FE9A" />
+        <pointLight position={[10, 10, 10]} intensity={1} color={PALETTE.GREEN.GLOW} />
         <SpinningGem />
       </Canvas>
     </div>
