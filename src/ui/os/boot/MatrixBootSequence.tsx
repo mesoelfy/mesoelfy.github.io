@@ -11,8 +11,6 @@ import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
 import { useSmartScroll } from './hooks/useSmartScroll';
-import { useDeviceType } from '@/ui/sim/hooks/useDeviceType';
-import { useStore } from '@/engine/state/global/useStore';
 
 interface Props {
   onComplete: () => void;
@@ -23,8 +21,6 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mainStackRef = useRef<HTMLDivElement>(null);
-  const device = useDeviceType();
-  const { setBootState, setIntroDone, setInitialClickPos } = useStore();
 
   const { 
     step, isBreaching, showGpuPanel, handleInitialize: coreInitialize, logsToShow,
@@ -40,16 +36,8 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     }
   }, [showGpuPanel]);
 
-  const handleWrapperClick = (e: React.MouseEvent) => {
-      setInitialClickPos({ x: e.clientX, y: e.clientY });
-      if (device === 'mobile') {
-          AudioSystem.init();
-          AudioSystem.playSound('ui_error');
-          setIntroDone(true);
-          setBootState('mobile_lockdown');
-      } else {
-          coreInitialize();
-      }
+  const handleWrapperClick = () => {
+      coreInitialize();
   };
 
   return (

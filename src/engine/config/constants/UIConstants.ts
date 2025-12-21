@@ -8,10 +8,6 @@ export const UI_METRICS = {
     STROKE: 4,
     THRESHOLD_CRITICAL: 0.3,
     THRESHOLD_WARNING: 0.6
-  },
-  JOYSTICK: {
-    MAX_RADIUS: 40,
-    SENSITIVITY: 30.0
   }
 } as const;
 

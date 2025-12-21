@@ -7,23 +7,12 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useStore } from '@/engine/state/global/useStore';
 
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
-  const isMobileRef = useRef(false);
-  const initialClickPos = useStore(state => state.initialClickPos);
 
   useEffect(() => {
-    const checkMobile = () => {
-        isMobileRef.current = window.matchMedia('(pointer: coarse)').matches || 
-                              ('ontouchstart' in window) || 
-                              (navigator.maxTouchPoints > 0);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
     const engine = GameBootstrapper();
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
@@ -46,24 +35,12 @@ export const GameDirector = memo(() => {
     }, 100);
 
     return () => {
-      window.removeEventListener('resize', checkMobile);
       clearInterval(refreshInterval);
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
     };
   }, []); 
-
-  useEffect(() => {
-      if (!initialClickPos || isMobileRef.current || !engineRef.current) return;
-      try {
-          const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          input.updateBounds(viewport.width, viewport.height);
-          const wx = (initialClickPos.x / size.width) * viewport.width - (viewport.width / 2);
-          const wy = -((initialClickPos.y / size.height) * viewport.height - (viewport.height / 2));
-          input.updateCursor(wx, wy);
-      } catch {}
-  }, [initialClickPos, viewport, size]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -79,11 +56,10 @@ export const GameDirector = memo(() => {
     if (engineRef.current) {
       try {
           const input = ServiceLocator.getSystem<InputSystem>('InputSystem');
-          if (!isMobileRef.current) {
-              const x = (state.pointer.x * viewport.width) / 2;
-              const y = (state.pointer.y * viewport.height) / 2;
-              input.updateCursor(x, y);
-          }
+          const x = (state.pointer.x * viewport.width) / 2;
+          const y = (state.pointer.y * viewport.height) / 2;
+          input.updateCursor(x, y);
+          
           engineRef.current.update(delta, state.clock.elapsedTime);
       } catch (e: any) {
           console.error("Game Loop Critical Failure:", e);

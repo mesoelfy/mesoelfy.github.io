@@ -35,20 +35,16 @@ import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
 import { VFXSystem } from '@/engine/systems/VFXSystem';
 
-// Mode Specific Systems
+// Desktop Systems
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
 import { WeaponSystem } from '@/engine/systems/WeaponSystem';
 import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
-import { MobileWaveSystem } from '@/engine/systems/MobileWaveSystem';
-import { MobileCombatSystem } from '@/engine/systems/MobileCombatSystem';
-
-export type EngineMode = 'DESKTOP' | 'MOBILE';
 
 export class EngineFactory {
-  public static create(mode: EngineMode): GameEngineCore {
+  public static create(): GameEngineCore {
     // 1. Core Services
     const registry = new EntityRegistry();
     const eventBus = SharedGameEventBus; 
@@ -104,6 +100,14 @@ export class EngineFactory {
     const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const renderSystem = new RenderSystem(registry);
 
+    // Desktop Specifics
+    const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
+    const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
+    const structureSystem = new StructureSystem(panelSystem);
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
+    const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
+    const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
+
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
@@ -121,31 +125,16 @@ export class EngineFactory {
     register(timeSystem, SystemPhase.INPUT, 'TimeSystem');
     register(inputSystem, SystemPhase.INPUT);
     register(interactionSystem, SystemPhase.INPUT, 'InteractionSystem');
-    
-    if (mode === 'DESKTOP') {
-        const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
-        register(movementSystem, SystemPhase.INPUT);
-    }
+    register(movementSystem, SystemPhase.INPUT);
 
     // PHASE 1: LOGIC
     register(panelSystem, SystemPhase.LOGIC, 'PanelRegistrySystem');
     register(gameStateSystem, SystemPhase.LOGIC, 'GameStateSystem');
     register(targetingSystem, SystemPhase.LOGIC);
-    
-    if (mode === 'DESKTOP') {
-        const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
-        const structureSystem = new StructureSystem(panelSystem);
-        const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, fastEventBus, ConfigService);
-        
-        register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
-        register(structureSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); 
-        register(weaponSystem, SystemPhase.LOGIC);   
-    } else {
-        const mobileWaveSystem = new MobileWaveSystem(spawner);
-        register(mobileWaveSystem, SystemPhase.LOGIC);
-        register(behaviorSystem, SystemPhase.LOGIC); 
-    }
+    register(waveSystem, SystemPhase.LOGIC, 'WaveSystem');
+    register(structureSystem, SystemPhase.LOGIC);
+    register(behaviorSystem, SystemPhase.LOGIC); 
+    register(weaponSystem, SystemPhase.LOGIC);   
 
     // PHASE 2: PHYSICS
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
@@ -154,16 +143,8 @@ export class EngineFactory {
     register(projectileSystem, SystemPhase.PHYSICS);
 
     // PHASE 3: COLLISION
-    if (mode === 'DESKTOP') {
-        const combatSystem = new CombatSystem(registry, eventBus, fastEventBus, audioService);
-        const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
-        
-        register(collisionSystem, SystemPhase.COLLISION);
-        register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
-    } else {
-        const mobileCombat = new MobileCombatSystem(registry, eventBus, fastEventBus, audioService);
-        register(mobileCombat, SystemPhase.COLLISION);
-    }
+    register(collisionSystem, SystemPhase.COLLISION);
+    register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
 
     // PHASE 4: STATE
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
@@ -183,10 +164,8 @@ export class EngineFactory {
     // 7. Final Setup
     engine.setup(ServiceLocator);
 
-    // 8. Player Spawn (Desktop Only)
-    if (mode === 'DESKTOP') {
-        spawner.spawnPlayer();
-    }
+    // 8. Player Spawn
+    spawner.spawnPlayer();
 
     return engine;
   }

@@ -16,7 +16,6 @@ import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
-import { MobileExperience } from '@/ui/os/apps/mobile/MobileExperience'; 
 import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
@@ -28,7 +27,6 @@ import { SimulationHUD } from '@/ui/os/apps/sandbox/SimulationHUD';
 import { WebGLErrorBoundary } from '@/ui/os/overlays/ErrorBoundary';
 import { GlobalBackdrop } from '@/ui/os/overlays/GlobalBackdrop'; 
 import { MetaManager } from '@/ui/os/system/MetaManager'; 
-import { RotationLock } from '@/ui/os/overlays/RotationLock';
 import { FeedAccessTerminal } from '@/ui/kit/molecules/FeedAccessTerminal'; 
 import { HoloBackground } from '@/ui/os/apps/sandbox/layout/HoloBackground';
 import { GameProvider } from '@/engine/state/GameContext';
@@ -55,12 +53,10 @@ export default function Home() {
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isSandbox = bootState === 'sandbox';
-  const isMobileLockdown = bootState === 'mobile_lockdown'; 
 
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
-  const [mobileSkip, setMobileSkip] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,31 +94,14 @@ export default function Home() {
     };
   }, [bootState]); 
 
-  // --- DEBUG SHORTCUT: '1' for Mobile Quickstart ---
-  useEffect(() => {
-      const handleDebugKeys = (e: KeyboardEvent) => {
-          if (e.key === '1') {
-              AudioSystem.init(); 
-              setIntroDone(true);
-              setMobileSkip(true); 
-              setBootState('mobile_lockdown');
-          }
-      };
-      window.addEventListener('keydown', handleDebugKeys);
-      return () => window.removeEventListener('keydown', handleDebugKeys);
-  }, [setIntroDone, setBootState]);
-
   useEffect(() => {
     if (bootState !== 'active') return;
 
     const checkPauseState = () => {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
-        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-        const isSmallScreen = window.innerWidth < 768;
-        const isRotationLocked = isPortrait && isSmallScreen;
 
-        if (isMenuOpen || isDebugActive || isRotationLocked) {
+        if (isMenuOpen || isDebugActive) {
             setSimulationPaused(true);
         } else {
             setSimulationPaused(false);
@@ -159,8 +138,7 @@ export default function Home() {
       <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black">
         
         <MetaManager />
-        {!isMobileLockdown && <RotationLock />}
-        {!isMobileLockdown && <CustomCursor />}
+        <CustomCursor />
         <GlobalBackdrop />
         <DebugOverlay />
 
@@ -183,16 +161,14 @@ export default function Home() {
           <WebGLErrorBoundary key={sessionId}>
               <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
               
-              {!isMobileLockdown && (
-                  <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
-                      <GameOverlay />
-                  </div>
-              )}
+              <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
+                  <GameOverlay />
+              </div>
           </WebGLErrorBoundary>
 
           {isSandbox && <SimulationHUD />}
 
-          {!isSandbox && !isMobileLockdown && (
+          {!isSandbox && (
               <>
                   <AboutModal />
                   <FeedModal />
@@ -210,9 +186,7 @@ export default function Home() {
             />
           )}
 
-          {isMobileLockdown && <MobileExperience skipIntro={mobileSkip} />}
-
-          {!isSandbox && !isMobileLockdown && (
+          {!isSandbox && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
 

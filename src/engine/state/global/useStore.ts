@@ -46,7 +46,7 @@ const DEFAULT_AUDIO: AudioSettings = {
 };
 
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
-type BootState = 'standby' | 'active' | 'sandbox' | 'mobile_lockdown';
+type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
 export type LabExperiment = 'NONE' | 'GLITCH';
@@ -66,7 +66,6 @@ interface AppState {
   isBreaching: boolean;
   activeModal: ModalType;
   isSimulationPaused: boolean;
-  initialClickPos: { x: number, y: number } | null;
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
   galleryTarget: string;
@@ -101,7 +100,6 @@ interface AppState {
   setDebugFlag: (key: keyof DebugFlags, value: any) => void;
   resetDebugFlags: () => void;
   setSimulationPaused: (paused: boolean) => void;
-  setInitialClickPos: (pos: { x: number, y: number } | null) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -113,7 +111,6 @@ export const useStore = create<AppState>()(
       isBreaching: false,
       activeModal: 'none',
       isSimulationPaused: false,
-      initialClickPos: null,
       sandboxView: 'lab',
       labExperiment: 'NONE',
       galleryTarget: EnemyTypes.DRILLER,
@@ -133,7 +130,7 @@ export const useStore = create<AppState>()(
 
       setBootState: (bs) => set({ 
           bootState: bs,
-          isBreaching: bs === 'active' || bs === 'mobile_lockdown' ? false : get().isBreaching 
+          isBreaching: bs === 'active' ? false : get().isBreaching 
       }),
       setIntroDone: (done) => set({ introDone: done }),
       startBreach: () => set({ isBreaching: true }),
@@ -164,8 +161,7 @@ export const useStore = create<AppState>()(
               labExperiment: 'NONE',
               galleryTarget: EnemyTypes.DRILLER,
               galleryAction: 'IDLE',
-              isSimulationPaused: false,
-              initialClickPos: null
+              isSimulationPaused: false
           }));
       },
       toggleMaster: () => {
@@ -209,8 +205,7 @@ export const useStore = create<AppState>()(
       resetDebugFlags: () => set({
           debugFlags: { godMode: false, panelGodMode: false, peaceMode: false, showHitboxes: false, timeScale: 1.0 }
       }),
-      setSimulationPaused: (paused) => set({ isSimulationPaused: paused }),
-      setInitialClickPos: (pos) => set({ initialClickPos: pos })
+      setSimulationPaused: (paused) => set({ isSimulationPaused: paused })
     }),
     {
       name: STORAGE_KEYS.UI_SETTINGS, 
