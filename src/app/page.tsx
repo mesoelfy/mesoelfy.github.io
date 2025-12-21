@@ -70,10 +70,15 @@ export default function Home() {
     
     // Check Hardware
     const w = window.innerWidth;
-    if (w <= 1100) { // Catch small laptops / tablets
+    
+    // Low Threshold: 1100px (Tablets/Mobile)
+    if (w <= 1100) {
         setGateVariant('MOBILE');
         setShowGate(true);
-    } else if (w > 2500) { // Catch 4K / Ultrawide
+    } 
+    // High Threshold: 3000px (4K/Ultrawide)
+    // Raised from 2500 to avoid flagging standard 1440p (2560px) monitors
+    else if (w > 3000) {
         setGateVariant('ULTRAWIDE');
         setShowGate(true);
     }
@@ -155,7 +160,7 @@ export default function Home() {
       setIntroDone(true);
       AudioSystem.startMusic(); 
       startGame();
-    }, 200);
+    }, 0);
   };
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
@@ -187,9 +192,9 @@ export default function Home() {
           </AnimatePresence>
 
           <WebGLErrorBoundary key={sessionId}>
-              <SceneCanvas className={clsx("blur-0 transition-opacity duration-[2000ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
+              <SceneCanvas className={clsx("blur-0 transition-opacity duration-[500ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
               
-              <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[2000ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
+              <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[500ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
                   <GameOverlay />
               </div>
           </WebGLErrorBoundary>
@@ -207,7 +212,6 @@ export default function Home() {
               </>
           )}
 
-          {/* Wait for check to complete, and gate to be closed/resolved */}
           {checkDone && bootState === 'standby' && !showGate && (
             <MatrixBootSequence 
                onComplete={handleBootComplete} 
@@ -219,7 +223,6 @@ export default function Home() {
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
 
-                {/* MODIFIED: overflow-y-auto enabled for mobile, hidden for large screens */}
                 <div className="flex-1 min-h-0 relative w-full overflow-y-auto lg:overflow-hidden">
                   <div 
                       className="w-full origin-top transition-transform duration-300 ease-out"

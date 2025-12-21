@@ -7,5 +7,6 @@ export const BOOT_SEQUENCE = {
     DECRYPT: 11500,
     READY: 13500
   },
-  COMPLETION_DELAY: 800
+  // Reduced to 500ms for a snappy transition
+  COMPLETION_DELAY: 500
 };

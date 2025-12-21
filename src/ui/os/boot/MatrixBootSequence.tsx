@@ -44,26 +44,30 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
     <motion.div 
       ref={containerRef}
       animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
       className={clsx(
-          "fixed inset-0 z-boot font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black",
-          isBreaching ? "overflow-hidden cursor-none" : "overflow-y-auto overflow-x-auto cursor-auto"
+          "fixed inset-0 z-boot font-mono outline-none bg-black scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black cursor-none",
+          isBreaching ? "overflow-hidden" : "overflow-y-auto overflow-x-auto"
       )}
     >
       <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
       <div className="min-h-full min-w-min w-full flex items-center p-2 md:p-8 relative z-10">
         <motion.div 
             className={clsx(
-                "flex flex-col gap-4 transition-all duration-500 ease-out m-auto", 
+                "flex flex-col gap-4 transition-all m-auto", 
                 "w-full max-w-lg md:max-w-2xl lg:w-auto lg:max-w-none",
-                showGpuPanel && !isBreaching ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" : ""
+                showGpuPanel ? "lg:grid lg:grid-cols-[18rem_42rem_18rem] lg:gap-8 lg:items-end" : ""
             )}
-            animate={isBreaching ? { scale: 15, opacity: 0, filter: "blur(10px)" } : { opacity: 1, filter: "blur(0px)" }}
-            initial={{ opacity: 0 }}
-            transition={{ scale: { duration: 0.8, ease: "easeIn" }, opacity: { duration: 0.2, ease: "easeIn" }, filter: { duration: 0.2 } }}
+            // --- CLEAN DISSOLVE ANIMATION (SCALED UP 2X) ---
+            animate={isBreaching ? { scale: 2.2, opacity: 0, filter: "blur(10px)" } : { scale: 2.0, opacity: 1, filter: "blur(0px)" }}
+            initial={{ opacity: 0, scale: 2.0 }}
+            transition={{ 
+                duration: 0.5, 
+                ease: "easeIn" 
+            }}
         >
             <AnimatePresence>
-                {showGpuPanel && !isBreaching && (
+                {showGpuPanel && (
                     <motion.div 
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
@@ -85,9 +89,9 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                 <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                     <BootHeader step={step} />
                     
-                    {/* Body Wrapper: Holds Background & Content separated */}
+                    {/* Body Wrapper */}
                     <div className="relative w-full flex-1">
-                        <DotGridBackground /> {/* Fills this wrapper edge-to-edge, below header */}
+                        <DotGridBackground /> 
                         <div className="p-4 pt-2 h-40 flex flex-col justify-start text-xs md:text-sm font-mono relative z-10 leading-relaxed">
                             {logsToShow.map((line, i) => (
                                 <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />
@@ -104,7 +108,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                         
                         {/* Body Wrapper */}
                         <div className="relative w-full">
-                            <DotGridBackground /> {/* Fills this wrapper edge-to-edge */}
+                            <DotGridBackground /> 
                             <div className="p-4 md:p-6 flex flex-col items-center gap-4 relative z-10">
                                 <AsciiRenderer />
                                 {showWarningBox && (
@@ -133,7 +137,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: Props) => {
                 )}
                 </AnimatePresence>
             </div>
-            {showGpuPanel && !isBreaching && <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />}
+            {showGpuPanel && <div className="hidden lg:block w-72 lg:col-start-3 lg:row-start-1" />}
         </motion.div>
       </div>
     </motion.div>
