@@ -4,10 +4,10 @@ import { ASCII_TITLE } from '@/engine/config/TextAssets';
 import { motion } from 'framer-motion';
 
 interface Props {
-  isInfected: boolean;
+  step: number;
 }
 
-export const AsciiRenderer = ({ isInfected }: Props) => {
+export const AsciiRenderer = ({ step }: Props) => {
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isHigh = graphicsMode === 'HIGH';
 
@@ -17,7 +17,6 @@ export const AsciiRenderer = ({ isInfected }: Props) => {
   }, []);
 
   return (
-    // SIZE UPDATE: text-[9px] -> text-[11px]
     <div className="font-mono font-bold leading-[0.95] whitespace-pre text-center select-none overflow-hidden text-[11px] shrink-0">
       {rows.map((row, rowIndex) => (
         <motion.div
@@ -32,19 +31,31 @@ export const AsciiRenderer = ({ isInfected }: Props) => {
             let baseClass = 'transition-colors duration-300 ';
             let animClass = '';
             
-            const isRed = isInfected && Math.random() > 0.7;
-
-            if (isRed) {
+            // COLOR LOGIC:
+            // Step 3 = Red (Unsafe)
+            // Step 4 = Purple (Bypass)
+            // Else   = Green (Normal)
+            
+            if (step === 3) {
+                // RED PHASE
                 baseClass += 'text-critical-red';
                 animClass = 'animate-matrix-red';
-            } else if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
-                baseClass += 'text-primary-green-dark';
-                animClass = 'animate-matrix-green';
-            } else if (['░', '▒', '▓'].includes(char)) {
+            } else if (step === 4) {
+                // PURPLE PHASE
                 baseClass += 'text-latent-purple';
                 animClass = 'animate-matrix-purple';
             } else {
-                baseClass += 'text-primary-green-dark';
+                // GREEN PHASE (Default)
+                if (['█', '▀', '▄', '▌', '▐'].includes(char)) {
+                    baseClass += 'text-primary-green-dark';
+                    animClass = 'animate-matrix-green';
+                } else if (['░', '▒', '▓'].includes(char)) {
+                    // In Green phase, shading blocks are just dim green
+                    baseClass += 'text-primary-green-dim';
+                    animClass = 'animate-matrix-green';
+                } else {
+                    baseClass += 'text-primary-green-dark';
+                }
             }
 
             const finalClass = isHigh ? `${baseClass} ${animClass}` : baseClass;

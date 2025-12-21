@@ -32,29 +32,34 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
       ctx.font = '14px "Courier New"';
 
       const currentStep = stepRef.current;
-      const isUnsafePhase = currentStep >= 3;
       
+      // COLOR LOGIC:
+      // Step 0-2: Green
+      // Step 3 (Unsafe): Red
+      // Step 4 (Bypass): Purple
+      // Step 5+ (Decrypted): Green
+      let baseColor = '#0F0'; // Default Green
+      let shadowColor = '#0F0';
+      let shadowBlur = 0;
+
+      if (currentStep === 3) {
+          baseColor = '#FF003C'; // Critical Red
+          shadowColor = '#FF003C';
+          shadowBlur = 8;
+      } else if (currentStep === 4) {
+          baseColor = '#9E4EA5'; // Latent Purple
+          shadowColor = '#9E4EA5';
+          shadowBlur = 8;
+      }
+
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
 
-        const isPurple = Math.random() > 0.6;
-        const isRed = isUnsafePhase && Math.random() > 0.6; 
-        let color = '#0F0';
-        let blur = 0;
-
-        if (isRed) {
-            color = '#FF003C';
-            blur = 8;
-        } else if (isPurple) {
-            color = '#9E4EA5';
-            blur = 8;
-        }
-
-        ctx.fillStyle = color;
-        ctx.shadowBlur = blur;
-        ctx.shadowColor = color;
+        ctx.fillStyle = baseColor;
+        ctx.shadowBlur = shadowBlur;
+        ctx.shadowColor = shadowColor;
         ctx.fillText(text, x, y);
         ctx.shadowBlur = 0;
 

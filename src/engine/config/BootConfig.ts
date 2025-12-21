@@ -1,12 +1,11 @@
 export const BOOT_SEQUENCE = {
   TIMINGS: {
-    INIT: 3000,
-    LINK: 4000,
-    SECURITY_CHECK: 8000,
-    BYPASS: 9500,
-    DECRYPT: 11500,
-    READY: 13500
+    INIT: 1500,            // Faster "CONNECTED" + Rain
+    LINK: 5500,            // Long pause before "MOUNT"
+    SECURITY_CHECK: 7500,  // Fast jump to "UNSAFE"
+    BYPASS: 11500,         // Long hold on "UNSAFE" (Red)
+    DECRYPT: 13500,        // "DECRYPTED"
+    READY: 14500           // "CAUTION" + Triangles
   },
-  // Reduced to 500ms for a snappy transition
   COMPLETION_DELAY: 500
 };

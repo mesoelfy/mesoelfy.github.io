@@ -9,7 +9,7 @@ import { TypedLog } from './atoms/TypedLog';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
-import { Zap, ZapOff, Cpu, ChevronRight, Power } from 'lucide-react';
+import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
 // --- AWARD-WINNING TOGGLE COMPONENT ---
@@ -18,12 +18,9 @@ const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (
 
   return (
     <div className="relative w-full h-16 bg-[#050505] border border-white/10 p-1 flex select-none">
-      {/* Background Grid Texture */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '4px 4px' }} 
       />
-
-      {/* The Sliding Selector */}
       <motion.div
         layout
         initial={false}
@@ -35,18 +32,15 @@ const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] border shadow-[0_0_20px_rgba(0,0,0,0.5)] z-0"
       >
-        {/* Inner Glow Pulse */}
         <motion.div 
             animate={{ opacity: [0.3, 0.6, 0.3] }} 
             transition={{ duration: 2, repeat: Infinity }} 
             className={clsx("absolute inset-0 bg-gradient-to-r opacity-20", isHigh ? "from-primary-green/20 to-transparent" : "from-alert-yellow/20 to-transparent")} 
         />
-        {/* Corner Accents */}
         <div className={clsx("absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2", isHigh ? "border-primary-green" : "border-alert-yellow")} />
         <div className={clsx("absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2", isHigh ? "border-primary-green" : "border-alert-yellow")} />
       </motion.div>
 
-      {/* High Voltage Button */}
       <button
         onClick={() => { setMode('HIGH'); AudioSystem.playClick(); }}
         onMouseEnter={() => AudioSystem.playHover()}
@@ -66,7 +60,6 @@ const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (
         </div>
       </button>
 
-      {/* Potato Mode Button */}
       <button
         onClick={() => { setMode('POTATO'); AudioSystem.playClick(); }}
         onMouseEnter={() => AudioSystem.playHover()}
@@ -97,13 +90,8 @@ const InitializeButton = ({ onClick }: { onClick: () => void }) => {
             onMouseEnter={() => AudioSystem.playHover()}
             className="group relative w-full h-16 overflow-hidden bg-black border border-primary-green transition-all duration-300 hover:shadow-[0_0_30px_rgba(120,246,84,0.3)]"
         >
-            {/* Background Fill Animation */}
             <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-            
-            {/* Striped Pattern Overlay */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)] transition-opacity duration-500" />
-
-            {/* Content Layer */}
             <div className="absolute inset-0 flex items-center justify-between px-8 relative z-10">
                 <div className="flex flex-col items-start">
                     <div className="flex items-center gap-3">
@@ -116,7 +104,6 @@ const InitializeButton = ({ onClick }: { onClick: () => void }) => {
                         ESTABLISH_NEURAL_LINK
                     </span>
                 </div>
-
                 <div className="flex items-center gap-1">
                     {[0, 1, 2].map(i => (
                         <motion.div 
@@ -133,19 +120,36 @@ const InitializeButton = ({ onClick }: { onClick: () => void }) => {
     );
 };
 
+// --- DANGER TRIANGLE ---
+const DangerTriangle = () => (
+    <motion.div
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ 
+            opacity: 1, 
+            scale: 1,
+            color: ['#FF003C', '#eae747', '#FF003C'] 
+        }}
+        transition={{ 
+            color: { duration: 0.5, repeat: Infinity, ease: "linear" },
+            scale: { type: "spring", bounce: 0.5 }
+        }}
+        className="text-critical-red"
+    >
+        <AlertTriangle size={32} strokeWidth={2.5} />
+    </motion.div>
+);
+
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: () => void, onBreachStart: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { graphicsMode, setGraphicsMode } = useStore();
   const [uiScale, setUiScale] = useState(1.0);
-  const { step, isBreaching, handleInitialize, logsToShow, showMatrix, showPayloadWindow, showWarningBox, showButton } = useBootSequence({ onComplete, onBreachStart });
+  const { step, isBreaching, handleInitialize, logsToShow, showMatrix, showPayloadWindow, showButton } = useBootSequence({ onComplete, onBreachStart });
   
   useMatrixRain(canvasRef, showMatrix, isBreaching, step);
 
   useEffect(() => {
-    // Immediate calculation to minimize flash
     const calc = () => Math.max(0.5, Math.min(window.innerWidth/680, window.innerHeight/850) * 0.96);
     setUiScale(calc());
-    
     const res = () => { setUiScale(calc()); };
     window.addEventListener('resize', res); 
     return () => window.removeEventListener('resize', res);
@@ -162,25 +166,19 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                 transform: `scale(${isBreaching ? uiScale*1.1 : uiScale})`, 
                 filter: isBreaching ? "blur(20px)" : "blur(0px)", 
                 opacity: isBreaching ? 0 : 1, 
-                // CRITICAL FIX: Only animate transform during breach to prevent initial resize pop
-                transition: isBreaching 
-                    ? "transform 0.8s cubic-bezier(0.7, 0, 0.84, 0), opacity 0.5s ease-in, filter 0.5s ease-in" 
-                    : "none"
+                transition: isBreaching ? "transform 0.8s cubic-bezier(0.7, 0, 0.84, 0), opacity 0.5s ease-in, filter 0.5s ease-in" : "none"
             }}
         >
-            {/* TERMINAL LOG */}
             <div className="w-full bg-black/90 border border-primary-green-dim/50 shadow-[0_0_20px_rgba(0,255,65,0.1)] overflow-hidden shrink-0 relative z-20 flex flex-col">
                 <BootHeader step={step} />
                 <div className="relative w-full flex-1">
                     <DotGridBackground /> 
-                    {/* Fixed Height Layout */}
                     <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
                         {logsToShow.map((line, i) => <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />)}
                     </div>
                 </div>
             </div>
 
-            {/* PAYLOAD / INTERACTIVE AREA */}
             <AnimatePresence mode="wait">
             {showPayloadWindow && (
                 <motion.div 
@@ -195,9 +193,14 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                         <DotGridBackground /> 
                         
                         <div className="relative z-10 flex flex-col items-center gap-6">
-                            <AsciiRenderer isInfected={showWarningBox} />
                             
-                            {/* CONTROLS - SIMPLE FADE IN */}
+                            {/* ASCII + CAUTION TRIANGLES */}
+                            <div className="flex items-center gap-6">
+                                {step >= 6 && <DangerTriangle />}
+                                <AsciiRenderer step={step} />
+                                {step >= 6 && <DangerTriangle />}
+                            </div>
+                            
                             <AnimatePresence>
                                 {showButton && (
                                     <motion.div 
@@ -212,10 +215,8 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                                                 <Cpu size={12} /> 
                                                 <span>Graphics_Kernel_Config</span>
                                             </div>
-                                            
                                             <GraphicsToggle mode={graphicsMode} setMode={setGraphicsMode} />
                                         </div>
-
                                         <InitializeButton onClick={handleInitialize} />
                                     </motion.div>
                                 )}
