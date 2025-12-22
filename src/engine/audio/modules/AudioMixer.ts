@@ -127,21 +127,36 @@ export class AudioMixer {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
+      // THRESHOLD SET TO 60% (Matching UI Yellow State)
+      const THRESHOLD = 0.6;
+      const FLOOR_FREQ = 800; // Muffled but audible
+      
       // If healthy or missing context, open filter
       if (!ctx || integrity >= 1.0) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, transitionTime);
           return;
       }
 
-      // If moderately damaged, start closing slightly
-      if (integrity > 0.3) {
+      // If integrity is above the warning threshold (Green), keep open
+      if (integrity > THRESHOLD) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
           return;
       }
 
-      // Critical state: Muffle sound significantly
-      const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, 1.0 - (integrity / 0.3));
-      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
+      // Logic:
+      // We are below 60%.
+      // We normalize the remaining health within this danger zone (0% to 60%).
+      const ratio = integrity / THRESHOLD;
+      
+      // Quadratic Curve: This makes the filter close faster than a linear slide.
+      // At 60% (Start): ratio=1.0, curve=1.0, intensity=0 (Open)
+      // At 30% (Critical): ratio=0.5, curve=0.25, intensity=0.75 (Heavily Muffled)
+      const curve = ratio * ratio; 
+      
+      const intensity = 1.0 - curve; 
+
+      const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
+      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.1);
   }
 
   public getByteFrequencyData(array: Uint8Array) { if (this.analyser) this.analyser.getByteFrequencyData(array); }
