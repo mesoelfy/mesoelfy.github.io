@@ -32,16 +32,16 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
         borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(255,0,60,0.6)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
         backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(255,0,60,0.15)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
       } : {}}
-      // SPEED UPDATE: 1.5 -> 2.0
-      transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
+      // UPDATED: Added delay: 0.4 to sync with Skull icon arrival (wait mode exit)
+      transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
     >
       <motion.span 
         className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
         animate={isCaution ? {
             color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654']
         } : {}}
-        // SPEED UPDATE: 1.5 -> 2.0
-        transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
+        // UPDATED: Added delay: 0.4 to sync with Skull icon
+        transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
       >
         MESOELFY_CORE
       </motion.span>
@@ -122,7 +122,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                            color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654'],
                            rotate: [0, 5, 0, -5, 0] 
                        }}
-                       // SPEED UPDATE: 1.5 -> 2.0
                        transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
                     >
                          <Skull size={18} />

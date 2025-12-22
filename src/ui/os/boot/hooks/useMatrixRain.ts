@@ -20,8 +20,6 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
     const cols = Math.floor(canvas.width / 20);
     const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
 
-    const colRandoms = Array(cols).fill(0).map(() => Math.random());
-
     const matrixEffect = () => {
       const mode = useStore.getState().graphicsMode;
       if (mode === 'POTATO') {
@@ -39,7 +37,9 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
-        const rand = colRandoms[ind];
+        
+        // Reverted to per-frame random for "within strand" variation
+        const rand = Math.random();
 
         let color = '#0F0'; 
         let shadowColor = '#0F0';
@@ -65,7 +65,7 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
                 shadowColor = '#FF003C';
                 shadowBlur = 8;
             }
-        } else if (currentStep >= 5) { // UPDATED: >= 5 to persist through Caution phase
+        } else if (currentStep >= 5) {
             // DECRYPTED PHASE: 35% Green, 45% Purple, 20% Red
             if (rand < 0.35) {
                 color = '#0F0';

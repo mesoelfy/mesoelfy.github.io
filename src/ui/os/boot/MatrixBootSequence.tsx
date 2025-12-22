@@ -126,7 +126,7 @@ const DangerTriangle = () => (
         animate={{ 
             opacity: 1, 
             scale: 1,
-            y: [-25, 25, -25], // UPDATED: Increased travel distance
+            y: [-25, 15, -25], // UPDATED: Lowered Max Y, Raised Min Y
             color: ['#FF003C', '#eae747', '#FF003C'] 
         }}
         transition={{ 
@@ -137,7 +137,8 @@ const DangerTriangle = () => (
         }}
         className="text-critical-red"
     >
-        <AlertTriangle size={32} strokeWidth={2.5} />
+        {/* UPDATED: Size +25% (40) */}
+        <AlertTriangle size={40} strokeWidth={2.5} />
     </motion.div>
 );
 
