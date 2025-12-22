@@ -1,6 +1,6 @@
 export const GAME_MATH = {
   SPAWN_RADIUS_STD: 25,
-  WEAPON_SPREAD_BASE: 0.15,
+  WEAPON_SPREAD_BASE: 0.075, // Tightened from 0.15
   SNIFFER_ANGLE_OFFSET: Math.PI / 4,
   FULL_CIRCLE: Math.PI * 2
 } as const;
