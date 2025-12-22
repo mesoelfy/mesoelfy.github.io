@@ -12,7 +12,6 @@ import { useMatrixRain } from './hooks/useMatrixRain';
 import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
-// --- AWARD-WINNING TOGGLE COMPONENT ---
 const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (m: 'HIGH' | 'POTATO') => void }) => {
   const isHigh = mode === 'HIGH';
 
@@ -127,12 +126,12 @@ const DangerTriangle = () => (
         animate={{ 
             opacity: 1, 
             scale: 1,
-            y: [-5, 5, -5], // Hover effect
-            color: ['#FF003C', '#eae747', '#FF003C'] // Slow cycle
+            y: [-25, 25, -25], // UPDATED: Increased travel distance
+            color: ['#FF003C', '#eae747', '#FF003C'] 
         }}
         transition={{ 
             y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
-            color: { duration: 2, repeat: Infinity, ease: "linear" }, // Slower color cycle
+            color: { duration: 2, repeat: Infinity, ease: "linear" },
             scale: { type: "spring", bounce: 0.5 },
             opacity: { duration: 0.5 }
         }}
@@ -196,14 +195,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                         <DotGridBackground /> 
                         
                         <div className="relative z-10 flex flex-col items-center gap-6">
-                            
-                            {/* ASCII + CAUTION TRIANGLES */}
                             <div className="flex items-center gap-6">
                                 {step >= 6 && <DangerTriangle />}
                                 <AsciiRenderer step={step} />
                                 {step >= 6 && <DangerTriangle />}
                             </div>
-                            
                             <AnimatePresence>
                                 {showButton && (
                                     <motion.div 

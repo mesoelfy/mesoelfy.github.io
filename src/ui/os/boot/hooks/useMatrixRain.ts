@@ -20,7 +20,6 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
     const cols = Math.floor(canvas.width / 20);
     const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
 
-    // Persist randomness per column to avoid flickering colors
     const colRandoms = Array(cols).fill(0).map(() => Math.random());
 
     const matrixEffect = () => {
@@ -42,26 +41,39 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
         const x = ind * 20;
         const rand = colRandoms[ind];
 
-        let color = '#0F0'; // Default Green
+        let color = '#0F0'; 
         let shadowColor = '#0F0';
         let shadowBlur = 0;
 
         if (currentStep === 3) {
-            // RED PHASE: 70% Red, 30% Green
+            // RED PHASE (UNSAFE): 70% Red, 30% Green
             if (rand < 0.7) {
                 color = '#FF003C';
                 shadowColor = '#FF003C';
                 shadowBlur = 8;
             }
         } else if (currentStep === 4) {
-            // PURPLE PHASE: 30% Green, 40% Purple, 30% Red
+            // PURPLE PHASE (BYPASS): 30% Green, 40% Purple, 30% Red
             if (rand < 0.3) {
                 color = '#0F0';
-            } else if (rand < 0.7) { // 0.3 to 0.7 = 40%
+            } else if (rand < 0.7) {
                 color = '#9E4EA5';
                 shadowColor = '#9E4EA5';
                 shadowBlur = 8;
-            } else { // 0.7 to 1.0 = 30%
+            } else {
+                color = '#FF003C';
+                shadowColor = '#FF003C';
+                shadowBlur = 8;
+            }
+        } else if (currentStep >= 5) { // UPDATED: >= 5 to persist through Caution phase
+            // DECRYPTED PHASE: 35% Green, 45% Purple, 20% Red
+            if (rand < 0.35) {
+                color = '#0F0';
+            } else if (rand < 0.80) { 
+                color = '#9E4EA5';
+                shadowColor = '#9E4EA5';
+                shadowBlur = 8;
+            } else {
                 color = '#FF003C';
                 shadowColor = '#FF003C';
                 shadowBlur = 8;

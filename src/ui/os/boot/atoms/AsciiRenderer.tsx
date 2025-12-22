@@ -11,15 +11,14 @@ export const AsciiRenderer = ({ step }: Props) => {
   const graphicsMode = useStore((state) => state.graphicsMode);
   const isHigh = graphicsMode === 'HIGH';
 
-  // Memoize the grid structure and assigned random values so they don't change on re-renders
   const grid = useMemo(() => {
     const cleanTitle = ASCII_TITLE.replace(/^\n/, '');
     const rows = cleanTitle.split('\n');
     return rows.map((row) => {
       return row.split('').map((char) => ({
         char,
-        rand: Math.random(), // Stable random value for color logic
-        delay: Math.random() * 2 // Stable delay
+        rand: Math.random(),
+        delay: Math.random() * 2
       }));
     });
   }, []);
@@ -36,12 +35,11 @@ export const AsciiRenderer = ({ step }: Props) => {
           {row.map((cell, charIndex) => {
             if (cell.char === ' ') return <span key={charIndex}> </span>;
 
-            let baseClass = 'transition-colors duration-500 '; // Smooth transition
+            let baseClass = 'transition-colors duration-500 ';
             let animClass = '';
             
-            // COLOR LOGIC (Matching Rain)
             if (step === 3) {
-                // RED PHASE: 70% Red, 30% Green
+                // RED PHASE (70% Red)
                 if (cell.rand < 0.7) {
                     baseClass += 'text-critical-red';
                     animClass = 'animate-matrix-red';
@@ -50,7 +48,7 @@ export const AsciiRenderer = ({ step }: Props) => {
                     animClass = 'animate-matrix-green';
                 }
             } else if (step === 4) {
-                // PURPLE PHASE: 30% Green, 40% Purple, 30% Red
+                // PURPLE PHASE (30G / 40P / 30R)
                 if (cell.rand < 0.3) {
                     baseClass += 'text-primary-green-dark';
                     animClass = 'animate-matrix-green';
@@ -61,8 +59,20 @@ export const AsciiRenderer = ({ step }: Props) => {
                     baseClass += 'text-critical-red';
                     animClass = 'animate-matrix-red';
                 }
+            } else if (step >= 5) { // UPDATED: >= 5 to persist through Caution phase
+                // DECRYPTED PHASE (35G / 45P / 20R)
+                if (cell.rand < 0.35) {
+                    baseClass += 'text-primary-green-dark';
+                    animClass = 'animate-matrix-green';
+                } else if (cell.rand < 0.80) {
+                    baseClass += 'text-latent-purple';
+                    animClass = 'animate-matrix-purple';
+                } else {
+                    baseClass += 'text-critical-red';
+                    animClass = 'animate-matrix-red';
+                }
             } else {
-                // GREEN PHASE (Default)
+                // DEFAULT GREEN
                 if (['█', '▀', '▄', '▌', '▐'].includes(cell.char)) {
                     baseClass += 'text-primary-green-dark';
                     animClass = 'animate-matrix-green';

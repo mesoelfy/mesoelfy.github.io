@@ -35,9 +35,6 @@ export const TypedLog = ({ text, color, speed = 20, showDots = false, blinkCycle
     setIsDoneTyping(true);
   }
 
-  // Dot Logic
-  // If active: blinking
-  // If past: solid
   const showBlinking = isDoneTyping && showDots && isActive && blinkCycles > 0;
   const showSolid = isDoneTyping && showDots && (isPast || (isActive && blinkCycles === 0));
 
@@ -45,14 +42,23 @@ export const TypedLog = ({ text, color, speed = 20, showDots = false, blinkCycle
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
       
-      {/* Blinking Dots */}
+      {/* Blinking Dots - Consecutive */}
       {showBlinking && (
-          <span 
-            className="animate-pulse" 
-            style={{ animationIterationCount: blinkCycles, animationDuration: '1s' }}
-          >
-            ...
-          </span>
+        <span className="flex">
+          {[0, 1, 2].map(i => (
+            <span 
+                key={i}
+                className="animate-pulse" 
+                style={{ 
+                    animationIterationCount: blinkCycles, 
+                    animationDuration: '1s',
+                    animationDelay: `${i * 0.2}s`
+                }}
+            >
+              .
+            </span>
+          ))}
+        </span>
       )}
 
       {/* Solid Dots */}
