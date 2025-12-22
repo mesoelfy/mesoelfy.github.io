@@ -45,6 +45,7 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
+// --- SNIFFER OVERLAY SHADER ---
 const SnifferOverlayShader = {
   vertex: `
     varying vec2 vPos;
@@ -79,9 +80,14 @@ const SnifferOverlayShader = {
 
       float dist = length(vPos);
       float tipMask = smoothstep(0.35, 0.65, dist);
+      
+      // Hard cut alpha for cleaner Normal Blending look
+      if (tipMask < 0.1) discard;
+
+      // Pulse opacity slightly
       float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
       
-      gl_FragColor = vec4(uColor, tipMask * pulse);
+      gl_FragColor = vec4(uColor, 1.0); // Full opacity, color modulated by uniform
     }
   `
 };
@@ -89,15 +95,16 @@ const SnifferOverlayShader = {
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
-const COL_SNIFFER = new THREE.Color(PALETTE.PINK.PRIMARY);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
   const containerRef = useRef<THREE.Group>(null), centerDotRef = useRef<THREE.Mesh>(null), reticleRef = useRef<THREE.Mesh>(null), ambientGlowRef = useRef<THREE.Mesh>(null), snifferRef = useRef<THREE.Mesh>(null);
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
+  const activeUpgrades = useGameStore(state => state.activeUpgrades);
   
-  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
+  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), snifferColor = useRef(new THREE.Color());
+  const currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', { ...ShaderLib.presets.playerAmbient, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.6 }, [Uniforms.ENERGY]: { value: 0.0 } } });
@@ -115,11 +122,11 @@ export const PlayerActor = () => {
           fragmentShader: SnifferOverlayShader.fragment,
           uniforms: {
               uLevel: { value: 0 },
-              uColor: { value: COL_SNIFFER },
+              uColor: { value: new THREE.Color(0, 0, 0) },
               uTime: { value: 0 }
           },
           transparent: true,
-          blending: THREE.AdditiveBlending,
+          blending: THREE.NormalBlending, // CHANGED FROM ADDITIVE
           depthTest: false
       });
   }, []);
@@ -165,10 +172,20 @@ export const PlayerActor = () => {
         // --- SYNC SNIFFER OVERLAY ---
         if (snifferRef.current) {
             snifferRef.current.rotation.z = reticleRef.current.rotation.z;
-            // Direct Store Access to avoid reactivity lag
             const levels = useGameStore.getState().activeUpgrades;
             snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
             snifferMaterial.uniforms.uTime.value = time;
+            
+            // Calculate Complementary Color (Dynamic Opposition)
+            // 1. Copy current base color
+            snifferColor.current.copy(tempColor.current);
+            
+            // 2. Rotate Hue by 180 degrees (0.5 in 0-1 space)
+            const hsl = { h: 0, s: 0, l: 0 };
+            snifferColor.current.getHSL(hsl);
+            snifferColor.current.setHSL((hsl.h + 0.5) % 1.0, 1.0, 0.6); // High Sat/Lightness for pop
+            
+            snifferMaterial.uniforms.uColor.value.copy(snifferColor.current);
         }
 
         if (isZenMode) {
