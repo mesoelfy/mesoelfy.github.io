@@ -50,10 +50,10 @@ const createReticleGeo = () => {
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
     
-    // Config: Slightly Bigger & Thicker
-    const rTip = 0.92;      // Was 0.90
-    const rValley = 0.84;   // Was 0.82
-    const thickness = 0.06; // Was 0.05
+    // Config
+    const rTip = 0.92;      
+    const rValley = 0.84;   
+    const thickness = 0.06; 
     
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
     const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
@@ -238,10 +238,10 @@ export const PlayerActor = () => {
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, lerpFactor);
             rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * iSpd);
         } else {
-            // Idle Rotation: REVERSED direction (Positive time)
+            // Idle Rotation: Counter-Clockwise (positive time)
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(
                 centerDotRef.current.rotation.z, 
-                time * iSpd + rotationOffsetRef.current, // CHANGED -time to time
+                time * iSpd + rotationOffsetRef.current, 
                 0.08
             );
         }
@@ -261,15 +261,32 @@ export const PlayerActor = () => {
             snifferMaterial.uniforms.uColor.value.copy(snifferColor.current);
         }
 
+        // --- UPDATE FORK ---
         if (forkRef.current) {
+            // Base sync
             forkRef.current.rotation.z = centerDotRef.current.rotation.z;
             (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         }
 
         if (isZenMode) {
-            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
+            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); // Bright Center
+            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6); // Saturated Reticle
+            
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
             ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
+
+            // --- ZEN MODE FORK OVERRIDES ---
+            if (forkRef.current) {
+                // 1. Color: Match Reticle (Color), not Center (White)
+                (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
+                
+                // 2. Rotation: Counter-Spin relative to center
+                // Center aims at mouse + idle spin (time * iSpd)
+                // We want to visually counteract the idle spin or spin opposite.
+                // Simple: Rotate backwards based on time
+                forkRef.current.rotation.z = - (time * iSpd);
+            }
+
         } else {
             let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
             tempColor.current.lerp(target, 0.2);
