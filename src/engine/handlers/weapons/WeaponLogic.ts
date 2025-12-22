@@ -16,10 +16,41 @@ export interface ShotDef {
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
 
+// The geometry oR is 0.65, but we want it at the "outside sharp pointed tip".
+// Increasing to 1.25 to push it visually to the edge of the star points.
+const RETICLE_RADIUS = 1.25;
+
+// GEOMETRY CALCULATION:
+// 1. The geometry generation twists tips by -0.55 radians (tA).
+// 2. The PlayerActor mesh has a static rotation of +Math.PI/12 (+0.2618 radians).
+// 3. Net offset = 0.2618 - 0.55 = -0.2882 radians (~ -16.5 degrees).
+const TWIST_OFFSET = -0.2882;
+
+// Standard Cardinal Points (CCW from East/Right)
+const ANGLES = {
+    RIGHT: 0,
+    TOP: Math.PI / 2,
+    LEFT: Math.PI,
+    BOTTOM: Math.PI * 1.5
+};
+
+// Map requested order to the geometry indices
+// 1. Top Left (Tip 2):   LEFT + Twist
+// 2. Bottom Right (Tip 0): RIGHT + Twist
+// 3. Bottom Left (Tip 3): BOTTOM + Twist
+// 4. Top Right (Tip 1):    TOP + Twist
+const SNIFFER_TIPS = [
+    ANGLES.LEFT + TWIST_OFFSET,   // 1. Top Left
+    ANGLES.RIGHT + TWIST_OFFSET,  // 2. Bottom Right
+    ANGLES.BOTTOM + TWIST_OFFSET, // 3. Bottom Left
+    ANGLES.TOP + TWIST_OFFSET     // 4. Top Right
+];
+
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  upgrades: Record<string, number>
+  upgrades: Record<string, number>,
+  reticleRotation: number = 0 // Passed from visual system
 ): ShotDef[] => {
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
@@ -44,7 +75,7 @@ export const calculatePlayerShots = (
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-  // Standard / Fork Shots
+  // --- 1. STANDARD / FORK SHOTS (Main Gun) ---
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
       
@@ -63,7 +94,7 @@ export const calculatePlayerShots = (
       });
   }
 
-  // Backdoor Shots
+  // --- 2. BACKDOOR SHOTS (Rear Gun) ---
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
       
@@ -82,20 +113,31 @@ export const calculatePlayerShots = (
       });
   }
 
-  // Sniffer (Homing) Shots
+  // --- 3. SNIFFER SHOTS (Reticle Tips) ---
   if (snifferLevel > 0) {
-      const angleStep = GAME_MATH.FULL_CIRCLE / snifferLevel;
+      // Clamp to max 4 tips (cycle if > 4, but array only has 4)
+      const maxTips = 4;
+      
       for (let i = 0; i < snifferLevel; i++) {
-          const angle = i * angleStep;
+          // Use modulo to cycle through tips if level > 4 (e.g. lvl 5 shoots from tip 1 again)
+          const tipIndex = i % maxTips;
           
-          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+          // Calculate exact tip position relative to reticle rotation
+          const localAngle = SNIFFER_TIPS[tipIndex];
+          const globalAngle = reticleRotation + localAngle;
+          
+          const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
+          const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
+          
+          // Velocity: They shoot outward from center, then home in
+          const vx = Math.cos(globalAngle) * speed * 0.5;
+          const vy = Math.sin(globalAngle) * speed * 0.5;
           
           shots.push({
-              x: spawnX,
-              y: spawnY,
-              vx: Math.cos(angle) * speed * 0.5,
-              vy: Math.sin(angle) * speed * 0.5,
+              x: tipX,
+              y: tipY,
+              vx: vx,
+              vy: vy,
               damage: damage * 0.5,
               life: life * 2,
               configId: WeaponIDs.PLAYER_SNIFFER,

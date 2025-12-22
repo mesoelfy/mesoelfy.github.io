@@ -3,6 +3,7 @@ import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
@@ -10,7 +11,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
+import { WeaponIDs } from '@/engine/config/Identifiers';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -65,7 +66,10 @@ export class WeaponSystem implements IGameSystem {
     if (time > this.lastFireTime + currentFireRate) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
-        if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel);
+        // Get the visual rotation to align Sniffer shots with reticle
+        const renderTransform = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        
+        if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel, renderTransform);
     }
   }
 
@@ -133,7 +137,7 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel) {
+  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity; let targetEnemy = null;
     for (const e of enemies) {
@@ -150,7 +154,17 @@ export class WeaponSystem implements IGameSystem {
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
     
-    const shots = calculatePlayerShots({ x: pPos.x, y: pPos.y }, { x: tPos.x, y: tPos.y }, upgrades);
+    // NOTE: PlayerActor renders the reticle with a NEGATIVE rotation relative to RenderTransform
+    // We replicate that here so bullets match visual tips.
+    const reticleRotation = pVisual ? -pVisual.rotation : 0;
+
+    const shots = calculatePlayerShots(
+        { x: pPos.x, y: pPos.y }, 
+        { x: tPos.x, y: tPos.y }, 
+        upgrades,
+        reticleRotation
+    );
+
     shots.forEach(shot => {
         const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, Faction.FRIENDLY, shot.life, shot.damage, shot.configId);
         

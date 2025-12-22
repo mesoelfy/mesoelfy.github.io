@@ -677,3 +677,6 @@ ProjectileGeometry - more shapes?
 #070B06 IMG_XX BG color
 
 
+It would also be nice if the tip that becomes upgraded became a color as indication
+
+backdoor / one large crescent wave that fires 4X slower than default baseline attack.
