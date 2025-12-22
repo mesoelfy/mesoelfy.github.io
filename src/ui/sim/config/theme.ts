@@ -4,17 +4,17 @@ export const GAME_THEME = {
   turret: {
     base: PALETTE.GREEN.PRIMARY,
     glow: PALETTE.GREEN.GLOW,
-    repair: PALETTE.PINK.PRIMARY, // Updated to Pink
+    repair: PALETTE.PINK.PRIMARY,
   },
   bullet: {
     plasma: PALETTE.MONO.WHITE,
     trail: PALETTE.GREEN.PRIMARY,
-    hunter: PALETTE.YELLOW.SOFT, 
+    hunter: PALETTE.ORANGE.PRIMARY, // Updated to Rust
   },
   enemy: {
-    muncher: PALETTE.PURPLE.PRIMARY,
+    muncher: PALETTE.PURPLE.INDIGO, // Updated to Indigo
     kamikaze: PALETTE.RED.CRITICAL,
-    hunter: PALETTE.YELLOW.SOFT,
+    hunter: PALETTE.ORANGE.PRIMARY, // Updated to Rust
     charge: PALETTE.MONO.WHITE,  
   },
   hud: {
@@ -24,7 +24,7 @@ export const GAME_THEME = {
   vfx: {
     spark: PALETTE.MONO.WHITE,
     damage: PALETTE.RED.CRITICAL,
-    heal: PALETTE.PINK.PRIMARY, // Updated to Pink
+    heal: PALETTE.PINK.PRIMARY,
     clash: PALETTE.YELLOW.SOFT,
   }
 };

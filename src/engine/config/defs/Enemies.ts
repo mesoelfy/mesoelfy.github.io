@@ -10,7 +10,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
       model: 'CONE', 
-      color: PALETTE.PURPLE.PRIMARY, 
+      color: PALETTE.PURPLE.INDIGO, // Updated
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
@@ -37,7 +37,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
       model: 'CUSTOM_HUNTER', 
-      color: PALETTE.YELLOW.SOFT, 
+      color: PALETTE.ORANGE.PRIMARY, // Updated
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
@@ -49,7 +49,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
     visual: { 
       model: 'OCTA', 
-      color: PALETTE.PINK.PRIMARY, // Updated to Pink
+      color: PALETTE.PINK.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
