@@ -680,3 +680,5 @@ ProjectileGeometry - more shapes?
 It would also be nice if the tip that becomes upgraded became a color as indication
 
 backdoor / one large crescent wave that fires 4X slower than default baseline attack.
+
+EXP points unlock upgrade tokens to spend in "shop", and different upgrades and aspects cost different amounts. Have legend of zelda OoT style slots that are empty and fill in when purchase. Badge-like.

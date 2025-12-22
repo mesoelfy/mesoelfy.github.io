@@ -33,51 +33,60 @@ export const registerAllAssets = () => {
   // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+      // Pass true for isProjectile
+      AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
   });
 };
 
 const createEnemyGeometry = (id: string, visual: any) => {
     if (id === EnemyTypes.DRILLER) {
-        // FIXED: Restore bulk (Radius 0.5) and keep Y-Axis alignment for correct spinning
         const height = 0.64;
-        const radius = 0.5; // Restored size
-        
+        const radius = 0.5; 
         const geo = new THREE.ConeGeometry(radius, height, 4);
-        
-        // Translate Tip to Origin (0,0,0)
-        // Default Cone: Center 0,0,0. Tip at +height/2. Base at -height/2.
-        // We move Down on Y by height/2 to bring Tip to 0.
-        // Now: Tip at 0, Body extends down to -height.
         geo.translate(0, -height / 2, 0);
-        
         return addBarycentricCoordinates(geo);
     }
-    return createGeometry(visual);
+    return createGeometry(visual, false);
 };
 
-const createGeometry = (visual: any) => {
+const createGeometry = (visual: any, isProjectile: boolean = false) => {
+    let geo;
     switch (visual.model) {
-        // Legacy fallback: Use 0.5 radius default if not specified, matching old code behavior
-        case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
-        case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
-        case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);
-        case 'TETRA': return new THREE.TetrahedronGeometry(1, 0);
-        case 'SPHERE': return new THREE.IcosahedronGeometry(1, 1);
-        case 'CAPSULE': return new THREE.CylinderGeometry(0.5, 0.5, 1, 6);
-        case 'CYLINDER': return new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
-        case 'TORUS': return new THREE.TorusGeometry(0.8, 0.2, 4, 8);
-        case 'BOX': return new THREE.BoxGeometry(1, 1, 1);
+        case 'CONE': geo = new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4); break;
+        case 'ICOSA': geo = new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0); break;
+        case 'OCTA': geo = new THREE.OctahedronGeometry(visual.radius || 0.5, 0); break;
+        case 'TETRA': geo = new THREE.TetrahedronGeometry(1, 0); break;
+        case 'SPHERE': geo = new THREE.IcosahedronGeometry(1, 1); break;
+        case 'CAPSULE': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); break;
+        case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
+        case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
+        case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
         case 'CUSTOM_HUNTER': return createHunterSpear();
         case 'CUSTOM_CHEVRON': {
             const shape = new THREE.Shape();
             const w = 0.8, h = 0.8, t = 0.3;
             shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
             shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
-            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
+            geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
             geo.center();
-            return geo;
+            break;
         }
-        default: return new THREE.BoxGeometry(1,1,1);
+        default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
+
+    // Offset Projectiles so origin is at the Tail (Bottom)
+    // Projectiles align +Y to velocity. Scaling Y stretches them.
+    // If centered (default), scaling Y stretches back and front.
+    // Moving geometry UP (+Y) by half height puts Bottom at 0.
+    // Then scaling Y grows UP (Forward).
+    if (isProjectile) {
+        if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
+            geo.translate(0, 0.5, 0);
+        } else if (visual.model === 'TETRA') {
+            // Tetra is weird, usually centered. Let's shift it a bit.
+            geo.translate(0, 0.3, 0);
+        }
+    }
+
+    return addBarycentricCoordinates(geo);
 };
