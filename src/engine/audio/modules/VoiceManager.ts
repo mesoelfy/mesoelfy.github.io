@@ -10,32 +10,54 @@ class MusicDeck {
   public element: HTMLAudioElement | null = null;
   public source: MediaElementAudioSourceNode | null = null;
   public gain: GainNode | null = null;
-
-  constructor() {
-    if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
-        this.element = new Audio();
-        this.element.crossOrigin = "anonymous";
-        this.element.loop = false; 
-    }
-  }
+  private outputNode: AudioNode | null = null;
+  private ctx: AudioContext | null = null;
 
   public init(ctx: AudioContext, output: AudioNode) {
-    if (!this.element || this.source) return;
-    this.source = ctx.createMediaElementSource(this.element);
-    this.gain = ctx.createGain();
-    this.gain.gain.value = 0; // Start silent
-    this.source.connect(this.gain);
-    this.gain.connect(output);
+    this.ctx = ctx;
+    this.outputNode = output;
+
+    // Lazy create Audio element if missing
+    if (!this.element && typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+        this.element = new Audio();
+        this.element.crossOrigin = "anonymous";
+        this.element.loop = false;
+    }
+
+    if (!this.element) return;
+
+    // Create Graph Nodes if missing
+    if (!this.gain) {
+        this.gain = ctx.createGain();
+        this.gain.gain.value = 0; // Start silent
+        this.gain.connect(output);
+    }
+
+    if (!this.source) {
+        try {
+            this.source = ctx.createMediaElementSource(this.element);
+            this.source.connect(this.gain);
+        } catch (e) {
+            console.warn("[MusicDeck] Failed to create MediaElementSource:", e);
+        }
+    }
   }
 
   public load(url: string) {
     if (this.element) {
+        // Reset crossOrigin to be safe
+        this.element.crossOrigin = "anonymous";
         this.element.src = url;
         this.element.load();
     }
   }
 
   public play() {
+    // Re-verify graph integrity before playing
+    if (this.ctx && this.outputNode) {
+        this.init(this.ctx, this.outputNode);
+    }
+
     if (this.element) {
         this.element.play().catch(e => console.warn("[MusicDeck] Play blocked", e));
     }
@@ -79,7 +101,7 @@ export class VoiceManager {
     private mixer: AudioMixer
   ) {}
 
-  // --- SFX LOGIC (Unchanged) ---
+  // --- SFX LOGIC ---
   public playSFX(key: AudioKey, pan: number = 0) {
     if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
     const ctx = this.ctxManager.ctx;
@@ -101,7 +123,7 @@ export class VoiceManager {
     source.start();
   }
 
-  // --- AMBIENCE LOGIC (Unchanged) ---
+  // --- AMBIENCE LOGIC ---
   public playAmbience(key: AudioKey) {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.ambienceGain) return;
@@ -134,7 +156,7 @@ export class VoiceManager {
     this.currentAmbienceKey = key;
   }
 
-  // --- NEW MUSIC SYSTEM ---
+  // --- MUSIC SYSTEM ---
   
   public startMusic() {
     const ctx = this.ctxManager.ctx;
@@ -145,9 +167,13 @@ export class VoiceManager {
         this.deckB.init(ctx, this.mixer.musicGain);
         
         // Auto-advance listeners
-        const handleEnded = () => this.advanceTrack(true);
-        if (this.deckA.element) this.deckA.element.addEventListener('ended', handleEnded);
-        if (this.deckB.element) this.deckB.element.addEventListener('ended', handleEnded);
+        const attachListener = (deck: MusicDeck) => {
+            if (deck.element) {
+                deck.element.addEventListener('ended', () => this.advanceTrack(true));
+            }
+        };
+        attachListener(this.deckA);
+        attachListener(this.deckB);
         
         this.isMusicInit = true;
         this.playTrack(0);
@@ -159,23 +185,17 @@ export class VoiceManager {
   }
 
   private advanceTrack(auto: boolean) {
-    // 1. Logic: Shuffle or Increment
     if (!auto && !this.isShuffled) {
-        // First manual click -> Shuffle Mode
         this.shufflePlaylist();
         this.isShuffled = true;
-        this.currentIndex = 0; // Start fresh from shuffled deck
+        this.currentIndex = 0; 
     } else {
-        // Just next one
         this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
     }
-
-    // 2. Play
     this.playTrack(this.currentIndex);
   }
 
   private shufflePlaylist() {
-    // Fisher-Yates
     for (let i = this.playlist.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
@@ -197,17 +217,15 @@ export class VoiceManager {
     nextDeck.load(nextUrl);
     nextDeck.play();
     
-    // Crossfade (3 seconds)
+    // Crossfade
     const FADE_TIME = 3.0;
     nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
     if (this.activeDeck) {
         currentDeck.fadeTo(0.0, FADE_TIME, ctx);
-        // Stop the old deck after fade completes to save resources
         setTimeout(() => currentDeck.stop(), FADE_TIME * 1000);
     }
 
-    // Swap State
     this.activeDeck = this.activeDeck === 'A' ? 'B' : 'A';
   }
 
