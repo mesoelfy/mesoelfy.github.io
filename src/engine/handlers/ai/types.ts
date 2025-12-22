@@ -24,7 +24,8 @@ export interface AIContext {
   damagePanel: (id: PanelId, amount: number, options?: DamageOptions) => void;
   
   getPanelRect: (id: PanelId) => WorldRect | undefined;
-  getPanelStress: (id: PanelId) => number; // NEW
+  getAllPanelRects: () => WorldRect[];
+  getPanelStress: (id: PanelId) => number;
   getUpgradeLevel: (key: string) => number;
   
   config: typeof ConfigService;

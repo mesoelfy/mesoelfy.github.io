@@ -14,4 +14,6 @@ export interface AIBlackboard {
   spawnOriginX?: number;
   spawnOriginY?: number;
   spinVel?: number;
+  roamTargetX?: number;
+  roamTargetY?: number;
 }

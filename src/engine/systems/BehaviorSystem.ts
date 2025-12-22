@@ -64,7 +64,8 @@ export class BehaviorSystem implements IGameSystem {
       },
       damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
-      getPanelStress: (id) => this.panelSystem.getPanelStress(id), // INJECTED
+      getAllPanelRects: () => this.panelSystem.getAllPanels(),
+      getPanelStress: (id) => this.panelSystem.getPanelStress(id),
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },

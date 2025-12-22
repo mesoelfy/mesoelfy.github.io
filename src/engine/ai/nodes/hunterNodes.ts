@@ -13,73 +13,75 @@ import * as THREE from 'three';
 const IDLE_SPIN_TARGET = -2.5;  // CW
 const CHARGE_SPIN_TARGET = 22.0; // CCW
 
-export class HoverDrift extends BTNode {
-  private minDur: number;
-  private maxDur: number;
-  constructor(private minRange: number, private maxRange: number, minDuration: number, maxDuration?: number) { 
-      super();
-      this.minDur = minDuration;
-      this.maxDur = maxDuration ?? minDuration;
-  }
+export class RoamPanelZone extends BTNode {
+  // padding: how far outside the panel they can go
+  constructor(private speed: number, private padding: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
-    const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const target = entity.getComponent<TargetData>(ComponentType.Target);
 
-    if (!transform || !motion || !target || !state || !visual) return NodeState.FAILURE;
-    
+    if (!transform || !motion || !state || !visual) return NodeState.FAILURE;
+
+    // Visual Spin (Idle)
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
 
-    if (state.stunTimer > 0) {
-        state.stunTimer -= context.delta;
-        return NodeState.RUNNING;
+    // 1. Pick a destination if none exists
+    if (state.data.roamTargetX === undefined || state.data.roamTargetY === undefined) {
+        const panels = context.getAllPanelRects();
+        if (panels.length > 0) {
+            // Pick random panel
+            const panel = panels[Math.floor(Math.random() * panels.length)];
+            
+            // Random point within bounds + padding
+            const halfW = (panel.width / 2) + this.padding;
+            const halfH = (panel.height / 2) + this.padding;
+            
+            state.data.roamTargetX = panel.x + (Math.random() * 2 - 1) * halfW;
+            state.data.roamTargetY = panel.y + (Math.random() * 2 - 1) * halfH;
+        } else {
+            // Fallback if no panels
+            state.data.roamTargetX = (Math.random() * 2 - 1) * 10;
+            state.data.roamTargetY = (Math.random() * 2 - 1) * 5;
+        }
     }
 
-    if (!state.timers[AITimerID.HOVER]) {
-        state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
-        state.data.driftX = (Math.random() - 0.5) * 4;
-        state.data.driftY = (Math.random() - 0.5) * 4;
-    }
+    const destX = state.data.roamTargetX!;
+    const destY = state.data.roamTargetY!;
 
-    state.timers[AITimerID.HOVER]! -= context.delta;
-    if (state.timers[AITimerID.HOVER]! <= 0) {
-        state.timers[AITimerID.HOVER] = undefined;
+    // 2. Move towards destination
+    const dx = destX - transform.x;
+    const dy = destY - transform.y;
+    const distSq = dx*dx + dy*dy;
+
+    // Arrive behavior
+    if (distSq < 1.0) {
+        // Reached target, clear it to pick new one next tick
+        state.data.roamTargetX = undefined;
+        state.data.roamTargetY = undefined;
+        // Reached destination, return SUCCESS to allow sequence to proceed to firing
         return NodeState.SUCCESS;
     }
 
-    const dx = target.x - transform.x;
-    const dy = target.y - transform.y;
-    const distSq = dx*dx + dy*dy;
-    const dist = Math.sqrt(distSq);
-    
-    if (dist < 0.001) {
-        motion.vx *= 0.9;
-        motion.vy *= 0.9;
-        return NodeState.RUNNING;
+    // Apply Velocity
+    motion.vx += (dx - motion.vx) * context.delta * 2.0;
+    motion.vy += (dy - motion.vy) * context.delta * 2.0;
+
+    // 3. Face Target (Player) if available, else look ahead
+    if (target && target.x !== undefined) {
+        const tDx = target.x - transform.x;
+        const tDy = target.y - transform.y;
+        transform.rotation = Math.atan2(tDy, tDx);
+    } else {
+        transform.rotation = Math.atan2(motion.vy, motion.vx);
     }
 
-    const angleToTarget = Math.atan2(dy, dx);
-    let tx = state.data.driftX || 0;
-    let ty = state.data.driftY || 0;
-
-    if (dist < this.minRange) {
-        tx -= dx * 0.5;
-        ty -= dy * 0.5;
-    } else if (dist > this.maxRange) {
-        tx += dx * 0.5;
-        ty += dy * 0.5;
-    }
-
-    motion.vx += (tx - motion.vx) * context.delta * 2.0;
-    motion.vy += (ty - motion.vy) * context.delta * 2.0;
-    transform.rotation = angleToTarget;
-    
     return NodeState.RUNNING;
   }
 }
@@ -122,7 +124,6 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    // OFFSET_TWEAK: 1.6 -> 1.3
     const offset = 1.3;
     const spreadAngle = 0.25; 
     const density = 2; 
