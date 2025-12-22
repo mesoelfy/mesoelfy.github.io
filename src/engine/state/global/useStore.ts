@@ -27,7 +27,10 @@ interface AudioSettings {
 
 const DEFAULT_AUDIO: AudioSettings = {
   master: true, music: false, sfx: true, ambience: true,
-  volumeMaster: 1.0, volumeMusic: 1.0, volumeSfx: 1.0, volumeAmbience: 1.0,
+  volumeMaster: 1.0, 
+  volumeMusic: 0.75, // UPDATED: 75% Default
+  volumeSfx: 1.0, 
+  volumeAmbience: 1.0,
   ambFilter: 0.5, ambSpeed: 0.5, ambWidth: 0.5, ambModSpeed: 0.5, ambModDepth: 0.5, 
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
@@ -51,7 +54,7 @@ interface AppState {
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
-  isMetamorphosizing: boolean; // NEW
+  isMetamorphosizing: boolean;
   activeModal: ModalType;
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
