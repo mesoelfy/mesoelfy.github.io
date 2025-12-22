@@ -13,6 +13,7 @@ import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { PALETTE } from '@/engine/config/Palette';
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -111,13 +112,28 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
   let borderColor = "border-primary-green-dim/30";
-  if (showCircuitLock) borderColor = "border-primary-green"; 
-  else if (isDestroyed) borderColor = isInteracting ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "border-critical-red animate-pulse"; 
-  // REPLACED: Updated shadow to #FFCCFF
-  else if (isInteracting && isDamaged) borderColor = "border-service-pink shadow-[0_0_10px_#FFCCFF]";
-  else if (isDamaged) borderColor = "border-alert-yellow/50";
+  let shadowStyle: React.CSSProperties = {};
 
-  // Background Logic
+  if (showCircuitLock) {
+      borderColor = "border-primary-green"; 
+  }
+  else if (isDestroyed) {
+      borderColor = isInteracting 
+        ? "border-latent-purple" 
+        : "border-critical-red animate-pulse";
+      
+      if (isInteracting) {
+          shadowStyle = { boxShadow: `0 0 10px ${PALETTE.PURPLE.PRIMARY}` };
+      }
+  }
+  else if (isInteracting && isDamaged) {
+      borderColor = "border-service-pink";
+      shadowStyle = { boxShadow: `0 0 10px ${PALETTE.PINK.PRIMARY}` };
+  }
+  else if (isDamaged) {
+      borderColor = "border-alert-yellow/50";
+  }
+
   let bgClass = "bg-black";
   if (transparent) bgClass = "bg-transparent";
   else if (isDestroyed) bgClass = "bg-black/20";
@@ -132,9 +148,9 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
           "border", borderColor, "rounded-sm",
           showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300"
         )}
+        style={shadowStyle}
       >
         <DotGridBackground className="top-8" />
-        {/* Only show scanlines if not transparent (improves legibility on mobile) */}
         {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
         
         {isCriticalGlobal && (

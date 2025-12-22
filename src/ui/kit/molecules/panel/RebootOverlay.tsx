@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Power } from 'lucide-react';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const RebootOverlay = () => (
   <motion.div 
@@ -48,8 +49,8 @@ export const RebootOverlay = () => (
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: 0.1 } }} 
                 transition={{ delay: 0.1 }}
-                // REPLACED: Updated shadow to #FFCCFF (255, 204, 255)
-                className="text-2xl md:text-3xl font-header font-black text-service-pink tracking-widest italic drop-shadow-[0_0_10px_rgba(255,204,255,0.5)]"
+                className="text-2xl md:text-3xl font-header font-black text-service-pink tracking-widest italic"
+                style={{ filter: `drop-shadow(0 0 10px ${PALETTE.PINK.PRIMARY}80)` }}
             >
                 SYSTEM
             </motion.span>

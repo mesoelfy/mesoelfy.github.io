@@ -670,7 +670,7 @@ Have a pop-up like wikipedia does asking for money $2.75 / $4.20 / $6.66 / $7.77
 
 ProjectileGeometry - more shapes?
 
-
+~ to exit debug should be at the bottom of the window like it is in the settings window. and there should be an indicator for ESC for options in the debug footer too.
 
 
 
