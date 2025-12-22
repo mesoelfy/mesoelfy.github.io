@@ -5,7 +5,16 @@ import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 export const FLOAT_SCALAR = 100;
 const EVENT_STRIDE = 5;
 
-export enum FastEventType { NONE = 0, PLAY_SOUND = 1, SPAWN_FX = 2, CAM_SHAKE = 3, HIT_STOP = 4, DUCK_MUSIC = 5 }
+export enum FastEventType { 
+  NONE = 0, 
+  PLAY_SOUND = 1, 
+  SPAWN_FX = 2, 
+  CAM_SHAKE = 3, 
+  HIT_STOP = 4, 
+  DUCK_MUSIC = 5,
+  ENTITY_FLASH = 6 // NEW
+}
+
 export enum SoundCode { NONE = 0, FX_PLAYER_FIRE = 1, FX_IMPACT_LIGHT = 2, FX_IMPACT_HEAVY = 3, FX_ENEMY_FIRE = 4, UI_CLICK = 5, UI_HOVER = 6, LOOP_DRILL = 7, FX_REBOOT_SUCCESS = 8, FX_LEVEL_UP = 9, LOOP_HEAL = 10, LOOP_WARNING = 11, FX_TELEPORT = 12, FX_EXHAUST_SIZZLE = 13, FX_PLAYER_DEATH = 14 }
 export enum FXCode { NONE = 0, EXPLOSION_PURPLE = 1, EXPLOSION_YELLOW = 2, EXPLOSION_RED = 3, IMPACT_WHITE = 4, IMPACT_RED = 5, DRILL_SPARKS = 6, HUNTER_RECOIL = 7, CLASH_YELLOW = 8, EXPLOSION_PURPLE_DIR = 9, EXPLOSION_YELLOW_DIR = 10, EXPLOSION_RED_DIR = 11, REBOOT_HEAL = 12, PURGE_BLAST = 13, ENGINE_FLARE = 14 }
 
@@ -50,6 +59,9 @@ export class FastEventBusImpl implements IFastEventService {
   public hitStop(ms: number) { this.emitRaw(FastEventType.HIT_STOP, ms); }
   public duckMusic(intensity: number, duration: number) {
     this.emitRaw(FastEventType.DUCK_MUSIC, Math.round(intensity * FLOAT_SCALAR), Math.round(duration * FLOAT_SCALAR));
+  }
+  public flashEntity(id: number) {
+    this.emitRaw(FastEventType.ENTITY_FLASH, id);
   }
   public getCursor(): number { return this.cursor; }
   public clear() { this.cursor = 0; }

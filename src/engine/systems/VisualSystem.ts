@@ -8,11 +8,11 @@ import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { Query } from '@/engine/ecs/Query';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType } from '@/engine/signals/FastEventBus';
 import * as THREE from 'three';
 
-// Easing Helper: Elastic Out
 function easeOutElastic(t: number): number {
   const c4 = (2 * Math.PI) / 3;
   if (t === 0) return 0;
@@ -30,18 +30,27 @@ export class VisualSystem implements IGameSystem {
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private interactionSystem: IInteractionSystem,
-    events: IGameEventService
+    private events: IGameEventService
   ) {
-    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-            if (effect) effect.flash = 1.0; 
-        }
-    });
+    // Removed slow subscription to ENEMY_DAMAGED
   }
 
   update(delta: number, time: number): void {
+    // 1. POLL FAST BUS FOR FLASH EVENTS
+    const unified = this.events as UnifiedEventService;
+    if (unified && typeof unified.processFastEvents === 'function') {
+        unified.processFastEvents((id, a1) => {
+            if (id === FastEventType.ENTITY_FLASH) {
+                const entityId = a1;
+                const entity = this.registry.getEntity(entityId);
+                if (entity) {
+                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+                    if (effect) effect.flash = 1.0; 
+                }
+            }
+        });
+    }
+
     const CFG = VISUAL_CONFIG.DEFORMATION;
     const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
     const RENDER_CFG = VISUAL_CONFIG.RENDER;
@@ -91,7 +100,6 @@ export class VisualSystem implements IGameSystem {
               }
           }
 
-          // Applied directly per-tick (no delta multiplication) to restore original feel
           render.rotation += spinSpeed;
           render.scale = 1.0; 
 
@@ -107,9 +115,7 @@ export class VisualSystem implements IGameSystem {
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // --- SPAWN ANIMATION LOGIC ---
           if (effect.spawnProgress < 1.0) {
-              // Advance progress
               if (effect.spawnVelocity > 0) {
                   effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
               }
@@ -130,7 +136,6 @@ export class VisualSystem implements IGameSystem {
               render.offsetY = 0;
           }
 
-          // Effect Decay
           if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
               effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
@@ -138,13 +143,11 @@ export class VisualSystem implements IGameSystem {
               dX += bump; dY += bump; dZ += bump;
           }
 
-          // Pulse
           if (effect.pulseSpeed > 0) {
               const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
-          // Elasticity
           if (motion && effect.elasticity > 0.01 && effect.spawnProgress >= 1.0) {
               const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
               const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;

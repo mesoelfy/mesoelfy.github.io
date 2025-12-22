@@ -20,7 +20,6 @@ export enum SystemPhase {
 }
 
 export interface IGameSystem {
-  // Alpha is 0.0 to 1.0, representing how far we are between physics ticks
   update(delta: number, time: number, alpha?: number): void;
   teardown(): void;
 }
@@ -58,6 +57,7 @@ export interface IFastEventService {
   camShake(amount: number): void;
   hitStop(ms: number): void;
   duckMusic(intensity: number, duration: number): void;
+  flashEntity(id: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
   clear(): void;
   getCursor(): number;

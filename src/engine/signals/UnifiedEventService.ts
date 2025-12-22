@@ -31,6 +31,18 @@ export class UnifiedEventService implements IGameEventService {
         this.fastBus.camShake(p.amount);
         return;
     }
+    
+    // --- OPTIMIZATION START ---
+    if (event === GameEvents.ENEMY_DAMAGED) {
+        const p = payload as GameEventPayloads[GameEvents.ENEMY_DAMAGED];
+        // Route purely visual damage feedback (flash) to fast bus.
+        // If logic listeners exist on Slow Bus for DAMAGE, they will be bypassed here!
+        // Currently only VisualSystem listens to this.
+        this.fastBus.flashEntity(p.id);
+        return;
+    }
+    // --- OPTIMIZATION END ---
+
     this.slowBus.emit(event, payload);
   }
 
