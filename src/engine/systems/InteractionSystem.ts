@@ -29,13 +29,16 @@ export class InteractionSystem implements IInteractionSystem {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
     
+    const cursor = this.input.getCursor();
+
+    // REMOVED: World Click Logic (Tap to Damage)
+    
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         return; 
     }
     
-    const cursor = this.input.getCursor();
-    
+    // Handle Continuous Interaction (Repair/Revive)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {

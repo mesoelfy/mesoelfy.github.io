@@ -3,6 +3,8 @@ README description
 
 First upgrade should be a bullet speed increase to what you'd actually want to start the game at. This let's the player feel relief early on by a significant boost.
 
+make IMG_XX thumbnails videos (2X bigger than they need to be and downscaled)
+
 
 # MESOELFY_OS // REFACTOR ROADMAP
 

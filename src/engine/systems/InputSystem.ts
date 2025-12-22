@@ -2,18 +2,14 @@ import { IGameSystem, IInputService } from '@/engine/interfaces';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
-  
-  // Bounds for clamping
   private _bounds = { width: 30, height: 20 }; 
 
-  update(delta: number, time: number): void {
-    // No-op for desktop mouse input (handled via updateCursor event in GameDirector)
-  }
+  // No constructor listener needed anymore since we don't track world clicks
+
+  update(delta: number, time: number): void {}
 
   teardown(): void {}
 
-  // --- IInputService Implementation ---
-  
   public updateCursor(x: number, y: number) {
     this._cursor.x = x;
     this._cursor.y = y;
@@ -30,5 +26,9 @@ export class InputSystem implements IGameSystem, IInputService {
 
   public isPressed(action: string): boolean {
     return false;
+  }
+
+  public popClick(): boolean {
+      return false; // Stubbed out
   }
 }

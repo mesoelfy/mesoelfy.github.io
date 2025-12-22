@@ -1,12 +1,9 @@
 import { useRef, useLayoutEffect } from 'react';
-import { useFrame, ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
 import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { useGameContext } from '@/engine/state/GameContext';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { RenderModel } from '@/engine/ecs/components/RenderModel';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -17,7 +14,7 @@ interface InstancedActorProps {
   material: THREE.Material;
   maxCount: number;
   renderKey?: string; 
-  interactive?: boolean; 
+  interactive?: boolean; // Kept for API compat, but ignored now
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -26,9 +23,8 @@ interface InstancedActorProps {
 
 export const InstancedActor = ({ 
     geometry, material, maxCount, 
-    interactive = false, renderKey 
+    renderKey 
 }: InstancedActorProps) => {
-  const { registry, events } = useGameContext();
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
   useLayoutEffect(() => {
@@ -101,45 +97,12 @@ export const InstancedActor = ({
     spawnAttr.needsUpdate = true;
   });
 
-  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-      if (!interactive || e.instanceId === undefined) return;
-      e.stopPropagation();
-      
-      try {
-          const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] }));
-          
-          let matchIndex = 0;
-          let foundEntity = null;
-          
-          for (const ent of candidates) {
-              if (!ent.active) continue;
-              const model = ent.getComponent<RenderModel>(ComponentType.RenderModel);
-              if (!model) continue;
-              
-              const key = `${model.geometryId}|${model.materialId}`;
-              if (key === renderKey) {
-                  if (matchIndex === e.instanceId) {
-                      foundEntity = ent;
-                      break;
-                  }
-                  matchIndex++;
-              }
-          }
-
-          if (foundEntity) {
-              events.emit(GameEvents.ENEMY_DAMAGED, { id: foundEntity.id as number, damage: 9999, type: 'TAP' });
-          }
-      } catch (err) {
-          console.warn("Interaction Failed:", err);
-      }
-  };
-
   return (
     <instancedMesh 
       ref={meshRef} 
       args={[geometry, material, maxCount]} 
       frustumCulled={false}
-      onPointerDown={interactive ? handlePointerDown : undefined}
+      pointerEvents="none" 
     />
   );
 };

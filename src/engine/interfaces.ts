@@ -151,6 +151,7 @@ export interface IInputService {
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
   updateBounds(width: number, height: number): void; 
+  popClick(): boolean; // NEW
 }
 
 export interface IParticleSystem extends IGameSystem {
