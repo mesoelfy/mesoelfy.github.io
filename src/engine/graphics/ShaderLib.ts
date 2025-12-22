@@ -42,47 +42,69 @@ export const ShaderLib = {
           vUv = uv;
           vPos = position;
           vSpawn = spawnProgress;
-          
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
         }
       `,
       fragment: `
         void main() {
-          // --- SPAWN DISSOLVE LOGIC ---
           float noise = snoise(vPos * 3.0 + vec3(0.0, uTime * 0.5, 0.0)) * 0.5 + 0.5;
           float threshold = (1.0 - vSpawn) * 1.4 - 0.2;
-          
           if (noise < threshold) discard;
-
           float edgeWidth = 0.1;
           float burn = smoothstep(threshold, threshold + edgeWidth, noise);
           float edgeIntensity = 1.0 - burn; 
-          
-          // --- COLOR LOGIC ---
           float width = 1.5;
           float wireEdge = edgeFactor(vBarycentric, width);
-          
-          // 'glow' represents how close we are to the wireframe line (1.0 = on line, 0.0 = face center)
           float glow = pow(1.0 - wireEdge, 0.4);
-          
           vec3 coreColor = vColor;
           float intensity = max(max(vColor.r, vColor.g), vColor.b);
-          
-          // Determine if we are in "High Intensity" (Flash) mode
-          // 0.0 = Normal, 1.0 = Flash
           float isFlash = smoothstep(1.0, 3.0, intensity);
-          
-          // Normal: Edges are White. Flash: Edges are colored (to prevent pink/pastel look).
           vec3 wireColor = mix(vec3(1.0), vColor, isFlash);
-          
-          // Mix: Face -> Wireframe
           vec3 finalColor = mix(coreColor, wireColor, glow);
-
-          // Apply Burn Edge (Blue/White Dissolve Line)
           vec3 burnColor = vec3(0.8, 1.0, 1.0) * 4.0; 
           finalColor += burnColor * edgeIntensity;
-
           gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    },
+
+    snifferIndicator: {
+      vertex: `
+        void main() {
+          vPos = position;
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragment: `
+        uniform vec3 uColor;
+        uniform float uLevel;
+        void main() {
+          // 1. Calculate angle and compensate for the 0.55 twist
+          float angle = atan(vPos.y, vPos.x) + 0.55;
+          float PI = 3.14159265359;
+          
+          // 2. Identify Quadrant (0: Right, 1: Top, 2: Left, 3: Bottom)
+          int q = int(mod(floor(angle / (PI / 2.0) + 0.5), 4.0));
+          
+          // 3. Match quadrants to firing order: 
+          // Order: [Left (2), Right (0), Bottom (3), Top (1)]
+          bool active = false;
+          if (uLevel >= 1.0 && q == 2) active = true;
+          if (uLevel >= 2.0 && q == 0) active = true;
+          if (uLevel >= 3.0 && q == 3) active = true;
+          if (uLevel >= 4.0 && q == 1) active = true;
+          
+          if (!active) discard;
+
+          // 4. Gradient masking so only the outer tips glow
+          float dist = length(vPos);
+          float mask = smoothstep(0.4, 0.65, dist);
+          
+          // 5. Pulsing Effect
+          float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
+          
+          gl_FragColor = vec4(uColor * pulse * 2.0, mask);
         }
       `
     },
@@ -118,45 +140,12 @@ export const ShaderLib = {
       `
     },
 
-    glitch: {
-      vertex: `
-        uniform float uIntensity;
-        uniform float uFrequency;
-        uniform float uSpeed;
-
-        void main() {
-          vUv = uv;
-          vColor = vec3(0.0, 1.0, 0.4); 
-          vBarycentric = barycentric;
-          vPos = position; 
-          
-          float noiseVal = snoise(vec3(position * uFrequency + uTime * uSpeed));
-          vec3 displaced = position + normal * noiseVal * uIntensity;
-          
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
-        }
-      `,
-      fragment: `
-        void main() {
-          float width = 1.0; 
-          float edge = edgeFactor(vBarycentric, width);
-          float scan = sin(vPos.y * 20.0 - uTime * 5.0) * 0.5 + 0.5;
-          float alpha = 0.1 + (1.0 - edge) * 0.9 + (scan * 0.3);
-          gl_FragColor = vec4(vColor, alpha);
-        }
-      `
-    },
-
     playerAmbient: {
       vertex: `
-        void main() { 
-          vUv = uv; 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-        }
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; uniform float uEnergy;
-        
         void main() {
           vec2 pos = vUv - 0.5;
           float angle = atan(pos.y, pos.x);
@@ -176,10 +165,7 @@ export const ShaderLib = {
 
     playerBacking: {
       vertex: `
-        void main() { 
-          vUv = uv; 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-        }
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; 
@@ -194,32 +180,23 @@ export const ShaderLib = {
 
     galleryBody: {
       vertex: `
-        void main() {
-          vBarycentric = barycentric;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
+        void main() { vBarycentric = barycentric; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
-        uniform vec3 uColor;
-        uniform float uGlow;
-        uniform float uDissolve;
-        
+        uniform vec3 uColor; uniform float uGlow; uniform float uDissolve;
         void main() {
           if (uDissolve > 0.0) {
               float stripes = sin(gl_FragCoord.y * 0.1 + gl_FragCoord.x * 0.1);
               if (stripes < (uDissolve * 2.0 - 1.0)) discard;
           }
-
           float width = 1.0; 
           float edge = edgeFactor(vBarycentric, width);
           float glow = 1.0 - edge;
           glow = pow(glow, 0.4) + uGlow; 
-          
           vec3 coreColor = uColor;
           vec3 edgeColor = vec3(1.0);
           vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
           finalColor += coreColor * uGlow * 0.5;
-
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `

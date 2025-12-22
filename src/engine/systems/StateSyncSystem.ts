@@ -14,7 +14,8 @@ export class StateSyncSystem implements IGameSystem {
     xp: -1,
     xpNext: -1,
     level: -1,
-    points: -1
+    points: -1,
+    upgradesHash: "" // Track changes to upgrades object
   };
 
   constructor(
@@ -34,24 +35,18 @@ export class StateSyncSystem implements IGameSystem {
     const max = this.healthSys.maxPlayerHealth;
     const reboot = this.healthSys.playerRebootProgress;
 
-    // 1. Health
     if (hp !== this.cache.health) {
       GameStream.set('PLAYER_HEALTH', hp);
-      // We use getState().set... to allow the slice to handle any side-effects if needed,
-      // or direct setState if the slice just sets the value. 
-      // Using direct setState here for raw data sync to match previous logic.
       useGameStore.setState({ playerHealth: hp });
       this.cache.health = hp;
     }
 
-    // 2. Max Health
     if (max !== this.cache.maxHealth) {
       GameStream.set('PLAYER_MAX_HEALTH', max);
       useGameStore.setState({ maxPlayerHealth: max });
       this.cache.maxHealth = max;
     }
 
-    // 3. Reboot Progress
     if (reboot !== this.cache.reboot) {
       GameStream.set('PLAYER_REBOOT', reboot);
       useGameStore.setState({ playerRebootProgress: reboot });
@@ -66,15 +61,12 @@ export class StateSyncSystem implements IGameSystem {
     const next = this.progSys.xpToNextLevel;
     const points = this.progSys.upgradePoints;
 
-    // 1. Score
     if (score !== this.cache.score) {
       GameStream.set('SCORE', score);
-      // Use the slice action for score to handle High Score logic
       useGameStore.getState().setScore(score);
       this.cache.score = score;
     }
 
-    // 2. XP & Leveling
     if (xp !== this.cache.xp || level !== this.cache.level || next !== this.cache.xpNext || points !== this.cache.points) {
       GameStream.set('XP', xp);
       GameStream.set('XP_NEXT', next);
@@ -92,22 +84,26 @@ export class StateSyncSystem implements IGameSystem {
       this.cache.xpNext = next;
       this.cache.points = points;
     }
+
+    // Sync Upgrades
+    // Optimization: JSON.stringify is relatively fast for small objects like this
+    const upgradesStr = JSON.stringify(this.progSys.activeUpgrades);
+    if (upgradesStr !== this.cache.upgradesHash) {
+        useGameStore.getState().setActiveUpgrades(this.progSys.activeUpgrades as Record<string, number>);
+        this.cache.upgradesHash = upgradesStr;
+    }
   }
 
   private syncIntegrity() {
-    // PanelRegistrySystem usually handles its own store updates for Panel Registration,
-    // but the aggregate Integrity score is a calculated value we want to stream.
     const integrity = this.panelSys.systemIntegrity;
     
     if (integrity !== this.cache.integrity) {
         GameStream.set('SYSTEM_INTEGRITY', integrity);
-        // Note: PanelSystem might update the store directly during damage calculations,
-        // but syncing here ensures GameStream is always 1:1 with the simulation frame.
         this.cache.integrity = integrity;
     }
   }
 
   teardown(): void {
-    // No cleanup needed for pure sync
+    // No cleanup needed
   }
 }

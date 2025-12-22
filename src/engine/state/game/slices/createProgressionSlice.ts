@@ -15,6 +15,7 @@ export interface ProgressionSlice {
   activeUpgrades: Record<string, number>;
   setScore: (val: number) => void;
   setProgressionData: (data: { xp: number, level: number, nextXp: number, points: number }) => void;
+  setActiveUpgrades: (upgrades: Record<string, number>) => void; // NEW
   selectUpgrade: (option: UpgradeOption) => void;
   resetProgressionState: () => void;
 }
@@ -46,6 +47,8 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
       xpToNextLevel: data.nextXp,
       upgradePoints: data.points
   }),
+
+  setActiveUpgrades: (upgrades) => set({ activeUpgrades: { ...upgrades } }),
 
   selectUpgrade: (option) => {
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });

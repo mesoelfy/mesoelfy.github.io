@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 22 11:42:31 CST 2025
+Generated on: Mon Dec 22 13:53:05 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -632,6 +632,10 @@ const config: Config = {
           DEFAULT: '#9E4EA5',
           dim: '#822B8A',
           deep: '#350E3A',
+        },
+        'service-pink': {
+          DEFAULT: '#FFCCFF', // Updated to #FFCCFF
+          dim: '#C21CC2',
         },
         'service-cyan': {
           DEFAULT: '#00F0FF', 
@@ -1512,6 +1516,7 @@ FILE: ./src/ui/kit/molecules/panel/RebootOverlay.tsx
 =====================================
 import { motion } from 'framer-motion';
 import { Power } from 'lucide-react';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const RebootOverlay = () => (
   <motion.div 
@@ -1530,10 +1535,10 @@ export const RebootOverlay = () => (
             transition: { delay: 0.1, duration: 0.2, ease: "easeIn" } 
         }}
         transition={{ type: "spring", stiffness: 250, damping: 25 }}
-        className="flex flex-col items-center gap-2 border-y-2 border-service-cyan bg-service-cyan/10 w-full py-4 relative overflow-hidden origin-center"
+        className="flex flex-col items-center gap-2 border-y-2 border-service-pink bg-service-pink/10 w-full py-4 relative overflow-hidden origin-center"
     >
       <motion.div 
-        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-service-cyan/20 to-transparent"
+        className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent via-service-pink/20 to-transparent"
         animate={{ top: ["-100%", "100%"] }}
         transition={{ duration: 1.5, ease: "linear", repeat: Infinity }}
       />
@@ -1550,7 +1555,7 @@ export const RebootOverlay = () => (
           }}
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
         >
-            <Power className="text-service-cyan w-8 h-8 md:w-10 md:h-10" />
+            <Power className="text-service-pink w-8 h-8 md:w-10 md:h-10" />
         </motion.div>
 
         <div className="flex flex-col overflow-hidden">
@@ -1560,7 +1565,8 @@ export const RebootOverlay = () => (
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: 0.1 } }} 
                 transition={{ delay: 0.1 }}
-                className="text-2xl md:text-3xl font-header font-black text-service-cyan tracking-widest italic drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]"
+                className="text-2xl md:text-3xl font-header font-black text-service-pink tracking-widest italic"
+                style={{ filter: `drop-shadow(0 0 10px ${PALETTE.PINK.PRIMARY}80)` }}
             >
                 SYSTEM
             </motion.span>
@@ -1569,7 +1575,7 @@ export const RebootOverlay = () => (
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ opacity: 0, transition: { duration: 0.1 } }}
                 transition={{ delay: 0.2 }}
-                className="text-xs md:text-sm font-mono font-bold text-service-cyan/80 tracking-[0.3em]"
+                className="text-xs md:text-sm font-mono font-bold text-service-pink/80 tracking-[0.3em]"
             >
                 RESTORED
             </motion.span>
@@ -1652,7 +1658,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
           statusText = "OFFLINE";
       }
   } else if (isInteracting && isDamaged) {
-      mainColor = "text-service-cyan";
+      // REPLACED: service-cyan -> service-pink
+      mainColor = "text-service-pink";
       statusText = "HEALING...";
   } else if (isDamaged) {
       mainColor = "text-alert-yellow"; 
@@ -1667,7 +1674,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
         isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
-        (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
+        // REPLACED: service-cyan -> service-pink
+        (isInteracting && isDamaged) ? "bg-service-pink/10 border-service-pink/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
     )}>
@@ -1691,7 +1699,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                             <motion.div key="destroyed" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"><Power size={10} className="text-latent-purple" /></motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
-                        <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
+                        // REPLACED: service-cyan -> service-pink
+                        <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-pink rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw size={10} className="text-black" /></motion.div>
                         </motion.div>
                     ) : isDamaged ? (
@@ -1710,7 +1719,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
-                        (isInteracting && isDamaged) ? "bg-service-cyan" :
+                        // REPLACED: service-cyan -> service-pink
+                        (isInteracting && isDamaged) ? "bg-service-pink" :
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}
@@ -2344,6 +2354,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 import { DOM_ATTR } from '@/ui/config/DOMConfig';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const CustomCursor = () => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -2361,11 +2372,6 @@ export const CustomCursor = () => {
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  // VISUAL LOGIC REFINED:
-  // We remove the static Zen triangle. 
-  // Custom Cursor (The Green Arrow) only shows if:
-  // 1. Not metamorphosizing
-  // 2. We are in a Menu, the Boot Screen, or standard Game Over (not Zen).
   const showCustomCursor = !isMetamorphosizing && 
     ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode)) && 
     !isOnScrollbar;
@@ -2418,10 +2424,12 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
+  const cursorColor = isHit ? PALETTE.RED.CRITICAL : (isHovering ? PALETTE.YELLOW.ALERT : PALETTE.GREEN.PRIMARY);
+  
+  // Dynamic shadows using Palette
   const cursorShadow = isHit 
-    ? 'drop-shadow(0 0 15px #FF003C)' 
-    : (isHovering ? 'drop-shadow(0 0 12px #eae747)' : 'drop-shadow(0 0 8px #78F654)');
+    ? `drop-shadow(0 0 15px ${PALETTE.RED.CRITICAL})` 
+    : (isHovering ? `drop-shadow(0 0 12px ${PALETTE.YELLOW.ALERT})` : `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY})`);
 
   return (
     <motion.div
@@ -2921,7 +2929,7 @@ import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
-import { tailwindMerge } from '@/utils/tailwindMerge'; // Assumption: user might not have this, so I will stick to clsx logic carefully
+import { PALETTE } from '@/engine/config/Palette';
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -3020,12 +3028,28 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   }, [health, maxHealth, isDestroyed, isGameOver]);
 
   let borderColor = "border-primary-green-dim/30";
-  if (showCircuitLock) borderColor = "border-primary-green"; 
-  else if (isDestroyed) borderColor = isInteracting ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "border-critical-red animate-pulse"; 
-  else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
-  else if (isDamaged) borderColor = "border-alert-yellow/50";
+  let shadowStyle: React.CSSProperties = {};
 
-  // Background Logic
+  if (showCircuitLock) {
+      borderColor = "border-primary-green"; 
+  }
+  else if (isDestroyed) {
+      borderColor = isInteracting 
+        ? "border-latent-purple" 
+        : "border-critical-red animate-pulse";
+      
+      if (isInteracting) {
+          shadowStyle = { boxShadow: `0 0 10px ${PALETTE.PURPLE.PRIMARY}` };
+      }
+  }
+  else if (isInteracting && isDamaged) {
+      borderColor = "border-service-pink";
+      shadowStyle = { boxShadow: `0 0 10px ${PALETTE.PINK.PRIMARY}` };
+  }
+  else if (isDamaged) {
+      borderColor = "border-alert-yellow/50";
+  }
+
   let bgClass = "bg-black";
   if (transparent) bgClass = "bg-transparent";
   else if (isDestroyed) bgClass = "bg-black/20";
@@ -3040,9 +3064,9 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
           "border", borderColor, "rounded-sm",
           showCircuitLock ? "animate-restore-flash" : "transition-colors duration-300"
         )}
+        style={shadowStyle}
       >
         <DotGridBackground className="top-8" />
-        {/* Only show scanlines if not transparent (improves legibility on mobile) */}
         {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
         
         {isCriticalGlobal && (
@@ -3484,6 +3508,7 @@ FILE: ./src/ui/os/boot/atoms/CoreHeader.tsx
 =====================================
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, Unlock, Lock, Skull } from 'lucide-react';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface CoreHeaderProps {
   step: number;
@@ -3509,22 +3534,43 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
+  // Animation Arrays mapped to Palette
+  const animBorder = [
+      `${PALETTE.GREEN.PRIMARY}4D`, // 30% alpha
+      `${PALETTE.YELLOW.ALERT}99`, // 60% alpha
+      `${PALETTE.RED.CRITICAL}99`, 
+      `${PALETTE.YELLOW.ALERT}99`, 
+      `${PALETTE.GREEN.PRIMARY}4D`
+  ];
+  
+  const animBg = [
+      `${PALETTE.GREEN.PRIMARY}1A`, // 10% alpha
+      `${PALETTE.YELLOW.ALERT}26`, // 15% alpha
+      `${PALETTE.RED.CRITICAL}26`, 
+      `${PALETTE.YELLOW.ALERT}26`, 
+      `${PALETTE.GREEN.PRIMARY}1A`
+  ];
+
+  const animText = [
+      PALETTE.GREEN.PRIMARY,
+      PALETTE.YELLOW.ALERT,
+      PALETTE.RED.CRITICAL,
+      PALETTE.YELLOW.ALERT,
+      PALETTE.GREEN.PRIMARY
+  ];
+
   return (
     <motion.div 
       className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
-        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(255,0,60,0.6)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
-        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(255,0,60,0.15)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+        borderColor: animBorder,
+        backgroundColor: animBg,
       } : {}}
-      // UPDATED: Added delay: 0.4 to sync with Skull icon arrival (wait mode exit)
       transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
     >
       <motion.span 
         className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
-        animate={isCaution ? {
-            color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654']
-        } : {}}
-        // UPDATED: Added delay: 0.4 to sync with Skull icon
+        animate={isCaution ? { color: animText } : {}}
         transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
       >
         MESOELFY_CORE
@@ -3532,7 +3578,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            {/* STEP 3: UNSAFE */}
             {isUnsafe && (
                 <motion.div 
                     key="unsafe"
@@ -3545,7 +3590,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 4: BYPASSING */}
             {isBypass && (
                 <motion.div 
                     key="bypass"
@@ -3566,7 +3610,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 5: DECRYPTED */}
             {isDecrypted && (
                 <motion.div 
                     key="unlocked"
@@ -3575,7 +3618,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                         scale: [1.5, 1], 
                         opacity: 1, 
                         rotate: 0,
-                        filter: ["drop-shadow(0 0 0px #78F654)", "drop-shadow(0 0 10px #78F654)", "drop-shadow(0 0 0px #78F654)"]
+                        filter: [`drop-shadow(0 0 0px ${PALETTE.GREEN.PRIMARY})`, `drop-shadow(0 0 10px ${PALETTE.GREEN.PRIMARY})`, `drop-shadow(0 0 0px ${PALETTE.GREEN.PRIMARY})`]
                     }} 
                     exit={{ scale: 0, opacity: 0 }}
                     transition={{ 
@@ -3587,7 +3630,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 6: CAUTION */}
             {isCaution && (
                 <motion.div 
                     key="caution"
@@ -3597,13 +3639,13 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                     <motion.div
                        animate={{
                            filter: [
-                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))', 
-                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
-                               'drop-shadow(0 0 20px rgba(255,0,60,1))', 
-                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
-                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))'
+                               `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY}CC)`, 
+                               `drop-shadow(0 0 15px ${PALETTE.YELLOW.ALERT})`,
+                               `drop-shadow(0 0 20px ${PALETTE.RED.CRITICAL})`, 
+                               `drop-shadow(0 0 15px ${PALETTE.YELLOW.ALERT})`,
+                               `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY}CC)`
                            ],
-                           color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654'],
+                           color: animText,
                            rotate: [0, 5, 0, -5, 0] 
                        }}
                        transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
@@ -3613,7 +3655,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* LOADING SPINNER */}
             {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"
@@ -3769,6 +3810,7 @@ import { useMemo } from 'react';
 import { useStore } from '@/engine/state/global/useStore';
 import { ASCII_TITLE } from '@/engine/config/TextAssets';
 import { motion } from 'framer-motion';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface Props {
   step: number;
@@ -3805,6 +3847,14 @@ export const AsciiRenderer = ({ step }: Props) => {
             let baseClass = 'transition-colors duration-500 ';
             let animClass = '';
             
+            // NOTE: Matrix colors are hard to do with classes + dynamic palette
+            // We'll map them to the closest Tailwind class defined in the config which matches the Palette
+            // or we could inline style color. Let's assume standard tailwind classes exist for these core colors.
+            // However, to strictly follow the palette request, we should use inline styles or standard colors.
+            // But 'animate-matrix-red' relies on keyframes in tailwind.config.ts which are HARDCODED.
+            // Changing palette.ts doesn't change keyframes.
+            // We updated the hexes in the previous step, so 'text-critical-red' is correct.
+            
             if (step === 3) {
                 // RED PHASE (70% Red)
                 if (cell.rand < 0.7) {
@@ -3826,7 +3876,7 @@ export const AsciiRenderer = ({ step }: Props) => {
                     baseClass += 'text-critical-red';
                     animClass = 'animate-matrix-red';
                 }
-            } else if (step >= 5) { // UPDATED: >= 5 to persist through Caution phase
+            } else if (step >= 5) { 
                 // DECRYPTED PHASE (35G / 45P / 20R)
                 if (cell.rand < 0.35) {
                     baseClass += 'text-primary-green-dark';
@@ -4630,11 +4680,12 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
                         onClick={onOverride}
                         className={clsx(
                             "group w-full relative overflow-hidden py-4 bg-transparent border transition-colors cursor-none",
-                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-cyan/30 hover:border-service-cyan"
+                            // REPLACED: service-cyan -> service-pink
+                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-pink/30 hover:border-service-pink"
                         )}
                         onMouseEnter={() => AudioSystem.playHover()}
                     >
-                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-cyan/10")} />
+                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-pink/10")} />
                         
                         <div className="relative flex items-center justify-center gap-3">
                             <span className="text-alert-yellow font-mono text-[10px] animate-pulse">⚠</span>
@@ -6009,6 +6060,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Zap, ZapOff, Cpu, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const GpuConfigPanel = () => {
   const { graphicsMode, setGraphicsMode } = useStore();
@@ -6031,9 +6083,7 @@ export const GpuConfigPanel = () => {
         </div>
       </div>
 
-      {/* BODY - No padding, full width buttons */}
       <div className="flex flex-col w-full h-full bg-black relative">
-        {/* Background Grid Decoration */}
         <div className="absolute inset-0 pointer-events-none opacity-20" 
              style={{ backgroundImage: 'radial-gradient(#15530A 1px, transparent 1px)', backgroundSize: '8px 8px' }} 
         />
@@ -6050,13 +6100,11 @@ export const GpuConfigPanel = () => {
           onMouseEnter={() => AudioSystem.playHover()}
           className="group relative w-full h-24 flex items-stretch border-b border-primary-green/30 overflow-hidden transition-all hover:bg-white/5"
         >
-          {/* Status Strip (Left) */}
           <div className={clsx(
               "w-2 h-full transition-colors duration-300", 
-              graphicsMode === 'HIGH' ? "bg-primary-green shadow-[0_0_15px_#78F654]" : "bg-gray-800"
-          )} />
+              graphicsMode === 'HIGH' ? "bg-primary-green" : "bg-gray-800"
+          )} style={graphicsMode === 'HIGH' ? { boxShadow: `0 0 15px ${PALETTE.GREEN.PRIMARY}` } : {}} />
           
-          {/* Content */}
           <div className="flex-1 flex items-center justify-between px-4 relative z-10">
              <div className="flex flex-col items-start text-left">
                 <span className={clsx(
@@ -6079,9 +6127,8 @@ export const GpuConfigPanel = () => {
              />
           </div>
 
-          {/* Active Background Pattern */}
           {graphicsMode === 'HIGH' && (
-              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `repeating-linear-gradient(45deg,transparent,transparent 10px,${PALETTE.GREEN.PRIMARY} 10px,${PALETTE.GREEN.PRIMARY} 12px)` }} />
           )}
         </button>
 
@@ -6091,13 +6138,11 @@ export const GpuConfigPanel = () => {
           onMouseEnter={() => AudioSystem.playHover()}
           className="group relative w-full h-24 flex items-stretch overflow-hidden transition-all hover:bg-white/5"
         >
-          {/* Status Strip (Left) */}
           <div className={clsx(
               "w-2 h-full transition-colors duration-300", 
-              graphicsMode === 'POTATO' ? "bg-alert-yellow shadow-[0_0_15px_#eae747]" : "bg-gray-800"
-          )} />
+              graphicsMode === 'POTATO' ? "bg-alert-yellow" : "bg-gray-800"
+          )} style={graphicsMode === 'POTATO' ? { boxShadow: `0 0 15px ${PALETTE.YELLOW.ALERT}` } : {}} />
           
-          {/* Content */}
           <div className="flex-1 flex items-center justify-between px-4 relative z-10">
              <div className="flex flex-col items-start text-left">
                 <span className={clsx(
@@ -6120,9 +6165,8 @@ export const GpuConfigPanel = () => {
              />
           </div>
 
-          {/* Active Background Pattern */}
           {graphicsMode === 'POTATO' && (
-              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#eae747_10px,#eae747_12px)]" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `repeating-linear-gradient(45deg,transparent,transparent 10px,${PALETTE.YELLOW.ALERT} 10px,${PALETTE.YELLOW.ALERT} 12px)` }} />
           )}
         </button>
       </div>
@@ -6333,7 +6377,8 @@ export const ContactModal = () => {
         
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-cyan rounded-full blur-[100px]" />
+            {/* REPLACED: service-cyan -> service-pink */}
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-pink rounded-full blur-[100px]" />
         </div>
 
         <div className="flex items-center justify-between p-4 border-b border-primary-green/20 bg-black/40 backdrop-blur-sm z-10 shrink-0">
@@ -7853,17 +7898,17 @@ export const GAME_THEME = {
   turret: {
     base: PALETTE.GREEN.PRIMARY,
     glow: PALETTE.GREEN.GLOW,
-    repair: PALETTE.CYAN.PRIMARY,
+    repair: PALETTE.PINK.PRIMARY,
   },
   bullet: {
     plasma: PALETTE.MONO.WHITE,
     trail: PALETTE.GREEN.PRIMARY,
-    hunter: PALETTE.YELLOW.SOFT, 
+    hunter: PALETTE.ORANGE.PRIMARY, // Updated to Rust
   },
   enemy: {
-    muncher: PALETTE.PURPLE.PRIMARY,
+    muncher: PALETTE.PURPLE.INDIGO, // Updated to Indigo
     kamikaze: PALETTE.RED.CRITICAL,
-    hunter: PALETTE.YELLOW.SOFT,
+    hunter: PALETTE.ORANGE.PRIMARY, // Updated to Rust
     charge: PALETTE.MONO.WHITE,  
   },
   hud: {
@@ -7873,7 +7918,7 @@ export const GAME_THEME = {
   vfx: {
     spark: PALETTE.MONO.WHITE,
     damage: PALETTE.RED.CRITICAL,
-    heal: PALETTE.CYAN.PRIMARY,
+    heal: PALETTE.PINK.PRIMARY,
     clash: PALETTE.YELLOW.SOFT,
   }
 };
@@ -8036,7 +8081,7 @@ const COLORS = {
   WARN: new THREE.Color(PALETTE.YELLOW.SOFT),
   CRIT: new THREE.Color(PALETTE.RED.LIGHT), 
   EMISSIVE_SAFE: new THREE.Color(PALETTE.GREEN.DARK),
-  EMISSIVE_WARN: new THREE.Color("#5e4b00"),
+  EMISSIVE_WARN: new THREE.Color(PALETTE.YELLOW.DIM),
   EMISSIVE_CRIT: new THREE.Color(PALETTE.RED.DIM), 
 };
 
@@ -8719,6 +8764,7 @@ import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 const createCoreGeo = () => {
@@ -8751,7 +8797,10 @@ const createReticleGeo = () => {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C'), COL_RET_HEAL = new THREE.Color('#257171');
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
+
+// Updated to Deep Pink/Purple for Repair Reticle
+const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
@@ -8962,6 +9011,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PALETTE } from '@/engine/config/Palette';
 
 const MAX_DAEMONS = 5;
 const SQUISH_SCALE_Y = 0.4;
@@ -8976,8 +9026,9 @@ export const DaemonActor = () => {
       const items: { root: THREE.Group, cage: THREE.Mesh, orb: THREE.Mesh }[] = [];
       const cageGeo = new THREE.OctahedronGeometry(0.7, 0); 
       const orbGeo = new THREE.IcosahedronGeometry(0.25, 1);
-      const cageMat = new THREE.MeshBasicMaterial({ color: '#00F0FF', wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
-      const orbMat = new THREE.MeshBasicMaterial({ color: '#00F0FF', toneMapped: false });
+      // Updated hardcoded hex to PINK
+      const cageMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
+      const orbMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, toneMapped: false });
 
       for(let i=0; i<MAX_DAEMONS; i++) {
           const root = new THREE.Group();
@@ -10187,7 +10238,7 @@ const BASE_STYLE = 'font-family: "Courier New", monospace; font-weight: bold; fo
 export const CONSOLE_STYLES = {
   GREEN:  `${BASE_STYLE} color: #78F654; background: #050505;`,
   PURPLE: `${BASE_STYLE} color: #9E4EA5; background: #050505;`,
-  CYAN:   `${BASE_STYLE} color: #00F0FF; background: #050505;`,
+  CYAN:   `${BASE_STYLE} color: #FFCCFF; background: #050505;`, // Updated to #FFCCFF
   TAG:    `font-family: monospace; font-size: 9px; background: #9E4EA5; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`,
   STATUS: `font-family: monospace; font-size: 9px; background: #78F654; color: #000; padding: 2px 4px; border-radius: 2px; font-weight: bold;`
 };
@@ -10202,13 +10253,22 @@ export const PALETTE = {
     PRIMARY: '#78F654',
     DIM: '#1bb930',
     DARK: '#217e10',
-    GLOW: '#C2FE9A'
+    GLOW: '#C2FE9A',
+    PURE: '#00FF41',
+    TERMINAL: '#00FF00'
   },
   PURPLE: {
     PRIMARY: '#9E4EA5',
     LIGHT: '#BC86BA',
     DEEP: '#350E3A',
-    DIM: '#822B8A'
+    DIM: '#822B8A',
+    INDIGO: '#4203D4' // New Driller Color
+  },
+  // Service Pink
+  PINK: {
+    PRIMARY: '#FFCCFF',
+    DIM: '#C21CC2',
+    DEEP: '#600B60'
   },
   RED: {
     CRITICAL: '#FF003C',
@@ -10218,11 +10278,18 @@ export const PALETTE = {
   YELLOW: {
     ALERT: '#eae747',
     SOFT: '#F7D277',
-    ORANGE: '#FF8C00'
+    GOLD: '#FFD700',
+    DIM: '#5e4b00'
+  },
+  // New Hunter Identity
+  ORANGE: {
+    PRIMARY: '#CF7233', // New Hunter Color (Clay/Rust)
+    BRIGHT: '#FF8C00'
   },
   CYAN: {
     PRIMARY: '#00F0FF',
-    DIM: '#008ba3'
+    DIM: '#008ba3',
+    PURE: '#00FFFF'
   },
   MONO: {
     BLACK: '#050505',
@@ -10233,8 +10300,10 @@ export const PALETTE = {
 
 // Collections for Procedural Generation
 export const COLOR_SETS = {
-  PURPLE: [PALETTE.PURPLE.PRIMARY, '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'],
+  PURPLE: [PALETTE.PURPLE.PRIMARY, PALETTE.PURPLE.INDIGO, '#7A2F8F', '#B57EDC'],
+  PINK:   [PALETTE.PINK.PRIMARY, PALETTE.PINK.DIM, '#FFB6FF', '#E0B0FF'],
   YELLOW: [PALETTE.YELLOW.SOFT, '#FFE5A0', '#FFA500', PALETTE.MONO.WHITE],
+  ORANGE: [PALETTE.ORANGE.PRIMARY, PALETTE.ORANGE.BRIGHT, '#E65100', PALETTE.YELLOW.SOFT], // New Set
   RED:    [PALETTE.RED.CRITICAL, PALETTE.RED.LIGHT, PALETTE.RED.DIM],
   CYAN:   [PALETTE.CYAN.PRIMARY, PALETTE.CYAN.DIM, PALETTE.MONO.WHITE],
   WHITE:  [PALETTE.MONO.WHITE]
@@ -10788,13 +10857,13 @@ const createExplosion = (
 };
 
 export const VFX_MANIFEST: Record<string, VFXRecipe> = {
-  // Driller
+  // Driller (Using PURPLE which now contains INDIGO)
   'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
   'EXPLOSION_PURPLE_DIR': createExplosion(COLOR_SETS.PURPLE, true,  [20, 30], [5, 10]),
   
-  // Hunter
-  'EXPLOSION_YELLOW':     createExplosion(COLOR_SETS.YELLOW, false, [15, 25], [10, 18]),
-  'EXPLOSION_YELLOW_DIR': createExplosion(COLOR_SETS.YELLOW, true,  [15, 25], [10, 18]),
+  // Hunter (Updated to use ORANGE set)
+  'EXPLOSION_YELLOW':     createExplosion(COLOR_SETS.ORANGE, false, [15, 25], [10, 18]),
+  'EXPLOSION_YELLOW_DIR': createExplosion(COLOR_SETS.ORANGE, true,  [15, 25], [10, 18]),
   
   // Kamikaze
   'EXPLOSION_RED':        createExplosion(COLOR_SETS.RED, false, [20, 35], [12, 22]),
@@ -10803,7 +10872,7 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   // Custom / Unique FX
   'IMPACT_WHITE': { pattern: 'RADIAL', colors: COLOR_SETS.WHITE, count: [3, 5], speed: [2, 5], life: [0.1, 0.2] },
   'IMPACT_RED':   { pattern: 'RADIAL', colors: COLOR_SETS.RED, count: [4, 7], speed: [3, 8], life: [0.2, 0.4] },
-  'CLASH_YELLOW': { pattern: 'RADIAL', colors: COLOR_SETS.YELLOW, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
+  'CLASH_YELLOW': { pattern: 'RADIAL', colors: COLOR_SETS.ORANGE, count: [5, 8], speed: [5, 10], life: [0.2, 0.4] },
   
   'DRILL_SPARKS':  { 
       pattern: 'DIRECTIONAL', 
@@ -10816,18 +10885,18 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
       shape: 1 
   },
   
-  'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: COLOR_SETS.YELLOW, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
+  'HUNTER_RECOIL': { pattern: 'DIRECTIONAL', colors: COLOR_SETS.ORANGE, count: [8, 12], speed: [10, 18], life: [0.3, 0.6], spread: 0.5 },
   
   'ENGINE_FLARE': { 
     pattern: 'DIRECTIONAL', 
-    colors: [PALETTE.YELLOW.SOFT, PALETTE.MONO.WHITE], 
+    colors: [PALETTE.ORANGE.BRIGHT, PALETTE.MONO.WHITE], 
     count: [3, 5], 
     speed: [15, 25], 
     life: [0.1, 0.2], 
     spread: 0.05 
   },
   
-  'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
+  'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.PINK, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
   'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };
 
@@ -11011,7 +11080,7 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.CYAN.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    visual: { model: 'OCTA', color: PALETTE.PINK.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -11025,7 +11094,7 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
-    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.YELLOW.ORANGE, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
+    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.ORANGE.BRIGHT, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -11034,14 +11103,14 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'CONE', color: PALETTE.YELLOW.ORANGE, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
+    visual: { model: 'CONE', color: PALETTE.ORANGE.PRIMARY, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' }, // Updated
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
     id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
-    visual: { model: 'SPHERE', color: PALETTE.CYAN.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
     tags: [Tag.BULLET, Tag.PLAYER] 
   }
@@ -11117,7 +11186,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
       model: 'CONE', 
-      color: PALETTE.PURPLE.PRIMARY, 
+      color: PALETTE.PURPLE.INDIGO, // Updated
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
@@ -11144,7 +11213,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
       model: 'CUSTOM_HUNTER', 
-      color: PALETTE.YELLOW.SOFT, 
+      color: PALETTE.ORANGE.PRIMARY, // Updated
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
@@ -11156,7 +11225,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
     visual: { 
       model: 'OCTA', 
-      color: PALETTE.CYAN.PRIMARY, 
+      color: PALETTE.PINK.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
@@ -16142,8 +16211,6 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.input.getCursor();
 
-    // REMOVED: World Click Logic (Tap to Damage)
-    
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         return; 
@@ -16219,7 +16286,8 @@ export class InteractionSystem implements IInteractionSystem {
                 this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
 
-            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.CYAN.PRIMARY;
+            // --- COLOR SWAP HERE: Cyan -> Pink ---
+            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.PINK.PRIMARY;
             this.spawnRepairParticles(cursor, color);
         }
     }
@@ -17015,6 +17083,7 @@ import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
@@ -17022,7 +17091,7 @@ import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
+import { WeaponIDs } from '@/engine/config/Identifiers';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -17077,7 +17146,10 @@ export class WeaponSystem implements IGameSystem {
     if (time > this.lastFireTime + currentFireRate) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
-        if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel);
+        // Get the visual rotation to align Sniffer shots with reticle
+        const renderTransform = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        
+        if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel, renderTransform);
     }
   }
 
@@ -17145,7 +17217,7 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel) {
+  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
     const enemies = this.registry.getByTag(Tag.ENEMY);
     let nearestDist = Infinity; let targetEnemy = null;
     for (const e of enemies) {
@@ -17162,7 +17234,17 @@ export class WeaponSystem implements IGameSystem {
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
     
-    const shots = calculatePlayerShots({ x: pPos.x, y: pPos.y }, { x: tPos.x, y: tPos.y }, upgrades);
+    // NOTE: PlayerActor renders the reticle with a NEGATIVE rotation relative to RenderTransform
+    // We replicate that here so bullets match visual tips.
+    const reticleRotation = pVisual ? -pVisual.rotation : 0;
+
+    const shots = calculatePlayerShots(
+        { x: pPos.x, y: pPos.y }, 
+        { x: tPos.x, y: tPos.y }, 
+        upgrades,
+        reticleRotation
+    );
+
     shots.forEach(shot => {
         const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, Faction.FRIENDLY, shot.life, shot.damage, shot.configId);
         
@@ -18142,12 +18224,13 @@ import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { Tag } from '@/engine/ecs/types';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
-const COL_SAFE = new THREE.Color("#00FF41");
-const COL_WARN = new THREE.Color("#FFD700");
-const COL_CRIT = new THREE.Color("#FF003C");
-const COL_SBX  = new THREE.Color("#00FFFF");
+const COL_SAFE = new THREE.Color(PALETTE.GREEN.PURE);
+const COL_WARN = new THREE.Color(PALETTE.YELLOW.GOLD);
+const COL_CRIT = new THREE.Color(PALETTE.RED.CRITICAL);
+const COL_SBX  = new THREE.Color(PALETTE.CYAN.PURE);
 
 export class WorldSystem implements IGameSystem {
   private targetColor = new THREE.Color();
@@ -18186,10 +18269,6 @@ export class WorldSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Only handling lighting color interpolation here for system consistency.
-    // Visual movement (WireframeFloor) is now handled in the View layer
-    // to ensure it persists during Game Over / Paused states.
-
     if (this.worldEntityId === null) return;
     
     const world = this.registry.getEntity(this.worldEntityId);
@@ -19416,10 +19495,41 @@ export interface ShotDef {
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
 
+// EXACT CALCULATION NOTE:
+// The Reticle Geometry (createReticleGeo in PlayerActor) defines tips at:
+// theta - tA. 
+// tA (Tip Angle offset) is 0.55 radians.
+// The static mesh rotation (PI/12) is OVERWRITTEN by the useFrame loop,
+// so the net visual offset is exactly -0.55 radians.
+
+const RETICLE_RADIUS = 1.65; // User preferred visual radius
+const TWIST_OFFSET = -0.55;  // Exact geometry parameter 'tA' (negative for CW twist)
+
+// Standard Cardinal Points (CCW from East/Right)
+const ANGLES = {
+    RIGHT: 0,
+    TOP: Math.PI / 2,
+    LEFT: Math.PI,
+    BOTTOM: Math.PI * 1.5
+};
+
+// Map requested order to the geometry indices
+// 1. Top Left (Tip 2):   LEFT + Twist
+// 2. Bottom Right (Tip 0): RIGHT + Twist
+// 3. Bottom Left (Tip 3): BOTTOM + Twist
+// 4. Top Right (Tip 1):    TOP + Twist
+const SNIFFER_TIPS = [
+    ANGLES.LEFT + TWIST_OFFSET,   // 1. Top Left
+    ANGLES.RIGHT + TWIST_OFFSET,  // 2. Bottom Right
+    ANGLES.BOTTOM + TWIST_OFFSET, // 3. Bottom Left
+    ANGLES.TOP + TWIST_OFFSET     // 4. Top Right
+];
+
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  upgrades: Record<string, number>
+  upgrades: Record<string, number>,
+  reticleRotation: number = 0 // Passed from visual system
 ): ShotDef[] => {
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
@@ -19444,7 +19554,7 @@ export const calculatePlayerShots = (
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-  // Standard / Fork Shots
+  // --- 1. STANDARD / FORK SHOTS (Main Gun) ---
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
       
@@ -19463,7 +19573,7 @@ export const calculatePlayerShots = (
       });
   }
 
-  // Backdoor Shots
+  // --- 2. BACKDOOR SHOTS (Rear Gun) ---
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
       
@@ -19482,20 +19592,30 @@ export const calculatePlayerShots = (
       });
   }
 
-  // Sniffer (Homing) Shots
+  // --- 3. SNIFFER SHOTS (Reticle Tips) ---
   if (snifferLevel > 0) {
-      const angleStep = GAME_MATH.FULL_CIRCLE / snifferLevel;
+      // Clamp to max 4 tips
+      const maxTips = 4;
+      
       for (let i = 0; i < snifferLevel; i++) {
-          const angle = i * angleStep;
+          const tipIndex = i % maxTips;
           
-          const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-          const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+          // Calculate exact tip position relative to reticle rotation
+          const localAngle = SNIFFER_TIPS[tipIndex];
+          const globalAngle = reticleRotation + localAngle;
+          
+          const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
+          const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
+          
+          // Velocity: They shoot outward from center, then home in
+          const vx = Math.cos(globalAngle) * speed * 0.5;
+          const vy = Math.sin(globalAngle) * speed * 0.5;
           
           shots.push({
-              x: spawnX,
-              y: spawnY,
-              vx: Math.cos(angle) * speed * 0.5,
-              vy: Math.sin(angle) * speed * 0.5,
+              x: tipX,
+              y: tipY,
+              vx: vx,
+              vy: vy,
               damage: damage * 0.5,
               life: life * 2,
               configId: WeaponIDs.PLAYER_SNIFFER,

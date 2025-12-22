@@ -45,17 +45,58 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
+const SnifferOverlayShader = {
+  vertex: `
+    varying vec2 vPos;
+    void main() {
+      vPos = position.xy;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragment: `
+    uniform float uLevel;
+    uniform vec3 uColor;
+    uniform float uTime;
+    varying vec2 vPos;
+
+    #define PI 3.14159265359
+
+    void main() {
+      float angle = atan(vPos.y, vPos.x);
+      float correctedAngle = angle + 0.55;
+      if (correctedAngle < 0.0) correctedAngle += 2.0 * PI;
+      
+      float sectorRaw = floor((correctedAngle + (PI / 4.0)) / (PI / 2.0));
+      int sector = int(mod(sectorRaw, 4.0));
+
+      bool isActive = false;
+      if (uLevel >= 1.0 && sector == 2) isActive = true;
+      if (uLevel >= 2.0 && sector == 0) isActive = true;
+      if (uLevel >= 3.0 && sector == 3) isActive = true;
+      if (uLevel >= 4.0 && sector == 1) isActive = true;
+
+      if (!isActive) discard;
+
+      float dist = length(vPos);
+      float tipMask = smoothstep(0.35, 0.65, dist);
+      float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
+      
+      gl_FragColor = vec4(uColor, tipMask * pulse);
+    }
+  `
+};
+
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
-
-// Updated to Deep Pink/Purple for Repair Reticle
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
+const COL_SNIFFER = new THREE.Color(PALETTE.PINK.PRIMARY);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
-  const containerRef = useRef<THREE.Group>(null), centerDotRef = useRef<THREE.Mesh>(null), reticleRef = useRef<THREE.Mesh>(null), ambientGlowRef = useRef<THREE.Mesh>(null);
+  const containerRef = useRef<THREE.Group>(null), centerDotRef = useRef<THREE.Mesh>(null), reticleRef = useRef<THREE.Mesh>(null), ambientGlowRef = useRef<THREE.Mesh>(null), snifferRef = useRef<THREE.Mesh>(null);
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
+  
   const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
   const ambientMaterial = useMemo(() => {
@@ -66,6 +107,21 @@ export const PlayerActor = () => {
   const backingMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_BACKING', { ...ShaderLib.presets.playerBacking, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.5 } } });
       mat.blending = THREE.NormalBlending; return mat;
+  }, []);
+
+  const snifferMaterial = useMemo(() => {
+      return new THREE.ShaderMaterial({
+          vertexShader: SnifferOverlayShader.vertex,
+          fragmentShader: SnifferOverlayShader.fragment,
+          uniforms: {
+              uLevel: { value: 0 },
+              uColor: { value: COL_SNIFFER },
+              uTime: { value: 0 }
+          },
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthTest: false
+      });
   }, []);
 
   useEffect(() => {
@@ -106,6 +162,15 @@ export const PlayerActor = () => {
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
         reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
         
+        // --- SYNC SNIFFER OVERLAY ---
+        if (snifferRef.current) {
+            snifferRef.current.rotation.z = reticleRef.current.rotation.z;
+            // Direct Store Access to avoid reactivity lag
+            const levels = useGameStore.getState().activeUpgrades;
+            snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
+            snifferMaterial.uniforms.uTime.value = time;
+        }
+
         if (isZenMode) {
             tempColor.current.setHSL((time*0.1)%1, 1, 0.9); reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
@@ -131,6 +196,7 @@ export const PlayerActor = () => {
     <group ref={containerRef}>
       <mesh ref={centerDotRef} geometry={coreGeo} renderOrder={3}><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
       <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0,0,Math.PI/12]} renderOrder={2}><meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} /></mesh>
+      <mesh ref={snifferRef} geometry={reticleGeo} rotation={[0,0,Math.PI/12]} renderOrder={4} material={snifferMaterial} />
       <mesh material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3,1.3,1]} renderOrder={1} />
       <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6,6,1]} renderOrder={0} />
     </group>
