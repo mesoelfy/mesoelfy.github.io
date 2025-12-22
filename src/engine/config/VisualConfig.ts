@@ -21,10 +21,15 @@ export const VISUAL_CONFIG = {
     SPAWN_Y_OFFSET: 3.5,
     
     // High Elasticity (Bullets)
-    // TUNING: Increased base stretch from 0.04 to 0.06 for better visuals at lower speeds
     BASE_STRETCH: 0.06, 
     BASE_SQUASH: 0.03,
     MAX_STRETCH_CAP: 4.0,
     MIN_SQUASH_CAP: 0.4
+  },
+  SPAWN: {
+    // Controls the "bounciness" of the enemy appearing
+    ELASTICITY: 1.5, // How much it overshoots 1.0 scale
+    ROTATION_SPEED: 15.0, // Radians per second during spawn
+    Y_OFFSET: -2.0 // Start spawning from slightly below
   }
 } as const;

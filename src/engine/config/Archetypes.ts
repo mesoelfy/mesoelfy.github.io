@@ -55,7 +55,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
           repair: GAME_THEME.turret.repair,
           reboot: '#9E4EA5'
       }},
-      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
+      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base, { spawnProgress: 1.0 }) // Player starts visible
     ]
   }
 };
@@ -63,9 +63,8 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
 // --- ENEMY GENERATION ---
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
-    const matId = 'MAT_ENEMY_BASE'; // Hardcoded for now, could be in def
+    const matId = 'MAT_ENEMY_BASE'; 
     
-    // Components common to all enemies
     const comps: any[] = [
       { type: ComponentType.Identity, data: { variant: def.id } },
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -73,18 +72,17 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1 })
+      // Enemies use spawnProgress: 0.0 (default in component) to animate in
+      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
     if (def.damage > 0) {
         comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
     }
 
-    // Specific AI extras
     if (def.ai === 'daemon') {
         comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
         comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
-        // Override collider for Daemon (Friendly)
         const col = comps.find((c: any) => c.type === ComponentType.Collider);
         if (col) {
             col.data.layer = CollisionLayers.PLAYER;
@@ -110,8 +108,6 @@ Object.values(WEAPONS).forEach(def => {
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-
-    // Use default hitboxes based on config for now, eventually move to Def
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
     const comps: any[] = [
@@ -119,7 +115,7 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Lifetime, data: { remaining: def.life, total: def.life } },
       { type: ComponentType.Combat, data: { damage: def.damage } },
-      { type: ComponentType.Health, data: { max: def.damage } }, // HP = Dmg for cancellation
+      { type: ComponentType.Health, data: { max: def.damage } }, 
       { type: ComponentType.Collider, data: { radius, layer, mask } },
       { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
@@ -129,19 +125,17 @@ Object.values(WEAPONS).forEach(def => {
           baseScaleY: def.visual.scale[1], 
           baseScaleZ: def.visual.scale[2] 
       }},
-      { type: ComponentType.RenderEffect, data: { elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, pulseSpeed: def.behavior?.pulseSpeed || 0 } }
+      // CRITICAL FIX: Set spawnProgress to 1.0 so bullets are immediately visible
+      { type: ComponentType.RenderEffect, data: { 
+          elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, 
+          pulseSpeed: def.behavior?.pulseSpeed || 0,
+          spawnProgress: 1.0 
+      }}
     ];
 
     if (def.behavior?.spinSpeed) {
         comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
     }
-
-    // Special Case: Bullets also have archetypes for spawning
-    // We map 'BULLET_PLAYER' -> 'PLAYER_STANDARD' internally in Spawner
-    // But we need blueprints for the ID being spawned.
-    // EntitySpawner.spawnBullet calls spawn with ArchetypeIDs.BULLET_PLAYER usually,
-    // but applies overrides.
-    // For this refactor, we are adding the blueprints directly.
     
     BLUEPRINTS[def.id] = {
         id: def.id,
@@ -150,9 +144,6 @@ Object.values(WEAPONS).forEach(def => {
     };
 });
 
-// BACKWARDS COMPATIBILITY MAPS
-// The Spawner still uses generic IDs like 'BULLET_PLAYER' to mean "Default bullet".
-// We need to keep these keys valid.
 BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
 BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
 

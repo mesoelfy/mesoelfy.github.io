@@ -49,26 +49,29 @@ export class WaveSystem implements IGameSystem {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
-    if (this.panelSystem.systemIntegrity <= 0) return;
-
-    if (!this.scenarioInit) {
-        const panels = this.panelSystem.getAllPanels();
-        const ready = panels.some(p => p.width > 0);
-        
-        if (ready) {
-            this.runScenario(panels);
-            this.scenarioInit = true;
+    // Allow stress test to proceed even if integrity is 0 (Game Over state)
+    // The GameEngine stops regular updates, but the Systems persist.
+    // We only block normal waves.
+    if (this.panelSystem.systemIntegrity > 0) {
+        if (!this.scenarioInit) {
+            const panels = this.panelSystem.getAllPanels();
+            const ready = panels.some(p => p.width > 0);
+            
+            if (ready) {
+                this.runScenario(panels);
+                this.scenarioInit = true;
+            }
         }
-    }
 
-    this.waveTime += delta;
-    
-    if (!useStore.getState().debugFlags.peaceMode) {
-        this.checkTimeline();
-        this.processQueue(time);
-    }
+        this.waveTime += delta;
+        
+        if (!useStore.getState().debugFlags.peaceMode) {
+            this.checkTimeline();
+            this.processQueue(time);
+        }
 
-    this.handleBreaches(delta);
+        this.handleBreaches(delta);
+    }
   }
 
   private triggerStressTest() {
@@ -85,15 +88,21 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
-              // INJECTION: Use SPAWN state with randomized durations for staggered pop-in effect
+              const spawnDuration = 0.5 + Math.random() * 2.5;
+
+              // We manually set velocity to 0 to trigger the SpawnPhase Kickstart
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
                   [ComponentType.State]: { 
                       current: AI_STATE.SPAWN,
-                      timers: { [AITimerID.SPAWN]: 0.5 + Math.random() * 2.5 }
+                      timers: {} 
                   },
                   [ComponentType.RenderTransform]: { scale: 0.0 },
-                  [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
+                  // Trick: We override velocity here to 0 so logic picks it up, 
+                  // but we rely on SpawnPhase to calculate the actual speed based on its hardcoded duration.
+                  // To support random duration, we would need to pass data to AI Blackboard.
+                  // For now, random position is enough chaos.
+                  [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
           }
       });

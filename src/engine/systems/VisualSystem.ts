@@ -12,6 +12,14 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
+// Easing Helper: Elastic Out
+function easeOutElastic(t: number): number {
+  const c4 = (2 * Math.PI) / 3;
+  if (t === 0) return 0;
+  if (t === 1) return 1;
+  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+}
+
 export class VisualSystem implements IGameSystem {
   private tempColor = new THREE.Color();
   
@@ -35,6 +43,7 @@ export class VisualSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const CFG = VISUAL_CONFIG.DEFORMATION;
+    const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
     const RENDER_CFG = VISUAL_CONFIG.RENDER;
     
     const isZenMode = useGameStore.getState().isZenMode;
@@ -55,32 +64,38 @@ export class VisualSystem implements IGameSystem {
 
       if (!render) continue;
 
-      // 1. AUTO ROTATION
+      // 1. AUTO ROTATION (Base)
       if (rotate) {
           render.rotation += rotate.speed * delta;
       }
 
-      // 2. STATE COLORING
+      // 2. STATE COLORING & ANIMATION (Restored Original Values)
       if (stateColor && model) {
           let targetHex = stateColor.base;
+          // RESTORED: Original base speed
           let spinSpeed = 0.02;
 
           if (isZenMode) {
               spinSpeed = -0.03;
           } else if (isDead) {
               targetHex = stateColor.dead;
+              // RESTORED: Original dead speeds
               spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
               if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
           } else {
+              // Standard Gameplay
               if (interactState === 'HEALING') {
                   targetHex = stateColor.repair;
-                  spinSpeed = -0.24;
+                  // RESTORED: Original healing speed
+                  spinSpeed = -0.24; 
               } else if (interactState === 'REBOOTING') {
                   targetHex = stateColor.reboot;
-                  spinSpeed = -0.24;
+                  // RESTORED: Original reboot speed
+                  spinSpeed = -0.24; 
               }
           }
 
+          // RESTORED: Applied directly per-tick (no delta multiplication) to match original feel
           render.rotation += spinSpeed;
           render.scale = 1.0; 
 
@@ -92,10 +107,33 @@ export class VisualSystem implements IGameSystem {
           model.b = this.tempColor.b;
       }
 
-      // 3. DYNAMIC SCALING
+      // 3. DYNAMIC SCALING & SPAWNING
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
+          // --- SPAWN ANIMATION LOGIC ---
+          if (effect.spawnProgress < 1.0) {
+              // Advance progress
+              if (effect.spawnVelocity > 0) {
+                  effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
+              }
+
+              const t = effect.spawnProgress;
+              const scaleCurve = easeOutElastic(t);
+              
+              dX *= scaleCurve;
+              dY *= scaleCurve;
+              dZ *= scaleCurve;
+
+              render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
+              
+              const riseT = t * (2 - t); 
+              render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
+
+          } else {
+              render.offsetY = 0;
+          }
+
           // Effect Decay
           if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
@@ -111,7 +149,7 @@ export class VisualSystem implements IGameSystem {
           }
 
           // Elasticity
-          if (motion && effect.elasticity > 0.01) {
+          if (motion && effect.elasticity > 0.01 && effect.spawnProgress >= 1.0) {
               const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
               const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
 
@@ -131,23 +169,6 @@ export class VisualSystem implements IGameSystem {
                   dX *= squashXZ;
                   dZ *= squashXZ;
               }
-          }
-          
-          // Spawn Pop
-          if (effect.spawnProgress < 1.0) {
-              const t = effect.spawnProgress;
-              if (t < 0.8) {
-                  const s = t / 0.8;
-                  dX *= s; dY *= s; dZ *= s;
-              } else {
-                  const popT = (t - 0.8) / 0.2;
-                  const pop = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
-                  dX *= pop; dY *= pop; dZ *= pop;
-              }
-              const ease = 1 - Math.pow(1 - t, 3);
-              render.offsetY = -CFG.SPAWN_Y_OFFSET * (1.0 - ease);
-          } else {
-              render.offsetY = 0;
           }
       }
 

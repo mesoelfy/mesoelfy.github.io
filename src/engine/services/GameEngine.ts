@@ -4,8 +4,6 @@ import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { WorldConfig } from '@/engine/config/WorldConfig';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
@@ -45,12 +43,9 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    if (this.gameSystem && this.panelSystem) {
-        if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
-            gameStore.stopGame();
-            GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
-            this.gameSystem.isGameOver = true; 
-        }
+    // FIX: Removed Game Over check here. HealthSystem handles the state transition and events.
+    if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
+        gameStore.stopGame();
     }
 
     let timeScale = 1.0;
