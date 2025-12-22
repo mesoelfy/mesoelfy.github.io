@@ -10,6 +10,7 @@ class MusicDeck {
   public element: HTMLAudioElement | null = null;
   public source: MediaElementAudioSourceNode | null = null;
   public gain: GainNode | null = null;
+  public stopTimer: ReturnType<typeof setTimeout> | null = null;
   private outputNode: AudioNode | null = null;
   private ctx: AudioContext | null = null;
 
@@ -53,6 +54,8 @@ class MusicDeck {
   }
 
   public play() {
+    this.cancelStop(); // Ensure we don't stop ourselves if we were fading out
+
     // Re-verify graph integrity before playing
     if (this.ctx && this.outputNode) {
         this.init(this.ctx, this.outputNode);
@@ -64,9 +67,17 @@ class MusicDeck {
   }
 
   public stop() {
+    this.cancelStop();
     if (this.element) {
         this.element.pause();
         this.element.currentTime = 0;
+    }
+  }
+
+  public cancelStop() {
+    if (this.stopTimer) {
+        clearTimeout(this.stopTimer);
+        this.stopTimer = null;
     }
   }
 
@@ -218,12 +229,18 @@ export class VoiceManager {
     nextDeck.play();
     
     // Crossfade
-    const FADE_TIME = 3.0;
+    const FADE_TIME = 2.0; // Reduced from 3.0 for snappier manual skips
     nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
     if (this.activeDeck) {
+        // Ensure we don't have double timers if clicked rapidly
+        currentDeck.cancelStop();
+        
         currentDeck.fadeTo(0.0, FADE_TIME, ctx);
-        setTimeout(() => currentDeck.stop(), FADE_TIME * 1000);
+        
+        currentDeck.stopTimer = setTimeout(() => {
+            currentDeck.stop();
+        }, FADE_TIME * 1000);
     }
 
     this.activeDeck = this.activeDeck === 'A' ? 'B' : 'A';

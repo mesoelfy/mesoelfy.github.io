@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 22 13:53:05 CST 2025
+Generated on: Mon Dec 22 16:06:34 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -8749,7 +8749,7 @@ export const ParticleActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/PlayerActor.tsx
 =====================================
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
@@ -8765,6 +8765,7 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import { PALETTE } from '@/engine/config/Palette';
+import { GAME_MATH } from '@/engine/config/constants/MathConstants';
 import * as THREE from 'three';
 
 const createCoreGeo = () => {
@@ -8796,18 +8797,128 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
+// --- DYNAMIC CHEVRON RIBBON GENERATOR ---
+const createForkedChevronGeo = (tipCount: number) => {
+    const shape = new THREE.Shape();
+    
+    // Config
+    const rTip = 0.92;      
+    const rValley = 0.84;   
+    const thickness = 0.06; 
+    
+    const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
+    const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
+    const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
+
+    // 1. OUTER EDGE (CW: Left -> Right)
+    const startBaseAngle = startAngle + (spread * 0.4); 
+    const pStartBase = pt(rValley, startBaseAngle);
+    shape.moveTo(pStartBase[0], pStartBase[1]);
+
+    for (let i = 0; i < tipCount; i++) {
+        const angle = startAngle - (i * spread);
+        const pTip = pt(rTip, angle);
+        shape.lineTo(pTip[0], pTip[1]);
+        
+        if (i < tipCount - 1) {
+            const midAngle = angle - (spread / 2);
+            const pValley = pt(rValley, midAngle);
+            shape.lineTo(pValley[0], pValley[1]);
+        }
+    }
+    
+    const endBaseAngle = (startAngle - ((tipCount - 1) * spread)) - (spread * 0.4);
+    const pEndBase = pt(rValley, endBaseAngle);
+    shape.lineTo(pEndBase[0], pEndBase[1]);
+
+    // 2. INNER EDGE (CCW: Right -> Left)
+    const rInnerTip = rTip - thickness;
+    const rInnerValley = rValley - thickness;
+
+    const pInnerEnd = pt(rInnerValley, endBaseAngle);
+    shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
+
+    for (let i = tipCount - 1; i >= 0; i--) {
+        const angle = startAngle - (i * spread);
+        const pInTip = pt(rInnerTip, angle);
+        shape.lineTo(pInTip[0], pInTip[1]);
+        
+        if (i > 0) {
+            const midAngle = angle + (spread / 2);
+            const pInValley = pt(rInnerValley, midAngle);
+            shape.lineTo(pInValley[0], pInValley[1]);
+        }
+    }
+
+    const pInnerStart = pt(rInnerValley, startBaseAngle);
+    shape.lineTo(pInnerStart[0], pInnerStart[1]);
+    
+    shape.closePath();
+
+    return new THREE.ShapeGeometry(shape);
+};
+
+const SnifferOverlayShader = {
+  vertex: `
+    varying vec2 vPos;
+    void main() {
+      vPos = position.xy;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragment: `
+    uniform float uLevel;
+    uniform vec3 uColor;
+    uniform float uTime;
+    varying vec2 vPos;
+    #define PI 3.14159265359
+    void main() {
+      float angle = atan(vPos.y, vPos.x);
+      float correctedAngle = angle + 0.55;
+      if (correctedAngle < 0.0) correctedAngle += 2.0 * PI;
+      float sectorRaw = floor((correctedAngle + (PI / 4.0)) / (PI / 2.0));
+      int sector = int(mod(sectorRaw, 4.0));
+      bool isActive = false;
+      if (uLevel >= 1.0 && sector == 2) isActive = true;
+      if (uLevel >= 2.0 && sector == 0) isActive = true;
+      if (uLevel >= 3.0 && sector == 3) isActive = true;
+      if (uLevel >= 4.0 && sector == 1) isActive = true;
+      if (!isActive) discard;
+      float dist = length(vPos);
+      float tipMask = smoothstep(0.35, 0.65, dist);
+      if (tipMask < 0.1) discard;
+      float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
+      gl_FragColor = vec4(uColor, 1.0); 
+    }
+  `
+};
+
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
-
-// Updated to Deep Pink/Purple for Repair Reticle
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
+const COL_SNIFFER = new THREE.Color(PALETTE.PINK.PRIMARY);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
-  const containerRef = useRef<THREE.Group>(null), centerDotRef = useRef<THREE.Mesh>(null), reticleRef = useRef<THREE.Mesh>(null), ambientGlowRef = useRef<THREE.Mesh>(null);
+  const containerRef = useRef<THREE.Group>(null);
+  const centerDotRef = useRef<THREE.Mesh>(null);
+  const reticleRef = useRef<THREE.Mesh>(null);
+  const ambientGlowRef = useRef<THREE.Mesh>(null);
+  const snifferRef = useRef<THREE.Mesh>(null);
+  const forkRef = useRef<THREE.Mesh>(null); 
+  
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
-  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
+  const activeUpgrades = useGameStore(state => state.activeUpgrades);
+  
+  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), snifferColor = useRef(new THREE.Color());
+  const currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
+
+  const forkLevel = activeUpgrades['FORK'] || 0;
+  const forkGeo = useMemo(() => {
+      const tips = 1 + forkLevel; 
+      return createForkedChevronGeo(tips);
+  }, [forkLevel]);
 
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', { ...ShaderLib.presets.playerAmbient, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.6 }, [Uniforms.ENERGY]: { value: 0.0 } } });
@@ -8819,11 +8930,32 @@ export const PlayerActor = () => {
       mat.blending = THREE.NormalBlending; return mat;
   }, []);
 
+  const snifferMaterial = useMemo(() => {
+      return new THREE.ShaderMaterial({
+          vertexShader: SnifferOverlayShader.vertex,
+          fragmentShader: SnifferOverlayShader.fragment,
+          uniforms: {
+              uLevel: { value: 0 },
+              uColor: { value: new THREE.Color(0, 0, 0) },
+              uTime: { value: 0 }
+          },
+          transparent: true,
+          blending: THREE.NormalBlending,
+          depthTest: false
+      });
+  }, []);
+
   useEffect(() => {
       const u1 = events.subscribe(GameEvents.PLAYER_HIT, () => { hitFlash.current = 1.0; });
       const u2 = events.subscribe(GameEvents.PLAYER_FIRED, (p) => { lastFireTimeRef.current = performance.now()/1000; targetAimAngle.current = p.angle - Math.PI/2; });
       return () => { u1(); u2(); };
   }, [events]);
+
+  useLayoutEffect(() => {
+      if (forkRef.current) {
+          forkRef.current.geometry = forkGeo;
+      }
+  }, [forkGeo]);
 
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
@@ -8849,18 +8981,63 @@ export const PlayerActor = () => {
 
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
         const time = state.clock.elapsedTime, tFire = time - lastFireTimeRef.current, iSpd = Math.PI*0.2;
+        
+        const isFiring = tFire < 0.05; 
+        const lerpFactor = isFiring ? 1.0 : 0.4;
+        
         if (tFire < 0.25) {
-            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, 0.4);
+            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, lerpFactor);
             rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * iSpd);
-        } else centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, -time * iSpd + rotationOffsetRef.current, 0.08);
+        } else {
+            // Idle Rotation: Counter-Clockwise (positive time)
+            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(
+                centerDotRef.current.rotation.z, 
+                time * iSpd + rotationOffsetRef.current, 
+                0.08
+            );
+        }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
         reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
         
+        if (snifferRef.current) {
+            snifferRef.current.rotation.z = reticleRef.current.rotation.z;
+            const levels = useGameStore.getState().activeUpgrades;
+            snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
+            snifferMaterial.uniforms.uTime.value = time;
+            snifferColor.current.copy(tempColor.current);
+            const hsl = { h: 0, s: 0, l: 0 };
+            snifferColor.current.getHSL(hsl);
+            snifferColor.current.setHSL((hsl.h + 0.5) % 1.0, 1.0, 0.6); 
+            snifferMaterial.uniforms.uColor.value.copy(snifferColor.current);
+        }
+
+        // --- UPDATE FORK ---
+        if (forkRef.current) {
+            // Base sync
+            forkRef.current.rotation.z = centerDotRef.current.rotation.z;
+            (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        }
+
         if (isZenMode) {
-            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
+            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); // Bright Center
+            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6); // Saturated Reticle
+            
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
             ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
+
+            // --- ZEN MODE FORK OVERRIDES ---
+            if (forkRef.current) {
+                // 1. Color: Match Reticle (Color), not Center (White)
+                (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
+                
+                // 2. Rotation: Counter-Spin relative to center
+                // Center aims at mouse + idle spin (time * iSpd)
+                // We want to visually counteract the idle spin or spin opposite.
+                // Simple: Rotate backwards based on time
+                forkRef.current.rotation.z = - (time * iSpd);
+            }
+
         } else {
             let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
             tempColor.current.lerp(target, 0.2);
@@ -8882,6 +9059,12 @@ export const PlayerActor = () => {
     <group ref={containerRef}>
       <mesh ref={centerDotRef} geometry={coreGeo} renderOrder={3}><meshBasicMaterial color={GAME_THEME.turret.base} /></mesh>
       <mesh ref={reticleRef} geometry={reticleGeo} rotation={[0,0,Math.PI/12]} renderOrder={2}><meshBasicMaterial color={GAME_THEME.turret.base} transparent opacity={0.8} /></mesh>
+      <mesh ref={snifferRef} geometry={reticleGeo} rotation={[0,0,Math.PI/12]} renderOrder={4} material={snifferMaterial} />
+      
+      <mesh ref={forkRef} geometry={forkGeo} renderOrder={3}>
+          <meshBasicMaterial color={GAME_THEME.turret.base} toneMapped={false} />
+      </mesh>
+
       <mesh material={backingMaterial} geometry={glowPlaneGeo} scale={[1.3,1.3,1]} renderOrder={1} />
       <mesh ref={ambientGlowRef} material={ambientMaterial} geometry={glowPlaneGeo} scale={[6,6,1]} renderOrder={0} />
     </group>
@@ -9501,53 +9684,62 @@ export const registerAllAssets = () => {
   // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual));
+      // Pass true for isProjectile
+      AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
   });
 };
 
 const createEnemyGeometry = (id: string, visual: any) => {
     if (id === EnemyTypes.DRILLER) {
-        // FIXED: Restore bulk (Radius 0.5) and keep Y-Axis alignment for correct spinning
         const height = 0.64;
-        const radius = 0.5; // Restored size
-        
+        const radius = 0.5; 
         const geo = new THREE.ConeGeometry(radius, height, 4);
-        
-        // Translate Tip to Origin (0,0,0)
-        // Default Cone: Center 0,0,0. Tip at +height/2. Base at -height/2.
-        // We move Down on Y by height/2 to bring Tip to 0.
-        // Now: Tip at 0, Body extends down to -height.
         geo.translate(0, -height / 2, 0);
-        
         return addBarycentricCoordinates(geo);
     }
-    return createGeometry(visual);
+    return createGeometry(visual, false);
 };
 
-const createGeometry = (visual: any) => {
+const createGeometry = (visual: any, isProjectile: boolean = false) => {
+    let geo;
     switch (visual.model) {
-        // Legacy fallback: Use 0.5 radius default if not specified, matching old code behavior
-        case 'CONE': return addBarycentricCoordinates(new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4));
-        case 'ICOSA': return addBarycentricCoordinates(new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0));
-        case 'OCTA': return new THREE.OctahedronGeometry(visual.radius || 0.5, 0);
-        case 'TETRA': return new THREE.TetrahedronGeometry(1, 0);
-        case 'SPHERE': return new THREE.IcosahedronGeometry(1, 1);
-        case 'CAPSULE': return new THREE.CylinderGeometry(0.5, 0.5, 1, 6);
-        case 'CYLINDER': return new THREE.CylinderGeometry(0.5, 0.5, 1, 8);
-        case 'TORUS': return new THREE.TorusGeometry(0.8, 0.2, 4, 8);
-        case 'BOX': return new THREE.BoxGeometry(1, 1, 1);
+        case 'CONE': geo = new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4); break;
+        case 'ICOSA': geo = new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0); break;
+        case 'OCTA': geo = new THREE.OctahedronGeometry(visual.radius || 0.5, 0); break;
+        case 'TETRA': geo = new THREE.TetrahedronGeometry(1, 0); break;
+        case 'SPHERE': geo = new THREE.IcosahedronGeometry(1, 1); break;
+        case 'CAPSULE': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); break;
+        case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
+        case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
+        case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
         case 'CUSTOM_HUNTER': return createHunterSpear();
         case 'CUSTOM_CHEVRON': {
             const shape = new THREE.Shape();
             const w = 0.8, h = 0.8, t = 0.3;
             shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
             shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
-            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
+            geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
             geo.center();
-            return geo;
+            break;
         }
-        default: return new THREE.BoxGeometry(1,1,1);
+        default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
+
+    // Offset Projectiles so origin is at the Tail (Bottom)
+    // Projectiles align +Y to velocity. Scaling Y stretches them.
+    // If centered (default), scaling Y stretches back and front.
+    // Moving geometry UP (+Y) by half height puts Bottom at 0.
+    // Then scaling Y grows UP (Forward).
+    if (isProjectile) {
+        if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
+            geo.translate(0, 0.5, 0);
+        } else if (visual.model === 'TETRA') {
+            // Tetra is weird, usually centered. Let's shift it a bit.
+            geo.translate(0, 0.3, 0);
+        }
+    }
+
+    return addBarycentricCoordinates(geo);
 };
 
 
@@ -10141,7 +10333,7 @@ FILE: ./src/engine/config/constants/MathConstants.ts
 =====================================
 export const GAME_MATH = {
   SPAWN_RADIUS_STD: 25,
-  WEAPON_SPREAD_BASE: 0.15,
+  WEAPON_SPREAD_BASE: 0.075, // Tightened from 0.15
   SNIFFER_ANGLE_OFFSET: Math.PI / 4,
   FULL_CIRCLE: Math.PI * 2
 } as const;
@@ -11038,13 +11230,12 @@ export const GAMEPLAY_CONFIG = {
   INTERACTION: {
     REPAIR_RATE: 0.05,
     QUERY_RADIUS: 1.0,
-    // Increased by ~15% (Was 2.8 -> 3.25)
     REPAIR_HEAL_AMOUNT: 3.25,
-    // Increased by ~15% (Was 4.0 -> 4.6)
     REBOOT_TICK_AMOUNT: 4.6
   },
   WEAPON: {
-    MUZZLE_OFFSET: 1.2
+    // Updated: Matches new larger Chevron Tip Radius (0.92)
+    MUZZLE_OFFSET: 0.92
   },
   STRUCTURE: {
     DECAY_INTERVAL: 0.1,
@@ -12732,6 +12923,7 @@ export interface ProgressionSlice {
   activeUpgrades: Record<string, number>;
   setScore: (val: number) => void;
   setProgressionData: (data: { xp: number, level: number, nextXp: number, points: number }) => void;
+  setActiveUpgrades: (upgrades: Record<string, number>) => void; // NEW
   selectUpgrade: (option: UpgradeOption) => void;
   resetProgressionState: () => void;
 }
@@ -12763,6 +12955,8 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
       xpToNextLevel: data.nextXp,
       upgradePoints: data.points
   }),
+
+  setActiveUpgrades: (upgrades) => set({ activeUpgrades: { ...upgrades } }),
 
   selectUpgrade: (option) => {
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
@@ -15603,47 +15797,69 @@ export const ShaderLib = {
           vUv = uv;
           vPos = position;
           vSpawn = spawnProgress;
-          
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
         }
       `,
       fragment: `
         void main() {
-          // --- SPAWN DISSOLVE LOGIC ---
           float noise = snoise(vPos * 3.0 + vec3(0.0, uTime * 0.5, 0.0)) * 0.5 + 0.5;
           float threshold = (1.0 - vSpawn) * 1.4 - 0.2;
-          
           if (noise < threshold) discard;
-
           float edgeWidth = 0.1;
           float burn = smoothstep(threshold, threshold + edgeWidth, noise);
           float edgeIntensity = 1.0 - burn; 
-          
-          // --- COLOR LOGIC ---
           float width = 1.5;
           float wireEdge = edgeFactor(vBarycentric, width);
-          
-          // 'glow' represents how close we are to the wireframe line (1.0 = on line, 0.0 = face center)
           float glow = pow(1.0 - wireEdge, 0.4);
-          
           vec3 coreColor = vColor;
           float intensity = max(max(vColor.r, vColor.g), vColor.b);
-          
-          // Determine if we are in "High Intensity" (Flash) mode
-          // 0.0 = Normal, 1.0 = Flash
           float isFlash = smoothstep(1.0, 3.0, intensity);
-          
-          // Normal: Edges are White. Flash: Edges are colored (to prevent pink/pastel look).
           vec3 wireColor = mix(vec3(1.0), vColor, isFlash);
-          
-          // Mix: Face -> Wireframe
           vec3 finalColor = mix(coreColor, wireColor, glow);
-
-          // Apply Burn Edge (Blue/White Dissolve Line)
           vec3 burnColor = vec3(0.8, 1.0, 1.0) * 4.0; 
           finalColor += burnColor * edgeIntensity;
-
           gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    },
+
+    snifferIndicator: {
+      vertex: `
+        void main() {
+          vPos = position;
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragment: `
+        uniform vec3 uColor;
+        uniform float uLevel;
+        void main() {
+          // 1. Calculate angle and compensate for the 0.55 twist
+          float angle = atan(vPos.y, vPos.x) + 0.55;
+          float PI = 3.14159265359;
+          
+          // 2. Identify Quadrant (0: Right, 1: Top, 2: Left, 3: Bottom)
+          int q = int(mod(floor(angle / (PI / 2.0) + 0.5), 4.0));
+          
+          // 3. Match quadrants to firing order: 
+          // Order: [Left (2), Right (0), Bottom (3), Top (1)]
+          bool active = false;
+          if (uLevel >= 1.0 && q == 2) active = true;
+          if (uLevel >= 2.0 && q == 0) active = true;
+          if (uLevel >= 3.0 && q == 3) active = true;
+          if (uLevel >= 4.0 && q == 1) active = true;
+          
+          if (!active) discard;
+
+          // 4. Gradient masking so only the outer tips glow
+          float dist = length(vPos);
+          float mask = smoothstep(0.4, 0.65, dist);
+          
+          // 5. Pulsing Effect
+          float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
+          
+          gl_FragColor = vec4(uColor * pulse * 2.0, mask);
         }
       `
     },
@@ -15679,45 +15895,12 @@ export const ShaderLib = {
       `
     },
 
-    glitch: {
-      vertex: `
-        uniform float uIntensity;
-        uniform float uFrequency;
-        uniform float uSpeed;
-
-        void main() {
-          vUv = uv;
-          vColor = vec3(0.0, 1.0, 0.4); 
-          vBarycentric = barycentric;
-          vPos = position; 
-          
-          float noiseVal = snoise(vec3(position * uFrequency + uTime * uSpeed));
-          vec3 displaced = position + normal * noiseVal * uIntensity;
-          
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
-        }
-      `,
-      fragment: `
-        void main() {
-          float width = 1.0; 
-          float edge = edgeFactor(vBarycentric, width);
-          float scan = sin(vPos.y * 20.0 - uTime * 5.0) * 0.5 + 0.5;
-          float alpha = 0.1 + (1.0 - edge) * 0.9 + (scan * 0.3);
-          gl_FragColor = vec4(vColor, alpha);
-        }
-      `
-    },
-
     playerAmbient: {
       vertex: `
-        void main() { 
-          vUv = uv; 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-        }
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; uniform float uEnergy;
-        
         void main() {
           vec2 pos = vUv - 0.5;
           float angle = atan(pos.y, pos.x);
@@ -15737,10 +15920,7 @@ export const ShaderLib = {
 
     playerBacking: {
       vertex: `
-        void main() { 
-          vUv = uv; 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-        }
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
         uniform vec3 uColor; uniform float uOpacity; 
@@ -15755,32 +15935,23 @@ export const ShaderLib = {
 
     galleryBody: {
       vertex: `
-        void main() {
-          vBarycentric = barycentric;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
+        void main() { vBarycentric = barycentric; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
       `,
       fragment: `
-        uniform vec3 uColor;
-        uniform float uGlow;
-        uniform float uDissolve;
-        
+        uniform vec3 uColor; uniform float uGlow; uniform float uDissolve;
         void main() {
           if (uDissolve > 0.0) {
               float stripes = sin(gl_FragCoord.y * 0.1 + gl_FragCoord.x * 0.1);
               if (stripes < (uDissolve * 2.0 - 1.0)) discard;
           }
-
           float width = 1.0; 
           float edge = edgeFactor(vBarycentric, width);
           float glow = 1.0 - edge;
           glow = pow(glow, 0.4) + uGlow; 
-          
           vec3 coreColor = uColor;
           vec3 edgeColor = vec3(1.0);
           vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
           finalColor += coreColor * uGlow * 0.5;
-
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
@@ -18572,7 +18743,8 @@ export class StateSyncSystem implements IGameSystem {
     xp: -1,
     xpNext: -1,
     level: -1,
-    points: -1
+    points: -1,
+    upgradesHash: "" // Track changes to upgrades object
   };
 
   constructor(
@@ -18592,24 +18764,18 @@ export class StateSyncSystem implements IGameSystem {
     const max = this.healthSys.maxPlayerHealth;
     const reboot = this.healthSys.playerRebootProgress;
 
-    // 1. Health
     if (hp !== this.cache.health) {
       GameStream.set('PLAYER_HEALTH', hp);
-      // We use getState().set... to allow the slice to handle any side-effects if needed,
-      // or direct setState if the slice just sets the value. 
-      // Using direct setState here for raw data sync to match previous logic.
       useGameStore.setState({ playerHealth: hp });
       this.cache.health = hp;
     }
 
-    // 2. Max Health
     if (max !== this.cache.maxHealth) {
       GameStream.set('PLAYER_MAX_HEALTH', max);
       useGameStore.setState({ maxPlayerHealth: max });
       this.cache.maxHealth = max;
     }
 
-    // 3. Reboot Progress
     if (reboot !== this.cache.reboot) {
       GameStream.set('PLAYER_REBOOT', reboot);
       useGameStore.setState({ playerRebootProgress: reboot });
@@ -18624,15 +18790,12 @@ export class StateSyncSystem implements IGameSystem {
     const next = this.progSys.xpToNextLevel;
     const points = this.progSys.upgradePoints;
 
-    // 1. Score
     if (score !== this.cache.score) {
       GameStream.set('SCORE', score);
-      // Use the slice action for score to handle High Score logic
       useGameStore.getState().setScore(score);
       this.cache.score = score;
     }
 
-    // 2. XP & Leveling
     if (xp !== this.cache.xp || level !== this.cache.level || next !== this.cache.xpNext || points !== this.cache.points) {
       GameStream.set('XP', xp);
       GameStream.set('XP_NEXT', next);
@@ -18650,23 +18813,27 @@ export class StateSyncSystem implements IGameSystem {
       this.cache.xpNext = next;
       this.cache.points = points;
     }
+
+    // Sync Upgrades
+    // Optimization: JSON.stringify is relatively fast for small objects like this
+    const upgradesStr = JSON.stringify(this.progSys.activeUpgrades);
+    if (upgradesStr !== this.cache.upgradesHash) {
+        useGameStore.getState().setActiveUpgrades(this.progSys.activeUpgrades as Record<string, number>);
+        this.cache.upgradesHash = upgradesStr;
+    }
   }
 
   private syncIntegrity() {
-    // PanelRegistrySystem usually handles its own store updates for Panel Registration,
-    // but the aggregate Integrity score is a calculated value we want to stream.
     const integrity = this.panelSys.systemIntegrity;
     
     if (integrity !== this.cache.integrity) {
         GameStream.set('SYSTEM_INTEGRITY', integrity);
-        // Note: PanelSystem might update the store directly during damage calculations,
-        // but syncing here ensures GameStream is always 1:1 with the simulation frame.
         this.cache.integrity = integrity;
     }
   }
 
   teardown(): void {
-    // No cleanup needed for pure sync
+    // No cleanup needed
   }
 }
 
@@ -19494,18 +19661,9 @@ export interface ShotDef {
 }
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
+const RETICLE_RADIUS = 1.65; 
+const TWIST_OFFSET = -0.55;  
 
-// EXACT CALCULATION NOTE:
-// The Reticle Geometry (createReticleGeo in PlayerActor) defines tips at:
-// theta - tA. 
-// tA (Tip Angle offset) is 0.55 radians.
-// The static mesh rotation (PI/12) is OVERWRITTEN by the useFrame loop,
-// so the net visual offset is exactly -0.55 radians.
-
-const RETICLE_RADIUS = 1.65; // User preferred visual radius
-const TWIST_OFFSET = -0.55;  // Exact geometry parameter 'tA' (negative for CW twist)
-
-// Standard Cardinal Points (CCW from East/Right)
 const ANGLES = {
     RIGHT: 0,
     TOP: Math.PI / 2,
@@ -19513,23 +19671,18 @@ const ANGLES = {
     BOTTOM: Math.PI * 1.5
 };
 
-// Map requested order to the geometry indices
-// 1. Top Left (Tip 2):   LEFT + Twist
-// 2. Bottom Right (Tip 0): RIGHT + Twist
-// 3. Bottom Left (Tip 3): BOTTOM + Twist
-// 4. Top Right (Tip 1):    TOP + Twist
 const SNIFFER_TIPS = [
-    ANGLES.LEFT + TWIST_OFFSET,   // 1. Top Left
-    ANGLES.RIGHT + TWIST_OFFSET,  // 2. Bottom Right
-    ANGLES.BOTTOM + TWIST_OFFSET, // 3. Bottom Left
-    ANGLES.TOP + TWIST_OFFSET     // 4. Top Right
+    ANGLES.LEFT + TWIST_OFFSET,   
+    ANGLES.RIGHT + TWIST_OFFSET,  
+    ANGLES.BOTTOM + TWIST_OFFSET, 
+    ANGLES.TOP + TWIST_OFFSET     
 ];
 
 export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
   upgrades: Record<string, number>,
-  reticleRotation: number = 0 // Passed from visual system
+  reticleRotation: number = 0 
 ): ShotDef[] => {
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
@@ -19539,7 +19692,9 @@ export const calculatePlayerShots = (
   const snifferLevel = upgrades['SNIFFER'] || 0;
   const backdoorLevel = upgrades['BACKDOOR'] || 0;
 
-  const projectileCount = 1 + (forkLevel * 2);
+  // UPDATED: Increase by 1 projectile per level (1, 2, 3, 4...)
+  const projectileCount = 1 + forkLevel;
+  
   const damage = 1 + dmgLevel;
   const speed = config.bulletSpeed;
   const life = config.bulletLife;
@@ -19548,13 +19703,12 @@ export const calculatePlayerShots = (
   const dy = target.y - origin.y;
   const baseAngle = Math.atan2(dy, dx);
 
-  let configId: ArchetypeID = WeaponIDs.PLAYER_STANDARD;
-  if (forkLevel > 0) configId = WeaponIDs.PLAYER_FORK;
+  const configId: ArchetypeID = WeaponIDs.PLAYER_STANDARD;
   
   const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
   const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
 
-  // --- 1. STANDARD / FORK SHOTS (Main Gun) ---
+  // --- 1. STANDARD / FORK SHOTS ---
   for (let i = 0; i < projectileCount; i++) {
       const angle = startAngle + (i * spreadAngle);
       
@@ -19573,10 +19727,9 @@ export const calculatePlayerShots = (
       });
   }
 
-  // --- 2. BACKDOOR SHOTS (Rear Gun) ---
+  // --- 2. BACKDOOR SHOTS ---
   if (backdoorLevel > 0) {
       const rearAngle = baseAngle + Math.PI; 
-      
       const spawnX = origin.x + Math.cos(rearAngle) * MUZZLE_OFFSET;
       const spawnY = origin.y + Math.sin(rearAngle) * MUZZLE_OFFSET;
 
@@ -19592,34 +19745,23 @@ export const calculatePlayerShots = (
       });
   }
 
-  // --- 3. SNIFFER SHOTS (Reticle Tips) ---
+  // --- 3. SNIFFER SHOTS ---
   if (snifferLevel > 0) {
-      // Clamp to max 4 tips
       const maxTips = 4;
-      
       for (let i = 0; i < snifferLevel; i++) {
           const tipIndex = i % maxTips;
-          
-          // Calculate exact tip position relative to reticle rotation
           const localAngle = SNIFFER_TIPS[tipIndex];
           const globalAngle = reticleRotation + localAngle;
           
           const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
           const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
-          
-          // Velocity: They shoot outward from center, then home in
           const vx = Math.cos(globalAngle) * speed * 0.5;
           const vy = Math.sin(globalAngle) * speed * 0.5;
           
           shots.push({
-              x: tipX,
-              y: tipY,
-              vx: vx,
-              vy: vy,
-              damage: damage * 0.5,
-              life: life * 2,
-              configId: WeaponIDs.PLAYER_SNIFFER,
-              isHoming: true
+              x: tipX, y: tipY, vx, vy,
+              damage: damage * 0.5, life: life * 2,
+              configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true
           });
       }
   }
