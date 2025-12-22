@@ -91,18 +91,28 @@ const InitializeButton = ({ onClick }: { onClick: () => void }) => {
         >
             <div className="absolute inset-0 bg-primary-green translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
             <div className="absolute inset-0 opacity-0 group-hover:opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)] transition-opacity duration-500" />
-            <div className="absolute inset-0 flex items-center justify-between px-8 relative z-10">
-                <div className="flex flex-col items-start">
-                    <div className="flex items-center gap-3">
-                        <Power size={18} className="text-primary-green group-hover:text-black transition-colors duration-300" />
-                        <span className="font-header font-black text-xl tracking-[0.25em] text-white group-hover:text-black transition-colors duration-300">
+            
+            <div className="absolute inset-0 flex items-center justify-between px-6 relative z-10">
+                <div className="flex items-center gap-5">
+                    {/* Centered Power Icon - Larger and Thicker */}
+                    <div className="flex items-center justify-center w-10 h-10">
+                        <Power 
+                            size={28} 
+                            strokeWidth={3}
+                            className="text-primary-green group-hover:text-black transition-colors duration-300 drop-shadow-[0_0_8px_rgba(120,246,84,0.5)] group-hover:drop-shadow-none" 
+                        />
+                    </div>
+                    
+                    <div className="flex flex-col items-start justify-center h-full">
+                        <span className="font-header font-black text-xl tracking-[0.25em] text-white group-hover:text-black transition-colors duration-300 leading-none mb-1">
                             INITIALIZE_SYSTEM
                         </span>
+                        <span className="font-mono text-[9px] text-primary-green-dim group-hover:text-black/70 tracking-[0.4em] transition-colors duration-300 leading-none">
+                            ESTABLISH_NEURAL_LINK
+                        </span>
                     </div>
-                    <span className="font-mono text-[9px] text-primary-green-dim group-hover:text-black/70 tracking-[0.4em] pl-8 transition-colors duration-300">
-                        ESTABLISH_NEURAL_LINK
-                    </span>
                 </div>
+
                 <div className="flex items-center gap-1">
                     {[0, 1, 2].map(i => (
                         <motion.div 
@@ -110,7 +120,7 @@ const InitializeButton = ({ onClick }: { onClick: () => void }) => {
                             animate={{ opacity: [0.3, 1, 0.3] }}
                             transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
                         >
-                            <ChevronRight size={20} className="text-primary-green group-hover:text-black transition-colors duration-300 -ml-2" />
+                            <ChevronRight size={25} className="text-primary-green group-hover:text-black transition-colors duration-300 -ml-2" />
                         </motion.div>
                     ))}
                 </div>
@@ -126,7 +136,7 @@ const DangerTriangle = () => (
         animate={{ 
             opacity: 1, 
             scale: 1,
-            y: [-25, 15, -25], // UPDATED: Lowered Max Y, Raised Min Y
+            y: [-25, 15, -25], 
             color: ['#FF003C', '#eae747', '#FF003C'] 
         }}
         transition={{ 
@@ -137,7 +147,6 @@ const DangerTriangle = () => (
         }}
         className="text-critical-red"
     >
-        {/* UPDATED: Size +25% (40) */}
         <AlertTriangle size={40} strokeWidth={2.5} />
     </motion.div>
 );
