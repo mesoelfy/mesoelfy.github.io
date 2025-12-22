@@ -3,7 +3,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
@@ -76,21 +76,37 @@ export const Header = () => {
   const borderColor = isZenMode ? "border-purple-500/30" : "border-white/10";
   const heartbeatControls = useHeartbeat();
 
+  // Slow down color transitions for Zen Mode feel (Structural elements only)
+  const slowTransition = "transition-colors duration-[2000ms]";
+
   return (
-    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
+    <header className={clsx("relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5", slowTransition)}>
       
-      {isZenMode && (
-          <motion.div 
-            className="absolute inset-x-0 bottom-0 h-[2px] z-50 bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
-            animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-          />
-      )}
+      {/* PRISMATIC ZEN BAR (Fades In) */}
+      <AnimatePresence>
+        {isZenMode && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.0, ease: "easeInOut" }}
+              className="absolute inset-x-0 bottom-0 h-[2px] z-50 overflow-hidden"
+            >
+                <motion.div 
+                    className="w-full h-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+                    animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                />
+            </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex items-center gap-4">
         <motion.span 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },
                 heartbeat: { 
@@ -99,7 +115,7 @@ export const Header = () => {
                     transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
                 } 
             }} 
-            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
+            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide", slowTransition, statusColor)}
         >
           {isZenMode ? (
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
@@ -109,7 +125,7 @@ export const Header = () => {
         </motion.span>
         
         {mounted && (
-          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l transition-colors", statusColor, borderColor)}>
+          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l", slowTransition, statusColor, borderColor)}>
             <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={statusColor} />
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">{isZenMode ? "PEACE_PROTOCOL" : "THREAT_NEUTRALIZED"}</span>
@@ -119,82 +135,86 @@ export const Header = () => {
         )}
       </div>
       
-      {/* CONTROLS CONTAINER */}
+      {/* CONTROLS */}
       <div className="flex items-center gap-0">
       
-        {/* NEXT TRACK BUTTON */}
+        {/* NEXT TRACK BUTTON (Fast Interaction) */}
         <button 
             onClick={(e) => { 
                 audio.nextTrack(); 
                 audio.playClick(getPan(e)); 
             }}
+            onMouseEnter={(e) => audio.playHover(getPan(e))}
             className={clsx(
-                // Placement: mr-3.5
-                "group flex items-center justify-center px-3 h-7 rounded-full border transition-all duration-200 mr-3.5",
-                statusColor, // Keeps text color Green/Purple (Used by bg-current)
-                
-                // Active State Styling:
+                "group flex items-center justify-center px-3 h-7 rounded-full border mr-3.5",
+                // FAST transition for hover states
+                "transition-all duration-200", 
+                statusColor,
                 "bg-white/5 border-white/20 opacity-100",
-                
-                // Hover Effects:
-                // DO NOT add 'hover:text-black' here. The text color must stay Green so 'bg-current' becomes Green.
                 "hover:bg-current hover:border-transparent"
             )}
             title="Next Track / Shuffle"
         >
             <FastForward 
               size={14} 
-              // Icon Behavior:
-              // - Default: Green Outline (via fill-transparent)
-              // - Hover: Black Outline + Black Fill (group-hover:text-black overrides parent Green)
               className="fill-transparent group-hover:fill-current group-hover:text-black transition-all duration-200" 
               strokeWidth={2}
             />
         </button>
 
-        {/* TOGGLE GROUP */}
-        <div className={clsx("flex items-center gap-1 pl-4 border-l transition-colors", borderColor)}>
+        {/* TOGGLE GROUP (Container is slow, Buttons are fast) */}
+        <div className={clsx("flex items-center gap-1 pl-4 border-l", slowTransition, borderColor)}>
             <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
             <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
             <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
             
-            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            <div className={clsx("w-[1px] h-4 mx-1", slowTransition, isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
             
-            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            <div className={clsx("w-[1px] h-4 mx-1", slowTransition, isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             
             <button 
                 onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} 
                 className={clsx(
-                    "group flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
+                    "group flex items-center justify-center p-1.5 border border-transparent rounded-sm",
+                    "transition-all duration-200", // Fast hover
                     statusColor,
                     "hover:bg-current hover:border-transparent"
                 )}
             >
-                {/* SETTINGS GEAR: Size 17 */}
                 <Settings size={17} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
             </button>
         </div>
       </div>
       
-      {!isGameOver && !isZenMode && (
-        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
-              <motion.div 
-                key={isCritical ? "critical-bar" : "normal-bar"}
-                animate={isCritical ? heartbeatControls : "idle"} 
-                variants={barVariants}
-                className={clsx(
-                    "w-full h-full shadow-[0_0_10px_currentColor]", 
-                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
-                )} 
-              />
-          </div>
-        </div>
-      )}
+      {/* STANDARD HEALTH BAR (Fades Out) */}
+      <AnimatePresence>
+        {!isGameOver && !isZenMode && (
+            <motion.div 
+                key="standard-health-bar"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.0 }}
+                className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900"
+            >
+            <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
+                <motion.div 
+                    key={isCritical ? "critical-bar" : "normal-bar"}
+                    animate={isCritical ? heartbeatControls : "idle"} 
+                    variants={barVariants}
+                    className={clsx(
+                        "w-full h-full shadow-[0_0_10px_currentColor]", 
+                        isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                    )} 
+                />
+            </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
       
-      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
+      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1", slowTransition, isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
         {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
         <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
       </div>

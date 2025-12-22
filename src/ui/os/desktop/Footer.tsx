@@ -61,8 +61,6 @@ export const Footer = () => {
         lockUntilRef.current = Date.now() + 999999999; 
     });
     
-    // ... (Other handlers omitted for brevity, logic remains same)
-
     const interval = setInterval(() => {
         if (canUpdate() && !useGameStore.getState().isZenMode) {
             setLog({ text: IDLE_MESSAGES[Math.floor(Math.random() * IDLE_MESSAGES.length)], type: 'info' });
@@ -76,7 +74,7 @@ export const Footer = () => {
   }, []);
 
   return (
-    <footer className={clsx("w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-500", globalColor)}>
+    <footer className={clsx("w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-[2000ms]", globalColor)}>
       <div className="flex-1 flex items-center gap-2 overflow-hidden mr-4">
         <span className="shrink-0 font-bold">LOG:</span>
         <AnimatePresence mode="wait">
@@ -100,7 +98,14 @@ export const Footer = () => {
       </div>
       <div className="flex items-center gap-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity">
         <span>VER:</span>
-        <a href={actionsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors decoration-dashed underline underline-offset-2">{commitHash}</a>
+        <a 
+            href={actionsUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:text-white transition-colors duration-200 decoration-dashed underline underline-offset-2"
+        >
+            {commitHash}
+        </a>
       </div>
     </footer>
   );
