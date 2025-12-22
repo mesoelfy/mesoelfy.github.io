@@ -98,9 +98,14 @@ export class AudioServiceImpl implements IAudioService {
 
   public startMusic() {
     this.ctxManager.resume();
-    this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
+    // No arguments, VoiceManager uses manifest
+    this.voices.startMusic();
     if (this.isReady && this.bank.has('ambience_core')) this.playAmbience('ambience_core');
     else this._autoStartAmbience = true;
+  }
+
+  public nextTrack() {
+    this.voices.nextTrack();
   }
   
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }

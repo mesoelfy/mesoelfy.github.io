@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon, FastForward } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useEffect, useState, useRef } from 'react';
@@ -118,13 +118,50 @@ export const Header = () => {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-4">
+      
+      {/* CONTROLS CONTAINER */}
+      <div className="flex items-center gap-0">
+      
+        {/* NEXT TRACK BUTTON */}
+        <button 
+            onClick={(e) => { 
+                audio.nextTrack(); 
+                audio.playClick(getPan(e)); 
+            }}
+            className={clsx(
+                // Placement: mr-3.5
+                "group flex items-center justify-center px-3 h-7 rounded-full border transition-all duration-200 mr-3.5",
+                statusColor, // Keeps text color Green/Purple (Used by bg-current)
+                
+                // Active State Styling:
+                "bg-white/5 border-white/20 opacity-100",
+                
+                // Hover Effects:
+                // DO NOT add 'hover:text-black' here. The text color must stay Green so 'bg-current' becomes Green.
+                "hover:bg-current hover:border-transparent"
+            )}
+            title="Next Track / Shuffle"
+        >
+            <FastForward 
+              size={14} 
+              // Icon Behavior:
+              // - Default: Green Outline (via fill-transparent)
+              // - Hover: Black Outline + Black Fill (group-hover:text-black overrides parent Green)
+              className="fill-transparent group-hover:fill-current group-hover:text-black transition-all duration-200" 
+              strokeWidth={2}
+            />
+        </button>
+
+        {/* TOGGLE GROUP */}
         <div className={clsx("flex items-center gap-1 pl-4 border-l transition-colors", borderColor)}>
             <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
             <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
             <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
+            
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
+            
             <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             
             <button 
@@ -135,7 +172,8 @@ export const Header = () => {
                     "hover:bg-current hover:border-transparent"
                 )}
             >
-                <Settings size={14} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
+                {/* SETTINGS GEAR: Size 17 */}
+                <Settings size={17} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
             </button>
         </div>
       </div>

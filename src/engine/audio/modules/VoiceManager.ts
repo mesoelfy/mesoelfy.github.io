@@ -4,14 +4,74 @@ import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
-import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
+import { MUSIC_PLAYLIST } from '@/engine/config/assets/MusicManifest';
+
+class MusicDeck {
+  public element: HTMLAudioElement | null = null;
+  public source: MediaElementAudioSourceNode | null = null;
+  public gain: GainNode | null = null;
+
+  constructor() {
+    if (typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+        this.element = new Audio();
+        this.element.crossOrigin = "anonymous";
+        this.element.loop = false; 
+    }
+  }
+
+  public init(ctx: AudioContext, output: AudioNode) {
+    if (!this.element || this.source) return;
+    this.source = ctx.createMediaElementSource(this.element);
+    this.gain = ctx.createGain();
+    this.gain.gain.value = 0; // Start silent
+    this.source.connect(this.gain);
+    this.gain.connect(output);
+  }
+
+  public load(url: string) {
+    if (this.element) {
+        this.element.src = url;
+        this.element.load();
+    }
+  }
+
+  public play() {
+    if (this.element) {
+        this.element.play().catch(e => console.warn("[MusicDeck] Play blocked", e));
+    }
+  }
+
+  public stop() {
+    if (this.element) {
+        this.element.pause();
+        this.element.currentTime = 0;
+    }
+  }
+
+  public fadeTo(value: number, duration: number, ctx: AudioContext) {
+    if (!this.gain) return;
+    const now = ctx.currentTime;
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now);
+    this.gain.gain.linearRampToValueAtTime(value, now + duration);
+  }
+}
 
 export class VoiceManager {
   private activeCount = 0;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
-  private musicElement: HTMLAudioElement | null = null;
+
+  // --- MUSIC SYSTEM ---
+  private deckA = new MusicDeck();
+  private deckB = new MusicDeck();
+  private activeDeck: 'A' | 'B' | null = null;
+  
+  private playlist: string[] = [...MUSIC_PLAYLIST];
+  private currentIndex = 0;
+  private isShuffled = false;
+  private isMusicInit = false;
 
   constructor(
     private ctxManager: AudioContextManager,
@@ -19,40 +79,32 @@ export class VoiceManager {
     private mixer: AudioMixer
   ) {}
 
+  // --- SFX LOGIC (Unchanged) ---
   public playSFX(key: AudioKey, pan: number = 0) {
     if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
-
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
     const recipe = AUDIO_MANIFEST[key];
-    
     if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    
     if (recipe.pitchVariance > 0) {
         source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
     }
-
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
-
     source.connect(panner);
     panner.connect(this.mixer.sfxGain);
-
-    source.onended = () => {
-        this.activeCount--;
-    };
-    
+    source.onended = () => { this.activeCount--; };
     this.activeCount++;
     source.start();
   }
 
+  // --- AMBIENCE LOGIC (Unchanged) ---
   public playAmbience(key: AudioKey) {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.ambienceGain) return;
-    
     if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
 
     if (this.currentAmbienceNode && this.currentAmbienceGain) {
@@ -68,45 +120,100 @@ export class VoiceManager {
 
     const buffer = this.bank.get(key);
     if (!buffer) return;
-
     const source = ctx.createBufferSource();
     source.buffer = buffer; 
     source.loop = true;
-    
     const fadeGain = ctx.createGain();
     fadeGain.gain.setValueAtTime(0, ctx.currentTime);
     fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
-    
     source.connect(fadeGain); 
     fadeGain.connect(this.mixer.ambienceGain); 
     source.start();
-    
     this.currentAmbienceNode = source; 
     this.currentAmbienceGain = fadeGain; 
     this.currentAmbienceKey = key;
   }
 
-  public startMusic(url?: string) {
+  // --- NEW MUSIC SYSTEM ---
+  
+  public startMusic() {
     const ctx = this.ctxManager.ctx;
-    if (!ctx || !this.mixer.musicGain || this.musicElement) return;
+    if (!ctx || !this.mixer.musicGain) return;
 
-    const targetUrl = url || EXTERNAL_CONFIG.ASSETS.AUDIO.BG_MUSIC;
+    if (!this.isMusicInit) {
+        this.deckA.init(ctx, this.mixer.musicGain);
+        this.deckB.init(ctx, this.mixer.musicGain);
+        
+        // Auto-advance listeners
+        const handleEnded = () => this.advanceTrack(true);
+        if (this.deckA.element) this.deckA.element.addEventListener('ended', handleEnded);
+        if (this.deckB.element) this.deckB.element.addEventListener('ended', handleEnded);
+        
+        this.isMusicInit = true;
+        this.playTrack(0);
+    }
+  }
 
-    this.musicElement = new Audio(targetUrl);
-    this.musicElement.loop = true; 
-    this.musicElement.crossOrigin = "anonymous";
+  public nextTrack() {
+    this.advanceTrack(false);
+  }
+
+  private advanceTrack(auto: boolean) {
+    // 1. Logic: Shuffle or Increment
+    if (!auto && !this.isShuffled) {
+        // First manual click -> Shuffle Mode
+        this.shufflePlaylist();
+        this.isShuffled = true;
+        this.currentIndex = 0; // Start fresh from shuffled deck
+    } else {
+        // Just next one
+        this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
+    }
+
+    // 2. Play
+    this.playTrack(this.currentIndex);
+  }
+
+  private shufflePlaylist() {
+    // Fisher-Yates
+    for (let i = this.playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
+    }
+    console.log('[VoiceManager] Playlist Shuffled');
+  }
+
+  private playTrack(index: number) {
+    const ctx = this.ctxManager.ctx;
+    if (!ctx) return;
+
+    const nextUrl = this.playlist[index];
+    const nextDeck = this.activeDeck === 'A' ? this.deckB : this.deckA;
+    const currentDeck = this.activeDeck === 'A' ? this.deckA : this.deckB;
+
+    console.log(`[Music] Playing [${index}]: ${nextUrl.split('/').pop()}`);
+
+    // Load & Play Next
+    nextDeck.load(nextUrl);
+    nextDeck.play();
     
-    const source = ctx.createMediaElementSource(this.musicElement);
-    source.connect(this.mixer.musicGain);
+    // Crossfade (3 seconds)
+    const FADE_TIME = 3.0;
+    nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
-    this.musicElement.play().catch(() => console.warn("[Audio] Autoplay blocked"));
+    if (this.activeDeck) {
+        currentDeck.fadeTo(0.0, FADE_TIME, ctx);
+        // Stop the old deck after fade completes to save resources
+        setTimeout(() => currentDeck.stop(), FADE_TIME * 1000);
+    }
+
+    // Swap State
+    this.activeDeck = this.activeDeck === 'A' ? 'B' : 'A';
   }
 
   public stopAll() {
-    if (this.musicElement) { 
-        this.musicElement.pause(); 
-        this.musicElement.currentTime = 0; 
-    }
+    this.deckA.stop();
+    this.deckB.stop();
     
     if (this.currentAmbienceNode) { 
         try { this.currentAmbienceNode.stop(); } catch {} 
@@ -114,7 +221,6 @@ export class VoiceManager {
         this.currentAmbienceGain = null;
         this.currentAmbienceKey = null; 
     }
-    
     this.activeCount = 0;
   }
 }

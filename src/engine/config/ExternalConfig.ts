@@ -3,9 +3,7 @@ export const EXTERNAL_CONFIG = {
     FORMSPREE: "https://formspree.io/f/xkgdbkpz"
   },
   ASSETS: {
-    AUDIO: {
-      BG_MUSIC: '/assets/audio/bg_music_placeholder.mp3'
-    },
+    // AUDIO section cleared. Music handled by MusicManifest.
     ICONS: {
       FAVICON: '/favicon.ico'
     }

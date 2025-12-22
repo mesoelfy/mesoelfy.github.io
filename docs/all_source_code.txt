@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 21 19:19:10 CST 2025
+Generated on: Sun Dec 21 21:57:30 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -27,7 +27,34 @@ PROJECT DIRECTORY STRUCTURE:
 ├── public
 │   ├── assets
 │   │   ├── audio
-│   │   │   └── bg_music_placeholder.mp3
+│   │   │   ├── bg_music_placeholder.mp3
+│   │   │   └── music
+│   │   │       └── mesoelfy_os
+│   │   │           ├── 01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3
+│   │   │           ├── 02 - 002_14 - Dolen Angol (Cover) - cyberpunk, darksynth, psybient, chopped sample, glitch, chiptune, synth cadenza.mp3
+│   │   │           ├── 03 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 04 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 05 - 007_04 - Dant Arth (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 06 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 07 - 003_24 - Lach Mí (Cover) - Acid Techno, DnB, atmospheric pads.mp3
+│   │   │           ├── 08 - 001_01 - Dúath Maethor (Cover) - psybience.mp3
+│   │   │           ├── 09 - 008_01 - Galu na Vëa (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 10 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 11 - 007_01 - Angwedh Thinnas (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 12 - 004_01 - Tyaliéli Vendë (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 13 - 008_08 - Alcar mi Morë (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 14 - 008_13 - Fuin Roch (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 15 - 004_05 - Edraith o Rhach (Cover) - psybient.mp3
+│   │   │           ├── 16 - 006_22 - Míruvórë Silda (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 17 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 18 - 006_10 - Nárë Inwisti (Cover) - dark chiptune, folktronica, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 19 - 007_07 - Tuima Morë (Cover) - folktronica.mp3
+│   │   │           ├── 20 - 007_16 - Calu Am Calu (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 21 - 001_20 - Amrûn Echui (Cover).mp3
+│   │   │           ├── 22 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 23 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3
+│   │   │           ├── 24 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3
+│   │   │           └── 25 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3
 │   │   └── images
 │   │       ├── social-card.jpg
 │   │       └── social_preview_github_1280x640.jpg
@@ -373,7 +400,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-81 directories, 284 files
+83 directories, 309 files
 
 =====================================
 FILE: ./next.config.js
@@ -10436,11 +10463,16 @@ export const VISUAL_CONFIG = {
     SPAWN_Y_OFFSET: 3.5,
     
     // High Elasticity (Bullets)
-    // TUNING: Increased base stretch from 0.04 to 0.06 for better visuals at lower speeds
     BASE_STRETCH: 0.06, 
     BASE_SQUASH: 0.03,
     MAX_STRETCH_CAP: 4.0,
     MIN_SQUASH_CAP: 0.4
+  },
+  SPAWN: {
+    // Controls the "bounciness" of the enemy appearing
+    ELASTICITY: 1.5, // How much it overshoots 1.0 scale
+    ROTATION_SPEED: 15.0, // Radians per second during spawn
+    Y_OFFSET: -2.0 // Start spawning from slightly below
   }
 } as const;
 
@@ -10539,7 +10571,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
           repair: GAME_THEME.turret.repair,
           reboot: '#9E4EA5'
       }},
-      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base)
+      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base, { spawnProgress: 1.0 }) 
     ]
   }
 };
@@ -10547,9 +10579,8 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
 // --- ENEMY GENERATION ---
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
-    const matId = 'MAT_ENEMY_BASE'; // Hardcoded for now, could be in def
+    const matId = 'MAT_ENEMY_BASE'; 
     
-    // Components common to all enemies
     const comps: any[] = [
       { type: ComponentType.Identity, data: { variant: def.id } },
       { type: ComponentType.Transform, data: { scale: 1.0 } },
@@ -10557,18 +10588,17 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1 })
+      // Enemies use spawnProgress: 0.0 to animate in
+      ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
     if (def.damage > 0) {
         comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
     }
 
-    // Specific AI extras
     if (def.ai === 'daemon') {
         comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
         comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
-        // Override collider for Daemon (Friendly)
         const col = comps.find((c: any) => c.type === ComponentType.Collider);
         if (col) {
             col.data.layer = CollisionLayers.PLAYER;
@@ -10594,8 +10624,6 @@ Object.values(WEAPONS).forEach(def => {
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
-
-    // Use default hitboxes based on config for now, eventually move to Def
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
     const comps: any[] = [
@@ -10603,7 +10631,7 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Motion, data: { friction: 0 } },
       { type: ComponentType.Lifetime, data: { remaining: def.life, total: def.life } },
       { type: ComponentType.Combat, data: { damage: def.damage } },
-      { type: ComponentType.Health, data: { max: def.damage } }, // HP = Dmg for cancellation
+      { type: ComponentType.Health, data: { max: def.damage } }, 
       { type: ComponentType.Collider, data: { radius, layer, mask } },
       { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
@@ -10613,19 +10641,17 @@ Object.values(WEAPONS).forEach(def => {
           baseScaleY: def.visual.scale[1], 
           baseScaleZ: def.visual.scale[2] 
       }},
-      { type: ComponentType.RenderEffect, data: { elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, pulseSpeed: def.behavior?.pulseSpeed || 0 } }
+      // FIX: Set spawnProgress to 1.0
+      { type: ComponentType.RenderEffect, data: { 
+          elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, 
+          pulseSpeed: def.behavior?.pulseSpeed || 0,
+          spawnProgress: 1.0 
+      }}
     ];
 
     if (def.behavior?.spinSpeed) {
         comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
     }
-
-    // Special Case: Bullets also have archetypes for spawning
-    // We map 'BULLET_PLAYER' -> 'PLAYER_STANDARD' internally in Spawner
-    // But we need blueprints for the ID being spawned.
-    // EntitySpawner.spawnBullet calls spawn with ArchetypeIDs.BULLET_PLAYER usually,
-    // but applies overrides.
-    // For this refactor, we are adding the blueprints directly.
     
     BLUEPRINTS[def.id] = {
         id: def.id,
@@ -10634,9 +10660,6 @@ Object.values(WEAPONS).forEach(def => {
     };
 });
 
-// BACKWARDS COMPATIBILITY MAPS
-// The Spawner still uses generic IDs like 'BULLET_PLAYER' to mean "Default bullet".
-// We need to keep these keys valid.
 BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
 BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
 
@@ -11780,7 +11803,8 @@ export class RenderEffect extends Component {
   constructor(
     public flash: number = 0,
     public shudder: number = 0,
-    public spawnProgress: number = 1.0,
+    public spawnProgress: number = 0.0, // Default to 0 (Invisible)
+    public spawnVelocity: number = 0.0, // New: Controlled by AI
     public elasticity: number = 0.1,
     public pulseSpeed: number = 0,
     public flashR: number = 4.0,
@@ -11793,7 +11817,9 @@ export class RenderEffect extends Component {
   public reset(data: Partial<RenderEffect>) {
     this.flash = 0;
     this.shudder = 0;
-    this.spawnProgress = data.spawnProgress ?? 1.0;
+    // Essential: Reset spawn progress to 0 on pool reuse so enemies don't flash into existence
+    this.spawnProgress = data.spawnProgress ?? 0.0; 
+    this.spawnVelocity = 0.0;
     this.elasticity = data.elasticity ?? 0.1;
     this.pulseSpeed = data.pulseSpeed ?? 0;
     this.flashR = data.flashR ?? 4.0;
@@ -14491,73 +14517,75 @@ import * as THREE from 'three';
 const IDLE_SPIN_TARGET = -2.5;  // CW
 const CHARGE_SPIN_TARGET = 22.0; // CCW
 
-export class HoverDrift extends BTNode {
-  private minDur: number;
-  private maxDur: number;
-  constructor(private minRange: number, private maxRange: number, minDuration: number, maxDuration?: number) { 
-      super();
-      this.minDur = minDuration;
-      this.maxDur = maxDuration ?? minDuration;
-  }
+export class RoamPanelZone extends BTNode {
+  // padding: how far outside the panel they can go
+  constructor(private speed: number, private padding: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
-    const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const target = entity.getComponent<TargetData>(ComponentType.Target);
 
-    if (!transform || !motion || !target || !state || !visual) return NodeState.FAILURE;
-    
+    if (!transform || !motion || !state || !visual) return NodeState.FAILURE;
+
+    // Visual Spin (Idle)
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
 
-    if (state.stunTimer > 0) {
-        state.stunTimer -= context.delta;
-        return NodeState.RUNNING;
+    // 1. Pick a destination if none exists
+    if (state.data.roamTargetX === undefined || state.data.roamTargetY === undefined) {
+        const panels = context.getAllPanelRects();
+        if (panels.length > 0) {
+            // Pick random panel
+            const panel = panels[Math.floor(Math.random() * panels.length)];
+            
+            // Random point within bounds + padding
+            const halfW = (panel.width / 2) + this.padding;
+            const halfH = (panel.height / 2) + this.padding;
+            
+            state.data.roamTargetX = panel.x + (Math.random() * 2 - 1) * halfW;
+            state.data.roamTargetY = panel.y + (Math.random() * 2 - 1) * halfH;
+        } else {
+            // Fallback if no panels
+            state.data.roamTargetX = (Math.random() * 2 - 1) * 10;
+            state.data.roamTargetY = (Math.random() * 2 - 1) * 5;
+        }
     }
 
-    if (!state.timers[AITimerID.HOVER]) {
-        state.timers[AITimerID.HOVER] = this.minDur + Math.random() * (this.maxDur - this.minDur);
-        state.data.driftX = (Math.random() - 0.5) * 4;
-        state.data.driftY = (Math.random() - 0.5) * 4;
-    }
+    const destX = state.data.roamTargetX!;
+    const destY = state.data.roamTargetY!;
 
-    state.timers[AITimerID.HOVER]! -= context.delta;
-    if (state.timers[AITimerID.HOVER]! <= 0) {
-        state.timers[AITimerID.HOVER] = undefined;
+    // 2. Move towards destination
+    const dx = destX - transform.x;
+    const dy = destY - transform.y;
+    const distSq = dx*dx + dy*dy;
+
+    // Arrive behavior
+    if (distSq < 1.0) {
+        // Reached target, clear it to pick new one next tick
+        state.data.roamTargetX = undefined;
+        state.data.roamTargetY = undefined;
+        // Reached destination, return SUCCESS to allow sequence to proceed to firing
         return NodeState.SUCCESS;
     }
 
-    const dx = target.x - transform.x;
-    const dy = target.y - transform.y;
-    const distSq = dx*dx + dy*dy;
-    const dist = Math.sqrt(distSq);
-    
-    if (dist < 0.001) {
-        motion.vx *= 0.9;
-        motion.vy *= 0.9;
-        return NodeState.RUNNING;
+    // Apply Velocity
+    motion.vx += (dx - motion.vx) * context.delta * 2.0;
+    motion.vy += (dy - motion.vy) * context.delta * 2.0;
+
+    // 3. Face Target (Player) if available, else look ahead
+    if (target && target.x !== undefined) {
+        const tDx = target.x - transform.x;
+        const tDy = target.y - transform.y;
+        transform.rotation = Math.atan2(tDy, tDx);
+    } else {
+        transform.rotation = Math.atan2(motion.vy, motion.vx);
     }
 
-    const angleToTarget = Math.atan2(dy, dx);
-    let tx = state.data.driftX || 0;
-    let ty = state.data.driftY || 0;
-
-    if (dist < this.minRange) {
-        tx -= dx * 0.5;
-        ty -= dy * 0.5;
-    } else if (dist > this.maxRange) {
-        tx += dx * 0.5;
-        ty += dy * 0.5;
-    }
-
-    motion.vx += (tx - motion.vx) * context.delta * 2.0;
-    motion.vy += (ty - motion.vy) * context.delta * 2.0;
-    transform.rotation = angleToTarget;
-    
     return NodeState.RUNNING;
   }
 }
@@ -14600,7 +14628,6 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    // OFFSET_TWEAK: 1.6 -> 1.3
     const offset = 1.3;
     const spreadAngle = 0.25; 
     const density = 2; 
@@ -14921,68 +14948,66 @@ import { Entity } from '@/engine/ecs/Entity';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { AITimerID } from '@/engine/ai/AITimerID';
 
 export class SpawnPhase extends BTNode {
+  // duration: How long the spawn animation takes in seconds
   constructor(private duration: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     
-    if (!state) return NodeState.SUCCESS;
-    if (state.timers[AITimerID.SPAWN] === undefined) {
-        state.timers[AITimerID.SPAWN] = this.duration;
+    if (!state || !effect) return NodeState.FAILURE;
+
+    // 1. GATEKEEP: If already active, we are done. Don't run logic.
+    if (state.current !== AI_STATE.IDLE && state.current !== AI_STATE.SPAWN) {
+        // Safety: Ensure we are fully visible if we skipped logic somehow
+        if (effect.spawnProgress < 1.0) effect.spawnProgress = 1.0;
+        return NodeState.SUCCESS;
+    }
+
+    // 2. KICKSTART: If just created (IDLE) or stuck in SPAWN without velocity
+    if (state.current === AI_STATE.IDLE || (state.current === AI_STATE.SPAWN && effect.spawnVelocity === 0)) {
         state.current = AI_STATE.SPAWN;
-        if (effect) {
-            effect.spawnProgress = 0.0;
+        effect.spawnProgress = 0.0;
+        // Velocity = 100% / duration in seconds
+        effect.spawnVelocity = 1.0 / Math.max(0.1, this.duration);
+    }
+
+    // 3. FLAVOR: Face Target while spawning (Tactical look)
+    if (transform && target && target.x !== 0 && target.y !== 0) {
+        const dx = target.x - transform.x;
+        const dy = target.y - transform.y;
+        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
+            const targetAngle = Math.atan2(dy, dx);
+            // Smooth turn towards target
+            let diff = targetAngle - transform.rotation;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            transform.rotation += diff * 5.0 * context.delta;
         }
     }
 
-    if (state.timers[AITimerID.SPAWN]! > 0) {
-        state.timers[AITimerID.SPAWN]! -= context.delta;
-        
-        if (transform && target) {
-            const dx = target.x - transform.x;
-            const dy = target.y - transform.y;
-            if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
-                const targetAngle = Math.atan2(dy, dx);
-                transform.rotation = targetAngle;
-            }
-        }
-
-        if (effect && visual) {
-            const t = 1.0 - (state.timers[AITimerID.SPAWN]! / this.duration);
-            effect.spawnProgress = Math.max(0, Math.min(1, t));
-            
-            if (t < 0.8) {
-                visual.scale = t / 0.8;
-            } else {
-                const popT = (t - 0.8) / 0.2;
-                visual.scale = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
-            }
-            visual.rotation += (1.0 - t) * 15.0 * context.delta;
-        }
-        return NodeState.RUNNING;
-    }
-
-    if (state.current === AI_STATE.SPAWN) {
+    // 4. CHECK COMPLETION
+    // The VisualSystem increments spawnProgress using the velocity we set above.
+    if (effect.spawnProgress >= 1.0) {
+        effect.spawnProgress = 1.0;
+        effect.spawnVelocity = 0; // Stop animating
         state.current = AI_STATE.ACTIVE;
-        if (effect && visual) {
-            effect.spawnProgress = 1.0;
-            visual.scale = 1.0;
-            effect.flash = 0.6; 
-        }
+        
+        // Optional: Trigger a subtle pop flash
+        effect.flash = 0.5;
+        
+        return NodeState.SUCCESS;
     }
-    return NodeState.SUCCESS;
+
+    return NodeState.RUNNING;
   }
 }
 
@@ -15104,6 +15129,8 @@ export interface AIBlackboard {
   spawnOriginX?: number;
   spawnOriginY?: number;
   spinVel?: number;
+  roamTargetX?: number;
+  roamTargetY?: number;
 }
 
 
@@ -18128,7 +18155,8 @@ export class BehaviorSystem implements IGameSystem {
       },
       damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
       getPanelRect: (id) => this.panelSystem.getPanelRect(id),
-      getPanelStress: (id) => this.panelSystem.getPanelStress(id), // INJECTED
+      getAllPanelRects: () => this.panelSystem.getAllPanels(),
+      getPanelStress: (id) => this.panelSystem.getPanelStress(id),
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
@@ -18324,26 +18352,26 @@ export class WaveSystem implements IGameSystem {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
-    if (this.panelSystem.systemIntegrity <= 0) return;
-
-    if (!this.scenarioInit) {
-        const panels = this.panelSystem.getAllPanels();
-        const ready = panels.some(p => p.width > 0);
-        
-        if (ready) {
-            this.runScenario(panels);
-            this.scenarioInit = true;
+    if (this.panelSystem.systemIntegrity > 0) {
+        if (!this.scenarioInit) {
+            const panels = this.panelSystem.getAllPanels();
+            const ready = panels.some(p => p.width > 0);
+            
+            if (ready) {
+                this.runScenario(panels);
+                this.scenarioInit = true;
+            }
         }
-    }
 
-    this.waveTime += delta;
-    
-    if (!useStore.getState().debugFlags.peaceMode) {
-        this.checkTimeline();
-        this.processQueue(time);
-    }
+        this.waveTime += delta;
+        
+        if (!useStore.getState().debugFlags.peaceMode) {
+            this.checkTimeline();
+            this.processQueue(time);
+        }
 
-    this.handleBreaches(delta);
+        this.handleBreaches(delta);
+    }
   }
 
   private triggerStressTest() {
@@ -18360,15 +18388,16 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
-              // INJECTION: Use SPAWN state with randomized durations for staggered pop-in effect
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
                   [ComponentType.State]: { 
                       current: AI_STATE.SPAWN,
-                      timers: { [AITimerID.SPAWN]: 0.5 + Math.random() * 2.5 }
+                      timers: {} 
                   },
-                  [ComponentType.RenderTransform]: { scale: 0.0 },
-                  [ComponentType.RenderEffect]: { spawnProgress: 0.0 }
+                  // FIX: Set scale to 1.0. VisualSystem handles the "grow from 0" animation dynamically.
+                  [ComponentType.RenderTransform]: { scale: 1.0 },
+                  // Explicitly zero out spawn params to trigger the logic kickstart
+                  [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
           }
       });
@@ -18629,6 +18658,14 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
 
+// Easing Helper: Elastic Out
+function easeOutElastic(t: number): number {
+  const c4 = (2 * Math.PI) / 3;
+  if (t === 0) return 0;
+  if (t === 1) return 1;
+  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+}
+
 export class VisualSystem implements IGameSystem {
   private tempColor = new THREE.Color();
   
@@ -18652,6 +18689,7 @@ export class VisualSystem implements IGameSystem {
 
   update(delta: number, time: number): void {
     const CFG = VISUAL_CONFIG.DEFORMATION;
+    const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
     const RENDER_CFG = VISUAL_CONFIG.RENDER;
     
     const isZenMode = useGameStore.getState().isZenMode;
@@ -18672,12 +18710,12 @@ export class VisualSystem implements IGameSystem {
 
       if (!render) continue;
 
-      // 1. AUTO ROTATION
+      // 1. AUTO ROTATION (Base)
       if (rotate) {
           render.rotation += rotate.speed * delta;
       }
 
-      // 2. STATE COLORING
+      // 2. STATE COLORING & ANIMATION
       if (stateColor && model) {
           let targetHex = stateColor.base;
           let spinSpeed = 0.02;
@@ -18689,15 +18727,17 @@ export class VisualSystem implements IGameSystem {
               spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
               if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
           } else {
+              // Standard Gameplay
               if (interactState === 'HEALING') {
                   targetHex = stateColor.repair;
-                  spinSpeed = -0.24;
+                  spinSpeed = -0.24; 
               } else if (interactState === 'REBOOTING') {
                   targetHex = stateColor.reboot;
-                  spinSpeed = -0.24;
+                  spinSpeed = -0.24; 
               }
           }
 
+          // Applied directly per-tick (no delta multiplication) to restore original feel
           render.rotation += spinSpeed;
           render.scale = 1.0; 
 
@@ -18709,10 +18749,33 @@ export class VisualSystem implements IGameSystem {
           model.b = this.tempColor.b;
       }
 
-      // 3. DYNAMIC SCALING
+      // 3. DYNAMIC SCALING & SPAWNING
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
+          // --- SPAWN ANIMATION LOGIC ---
+          if (effect.spawnProgress < 1.0) {
+              // Advance progress
+              if (effect.spawnVelocity > 0) {
+                  effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
+              }
+
+              const t = effect.spawnProgress;
+              const scaleCurve = easeOutElastic(t);
+              
+              dX *= scaleCurve;
+              dY *= scaleCurve;
+              dZ *= scaleCurve;
+
+              render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
+              
+              const riseT = t * (2 - t); 
+              render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
+
+          } else {
+              render.offsetY = 0;
+          }
+
           // Effect Decay
           if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
@@ -18728,7 +18791,7 @@ export class VisualSystem implements IGameSystem {
           }
 
           // Elasticity
-          if (motion && effect.elasticity > 0.01) {
+          if (motion && effect.elasticity > 0.01 && effect.spawnProgress >= 1.0) {
               const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
               const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
 
@@ -18748,23 +18811,6 @@ export class VisualSystem implements IGameSystem {
                   dX *= squashXZ;
                   dZ *= squashXZ;
               }
-          }
-          
-          // Spawn Pop
-          if (effect.spawnProgress < 1.0) {
-              const t = effect.spawnProgress;
-              if (t < 0.8) {
-                  const s = t / 0.8;
-                  dX *= s; dY *= s; dZ *= s;
-              } else {
-                  const popT = (t - 0.8) / 0.2;
-                  const pop = 1.0 + (Math.sin(popT * Math.PI) * 0.25);
-                  dX *= pop; dY *= pop; dZ *= pop;
-              }
-              const ease = 1 - Math.pow(1 - t, 3);
-              render.offsetY = -CFG.SPAWN_Y_OFFSET * (1.0 - ease);
-          } else {
-              render.offsetY = 0;
           }
       }
 
@@ -19190,17 +19236,17 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { Sequence, MemSequence } from '@/engine/ai/behavior/composites';
 import { SpawnPhase } from '@/engine/ai/nodes/logic';
-import { HoverDrift, AimAndFire } from '@/engine/ai/nodes/hunterNodes';
+import { RoamPanelZone, AimAndFire } from '@/engine/ai/nodes/hunterNodes';
 import { Wait } from '@/engine/ai/nodes/actions';
 
 const HUNTER_TREE = new Sequence([
   new SpawnPhase(1.5),
   new MemSequence([
-    // 1. Approach & Drift (MinRange, MaxRange, MinDur, MaxDur)
-    new HoverDrift(10.0, 18.0, 0.8, 1.5),
+    // 1. Reposition to a random spot in the panel area
+    // speed: 12.0, padding: 1.0 (margin outside panel)
+    new RoamPanelZone(12.0, 1.0),
     
     // 2. Aim & Fire (AimDuration, Speed, ConfigID)
-    // BUFF: Increased duration from 0.5 to 1.2
     new AimAndFire(1.2, 40.0, 'ENEMY_HUNTER'),
     
     // 3. Cooldown
@@ -19244,7 +19290,8 @@ export interface AIContext {
   damagePanel: (id: PanelId, amount: number, options?: DamageOptions) => void;
   
   getPanelRect: (id: PanelId) => WorldRect | undefined;
-  getPanelStress: (id: PanelId) => number; // NEW
+  getAllPanelRects: () => WorldRect[];
+  getPanelStress: (id: PanelId) => number;
   getUpgradeLevel: (key: string) => number;
   
   config: typeof ConfigService;
@@ -19767,8 +19814,6 @@ import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { WorldConfig } from '@/engine/config/WorldConfig';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
 
 export class GameEngineCore implements IGameSystem {
   private systems: IGameSystem[][] = [[], [], [], [], [], []];
@@ -19808,12 +19853,9 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    if (this.gameSystem && this.panelSystem) {
-        if (gameStore.isPlaying && this.panelSystem.systemIntegrity <= 0) {
-            gameStore.stopGame();
-            GameEventBus.emit(GameEvents.TRAUMA_ADDED, { amount: 1.0 });
-            this.gameSystem.isGameOver = true; 
-        }
+    // FIX: Removed Game Over check here. HealthSystem handles the state transition and events.
+    if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
+        gameStore.stopGame();
     }
 
     let timeScale = 1.0;

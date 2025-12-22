@@ -135,6 +135,7 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: AudioKey, pan?: number): void;
   playAmbience(key: AudioKey): void;
+  nextTrack(): void; // NEW
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;
@@ -196,5 +197,5 @@ export interface IPanelSystem extends IGameSystem {
   getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
   getPanelAt(x: number, y: number): PanelId | null;
-  getPanelStress(id: PanelId): number; // NEW
+  getPanelStress(id: PanelId): number; 
 }

@@ -17,6 +17,7 @@ class AudioSystemFacade implements IAudioService {
 
   public async init() { return this.service.init(); }
   public startMusic() { this.service.startMusic(); }
+  public nextTrack() { this.service.nextTrack(); }
   public stopAll() { this.service.stopAll(); }
   public updateVolumes() { this.service.updateVolumes(); }
   
