@@ -16,15 +16,15 @@ export interface ShotDef {
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
 
-// The geometry oR is 0.65, but we want it at the "outside sharp pointed tip".
-// Increasing to 1.25 to push it visually to the edge of the star points.
-const RETICLE_RADIUS = 1.25;
+// EXACT CALCULATION NOTE:
+// The Reticle Geometry (createReticleGeo in PlayerActor) defines tips at:
+// theta - tA. 
+// tA (Tip Angle offset) is 0.55 radians.
+// The static mesh rotation (PI/12) is OVERWRITTEN by the useFrame loop,
+// so the net visual offset is exactly -0.55 radians.
 
-// GEOMETRY CALCULATION:
-// 1. The geometry generation twists tips by -0.55 radians (tA).
-// 2. The PlayerActor mesh has a static rotation of +Math.PI/12 (+0.2618 radians).
-// 3. Net offset = 0.2618 - 0.55 = -0.2882 radians (~ -16.5 degrees).
-const TWIST_OFFSET = -0.2882;
+const RETICLE_RADIUS = 1.65; // User preferred visual radius
+const TWIST_OFFSET = -0.55;  // Exact geometry parameter 'tA' (negative for CW twist)
 
 // Standard Cardinal Points (CCW from East/Right)
 const ANGLES = {
@@ -115,11 +115,10 @@ export const calculatePlayerShots = (
 
   // --- 3. SNIFFER SHOTS (Reticle Tips) ---
   if (snifferLevel > 0) {
-      // Clamp to max 4 tips (cycle if > 4, but array only has 4)
+      // Clamp to max 4 tips
       const maxTips = 4;
       
       for (let i = 0; i < snifferLevel; i++) {
-          // Use modulo to cycle through tips if level > 4 (e.g. lvl 5 shoots from tip 1 again)
           const tipIndex = i % maxTips;
           
           // Calculate exact tip position relative to reticle rotation
