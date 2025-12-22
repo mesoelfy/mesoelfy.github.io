@@ -55,7 +55,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
           repair: GAME_THEME.turret.repair,
           reboot: '#9E4EA5'
       }},
-      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base, { spawnProgress: 1.0 }) // Player starts visible
+      ...RenderComps(GEOMETRY_IDS.PLAYER, MATERIAL_IDS.PLAYER, GAME_THEME.turret.base, { spawnProgress: 1.0 }) 
     ]
   }
 };
@@ -72,7 +72,7 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      // Enemies use spawnProgress: 0.0 (default in component) to animate in
+      // Enemies use spawnProgress: 0.0 to animate in
       ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
@@ -125,7 +125,7 @@ Object.values(WEAPONS).forEach(def => {
           baseScaleY: def.visual.scale[1], 
           baseScaleZ: def.visual.scale[2] 
       }},
-      // CRITICAL FIX: Set spawnProgress to 1.0 so bullets are immediately visible
+      // FIX: Set spawnProgress to 1.0
       { type: ComponentType.RenderEffect, data: { 
           elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, 
           pulseSpeed: def.behavior?.pulseSpeed || 0,

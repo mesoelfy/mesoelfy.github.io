@@ -69,33 +69,29 @@ export class VisualSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      // 2. STATE COLORING & ANIMATION (Restored Original Values)
+      // 2. STATE COLORING & ANIMATION
       if (stateColor && model) {
           let targetHex = stateColor.base;
-          // RESTORED: Original base speed
           let spinSpeed = 0.02;
 
           if (isZenMode) {
               spinSpeed = -0.03;
           } else if (isDead) {
               targetHex = stateColor.dead;
-              // RESTORED: Original dead speeds
               spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
               if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
           } else {
               // Standard Gameplay
               if (interactState === 'HEALING') {
                   targetHex = stateColor.repair;
-                  // RESTORED: Original healing speed
                   spinSpeed = -0.24; 
               } else if (interactState === 'REBOOTING') {
                   targetHex = stateColor.reboot;
-                  // RESTORED: Original reboot speed
                   spinSpeed = -0.24; 
               }
           }
 
-          // RESTORED: Applied directly per-tick (no delta multiplication) to match original feel
+          // Applied directly per-tick (no delta multiplication) to restore original feel
           render.rotation += spinSpeed;
           render.scale = 1.0; 
 

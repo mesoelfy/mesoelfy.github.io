@@ -49,9 +49,6 @@ export class WaveSystem implements IGameSystem {
     if (useGameStore.getState().isZenMode) return;
     if (useStore.getState().bootState === 'sandbox') return;
     
-    // Allow stress test to proceed even if integrity is 0 (Game Over state)
-    // The GameEngine stops regular updates, but the Systems persist.
-    // We only block normal waves.
     if (this.panelSystem.systemIntegrity > 0) {
         if (!this.scenarioInit) {
             const panels = this.panelSystem.getAllPanels();
@@ -88,20 +85,15 @@ export class WaveSystem implements IGameSystem {
               const x = (Math.random() - 0.5) * width * 1.5;
               const y = (Math.random() - 0.5) * height * 1.5;
               
-              const spawnDuration = 0.5 + Math.random() * 2.5;
-
-              // We manually set velocity to 0 to trigger the SpawnPhase Kickstart
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
                   [ComponentType.State]: { 
                       current: AI_STATE.SPAWN,
                       timers: {} 
                   },
-                  [ComponentType.RenderTransform]: { scale: 0.0 },
-                  // Trick: We override velocity here to 0 so logic picks it up, 
-                  // but we rely on SpawnPhase to calculate the actual speed based on its hardcoded duration.
-                  // To support random duration, we would need to pass data to AI Blackboard.
-                  // For now, random position is enough chaos.
+                  // FIX: Set scale to 1.0. VisualSystem handles the "grow from 0" animation dynamically.
+                  [ComponentType.RenderTransform]: { scale: 1.0 },
+                  // Explicitly zero out spawn params to trigger the logic kickstart
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
           }
