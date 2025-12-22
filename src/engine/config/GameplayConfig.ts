@@ -6,8 +6,8 @@ export const GAMEPLAY_CONFIG = {
     REBOOT_TICK_AMOUNT: 4.6
   },
   WEAPON: {
-    // Exact Match: Chevron Radius (0.82) + Chevron Height (0.08) = 0.90
-    MUZZLE_OFFSET: 0.90
+    // Updated: Matches new larger Chevron Tip Radius (0.92)
+    MUZZLE_OFFSET: 0.92
   },
   STRUCTURE: {
     DECAY_INTERVAL: 0.1,

@@ -46,57 +46,61 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
-// --- DYNAMIC TRIDENT GENERATOR ---
+// --- DYNAMIC CHEVRON RIBBON GENERATOR ---
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
     
-    // Radii
-    const rOuter = 0.90; // Muzzle Tip
-    const rValley = 0.86; // Between tips
-    const rBase = 0.82; // Inner Base
+    // Config: Slightly Bigger & Thicker
+    const rTip = 0.92;      // Was 0.90
+    const rValley = 0.84;   // Was 0.82
+    const thickness = 0.06; // Was 0.05
     
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
-    const totalAngle = (tipCount - 1) * spread;
-    
-    // Aligned to WeaponLogic: Start at (Base - HalfTotal)
-    // Relative to Up (PI/2), this is (PI/2 - HalfTotal)
-    // We want to draw Left-to-Right (CW decreasing angle) or Right-to-Left (CCW increasing)?
-    // WeaponLogic uses: baseAngle - halfTotal + (i * spread). (Increasing angle).
-    // Increasing angle goes CCW (Right -> Left relative to Up).
-    
-    // Start Right (Smallest Angle)
-    const startAngle = (Math.PI / 2) - (totalAngle / 2);
-    
-    // Helper: Polar to Cartesian
-    const pt = (r: number, angle: number) => [r * Math.cos(angle), r * Math.sin(angle)];
+    const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
+    const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
 
-    // 1. Trace Top Edge (Tips & Valleys)
-    // Going CCW from Right to Left
+    // 1. OUTER EDGE (CW: Left -> Right)
+    const startBaseAngle = startAngle + (spread * 0.4); 
+    const pStartBase = pt(rValley, startBaseAngle);
+    shape.moveTo(pStartBase[0], pStartBase[1]);
+
     for (let i = 0; i < tipCount; i++) {
-        const angle = startAngle + (i * spread);
-        const pTip = pt(rOuter, angle);
+        const angle = startAngle - (i * spread);
+        const pTip = pt(rTip, angle);
+        shape.lineTo(pTip[0], pTip[1]);
         
-        if (i === 0) shape.moveTo(pTip[0], pTip[1]);
-        else shape.lineTo(pTip[0], pTip[1]);
-
-        // Valley (if not last)
         if (i < tipCount - 1) {
-            const midAngle = angle + (spread / 2);
+            const midAngle = angle - (spread / 2);
             const pValley = pt(rValley, midAngle);
             shape.lineTo(pValley[0], pValley[1]);
         }
     }
-
-    // 2. Trace Bottom Edge (Base Arc)
-    // Going CW from Left to Right
-    const leftBaseAngle = startAngle + ((tipCount - 1) * spread) + 0.04; 
-    const rightBaseAngle = startAngle - 0.04;
-
-    const pBaseLeft = pt(rBase, leftBaseAngle);
-    shape.lineTo(pBaseLeft[0], pBaseLeft[1]);
     
-    const pBaseRight = pt(rBase, rightBaseAngle);
-    shape.lineTo(pBaseRight[0], pBaseRight[1]);
+    const endBaseAngle = (startAngle - ((tipCount - 1) * spread)) - (spread * 0.4);
+    const pEndBase = pt(rValley, endBaseAngle);
+    shape.lineTo(pEndBase[0], pEndBase[1]);
+
+    // 2. INNER EDGE (CCW: Right -> Left)
+    const rInnerTip = rTip - thickness;
+    const rInnerValley = rValley - thickness;
+
+    const pInnerEnd = pt(rInnerValley, endBaseAngle);
+    shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
+
+    for (let i = tipCount - 1; i >= 0; i--) {
+        const angle = startAngle - (i * spread);
+        const pInTip = pt(rInnerTip, angle);
+        shape.lineTo(pInTip[0], pInTip[1]);
+        
+        if (i > 0) {
+            const midAngle = angle + (spread / 2);
+            const pInValley = pt(rInnerValley, midAngle);
+            shape.lineTo(pInValley[0], pInValley[1]);
+        }
+    }
+
+    const pInnerStart = pt(rInnerValley, startBaseAngle);
+    shape.lineTo(pInnerStart[0], pInnerStart[1]);
     
     shape.closePath();
 
@@ -196,6 +200,12 @@ export const PlayerActor = () => {
       return () => { u1(); u2(); };
   }, [events]);
 
+  useLayoutEffect(() => {
+      if (forkRef.current) {
+          forkRef.current.geometry = forkGeo;
+      }
+  }, [forkGeo]);
+
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
     const isSysFail = useGameStore.getState().systemIntegrity <= 0;
@@ -228,7 +238,12 @@ export const PlayerActor = () => {
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, lerpFactor);
             rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * iSpd);
         } else {
-            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, -time * iSpd + rotationOffsetRef.current, 0.08);
+            // Idle Rotation: REVERSED direction (Positive time)
+            centerDotRef.current.rotation.z = THREE.MathUtils.lerp(
+                centerDotRef.current.rotation.z, 
+                time * iSpd + rotationOffsetRef.current, // CHANGED -time to time
+                0.08
+            );
         }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
@@ -246,9 +261,7 @@ export const PlayerActor = () => {
             snifferMaterial.uniforms.uColor.value.copy(snifferColor.current);
         }
 
-        // --- UPDATE FORK ROTATION ---
         if (forkRef.current) {
-            // FIXED: Sync rotation exactly with centerDot (both are defined 'Up' facing)
             forkRef.current.rotation.z = centerDotRef.current.rotation.z;
             (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         }
