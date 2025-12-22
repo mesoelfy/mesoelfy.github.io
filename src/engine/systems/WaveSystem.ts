@@ -26,6 +26,7 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private spawner: IEntitySpawner,
@@ -33,7 +34,7 @@ export class WaveSystem implements IGameSystem {
     private events: IGameEventService
   ) {
     this.reset();
-    this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest()));
   }
 
   private reset() {
@@ -91,9 +92,7 @@ export class WaveSystem implements IGameSystem {
                       current: AI_STATE.SPAWN,
                       timers: {} 
                   },
-                  // FIX: Set scale to 1.0. VisualSystem handles the "grow from 0" animation dynamically.
                   [ComponentType.RenderTransform]: { scale: 1.0 },
-                  // Explicitly zero out spawn params to trigger the logic kickstart
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
           }
@@ -254,5 +253,7 @@ export class WaveSystem implements IGameSystem {
 
   teardown(): void {
     this.reset();
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
   }
 }

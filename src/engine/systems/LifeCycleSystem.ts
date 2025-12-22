@@ -11,16 +11,15 @@ import { Query } from '@/engine/ecs/Query';
 
 export class LifeCycleSystem implements IGameSystem {
   private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService
   ) {
-    // ZEN_MODE_ENABLED purgeHostiles() call removed to allow Nova to handle destruction.
-    
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.purgeSummons();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -71,5 +70,8 @@ export class LifeCycleSystem implements IGameSystem {
       }
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

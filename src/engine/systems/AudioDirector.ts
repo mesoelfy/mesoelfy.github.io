@@ -7,7 +7,8 @@ import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 
 export class AudioDirector implements IGameSystem {
-  
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private panelSystem: IPanelSystem,
     private events: IGameEventService, // Unified
@@ -17,44 +18,36 @@ export class AudioDirector implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
         else this.playSpatial(p.id, 'fx_reboot_success');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
         this.audio.duckMusic(0.8, 1.5); 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
         this.audio.playSound('fx_level_up');
-    });
+    }));
 
-    // We no longer subscribe to PLAY_SOUND here for slow path,
-    // because UnifiedEventService routes standard playSound calls to the fast bus if they match a SoundCode.
-    // However, if we emit a sound that IS NOT in the SoundCode list (unlikely for game logic),
-    // it would fall through to the slow bus.
-    // For completeness, we can keep it as a fallback:
-    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
-        // Only play if it wasn't handled by fast path (optimization)
-        // In this architecture, UnifiedService only emits slow event if NOT fast code.
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-    // Cast to access the optimized polling method
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
         unified.processFastEvents((id, a1, a2, a3, a4) => {
@@ -84,5 +77,8 @@ export class AudioDirector implements IGameSystem {
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

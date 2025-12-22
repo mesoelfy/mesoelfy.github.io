@@ -10,6 +10,8 @@ import { ParticleShape } from '@/engine/ecs/types';
 import { PanelId } from '@/engine/config/PanelConfig';
 
 export class VFXSystem implements IGameSystem {
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
@@ -21,28 +23,28 @@ export class VFXSystem implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
         this.executeRecipe(p.type, p.x, p.y, p.angle);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
         this.executeRecipe('REBOOT_HEAL', x, 0);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.shakeSystem.addTrauma(0.75);
         this.timeSystem.freeze(0.15);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.shakeSystem.addTrauma(1.0);
         this.timeSystem.freeze(0.5);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -75,7 +77,10 @@ export class VFXSystem implements IGameSystem {
       return rect ? rect.x : 0;
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
       const count = this.randomRange(2, 3);

@@ -8,6 +8,7 @@ export class HealthSystem implements IGameSystem {
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
+  private unsubs: (() => void)[] = [];
   
   constructor(
     private events: IGameEventService,
@@ -16,11 +17,11 @@ export class HealthSystem implements IGameSystem {
   ) {
     this.reset();
     
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => this.tickReboot(p.amount));
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount));
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => this.tickReboot(p.amount)));
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount)));
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         this.damagePlayer(p.damage);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -45,7 +46,6 @@ export class HealthSystem implements IGameSystem {
             this.audio.playSound('fx_player_death');
         }
     } else {
-        // Damage while down reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -76,5 +76,8 @@ export class HealthSystem implements IGameSystem {
       this.isGameOver = false;
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

@@ -26,6 +26,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   private elements = new Map<string, HTMLElement>();
   private rectCache = new Map<PanelId, WorldRect>();
   private stressMap = new Map<PanelId, number>();
+  private unsubs: (() => void)[] = [];
 
   public get systemIntegrity() {
       return useGameStore.getState().systemIntegrity;
@@ -48,12 +49,12 @@ export class PanelRegistrySystem implements IPanelSystem {
         });
     }
 
-    this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
         const current = this.stressMap.get(p.id) || 0;
         this.stressMap.set(p.id, Math.min(3.0, current + 0.5));
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = useGameStore.getState().restoreAllPanels();
             if (restoredCount > 0) {
@@ -61,15 +62,14 @@ export class PanelRegistrySystem implements IPanelSystem {
                 this.audio.playSound('fx_reboot_success'); 
             }
         }
-    });
+    }));
 
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.destroyAll();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-      // Decay stress over time
       for (const [id, stress] of this.stressMap.entries()) {
           if (stress > 0) {
               this.stressMap.set(id, Math.max(0, stress * 0.9));
@@ -82,6 +82,8 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
       this.observer?.disconnect();
       this.entityMap.clear();
       this.elements.clear();

@@ -11,16 +11,17 @@ export class ProgressionSystem implements IGameSystem {
   public upgradePoints: number = 0;
   
   public activeUpgrades: Partial<Record<UpgradeOption, number>> = {};
+  private unsubs: (() => void)[] = [];
 
   constructor(private events: IGameEventService) {
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option as UpgradeOption);
-    });
+    }));
     
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
         this.addScore(1);
         this.addXp(10);
-    });
+    }));
     
     this.reset();
   }
@@ -47,7 +48,6 @@ export class ProgressionSystem implements IGameSystem {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           
-          // Instant-use options don't increment a level counter
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
               return;
           }
@@ -69,5 +69,8 @@ export class ProgressionSystem implements IGameSystem {
       };
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

@@ -5,6 +5,7 @@ import { ProgressionSystem } from './ProgressionSystem';
 
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private healthSys: HealthSystem,
@@ -13,15 +14,14 @@ export class GameStateSystem implements IGameStateSystem {
     private events: IGameEventService,
     private audio: IAudioService
   ) {
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
-            // Buffed: Now heals 75% of max health
             this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
             this.audio.playSound('ui_optimal');
         } else if (p.option === 'DAEMON') {
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -43,6 +43,8 @@ export class GameStateSystem implements IGameStateSystem {
   }
 
   teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
       this.healthSys.reset();
       this.progSys.reset();
   }

@@ -14,6 +14,8 @@ import { Faction } from '@/engine/ecs/types';
 import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private registry: IEntityRegistry,
     private spawner: IEntitySpawner,
@@ -23,7 +25,7 @@ export class BehaviorSystem implements IGameSystem {
     private audio: IAudioService,
     private events: IGameEventService
   ) {
-    events.subscribe(GameEvents.SPAWN_DAEMON, () => {
+    this.unsubs.push(events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
         const orbital = e.getComponent<OrbitalData>(ComponentType.Orbital);
         if (orbital) {
@@ -31,7 +33,7 @@ export class BehaviorSystem implements IGameSystem {
             orbital.speed = 1.5 + Math.random() * 1.0; 
             orbital.angle = Math.random() * Math.PI * 2;
         }
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -85,5 +87,8 @@ export class BehaviorSystem implements IGameSystem {
     }
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

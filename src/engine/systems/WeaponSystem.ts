@@ -22,7 +22,7 @@ interface PurgeState {
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
-  private unsubPurge: () => void;
+  private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
   
   private purgeState: PurgeState = {
@@ -36,10 +36,10 @@ export class WeaponSystem implements IGameSystem {
     private events: IGameEventService,
     private config: typeof ConfigService
   ) {
-    this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
         if (p.option === 'NOVA') this.triggerNova();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -122,7 +122,6 @@ export class WeaponSystem implements IGameSystem {
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
-          // --- RESTORED PRISMATIC SPIRAL LOGIC ---
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.6); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
@@ -180,5 +179,8 @@ export class WeaponSystem implements IGameSystem {
       return null;
   }
 
-  teardown(): void { this.unsubPurge(); }
+  teardown(): void { 
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
