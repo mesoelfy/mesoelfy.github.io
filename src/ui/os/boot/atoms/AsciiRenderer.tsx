@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '@/engine/state/global/useStore';
 import { ASCII_TITLE } from '@/engine/config/TextAssets';
 import { motion } from 'framer-motion';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface Props {
   step: number;
@@ -38,6 +39,14 @@ export const AsciiRenderer = ({ step }: Props) => {
             let baseClass = 'transition-colors duration-500 ';
             let animClass = '';
             
+            // NOTE: Matrix colors are hard to do with classes + dynamic palette
+            // We'll map them to the closest Tailwind class defined in the config which matches the Palette
+            // or we could inline style color. Let's assume standard tailwind classes exist for these core colors.
+            // However, to strictly follow the palette request, we should use inline styles or standard colors.
+            // But 'animate-matrix-red' relies on keyframes in tailwind.config.ts which are HARDCODED.
+            // Changing palette.ts doesn't change keyframes.
+            // We updated the hexes in the previous step, so 'text-critical-red' is correct.
+            
             if (step === 3) {
                 // RED PHASE (70% Red)
                 if (cell.rand < 0.7) {
@@ -59,7 +68,7 @@ export const AsciiRenderer = ({ step }: Props) => {
                     baseClass += 'text-critical-red';
                     animClass = 'animate-matrix-red';
                 }
-            } else if (step >= 5) { // UPDATED: >= 5 to persist through Caution phase
+            } else if (step >= 5) { 
                 // DECRYPTED PHASE (35G / 45P / 20R)
                 if (cell.rand < 0.35) {
                     baseClass += 'text-primary-green-dark';

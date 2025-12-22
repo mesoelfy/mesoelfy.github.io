@@ -5,12 +5,13 @@ import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { Tag } from '@/engine/ecs/types';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
-const COL_SAFE = new THREE.Color("#00FF41");
-const COL_WARN = new THREE.Color("#FFD700");
-const COL_CRIT = new THREE.Color("#FF003C");
-const COL_SBX  = new THREE.Color("#00FFFF");
+const COL_SAFE = new THREE.Color(PALETTE.GREEN.PURE);
+const COL_WARN = new THREE.Color(PALETTE.YELLOW.GOLD);
+const COL_CRIT = new THREE.Color(PALETTE.RED.CRITICAL);
+const COL_SBX  = new THREE.Color(PALETTE.CYAN.PURE);
 
 export class WorldSystem implements IGameSystem {
   private targetColor = new THREE.Color();
@@ -49,10 +50,6 @@ export class WorldSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    // Only handling lighting color interpolation here for system consistency.
-    // Visual movement (WireframeFloor) is now handled in the View layer
-    // to ensure it persists during Game Over / Paused states.
-
     if (this.worldEntityId === null) return;
     
     const world = this.registry.getEntity(this.worldEntityId);

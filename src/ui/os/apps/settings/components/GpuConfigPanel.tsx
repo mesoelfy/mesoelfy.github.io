@@ -2,6 +2,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { Zap, ZapOff, Cpu, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const GpuConfigPanel = () => {
   const { graphicsMode, setGraphicsMode } = useStore();
@@ -24,9 +25,7 @@ export const GpuConfigPanel = () => {
         </div>
       </div>
 
-      {/* BODY - No padding, full width buttons */}
       <div className="flex flex-col w-full h-full bg-black relative">
-        {/* Background Grid Decoration */}
         <div className="absolute inset-0 pointer-events-none opacity-20" 
              style={{ backgroundImage: 'radial-gradient(#15530A 1px, transparent 1px)', backgroundSize: '8px 8px' }} 
         />
@@ -43,13 +42,11 @@ export const GpuConfigPanel = () => {
           onMouseEnter={() => AudioSystem.playHover()}
           className="group relative w-full h-24 flex items-stretch border-b border-primary-green/30 overflow-hidden transition-all hover:bg-white/5"
         >
-          {/* Status Strip (Left) */}
           <div className={clsx(
               "w-2 h-full transition-colors duration-300", 
-              graphicsMode === 'HIGH' ? "bg-primary-green shadow-[0_0_15px_#78F654]" : "bg-gray-800"
-          )} />
+              graphicsMode === 'HIGH' ? "bg-primary-green" : "bg-gray-800"
+          )} style={graphicsMode === 'HIGH' ? { boxShadow: `0 0 15px ${PALETTE.GREEN.PRIMARY}` } : {}} />
           
-          {/* Content */}
           <div className="flex-1 flex items-center justify-between px-4 relative z-10">
              <div className="flex flex-col items-start text-left">
                 <span className={clsx(
@@ -72,9 +69,8 @@ export const GpuConfigPanel = () => {
              />
           </div>
 
-          {/* Active Background Pattern */}
           {graphicsMode === 'HIGH' && (
-              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#78F654_10px,#78F654_12px)]" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `repeating-linear-gradient(45deg,transparent,transparent 10px,${PALETTE.GREEN.PRIMARY} 10px,${PALETTE.GREEN.PRIMARY} 12px)` }} />
           )}
         </button>
 
@@ -84,13 +80,11 @@ export const GpuConfigPanel = () => {
           onMouseEnter={() => AudioSystem.playHover()}
           className="group relative w-full h-24 flex items-stretch overflow-hidden transition-all hover:bg-white/5"
         >
-          {/* Status Strip (Left) */}
           <div className={clsx(
               "w-2 h-full transition-colors duration-300", 
-              graphicsMode === 'POTATO' ? "bg-alert-yellow shadow-[0_0_15px_#eae747]" : "bg-gray-800"
-          )} />
+              graphicsMode === 'POTATO' ? "bg-alert-yellow" : "bg-gray-800"
+          )} style={graphicsMode === 'POTATO' ? { boxShadow: `0 0 15px ${PALETTE.YELLOW.ALERT}` } : {}} />
           
-          {/* Content */}
           <div className="flex-1 flex items-center justify-between px-4 relative z-10">
              <div className="flex flex-col items-start text-left">
                 <span className={clsx(
@@ -113,9 +107,8 @@ export const GpuConfigPanel = () => {
              />
           </div>
 
-          {/* Active Background Pattern */}
           {graphicsMode === 'POTATO' && (
-              <div className="absolute inset-0 opacity-10 pointer-events-none bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#eae747_10px,#eae747_12px)]" />
+              <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `repeating-linear-gradient(45deg,transparent,transparent 10px,${PALETTE.YELLOW.ALERT} 10px,${PALETTE.YELLOW.ALERT} 12px)` }} />
           )}
         </button>
       </div>

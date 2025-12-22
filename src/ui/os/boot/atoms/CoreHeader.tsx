@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, Unlock, Lock, Skull } from 'lucide-react';
+import { PALETTE } from '@/engine/config/Palette';
 
 interface CoreHeaderProps {
   step: number;
@@ -25,22 +26,43 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
     textColor = "text-latent-purple-light";
   }
 
+  // Animation Arrays mapped to Palette
+  const animBorder = [
+      `${PALETTE.GREEN.PRIMARY}4D`, // 30% alpha
+      `${PALETTE.YELLOW.ALERT}99`, // 60% alpha
+      `${PALETTE.RED.CRITICAL}99`, 
+      `${PALETTE.YELLOW.ALERT}99`, 
+      `${PALETTE.GREEN.PRIMARY}4D`
+  ];
+  
+  const animBg = [
+      `${PALETTE.GREEN.PRIMARY}1A`, // 10% alpha
+      `${PALETTE.YELLOW.ALERT}26`, // 15% alpha
+      `${PALETTE.RED.CRITICAL}26`, 
+      `${PALETTE.YELLOW.ALERT}26`, 
+      `${PALETTE.GREEN.PRIMARY}1A`
+  ];
+
+  const animText = [
+      PALETTE.GREEN.PRIMARY,
+      PALETTE.YELLOW.ALERT,
+      PALETTE.RED.CRITICAL,
+      PALETTE.YELLOW.ALERT,
+      PALETTE.GREEN.PRIMARY
+  ];
+
   return (
     <motion.div 
       className={`flex shrink-0 items-center justify-between border-b px-3 py-2 select-none transition-colors duration-500 ${!isCaution ? `${borderColor} ${bgColor}` : ''}`}
       animate={isCaution ? {
-        borderColor: ['rgba(120,246,84,0.3)', 'rgba(234,231,71,0.6)', 'rgba(255,0,60,0.6)', 'rgba(234,231,71,0.6)', 'rgba(120,246,84,0.3)'],
-        backgroundColor: ['rgba(120,246,84,0.1)', 'rgba(234,231,71,0.15)', 'rgba(255,0,60,0.15)', 'rgba(234,231,71,0.15)', 'rgba(120,246,84,0.1)'],
+        borderColor: animBorder,
+        backgroundColor: animBg,
       } : {}}
-      // UPDATED: Added delay: 0.4 to sync with Skull icon arrival (wait mode exit)
       transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
     >
       <motion.span 
         className={`text-sm font-mono font-bold tracking-widest uppercase ${!isCaution ? textColor : ''}`}
-        animate={isCaution ? {
-            color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654']
-        } : {}}
-        // UPDATED: Added delay: 0.4 to sync with Skull icon
+        animate={isCaution ? { color: animText } : {}}
         transition={{ duration: 2.0, repeat: Infinity, ease: "linear", delay: isCaution ? 0.4 : 0 }}
       >
         MESOELFY_CORE
@@ -48,7 +70,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
       
       <div className="relative w-6 h-6 flex items-center justify-center">
          <AnimatePresence mode="wait">
-            {/* STEP 3: UNSAFE */}
             {isUnsafe && (
                 <motion.div 
                     key="unsafe"
@@ -61,7 +82,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 4: BYPASSING */}
             {isBypass && (
                 <motion.div 
                     key="bypass"
@@ -82,7 +102,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 5: DECRYPTED */}
             {isDecrypted && (
                 <motion.div 
                     key="unlocked"
@@ -91,7 +110,7 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                         scale: [1.5, 1], 
                         opacity: 1, 
                         rotate: 0,
-                        filter: ["drop-shadow(0 0 0px #78F654)", "drop-shadow(0 0 10px #78F654)", "drop-shadow(0 0 0px #78F654)"]
+                        filter: [`drop-shadow(0 0 0px ${PALETTE.GREEN.PRIMARY})`, `drop-shadow(0 0 10px ${PALETTE.GREEN.PRIMARY})`, `drop-shadow(0 0 0px ${PALETTE.GREEN.PRIMARY})`]
                     }} 
                     exit={{ scale: 0, opacity: 0 }}
                     transition={{ 
@@ -103,7 +122,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* STEP 6: CAUTION */}
             {isCaution && (
                 <motion.div 
                     key="caution"
@@ -113,13 +131,13 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                     <motion.div
                        animate={{
                            filter: [
-                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))', 
-                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
-                               'drop-shadow(0 0 20px rgba(255,0,60,1))', 
-                               'drop-shadow(0 0 15px rgba(234,231,71,1))',
-                               'drop-shadow(0 0 8px rgba(120,246,84,0.8))'
+                               `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY}CC)`, 
+                               `drop-shadow(0 0 15px ${PALETTE.YELLOW.ALERT})`,
+                               `drop-shadow(0 0 20px ${PALETTE.RED.CRITICAL})`, 
+                               `drop-shadow(0 0 15px ${PALETTE.YELLOW.ALERT})`,
+                               `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY}CC)`
                            ],
-                           color: ['#78F654', '#eae747', '#FF003C', '#eae747', '#78F654'],
+                           color: animText,
                            rotate: [0, 5, 0, -5, 0] 
                        }}
                        transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
@@ -129,7 +147,6 @@ export const CoreHeader = ({ step }: CoreHeaderProps) => {
                 </motion.div>
             )}
 
-            {/* LOADING SPINNER */}
             {!isUnsafe && !isBypass && !isDecrypted && !isCaution && (
                 <motion.div 
                     key="loading"

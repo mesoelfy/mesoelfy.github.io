@@ -6,6 +6,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { clsx } from 'clsx';
 import { DOM_ATTR } from '@/ui/config/DOMConfig';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const CustomCursor = () => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -23,11 +24,6 @@ export const CustomCursor = () => {
   const isMenuOpen = activeModal !== 'none' || isDebugOpen;
   const isGameOver = systemIntegrity <= 0;
 
-  // VISUAL LOGIC REFINED:
-  // We remove the static Zen triangle. 
-  // Custom Cursor (The Green Arrow) only shows if:
-  // 1. Not metamorphosizing
-  // 2. We are in a Menu, the Boot Screen, or standard Game Over (not Zen).
   const showCustomCursor = !isMetamorphosizing && 
     ((!isGameActive && !isBreaching) || isMenuOpen || (isGameOver && !isZenMode)) && 
     !isOnScrollbar;
@@ -80,10 +76,12 @@ export const CustomCursor = () => {
     };
   }, []);
 
-  const cursorColor = isHit ? '#FF003C' : (isHovering ? '#eae747' : '#78F654');
+  const cursorColor = isHit ? PALETTE.RED.CRITICAL : (isHovering ? PALETTE.YELLOW.ALERT : PALETTE.GREEN.PRIMARY);
+  
+  // Dynamic shadows using Palette
   const cursorShadow = isHit 
-    ? 'drop-shadow(0 0 15px #FF003C)' 
-    : (isHovering ? 'drop-shadow(0 0 12px #eae747)' : 'drop-shadow(0 0 8px #78F654)');
+    ? `drop-shadow(0 0 15px ${PALETTE.RED.CRITICAL})` 
+    : (isHovering ? `drop-shadow(0 0 12px ${PALETTE.YELLOW.ALERT})` : `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY})`);
 
   return (
     <motion.div

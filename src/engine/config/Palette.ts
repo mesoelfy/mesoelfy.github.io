@@ -4,7 +4,9 @@ export const PALETTE = {
     PRIMARY: '#78F654',
     DIM: '#1bb930',
     DARK: '#217e10',
-    GLOW: '#C2FE9A'
+    GLOW: '#C2FE9A',
+    PURE: '#00FF41',    // World Safe State
+    TERMINAL: '#00FF00' // Ascii Matrix
   },
   PURPLE: {
     PRIMARY: '#9E4EA5',
@@ -12,7 +14,7 @@ export const PALETTE = {
     DEEP: '#350E3A',
     DIM: '#822B8A'
   },
-  // NEW: Service Pink (Updated to #FFCCFF)
+  // Service Pink (Core System)
   PINK: {
     PRIMARY: '#FFCCFF',
     DIM: '#C21CC2',
@@ -26,11 +28,14 @@ export const PALETTE = {
   YELLOW: {
     ALERT: '#eae747',
     SOFT: '#F7D277',
+    GOLD: '#FFD700', // World Warning
+    DIM: '#5e4b00',  // Crystal Emissive
     ORANGE: '#FF8C00'
   },
   CYAN: {
     PRIMARY: '#00F0FF',
-    DIM: '#008ba3'
+    DIM: '#008ba3',
+    PURE: '#00FFFF' // World Sandbox
   },
   MONO: {
     BLACK: '#050505',
