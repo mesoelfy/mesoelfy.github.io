@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 21 21:57:30 CST 2025
+Generated on: Mon Dec 22 09:47:37 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -27,7 +27,6 @@ PROJECT DIRECTORY STRUCTURE:
 ├── public
 │   ├── assets
 │   │   ├── audio
-│   │   │   ├── bg_music_placeholder.mp3
 │   │   │   └── music
 │   │   │       └── mesoelfy_os
 │   │   │           ├── 01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3
@@ -120,6 +119,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── WorldConfig.ts
 │   │   │   ├── assets
 │   │   │   │   ├── AudioManifest.ts
+│   │   │   │   ├── MusicManifest.ts
 │   │   │   │   └── VFXManifest.ts
 │   │   │   ├── constants
 │   │   │   │   ├── MathConstants.ts
@@ -4855,8 +4855,6 @@ export const Footer = () => {
         lockUntilRef.current = Date.now() + 999999999; 
     });
     
-    // ... (Other handlers omitted for brevity, logic remains same)
-
     const interval = setInterval(() => {
         if (canUpdate() && !useGameStore.getState().isZenMode) {
             setLog({ text: IDLE_MESSAGES[Math.floor(Math.random() * IDLE_MESSAGES.length)], type: 'info' });
@@ -4870,7 +4868,7 @@ export const Footer = () => {
   }, []);
 
   return (
-    <footer className={clsx("w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-500", globalColor)}>
+    <footer className={clsx("w-full h-8 border-t bg-black flex items-center justify-between px-4 z-40 shrink-0 text-[10px] font-mono overflow-hidden transition-colors duration-[2000ms]", globalColor)}>
       <div className="flex-1 flex items-center gap-2 overflow-hidden mr-4">
         <span className="shrink-0 font-bold">LOG:</span>
         <AnimatePresence mode="wait">
@@ -4894,7 +4892,14 @@ export const Footer = () => {
       </div>
       <div className="flex items-center gap-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity">
         <span>VER:</span>
-        <a href={actionsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors decoration-dashed underline underline-offset-2">{commitHash}</a>
+        <a 
+            href={actionsUrl} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="hover:text-white transition-colors duration-200 decoration-dashed underline underline-offset-2"
+        >
+            {commitHash}
+        </a>
       </div>
     </footer>
   );
@@ -4904,12 +4909,12 @@ export const Footer = () => {
 =====================================
 FILE: ./src/ui/os/desktop/Header.tsx
 =====================================
-import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon } from 'lucide-react';
+import { Volume2, VolumeX, Music, Activity, Wind, Settings, Infinity as InfinityIcon, FastForward } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useEffect, useState, useRef } from 'react';
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useHeartbeat } from '@/ui/sim/hooks/useHeartbeat';
 import { useAudio } from '@/ui/hooks/useAudio';
 import { getPan } from '@/engine/audio/AudioUtils';
@@ -4982,21 +4987,37 @@ export const Header = () => {
   const borderColor = isZenMode ? "border-purple-500/30" : "border-white/10";
   const heartbeatControls = useHeartbeat();
 
+  // Slow down color transitions for Zen Mode feel (Structural elements only)
+  const slowTransition = "transition-colors duration-[2000ms]";
+
   return (
-    <header className="relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5 transition-colors duration-300">
+    <header className={clsx("relative w-full h-12 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 z-40 shrink-0 border-b border-white/5", slowTransition)}>
       
-      {isZenMode && (
-          <motion.div 
-            className="absolute inset-x-0 bottom-0 h-[2px] z-50 bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
-            animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-          />
-      )}
+      {/* PRISMATIC ZEN BAR (Fades In) */}
+      <AnimatePresence>
+        {isZenMode && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.0, ease: "easeInOut" }}
+              className="absolute inset-x-0 bottom-0 h-[2px] z-50 overflow-hidden"
+            >
+                <motion.div 
+                    className="w-full h-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+                    animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                />
+            </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex items-center gap-4">
         <motion.span 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
             variants={{ 
                 idle: { scale: 1, textShadow: "0 0 0px transparent" },
                 heartbeat: { 
@@ -5005,7 +5026,7 @@ export const Header = () => {
                     transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
                 } 
             }} 
-            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide transition-colors duration-500", statusColor)}
+            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide", slowTransition, statusColor)}
         >
           {isZenMode ? (
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
@@ -5015,7 +5036,7 @@ export const Header = () => {
         </motion.span>
         
         {mounted && (
-          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l transition-colors", statusColor, borderColor)}>
+          <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l", slowTransition, statusColor, borderColor)}>
             <Radar active={isPlaying} panic={!isZenMode && (isCritical || (isPlaying && isCritical))} color={statusColor} />
             <div className="flex flex-col leading-none">
                 <span className="text-[8px] opacity-60 tracking-wider">{isZenMode ? "PEACE_PROTOCOL" : "THREAT_NEUTRALIZED"}</span>
@@ -5024,45 +5045,87 @@ export const Header = () => {
           </div>
         )}
       </div>
-      <div className="flex items-center gap-4">
-        <div className={clsx("flex items-center gap-1 pl-4 border-l transition-colors", borderColor)}>
+      
+      {/* CONTROLS */}
+      <div className="flex items-center gap-0">
+      
+        {/* NEXT TRACK BUTTON (Fast Interaction) */}
+        <button 
+            onClick={(e) => { 
+                audio.nextTrack(); 
+                audio.playClick(getPan(e)); 
+            }}
+            onMouseEnter={(e) => audio.playHover(getPan(e))}
+            className={clsx(
+                "group flex items-center justify-center px-3 h-7 rounded-full border mr-3.5",
+                // FAST transition for hover states
+                "transition-all duration-200", 
+                statusColor,
+                "bg-white/5 border-white/20 opacity-100",
+                "hover:bg-current hover:border-transparent"
+            )}
+            title="Next Track / Shuffle"
+        >
+            <FastForward 
+              size={14} 
+              className="fill-transparent group-hover:fill-current group-hover:text-black transition-all duration-200" 
+              strokeWidth={2}
+            />
+        </button>
+
+        {/* TOGGLE GROUP (Container is slow, Buttons are fast) */}
+        <div className={clsx("flex items-center gap-1 pl-4 border-l", slowTransition, borderColor)}>
             <ToggleButton variant="icon" active={audioSettings.ambience} onClick={toggleAmbience} color={statusColor} icon={Wind} />
             <ToggleButton variant="icon" active={audioSettings.sfx} onClick={toggleSfx} color={statusColor} icon={Music} label="SFX" />
             <ToggleButton variant="icon" active={audioSettings.music} onClick={toggleMusic} color={statusColor} icon={Music} />
-            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            
+            <div className={clsx("w-[1px] h-4 mx-1", slowTransition, isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            
             <ToggleButton variant="icon" active={audioSettings.master} onClick={toggleMaster} color={statusColor} icon={Volume2} iconOff={VolumeX} />
-            <div className={clsx("w-[1px] h-4 mx-1 transition-colors", isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
+            
+            <div className={clsx("w-[1px] h-4 mx-1", slowTransition, isZenMode ? "bg-purple-500/30" : "bg-white/10")} />
             
             <button 
                 onClick={(e) => { toggleSettings(); audio.playSound('ui_menu_open', getPan(e)); }} 
                 className={clsx(
-                    "group flex items-center justify-center p-1.5 transition-all duration-200 border border-transparent rounded-sm",
+                    "group flex items-center justify-center p-1.5 border border-transparent rounded-sm",
+                    "transition-all duration-200", // Fast hover
                     statusColor,
                     "hover:bg-current hover:border-transparent"
                 )}
             >
-                <Settings size={14} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
+                <Settings size={17} className="animate-spin-slow text-current group-hover:text-black transition-colors duration-200" />
             </button>
         </div>
       </div>
       
-      {!isGameOver && !isZenMode && (
-        <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900">
-          <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
-              <motion.div 
-                key={isCritical ? "critical-bar" : "normal-bar"}
-                animate={isCritical ? heartbeatControls : "idle"} 
-                variants={barVariants}
-                className={clsx(
-                    "w-full h-full shadow-[0_0_10px_currentColor]", 
-                    isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
-                )} 
-              />
-          </div>
-        </div>
-      )}
+      {/* STANDARD HEALTH BAR (Fades Out) */}
+      <AnimatePresence>
+        {!isGameOver && !isZenMode && (
+            <motion.div 
+                key="standard-health-bar"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.0 }}
+                className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-gray-900"
+            >
+            <div ref={barRef} className="h-full w-full transition-all duration-100 ease-linear">
+                <motion.div 
+                    key={isCritical ? "critical-bar" : "normal-bar"}
+                    animate={isCritical ? heartbeatControls : "idle"} 
+                    variants={barVariants}
+                    className={clsx(
+                        "w-full h-full shadow-[0_0_10px_currentColor]", 
+                        isCritical ? "bg-critical-red" : isWarning ? "bg-alert-yellow" : "bg-primary-green"
+                    )} 
+                />
+            </div>
+            </motion.div>
+        )}
+      </AnimatePresence>
       
-      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1 transition-colors duration-300", isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
+      <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1", slowTransition, isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
         {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
         <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
       </div>
@@ -10373,9 +10436,7 @@ export const EXTERNAL_CONFIG = {
     FORMSPREE: "https://formspree.io/f/xkgdbkpz"
   },
   ASSETS: {
-    AUDIO: {
-      BG_MUSIC: '/assets/audio/bg_music_placeholder.mp3'
-    },
+    // AUDIO section cleared. Music handled by MusicManifest.
     ICONS: {
       FAVICON: '/favicon.ico'
     }
@@ -10714,7 +10775,7 @@ FILE: ./src/engine/config/StorageConfig.ts
 =====================================
 export const STORAGE_KEYS = {
   GAME_STATE: 'mesoelfy-os-storage-v3',
-  UI_SETTINGS: 'mesoelfy-ui-settings-v3'
+  UI_SETTINGS: 'mesoelfy-ui-settings-v4'
 } as const;
 
 
@@ -10806,6 +10867,38 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
   'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };
+
+
+=====================================
+FILE: ./src/engine/config/assets/MusicManifest.ts
+=====================================
+export const MUSIC_PLAYLIST = [
+  "/assets/audio/music/mesoelfy_os/01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3",
+  "/assets/audio/music/mesoelfy_os/02 - 002_14 - Dolen Angol (Cover) - cyberpunk, darksynth, psybient, chopped sample, glitch, chiptune, synth cadenza.mp3",
+  "/assets/audio/music/mesoelfy_os/03 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/04 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/05 - 007_04 - Dant Arth (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/06 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/07 - 003_24 - Lach Mí (Cover) - Acid Techno, DnB, atmospheric pads.mp3",
+  "/assets/audio/music/mesoelfy_os/08 - 001_01 - Dúath Maethor (Cover) - psybience.mp3",
+  "/assets/audio/music/mesoelfy_os/09 - 008_01 - Galu na Vëa (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/10 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/11 - 007_01 - Angwedh Thinnas (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/12 - 004_01 - Tyaliéli Vendë (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/13 - 008_08 - Alcar mi Morë (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/14 - 008_13 - Fuin Roch (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/15 - 004_05 - Edraith o Rhach (Cover) - psybient.mp3",
+  "/assets/audio/music/mesoelfy_os/16 - 006_22 - Míruvórë Silda (Cover) - dark chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/17 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/18 - 006_10 - Nárë Inwisti (Cover) - dark chiptune, folktronica, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/19 - 007_07 - Tuima Morë (Cover) - folktronica.mp3",
+  "/assets/audio/music/mesoelfy_os/20 - 007_16 - Calu Am Calu (Cover) - chiptune, japanese funk, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/21 - 001_20 - Amrûn Echui (Cover).mp3",
+  "/assets/audio/music/mesoelfy_os/22 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/23 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/24 - Elf Girl 009 - chiptune, jazz fusion, cyberpunk, chopped sample, glitch, virtuosic harmonic melodic exploration.mp3",
+  "/assets/audio/music/mesoelfy_os/25 - Elf Girl 009 - ambient chiptune, jazz fusion, virtuosic harmonic melodic exploration.mp3"
+];
 
 
 =====================================
@@ -12970,7 +13063,10 @@ interface AudioSettings {
 
 const DEFAULT_AUDIO: AudioSettings = {
   master: true, music: false, sfx: true, ambience: true,
-  volumeMaster: 1.0, volumeMusic: 1.0, volumeSfx: 1.0, volumeAmbience: 1.0,
+  volumeMaster: 1.0, 
+  volumeMusic: 0.75, // UPDATED: 75% Default
+  volumeSfx: 1.0, 
+  volumeAmbience: 1.0,
   ambFilter: 0.5, ambSpeed: 0.5, ambWidth: 0.5, ambModSpeed: 0.5, ambModDepth: 0.5, 
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
@@ -12994,7 +13090,7 @@ interface AppState {
   bootState: BootState;
   introDone: boolean;
   isBreaching: boolean;
-  isMetamorphosizing: boolean; // NEW
+  isMetamorphosizing: boolean;
   activeModal: ModalType;
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
@@ -13505,9 +13601,14 @@ export class AudioServiceImpl implements IAudioService {
 
   public startMusic() {
     this.ctxManager.resume();
-    this.voices.startMusic('/assets/audio/bg_music_placeholder.mp3');
+    // No arguments, VoiceManager uses manifest
+    this.voices.startMusic();
     if (this.isReady && this.bank.has('ambience_core')) this.playAmbience('ambience_core');
     else this._autoStartAmbience = true;
+  }
+
+  public nextTrack() {
+    this.voices.nextTrack();
   }
   
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
@@ -13647,6 +13748,7 @@ class AudioSystemFacade implements IAudioService {
 
   public async init() { return this.service.init(); }
   public startMusic() { this.service.startMusic(); }
+  public nextTrack() { this.service.nextTrack(); }
   public stopAll() { this.service.stopAll(); }
   public updateVolumes() { this.service.updateVolumes(); }
   
@@ -13739,6 +13841,12 @@ export class AudioDirector implements IGameSystem {
         this.audio.duckMusic(0.8, 1.5); 
     });
 
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        const intensity = p.damage > 5 ? 0.8 : 0.6;
+        const duration = p.damage > 5 ? 1.0 : 0.5;
+        this.audio.duckMusic(intensity, duration);
+    });
+
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
@@ -13746,7 +13854,14 @@ export class AudioDirector implements IGameSystem {
     });
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') this._isPurging = true;
+        // FIX: Only trigger the cinematic filter riser if we are in Game Over state (Zen Bomb)
+        // Standard gameplay purges should NOT clear the low-pass filter.
+        const isGameOver = this.panelSystem.systemIntegrity <= 0;
+        
+        if (p.option === 'PURGE' && isGameOver) {
+            this._isPurging = true;
+        }
+        
         this.audio.playSound('fx_level_up');
     });
 
@@ -13768,16 +13883,12 @@ export class AudioDirector implements IGameSystem {
 
   update(delta: number, time: number): void {
     // Determine Target Integrity for Filter
-    // 1. Purging: Force Open (1.0) with Slow Transition
-    // 2. Zen Mode: Force Open (1.0)
-    // 3. Standard: Use Panel System Integrity
-    
     let integrity = this.panelSystem.systemIntegrity / 100;
     let timeConstant = 0.05; // Default fast transition
 
     if (this._isPurging) {
         integrity = 1.0;
-        timeConstant = 2.0; // Slow cinematic riser during purge
+        timeConstant = 2.0; // Slow cinematic riser during Zen purge
     } else if (this._isZen) {
         integrity = 1.0;
     }
@@ -13785,7 +13896,6 @@ export class AudioDirector implements IGameSystem {
     const mixer = (this.audio as any).mixer as AudioMixer;
     if (mixer) mixer.updateMasterFilter(integrity, timeConstant);
 
-    // Fast Event Processing
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
         unified.processFastEvents((id, a1, a2, a3, a4) => {
@@ -13951,21 +14061,36 @@ export class AudioMixer {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
+      // THRESHOLD SET TO 60% (Matching UI Yellow State)
+      const THRESHOLD = 0.6;
+      const FLOOR_FREQ = 800; // Muffled but audible
+      
       // If healthy or missing context, open filter
       if (!ctx || integrity >= 1.0) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, transitionTime);
           return;
       }
 
-      // If moderately damaged, start closing slightly
-      if (integrity > 0.3) {
+      // If integrity is above the warning threshold (Green), keep open
+      if (integrity > THRESHOLD) {
           this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
           return;
       }
 
-      // Critical state: Muffle sound significantly
-      const targetFreq = this.MAX_FREQ * Math.pow(800 / this.MAX_FREQ, 1.0 - (integrity / 0.3));
-      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
+      // Logic:
+      // We are below 60%.
+      // We normalize the remaining health within this danger zone (0% to 60%).
+      const ratio = integrity / THRESHOLD;
+      
+      // Quadratic Curve: This makes the filter close faster than a linear slide.
+      // At 60% (Start): ratio=1.0, curve=1.0, intensity=0 (Open)
+      // At 30% (Critical): ratio=0.5, curve=0.25, intensity=0.75 (Heavily Muffled)
+      const curve = ratio * ratio; 
+      
+      const intensity = 1.0 - curve; 
+
+      const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
+      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.1);
   }
 
   public getByteFrequencyData(array: Uint8Array) { if (this.analyser) this.analyser.getByteFrequencyData(array); }
@@ -14059,14 +14184,96 @@ import { AudioMixer } from './AudioMixer';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
-import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
+import { MUSIC_PLAYLIST } from '@/engine/config/assets/MusicManifest';
+
+class MusicDeck {
+  public element: HTMLAudioElement | null = null;
+  public source: MediaElementAudioSourceNode | null = null;
+  public gain: GainNode | null = null;
+  private outputNode: AudioNode | null = null;
+  private ctx: AudioContext | null = null;
+
+  public init(ctx: AudioContext, output: AudioNode) {
+    this.ctx = ctx;
+    this.outputNode = output;
+
+    // Lazy create Audio element if missing
+    if (!this.element && typeof window !== 'undefined' && typeof Audio !== 'undefined') {
+        this.element = new Audio();
+        this.element.crossOrigin = "anonymous";
+        this.element.loop = false;
+    }
+
+    if (!this.element) return;
+
+    // Create Graph Nodes if missing
+    if (!this.gain) {
+        this.gain = ctx.createGain();
+        this.gain.gain.value = 0; // Start silent
+        this.gain.connect(output);
+    }
+
+    if (!this.source) {
+        try {
+            this.source = ctx.createMediaElementSource(this.element);
+            this.source.connect(this.gain);
+        } catch (e) {
+            console.warn("[MusicDeck] Failed to create MediaElementSource:", e);
+        }
+    }
+  }
+
+  public load(url: string) {
+    if (this.element) {
+        // Reset crossOrigin to be safe
+        this.element.crossOrigin = "anonymous";
+        this.element.src = url;
+        this.element.load();
+    }
+  }
+
+  public play() {
+    // Re-verify graph integrity before playing
+    if (this.ctx && this.outputNode) {
+        this.init(this.ctx, this.outputNode);
+    }
+
+    if (this.element) {
+        this.element.play().catch(e => console.warn("[MusicDeck] Play blocked", e));
+    }
+  }
+
+  public stop() {
+    if (this.element) {
+        this.element.pause();
+        this.element.currentTime = 0;
+    }
+  }
+
+  public fadeTo(value: number, duration: number, ctx: AudioContext) {
+    if (!this.gain) return;
+    const now = ctx.currentTime;
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(this.gain.gain.value, now);
+    this.gain.gain.linearRampToValueAtTime(value, now + duration);
+  }
+}
 
 export class VoiceManager {
   private activeCount = 0;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
-  private musicElement: HTMLAudioElement | null = null;
+
+  // --- MUSIC SYSTEM ---
+  private deckA = new MusicDeck();
+  private deckB = new MusicDeck();
+  private activeDeck: 'A' | 'B' | null = null;
+  
+  private playlist: string[] = [...MUSIC_PLAYLIST];
+  private currentIndex = 0;
+  private isShuffled = false;
+  private isMusicInit = false;
 
   constructor(
     private ctxManager: AudioContextManager,
@@ -14074,40 +14281,32 @@ export class VoiceManager {
     private mixer: AudioMixer
   ) {}
 
+  // --- SFX LOGIC ---
   public playSFX(key: AudioKey, pan: number = 0) {
     if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
-
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
     const recipe = AUDIO_MANIFEST[key];
-    
     if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    
     if (recipe.pitchVariance > 0) {
         source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
     }
-
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
-
     source.connect(panner);
     panner.connect(this.mixer.sfxGain);
-
-    source.onended = () => {
-        this.activeCount--;
-    };
-    
+    source.onended = () => { this.activeCount--; };
     this.activeCount++;
     source.start();
   }
 
+  // --- AMBIENCE LOGIC ---
   public playAmbience(key: AudioKey) {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.ambienceGain) return;
-    
     if (this.currentAmbienceKey === key && this.currentAmbienceNode) return;
 
     if (this.currentAmbienceNode && this.currentAmbienceGain) {
@@ -14123,45 +14322,96 @@ export class VoiceManager {
 
     const buffer = this.bank.get(key);
     if (!buffer) return;
-
     const source = ctx.createBufferSource();
     source.buffer = buffer; 
     source.loop = true;
-    
     const fadeGain = ctx.createGain();
     fadeGain.gain.setValueAtTime(0, ctx.currentTime);
     fadeGain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + 2.0); 
-    
     source.connect(fadeGain); 
     fadeGain.connect(this.mixer.ambienceGain); 
     source.start();
-    
     this.currentAmbienceNode = source; 
     this.currentAmbienceGain = fadeGain; 
     this.currentAmbienceKey = key;
   }
 
-  public startMusic(url?: string) {
+  // --- MUSIC SYSTEM ---
+  
+  public startMusic() {
     const ctx = this.ctxManager.ctx;
-    if (!ctx || !this.mixer.musicGain || this.musicElement) return;
+    if (!ctx || !this.mixer.musicGain) return;
 
-    const targetUrl = url || EXTERNAL_CONFIG.ASSETS.AUDIO.BG_MUSIC;
+    if (!this.isMusicInit) {
+        this.deckA.init(ctx, this.mixer.musicGain);
+        this.deckB.init(ctx, this.mixer.musicGain);
+        
+        // Auto-advance listeners
+        const attachListener = (deck: MusicDeck) => {
+            if (deck.element) {
+                deck.element.addEventListener('ended', () => this.advanceTrack(true));
+            }
+        };
+        attachListener(this.deckA);
+        attachListener(this.deckB);
+        
+        this.isMusicInit = true;
+        this.playTrack(0);
+    }
+  }
 
-    this.musicElement = new Audio(targetUrl);
-    this.musicElement.loop = true; 
-    this.musicElement.crossOrigin = "anonymous";
+  public nextTrack() {
+    this.advanceTrack(false);
+  }
+
+  private advanceTrack(auto: boolean) {
+    if (!auto && !this.isShuffled) {
+        this.shufflePlaylist();
+        this.isShuffled = true;
+        this.currentIndex = 0; 
+    } else {
+        this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
+    }
+    this.playTrack(this.currentIndex);
+  }
+
+  private shufflePlaylist() {
+    for (let i = this.playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
+    }
+    console.log('[VoiceManager] Playlist Shuffled');
+  }
+
+  private playTrack(index: number) {
+    const ctx = this.ctxManager.ctx;
+    if (!ctx) return;
+
+    const nextUrl = this.playlist[index];
+    const nextDeck = this.activeDeck === 'A' ? this.deckB : this.deckA;
+    const currentDeck = this.activeDeck === 'A' ? this.deckA : this.deckB;
+
+    console.log(`[Music] Playing [${index}]: ${nextUrl.split('/').pop()}`);
+
+    // Load & Play Next
+    nextDeck.load(nextUrl);
+    nextDeck.play();
     
-    const source = ctx.createMediaElementSource(this.musicElement);
-    source.connect(this.mixer.musicGain);
+    // Crossfade
+    const FADE_TIME = 3.0;
+    nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
-    this.musicElement.play().catch(() => console.warn("[Audio] Autoplay blocked"));
+    if (this.activeDeck) {
+        currentDeck.fadeTo(0.0, FADE_TIME, ctx);
+        setTimeout(() => currentDeck.stop(), FADE_TIME * 1000);
+    }
+
+    this.activeDeck = this.activeDeck === 'A' ? 'B' : 'A';
   }
 
   public stopAll() {
-    if (this.musicElement) { 
-        this.musicElement.pause(); 
-        this.musicElement.currentTime = 0; 
-    }
+    this.deckA.stop();
+    this.deckB.stop();
     
     if (this.currentAmbienceNode) { 
         try { this.currentAmbienceNode.stop(); } catch {} 
@@ -14169,7 +14419,6 @@ export class VoiceManager {
         this.currentAmbienceGain = null;
         this.currentAmbienceKey = null; 
     }
-    
     this.activeCount = 0;
   }
 }
@@ -20046,6 +20295,7 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: AudioKey, pan?: number): void;
   playAmbience(key: AudioKey): void;
+  nextTrack(): void; // NEW
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;
@@ -20107,7 +20357,7 @@ export interface IPanelSystem extends IGameSystem {
   getPanelState(id: PanelId): { health: number; isDestroyed: boolean } | undefined;
   getAllPanels(): any[]; 
   getPanelAt(x: number, y: number): PanelId | null;
-  getPanelStress(id: PanelId): number; // NEW
+  getPanelStress(id: PanelId): number; 
 }
 
 

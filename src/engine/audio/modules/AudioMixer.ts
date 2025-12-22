@@ -127,36 +127,41 @@ export class AudioMixer {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
-      // THRESHOLD SET TO 60% (Matching UI Yellow State)
-      const THRESHOLD = 0.6;
-      const FLOOR_FREQ = 800; // Muffled but audible
+      const YELLOW_START = 0.6; // 60% Health
+      const RED_START = 0.3;    // 30% Health
+      const FLOOR_FREQ = 700;   // Hz at 0% Health
       
-      // If healthy or missing context, open filter
+      // Intensity at the boundary between Yellow and Red (30% Health)
+      // 0.0 = Open, 1.0 = Closed. 0.6 means 60% of the filter range is applied at 30% health.
+      const RED_BOUNDARY_INTENSITY = 0.6; 
+
+      let intensity = 0;
+
       if (!ctx || integrity >= 1.0) {
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, transitionTime);
-          return;
+          // Full Health / System Reset
+          intensity = 0;
+      } else if (integrity > YELLOW_START) {
+          // Safe Zone (>60%)
+          intensity = 0;
+      } else if (integrity > RED_START) {
+          // Yellow Zone (60% -> 30%)
+          // Quadratic Curve (Slow start, accelerates towards Red)
+          const range = YELLOW_START - RED_START; // 0.3
+          const t = (YELLOW_START - integrity) / range; // 0.0 at Yellow Start, 1.0 at Red Start
+          intensity = (t * t) * RED_BOUNDARY_INTENSITY;
+      } else {
+          // Red Zone (30% -> 0%)
+          // Linear Curve (Steady decline to Floor)
+          const range = RED_START - 0.0;
+          const t = (RED_START - integrity) / range; // 0.0 at Red Start, 1.0 at Death
+          intensity = RED_BOUNDARY_INTENSITY + (t * (1.0 - RED_BOUNDARY_INTENSITY));
       }
 
-      // If integrity is above the warning threshold (Green), keep open
-      if (integrity > THRESHOLD) {
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
-          return;
-      }
-
-      // Logic:
-      // We are below 60%.
-      // We normalize the remaining health within this danger zone (0% to 60%).
-      const ratio = integrity / THRESHOLD;
-      
-      // Quadratic Curve: This makes the filter close faster than a linear slide.
-      // At 60% (Start): ratio=1.0, curve=1.0, intensity=0 (Open)
-      // At 30% (Critical): ratio=0.5, curve=0.25, intensity=0.75 (Heavily Muffled)
-      const curve = ratio * ratio; 
-      
-      const intensity = 1.0 - curve; 
-
+      // Map Intensity (0 to 1) to Frequency (MAX to FLOOR)
+      // Using logarithmic mapping for natural hearing response
       const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
-      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.1);
+      
+      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx ? ctx.currentTime : 0, transitionTime);
   }
 
   public getByteFrequencyData(array: Uint8Array) { if (this.analyser) this.analyser.getByteFrequencyData(array); }
