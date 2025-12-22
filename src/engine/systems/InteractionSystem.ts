@@ -31,8 +31,6 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.input.getCursor();
 
-    // REMOVED: World Click Logic (Tap to Damage)
-    
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         return; 
@@ -108,7 +106,8 @@ export class InteractionSystem implements IInteractionSystem {
                 this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
             }
 
-            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.CYAN.PRIMARY;
+            // --- COLOR SWAP HERE: Cyan -> Pink ---
+            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.PINK.PRIMARY;
             this.spawnRepairParticles(cursor, color);
         }
     }

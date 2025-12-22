@@ -12,6 +12,12 @@ export const PALETTE = {
     DEEP: '#350E3A',
     DIM: '#822B8A'
   },
+  // NEW: Service Pink (Updated to #FFCCFF)
+  PINK: {
+    PRIMARY: '#FFCCFF',
+    DIM: '#C21CC2',
+    DEEP: '#600B60'
+  },
   RED: {
     CRITICAL: '#FF003C',
     DIM: '#800010',
@@ -36,6 +42,7 @@ export const PALETTE = {
 // Collections for Procedural Generation
 export const COLOR_SETS = {
   PURPLE: [PALETTE.PURPLE.PRIMARY, '#D0A3D8', '#E0B0FF', '#7A2F8F', '#B57EDC'],
+  PINK:   [PALETTE.PINK.PRIMARY, PALETTE.PINK.DIM, '#FFB6FF', '#E0B0FF'],
   YELLOW: [PALETTE.YELLOW.SOFT, '#FFE5A0', '#FFA500', PALETTE.MONO.WHITE],
   RED:    [PALETTE.RED.CRITICAL, PALETTE.RED.LIGHT, PALETTE.RED.DIM],
   CYAN:   [PALETTE.CYAN.PRIMARY, PALETTE.CYAN.DIM, PALETTE.MONO.WHITE],

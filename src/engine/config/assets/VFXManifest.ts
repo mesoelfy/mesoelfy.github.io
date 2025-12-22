@@ -80,6 +80,7 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
     spread: 0.05 
   },
   
-  'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.CYAN, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
+  // REBOOT_HEAL is now PINK
+  'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.PINK, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
   'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
 };

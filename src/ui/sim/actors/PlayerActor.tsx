@@ -13,6 +13,7 @@ import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 const createCoreGeo = () => {
@@ -45,7 +46,10 @@ const createReticleGeo = () => {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C'), COL_RET_HEAL = new THREE.Color('#257171');
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
+
+// Updated to Deep Pink/Purple for Repair Reticle
+const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();

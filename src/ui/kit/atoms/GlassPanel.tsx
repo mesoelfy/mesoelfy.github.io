@@ -13,7 +13,6 @@ import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
 import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
-import { tailwindMerge } from '@/utils/tailwindMerge'; // Assumption: user might not have this, so I will stick to clsx logic carefully
 
 const DEFAULT_MAX_HEALTH = 100;
 
@@ -114,7 +113,8 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   let borderColor = "border-primary-green-dim/30";
   if (showCircuitLock) borderColor = "border-primary-green"; 
   else if (isDestroyed) borderColor = isInteracting ? "border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "border-critical-red animate-pulse"; 
-  else if (isInteracting && isDamaged) borderColor = "border-service-cyan shadow-[0_0_10px_#00F0FF]";
+  // REPLACED: Updated shadow to #FFCCFF
+  else if (isInteracting && isDamaged) borderColor = "border-service-pink shadow-[0_0_10px_#FFCCFF]";
   else if (isDamaged) borderColor = "border-alert-yellow/50";
 
   // Background Logic

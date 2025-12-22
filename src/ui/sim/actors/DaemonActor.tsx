@@ -8,6 +8,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
+import { PALETTE } from '@/engine/config/Palette';
 
 const MAX_DAEMONS = 5;
 const SQUISH_SCALE_Y = 0.4;
@@ -22,8 +23,9 @@ export const DaemonActor = () => {
       const items: { root: THREE.Group, cage: THREE.Mesh, orb: THREE.Mesh }[] = [];
       const cageGeo = new THREE.OctahedronGeometry(0.7, 0); 
       const orbGeo = new THREE.IcosahedronGeometry(0.25, 1);
-      const cageMat = new THREE.MeshBasicMaterial({ color: '#00F0FF', wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
-      const orbMat = new THREE.MeshBasicMaterial({ color: '#00F0FF', toneMapped: false });
+      // Updated hardcoded hex to PINK
+      const cageMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
+      const orbMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, toneMapped: false });
 
       for(let i=0; i<MAX_DAEMONS; i++) {
           const root = new THREE.Group();

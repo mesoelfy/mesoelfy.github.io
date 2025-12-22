@@ -67,7 +67,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
           statusText = "OFFLINE";
       }
   } else if (isInteracting && isDamaged) {
-      mainColor = "text-service-cyan";
+      // REPLACED: service-cyan -> service-pink
+      mainColor = "text-service-pink";
       statusText = "HEALING...";
   } else if (isDamaged) {
       mainColor = "text-alert-yellow"; 
@@ -82,7 +83,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
         isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
-        (isInteracting && isDamaged) ? "bg-service-cyan/10 border-service-cyan/50" :
+        // REPLACED: service-cyan -> service-pink
+        (isInteracting && isDamaged) ? "bg-service-pink/10 border-service-pink/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
     )}>
@@ -106,7 +108,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                             <motion.div key="destroyed" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"><Power size={10} className="text-latent-purple" /></motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
-                        <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-cyan rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
+                        // REPLACED: service-cyan -> service-pink
+                        <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-pink rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw size={10} className="text-black" /></motion.div>
                         </motion.div>
                     ) : isDamaged ? (
@@ -125,7 +128,8 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
-                        (isInteracting && isDamaged) ? "bg-service-cyan" :
+                        // REPLACED: service-cyan -> service-pink
+                        (isInteracting && isDamaged) ? "bg-service-pink" :
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}

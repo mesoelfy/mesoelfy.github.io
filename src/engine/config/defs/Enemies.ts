@@ -49,7 +49,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
     visual: { 
       model: 'OCTA', 
-      color: PALETTE.CYAN.PRIMARY, 
+      color: PALETTE.PINK.PRIMARY, // Updated to Pink
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }

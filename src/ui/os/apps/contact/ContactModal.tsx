@@ -50,7 +50,8 @@ export const ContactModal = () => {
         
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-cyan rounded-full blur-[100px]" />
+            {/* REPLACED: service-cyan -> service-pink */}
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-pink rounded-full blur-[100px]" />
         </div>
 
         <div className="flex items-center justify-between p-4 border-b border-primary-green/20 bg-black/40 backdrop-blur-sm z-10 shrink-0">

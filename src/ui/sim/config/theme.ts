@@ -4,7 +4,7 @@ export const GAME_THEME = {
   turret: {
     base: PALETTE.GREEN.PRIMARY,
     glow: PALETTE.GREEN.GLOW,
-    repair: PALETTE.CYAN.PRIMARY,
+    repair: PALETTE.PINK.PRIMARY, // Updated to Pink
   },
   bullet: {
     plasma: PALETTE.MONO.WHITE,
@@ -24,7 +24,7 @@ export const GAME_THEME = {
   vfx: {
     spark: PALETTE.MONO.WHITE,
     damage: PALETTE.RED.CRITICAL,
-    heal: PALETTE.CYAN.PRIMARY,
+    heal: PALETTE.PINK.PRIMARY, // Updated to Pink
     clash: PALETTE.YELLOW.SOFT,
   }
 };

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 22 09:47:37 CST 2025
+Generated on: Mon Dec 22 11:42:31 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -9037,14 +9037,11 @@ export const DaemonActor = () => {
 FILE: ./src/ui/sim/actors/InstancedActor.tsx
 =====================================
 import { useRef, useLayoutEffect } from 'react';
-import { useFrame, ThreeEvent } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
 import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { useGameContext } from '@/engine/state/GameContext';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { RenderModel } from '@/engine/ecs/components/RenderModel';
 
 const tempObj = new THREE.Object3D();
 const tempColor = new THREE.Color();
@@ -9055,7 +9052,7 @@ interface InstancedActorProps {
   material: THREE.Material;
   maxCount: number;
   renderKey?: string; 
-  interactive?: boolean; 
+  interactive?: boolean; // Kept for API compat, but ignored now
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -9064,9 +9061,8 @@ interface InstancedActorProps {
 
 export const InstancedActor = ({ 
     geometry, material, maxCount, 
-    interactive = false, renderKey 
+    renderKey 
 }: InstancedActorProps) => {
-  const { registry, events } = useGameContext();
   const meshRef = useRef<THREE.InstancedMesh>(null);
   
   useLayoutEffect(() => {
@@ -9139,45 +9135,12 @@ export const InstancedActor = ({
     spawnAttr.needsUpdate = true;
   });
 
-  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-      if (!interactive || e.instanceId === undefined) return;
-      e.stopPropagation();
-      
-      try {
-          const candidates = Array.from(registry.query({ all: [ComponentType.Transform, ComponentType.RenderModel] }));
-          
-          let matchIndex = 0;
-          let foundEntity = null;
-          
-          for (const ent of candidates) {
-              if (!ent.active) continue;
-              const model = ent.getComponent<RenderModel>(ComponentType.RenderModel);
-              if (!model) continue;
-              
-              const key = `${model.geometryId}|${model.materialId}`;
-              if (key === renderKey) {
-                  if (matchIndex === e.instanceId) {
-                      foundEntity = ent;
-                      break;
-                  }
-                  matchIndex++;
-              }
-          }
-
-          if (foundEntity) {
-              events.emit(GameEvents.ENEMY_DAMAGED, { id: foundEntity.id as number, damage: 9999, type: 'TAP' });
-          }
-      } catch (err) {
-          console.warn("Interaction Failed:", err);
-      }
-  };
-
   return (
     <instancedMesh 
       ref={meshRef} 
       args={[geometry, material, maxCount]} 
       frustumCulled={false}
-      onPointerDown={interactive ? handlePointerDown : undefined}
+      pointerEvents="none" 
     />
   );
 };
@@ -11253,6 +11216,18 @@ export class UnifiedEventService implements IGameEventService {
         this.fastBus.camShake(p.amount);
         return;
     }
+    
+    // --- OPTIMIZATION START ---
+    if (event === GameEvents.ENEMY_DAMAGED) {
+        const p = payload as GameEventPayloads[GameEvents.ENEMY_DAMAGED];
+        // Route purely visual damage feedback (flash) to fast bus.
+        // If logic listeners exist on Slow Bus for DAMAGE, they will be bypassed here!
+        // Currently only VisualSystem listens to this.
+        this.fastBus.flashEntity(p.id);
+        return;
+    }
+    // --- OPTIMIZATION END ---
+
     this.slowBus.emit(event, payload);
   }
 
@@ -11417,7 +11392,16 @@ import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 export const FLOAT_SCALAR = 100;
 const EVENT_STRIDE = 5;
 
-export enum FastEventType { NONE = 0, PLAY_SOUND = 1, SPAWN_FX = 2, CAM_SHAKE = 3, HIT_STOP = 4, DUCK_MUSIC = 5 }
+export enum FastEventType { 
+  NONE = 0, 
+  PLAY_SOUND = 1, 
+  SPAWN_FX = 2, 
+  CAM_SHAKE = 3, 
+  HIT_STOP = 4, 
+  DUCK_MUSIC = 5,
+  ENTITY_FLASH = 6 // NEW
+}
+
 export enum SoundCode { NONE = 0, FX_PLAYER_FIRE = 1, FX_IMPACT_LIGHT = 2, FX_IMPACT_HEAVY = 3, FX_ENEMY_FIRE = 4, UI_CLICK = 5, UI_HOVER = 6, LOOP_DRILL = 7, FX_REBOOT_SUCCESS = 8, FX_LEVEL_UP = 9, LOOP_HEAL = 10, LOOP_WARNING = 11, FX_TELEPORT = 12, FX_EXHAUST_SIZZLE = 13, FX_PLAYER_DEATH = 14 }
 export enum FXCode { NONE = 0, EXPLOSION_PURPLE = 1, EXPLOSION_YELLOW = 2, EXPLOSION_RED = 3, IMPACT_WHITE = 4, IMPACT_RED = 5, DRILL_SPARKS = 6, HUNTER_RECOIL = 7, CLASH_YELLOW = 8, EXPLOSION_PURPLE_DIR = 9, EXPLOSION_YELLOW_DIR = 10, EXPLOSION_RED_DIR = 11, REBOOT_HEAL = 12, PURGE_BLAST = 13, ENGINE_FLARE = 14 }
 
@@ -11462,6 +11446,9 @@ export class FastEventBusImpl implements IFastEventService {
   public hitStop(ms: number) { this.emitRaw(FastEventType.HIT_STOP, ms); }
   public duckMusic(intensity: number, duration: number) {
     this.emitRaw(FastEventType.DUCK_MUSIC, Math.round(intensity * FLOAT_SCALAR), Math.round(duration * FLOAT_SCALAR));
+  }
+  public flashEntity(id: number) {
+    this.emitRaw(FastEventType.ENTITY_FLASH, id);
   }
   public getCursor(): number { return this.cursor; }
   public clear() { this.cursor = 0; }
@@ -11936,7 +11923,13 @@ export class TransformData extends Component {
     public x: number = 0, 
     public y: number = 0, 
     public rotation: number = 0, 
-    public scale: number = 1.0
+    public scale: number = 1.0,
+    
+    // Previous state for interpolation
+    public prevX: number = 0,
+    public prevY: number = 0,
+    public prevRotation: number = 0,
+    public prevScale: number = 1.0
   ) {
     super();
   }
@@ -11946,6 +11939,13 @@ export class TransformData extends Component {
     this.y = data.y ?? 0;
     this.rotation = data.rotation ?? 0;
     this.scale = data.scale ?? 1.0;
+    
+    // Reset previous to current to prevent jump on spawn
+    this.prevX = this.x;
+    this.prevY = this.y;
+    this.prevRotation = this.rotation;
+    this.prevScale = this.scale;
+    
     return this;
   }
 }
@@ -14061,36 +14061,41 @@ export class AudioMixer {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
-      // THRESHOLD SET TO 60% (Matching UI Yellow State)
-      const THRESHOLD = 0.6;
-      const FLOOR_FREQ = 800; // Muffled but audible
+      const YELLOW_START = 0.6; // 60% Health
+      const RED_START = 0.3;    // 30% Health
+      const FLOOR_FREQ = 700;   // Hz at 0% Health
       
-      // If healthy or missing context, open filter
+      // Intensity at the boundary between Yellow and Red (30% Health)
+      // 0.0 = Open, 1.0 = Closed. 0.6 means 60% of the filter range is applied at 30% health.
+      const RED_BOUNDARY_INTENSITY = 0.6; 
+
+      let intensity = 0;
+
       if (!ctx || integrity >= 1.0) {
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx?.currentTime || 0, transitionTime);
-          return;
+          // Full Health / System Reset
+          intensity = 0;
+      } else if (integrity > YELLOW_START) {
+          // Safe Zone (>60%)
+          intensity = 0;
+      } else if (integrity > RED_START) {
+          // Yellow Zone (60% -> 30%)
+          // Quadratic Curve (Slow start, accelerates towards Red)
+          const range = YELLOW_START - RED_START; // 0.3
+          const t = (YELLOW_START - integrity) / range; // 0.0 at Yellow Start, 1.0 at Red Start
+          intensity = (t * t) * RED_BOUNDARY_INTENSITY;
+      } else {
+          // Red Zone (30% -> 0%)
+          // Linear Curve (Steady decline to Floor)
+          const range = RED_START - 0.0;
+          const t = (RED_START - integrity) / range; // 0.0 at Red Start, 1.0 at Death
+          intensity = RED_BOUNDARY_INTENSITY + (t * (1.0 - RED_BOUNDARY_INTENSITY));
       }
 
-      // If integrity is above the warning threshold (Green), keep open
-      if (integrity > THRESHOLD) {
-          this.masterFilter.frequency.setTargetAtTime(this.MAX_FREQ, ctx.currentTime, 0.1);
-          return;
-      }
-
-      // Logic:
-      // We are below 60%.
-      // We normalize the remaining health within this danger zone (0% to 60%).
-      const ratio = integrity / THRESHOLD;
-      
-      // Quadratic Curve: This makes the filter close faster than a linear slide.
-      // At 60% (Start): ratio=1.0, curve=1.0, intensity=0 (Open)
-      // At 30% (Critical): ratio=0.5, curve=0.25, intensity=0.75 (Heavily Muffled)
-      const curve = ratio * ratio; 
-      
-      const intensity = 1.0 - curve; 
-
+      // Map Intensity (0 to 1) to Frequency (MAX to FLOOR)
+      // Using logarithmic mapping for natural hearing response
       const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
-      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.1);
+      
+      this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx ? ctx.currentTime : 0, transitionTime);
   }
 
   public getByteFrequencyData(array: Uint8Array) { if (this.analyser) this.analyser.getByteFrequencyData(array); }
@@ -16026,6 +16031,7 @@ export class HealthSystem implements IGameSystem {
   public maxPlayerHealth: number = PLAYER_CONFIG.maxHealth;
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
+  private unsubs: (() => void)[] = [];
   
   constructor(
     private events: IGameEventService,
@@ -16034,11 +16040,11 @@ export class HealthSystem implements IGameSystem {
   ) {
     this.reset();
     
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => this.tickReboot(p.amount));
-    this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount));
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_REBOOT_TICK, (p) => this.tickReboot(p.amount)));
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount)));
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         this.damagePlayer(p.damage);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -16063,7 +16069,6 @@ export class HealthSystem implements IGameSystem {
             this.audio.playSound('fx_player_death');
         }
     } else {
-        // Damage while down reduces reboot progress
         this.playerRebootProgress = Math.max(0, this.playerRebootProgress - (amount * 2));
     }
   }
@@ -16094,7 +16099,10 @@ export class HealthSystem implements IGameSystem {
       this.isGameOver = false;
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -16132,13 +16140,16 @@ export class InteractionSystem implements IInteractionSystem {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
     
+    const cursor = this.input.getCursor();
+
+    // REMOVED: World Click Logic (Tap to Damage)
+    
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         return; 
     }
     
-    const cursor = this.input.getCursor();
-    
+    // Handle Continuous Interaction (Repair/Revive)
     if (this.gameSystem.playerHealth <= 0) {
         this.handleRevival(cursor, time);
         if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
@@ -16296,6 +16307,8 @@ import { ParticleShape } from '@/engine/ecs/types';
 import { PanelId } from '@/engine/config/PanelConfig';
 
 export class VFXSystem implements IGameSystem {
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
@@ -16307,28 +16320,28 @@ export class VFXSystem implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.SPAWN_FX, (p) => {
         this.executeRecipe(p.type, p.x, p.y, p.angle);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         const x = p.x !== undefined ? p.x : this.getPanelX(p.id);
         this.executeRecipe('REBOOT_HEAL', x, 0);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, () => {
         this.shakeSystem.addTrauma(0.75);
         this.timeSystem.freeze(0.15);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.shakeSystem.addTrauma(1.0);
         this.timeSystem.freeze(0.5);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -16361,7 +16374,10 @@ export class VFXSystem implements IGameSystem {
       return rect ? rect.x : 0;
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
       const count = this.randomRange(2, 3);
@@ -16555,8 +16571,12 @@ export class ParticleSystem implements IParticleSystem {
   update(delta: number, time: number): void {
     if (this.count === 0) return;
 
-    // Use centralized constant
-    const friction = PhysicsConfig.PARTICLES.FRICTION;
+    // Normalize friction for variable timestep
+    // PhysicsConfig.PARTICLES.FRICTION (e.g. 0.95) is tuned for 60Hz (16ms)
+    // Formula: adjustedFriction = baseFriction ^ (delta / fixedDelta)
+    const baseFriction = PhysicsConfig.PARTICLES.FRICTION;
+    const timeRatio = delta * 60; // ratio of current frame to 60fps frame
+    const friction = Math.pow(baseFriction, timeRatio);
 
     let i = 0;
     while (i < this.count) {
@@ -17014,7 +17034,7 @@ interface PurgeState {
 
 export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
-  private unsubPurge: () => void;
+  private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
   
   private purgeState: PurgeState = {
@@ -17028,10 +17048,10 @@ export class WeaponSystem implements IGameSystem {
     private events: IGameEventService,
     private config: typeof ConfigService
   ) {
-    this.unsubPurge = this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
         if (p.option === 'NOVA') this.triggerNova();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -17114,7 +17134,6 @@ export class WeaponSystem implements IGameSystem {
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
-          // --- RESTORED PRISMATIC SPIRAL LOGIC ---
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.6); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
@@ -17172,7 +17191,10 @@ export class WeaponSystem implements IGameSystem {
       return null;
   }
 
-  teardown(): void { this.unsubPurge(); }
+  teardown(): void { 
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -17284,6 +17306,15 @@ const qSpin = new THREE.Quaternion();
 const qAim = new THREE.Quaternion();
 const qFinal = new THREE.Quaternion();
 
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const lerpAngle = (a: number, b: number, t: number) => {
+    const diff = b - a;
+    // Normalize diff to -PI to +PI
+    const d = ((diff % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    return a + d * t;
+};
+
 export class RenderSystem implements IGameSystem {
   // CACHED QUERY
   private renderQuery = new Query({ 
@@ -17292,7 +17323,7 @@ export class RenderSystem implements IGameSystem {
 
   constructor(private registry: IEntityRegistry) {}
 
-  update(delta: number, time: number): void {
+  update(delta: number, time: number, alpha: number = 1.0): void {
     MaterialFactory.updateUniforms(time);
     RenderBuffer.reset();
 
@@ -17315,9 +17346,9 @@ export class RenderSystem implements IGameSystem {
       
       RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
 
-      // --- 1. Position ---
-      let vx = transform.x;
-      let vy = transform.y;
+      // --- 1. Position (Interpolated) ---
+      let vx = lerp(transform.prevX, transform.x, alpha);
+      let vy = lerp(transform.prevY, transform.y, alpha);
       const vz = visual ? visual.offsetZ : 0;
       
       if (effect && effect.shudder > 0) {
@@ -17331,10 +17362,12 @@ export class RenderSystem implements IGameSystem {
           vy += visual.offsetY;
       }
 
-      // --- 2. Scale ---
-      let sX = transform.scale;
-      let sY = transform.scale;
-      let sZ = transform.scale;
+      // --- 2. Scale (Interpolated) ---
+      let baseScale = lerp(transform.prevScale, transform.scale, alpha);
+      
+      let sX = baseScale;
+      let sY = baseScale;
+      let sZ = baseScale;
 
       if (visual) {
           sX *= visual.scale * visual.baseScaleX * visual.dynamicScaleX;
@@ -17342,10 +17375,14 @@ export class RenderSystem implements IGameSystem {
           sZ *= visual.scale * visual.baseScaleZ * visual.dynamicScaleZ;
       }
 
-      // --- 3. Rotation ---
+      // --- 3. Rotation (Interpolated) ---
       const visRot = visual ? visual.rotation : 0;
+      
+      // Interpolate physics rotation to avoid snapping
+      const physicsRot = lerpAngle(transform.prevRotation, transform.rotation, alpha);
+
       qSpin.setFromAxisAngle(axisY, visRot);
-      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
+      qAim.setFromAxisAngle(axisZ, physicsRot - Math.PI/2);
       qFinal.copy(qAim).multiply(qSpin);
 
       // --- 4. Color ---
@@ -17569,7 +17606,8 @@ import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 
 export class AudioDirector implements IGameSystem {
-  
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private panelSystem: IPanelSystem,
     private events: IGameEventService, // Unified
@@ -17579,44 +17617,36 @@ export class AudioDirector implements IGameSystem {
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
         else this.playSpatial(p.id, 'fx_reboot_success');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
         this.audio.duckMusic(0.8, 1.5); 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
         this.audio.playSound('fx_level_up');
-    });
+    }));
 
-    // We no longer subscribe to PLAY_SOUND here for slow path,
-    // because UnifiedEventService routes standard playSound calls to the fast bus if they match a SoundCode.
-    // However, if we emit a sound that IS NOT in the SoundCode list (unlikely for game logic),
-    // it would fall through to the slow bus.
-    // For completeness, we can keep it as a fallback:
-    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
-        // Only play if it wasn't handled by fast path (optimization)
-        // In this architecture, UnifiedService only emits slow event if NOT fast code.
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-    // Cast to access the optimized polling method
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
         unified.processFastEvents((id, a1, a2, a3, a4) => {
@@ -17646,7 +17676,10 @@ export class AudioDirector implements IGameSystem {
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -17657,18 +17690,14 @@ import { IGameSystem, IInputService } from '@/engine/interfaces';
 
 export class InputSystem implements IGameSystem, IInputService {
   private _cursor = { x: 0, y: 0 };
-  
-  // Bounds for clamping
   private _bounds = { width: 30, height: 20 }; 
 
-  update(delta: number, time: number): void {
-    // No-op for desktop mouse input (handled via updateCursor event in GameDirector)
-  }
+  // No constructor listener needed anymore since we don't track world clicks
+
+  update(delta: number, time: number): void {}
 
   teardown(): void {}
 
-  // --- IInputService Implementation ---
-  
   public updateCursor(x: number, y: number) {
     this._cursor.x = x;
     this._cursor.y = y;
@@ -17685,6 +17714,10 @@ export class InputSystem implements IGameSystem, IInputService {
 
   public isPressed(action: string): boolean {
     return false;
+  }
+
+  public popClick(): boolean {
+      return false; // Stubbed out
   }
 }
 
@@ -17720,6 +17753,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   private elements = new Map<string, HTMLElement>();
   private rectCache = new Map<PanelId, WorldRect>();
   private stressMap = new Map<PanelId, number>();
+  private unsubs: (() => void)[] = [];
 
   public get systemIntegrity() {
       return useGameStore.getState().systemIntegrity;
@@ -17742,12 +17776,12 @@ export class PanelRegistrySystem implements IPanelSystem {
         });
     }
 
-    this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
         const current = this.stressMap.get(p.id) || 0;
         this.stressMap.set(p.id, Math.min(3.0, current + 0.5));
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'RESTORE') {
             const restoredCount = useGameStore.getState().restoreAllPanels();
             if (restoredCount > 0) {
@@ -17755,15 +17789,14 @@ export class PanelRegistrySystem implements IPanelSystem {
                 this.audio.playSound('fx_reboot_success'); 
             }
         }
-    });
+    }));
 
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this.destroyAll();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-      // Decay stress over time
       for (const [id, stress] of this.stressMap.entries()) {
           if (stress > 0) {
               this.stressMap.set(id, Math.max(0, stress * 0.9));
@@ -17776,6 +17809,8 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
       this.observer?.disconnect();
       this.entityMap.clear();
       this.elements.clear();
@@ -17956,16 +17991,17 @@ export class ProgressionSystem implements IGameSystem {
   public upgradePoints: number = 0;
   
   public activeUpgrades: Partial<Record<UpgradeOption, number>> = {};
+  private unsubs: (() => void)[] = [];
 
   constructor(private events: IGameEventService) {
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         this.applyUpgrade(p.option as UpgradeOption);
-    });
+    }));
     
-    this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
         this.addScore(1);
         this.addXp(10);
-    });
+    }));
     
     this.reset();
   }
@@ -17992,7 +18028,6 @@ export class ProgressionSystem implements IGameSystem {
       if (this.upgradePoints > 0) {
           this.upgradePoints--;
           
-          // Instant-use options don't increment a level counter
           if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
               return;
           }
@@ -18014,7 +18049,10 @@ export class ProgressionSystem implements IGameSystem {
       };
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -18028,6 +18066,7 @@ import { ProgressionSystem } from './ProgressionSystem';
 
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private healthSys: HealthSystem,
@@ -18036,15 +18075,14 @@ export class GameStateSystem implements IGameStateSystem {
     private events: IGameEventService,
     private audio: IAudioService
   ) {
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'REPAIR_NANITES') {
-            // Buffed: Now heals 75% of max health
             this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
             this.audio.playSound('ui_optimal');
         } else if (p.option === 'DAEMON') {
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -18066,6 +18104,8 @@ export class GameStateSystem implements IGameStateSystem {
   }
 
   teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
       this.healthSys.reset();
       this.progSys.reset();
   }
@@ -18354,6 +18394,8 @@ import { Faction } from '@/engine/ecs/types';
 import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
+  private unsubs: (() => void)[] = [];
+
   constructor(
     private registry: IEntityRegistry,
     private spawner: IEntitySpawner,
@@ -18363,7 +18405,7 @@ export class BehaviorSystem implements IGameSystem {
     private audio: IAudioService,
     private events: IGameEventService
   ) {
-    events.subscribe(GameEvents.SPAWN_DAEMON, () => {
+    this.unsubs.push(events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
         const orbital = e.getComponent<OrbitalData>(ComponentType.Orbital);
         if (orbital) {
@@ -18371,7 +18413,7 @@ export class BehaviorSystem implements IGameSystem {
             orbital.speed = 1.5 + Math.random() * 1.0; 
             orbital.angle = Math.random() * Math.PI * 2;
         }
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -18425,7 +18467,10 @@ export class BehaviorSystem implements IGameSystem {
     }
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -18578,6 +18623,7 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private spawner: IEntitySpawner,
@@ -18585,7 +18631,7 @@ export class WaveSystem implements IGameSystem {
     private events: IGameEventService
   ) {
     this.reset();
-    this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest());
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest()));
   }
 
   private reset() {
@@ -18643,9 +18689,7 @@ export class WaveSystem implements IGameSystem {
                       current: AI_STATE.SPAWN,
                       timers: {} 
                   },
-                  // FIX: Set scale to 1.0. VisualSystem handles the "grow from 0" animation dynamically.
                   [ComponentType.RenderTransform]: { scale: 1.0 },
-                  // Explicitly zero out spawn params to trigger the logic kickstart
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
           }
@@ -18806,6 +18850,8 @@ export class WaveSystem implements IGameSystem {
 
   teardown(): void {
     this.reset();
+    this.unsubs.forEach(u => u());
+    this.unsubs = [];
   }
 }
 
@@ -18826,16 +18872,15 @@ import { Query } from '@/engine/ecs/Query';
 
 export class LifeCycleSystem implements IGameSystem {
   private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
+  private unsubs: (() => void)[] = [];
 
   constructor(
     private registry: IEntityRegistry,
     private events: IGameEventService
   ) {
-    // ZEN_MODE_ENABLED purgeHostiles() call removed to allow Nova to handle destruction.
-    
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.purgeSummons();
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
@@ -18886,7 +18931,10 @@ export class LifeCycleSystem implements IGameSystem {
       }
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -18903,11 +18951,11 @@ import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 import { StateColor } from '@/engine/ecs/components/StateColor';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { GameEvents } from '@/engine/signals/GameEvents';
 import { Query } from '@/engine/ecs/Query';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType } from '@/engine/signals/FastEventBus';
 import * as THREE from 'three';
 
-// Easing Helper: Elastic Out
 function easeOutElastic(t: number): number {
   const c4 = (2 * Math.PI) / 3;
   if (t === 0) return 0;
@@ -18925,18 +18973,27 @@ export class VisualSystem implements IGameSystem {
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private interactionSystem: IInteractionSystem,
-    events: IGameEventService
+    private events: IGameEventService
   ) {
-    events.subscribe(GameEvents.ENEMY_DAMAGED, (p) => {
-        const entity = this.registry.getEntity(p.id);
-        if (entity) {
-            const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-            if (effect) effect.flash = 1.0; 
-        }
-    });
+    // Removed slow subscription to ENEMY_DAMAGED
   }
 
   update(delta: number, time: number): void {
+    // 1. POLL FAST BUS FOR FLASH EVENTS
+    const unified = this.events as UnifiedEventService;
+    if (unified && typeof unified.processFastEvents === 'function') {
+        unified.processFastEvents((id, a1) => {
+            if (id === FastEventType.ENTITY_FLASH) {
+                const entityId = a1;
+                const entity = this.registry.getEntity(entityId);
+                if (entity) {
+                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+                    if (effect) effect.flash = 1.0; 
+                }
+            }
+        });
+    }
+
     const CFG = VISUAL_CONFIG.DEFORMATION;
     const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
     const RENDER_CFG = VISUAL_CONFIG.RENDER;
@@ -18986,7 +19043,6 @@ export class VisualSystem implements IGameSystem {
               }
           }
 
-          // Applied directly per-tick (no delta multiplication) to restore original feel
           render.rotation += spinSpeed;
           render.scale = 1.0; 
 
@@ -19002,9 +19058,7 @@ export class VisualSystem implements IGameSystem {
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // --- SPAWN ANIMATION LOGIC ---
           if (effect.spawnProgress < 1.0) {
-              // Advance progress
               if (effect.spawnVelocity > 0) {
                   effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
               }
@@ -19025,7 +19079,6 @@ export class VisualSystem implements IGameSystem {
               render.offsetY = 0;
           }
 
-          // Effect Decay
           if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
           if (effect.flash > 0) {
               effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
@@ -19033,13 +19086,11 @@ export class VisualSystem implements IGameSystem {
               dX += bump; dY += bump; dZ += bump;
           }
 
-          // Pulse
           if (effect.pulseSpeed > 0) {
               const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
-          // Elasticity
           if (motion && effect.elasticity > 0.01 && effect.spawnProgress >= 1.0) {
               const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
               const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
@@ -19111,6 +19162,13 @@ export class PhysicsSystem implements IPhysicsSystem {
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
       
       if (transform && motion) {
+        // SNAPSHOT for Interpolation
+        transform.prevX = transform.x;
+        transform.prevY = transform.y;
+        transform.prevRotation = transform.rotation;
+        transform.prevScale = transform.scale;
+
+        // INTEGRATE
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
         
@@ -20102,7 +20160,6 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // FIX: Removed Game Over check here. HealthSystem handles the state transition and events.
     if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
         gameStore.stopGame();
     }
@@ -20122,8 +20179,10 @@ export class GameEngineCore implements IGameSystem {
     }
 
     const fixedStep = WorldConfig.time.fixedDelta;
+    
+    // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
     while (this.accumulator >= fixedStep) {
-        for (let phase = 0; phase < this.systems.length; phase++) {
+        for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
             const phaseSystems = this.systems[phase];
             for (let i = 0; i < phaseSystems.length; i++) {
                 try {
@@ -20137,6 +20196,20 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
+    // --- 2. RENDER UPDATE LOOP (Variable Timestep) ---
+    const alpha = this.accumulator / fixedStep;
+    
+    const renderSystems = this.systems[SystemPhase.RENDER];
+    for (let i = 0; i < renderSystems.length; i++) {
+        try {
+            renderSystems[i].update(renderDelta, renderTime, alpha);
+        } catch (e: any) {
+            console.error(`ERR_PHASE_RENDER:`, e);
+        }
+    }
+
+    // --- 3. CLEANUP ---
+    // Clear events AFTER Render systems (VFXSystem) have processed them
     if (this.fastEventBus) this.fastEventBus.clear();
   }
 
@@ -20180,7 +20253,7 @@ export enum SystemPhase {
 }
 
 export interface IGameSystem {
-  update(delta: number, time: number): void;
+  update(delta: number, time: number, alpha?: number): void;
   teardown(): void;
 }
 
@@ -20217,6 +20290,7 @@ export interface IFastEventService {
   camShake(amount: number): void;
   hitStop(ms: number): void;
   duckMusic(intensity: number, duration: number): void;
+  flashEntity(id: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
   clear(): void;
   getCursor(): number;
@@ -20295,7 +20369,7 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: AudioKey, pan?: number): void;
   playAmbience(key: AudioKey): void;
-  nextTrack(): void; // NEW
+  nextTrack(): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;
@@ -20310,6 +20384,7 @@ export interface IInputService {
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
   updateBounds(width: number, height: number): void; 
+  popClick(): boolean; // NEW
 }
 
 export interface IParticleSystem extends IGameSystem {

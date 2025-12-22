@@ -38,6 +38,10 @@ const config: Config = {
           dim: '#822B8A',
           deep: '#350E3A',
         },
+        'service-pink': {
+          DEFAULT: '#FFCCFF', // Updated to #FFCCFF
+          dim: '#C21CC2',
+        },
         'service-cyan': {
           DEFAULT: '#00F0FF', 
           dim: '#008ba3',

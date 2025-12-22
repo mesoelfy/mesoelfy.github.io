@@ -22,7 +22,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.CYAN.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    // Updated to Pink for Homing
+    visual: { model: 'OCTA', color: PALETTE.PINK.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -52,7 +53,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.DAEMON_ORB]: {
     id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
-    visual: { model: 'SPHERE', color: PALETTE.CYAN.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    // Updated to Pink Dim
+    visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
     tags: [Tag.BULLET, Tag.PLAYER] 
   }

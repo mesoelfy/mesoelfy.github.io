@@ -202,11 +202,12 @@ export const MobileGateModal = ({ isOpen, variant, onOverride }: Props) => {
                         onClick={onOverride}
                         className={clsx(
                             "group w-full relative overflow-hidden py-4 bg-transparent border transition-colors cursor-none",
-                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-cyan/30 hover:border-service-cyan"
+                            // REPLACED: service-cyan -> service-pink
+                            isMobile ? "border-white/20 hover:border-alert-yellow/50" : "border-service-pink/30 hover:border-service-pink"
                         )}
                         onMouseEnter={() => AudioSystem.playHover()}
                     >
-                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-cyan/10")} />
+                        <div className={clsx("absolute inset-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300", isMobile ? "bg-alert-yellow/10" : "bg-service-pink/10")} />
                         
                         <div className="relative flex items-center justify-center gap-3">
                             <span className="text-alert-yellow font-mono text-[10px] animate-pulse">⚠</span>
