@@ -127,11 +127,14 @@ const DangerTriangle = () => (
         animate={{ 
             opacity: 1, 
             scale: 1,
-            color: ['#FF003C', '#eae747', '#FF003C'] 
+            y: [-5, 5, -5], // Hover effect
+            color: ['#FF003C', '#eae747', '#FF003C'] // Slow cycle
         }}
         transition={{ 
-            color: { duration: 0.5, repeat: Infinity, ease: "linear" },
-            scale: { type: "spring", bounce: 0.5 }
+            y: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+            color: { duration: 2, repeat: Infinity, ease: "linear" }, // Slower color cycle
+            scale: { type: "spring", bounce: 0.5 },
+            opacity: { duration: 0.5 }
         }}
         className="text-critical-red"
     >
@@ -174,7 +177,7 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                 <div className="relative w-full flex-1">
                     <DotGridBackground /> 
                     <div className="p-4 pt-2 h-44 flex flex-col justify-start text-sm font-mono relative z-10 leading-relaxed">
-                        {logsToShow.map((line, i) => <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} isActive={i === step && !isBreaching} isPast={i < step} />)}
+                        {logsToShow.map((line, i) => <TypedLog key={i} text={line.text} color={line.color} speed={line.speed} showDots={line.hasDots} blinkCycles={line.blinkCycles} isActive={i === step && !isBreaching} isPast={i < step} />)}
                     </div>
                 </div>
             </div>

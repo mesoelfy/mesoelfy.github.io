@@ -20,6 +20,9 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
     const cols = Math.floor(canvas.width / 20);
     const ypos = Array(cols).fill(0).map(() => Math.random() * -1000);
 
+    // Persist randomness per column to avoid flickering colors
+    const colRandoms = Array(cols).fill(0).map(() => Math.random());
+
     const matrixEffect = () => {
       const mode = useStore.getState().graphicsMode;
       if (mode === 'POTATO') {
@@ -33,31 +36,39 @@ export const useMatrixRain = (canvasRef: React.RefObject<HTMLCanvasElement>, isV
 
       const currentStep = stepRef.current;
       
-      // COLOR LOGIC:
-      // Step 0-2: Green
-      // Step 3 (Unsafe): Red
-      // Step 4 (Bypass): Purple
-      // Step 5+ (Decrypted): Green
-      let baseColor = '#0F0'; // Default Green
-      let shadowColor = '#0F0';
-      let shadowBlur = 0;
-
-      if (currentStep === 3) {
-          baseColor = '#FF003C'; // Critical Red
-          shadowColor = '#FF003C';
-          shadowBlur = 8;
-      } else if (currentStep === 4) {
-          baseColor = '#9E4EA5'; // Latent Purple
-          shadowColor = '#9E4EA5';
-          shadowBlur = 8;
-      }
-
       ypos.forEach((y, ind) => {
         const charSet = Math.random() > 0.5 ? 0x16A0 : 0x2200; 
         const text = String.fromCharCode(charSet + Math.random() * 64);
         const x = ind * 20;
+        const rand = colRandoms[ind];
 
-        ctx.fillStyle = baseColor;
+        let color = '#0F0'; // Default Green
+        let shadowColor = '#0F0';
+        let shadowBlur = 0;
+
+        if (currentStep === 3) {
+            // RED PHASE: 70% Red, 30% Green
+            if (rand < 0.7) {
+                color = '#FF003C';
+                shadowColor = '#FF003C';
+                shadowBlur = 8;
+            }
+        } else if (currentStep === 4) {
+            // PURPLE PHASE: 30% Green, 40% Purple, 30% Red
+            if (rand < 0.3) {
+                color = '#0F0';
+            } else if (rand < 0.7) { // 0.3 to 0.7 = 40%
+                color = '#9E4EA5';
+                shadowColor = '#9E4EA5';
+                shadowBlur = 8;
+            } else { // 0.7 to 1.0 = 30%
+                color = '#FF003C';
+                shadowColor = '#FF003C';
+                shadowBlur = 8;
+            }
+        }
+
+        ctx.fillStyle = color;
         ctx.shadowBlur = shadowBlur;
         ctx.shadowColor = shadowColor;
         ctx.fillText(text, x, y);

@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
+import { clsx } from 'clsx';
 
 interface TypedLogProps {
   text: string;
   color: string;
   speed: number;
   showDots: boolean;
+  blinkCycles?: number;
   isActive: boolean;
   isPast: boolean;
 }
 
-export const TypedLog = ({ text, color, speed = 20, showDots = false, isActive = false, isPast = false }: TypedLogProps) => {
+export const TypedLog = ({ text, color, speed = 20, showDots = false, blinkCycles = 0, isActive = false, isPast = false }: TypedLogProps) => {
   const [displayed, setDisplayed] = useState("");
   const [isDoneTyping, setIsDoneTyping] = useState(false);
   
@@ -33,10 +35,29 @@ export const TypedLog = ({ text, color, speed = 20, showDots = false, isActive =
     setIsDoneTyping(true);
   }
 
+  // Dot Logic
+  // If active: blinking
+  // If past: solid
+  const showBlinking = isDoneTyping && showDots && isActive && blinkCycles > 0;
+  const showSolid = isDoneTyping && showDots && (isPast || (isActive && blinkCycles === 0));
+
   return (
     <div className={`whitespace-nowrap font-mono ${color} flex items-center shrink-0`}>
       <span>{displayed}</span>
-      {isDoneTyping && showDots && <span>{isPast ? '...' : (Math.floor(Date.now() / 300) % 4 === 0 ? '' : '...')}</span>}
+      
+      {/* Blinking Dots */}
+      {showBlinking && (
+          <span 
+            className="animate-pulse" 
+            style={{ animationIterationCount: blinkCycles, animationDuration: '1s' }}
+          >
+            ...
+          </span>
+      )}
+
+      {/* Solid Dots */}
+      {showSolid && <span>...</span>}
+
       {isActive && <span className="ml-1 animate-cursor-blink text-primary-green font-bold">_</span>}
     </div>
   );
