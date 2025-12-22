@@ -34,6 +34,12 @@ export class AudioDirector implements IGameSystem {
         this.audio.duckMusic(0.8, 1.5); 
     });
 
+    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+        const intensity = p.damage > 5 ? 0.8 : 0.6;
+        const duration = p.damage > 5 ? 1.0 : 0.5;
+        this.audio.duckMusic(intensity, duration);
+    });
+
     this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
@@ -41,7 +47,14 @@ export class AudioDirector implements IGameSystem {
     });
 
     this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'PURGE') this._isPurging = true;
+        // FIX: Only trigger the cinematic filter riser if we are in Game Over state (Zen Bomb)
+        // Standard gameplay purges should NOT clear the low-pass filter.
+        const isGameOver = this.panelSystem.systemIntegrity <= 0;
+        
+        if (p.option === 'PURGE' && isGameOver) {
+            this._isPurging = true;
+        }
+        
         this.audio.playSound('fx_level_up');
     });
 
@@ -63,16 +76,12 @@ export class AudioDirector implements IGameSystem {
 
   update(delta: number, time: number): void {
     // Determine Target Integrity for Filter
-    // 1. Purging: Force Open (1.0) with Slow Transition
-    // 2. Zen Mode: Force Open (1.0)
-    // 3. Standard: Use Panel System Integrity
-    
     let integrity = this.panelSystem.systemIntegrity / 100;
     let timeConstant = 0.05; // Default fast transition
 
     if (this._isPurging) {
         integrity = 1.0;
-        timeConstant = 2.0; // Slow cinematic riser during purge
+        timeConstant = 2.0; // Slow cinematic riser during Zen purge
     } else if (this._isZen) {
         integrity = 1.0;
     }
@@ -80,7 +89,6 @@ export class AudioDirector implements IGameSystem {
     const mixer = (this.audio as any).mixer as AudioMixer;
     if (mixer) mixer.updateMasterFilter(integrity, timeConstant);
 
-    // Fast Event Processing
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
         unified.processFastEvents((id, a1, a2, a3, a4) => {
