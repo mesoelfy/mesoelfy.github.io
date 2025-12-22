@@ -33,6 +33,13 @@ export class PhysicsSystem implements IPhysicsSystem {
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
       
       if (transform && motion) {
+        // SNAPSHOT for Interpolation
+        transform.prevX = transform.x;
+        transform.prevY = transform.y;
+        transform.prevRotation = transform.rotation;
+        transform.prevScale = transform.scale;
+
+        // INTEGRATE
         transform.x += motion.vx * delta;
         transform.y += motion.vy * delta;
         

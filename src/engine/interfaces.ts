@@ -20,7 +20,8 @@ export enum SystemPhase {
 }
 
 export interface IGameSystem {
-  update(delta: number, time: number): void;
+  // Alpha is 0.0 to 1.0, representing how far we are between physics ticks
+  update(delta: number, time: number, alpha?: number): void;
   teardown(): void;
 }
 
@@ -135,7 +136,7 @@ export interface IAudioService {
   updateVolumes(): void;
   playSound(key: AudioKey, pan?: number): void;
   playAmbience(key: AudioKey): void;
-  nextTrack(): void; // NEW
+  nextTrack(): void;
   duckMusic(intensity: number, duration: number): void;
   getFrequencyData(array: Uint8Array): void;
   playClick(pan?: number): void;

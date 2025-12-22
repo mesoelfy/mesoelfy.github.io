@@ -16,6 +16,15 @@ const qSpin = new THREE.Quaternion();
 const qAim = new THREE.Quaternion();
 const qFinal = new THREE.Quaternion();
 
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const lerpAngle = (a: number, b: number, t: number) => {
+    const diff = b - a;
+    // Normalize diff to -PI to +PI
+    const d = ((diff % (Math.PI * 2)) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+    return a + d * t;
+};
+
 export class RenderSystem implements IGameSystem {
   // CACHED QUERY
   private renderQuery = new Query({ 
@@ -24,7 +33,7 @@ export class RenderSystem implements IGameSystem {
 
   constructor(private registry: IEntityRegistry) {}
 
-  update(delta: number, time: number): void {
+  update(delta: number, time: number, alpha: number = 1.0): void {
     MaterialFactory.updateUniforms(time);
     RenderBuffer.reset();
 
@@ -47,9 +56,9 @@ export class RenderSystem implements IGameSystem {
       
       RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
 
-      // --- 1. Position ---
-      let vx = transform.x;
-      let vy = transform.y;
+      // --- 1. Position (Interpolated) ---
+      let vx = lerp(transform.prevX, transform.x, alpha);
+      let vy = lerp(transform.prevY, transform.y, alpha);
       const vz = visual ? visual.offsetZ : 0;
       
       if (effect && effect.shudder > 0) {
@@ -63,10 +72,12 @@ export class RenderSystem implements IGameSystem {
           vy += visual.offsetY;
       }
 
-      // --- 2. Scale ---
-      let sX = transform.scale;
-      let sY = transform.scale;
-      let sZ = transform.scale;
+      // --- 2. Scale (Interpolated) ---
+      let baseScale = lerp(transform.prevScale, transform.scale, alpha);
+      
+      let sX = baseScale;
+      let sY = baseScale;
+      let sZ = baseScale;
 
       if (visual) {
           sX *= visual.scale * visual.baseScaleX * visual.dynamicScaleX;
@@ -74,10 +85,14 @@ export class RenderSystem implements IGameSystem {
           sZ *= visual.scale * visual.baseScaleZ * visual.dynamicScaleZ;
       }
 
-      // --- 3. Rotation ---
+      // --- 3. Rotation (Interpolated) ---
       const visRot = visual ? visual.rotation : 0;
+      
+      // Interpolate physics rotation to avoid snapping
+      const physicsRot = lerpAngle(transform.prevRotation, transform.rotation, alpha);
+
       qSpin.setFromAxisAngle(axisY, visRot);
-      qAim.setFromAxisAngle(axisZ, transform.rotation - Math.PI/2);
+      qAim.setFromAxisAngle(axisZ, physicsRot - Math.PI/2);
       qFinal.copy(qAim).multiply(qSpin);
 
       // --- 4. Color ---

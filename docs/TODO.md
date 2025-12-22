@@ -611,6 +611,7 @@ Refactoring prompts:
         Magic Booleans / Magic Methods (Dunder Methods) / Magic Paths and URLs / Magic Behavior (Implicit Logic) / Primitive Obsession 
     - are there any legacy systems that need to be scrubbed?
     - Is anything in the codebase being handled in a convoluted way that could be refactored in a more elegant manner? Make a list.
+    - hidden debts in the architecture
 
 
 

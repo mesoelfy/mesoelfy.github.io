@@ -43,7 +43,6 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // FIX: Removed Game Over check here. HealthSystem handles the state transition and events.
     if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
         gameStore.stopGame();
     }
@@ -63,8 +62,10 @@ export class GameEngineCore implements IGameSystem {
     }
 
     const fixedStep = WorldConfig.time.fixedDelta;
+    
+    // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
     while (this.accumulator >= fixedStep) {
-        for (let phase = 0; phase < this.systems.length; phase++) {
+        for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
             const phaseSystems = this.systems[phase];
             for (let i = 0; i < phaseSystems.length; i++) {
                 try {
@@ -78,6 +79,20 @@ export class GameEngineCore implements IGameSystem {
         this.accumulator -= fixedStep;
     }
     
+    // --- 2. RENDER UPDATE LOOP (Variable Timestep) ---
+    const alpha = this.accumulator / fixedStep;
+    
+    const renderSystems = this.systems[SystemPhase.RENDER];
+    for (let i = 0; i < renderSystems.length; i++) {
+        try {
+            renderSystems[i].update(renderDelta, renderTime, alpha);
+        } catch (e: any) {
+            console.error(`ERR_PHASE_RENDER:`, e);
+        }
+    }
+
+    // --- 3. CLEANUP ---
+    // Clear events AFTER Render systems (VFXSystem) have processed them
     if (this.fastEventBus) this.fastEventBus.clear();
   }
 
