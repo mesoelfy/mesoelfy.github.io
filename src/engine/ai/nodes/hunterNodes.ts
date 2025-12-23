@@ -8,13 +8,13 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import * as THREE from 'three';
 
 const IDLE_SPIN_TARGET = -2.5;  // CW
 const CHARGE_SPIN_TARGET = 22.0; // CCW
 
 export class RoamPanelZone extends BTNode {
-  // padding: how far outside the panel they can go
   constructor(private speed: number, private padding: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -26,27 +26,25 @@ export class RoamPanelZone extends BTNode {
 
     if (!transform || !motion || !state || !visual) return NodeState.FAILURE;
 
+    // Reset State
+    state.current = AI_STATE.ACTIVE;
+
     // Visual Spin (Idle)
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
 
-    // 1. Pick a destination if none exists
     if (state.data.roamTargetX === undefined || state.data.roamTargetY === undefined) {
         const panels = context.getAllPanelRects();
         if (panels.length > 0) {
-            // Pick random panel
             const panel = panels[Math.floor(Math.random() * panels.length)];
-            
-            // Random point within bounds + padding
             const halfW = (panel.width / 2) + this.padding;
             const halfH = (panel.height / 2) + this.padding;
             
             state.data.roamTargetX = panel.x + (Math.random() * 2 - 1) * halfW;
             state.data.roamTargetY = panel.y + (Math.random() * 2 - 1) * halfH;
         } else {
-            // Fallback if no panels
             state.data.roamTargetX = (Math.random() * 2 - 1) * 10;
             state.data.roamTargetY = (Math.random() * 2 - 1) * 5;
         }
@@ -55,25 +53,19 @@ export class RoamPanelZone extends BTNode {
     const destX = state.data.roamTargetX!;
     const destY = state.data.roamTargetY!;
 
-    // 2. Move towards destination
     const dx = destX - transform.x;
     const dy = destY - transform.y;
     const distSq = dx*dx + dy*dy;
 
-    // Arrive behavior
     if (distSq < 1.0) {
-        // Reached target, clear it to pick new one next tick
         state.data.roamTargetX = undefined;
         state.data.roamTargetY = undefined;
-        // Reached destination, return SUCCESS to allow sequence to proceed to firing
         return NodeState.SUCCESS;
     }
 
-    // Apply Velocity
     motion.vx += (dx - motion.vx) * context.delta * 2.0;
     motion.vy += (dy - motion.vy) * context.delta * 2.0;
 
-    // 3. Face Target (Player) if available, else look ahead
     if (target && target.x !== undefined) {
         const tDx = target.x - transform.x;
         const tDy = target.y - transform.y;
@@ -98,6 +90,9 @@ export class AimAndFire extends BTNode {
 
     if (!transform || !target || !state || !visual) return NodeState.FAILURE;
     
+    // --- SET STATE FOR VISUAL SYSTEM (SQUASH) ---
+    state.current = AI_STATE.CHARGING;
+
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
     state.data.spinVel = currentVel;
@@ -162,6 +157,10 @@ export class AimAndFire extends BTNode {
         }
 
         context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+        
+        // Reset state after firing
+        state.current = AI_STATE.ATTACK; 
+        
         return NodeState.SUCCESS;
     }
     return NodeState.RUNNING;

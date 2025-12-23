@@ -25,7 +25,9 @@ import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
-import { VisualSystem } from '@/engine/systems/VisualSystem';
+// REFACTOR: Replaced VisualSystem with specialized systems
+import { RenderStateSystem } from '@/engine/systems/RenderStateSystem';
+import { AnimationSystem } from '@/engine/systems/AnimationSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
@@ -61,11 +63,8 @@ export class EngineFactory {
     // 2. Global Registration
     ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
-    // Replace specific bus registrations with the Unified one
     ServiceLocator.register('GameEventService', eventBus);
-    ServiceLocator.register('FastEventService', rawFastBus); // Keep raw access for legacy/direct checks if needed? Or remove?
-    // Actually, we should try to use Unified everywhere. But Directors might need the raw fast bus interface
-    // unless we typecast. Let's register Unified as the primary IGameEventService.
+    ServiceLocator.register('FastEventService', rawFastBus); 
     
     ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
@@ -81,7 +80,6 @@ export class EngineFactory {
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
-    // ShakeSystem consumes events
     const shakeSystem = new ShakeSystem(eventBus); 
     
     const panelSystem = new PanelRegistrySystem(eventBus, audioService);
@@ -99,21 +97,21 @@ export class EngineFactory {
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
-    // Pass Unified Bus to Behavior
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
-    // Directors need to consume Fast Events. UnifiedEventService exposes processFastEvents.
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    // REFACTOR: New Visual Systems
+    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
+    
     const renderSystem = new RenderSystem(registry);
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    // Producers use Unified Bus
     const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
     const combatSystem = new CombatSystem(registry, eventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
@@ -123,7 +121,7 @@ export class EngineFactory {
     // 5. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-    engine.injectFastEventBus(rawFastBus); // Engine cleans the raw buffer
+    engine.injectFastEventBus(rawFastBus); 
 
     // 6. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
@@ -158,7 +156,10 @@ export class EngineFactory {
     register(hudService, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
-    register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
+    // REFACTOR: Register Split Visual Systems
+    register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
+    register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
+    
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);

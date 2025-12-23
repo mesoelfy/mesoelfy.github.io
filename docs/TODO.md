@@ -2,21 +2,13 @@
 
 ## 🐛 KNOWN BUGS & INSTABILITY
 - [ ] **White Flash on Refresh (FOUC):** The 3D Canvas areas flash white briefly on page reload.
-- [ ] **Mobile Controls:** Right now the touch joystick isn't working because touching anywhere on skin moves character. Everything isn't being resized properly for mobile and needs an overhaul. Force landscape view or shrink everything?
 - [ ] **Firefox Rendering:** The `LV_XX` text isn't rendering properly in Firefox. (try other browsers).
 - [ ] **Sandbox/Holodeck:** 
     - Holodeck is slow and glitchy.
     - Player pointer cursor and battle reticle both appearing, but not in sync. Should just be battle cursor if not hovering on settings.
     - **AudioMatrix:** The sounds aren't playing in `audio_matrix`.
-- [ ] **Game State Desyncs:** 
-    - Enemy kill count is going up even when not killing them.
-    - Sometimes green "system restored" animation appears in a panel during game over state.
-    - Resetting via debug menu then starting another game: player wasn't shooting correctly and at the GAME OVER state the second time the bomb reset didn't appear.
-    - Clicking bomb should stay in red system failure state (currently toggles?).
-    - Red game over OS and grid state fix / tied to Zen mode interfering?
+
 - [ ] **Visual Glitches:**
-    - Daemon geometry not squishing after shooting ball (like a compressed spring).
-    - When a panel dies in other browsers there seems to be a frame hitch but it might be hit stop.
     - Video Slots: I could see the third video already loaded but the [mask] was still being obscured. The stagger of loading is being faked? New videos coming in you can see the edges... take another long look at this section.
     - Mini mode causes the custom cursor to persist, but it shouldn't be visible when minimized like that because we are back to the game dashboard.
     - Disabling god suite toggles makes a sound, but enabling doesn't make a sound.
@@ -25,16 +17,14 @@
 ## ⚔️ GAMEPLAY MECHANICS & DESIGN
 - [ ] **Tuning:**
     - **First Upgrade:** Should be a bullet speed increase to what you'd actually want to start the game at. This lets the player feel relief early on by a significant boost.
-    - **Reboot Rate:** Increase the reboot heal rate by 50%.
-    - **Damage:** Damage from drillers should be at a constant rate.
     - **Incentive:** What is the incentive to keep all panels alive instead of just puppy guarding one? Maybe you only get your upgrades if in green status or 100%?
     - **Health:** Need health for player and lives and powerups. (increase bullet size / rate of fire). Make players health slowly auto regenerate.
 - [ ] **New Enemies & logic:**
     - **Muncher:** What if there is a muncher enemy that targets the elements within a panel such as each of the three video slots or each social media button? (Slots within a green health panel like IMG_XX can be targeted by a new driller type. if it gets destroyed, it does a certain percentage amount of damage to the entire panel).
     - **Weaver (Firewall Enemy):** JezzBall/Qix inspired. Crawls GlassPanel edges. Embeds anchor nodes. Makes a bee line to close triangle shape. Area inside turns to hazard.
     - **Burrower:** There could be "burrow" waves where they burrow into modal. Can it be coded for them to be moving around doing stuff even though we haven't instantiated the modal yet?
-    - **Kamikaze:** Should be bigger and slow. If it blows up on player and is inside a panel, it does damage to that panel. If explodes in panel, it does same amount of damage to panel as it does to player.
-    - **Hunter:** Movement logic needs updating, it feels kind of floaty and not menacing. I want it to feel intimidating. Weapon needs to start small and get bigger before launching.
+    
+   
     - **Collisions:** Player colliding with any enemy should hurt player and make that enemy explode (by doing damage to them).
     - **Spawn Logic:** Enemies should be spawning in the coordinates where a broken panel is with their own sophisticated spawn rate separate from the waves.
 - [ ] **Bosses:**
@@ -152,3 +142,6 @@
 - **Deployment:** "Deployment Check: Verify GitHub Pages behavior." *(Likely standard procedure, can remain or be removed if live).*
 - **Misc:** "need help seeing not obvious stuff that is missing." *(Vague, covered by Refactoring Audits)*.
 - **Misc:** "sharing https://mesoelfy.github.io/ needs to make an awesome twitter link capsule image." *(Metadata exists, covered by "Sharing" item in UI).*
+
+
+add muzzle flash particle effect at the gun tip when firing

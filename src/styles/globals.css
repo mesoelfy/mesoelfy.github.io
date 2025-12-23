@@ -7,26 +7,30 @@
   --shake-x: 0px;
   --shake-y: 0px;
   --shake-r: 0rad;
+  
+  /* Force browser to default to dark before CSS loads */
+  color-scheme: dark;
 }
 
-html, body {
-  background-color: #000000;
+html {
+  background-color: #000000 !important;
   overscroll-behavior: none; 
   touch-action: none; 
+}
+
+body {
+  background-color: #000000 !important;
+  color: #78F654;
+  overflow: hidden; 
+  font-family: 'Courier New', monospace;
+  height: 100dvh; 
+  width: 100vw;
 }
 
 /* Force override for cursor management */
 body.cursor-none, 
 body.cursor-none * {
   cursor: none !important;
-}
-
-body {
-  color: #78F654;
-  overflow: hidden; 
-  font-family: 'Courier New', monospace;
-  height: 100dvh; 
-  width: 100vw;
 }
 
 #global-app-root {
