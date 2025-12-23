@@ -6,6 +6,7 @@ import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
@@ -84,13 +85,13 @@ export class AimAndFire extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const renderEffect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !target || !state || !visual) return NodeState.FAILURE;
     
-    // --- SET STATE FOR VISUAL SYSTEM (SQUASH) ---
     state.current = AI_STATE.CHARGING;
 
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
@@ -119,7 +120,15 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    const offset = 1.3;
+    
+    // --- DYNAMIC EXHAUST OFFSET ---
+    // Base offset is 1.3. Max compression is 40% (factor 0.4).
+    // If squashFactor is 1.0, reduce offset by 40%.
+    let offset = 1.3;
+    if (renderEffect) {
+        offset *= (1.0 - (0.4 * renderEffect.squashFactor));
+    }
+
     const spreadAngle = 0.25; 
     const density = 2; 
 
@@ -158,7 +167,6 @@ export class AimAndFire extends BTNode {
 
         context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
         
-        // Reset state after firing
         state.current = AI_STATE.ATTACK; 
         
         return NodeState.SUCCESS;

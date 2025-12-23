@@ -9,6 +9,7 @@ import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
   const c4 = (2 * Math.PI) / 3;
@@ -54,8 +55,6 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      // State-based spin overrides (Player/Interaction)
-      // If we are healing/rebooting, spin the player differently
       if (entity.hasTag('PLAYER')) {
           let spinSpeed = 0.0;
           if (isZenMode) spinSpeed = -0.03;
@@ -69,7 +68,6 @@ export class AnimationSystem implements IGameSystem {
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // A. Spawn Animation (Pop-in)
           if (effect.spawnProgress < 1.0) {
               if (effect.spawnVelocity > 0) {
                   effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
@@ -84,37 +82,45 @@ export class AnimationSystem implements IGameSystem {
 
               render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
               
-              // Rise from below floor
               const riseT = t * (2 - t); 
               render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
           } else {
               render.offsetY = 0;
           }
 
-          // B. Flash Scale Bump (Impact)
           if (effect.flash > 0) {
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
           }
 
-          // C. Pulse (Idle/Breathing)
           if (effect.pulseSpeed > 0) {
               const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
-          // D. Velocity Stretch & AI State Squash
-          if (motion && effect.spawnProgress >= 1.0) {
+          if (effect.spawnProgress >= 1.0) {
               
-              // AI State Override: Charging = Squash Down
+              // D. AI State: Charging = Smooth Squash & Stretch
+              let targetSquash = 0.0;
               if (aiState && aiState.current === AI_STATE.CHARGING) {
-                  // Squash vertically, expand horizontally (Pre-jump coil)
-                  dY *= 0.6; // Flatten
-                  dX *= 1.3; // Widen
-                  dZ *= 1.3; // Widen
+                  targetSquash = 1.0;
+              }
+
+              effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
+
+              if (effect.squashFactor > 0.01) {
+                  // UPDATED: More exaggerated flare
+                  // Compressing Y by 40% (0.4)
+                  // Expanding X/Z by 60% (0.6) for dramatic cartoon effect
+                  
+                  const compression = 0.4 * effect.squashFactor; 
+                  const expansion = 0.6 * effect.squashFactor;   
+
+                  dY *= (1.0 - compression); 
+                  dX *= (1.0 + expansion);   
+                  dZ *= (1.0 + expansion);   
               } 
-              // Velocity Stretch
-              else if (effect.elasticity > 0.01) {
+              else if (motion && effect.elasticity > 0.01) {
                   const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
                   const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
 
@@ -123,11 +129,9 @@ export class AnimationSystem implements IGameSystem {
                       let stretchY = 1.0, squashXZ = 1.0;
                       
                       if (effect.elasticity > 1.0) {
-                          // High elasticity (Projectiles)
                           stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
                           squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
                       } else {
-                          // Standard elasticity (Enemies)
                           stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
                           squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
                       }
