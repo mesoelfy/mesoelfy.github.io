@@ -169,7 +169,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
 
   return (
     <motion.div animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }} className="fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden">
-      <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
+      <canvas 
+        ref={canvasRef} 
+        className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} 
+        style={{ background: 'transparent' }} 
+      />
       
       <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
         <motion.div 

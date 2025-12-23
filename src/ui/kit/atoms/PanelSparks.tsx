@@ -135,6 +135,7 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 pointer-events-none z-0 mix-blend-screen"
+      style={{ background: 'transparent' }}
     />
   );
 };
