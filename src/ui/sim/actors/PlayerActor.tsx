@@ -162,7 +162,6 @@ export const PlayerActor = () => {
   
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
-  const forkColor = useRef(new THREE.Color());
   const reticleColor = useRef(new THREE.Color());
   const snifferColor = useRef(new THREE.Color());
   
@@ -241,10 +240,8 @@ export const PlayerActor = () => {
         
         if (tFire < 0.25) {
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, lerpFactor);
-            // FIX: Subtract time from current rotation to get offset, ensuring smooth handover
             rotationOffsetRef.current = centerDotRef.current.rotation.z - (time * iSpd);
         } else {
-            // Idle Rotation: Counter-Clockwise (positive time)
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(
                 centerDotRef.current.rotation.z, 
                 time * iSpd + rotationOffsetRef.current, 
@@ -255,8 +252,10 @@ export const PlayerActor = () => {
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
         reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
         
-        if (snifferRef.current) {
-            snifferRef.current.rotation.z = reticleRef.current.rotation.z;
+        // --- SNIFFER COLOR CALCULATION (Complementary to Main) ---
+        // We use this for both the Sniffer Tip AND now the Chevron Ribbon
+        if (snifferRef.current || forkRef.current) {
+            snifferRef.current!.rotation.z = reticleRef.current.rotation.z;
             const levels = useGameStore.getState().activeUpgrades;
             snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
             snifferMaterial.uniforms.uTime.value = time;
@@ -288,20 +287,23 @@ export const PlayerActor = () => {
             else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
             
-            let forkTarget = isDeadState ? COL_DEAD : COL_BASE;
-            forkColor.current.lerp(forkTarget, 0.2);
-
             if (hitFlash.current > 0.01) { 
                 tempColor.current.lerp(COL_HIT, hitFlash.current); 
                 reticleColor.current.lerp(COL_HIT, hitFlash.current); 
-                forkColor.current.lerp(COL_HIT, hitFlash.current);
             }
             
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
 
+            // --- FORK COLOR UPDATE ---
+            // If Dead: Use Red/Hit color.
+            // If Alive: Use Sniffer Color (Complementary Pink/Magenta).
             if (forkRef.current) {
-                (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(forkColor.current);
+                if (isDeadState || hitFlash.current > 0.01) {
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current); // Red when dead/hit
+                } else {
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(snifferColor.current); // Complementary when alive
+                }
                 forkRef.current.rotation.z = centerDotRef.current.rotation.z;
             }
         }

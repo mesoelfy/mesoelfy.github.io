@@ -8,7 +8,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_STANDARD]: {
     id: WeaponIDs.PLAYER_STANDARD,
     damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
+    // UPDATED: Now Purple (was Green)
+    visual: { model: 'CAPSULE', color: PALETTE.PURPLE.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -22,7 +23,6 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    // UPDATED: Set to PURPLE.PRIMARY (Reboot Color) instead of PINK
     visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
