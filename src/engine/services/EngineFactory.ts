@@ -11,7 +11,7 @@ import { HUDService } from '@/engine/services/HUDService';
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
-import { SystemPhase } from '@/engine/interfaces';
+import { SystemPhase, IAudioService } from '@/engine/interfaces';
 
 // Systems
 import { TimeSystem } from '@/engine/systems/TimeSystem';
@@ -25,7 +25,6 @@ import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
-// REFACTOR: Replaced VisualSystem with specialized systems
 import { RenderStateSystem } from '@/engine/systems/RenderStateSystem';
 import { AnimationSystem } from '@/engine/systems/AnimationSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
@@ -47,36 +46,43 @@ import { WaveSystem } from '@/engine/systems/WaveSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. Core Services
+    // 1. PRESERVE CRITICAL SERVICES
+    // We must keep the AudioService alive because it holds the AudioContext and buffers.
+    // Recreating it destroys the audio graph and requires re-initialization (user gesture).
+    let audioService: IAudioService;
+    try {
+        audioService = ServiceLocator.getAudioService();
+    } catch {
+        audioService = new AudioServiceImpl();
+    }
+
+    // 2. RESET & REBIND
+    ServiceLocator.reset();
+    ServiceLocator.register('AudioService', audioService);
+
+    // 3. Core Services
     const registry = new EntityRegistry();
     const rawSlowBus = SharedGameEventBus; 
     const rawFastBus = new FastEventBusImpl();
-    
-    // UNIFIED BUS
     const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
 
-    const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
     const hudService = new HUDService(); 
     const spawner = new EntitySpawner(registry);
     
-    // 2. Global Registration
-    ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
     ServiceLocator.register('GameEventService', eventBus);
     ServiceLocator.register('FastEventService', rawFastBus); 
-    
-    ServiceLocator.register('AudioService', audioService);
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
     ServiceLocator.register('HUDService', hudService);
 
-    // 3. Content Registration
+    // 4. Content Registration
     registerAllComponents();
     registerAllBehaviors();
     registerAllAssets();
 
-    // 4. Common Systems Instantiation
+    // 5. Common Systems Instantiation
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
@@ -102,10 +108,9 @@ export class EngineFactory {
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    // REFACTOR: New Visual Systems
+    // Visual Systems
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
-    
     const renderSystem = new RenderSystem(registry);
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
@@ -118,12 +123,12 @@ export class EngineFactory {
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
-    // 5. Engine Injection
+    // 6. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
     engine.injectFastEventBus(rawFastBus); 
 
-    // 6. Registration
+    // 7. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
@@ -156,10 +161,8 @@ export class EngineFactory {
     register(hudService, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
-    // REFACTOR: Register Split Visual Systems
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
-    
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);

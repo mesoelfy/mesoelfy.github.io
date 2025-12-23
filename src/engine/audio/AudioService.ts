@@ -83,10 +83,22 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public playSound(key: AudioKey, pan: number = 0) {
-      if (this.isReady) {
-          if (this.bank.has(key)) this.voices.playSFX(key, pan);
-      } else if (CRITICAL_SOUNDS.includes(key)) {
-          this.pendingSounds.push({ key, pan });
+      if (!this.isReady) {
+          if (CRITICAL_SOUNDS.includes(key)) {
+              this.pendingSounds.push({ key, pan });
+          }
+          return;
+      }
+
+      if (this.bank.has(key)) {
+          this.voices.playSFX(key, pan);
+      } else if (AUDIO_MANIFEST[key]) {
+          // On-demand generation for missing sounds (e.g. Audio Matrix)
+          this.generateSingle(key).then(() => {
+              if (this.bank.has(key)) {
+                  this.voices.playSFX(key, pan);
+              }
+          });
       }
   }
 
@@ -98,7 +110,6 @@ export class AudioServiceImpl implements IAudioService {
 
   public startMusic() {
     this.ctxManager.resume();
-    // No arguments, VoiceManager uses manifest
     this.voices.startMusic();
     if (this.isReady && this.bank.has('ambience_core')) this.playAmbience('ambience_core');
     else this._autoStartAmbience = true;
