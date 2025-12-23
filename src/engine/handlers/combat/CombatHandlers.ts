@@ -12,6 +12,7 @@ import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { Tag } from '@/engine/ecs/types';
 
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
@@ -39,10 +40,8 @@ const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: numbe
     
     const model = getModel(source);
     if (model) {
-        // FIX: Normalize brightness to 1.0 (Neon)
-        // If the color is (0.5, 0.0, 0.5), max is 0.5. 
-        // Division makes it (1.0, 0.0, 1.0) -> Maximum Brightness Magenta.
-        const maxC = Math.max(model.r, model.g, model.b, 0.01); // 0.01 prevents divide by zero
+        // Normalize brightness to 1.0 (Neon)
+        const maxC = Math.max(model.r, model.g, model.b, 0.01); 
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
     } else { 
         ctx.spawnFX('IMPACT_WHITE', x, y); 
@@ -87,7 +86,6 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   const bPos = getPos(bullet); applyKnockback(enemy, bPos, 3.0);
-  // source is bullet (b), so impact splash uses bullet color
   handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 
@@ -131,12 +129,29 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
 function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: string, sprayAngle?: number) {
   const hpA = getHp(a); const hpB = getHp(b); const cA = getCombat(a); const cB = getCombat(b);
   const dmgA = cA ? cA.damage : 1; const dmgB = cB ? cB.damage : 1;
+  
   if (hpA) { hpA.current = Math.max(0, hpA.current - dmgB); if (hpA.current > 0) ctx.flashEntity(a.id as number); }
   if (hpB) { hpB.current = Math.max(0, hpB.current - dmgA); if (hpB.current > 0) ctx.flashEntity(b.id as number); }
+  
   const posA = getPos(a); const posB = getPos(b);
   if (posA) { const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0; resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX); }
+  
   let soundKey = '';
-  if (hpA && hpA.current <= 0) { ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
-  if (hpB && hpB.current <= 0) { ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
+  
+  if (hpA && hpA.current <= 0) { 
+      // If Enemy Dies: Spawn Explosion (mapped via 'IMPACT_WHITE' override in CombatSystem)
+      // If Bullet Dies (Clash): Only spawn if not bullet (to avoid double splash)
+      const fxA = a.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      ctx.destroyEntity(a, fxA, sprayAngle); 
+      soundKey = 'fx_impact_light'; 
+  }
+  
+  if (hpB && hpB.current <= 0) { 
+      // If Bullet Dies: Suppress extra white splash (visuals handled above in resolveImpactVisuals)
+      const fxB = b.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      ctx.destroyEntity(b, fxB, sprayAngle); 
+      soundKey = 'fx_impact_light'; 
+  }
+  
   if (soundKey) ctx.playSpatialAudio(soundKey, posA ? posA.x : 0);
 }
