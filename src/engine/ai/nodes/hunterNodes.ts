@@ -121,9 +121,7 @@ export class AimAndFire extends BTNode {
 
     const rearAngle = transform.rotation + Math.PI;
     
-    // --- DYNAMIC EXHAUST OFFSET ---
-    // Base offset is 1.3. Max compression is 40% (factor 0.4).
-    // If squashFactor is 1.0, reduce offset by 40%.
+    // Dynamic Exhaust Offset
     let offset = 1.3;
     if (renderEffect) {
         offset *= (1.0 - (0.4 * renderEffect.squashFactor));
@@ -166,11 +164,57 @@ export class AimAndFire extends BTNode {
         }
 
         context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
-        
         state.current = AI_STATE.ATTACK; 
         
         return NodeState.SUCCESS;
     }
+    return NodeState.RUNNING;
+  }
+}
+
+export class HunterCooldown extends BTNode {
+  constructor(private min: number, private max: number) { super(); }
+
+  tick(entity: Entity, context: AIContext): NodeState {
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const target = entity.getComponent<TargetData>(ComponentType.Target);
+
+    if (!state || !transform || !visual) return NodeState.FAILURE;
+
+    // Init Timer
+    if (state.timers[AITimerID.WAIT] === undefined) {
+        state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
+    }
+
+    // 1. Visually Spin Down (Graceful Transition)
+    // Lerp from high charge speed back to idle speed
+    let currentVel = state.data.spinVel ?? CHARGE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 2.0);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
+    // 2. Keep Facing Target (Track Player while drifting)
+    if (target && target.x !== undefined) {
+        const dx = target.x - transform.x;
+        const dy = target.y - transform.y;
+        const desiredAngle = Math.atan2(dy, dx);
+        
+        // Smooth turn
+        let diff = desiredAngle - transform.rotation;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        transform.rotation += diff * 5.0 * context.delta;
+    }
+
+    // 3. Tick Timer
+    state.timers[AITimerID.WAIT]! -= context.delta;
+    if (state.timers[AITimerID.WAIT]! <= 0) {
+        state.timers[AITimerID.WAIT] = undefined;
+        return NodeState.SUCCESS;
+    }
+
     return NodeState.RUNNING;
   }
 }
