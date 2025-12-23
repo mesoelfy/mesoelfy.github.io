@@ -160,7 +160,12 @@ export const PlayerActor = () => {
   const isZenMode = useGameStore(state => state.isZenMode);
   const activeUpgrades = useGameStore(state => state.activeUpgrades);
   
-  const animScale = useRef(0), tempColor = useRef(new THREE.Color()), reticleColor = useRef(new THREE.Color()), snifferColor = useRef(new THREE.Color());
+  const animScale = useRef(0);
+  const tempColor = useRef(new THREE.Color());
+  const forkColor = useRef(new THREE.Color()); // Independent fork color
+  const reticleColor = useRef(new THREE.Color());
+  const snifferColor = useRef(new THREE.Color());
+  
   const currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
   const forkLevel = activeUpgrades['FORK'] || 0;
@@ -261,13 +266,6 @@ export const PlayerActor = () => {
             snifferMaterial.uniforms.uColor.value.copy(snifferColor.current);
         }
 
-        // --- UPDATE FORK ---
-        if (forkRef.current) {
-            // Base sync
-            forkRef.current.rotation.z = centerDotRef.current.rotation.z;
-            (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
-        }
-
         if (isZenMode) {
             tempColor.current.setHSL((time*0.1)%1, 1, 0.9); // Bright Center
             reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6); // Saturated Reticle
@@ -281,22 +279,38 @@ export const PlayerActor = () => {
                 (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
                 
                 // 2. Rotation: Counter-Spin relative to center
-                // Center aims at mouse + idle spin (time * iSpd)
-                // We want to visually counteract the idle spin or spin opposite.
-                // Simple: Rotate backwards based on time
                 forkRef.current.rotation.z = - (time * iSpd);
             }
 
         } else {
+            // STANDARD MODE LOGIC
             let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
             tempColor.current.lerp(target, 0.2);
+            
             if (isDeadState) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
             else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
-            if (hitFlash.current > 0.01) { tempColor.current.lerp(COL_HIT, hitFlash.current); reticleColor.current.lerp(COL_HIT, hitFlash.current); }
+            
+            // Fork Visuals:
+            // 1. Only Red if Dead. Otherwise Green (Base) even when repairing.
+            let forkTarget = isDeadState ? COL_DEAD : COL_BASE;
+            forkColor.current.lerp(forkTarget, 0.2);
+
+            if (hitFlash.current > 0.01) { 
+                tempColor.current.lerp(COL_HIT, hitFlash.current); 
+                reticleColor.current.lerp(COL_HIT, hitFlash.current); 
+                forkColor.current.lerp(COL_HIT, hitFlash.current);
+            }
+            
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
+
+            if (forkRef.current) {
+                (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(forkColor.current);
+                forkRef.current.rotation.z = centerDotRef.current.rotation.z;
+            }
         }
+        
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * (isZenMode ? 3.0 : 1.0));

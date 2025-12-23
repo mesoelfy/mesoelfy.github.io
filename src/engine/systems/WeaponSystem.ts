@@ -172,11 +172,9 @@ export class WeaponSystem implements IGameSystem {
             bullet.addComponent(new TargetData(null, 'ENEMY'));
             this.registry.updateCache(bullet); 
         }
-
-        if (pRender) {
-            const bModel = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
-            if (bModel) { bModel.r = pRender.r * 4; bModel.g = pRender.g * 4; bModel.b = pRender.b * 4; }
-        }
+        
+        // REMOVED: No longer copying player render color to bullet.
+        // Projectiles now use the inherent color defined in Weapons.ts
     });
 
     this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });

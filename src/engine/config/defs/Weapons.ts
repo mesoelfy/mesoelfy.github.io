@@ -22,7 +22,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.PINK.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    // UPDATED: Set to PURPLE.PRIMARY (Reboot Color) instead of PINK
+    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -45,7 +46,7 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'CONE', color: PALETTE.ORANGE.PRIMARY, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' }, // Updated
+    visual: { model: 'CONE', color: PALETTE.ORANGE.PRIMARY, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.ENEMY]
   },
