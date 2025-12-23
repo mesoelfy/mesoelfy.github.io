@@ -92,7 +92,9 @@ export class VisualSystem implements IGameSystem {
           } else {
               // Standard Gameplay
               if (interactState === 'HEALING') {
-                  targetHex = stateColor.repair;
+                  // CHANGE: Projectiles (derived from model color) now match Reboot (Purple)
+                  // Reticle visual (PlayerActor) remains Pink/Repair color independently
+                  targetHex = stateColor.reboot; 
                   spinSpeed = -0.24; 
               } else if (interactState === 'REBOOTING') {
                   targetHex = stateColor.reboot;
