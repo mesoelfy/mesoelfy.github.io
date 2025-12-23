@@ -13,7 +13,7 @@ export const PALETTE = {
     LIGHT: '#BC86BA',
     DEEP: '#350E3A',
     DIM: '#822B8A',
-    INDIGO: '#4203D4' // New Driller Color
+    INDIGO: '#4203D4' // Kept for Driller Body (Dark is okay for solid mesh)
   },
   // Service Pink
   PINK: {
@@ -34,7 +34,7 @@ export const PALETTE = {
   },
   // New Hunter Identity
   ORANGE: {
-    PRIMARY: '#CF7233', // New Hunter Color (Clay/Rust)
+    PRIMARY: '#CF7233', 
     BRIGHT: '#FF8C00'
   },
   CYAN: {
@@ -49,12 +49,19 @@ export const PALETTE = {
   }
 } as const;
 
-// Collections for Procedural Generation
+// Collections for Procedural Generation (VFX)
+// UPDATED: Purple set now uses lighter, "hotter" colors for better contrast on black
 export const COLOR_SETS = {
-  PURPLE: [PALETTE.PURPLE.PRIMARY, PALETTE.PURPLE.INDIGO, '#7A2F8F', '#B57EDC'],
+  PURPLE: [
+      PALETTE.PURPLE.PRIMARY, // Mid
+      PALETTE.PURPLE.LIGHT,   // Light
+      '#E0B0FF',              // Mauve (Very Light)
+      '#D461FF',              // Electric Neon (Bright)
+      '#F0D0FF'               // Near White (Hot)
+  ],
   PINK:   [PALETTE.PINK.PRIMARY, PALETTE.PINK.DIM, '#FFB6FF', '#E0B0FF'],
   YELLOW: [PALETTE.YELLOW.SOFT, '#FFE5A0', '#FFA500', PALETTE.MONO.WHITE],
-  ORANGE: [PALETTE.ORANGE.PRIMARY, PALETTE.ORANGE.BRIGHT, '#E65100', PALETTE.YELLOW.SOFT], // New Set
+  ORANGE: [PALETTE.ORANGE.PRIMARY, PALETTE.ORANGE.BRIGHT, '#E65100', PALETTE.YELLOW.SOFT],
   RED:    [PALETTE.RED.CRITICAL, PALETTE.RED.LIGHT, PALETTE.RED.DIM],
   CYAN:   [PALETTE.CYAN.PRIMARY, PALETTE.CYAN.DIM, PALETTE.MONO.WHITE],
   WHITE:  [PALETTE.MONO.WHITE]

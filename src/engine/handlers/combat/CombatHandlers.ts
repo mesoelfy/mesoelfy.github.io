@@ -36,11 +36,17 @@ const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
 
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) { ctx.spawnFX(overrideFX as VFXKey, x, y); return; }
+    
     const model = getModel(source);
     if (model) {
-        const maxC = Math.max(model.r, model.g, model.b, 1.0); 
+        // FIX: Normalize brightness to 1.0 (Neon)
+        // If the color is (0.5, 0.0, 0.5), max is 0.5. 
+        // Division makes it (1.0, 0.0, 1.0) -> Maximum Brightness Magenta.
+        const maxC = Math.max(model.r, model.g, model.b, 0.01); // 0.01 prevents divide by zero
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
-    } else { ctx.spawnFX('IMPACT_WHITE', x, y); }
+    } else { 
+        ctx.spawnFX('IMPACT_WHITE', x, y); 
+    }
 };
 
 const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, force: number) => {
@@ -81,6 +87,7 @@ export const handlePlayerHit = (player: Entity, bullet: Entity, ctx: CombatConte
 
 export const handleEnemyHit = (enemy: Entity, bullet: Entity, ctx: CombatContext) => {
   const bPos = getPos(bullet); applyKnockback(enemy, bPos, 3.0);
+  // source is bullet (b), so impact splash uses bullet color
   handleMassExchange(enemy, bullet, ctx, undefined, bPos ? bPos.rotation + Math.PI : 0);
 };
 

@@ -8,14 +8,18 @@ import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
 import { ParticleShape } from '@/engine/ecs/types';
 import { PanelId } from '@/engine/config/PanelConfig';
+import * as THREE from 'three';
 
 export class VFXSystem implements IGameSystem {
   private unsubs: (() => void)[] = [];
+  
+  private tempColor = new THREE.Color();
+  private white = new THREE.Color(0xffffff);
 
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
-    private events: IGameEventService, // Unified
+    private events: IGameEventService, 
     private panelSystem: IPanelSystem,
     private timeSystem: TimeSystem
   ) {
@@ -83,19 +87,39 @@ export class VFXSystem implements IGameSystem {
   }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
-      const count = this.randomRange(2, 3);
+      // 1. Prepare Palette
+      this.tempColor.set(hexColor);
+      this.tempColor.lerp(this.white, 0.6); // Lighter "hot" version
+      const lightHex = '#' + this.tempColor.getHexString();
+      
+      // REVERTED: Original Physics Counts
+      const count = this.randomRange(2, 3); 
       
       for(let i=0; i<count; i++) {
           const side = Math.random() > 0.5 ? 1 : -1;
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
+          // REVERTED: Original Speed/Life
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          this.particleSystem.spawn(x, y, hexColor, vx, vy, life, 1.0, ParticleShape.SQUARE); 
+          // 2. Color Variant Logic (Kept)
+          const randC = Math.random();
+          let finalColor = hexColor;
+          let size = 1.0;
+
+          if (randC > 0.8) {
+              finalColor = '#FFFFFF';
+              size = 0.8;
+          } else if (randC > 0.4) {
+              finalColor = lightHex;
+              size = 1.2;
+          }
+
+          this.particleSystem.spawn(x, y, finalColor, vx, vy, life, size, ParticleShape.SQUARE); 
       }
   }
 
