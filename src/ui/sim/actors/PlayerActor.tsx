@@ -162,7 +162,7 @@ export const PlayerActor = () => {
   
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
-  const forkColor = useRef(new THREE.Color()); // Independent fork color
+  const forkColor = useRef(new THREE.Color());
   const reticleColor = useRef(new THREE.Color());
   const snifferColor = useRef(new THREE.Color());
   
@@ -241,7 +241,8 @@ export const PlayerActor = () => {
         
         if (tFire < 0.25) {
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(centerDotRef.current.rotation.z, targetAimAngle.current, lerpFactor);
-            rotationOffsetRef.current = centerDotRef.current.rotation.z + (time * iSpd);
+            // FIX: Subtract time from current rotation to get offset, ensuring smooth handover
+            rotationOffsetRef.current = centerDotRef.current.rotation.z - (time * iSpd);
         } else {
             // Idle Rotation: Counter-Clockwise (positive time)
             centerDotRef.current.rotation.z = THREE.MathUtils.lerp(
@@ -273,12 +274,8 @@ export const PlayerActor = () => {
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
             ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
 
-            // --- ZEN MODE FORK OVERRIDES ---
             if (forkRef.current) {
-                // 1. Color: Match Reticle (Color), not Center (White)
                 (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
-                
-                // 2. Rotation: Counter-Spin relative to center
                 forkRef.current.rotation.z = - (time * iSpd);
             }
 
@@ -291,8 +288,6 @@ export const PlayerActor = () => {
             else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
             
-            // Fork Visuals:
-            // 1. Only Red if Dead. Otherwise Green (Base) even when repairing.
             let forkTarget = isDeadState ? COL_DEAD : COL_BASE;
             forkColor.current.lerp(forkTarget, 0.2);
 
