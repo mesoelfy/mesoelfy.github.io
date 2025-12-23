@@ -55,13 +55,20 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
+      // State-based spin overrides (Player/Interaction)
       if (entity.hasTag('PLAYER')) {
-          let spinSpeed = 0.0;
-          if (isZenMode) spinSpeed = -0.03;
-          else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
-          else if (interactState === 'HEALING' || interactState === 'REBOOTING') spinSpeed = -0.24;
+          // Default Idle Spin
+          let spinSpeed = 0.02; 
+
+          if (isZenMode) {
+              spinSpeed = -0.03;
+          } else if (isDead) {
+              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+          } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
+              spinSpeed = -0.24;
+          }
           
-          if (spinSpeed !== 0) render.rotation += spinSpeed;
+          render.rotation += spinSpeed;
       }
 
       // 2. SCALE & DEFORMATION
@@ -99,8 +106,6 @@ export class AnimationSystem implements IGameSystem {
           }
 
           if (effect.spawnProgress >= 1.0) {
-              
-              // D. AI State: Charging = Smooth Squash & Stretch
               let targetSquash = 0.0;
               if (aiState && aiState.current === AI_STATE.CHARGING) {
                   targetSquash = 1.0;
@@ -109,12 +114,8 @@ export class AnimationSystem implements IGameSystem {
               effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
 
               if (effect.squashFactor > 0.01) {
-                  // UPDATED: More exaggerated flare
-                  // Compressing Y by 40% (0.4)
-                  // Expanding X/Z by 60% (0.6) for dramatic cartoon effect
-                  
                   const compression = 0.4 * effect.squashFactor; 
-                  const expansion = 0.6 * effect.squashFactor;   
+                  const expansion = 0.8 * effect.squashFactor;   
 
                   dY *= (1.0 - compression); 
                   dX *= (1.0 + expansion);   
