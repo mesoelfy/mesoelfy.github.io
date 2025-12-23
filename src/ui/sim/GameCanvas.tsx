@@ -45,6 +45,8 @@ export const GameOverlay = () => {
           stencil: false,
           powerPreference: "high-performance"
         }}
+        // FIX: Ensure transparent background so we see SceneCanvas behind it
+        style={{ background: 'transparent' }}
         eventSource={typeof document !== 'undefined' ? document.body : undefined}
         eventPrefix="client"
       >

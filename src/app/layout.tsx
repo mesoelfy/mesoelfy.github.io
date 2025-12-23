@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`} style={{ backgroundColor: '#000000' }}>
       <body 
         className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} 

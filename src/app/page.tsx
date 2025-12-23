@@ -71,13 +71,10 @@ export default function Home() {
     // Check Hardware
     const w = window.innerWidth;
     
-    // Low Threshold: 1100px (Tablets/Mobile)
     if (w <= 1100) {
         setGateVariant('MOBILE');
         setShowGate(true);
     } 
-    // High Threshold: 3000px (4K/Ultrawide)
-    // Raised from 2500 to avoid flagging standard 1440p (2560px) monitors
     else if (w > 3000) {
         setGateVariant('ULTRAWIDE');
         setShowGate(true);
@@ -167,7 +164,11 @@ export default function Home() {
 
   return (
     <GameProvider>
-      <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black">
+      <div 
+        id={DOM_ID.APP_ROOT} 
+        className="relative w-full h-screen overflow-hidden cursor-none bg-black"
+        style={{ backgroundColor: '#000000' }}
+      >
         
         <MetaManager />
         <CustomCursor />
