@@ -11,7 +11,6 @@ import { IntelligentHeader } from '@/ui/kit/molecules/panel/IntelligentHeader';
 import { BreachOverlay } from '@/ui/kit/molecules/panel/BreachOverlay';
 import { SafePanelContent } from './SafePanelContent';
 import { DotGridBackground } from './DotGridBackground';
-import { usePanelPhysics } from '@/ui/kit/hooks/usePanelPhysics';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { PALETTE } from '@/engine/config/Palette';
 
@@ -51,7 +50,7 @@ interface GlassPanelProps {
   title?: string;
   gameId?: PanelId;
   maxHealth?: number; 
-  transparent?: boolean; // NEW PROP
+  transparent?: boolean; 
 }
 
 export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEFAULT_MAX_HEALTH, transparent = false }: GlassPanelProps) => {
@@ -61,10 +60,6 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
   const interactionTarget = useGameStore(state => state.interactionTarget);
   
   const isGameOver = Math.floor(systemIntegrity) <= 0;
-
-  if (gameId) {
-      usePanelPhysics(gameId, visualRef, !isGameOver);
-  }
   
   const isInteracting = !!(gameId && interactionTarget === gameId);
   const isCriticalGlobal = systemIntegrity < 30 && !isGameOver;
@@ -151,7 +146,7 @@ export const GlassPanel = ({ children, className, title, gameId, maxHealth = DEF
         style={shadowStyle}
       >
         <DotGridBackground className="top-8" />
-        {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(10,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
+        {!transparent && <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,10,10,0.4)_50%)] z-0 bg-[length:100%_4px]" />}
         
         {isCriticalGlobal && (
             <motion.div 

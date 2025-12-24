@@ -13,13 +13,6 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { PanelId } from '@/engine/config/PanelConfig';
 
-interface PanelRuntime {
-  id: PanelId;
-  element: HTMLElement;
-  entityId: number;
-  stress: number; 
-}
-
 export class PanelRegistrySystem implements IPanelSystem {
   private entityMap = new Map<string, Entity>();
   private observer: ResizeObserver | null = null;
@@ -51,7 +44,9 @@ export class PanelRegistrySystem implements IPanelSystem {
 
     this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
         const current = this.stressMap.get(p.id) || 0;
-        this.stressMap.set(p.id, Math.min(3.0, current + 0.5));
+        // Cap max stress to prevent panels flying off screen
+        // UPDATED: Reduced per-hit stress from 0.8 to 0.4 to reduce Driller jitter
+        this.stressMap.set(p.id, Math.min(4.0, current + 0.4));
     }));
 
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
@@ -70,9 +65,31 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   update(delta: number, time: number): void {
+      // Iterate through stress map to apply physics
       for (const [id, stress] of this.stressMap.entries()) {
-          if (stress > 0) {
-              this.stressMap.set(id, Math.max(0, stress * 0.9));
+          const el = this.elements.get(id as string);
+          
+          if (stress > 0.01) {
+              // 1. Decay
+              const decayFactor = Math.pow(0.9, delta * 60); // Frame-rate independent decay
+              const newStress = stress * decayFactor;
+              this.stressMap.set(id, newStress);
+
+              // 2. Apply Visual Shake
+              if (el) {
+                  const shake = newStress * 2.0; 
+                  const jx = (Math.random() - 0.5) * shake;
+                  const jy = (Math.random() - 0.5) * shake;
+                  
+                  // Use translate3d for GPU acceleration
+                  el.style.transform = `translate3d(${jx.toFixed(1)}px, ${jy.toFixed(1)}px, 0)`;
+              }
+          } else {
+              // 3. Reset / Cleanup
+              if (stress !== 0) this.stressMap.set(id, 0);
+              if (el && el.style.transform !== '') {
+                  el.style.transform = '';
+              }
           }
       }
   }
