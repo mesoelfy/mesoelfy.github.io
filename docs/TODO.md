@@ -160,3 +160,5 @@ SFX text too low in toggle
 MICROINTERACTIONS - - - great motion graphic design prompt - ask for list of what could be added
 
 drillers do too much damage.
+healing/rebooting panel should be 10% faster
+healing player 10% faster

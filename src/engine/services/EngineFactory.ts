@@ -97,7 +97,6 @@ export class EngineFactory {
     const worldSystem = new WorldSystem(panelSystem, registry);
     
     const projectileSystem = new ProjectileSystem(registry);
-    // INJECT PHYSICS INTO TARGETING
     const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
@@ -116,9 +115,9 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    // INJECT PHYSICS INTO WEAPON
     const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem);
-    const combatSystem = new CombatSystem(registry, eventBus, audioService);
+    // UPDATED: Inject rawFastBus into CombatSystem
+    const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
