@@ -150,10 +150,9 @@ screenflash on refresh issue persists
 
 
 multi shot just isn't satisfying or aimable. let's just make the upgrade make your single shot wider
-
 )>  curve with point dead center. more points with every upgrade.
 
-SFX text too low in toggle
+
 
 technical debt
 

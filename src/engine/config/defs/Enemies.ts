@@ -5,12 +5,12 @@ import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 export const ENEMIES: Record<EnemyType, EnemyDef> = {
   [EnemyTypes.DRILLER]: {
     id: EnemyTypes.DRILLER,
-    health: 1, damage: 1, score: 100, xp: 10,
+    health: 1, damage: 0.75, score: 100, xp: 10,
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
       model: 'CONE', 
-      color: PALETTE.PURPLE.INDIGO, // Updated
+      color: PALETTE.PURPLE.INDIGO, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
@@ -19,7 +19,8 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   },
   [EnemyTypes.KAMIKAZE]: {
     id: EnemyTypes.KAMIKAZE,
-    health: 2, damage: 3, score: 200, xp: 20,
+    health: 4, // Doubled from 2
+    damage: 3, score: 200, xp: 20,
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
     visual: { 
@@ -37,7 +38,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
       model: 'CUSTOM_HUNTER', 
-      color: PALETTE.ORANGE.PRIMARY, // Updated
+      color: PALETTE.ORANGE.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
