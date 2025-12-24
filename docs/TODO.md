@@ -161,3 +161,5 @@ MICROINTERACTIONS - - - great motion graphic design prompt - ask for list of wha
 player ability, leave a snail slime trail where the cursor was. upgrades - can increase the frequency at which you drop slime and the length of time you drop slime, and damage. center reticle can change color like tip whenever dropping slime
 
 
+Increase Lighthouse Score.
+Is my site optimized for things Google loves? (without unnecessary bloat)

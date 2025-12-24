@@ -59,6 +59,7 @@ export interface IFastEventService {
   duckMusic(intensity: number, duration: number): void;
   flashEntity(id: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
+  swap(): void; // NEW: Flip buffers
   clear(): void;
   getCursor(): number;
 }
@@ -151,7 +152,7 @@ export interface IInputService {
   isPressed(action: string): boolean;
   updateCursor(x: number, y: number): void;
   updateBounds(width: number, height: number): void; 
-  popClick(): boolean; // NEW
+  popClick(): boolean; 
 }
 
 export interface IParticleSystem extends IGameSystem {

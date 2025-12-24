@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Dec 24 15:05:40 CST 2025
+Generated on: Wed Dec 24 16:38:18 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -57,7 +57,11 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   └── images
 │   │       ├── social-card.jpg
 │   │       └── social_preview_github_1280x640.jpg
-│   └── favicon.ico
+│   ├── favicon.ico
+│   ├── manifest.json
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   └── sw.js
 ├── scripts
 │   └── create_source_context.command
 ├── src
@@ -359,48 +363,51 @@ PROJECT DIRECTORY STRUCTURE:
 │       │       │   └── useMetaUrl.ts
 │       │       ├── metaConstants.ts
 │       │       └── useFavicon.ts
-│       └── sim
-│           ├── GameCanvas.tsx
-│           ├── GameDirector.tsx
-│           ├── RenderDirector.tsx
-│           ├── SceneCanvas.tsx
-│           ├── actors
-│           │   ├── DaemonActor.tsx
-│           │   ├── InstancedActor.tsx
-│           │   ├── ParticleActor.tsx
-│           │   ├── PlayerActor.tsx
-│           │   ├── ProjectileActor.tsx
-│           │   └── UniversalActor.tsx
-│           ├── assets
-│           │   ├── AssetCatalog.ts
-│           │   └── AssetService.ts
-│           ├── config
-│           │   └── theme.ts
-│           ├── experiments
-│           │   └── GlitchGhost.tsx
-│           ├── hooks
-│           │   ├── useHeartbeat.ts
-│           │   ├── usePanelRegistry.ts
-│           │   ├── usePanelTracker.ts
-│           │   └── useWindowFocus.ts
-│           ├── props
-│           │   └── MiniCrystalCanvas.tsx
-│           ├── registry
-│           │   ├── PanelElementRegistry.ts
-│           │   ├── RenderCatalog.ts
-│           │   └── RenderRegistry.ts
-│           ├── stages
-│           │   ├── GalleryStage.tsx
-│           │   └── LabStage.tsx
-│           └── vfx
-│               ├── CameraRig.tsx
-│               ├── PostProcessing.tsx
-│               ├── UISyncDirector.tsx
-│               └── WireframeFloor.tsx
+│       ├── sim
+│       │   ├── GameCanvas.tsx
+│       │   ├── GameDirector.tsx
+│       │   ├── RenderDirector.tsx
+│       │   ├── SceneCanvas.tsx
+│       │   ├── actors
+│       │   │   ├── DaemonActor.tsx
+│       │   │   ├── InstancedActor.tsx
+│       │   │   ├── ParticleActor.tsx
+│       │   │   ├── PlayerActor.tsx
+│       │   │   ├── ProjectileActor.tsx
+│       │   │   └── UniversalActor.tsx
+│       │   ├── assets
+│       │   │   ├── AssetCatalog.ts
+│       │   │   └── AssetService.ts
+│       │   ├── config
+│       │   │   └── theme.ts
+│       │   ├── experiments
+│       │   │   └── GlitchGhost.tsx
+│       │   ├── hooks
+│       │   │   ├── useHeartbeat.ts
+│       │   │   ├── usePanelRegistry.ts
+│       │   │   ├── usePanelTracker.ts
+│       │   │   └── useWindowFocus.ts
+│       │   ├── props
+│       │   │   └── MiniCrystalCanvas.tsx
+│       │   ├── registry
+│       │   │   ├── PanelElementRegistry.ts
+│       │   │   ├── RenderCatalog.ts
+│       │   │   └── RenderRegistry.ts
+│       │   ├── stages
+│       │   │   ├── GalleryStage.tsx
+│       │   │   └── LabStage.tsx
+│       │   └── vfx
+│       │       ├── CameraRig.tsx
+│       │       ├── PostProcessing.tsx
+│       │       ├── UISyncDirector.tsx
+│       │       └── WireframeFloor.tsx
+│       └── system
+│           ├── PWARegister.tsx
+│           └── SemanticContent.tsx
 ├── tailwind.config.ts
 └── tsconfig.json
 
-83 directories, 309 files
+84 directories, 315 files
 
 =====================================
 FILE: ./next.config.js
@@ -705,6 +712,92 @@ const config: Config = {
   plugins: [],
 }
 export default config
+
+
+=====================================
+FILE: ./public/manifest.json
+=====================================
+{
+  "name": "MESOELFY_OS",
+  "short_name": "MESOELFY",
+  "description": "Latent Space Bandit // Digital HQ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
+
+
+=====================================
+FILE: ./public/sw.js
+=====================================
+const CACHE_NAME = 'mesoelfy-os-cache-v1';
+
+// Assets to cache immediately
+const PRECACHE_URLS = [
+  '/',
+  '/favicon.ico',
+  '/manifest.json',
+  '/assets/images/social-card.jpg',
+  '/assets/audio/music/mesoelfy_os/01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  // Clean up old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+// Cache First, Network Fallback Strategy
+self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests (like YouTube)
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      if (response) {
+        return response;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        // Cache new resources dynamically (except heavy media if preferred)
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      });
+    })
+  );
+});
 
 
 =====================================
@@ -2705,7 +2798,9 @@ interface ToggleButtonProps {
   active: boolean;
   onClick: () => void;
   variant?: 'icon' | 'panel'; 
-  color?: string; // e.g. "text-primary-green"
+  color?: string;
+  /** Accessibility Label (Required for icon-only buttons) */
+  'aria-label'?: string; 
 }
 
 export const ToggleButton = ({ 
@@ -2715,7 +2810,8 @@ export const ToggleButton = ({
   active, 
   onClick, 
   variant = 'icon',
-  color
+  color,
+  'aria-label': ariaLabel 
 }: ToggleButtonProps) => {
   const audio = useAudio();
   const Icon = active ? IconOn : (IconOff || IconOn);
@@ -2725,12 +2821,16 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
+  // Safe fallback for aria-label if not provided
+  const a11yLabel = ariaLabel || label || (active ? "Toggle Off" : "Toggle On");
+
   // 1. PANEL VARIANT (Settings Menu)
   if (variant === 'panel') {
       return (
         <button
           onClick={handleClick}
           onMouseEnter={(e) => audio.playHover(getPan(e))}
+          aria-label={a11yLabel}
           className={clsx(
             "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
             active 
@@ -2756,9 +2856,10 @@ export const ToggleButton = ({
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
+      aria-label={a11yLabel}
       className={clsx(
         "group flex items-center justify-center h-7 transition-all duration-200 border rounded-sm",
-        "w-8", // Uniform width for both Icons and Text labels (SFX)
+        "w-8", 
         color || 'text-white',
         "hover:bg-current hover:border-transparent",
         active 
@@ -3382,6 +3483,95 @@ export const useHoloCycler = (slotIndex: number, isSystemActive: boolean) => {
   }, []);
 
   return { videoId, isMasked };
+};
+
+
+=====================================
+FILE: ./src/ui/system/PWARegister.tsx
+=====================================
+'use client';
+
+import { useEffect } from 'react';
+
+/**
+ * Registers the Service Worker to enable PWA capabilities.
+ * This enables the 'Add to Home Screen' prompt on mobile/desktop.
+ */
+export const PWARegister = () => {
+  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      window.location.hostname !== 'localhost' // Optional: skip on localhost to avoid caching issues during dev
+    ) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => console.log('// PWA SERVICE_WORKER: ONLINE', reg.scope))
+        .catch((err) => console.error('// PWA SERVICE_WORKER: FAILED', err));
+    }
+  }, []);
+
+  return null;
+};
+
+
+=====================================
+FILE: ./src/ui/system/SemanticContent.tsx
+=====================================
+import identity from '@/engine/config/static/identity.json';
+import socials from '@/engine/config/static/socials.json';
+
+/**
+ * Invisible semantic layer for SEO bots.
+ * Provides text context for the 3D canvas content.
+ */
+export const SemanticContent = () => {
+  return (
+    <article className="sr-only">
+      <header>
+        <h1>MESOELFY: 3D Interactive Portfolio & Game</h1>
+        <h2>Operator: {identity.name} ({identity.class})</h2>
+        <p>{identity.bio}</p>
+      </header>
+
+      <section aria-label="Technical Overview">
+        <h3>About This Project</h3>
+        <p>
+          This site represents a "Digital Headquarters" for Elfy (Steven Casteel). 
+          It is an immersive web experiment that combines a functional portfolio with 
+          an arcade-style shooter game, wrapped in a sci-fi Operating System aesthetic.
+        </p>
+        
+        <h3>Open Source Architecture</h3>
+        <p>
+          Built to push the limits of React-based 3D rendering. The source code is available 
+          on GitHub for educational purposes.
+        </p>
+        
+        <h4>Core Stack & Libraries:</h4>
+        <ul>
+          <li><strong>Framework:</strong> Next.js 14 (App Router) & TypeScript</li>
+          <li><strong>3D Engine:</strong> React Three Fiber (R3F) v9 & Three.js</li>
+          <li><strong>Helpers:</strong> @react-three/drei & maath</li>
+          <li><strong>State Management:</strong> Zustand (with persistence)</li>
+          <li><strong>Styling:</strong> Tailwind CSS & Framer Motion</li>
+          <li><strong>Post-Processing:</strong> @react-three/postprocessing (Bloom, Vignette)</li>
+          <li><strong>Audio:</strong> Native Web Audio API (Real-time synthesis)</li>
+        </ul>
+      </section>
+
+      <footer aria-label="Social Uplinks">
+        <h3>Connect</h3>
+        <ul>
+          {socials.map((social) => (
+            <li key={social.name}>
+              <a href={social.url} rel="me">{social.name}</a>
+            </li>
+          ))}
+        </ul>
+      </footer>
+    </article>
+  );
 };
 
 
@@ -9648,7 +9838,9 @@ export const registerAllAssets = () => {
     return mat;
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+  
+  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true }));
 
   // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
@@ -9704,16 +9896,10 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
 
-    // Offset Projectiles so origin is at the Tail (Bottom)
-    // Projectiles align +Y to velocity. Scaling Y stretches them.
-    // If centered (default), scaling Y stretches back and front.
-    // Moving geometry UP (+Y) by half height puts Bottom at 0.
-    // Then scaling Y grows UP (Forward).
     if (isProjectile) {
         if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
             geo.translate(0, 0.5, 0);
         } else if (visual.model === 'TETRA') {
-            // Tetra is weird, usually centered. Let's shift it a bit.
             geo.translate(0, 0.3, 0);
         }
     }
@@ -9728,6 +9914,8 @@ FILE: ./src/app/layout.tsx
 import type { Metadata, Viewport } from 'next';
 import { Montserrat, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
+import socials from '@/engine/config/static/socials.json';
+import identity from '@/engine/config/static/identity.json';
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
@@ -9743,9 +9931,74 @@ const jetbrains = JetBrains_Mono({
   display: 'swap',
 });
 
+const BASE_URL = 'https://mesoelfy.github.io';
+const REAL_SITE = "https://www.stevencasteel.com/";
+const REPO_URL = "https://github.com/mesoelfy/mesoelfy.github.io";
+const RELEASES_URL = "https://github.com/mesoelfy/mesoelfy.github.io/releases";
+
+// TODO: REPLACE THIS ID WITH BESPOKE TRAILER FOR LAUNCH
+const TRAILER_VIDEO_ID = "oLALHbB3iXU"; 
+
 export const metadata: Metadata = {
-  title: 'MESOELFY // LATENT SPACE BANDIT',
-  description: 'The official digital HQ of Mesoelfy. Art, Lore, and Neural Network Injections.',
+  metadataBase: new URL(BASE_URL),
+  title: {
+    template: '%s // MESOELFY',
+    default: 'MESOELFY // 3D PORTFOLIO & WEB GAME',
+  },
+  description: "An interactive 3D portfolio and shooter game running in the browser. Built by Elfy using React Three Fiber.",
+  keywords: [
+    "React Three Fiber", "R3F", "WebGL", "Three.js", "Next.js", 
+    "Creative Developer", "Interactive Portfolio", "Web Game", "Indie Dev",
+    "Shaders", "GLSL", "Zustand", "Tailwind CSS", "Meso Elfy", "Esper Elfy"
+  ],
+  authors: [{ name: "Elfy", url: BASE_URL }],
+  creator: "Elfy",
+  manifest: '/manifest.json', // PWA ACTIVATION
+  openGraph: {
+    title: 'MESOELFY // DIGITAL HQ',
+    description: 'Enter the void. An immersive 3D portfolio and arcade shooter built with modern web tech.',
+    url: BASE_URL,
+    siteName: 'MESOELFY_OS',
+    locale: 'en_US',
+    type: 'website',
+    images: [
+      {
+        url: '/assets/images/social-card.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'MESOELFY_OS 3D Environment',
+      },
+    ],
+    // NOTE: TO ENABLE DISCORD/TELEGRAM VIDEO AUTOPLAY:
+    // 1. Host a short (<10mb) .mp4 file (e.g., /assets/video/preview.mp4).
+    // 2. Uncomment and update the lines below:
+    // videos: [
+    //   {
+    //     url: 'https://mesoelfy.github.io/assets/video/preview.mp4',
+    //     width: 1280,
+    //     height: 720,
+    //     type: 'video/mp4',
+    //   }
+    // ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MESOELFY // SYSTEM_ONLINE',
+    description: 'A 3D OS portfolio and game. Built with R3F & Next.js.',
+    creator: '@mesoelfy',
+    images: ['/assets/images/social-card.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
@@ -9758,8 +10011,63 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const schema = [
+    // 1. IDENTITY (The Person)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: identity.name, 
+      alternateName: ["Meso Elfy", "Esper Elfy", "Steven Casteel"], 
+      url: BASE_URL,
+      image: `${BASE_URL}/assets/images/social-card.jpg`,
+      sameAs: [ REAL_SITE, ...socials.map(s => s.url) ],
+      jobTitle: identity.class,
+      description: identity.bio,
+      knowsAbout: ["Game Development", "React Three Fiber", "Web Architecture", "Creative Coding"]
+    },
+    // 2. SOFTWARE (The Site/App itself)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'MESOELFY_OS',
+      applicationCategory: 'GameApplication',
+      operatingSystem: 'Windows, macOS, Linux, Web Browser',
+      browserRequirements: 'Requires WebGL 2.0',
+      description: 'A generative 3D operating system and arcade shooter portfolio.',
+      softwareVersion: '0.1.0',
+      downloadUrl: RELEASES_URL,
+      codeRepository: REPO_URL,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD'
+      },
+      author: {
+        '@type': 'Person',
+        name: 'Elfy'
+      }
+    },
+    // 3. MEDIA (The Gameplay Trailer)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: 'MESOELFY_OS // Gameplay Preview',
+      description: 'Footage of the MESOELFY_OS latent space environment and combat mechanics.',
+      thumbnailUrl: `${BASE_URL}/assets/images/social-card.jpg`,
+      uploadDate: new Date().toISOString(),
+      contentUrl: `https://www.youtube.com/watch?v=${TRAILER_VIDEO_ID}`,
+      embedUrl: `https://www.youtube.com/embed/${TRAILER_VIDEO_ID}`
+    }
+  ];
+
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`} style={{ backgroundColor: '#000000' }}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      </head>
       <body 
         className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} 
@@ -9778,9 +10086,9 @@ FILE: ./src/app/page.tsx
 =====================================
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { SceneCanvas } from '@/ui/sim/SceneCanvas';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { SocialRow } from '@/ui/kit/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/kit/molecules/LiveArtGrid';
@@ -9794,7 +10102,6 @@ import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
-import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9812,6 +10119,11 @@ import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DOM_ID } from '@/ui/config/DOMConfig';
+import { SemanticContent } from '@/ui/system/SemanticContent';
+import { PWARegister } from '@/ui/system/PWARegister';
+
+const SceneCanvas = dynamic(() => import('@/ui/sim/SceneCanvas').then(m => m.SceneCanvas), { ssr: false });
+const GameOverlay = dynamic(() => import('@/ui/sim/GameCanvas').then(m => m.GameOverlay), { ssr: false });
 
 export default function Home() {
   const { 
@@ -9832,23 +10144,18 @@ export default function Home() {
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isSandbox = bootState === 'sandbox';
-
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Gate Logic
   const [showGate, setShowGate] = useState(false);
   const [gateVariant, setGateVariant] = useState<GateVariant>('MOBILE');
   const [checkDone, setCheckDone] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Check Hardware
     const w = window.innerWidth;
-    
     if (w <= 1100) {
         setGateVariant('MOBILE');
         setShowGate(true);
@@ -9868,86 +10175,53 @@ export default function Home() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-
     const handleResize = () => {
         if (!contentRef.current) return;
         if (window.innerWidth >= 1024) {
-            const HEADER_H = 48;
-            const FOOTER_H = 32;
-            const PADDING_Y = 48; 
+            const HEADER_H = 48; const FOOTER_H = 32; const PADDING_Y = 48; 
             const availableHeight = window.innerHeight - HEADER_H - FOOTER_H;
             const naturalHeight = contentRef.current.scrollHeight + PADDING_Y;
             const ratio = Math.min(1, availableHeight / naturalHeight);
             setDashboardScale(Math.floor(ratio * 1000) / 1000);
-        } else {
-            setDashboardScale(1);
-        }
+        } else { setDashboardScale(1); }
     };
-
-    const debouncedResize = () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(handleResize, 100);
-    };
-
+    const debouncedResize = () => { clearTimeout(timeoutId); timeoutId = setTimeout(handleResize, 100); };
     handleResize();
     const observer = new ResizeObserver(debouncedResize);
     if (contentRef.current) observer.observe(contentRef.current);
     window.addEventListener('resize', debouncedResize);
-    
-    return () => {
-        window.removeEventListener('resize', debouncedResize);
-        observer.disconnect();
-        clearTimeout(timeoutId);
-    };
+    return () => { window.removeEventListener('resize', debouncedResize); observer.disconnect(); clearTimeout(timeoutId); };
   }, [bootState]); 
 
   useEffect(() => {
     if (bootState !== 'active') return;
-
     const checkPauseState = () => {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
-
-        if (isMenuOpen || isDebugActive || showGate) {
-            setSimulationPaused(true);
-        } else {
-            setSimulationPaused(false);
-        }
+        if (isMenuOpen || isDebugActive || showGate) { setSimulationPaused(true); } 
+        else { setSimulationPaused(false); }
     };
-
     checkPauseState();
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
   }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showGate]);
 
-  useEffect(() => {
-      AudioSystem.init();
-  }, []);
+  useEffect(() => { AudioSystem.init(); }, []);
 
-  const handleBreachStart = () => {
-    AudioSystem.playSound('initialize_impact');
-    startBreach();
-  };
+  const handleBreachStart = () => { AudioSystem.playSound('initialize_impact'); startBreach(); };
 
   const handleBootComplete = () => {
-    setTimeout(() => {
-      setBootState('active');
-      setIntroDone(true);
-      AudioSystem.startMusic(); 
-      startGame();
-    }, 0);
+    setTimeout(() => { setBootState('active'); setIntroDone(true); AudioSystem.startMusic(); startGame(); }, 0);
   };
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
     <GameProvider>
-      <div 
-        id={DOM_ID.APP_ROOT} 
-        className="relative w-full h-screen overflow-hidden cursor-none bg-black"
-        style={{ backgroundColor: '#000000' }}
-      >
-        
+      <PWARegister />
+      <SemanticContent />
+
+      <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black" style={{ backgroundColor: '#000000' }}>
         <MetaManager />
         <CustomCursor />
         <GlobalBackdrop />
@@ -9955,24 +10229,21 @@ export default function Home() {
         <MobileGateModal isOpen={showGate} variant={gateVariant} onOverride={handleGateOverride} />
 
         <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
-          
           <AnimatePresence>
               {showHoloBackground && (
-                  <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="absolute inset-0 z-holo"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="absolute inset-0 z-holo">
                       <HoloBackground />
                   </motion.div>
               )}
           </AnimatePresence>
 
+          <div className="absolute inset-0 z-deep bg-black pointer-events-none">
+             <img src="/assets/images/social-card.jpg" alt="MESOELFY_OS Background" className="w-full h-full object-cover opacity-50" />
+             <div className="absolute inset-0 bg-black/50" />
+          </div>
+
           <WebGLErrorBoundary key={sessionId}>
               <SceneCanvas className={clsx("blur-0 transition-opacity duration-[500ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
-              
               <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[500ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
                   <GameOverlay />
               </div>
@@ -9982,76 +10253,32 @@ export default function Home() {
 
           {!isSandbox && (
               <>
-                  <AboutModal />
-                  <FeedModal />
-                  <GalleryModal />
-                  <ContactModal />
-                  <SettingsModal />
-                  <ZenBomb />
+                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <ZenBomb />
               </>
           )}
 
           {checkDone && bootState === 'standby' && !showGate && (
-            <MatrixBootSequence 
-               onComplete={handleBootComplete} 
-               onBreachStart={handleBreachStart} 
-            />
+            <MatrixBootSequence onComplete={handleBootComplete} onBreachStart={handleBreachStart} />
           )}
 
           {!isSandbox && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
-
                 <div className="flex-1 min-h-0 relative w-full overflow-y-auto lg:overflow-hidden">
-                  <div 
-                      className="w-full origin-top transition-transform duration-300 ease-out"
-                      style={{ 
-                          transform: `scale(${dashboardScale})`,
-                          marginBottom: `-${(1 - dashboardScale) * 100}%` 
-                      }}
-                  >
+                  <div className="w-full origin-top transition-transform duration-300 ease-out" style={{ transform: `scale(${dashboardScale})`, marginBottom: `-${(1 - dashboardScale) * 100}%` }}>
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
                           {!isZenMode && (
-                          <motion.div 
-                              className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
-                              initial="hidden"
-                              animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
-                              variants={{
-                              hidden: { opacity: 0 },
-                              visible: { 
-                                  opacity: 1, 
-                                  transition: { 
-                                  staggerChildren: 0.05,
-                                  delayChildren: 0.0
-                                  } 
-                              }
-                              }}
-                          >
+                          <motion.div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8" initial="hidden" animate="visible" exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.0 } } }}>
                               <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                              <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId={PanelId.IDENTITY}>
-                                  <IdentityHUD />
-                              </GlassPanel>
-
-                              <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId={PanelId.SOCIAL}>
-                                  <SocialRow />
-                              </GlassPanel>
+                              <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId={PanelId.IDENTITY}> <IdentityHUD /> </GlassPanel>
+                              <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId={PanelId.SOCIAL}> <SocialRow /> </GlassPanel>
                               </div>
-
                               <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                              <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId={PanelId.FEED}>
-                                  <FeedAccessTerminal />
-                              </GlassPanel>
-
+                              <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId={PanelId.FEED}> <FeedAccessTerminal /> </GlassPanel>
                               <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
-                                  <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId={PanelId.ART}>
-                                  <LiveArtGrid />
-                                  </GlassPanel>
-
-                                  <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId={PanelId.VIDEO}>
-                                  <HoloCommLog />
-                                  </GlassPanel>
+                                  <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId={PanelId.ART}> <LiveArtGrid /> </GlassPanel>
+                                  <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId={PanelId.VIDEO}> <HoloCommLog /> </GlassPanel>
                               </div>
                               </div>
                           </motion.div>
@@ -10060,7 +10287,6 @@ export default function Home() {
                       </div>
                   </div>
                 </div>
-                
                 <Footer />
               </div>
           )}
@@ -17667,7 +17893,7 @@ export class WeaponSystem implements IGameSystem {
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
     private config: typeof ConfigService,
-    private physics: IPhysicsSystem // NEW DEPENDENCY
+    private physics: IPhysicsSystem 
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
@@ -17698,7 +17924,6 @@ export class WeaponSystem implements IGameSystem {
     if (time > this.lastFireTime + currentFireRate) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
-        // Get the visual rotation to align Sniffer shots with reticle
         const renderTransform = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
         
         if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel, renderTransform);
@@ -17736,7 +17961,8 @@ export class WeaponSystem implements IGameSystem {
           const b = this.spawner.spawnBullet(t.x, t.y, vx, vy, Faction.FRIENDLY, 2.0, damage, WeaponIDs.PLAYER_PURGE);
           const model = b.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { 
-              this.tempColor.setHSL(ratio, 0.9, 0.6);
+              // FIX: Use 0.5 Lightness for Pure Color (No white tint)
+              this.tempColor.setHSL(ratio, 1.0, 0.5);
               model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b;
           }
       }
@@ -17759,7 +17985,8 @@ export class WeaponSystem implements IGameSystem {
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
-          this.tempColor.setHSL(hue, 1.0, 0.6); 
+          // FIX: Use 0.5 Lightness for Pure Color
+          this.tempColor.setHSL(hue, 1.0, 0.5); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
 
@@ -17770,7 +17997,7 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
-    const RANGE = 14; // SQRT(196) = 14
+    const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
     
     let nearestDist = Infinity; 
@@ -17780,7 +18007,6 @@ export class WeaponSystem implements IGameSystem {
       const id = this.queryBuffer[i];
       const e = this.registry.getEntity(id);
       
-      // Strict Enemy Filtering
       if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
       
       const state = e.getComponent<AIStateData>(ComponentType.State);

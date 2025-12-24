@@ -12,7 +12,7 @@ export enum FastEventType {
   CAM_SHAKE = 3, 
   HIT_STOP = 4, 
   DUCK_MUSIC = 5,
-  ENTITY_FLASH = 6 // NEW
+  ENTITY_FLASH = 6
 }
 
 export enum SoundCode { NONE = 0, FX_PLAYER_FIRE = 1, FX_IMPACT_LIGHT = 2, FX_IMPACT_HEAVY = 3, FX_ENEMY_FIRE = 4, UI_CLICK = 5, UI_HOVER = 6, LOOP_DRILL = 7, FX_REBOOT_SUCCESS = 8, FX_LEVEL_UP = 9, LOOP_HEAL = 10, LOOP_WARNING = 11, FX_TELEPORT = 12, FX_EXHAUST_SIZZLE = 13, FX_PLAYER_DEATH = 14 }
@@ -37,14 +37,39 @@ export const getFXCode = (key: string): FXCode => {
 };
 
 export class FastEventBusImpl implements IFastEventService {
-  private buffer = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
-  private cursor = 0;
+  // DOUBLE BUFFERING
+  private bufferA = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
+  private bufferB = new Int32Array(SYS_LIMITS.EVENT_BUFFER_SIZE);
+  
+  // Pointers
+  private writeBuffer = this.bufferA;
+  private readBuffer = this.bufferB;
+  
+  private writeCursor = 0;
+  private readCursor = 0;
 
   private emitRaw(eventId: number, a1: number = 0, a2: number = 0, a3: number = 0, a4: number = 0) {
-    if (this.cursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
-    this.buffer[this.cursor++] = eventId;
-    this.buffer[this.cursor++] = a1; this.buffer[this.cursor++] = a2;
-    this.buffer[this.cursor++] = a3; this.buffer[this.cursor++] = a4;
+    if (this.writeCursor + EVENT_STRIDE >= SYS_LIMITS.EVENT_BUFFER_SIZE) return; 
+    
+    // Write to the active write buffer
+    this.writeBuffer[this.writeCursor++] = eventId;
+    this.writeBuffer[this.writeCursor++] = a1; 
+    this.writeBuffer[this.writeCursor++] = a2;
+    this.writeBuffer[this.writeCursor++] = a3; 
+    this.writeBuffer[this.writeCursor++] = a4;
+  }
+
+  public swap() {
+    // 1. Lock in the write count as the read count for this frame
+    this.readCursor = this.writeCursor;
+    
+    // 2. Flip buffers
+    const temp = this.readBuffer;
+    this.readBuffer = this.writeBuffer;
+    this.writeBuffer = temp;
+    
+    // 3. Reset the new write buffer for the next batch of events
+    this.writeCursor = 0;
   }
 
   public spawnFX(code: FXCode, x: number, y: number, angle: number = 0) {
@@ -63,9 +88,25 @@ export class FastEventBusImpl implements IFastEventService {
   public flashEntity(id: number) {
     this.emitRaw(FastEventType.ENTITY_FLASH, id);
   }
-  public getCursor(): number { return this.cursor; }
-  public clear() { this.cursor = 0; }
+  
+  // Debug / Telemetry only
+  public getCursor(): number { return this.readCursor; }
+  
+  public clear() { 
+    this.writeCursor = 0;
+    this.readCursor = 0;
+  }
+  
   public process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void) {
-      for(let i=0; i<this.cursor; i+=EVENT_STRIDE) callback(this.buffer[i], this.buffer[i+1], this.buffer[i+2], this.buffer[i+3], this.buffer[i+4]);
+      // Iterate the locked read buffer
+      for(let i=0; i<this.readCursor; i+=EVENT_STRIDE) {
+          callback(
+              this.readBuffer[i], 
+              this.readBuffer[i+1], 
+              this.readBuffer[i+2], 
+              this.readBuffer[i+3], 
+              this.readBuffer[i+4]
+          );
+      }
   }
 }

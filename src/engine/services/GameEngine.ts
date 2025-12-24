@@ -43,6 +43,13 @@ export class GameEngineCore implements IGameSystem {
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
+    // --- 0. SWAP EVENT BUFFERS ---
+    // Safely lock in all UI/Input events that occurred since the last frame.
+    // This prevents race conditions where events added during the loop might be cleared.
+    if (this.fastEventBus) {
+        this.fastEventBus.swap();
+    }
+
     if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
         gameStore.stopGame();
     }
@@ -90,10 +97,6 @@ export class GameEngineCore implements IGameSystem {
             console.error(`ERR_PHASE_RENDER:`, e);
         }
     }
-
-    // --- 3. CLEANUP ---
-    // Clear events AFTER Render systems (VFXSystem) have processed them
-    if (this.fastEventBus) this.fastEventBus.clear();
   }
 
   teardown(): void {
