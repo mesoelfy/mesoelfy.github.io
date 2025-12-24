@@ -1,8 +1,8 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { SceneCanvas } from '@/ui/sim/SceneCanvas';
 import { GlassPanel } from '@/ui/kit/atoms/GlassPanel';
 import { SocialRow } from '@/ui/kit/molecules/SocialRow';
 import { LiveArtGrid } from '@/ui/kit/molecules/LiveArtGrid';
@@ -16,7 +16,6 @@ import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
-import { GameOverlay } from '@/ui/sim/GameCanvas';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +33,13 @@ import { GameProvider } from '@/engine/state/GameContext';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DOM_ID } from '@/ui/config/DOMConfig';
+import { SemanticContent } from '@/ui/system/SemanticContent';
+
+// --- DYNAMIC IMPORTS FOR PERFORMANCE ---
+// These components are heavy on JS/WebGL. Loading them dynamically with ssr: false
+// ensures the initial HTML payload is light and the "Poster Image" is seen first.
+const SceneCanvas = dynamic(() => import('@/ui/sim/SceneCanvas').then(m => m.SceneCanvas), { ssr: false });
+const GameOverlay = dynamic(() => import('@/ui/sim/GameCanvas').then(m => m.GameOverlay), { ssr: false });
 
 export default function Home() {
   const { 
@@ -54,7 +60,6 @@ export default function Home() {
   const isZenMode = useGameStore(s => s.isZenMode);
   
   const isSandbox = bootState === 'sandbox';
-
   const showHoloBackground = isSandbox && (sandboxView === 'lab' || sandboxView === 'audio');
 
   const [dashboardScale, setDashboardScale] = useState(1);
@@ -164,12 +169,14 @@ export default function Home() {
 
   return (
     <GameProvider>
+      {/* 1. SEMANTIC SEO LAYER (INVISIBLE) */}
+      <SemanticContent />
+
       <div 
         id={DOM_ID.APP_ROOT} 
         className="relative w-full h-screen overflow-hidden cursor-none bg-black"
         style={{ backgroundColor: '#000000' }}
       >
-        
         <MetaManager />
         <CustomCursor />
         <GlobalBackdrop />
@@ -192,7 +199,22 @@ export default function Home() {
               )}
           </AnimatePresence>
 
+          {/* 2. THE POSTER IMAGE STRATEGY */}
+          {/* This static image sits behind the canvas. It provides:
+              a) A valid 'thumbnail' for Google Mobile Search results.
+              b) A loading screen before the heavy JS executes. 
+          */}
+          <div className="absolute inset-0 z-deep bg-black pointer-events-none">
+             <img 
+               src="/assets/images/social-card.jpg" 
+               alt="MESOELFY_OS Background"
+               className="w-full h-full object-cover opacity-50"
+             />
+             <div className="absolute inset-0 bg-black/50" /> {/* Dimmer */}
+          </div>
+
           <WebGLErrorBoundary key={sessionId}>
+              {/* 3. DYNAMIC 3D LAYERS (Fades In Over Poster) */}
               <SceneCanvas className={clsx("blur-0 transition-opacity duration-[500ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
               
               <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[500ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>

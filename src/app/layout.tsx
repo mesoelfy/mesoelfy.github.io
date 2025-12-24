@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Montserrat, JetBrains_Mono } from 'next/font/google';
 import '@/styles/globals.css';
+import socials from '@/engine/config/static/socials.json';
+import identity from '@/engine/config/static/identity.json';
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
@@ -16,9 +18,57 @@ const jetbrains = JetBrains_Mono({
   display: 'swap',
 });
 
+const BASE_URL = 'https://mesoelfy.github.io';
+const REAL_SITE = "https://www.stevencasteel.com/";
+
 export const metadata: Metadata = {
-  title: 'MESOELFY // LATENT SPACE BANDIT',
-  description: 'The official digital HQ of Mesoelfy. Art, Lore, and Neural Network Injections.',
+  metadataBase: new URL(BASE_URL),
+  title: {
+    template: '%s // MESOELFY',
+    default: 'MESOELFY // 3D PORTFOLIO & WEB GAME',
+  },
+  description: "An interactive 3D portfolio and shooter game running in the browser. Built by Elfy using React Three Fiber.",
+  keywords: [
+    "React Three Fiber", "R3F", "WebGL", "Three.js", "Next.js", 
+    "Creative Developer", "Interactive Portfolio", "Web Game", "Indie Dev",
+    "Shaders", "GLSL", "Zustand", "Tailwind CSS", "Meso Elfy", "Esper Elfy"
+  ],
+  authors: [{ name: "Elfy", url: BASE_URL }],
+  creator: "Elfy",
+  openGraph: {
+    title: 'MESOELFY // DIGITAL HQ',
+    description: 'Enter the void. An immersive 3D portfolio and arcade shooter built with modern web tech.',
+    url: BASE_URL,
+    siteName: 'MESOELFY_OS',
+    locale: 'en_US',
+    type: 'website',
+    images: [
+      {
+        url: '/assets/images/social-card.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'MESOELFY_OS 3D Environment',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MESOELFY // SYSTEM_ONLINE',
+    description: 'A 3D OS portfolio and game. Built with R3F & Next.js.',
+    creator: '@mesoelfy',
+    images: ['/assets/images/social-card.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export const viewport: Viewport = {
@@ -31,8 +81,34 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // SCHEMA STRATEGY:
+  // Primary Identity: "Elfy"
+  // Aliases: "Meso Elfy", "Esper Elfy", "Steven Casteel"
+  // Real Identity Link: "stevencasteel.com"
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: identity.name, 
+    alternateName: ["Meso Elfy", "Esper Elfy", "Steven Casteel"], 
+    url: BASE_URL,
+    image: `${BASE_URL}/assets/images/social-card.jpg`,
+    sameAs: [
+      REAL_SITE,
+      ...socials.map(s => s.url)
+    ],
+    jobTitle: identity.class,
+    description: identity.bio,
+    knowsAbout: ["Game Development", "React Three Fiber", "Web Architecture", "Creative Coding"]
+  };
+
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`} style={{ backgroundColor: '#000000' }}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body 
         className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} 
