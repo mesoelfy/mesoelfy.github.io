@@ -35,12 +35,13 @@ const createWindow = () => {
 
 app.whenReady().then(() => {
   // --- YOUTUBE 153 FIX ---
-  // Intercept requests to YouTube and inject a valid 'Referer' header.
-  // This tricks YouTube into thinking the video is playing on your website.
+  // Intercept requests to YouTube and inject valid 'Referer' AND 'Origin' headers.
+  // This tricks YouTube into thinking the video is playing on the hosted site, bypassing 'file://' restrictions.
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://*.youtube.com/*', '*://*.google.com/*'] },
     (details, callback) => {
       details.requestHeaders['Referer'] = 'https://mesoelfy.github.io/';
+      details.requestHeaders['Origin'] = 'https://mesoelfy.github.io';
       callback({ cancel: false, requestHeaders: details.requestHeaders });
     }
   );
