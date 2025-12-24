@@ -36,7 +36,8 @@ export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
   upgrades: Record<string, number>,
-  reticleRotation: number = 0 
+  reticleRotation: number = 0,
+  fireCycle: number = 0
 ): ShotDef[] => {
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
@@ -100,7 +101,8 @@ export const calculatePlayerShots = (
   }
 
   // --- 3. SNIFFER SHOTS ---
-  if (snifferLevel > 0) {
+  // UPDATED: Only fire every 3rd cycle
+  if (snifferLevel > 0 && fireCycle % 3 === 0) {
       const maxTips = 4;
       for (let i = 0; i < snifferLevel; i++) {
           const tipIndex = i % maxTips;
@@ -114,8 +116,11 @@ export const calculatePlayerShots = (
           
           shots.push({
               x: tipX, y: tipY, vx, vy,
-              damage: damage * 0.5, life: life * 2,
-              configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true
+              // UPDATED: Base Damage + 1
+              damage: damage + 1, 
+              life: life * 2,
+              configId: WeaponIDs.PLAYER_SNIFFER, 
+              isHoming: true
           });
       }
   }

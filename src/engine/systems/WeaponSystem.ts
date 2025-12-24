@@ -25,6 +25,7 @@ export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
+  private fireCycle = 0;
   
   private purgeState: PurgeState = {
       active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0
@@ -162,7 +163,8 @@ export class WeaponSystem implements IGameSystem {
         { x: pPos.x, y: pPos.y }, 
         { x: tPos.x, y: tPos.y }, 
         upgrades,
-        reticleRotation
+        reticleRotation,
+        this.fireCycle // Pass cycle
     );
 
     shots.forEach(shot => {
@@ -172,14 +174,12 @@ export class WeaponSystem implements IGameSystem {
             bullet.addComponent(new TargetData(null, 'ENEMY'));
             this.registry.updateCache(bullet); 
         }
-        
-        // REMOVED: No longer copying player render color to bullet.
-        // Projectiles now use the inherent color defined in Weapons.ts
     });
 
     this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });
     this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
+    this.fireCycle++; // Increment
   }
 
   private getPlayerEntity() {

@@ -23,7 +23,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    // UPDATED: Scale increased by 10% (0.3 -> 0.33)
+    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },

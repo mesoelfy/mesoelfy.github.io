@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 22 19:36:17 CST 2025
+Generated on: Wed Dec 24 11:35:20 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -224,6 +224,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   └── global
 │   │   │       └── useStore.ts
 │   │   ├── systems
+│   │   │   ├── AnimationSystem.ts
 │   │   │   ├── AudioDirector.ts
 │   │   │   ├── BehaviorSystem.ts
 │   │   │   ├── CollisionSystem.ts
@@ -242,6 +243,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── PlayerMovementSystem.ts
 │   │   │   ├── ProgressionSystem.ts
 │   │   │   ├── ProjectileSystem.ts
+│   │   │   ├── RenderStateSystem.ts
 │   │   │   ├── RenderSystem.ts
 │   │   │   ├── ShakeSystem.ts
 │   │   │   ├── StateSyncSystem.ts
@@ -249,7 +251,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── TargetingSystem.ts
 │   │   │   ├── TimeSystem.ts
 │   │   │   ├── VFXSystem.ts
-│   │   │   ├── VisualSystem.ts
 │   │   │   ├── WaveSystem.ts
 │   │   │   ├── WeaponSystem.ts
 │   │   │   ├── WorldSystem.ts
@@ -400,7 +401,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-83 directories, 309 files
+83 directories, 310 files
 
 =====================================
 FILE: ./next.config.js
@@ -2906,6 +2907,7 @@ export const PanelSparks = ({ intensity }: PanelSparksProps) => {
     <canvas 
       ref={canvasRef} 
       className="absolute inset-0 pointer-events-none z-0 mix-blend-screen"
+      style={{ background: 'transparent' }}
     />
   );
 };
@@ -4166,7 +4168,11 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
 
   return (
     <motion.div animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }} className="fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden">
-      <canvas ref={canvasRef} className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} />
+      <canvas 
+        ref={canvasRef} 
+        className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showMatrix && !isBreaching ? 'opacity-30' : 'opacity-0'}`} 
+        style={{ background: 'transparent' }} 
+      />
       
       <div className="w-full h-full flex flex-col items-center justify-center relative z-10">
         <motion.div 
@@ -7859,7 +7865,7 @@ FILE: ./src/ui/sim/SceneCanvas.tsx
 
 import { Canvas } from '@react-three/fiber';
 import { WireframeFloor } from '@/ui/sim/vfx/WireframeFloor';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { clsx } from 'clsx';
 
 interface SceneCanvasProps {
@@ -7868,13 +7874,25 @@ interface SceneCanvasProps {
 }
 
 export const SceneCanvas = ({ children, className }: SceneCanvasProps) => {
+  const [ready, setReady] = useState(false);
+
   return (
-    <div className={clsx("fixed inset-0 w-full h-full z-0 pointer-events-none transition-all duration-[2000ms] ease-out", className)}>
+    <div 
+        // Wrapper: Always black, handles the "Fade In" logic from page.tsx via className
+        className={clsx("fixed inset-0 w-full h-full z-0 pointer-events-none transition-all duration-[2000ms] ease-out bg-black", className)}
+        style={{ backgroundColor: '#000000' }}
+    >
       <Canvas 
         camera={{ position: [0, 2, 10], fov: 45 }}
         gl={{ antialias: true, alpha: false }} 
         dpr={[1, 2]}
-        style={{ background: '#000000' }} 
+        // Canvas Element: Force black bg, start invisible to prevent white flash
+        style={{ background: '#000000', opacity: ready ? 1 : 0, transition: 'opacity 0.2s ease-in' }}
+        onCreated={({ gl }) => {
+          gl.setClearColor('#000000', 1);
+          // Defer visibility slightly to ensure first frame is drawn
+          requestAnimationFrame(() => setReady(true));
+        }}
       >
         <color attach="background" args={['#000']} />
         <fog attach="fog" args={['#000', 2, 30]} />
@@ -9600,6 +9618,8 @@ export const GameOverlay = () => {
           stencil: false,
           powerPreference: "high-performance"
         }}
+        // FIX: Ensure transparent background so we see SceneCanvas behind it
+        style={{ background: 'transparent' }}
         eventSource={typeof document !== 'undefined' ? document.body : undefined}
         eventPrefix="client"
       >
@@ -9791,7 +9811,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`} style={{ backgroundColor: '#000000' }}>
       <body 
         className="bg-black text-primary-green selection:bg-primary-green selection:text-black font-mono"
         style={{ backgroundColor: '#000000' }} 
@@ -9881,13 +9901,10 @@ export default function Home() {
     // Check Hardware
     const w = window.innerWidth;
     
-    // Low Threshold: 1100px (Tablets/Mobile)
     if (w <= 1100) {
         setGateVariant('MOBILE');
         setShowGate(true);
     } 
-    // High Threshold: 3000px (4K/Ultrawide)
-    // Raised from 2500 to avoid flagging standard 1440p (2560px) monitors
     else if (w > 3000) {
         setGateVariant('ULTRAWIDE');
         setShowGate(true);
@@ -9977,7 +9994,11 @@ export default function Home() {
 
   return (
     <GameProvider>
-      <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black">
+      <div 
+        id={DOM_ID.APP_ROOT} 
+        className="relative w-full h-screen overflow-hidden cursor-none bg-black"
+        style={{ backgroundColor: '#000000' }}
+      >
         
         <MetaManager />
         <CustomCursor />
@@ -10114,26 +10135,30 @@ FILE: ./src/styles/globals.css
   --shake-x: 0px;
   --shake-y: 0px;
   --shake-r: 0rad;
+  
+  /* Force browser to default to dark before CSS loads */
+  color-scheme: dark;
 }
 
-html, body {
-  background-color: #000000;
+html {
+  background-color: #000000 !important;
   overscroll-behavior: none; 
   touch-action: none; 
+}
+
+body {
+  background-color: #000000 !important;
+  color: #78F654;
+  overflow: hidden; 
+  font-family: 'Courier New', monospace;
+  height: 100dvh; 
+  width: 100vw;
 }
 
 /* Force override for cursor management */
 body.cursor-none, 
 body.cursor-none * {
   cursor: none !important;
-}
-
-body {
-  color: #78F654;
-  overflow: hidden; 
-  font-family: 'Courier New', monospace;
-  height: 100dvh; 
-  width: 100vw;
 }
 
 #global-app-root {
@@ -10465,7 +10490,7 @@ export const PALETTE = {
     LIGHT: '#BC86BA',
     DEEP: '#350E3A',
     DIM: '#822B8A',
-    INDIGO: '#4203D4' // New Driller Color
+    INDIGO: '#4203D4' // Kept for Driller Body (Dark is okay for solid mesh)
   },
   // Service Pink
   PINK: {
@@ -10486,7 +10511,7 @@ export const PALETTE = {
   },
   // New Hunter Identity
   ORANGE: {
-    PRIMARY: '#CF7233', // New Hunter Color (Clay/Rust)
+    PRIMARY: '#CF7233', 
     BRIGHT: '#FF8C00'
   },
   CYAN: {
@@ -10501,12 +10526,19 @@ export const PALETTE = {
   }
 } as const;
 
-// Collections for Procedural Generation
+// Collections for Procedural Generation (VFX)
+// UPDATED: Purple set now uses lighter, "hotter" colors for better contrast on black
 export const COLOR_SETS = {
-  PURPLE: [PALETTE.PURPLE.PRIMARY, PALETTE.PURPLE.INDIGO, '#7A2F8F', '#B57EDC'],
+  PURPLE: [
+      PALETTE.PURPLE.PRIMARY, // Mid
+      PALETTE.PURPLE.LIGHT,   // Light
+      '#E0B0FF',              // Mauve (Very Light)
+      '#D461FF',              // Electric Neon (Bright)
+      '#F0D0FF'               // Near White (Hot)
+  ],
   PINK:   [PALETTE.PINK.PRIMARY, PALETTE.PINK.DIM, '#FFB6FF', '#E0B0FF'],
   YELLOW: [PALETTE.YELLOW.SOFT, '#FFE5A0', '#FFA500', PALETTE.MONO.WHITE],
-  ORANGE: [PALETTE.ORANGE.PRIMARY, PALETTE.ORANGE.BRIGHT, '#E65100', PALETTE.YELLOW.SOFT], // New Set
+  ORANGE: [PALETTE.ORANGE.PRIMARY, PALETTE.ORANGE.BRIGHT, '#E65100', PALETTE.YELLOW.SOFT],
   RED:    [PALETTE.RED.CRITICAL, PALETTE.RED.LIGHT, PALETTE.RED.DIM],
   CYAN:   [PALETTE.CYAN.PRIMARY, PALETTE.CYAN.DIM, PALETTE.MONO.WHITE],
   WHITE:  [PALETTE.MONO.WHITE]
@@ -12155,13 +12187,14 @@ export class RenderEffect extends Component {
   constructor(
     public flash: number = 0,
     public shudder: number = 0,
-    public spawnProgress: number = 0.0, // Default to 0 (Invisible)
-    public spawnVelocity: number = 0.0, // New: Controlled by AI
+    public spawnProgress: number = 0.0, 
+    public spawnVelocity: number = 0.0, 
     public elasticity: number = 0.1,
     public pulseSpeed: number = 0,
     public flashR: number = 4.0,
     public flashG: number = 0.0,
-    public flashB: number = 0.2
+    public flashB: number = 0.2,
+    public squashFactor: number = 0.0 // NEW: 0.0 (Normal) -> 1.0 (Fully Squashed)
   ) {
     super();
   }
@@ -12169,7 +12202,6 @@ export class RenderEffect extends Component {
   public reset(data: Partial<RenderEffect>) {
     this.flash = 0;
     this.shudder = 0;
-    // Essential: Reset spawn progress to 0 on pool reuse so enemies don't flash into existence
     this.spawnProgress = data.spawnProgress ?? 0.0; 
     this.spawnVelocity = 0.0;
     this.elasticity = data.elasticity ?? 0.1;
@@ -12177,6 +12209,7 @@ export class RenderEffect extends Component {
     this.flashR = data.flashR ?? 4.0;
     this.flashG = data.flashG ?? 0.0;
     this.flashB = data.flashB ?? 0.2;
+    this.squashFactor = 0.0;
     return this;
   }
 }
@@ -13861,10 +13894,22 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public playSound(key: AudioKey, pan: number = 0) {
-      if (this.isReady) {
-          if (this.bank.has(key)) this.voices.playSFX(key, pan);
-      } else if (CRITICAL_SOUNDS.includes(key)) {
-          this.pendingSounds.push({ key, pan });
+      if (!this.isReady) {
+          if (CRITICAL_SOUNDS.includes(key)) {
+              this.pendingSounds.push({ key, pan });
+          }
+          return;
+      }
+
+      if (this.bank.has(key)) {
+          this.voices.playSFX(key, pan);
+      } else if (AUDIO_MANIFEST[key]) {
+          // On-demand generation for missing sounds (e.g. Audio Matrix)
+          this.generateSingle(key).then(() => {
+              if (this.bank.has(key)) {
+                  this.voices.playSFX(key, pan);
+              }
+          });
       }
   }
 
@@ -13876,7 +13921,6 @@ export class AudioServiceImpl implements IAudioService {
 
   public startMusic() {
     this.ctxManager.resume();
-    // No arguments, VoiceManager uses manifest
     this.voices.startMusic();
     if (this.isReady && this.bank.has('ambience_core')) this.playAmbience('ambience_core');
     else this._autoStartAmbience = true;
@@ -15056,15 +15100,16 @@ import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import * as THREE from 'three';
 
 const IDLE_SPIN_TARGET = -2.5;  // CW
 const CHARGE_SPIN_TARGET = 22.0; // CCW
 
 export class RoamPanelZone extends BTNode {
-  // padding: how far outside the panel they can go
   constructor(private speed: number, private padding: number) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
@@ -15076,27 +15121,25 @@ export class RoamPanelZone extends BTNode {
 
     if (!transform || !motion || !state || !visual) return NodeState.FAILURE;
 
+    // Reset State
+    state.current = AI_STATE.ACTIVE;
+
     // Visual Spin (Idle)
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
 
-    // 1. Pick a destination if none exists
     if (state.data.roamTargetX === undefined || state.data.roamTargetY === undefined) {
         const panels = context.getAllPanelRects();
         if (panels.length > 0) {
-            // Pick random panel
             const panel = panels[Math.floor(Math.random() * panels.length)];
-            
-            // Random point within bounds + padding
             const halfW = (panel.width / 2) + this.padding;
             const halfH = (panel.height / 2) + this.padding;
             
             state.data.roamTargetX = panel.x + (Math.random() * 2 - 1) * halfW;
             state.data.roamTargetY = panel.y + (Math.random() * 2 - 1) * halfH;
         } else {
-            // Fallback if no panels
             state.data.roamTargetX = (Math.random() * 2 - 1) * 10;
             state.data.roamTargetY = (Math.random() * 2 - 1) * 5;
         }
@@ -15105,25 +15148,19 @@ export class RoamPanelZone extends BTNode {
     const destX = state.data.roamTargetX!;
     const destY = state.data.roamTargetY!;
 
-    // 2. Move towards destination
     const dx = destX - transform.x;
     const dy = destY - transform.y;
     const distSq = dx*dx + dy*dy;
 
-    // Arrive behavior
     if (distSq < 1.0) {
-        // Reached target, clear it to pick new one next tick
         state.data.roamTargetX = undefined;
         state.data.roamTargetY = undefined;
-        // Reached destination, return SUCCESS to allow sequence to proceed to firing
         return NodeState.SUCCESS;
     }
 
-    // Apply Velocity
     motion.vx += (dx - motion.vx) * context.delta * 2.0;
     motion.vy += (dy - motion.vy) * context.delta * 2.0;
 
-    // 3. Face Target (Player) if available, else look ahead
     if (target && target.x !== undefined) {
         const tDx = target.x - transform.x;
         const tDy = target.y - transform.y;
@@ -15142,12 +15179,15 @@ export class AimAndFire extends BTNode {
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const renderEffect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
 
     if (!transform || !target || !state || !visual) return NodeState.FAILURE;
     
+    state.current = AI_STATE.CHARGING;
+
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
     state.data.spinVel = currentVel;
@@ -15174,7 +15214,13 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    const offset = 1.3;
+    
+    // Dynamic Exhaust Offset
+    let offset = 1.3;
+    if (renderEffect) {
+        offset *= (1.0 - (0.4 * renderEffect.squashFactor));
+    }
+
     const spreadAngle = 0.25; 
     const density = 2; 
 
@@ -15212,8 +15258,57 @@ export class AimAndFire extends BTNode {
         }
 
         context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+        state.current = AI_STATE.ATTACK; 
+        
         return NodeState.SUCCESS;
     }
+    return NodeState.RUNNING;
+  }
+}
+
+export class HunterCooldown extends BTNode {
+  constructor(private min: number, private max: number) { super(); }
+
+  tick(entity: Entity, context: AIContext): NodeState {
+    const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+    const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const target = entity.getComponent<TargetData>(ComponentType.Target);
+
+    if (!state || !transform || !visual) return NodeState.FAILURE;
+
+    // Init Timer
+    if (state.timers[AITimerID.WAIT] === undefined) {
+        state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
+    }
+
+    // 1. Visually Spin Down (Graceful Transition)
+    // Lerp from high charge speed back to idle speed
+    let currentVel = state.data.spinVel ?? CHARGE_SPIN_TARGET;
+    currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 2.0);
+    state.data.spinVel = currentVel;
+    visual.rotation += currentVel * context.delta;
+
+    // 2. Keep Facing Target (Track Player while drifting)
+    if (target && target.x !== undefined) {
+        const dx = target.x - transform.x;
+        const dy = target.y - transform.y;
+        const desiredAngle = Math.atan2(dy, dx);
+        
+        // Smooth turn
+        let diff = desiredAngle - transform.rotation;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        transform.rotation += diff * 5.0 * context.delta;
+    }
+
+    // 3. Tick Timer
+    state.timers[AITimerID.WAIT]! -= context.delta;
+    if (state.timers[AITimerID.WAIT]! <= 0) {
+        state.timers[AITimerID.WAIT] = undefined;
+        return NodeState.SUCCESS;
+    }
+
     return NodeState.RUNNING;
   }
 }
@@ -16170,6 +16265,166 @@ export const MaterialFactory = new MaterialFactoryController();
 
 
 =====================================
+FILE: ./src/engine/systems/AnimationSystem.ts
+=====================================
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
+import { MotionData } from '@/engine/ecs/components/MotionData';
+import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { Query } from '@/engine/ecs/Query';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import * as THREE from 'three';
+
+function easeOutElastic(t: number): number {
+  const c4 = (2 * Math.PI) / 3;
+  if (t === 0) return 0;
+  if (t === 1) return 1;
+  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+}
+
+export class AnimationSystem implements IGameSystem {
+  private animationQuery = new Query({ 
+      all: [ComponentType.RenderTransform] 
+  });
+
+  constructor(
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem
+  ) {}
+
+  update(delta: number, time: number): void {
+    const CFG = VISUAL_CONFIG.DEFORMATION;
+    const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
+    
+    const isZenMode = useGameStore.getState().isZenMode;
+    const isDead = this.gameSystem.playerHealth <= 0;
+    const interactState = this.interactionSystem.repairState;
+
+    const entities = this.registry.query(this.animationQuery);
+
+    for (const entity of entities) {
+      if (!entity.active) continue;
+
+      const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+      const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
+      const aiState = entity.getComponent<AIStateData>(ComponentType.State);
+
+      if (!render) continue;
+
+      // 1. ROTATION LOGIC
+      if (rotate) {
+          render.rotation += rotate.speed * delta;
+      }
+
+      // State-based spin overrides (Player/Interaction)
+      if (entity.hasTag('PLAYER')) {
+          // Default Idle Spin
+          let spinSpeed = 0.02; 
+
+          if (isZenMode) {
+              spinSpeed = -0.03;
+          } else if (isDead) {
+              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+          } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
+              spinSpeed = -0.24;
+          }
+          
+          render.rotation += spinSpeed;
+      }
+
+      // 2. SCALE & DEFORMATION
+      let dX = 1.0, dY = 1.0, dZ = 1.0;
+
+      if (effect) {
+          if (effect.spawnProgress < 1.0) {
+              if (effect.spawnVelocity > 0) {
+                  effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
+              }
+
+              const t = effect.spawnProgress;
+              const scaleCurve = easeOutElastic(t);
+              
+              dX *= scaleCurve;
+              dY *= scaleCurve;
+              dZ *= scaleCurve;
+
+              render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
+              
+              const riseT = t * (2 - t); 
+              render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
+          } else {
+              render.offsetY = 0;
+          }
+
+          if (effect.flash > 0) {
+              const bump = effect.flash * 0.25;
+              dX += bump; dY += bump; dZ += bump;
+          }
+
+          if (effect.pulseSpeed > 0) {
+              const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
+              dX += pulse; dY += pulse; dZ += pulse;
+          }
+
+          if (effect.spawnProgress >= 1.0) {
+              let targetSquash = 0.0;
+              if (aiState && aiState.current === AI_STATE.CHARGING) {
+                  targetSquash = 1.0;
+              }
+
+              effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
+
+              if (effect.squashFactor > 0.01) {
+                  const compression = 0.4 * effect.squashFactor; 
+                  const expansion = 0.8 * effect.squashFactor;   
+
+                  dY *= (1.0 - compression); 
+                  dX *= (1.0 + expansion);   
+                  dZ *= (1.0 + expansion);   
+              } 
+              else if (motion && effect.elasticity > 0.01) {
+                  const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
+                  const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
+
+                  if (speedSq > threshold) {
+                      const speed = Math.sqrt(speedSq);
+                      let stretchY = 1.0, squashXZ = 1.0;
+                      
+                      if (effect.elasticity > 1.0) {
+                          stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
+                          squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
+                      } else {
+                          stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
+                          squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
+                      }
+                      
+                      dY *= stretchY;
+                      dX *= squashXZ;
+                      dZ *= squashXZ;
+                  }
+              }
+          }
+      }
+
+      render.dynamicScaleX = dX;
+      render.dynamicScaleY = dY;
+      render.dynamicScaleZ = dZ;
+    }
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/engine/systems/CollisionSystem.ts
 =====================================
 import { IGameSystem, IPhysicsSystem, ICombatSystem, IEntityRegistry } from '@/engine/interfaces';
@@ -16573,14 +16828,18 @@ import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
 import { useStore } from '@/engine/state/global/useStore';
 import { ParticleShape } from '@/engine/ecs/types';
 import { PanelId } from '@/engine/config/PanelConfig';
+import * as THREE from 'three';
 
 export class VFXSystem implements IGameSystem {
   private unsubs: (() => void)[] = [];
+  
+  private tempColor = new THREE.Color();
+  private white = new THREE.Color(0xffffff);
 
   constructor(
     private particleSystem: IParticleSystem,
     private shakeSystem: ShakeSystem,
-    private events: IGameEventService, // Unified
+    private events: IGameEventService, 
     private panelSystem: IPanelSystem,
     private timeSystem: TimeSystem
   ) {
@@ -16648,19 +16907,39 @@ export class VFXSystem implements IGameSystem {
   }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
-      const count = this.randomRange(2, 3);
+      // 1. Prepare Palette
+      this.tempColor.set(hexColor);
+      this.tempColor.lerp(this.white, 0.6); // Lighter "hot" version
+      const lightHex = '#' + this.tempColor.getHexString();
+      
+      // REVERTED: Original Physics Counts
+      const count = this.randomRange(2, 3); 
       
       for(let i=0; i<count; i++) {
           const side = Math.random() > 0.5 ? 1 : -1;
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
+          // REVERTED: Original Speed/Life
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          this.particleSystem.spawn(x, y, hexColor, vx, vy, life, 1.0, ParticleShape.SQUARE); 
+          // 2. Color Variant Logic (Kept)
+          const randC = Math.random();
+          let finalColor = hexColor;
+          let size = 1.0;
+
+          if (randC > 0.8) {
+              finalColor = '#FFFFFF';
+              size = 0.8;
+          } else if (randC > 0.4) {
+              finalColor = lightHex;
+              size = 1.2;
+          }
+
+          this.particleSystem.spawn(x, y, finalColor, vx, vy, life, size, ParticleShape.SQUARE); 
       }
   }
 
@@ -17149,6 +17428,109 @@ export class PanelSystem implements IPanelSystem {
       this.panels.clear();
       this.rectCache.clear();
   }
+}
+
+
+=====================================
+FILE: ./src/engine/systems/RenderStateSystem.ts
+=====================================
+import { IGameSystem, IEntityRegistry, IGameEventService, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { RenderModel } from '@/engine/ecs/components/RenderModel';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
+import { StateColor } from '@/engine/ecs/components/StateColor';
+import { Query } from '@/engine/ecs/Query';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType } from '@/engine/signals/FastEventBus';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import * as THREE from 'three';
+
+export class RenderStateSystem implements IGameSystem {
+  private tempColor = new THREE.Color();
+  
+  // Cached Query for entities with visual components
+  private renderQuery = new Query({ 
+      all: [ComponentType.RenderModel] 
+  });
+
+  constructor(
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem,
+    private events: IGameEventService
+  ) {}
+
+  update(delta: number, time: number): void {
+    // 1. POLL FAST BUS FOR FLASH EVENTS (Damage Feedback)
+    const unified = this.events as UnifiedEventService;
+    if (unified && typeof unified.processFastEvents === 'function') {
+        unified.processFastEvents((id, a1) => {
+            if (id === FastEventType.ENTITY_FLASH) {
+                const entityId = a1;
+                const entity = this.registry.getEntity(entityId);
+                if (entity) {
+                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+                    if (effect) effect.flash = 1.0; 
+                }
+            }
+        });
+    }
+
+    const RENDER_CFG = VISUAL_CONFIG.RENDER;
+    const isZenMode = useGameStore.getState().isZenMode;
+    const isDead = this.gameSystem.playerHealth <= 0;
+    const interactState = this.interactionSystem.repairState;
+
+    const entities = this.registry.query(this.renderQuery);
+
+    for (const entity of entities) {
+      if (!entity.active) continue;
+
+      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
+      const stateColor = entity.getComponent<StateColor>(ComponentType.StateColor);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+
+      if (!model) continue;
+
+      // --- STATE COLORING ---
+      if (stateColor) {
+          let targetHex = stateColor.base;
+
+          if (isDead && !isZenMode) {
+              targetHex = stateColor.dead;
+              if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
+          } else {
+              // Standard Gameplay Interactions
+              if (interactState === 'HEALING') {
+                  targetHex = stateColor.reboot; 
+              } else if (interactState === 'REBOOTING') {
+                  targetHex = stateColor.reboot;
+              }
+          }
+
+          const c = new THREE.Color(targetHex);
+          this.tempColor.setRGB(model.r, model.g, model.b);
+          this.tempColor.lerp(c, delta * 3.0);
+          model.r = this.tempColor.r;
+          model.g = this.tempColor.g;
+          model.b = this.tempColor.b;
+      }
+
+      // --- FLASH EFFECT DECAY ---
+      if (effect) {
+          if (effect.flash > 0) {
+              // Decay the flash value
+              effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
+          }
+          if (effect.shudder > 0) {
+              effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
+          }
+      }
+    }
+  }
+
+  teardown(): void {}
 }
 
 
@@ -18249,10 +18631,11 @@ export * from './StructureSystem';
 export * from './TargetingSystem';
 export * from './TimeSystem';
 export * from './VFXSystem';
-export * from './VisualSystem';
 export * from './WaveSystem';
 export * from './WeaponSystem';
 export * from './WorldSystem';
+export * from './RenderStateSystem';
+export * from './AnimationSystem';
 
 
 =====================================
@@ -19212,194 +19595,6 @@ export class LifeCycleSystem implements IGameSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/VisualSystem.ts
-=====================================
-import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { RenderModel } from '@/engine/ecs/components/RenderModel';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { MotionData } from '@/engine/ecs/components/MotionData';
-import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
-import { StateColor } from '@/engine/ecs/components/StateColor';
-import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { Query } from '@/engine/ecs/Query';
-import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
-import { FastEventType } from '@/engine/signals/FastEventBus';
-import * as THREE from 'three';
-
-function easeOutElastic(t: number): number {
-  const c4 = (2 * Math.PI) / 3;
-  if (t === 0) return 0;
-  if (t === 1) return 1;
-  return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
-}
-
-export class VisualSystem implements IGameSystem {
-  private tempColor = new THREE.Color();
-  
-  // CACHED QUERY
-  private visualQuery = new Query({ all: [ComponentType.RenderTransform] });
-
-  constructor(
-    private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem,
-    private events: IGameEventService
-  ) {
-    // Removed slow subscription to ENEMY_DAMAGED
-  }
-
-  update(delta: number, time: number): void {
-    // 1. POLL FAST BUS FOR FLASH EVENTS
-    const unified = this.events as UnifiedEventService;
-    if (unified && typeof unified.processFastEvents === 'function') {
-        unified.processFastEvents((id, a1) => {
-            if (id === FastEventType.ENTITY_FLASH) {
-                const entityId = a1;
-                const entity = this.registry.getEntity(entityId);
-                if (entity) {
-                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-                    if (effect) effect.flash = 1.0; 
-                }
-            }
-        });
-    }
-
-    const CFG = VISUAL_CONFIG.DEFORMATION;
-    const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
-    const RENDER_CFG = VISUAL_CONFIG.RENDER;
-    
-    const isZenMode = useGameStore.getState().isZenMode;
-    const isDead = this.gameSystem.playerHealth <= 0;
-    const interactState = this.interactionSystem.repairState;
-
-    const entities = this.registry.query(this.visualQuery);
-
-    for (const entity of entities) {
-      if (!entity.active) continue;
-
-      const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
-      const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
-      const stateColor = entity.getComponent<StateColor>(ComponentType.StateColor);
-      const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
-
-      if (!render) continue;
-
-      // 1. AUTO ROTATION (Base)
-      if (rotate) {
-          render.rotation += rotate.speed * delta;
-      }
-
-      // 2. STATE COLORING & ANIMATION
-      if (stateColor && model) {
-          let targetHex = stateColor.base;
-          let spinSpeed = 0.02;
-
-          if (isZenMode) {
-              spinSpeed = -0.03;
-          } else if (isDead) {
-              targetHex = stateColor.dead;
-              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
-              if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
-          } else {
-              // Standard Gameplay
-              if (interactState === 'HEALING') {
-                  // CHANGE: Projectiles (derived from model color) now match Reboot (Purple)
-                  // Reticle visual (PlayerActor) remains Pink/Repair color independently
-                  targetHex = stateColor.reboot; 
-                  spinSpeed = -0.24; 
-              } else if (interactState === 'REBOOTING') {
-                  targetHex = stateColor.reboot;
-                  spinSpeed = -0.24; 
-              }
-          }
-
-          render.rotation += spinSpeed;
-          render.scale = 1.0; 
-
-          const c = new THREE.Color(targetHex);
-          this.tempColor.setRGB(model.r, model.g, model.b);
-          this.tempColor.lerp(c, delta * 3.0);
-          model.r = this.tempColor.r;
-          model.g = this.tempColor.g;
-          model.b = this.tempColor.b;
-      }
-
-      // 3. DYNAMIC SCALING & SPAWNING
-      let dX = 1.0, dY = 1.0, dZ = 1.0;
-
-      if (effect) {
-          if (effect.spawnProgress < 1.0) {
-              if (effect.spawnVelocity > 0) {
-                  effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
-              }
-
-              const t = effect.spawnProgress;
-              const scaleCurve = easeOutElastic(t);
-              
-              dX *= scaleCurve;
-              dY *= scaleCurve;
-              dZ *= scaleCurve;
-
-              render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
-              
-              const riseT = t * (2 - t); 
-              render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
-
-          } else {
-              render.offsetY = 0;
-          }
-
-          if (effect.shudder > 0) effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
-          if (effect.flash > 0) {
-              effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
-              const bump = effect.flash * 0.25;
-              dX += bump; dY += bump; dZ += bump;
-          }
-
-          if (effect.pulseSpeed > 0) {
-              const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
-              dX += pulse; dY += pulse; dZ += pulse;
-          }
-
-          if (motion && effect.elasticity > 0.01 && effect.spawnProgress >= 1.0) {
-              const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-              const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
-
-              if (speedSq > threshold) {
-                  const speed = Math.sqrt(speedSq);
-                  let stretchY = 1.0, squashXZ = 1.0;
-                  
-                  if (effect.elasticity > 1.0) {
-                      stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
-                      squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
-                  } else {
-                      stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
-                      squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
-                  }
-                  
-                  dY *= stretchY;
-                  dX *= squashXZ;
-                  dZ *= squashXZ;
-              }
-          }
-      }
-
-      render.dynamicScaleX = dX;
-      render.dynamicScaleY = dY;
-      render.dynamicScaleZ = dZ;
-    }
-  }
-
-  teardown(): void {}
-}
-
-
-=====================================
 FILE: ./src/engine/systems/PhysicsSystem.ts
 =====================================
 import { IPhysicsSystem, IEntityRegistry } from '@/engine/interfaces';
@@ -19489,6 +19684,7 @@ import { EnemyTypes } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { Tag } from '@/engine/ecs/types';
 
 const getHp = (e: Entity) => e.getComponent<HealthData>(ComponentType.Health);
 const getId = (e: Entity) => e.getComponent<IdentityData>(ComponentType.Identity);
@@ -19513,11 +19709,15 @@ const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
 
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) { ctx.spawnFX(overrideFX as VFXKey, x, y); return; }
+    
     const model = getModel(source);
     if (model) {
-        const maxC = Math.max(model.r, model.g, model.b, 1.0); 
+        // Normalize brightness to 1.0 (Neon)
+        const maxC = Math.max(model.r, model.g, model.b, 0.01); 
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
-    } else { ctx.spawnFX('IMPACT_WHITE', x, y); }
+    } else { 
+        ctx.spawnFX('IMPACT_WHITE', x, y); 
+    }
 };
 
 const applyKnockback = (entity: Entity, sourcePos: TransformData | undefined, force: number) => {
@@ -19601,13 +19801,30 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
 function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: string, sprayAngle?: number) {
   const hpA = getHp(a); const hpB = getHp(b); const cA = getCombat(a); const cB = getCombat(b);
   const dmgA = cA ? cA.damage : 1; const dmgB = cB ? cB.damage : 1;
+  
   if (hpA) { hpA.current = Math.max(0, hpA.current - dmgB); if (hpA.current > 0) ctx.flashEntity(a.id as number); }
   if (hpB) { hpB.current = Math.max(0, hpB.current - dmgA); if (hpB.current > 0) ctx.flashEntity(b.id as number); }
+  
   const posA = getPos(a); const posB = getPos(b);
   if (posA) { const angle = posB ? Math.atan2(posB.y - posA.y, posB.x - posA.x) : 0; resolveImpactVisuals(b, posA.x, posA.y, angle, ctx, forceFX); }
+  
   let soundKey = '';
-  if (hpA && hpA.current <= 0) { ctx.destroyEntity(a, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
-  if (hpB && hpB.current <= 0) { ctx.destroyEntity(b, 'IMPACT_WHITE', sprayAngle); soundKey = 'fx_impact_light'; }
+  
+  if (hpA && hpA.current <= 0) { 
+      // If Enemy Dies: Spawn Explosion (mapped via 'IMPACT_WHITE' override in CombatSystem)
+      // If Bullet Dies (Clash): Only spawn if not bullet (to avoid double splash)
+      const fxA = a.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      ctx.destroyEntity(a, fxA, sprayAngle); 
+      soundKey = 'fx_impact_light'; 
+  }
+  
+  if (hpB && hpB.current <= 0) { 
+      // If Bullet Dies: Suppress extra white splash (visuals handled above in resolveImpactVisuals)
+      const fxB = b.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      ctx.destroyEntity(b, fxB, sprayAngle); 
+      soundKey = 'fx_impact_light'; 
+  }
+  
   if (soundKey) ctx.playSpatialAudio(soundKey, posA ? posA.x : 0);
 }
 
@@ -19834,8 +20051,7 @@ import { Entity } from '@/engine/ecs/Entity';
 import { EnemyLogic, AIContext } from './types';
 import { Sequence, MemSequence } from '@/engine/ai/behavior/composites';
 import { SpawnPhase } from '@/engine/ai/nodes/logic';
-import { RoamPanelZone, AimAndFire } from '@/engine/ai/nodes/hunterNodes';
-import { Wait } from '@/engine/ai/nodes/actions';
+import { RoamPanelZone, AimAndFire, HunterCooldown } from '@/engine/ai/nodes/hunterNodes';
 
 const HUNTER_TREE = new Sequence([
   new SpawnPhase(1.5),
@@ -19847,8 +20063,8 @@ const HUNTER_TREE = new Sequence([
     // 2. Aim & Fire (AimDuration, Speed, ConfigID)
     new AimAndFire(1.2, 40.0, 'ENEMY_HUNTER'),
     
-    // 3. Cooldown
-    new Wait(0.3, 0.6)
+    // 3. Cooldown with Animation Support (Graceful Spin Down)
+    new HunterCooldown(0.3, 0.6)
   ], 'hunter_tactics')
 ]);
 
@@ -20036,7 +20252,7 @@ import { HUDService } from '@/engine/services/HUDService';
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
-import { SystemPhase } from '@/engine/interfaces';
+import { SystemPhase, IAudioService } from '@/engine/interfaces';
 
 // Systems
 import { TimeSystem } from '@/engine/systems/TimeSystem';
@@ -20050,7 +20266,8 @@ import { InteractionSystem } from '@/engine/systems/InteractionSystem';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
-import { VisualSystem } from '@/engine/systems/VisualSystem';
+import { RenderStateSystem } from '@/engine/systems/RenderStateSystem';
+import { AnimationSystem } from '@/engine/systems/AnimationSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
@@ -20070,43 +20287,46 @@ import { WaveSystem } from '@/engine/systems/WaveSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. Core Services
+    // 1. PRESERVE CRITICAL SERVICES
+    // We must keep the AudioService alive because it holds the AudioContext and buffers.
+    // Recreating it destroys the audio graph and requires re-initialization (user gesture).
+    let audioService: IAudioService;
+    try {
+        audioService = ServiceLocator.getAudioService();
+    } catch {
+        audioService = new AudioServiceImpl();
+    }
+
+    // 2. RESET & REBIND
+    ServiceLocator.reset();
+    ServiceLocator.register('AudioService', audioService);
+
+    // 3. Core Services
     const registry = new EntityRegistry();
     const rawSlowBus = SharedGameEventBus; 
     const rawFastBus = new FastEventBusImpl();
-    
-    // UNIFIED BUS
     const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
 
-    const audioService = new AudioServiceImpl();
     const inputSystem = new InputSystem();
     const hudService = new HUDService(); 
     const spawner = new EntitySpawner(registry);
     
-    // 2. Global Registration
-    ServiceLocator.reset();
     ServiceLocator.register('EntityRegistry', registry);
-    // Replace specific bus registrations with the Unified one
     ServiceLocator.register('GameEventService', eventBus);
-    ServiceLocator.register('FastEventService', rawFastBus); // Keep raw access for legacy/direct checks if needed? Or remove?
-    // Actually, we should try to use Unified everywhere. But Directors might need the raw fast bus interface
-    // unless we typecast. Let's register Unified as the primary IGameEventService.
-    
-    ServiceLocator.register('AudioService', audioService);
+    ServiceLocator.register('FastEventService', rawFastBus); 
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
     ServiceLocator.register('HUDService', hudService);
 
-    // 3. Content Registration
+    // 4. Content Registration
     registerAllComponents();
     registerAllBehaviors();
     registerAllAssets();
 
-    // 4. Common Systems Instantiation
+    // 5. Common Systems Instantiation
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
-    // ShakeSystem consumes events
     const shakeSystem = new ShakeSystem(eventBus); 
     
     const panelSystem = new PanelRegistrySystem(eventBus, audioService);
@@ -20124,33 +20344,32 @@ export class EngineFactory {
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
-    // Pass Unified Bus to Behavior
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
-    // Directors need to consume Fast Events. UnifiedEventService exposes processFastEvents.
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    const visualSystem = new VisualSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    // Visual Systems
+    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    // Producers use Unified Bus
     const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
     const combatSystem = new CombatSystem(registry, eventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
-    // 5. Engine Injection
+    // 6. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
-    engine.injectFastEventBus(rawFastBus); // Engine cleans the raw buffer
+    engine.injectFastEventBus(rawFastBus); 
 
-    // 6. Registration
+    // 7. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
@@ -20183,7 +20402,8 @@ export class EngineFactory {
     register(hudService, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
-    register(visualSystem, SystemPhase.RENDER, 'VisualSystem');
+    register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
+    register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
