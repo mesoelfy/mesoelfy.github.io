@@ -20,6 +20,11 @@ const jetbrains = JetBrains_Mono({
 
 const BASE_URL = 'https://mesoelfy.github.io';
 const REAL_SITE = "https://www.stevencasteel.com/";
+const REPO_URL = "https://github.com/mesoelfy/mesoelfy.github.io";
+const RELEASES_URL = "https://github.com/mesoelfy/mesoelfy.github.io/releases";
+
+// TODO: REPLACE THIS ID WITH BESPOKE TRAILER FOR LAUNCH
+const TRAILER_VIDEO_ID = "oLALHbB3iXU"; 
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -35,6 +40,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Elfy", url: BASE_URL }],
   creator: "Elfy",
+  manifest: '/manifest.json', // PWA ACTIVATION
   openGraph: {
     title: 'MESOELFY // DIGITAL HQ',
     description: 'Enter the void. An immersive 3D portfolio and arcade shooter built with modern web tech.',
@@ -50,6 +56,17 @@ export const metadata: Metadata = {
         alt: 'MESOELFY_OS 3D Environment',
       },
     ],
+    // NOTE: TO ENABLE DISCORD/TELEGRAM VIDEO AUTOPLAY:
+    // 1. Host a short (<10mb) .mp4 file (e.g., /assets/video/preview.mp4).
+    // 2. Uncomment and update the lines below:
+    // videos: [
+    //   {
+    //     url: 'https://mesoelfy.github.io/assets/video/preview.mp4',
+    //     width: 1280,
+    //     height: 720,
+    //     type: 'video/mp4',
+    //   }
+    // ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -81,32 +98,61 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // SCHEMA STRATEGY:
-  // Primary Identity: "Elfy"
-  // Aliases: "Meso Elfy", "Esper Elfy", "Steven Casteel"
-  // Real Identity Link: "stevencasteel.com"
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Person',
-    name: identity.name, 
-    alternateName: ["Meso Elfy", "Esper Elfy", "Steven Casteel"], 
-    url: BASE_URL,
-    image: `${BASE_URL}/assets/images/social-card.jpg`,
-    sameAs: [
-      REAL_SITE,
-      ...socials.map(s => s.url)
-    ],
-    jobTitle: identity.class,
-    description: identity.bio,
-    knowsAbout: ["Game Development", "React Three Fiber", "Web Architecture", "Creative Coding"]
-  };
+  const schema = [
+    // 1. IDENTITY (The Person)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: identity.name, 
+      alternateName: ["Meso Elfy", "Esper Elfy", "Steven Casteel"], 
+      url: BASE_URL,
+      image: `${BASE_URL}/assets/images/social-card.jpg`,
+      sameAs: [ REAL_SITE, ...socials.map(s => s.url) ],
+      jobTitle: identity.class,
+      description: identity.bio,
+      knowsAbout: ["Game Development", "React Three Fiber", "Web Architecture", "Creative Coding"]
+    },
+    // 2. SOFTWARE (The Site/App itself)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'MESOELFY_OS',
+      applicationCategory: 'GameApplication',
+      operatingSystem: 'Windows, macOS, Linux, Web Browser',
+      browserRequirements: 'Requires WebGL 2.0',
+      description: 'A generative 3D operating system and arcade shooter portfolio.',
+      softwareVersion: '0.1.0',
+      downloadUrl: RELEASES_URL,
+      codeRepository: REPO_URL,
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD'
+      },
+      author: {
+        '@type': 'Person',
+        name: 'Elfy'
+      }
+    },
+    // 3. MEDIA (The Gameplay Trailer)
+    {
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: 'MESOELFY_OS // Gameplay Preview',
+      description: 'Footage of the MESOELFY_OS latent space environment and combat mechanics.',
+      thumbnailUrl: `${BASE_URL}/assets/images/social-card.jpg`,
+      uploadDate: new Date().toISOString(),
+      contentUrl: `https://www.youtube.com/watch?v=${TRAILER_VIDEO_ID}`,
+      embedUrl: `https://www.youtube.com/embed/${TRAILER_VIDEO_ID}`
+    }
+  ];
 
   return (
     <html lang="en" className={`${montserrat.variable} ${jetbrains.variable}`} style={{ backgroundColor: '#000000' }}>
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       </head>
       <body 
