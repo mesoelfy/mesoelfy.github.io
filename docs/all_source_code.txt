@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Dec 24 11:35:20 CST 2025
+Generated on: Wed Dec 24 14:14:05 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -69,7 +69,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── AIBlackboard.ts
 │   │   │   ├── AIStateTypes.ts
 │   │   │   ├── AITimerID.ts
-│   │   │   ├── StateMachine.ts
 │   │   │   ├── behavior
 │   │   │   │   ├── composites.ts
 │   │   │   │   ├── decorators.ts
@@ -401,7 +400,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-83 directories, 310 files
+83 directories, 309 files
 
 =====================================
 FILE: ./next.config.js
@@ -1590,7 +1589,7 @@ export const RebootOverlay = () => (
 =====================================
 FILE: ./src/ui/kit/molecules/panel/IntelligentHeader.tsx
 =====================================
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
@@ -1599,6 +1598,9 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { IPanelSystem } from '@/engine/interfaces';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { useGameStream } from '@/ui/hooks/useGameStream';
+import { StreamKey } from '@/engine/state/GameStream';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 interface IntelligentHeaderProps {
   title: string;
@@ -1609,13 +1611,27 @@ interface IntelligentHeaderProps {
   gameId?: string;
 }
 
-export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
+export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
-  const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
-  const isDamaged = !isDestroyed && healthPercent < 100;
+  const isDamaged = !isDestroyed && health < maxHealth; // Use Slow prop for logic state
   const [showOptimal, setShowOptimal] = useState(false);
+  
+  const barRef = useRef<HTMLDivElement>(null);
 
+  // FAST PATH: Direct DOM Update for Width
+  if (gameId) {
+      const streamKey = `PANEL_HEALTH_${gameId.toUpperCase()}` as StreamKey;
+      // eslint-disable-next-line
+      useGameStream(streamKey, (val) => {
+          if (barRef.current) {
+              const percent = Math.max(0, Math.min(100, (val / maxHealth) * 100));
+              barRef.current.style.width = `${percent}%`;
+          }
+      });
+  }
+
+  // SLOW PATH: Status Logic & Audio Triggers
   useEffect(() => {
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
@@ -1625,7 +1641,7 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
       if (gameId) {
           try {
               const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-              const rect = panels.getPanelRect(gameId);
+              const rect = panels.getPanelRect(gameId as PanelId);
               if (rect) {
                   const halfWidth = ViewportHelper.viewport.width / 2;
                   if (halfWidth > 0) {
@@ -1634,7 +1650,7 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                   }
               }
           } catch (e) {
-              // Engine system not ready or available, fallback to center pan
+              // Engine system not ready or available
           }
       }
 
@@ -1659,7 +1675,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
           statusText = "OFFLINE";
       }
   } else if (isInteracting && isDamaged) {
-      // REPLACED: service-cyan -> service-pink
       mainColor = "text-service-pink";
       statusText = "HEALING...";
   } else if (isDamaged) {
@@ -1675,7 +1690,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
         isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
-        // REPLACED: service-cyan -> service-pink
         (isInteracting && isDamaged) ? "bg-service-pink/10 border-service-pink/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
@@ -1700,7 +1714,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                             <motion.div key="destroyed" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"><Power size={10} className="text-latent-purple" /></motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
-                        // REPLACED: service-cyan -> service-pink
                         <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-pink rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw size={10} className="text-black" /></motion.div>
                         </motion.div>
@@ -1714,20 +1727,20 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         </div>
         {!isGameOver && (
             <div className="w-full h-1 bg-black/50 relative overflow-hidden">
-                <motion.div 
+                {/* FAST PATH DIV: Width controlled via GameStream ref + CSS Transition */}
+                <div 
+                    ref={barRef}
                     className={clsx(
-                        "h-full transition-colors duration-200",
+                        "h-full transition-all duration-300 ease-out", // UPDATED: Changed from transition-colors to transition-all
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
-                        (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
+                        (isDestroyed && health > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
-                        // REPLACED: service-cyan -> service-pink
                         (isInteracting && isDamaged) ? "bg-service-pink" :
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}
-                    initial={{ width: "100%" }}
-                    animate={{ width: `${healthPercent}%` }}
-                    transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+                    // Initialize with current value to avoid pop
+                    style={{ width: `${(health / maxHealth) * 100}%` }}
                 />
             </div>
         )}
@@ -2755,7 +2768,7 @@ export const ToggleButton = ({
           active ? "" : "opacity-80"
       )}>
           {label ? (
-            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[4px]">
+            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[2.5px]">
                 {label}
             </span> 
           ) : (
@@ -10555,16 +10568,16 @@ export const INPUT_SETTINGS = {} as const;
 FILE: ./src/engine/config/static/waves.json
 =====================================
 [
-  { "at": 0,     "type": "driller", "count": 4, "interval": 0.1 },
+  { "at": 0,     "type": "driller", "count": 3, "interval": 0.1 },
   { "at": 1.5,   "type": "hunter",  "count": 2, "interval": 0.2 },
-  { "at": 3.5,   "type": "driller", "count": 8, "interval": 0.15 },
-  { "at": 5.5,   "type": "kamikaze", "count": 4, "interval": 0.5 },
-  { "at": 8.0,   "type": "driller", "count": 12, "interval": 0.1 },
+  { "at": 3.5,   "type": "driller", "count": 7, "interval": 0.15 },
+  { "at": 5.5,   "type": "kamikaze", "count": 3, "interval": 0.5 },
+  { "at": 8.0,   "type": "driller", "count": 10, "interval": 0.1 },
   { "at": 10.5,  "type": "hunter",  "count": 4, "interval": 0.8 },
-  { "at": 14.0,  "type": "kamikaze", "count": 6, "interval": 0.3 },
-  { "at": 18.0,  "type": "driller", "count": 15, "interval": 0.05 },
+  { "at": 14.0,  "type": "kamikaze", "count": 4, "interval": 0.3 },
+  { "at": 18.0,  "type": "driller", "count": 13, "interval": 0.05 },
   { "at": 22.0,  "type": "hunter",  "count": 5, "interval": 0.5 },
-  { "at": 26.0,  "type": "kamikaze", "count": 8, "interval": 0.2 }
+  { "at": 26.0,  "type": "kamikaze", "count": 6, "interval": 0.2 }
 ]
 
 
@@ -11273,8 +11286,8 @@ export const GAMEPLAY_CONFIG = {
   INTERACTION: {
     REPAIR_RATE: 0.05,
     QUERY_RADIUS: 1.0,
-    REPAIR_HEAL_AMOUNT: 3.25,
-    REBOOT_TICK_AMOUNT: 4.6
+    REPAIR_HEAL_AMOUNT: 3.6, // Increased from 3.25
+    REBOOT_TICK_AMOUNT: 5.1  // Increased from 4.6
   },
   WEAPON: {
     // Updated: Matches new larger Chevron Tip Radius (0.92)
@@ -11315,7 +11328,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 0.5, speed: 22, life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE', radius: 1.0 },
+    // UPDATED: Scale increased by 10% (0.3 -> 0.33)
+    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -11416,12 +11430,12 @@ import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 export const ENEMIES: Record<EnemyType, EnemyDef> = {
   [EnemyTypes.DRILLER]: {
     id: EnemyTypes.DRILLER,
-    health: 1, damage: 1, score: 100, xp: 10,
+    health: 1, damage: 0.75, score: 100, xp: 10,
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
       model: 'CONE', 
-      color: PALETTE.PURPLE.INDIGO, // Updated
+      color: PALETTE.PURPLE.INDIGO, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
@@ -11430,7 +11444,8 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
   },
   [EnemyTypes.KAMIKAZE]: {
     id: EnemyTypes.KAMIKAZE,
-    health: 2, damage: 3, score: 200, xp: 20,
+    health: 4, // Doubled from 2
+    damage: 3, score: 200, xp: 20,
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
     visual: { 
@@ -11448,7 +11463,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
       model: 'CUSTOM_HUNTER', 
-      color: PALETTE.ORANGE.PRIMARY, // Updated
+      color: PALETTE.ORANGE.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
     }
@@ -12807,7 +12822,13 @@ export type StreamKey =
   | 'SCORE' 
   | 'XP' 
   | 'XP_NEXT' 
-  | 'LEVEL';
+  | 'LEVEL'
+  // Panel Health Keys
+  | 'PANEL_HEALTH_IDENTITY'
+  | 'PANEL_HEALTH_SOCIAL'
+  | 'PANEL_HEALTH_FEED'
+  | 'PANEL_HEALTH_ART'
+  | 'PANEL_HEALTH_VIDEO';
 
 type Listener = (val: number) => void;
 
@@ -12825,6 +12846,13 @@ class GameStreamService {
     this.values.set('XP_NEXT', 100);
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
+    
+    // Panel Defaults
+    this.values.set('PANEL_HEALTH_IDENTITY', 100);
+    this.values.set('PANEL_HEALTH_SOCIAL', 100);
+    this.values.set('PANEL_HEALTH_FEED', 100);
+    this.values.set('PANEL_HEALTH_ART', 100);
+    this.values.set('PANEL_HEALTH_VIDEO', 100);
   }
 
   public set(key: StreamKey, value: number) {
@@ -13097,7 +13125,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DamageOptions } from '@/engine/interfaces';
-import { GameStream } from '@/engine/state/GameStream';
+import { GameStream, StreamKey } from '@/engine/state/GameStream';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -13117,6 +13145,10 @@ export interface UISlice {
   destroyAllPanels: () => void;
   resetUIState: () => void;
 }
+
+const getStreamKey = (id: PanelId): StreamKey => {
+    return `PANEL_HEALTH_${id.toUpperCase()}` as StreamKey;
+};
 
 const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed: boolean }>) => {
     let current = 0;
@@ -13180,9 +13212,13 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       newHealth = Math.min(MAX_PANEL_HEALTH, newHealth + amount);
 
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
+
       if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
           newDestroyed = false;
           newHealth = MAX_PANEL_HEALTH * 0.3; 
+          GameStream.set(getStreamKey(id), newHealth); // Reset visual to 30%
           GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
           GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'UISlice' });
       } else if (!wasDestroyed) {
@@ -13206,6 +13242,9 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       let newHealth = Math.max(0, panel.health - amount);
       let newDestroyed = panel.isDestroyed;
+
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
 
       if (newHealth <= 0) {
           newDestroyed = true;
@@ -13234,6 +13273,10 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       if (!panel || !panel.isDestroyed) return;
 
       const newHealth = Math.max(0, panel.health - amount);
+      
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
+
       if (newHealth !== panel.health) {
           set(s => ({
               panels: { ...s.panels, [id]: { ...panel, health: newHealth } }
@@ -13250,11 +13293,14 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           const pid = key as PanelId;
           const p = nextPanels[key];
           if (p.isDestroyed) {
-              nextPanels[key] = { ...p, isDestroyed: false, health: MAX_PANEL_HEALTH * 0.3 };
+              const startHealth = MAX_PANEL_HEALTH * 0.3;
+              nextPanels[key] = { ...p, isDestroyed: false, health: startHealth };
+              GameStream.set(getStreamKey(pid), startHealth);
               GameEventBus.emit(GameEvents.PANEL_RESTORED, { id: pid });
               restoredCount++;
           } else if (p.health < MAX_PANEL_HEALTH) {
               nextPanels[key] = { ...p, health: MAX_PANEL_HEALTH };
+              GameStream.set(getStreamKey(pid), MAX_PANEL_HEALTH);
           }
       }
 
@@ -13272,6 +13318,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           const pid = key as PanelId;
           const p = nextPanels[key];
           nextPanels[key] = { ...p, health: 0, isDestroyed: true };
+          GameStream.set(getStreamKey(pid), 0);
           GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id: pid });
       }
       set(s => {
@@ -13283,7 +13330,10 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
   resetUIState: () => {
       const { panels } = get();
       const resetPanels = Object.fromEntries(
-          Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+          Object.entries(panels).map(([k, v]) => {
+              GameStream.set(getStreamKey(k as PanelId), MAX_PANEL_HEALTH);
+              return [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }];
+          })
       );
       set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
       GameStream.set('SYSTEM_INTEGRITY', 100);
@@ -15024,53 +15074,6 @@ export class MemSequence extends BTNode {
     }
     state.treeState[this.id] = 0;
     return NodeState.SUCCESS;
-  }
-}
-
-
-=====================================
-FILE: ./src/engine/ai/StateMachine.ts
-=====================================
-import { Entity } from '@/engine/ecs/Entity';
-
-export interface State {
-  name: string;
-  enter?: (entity: Entity, data?: any) => void;
-  update?: (entity: Entity, delta: number, time: number, data?: any) => void;
-  exit?: (entity: Entity, data?: any) => void;
-}
-
-export class StateMachine {
-  private states = new Map<string, State>();
-  private currentState: State | null = null;
-
-  public addState(state: State) {
-    this.states.set(state.name, state);
-    return this;
-  }
-
-  public setState(name: string, entity: Entity, data?: any) {
-    if (this.currentState && this.currentState.name === name) return;
-
-    if (this.currentState && this.currentState.exit) {
-      this.currentState.exit(entity, data);
-    }
-
-    this.currentState = this.states.get(name) || null;
-
-    if (this.currentState && this.currentState.enter) {
-      this.currentState.enter(entity, data);
-    }
-  }
-
-  public update(entity: Entity, delta: number, time: number, data?: any) {
-    if (this.currentState && this.currentState.update) {
-      this.currentState.update(entity, delta, time, data);
-    }
-  }
-
-  public getCurrentState() {
-    return this.currentState?.name || null;
   }
 }
 
@@ -17660,7 +17663,7 @@ export class TimeSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/WeaponSystem.ts
 =====================================
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
 import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
@@ -17674,6 +17677,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -17687,6 +17691,8 @@ export class WeaponSystem implements IGameSystem {
   private lastFireTime = 0;
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
+  private fireCycle = 0;
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   
   private purgeState: PurgeState = {
       active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0
@@ -17697,7 +17703,8 @@ export class WeaponSystem implements IGameSystem {
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
-    private config: typeof ConfigService
+    private config: typeof ConfigService,
+    private physics: IPhysicsSystem // NEW DEPENDENCY
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
@@ -17800,31 +17807,45 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
-    const enemies = this.registry.getByTag(Tag.ENEMY);
-    let nearestDist = Infinity; let targetEnemy = null;
-    for (const e of enemies) {
-      if (!e.active || e.hasTag(Tag.BULLET)) continue;
+    const RANGE = 14; // SQRT(196) = 14
+    const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
+    
+    let nearestDist = Infinity; 
+    let targetEnemy = null;
+
+    for (let i = 0; i < count; i++) {
+      const id = this.queryBuffer[i];
+      const e = this.registry.getEntity(id);
+      
+      // Strict Enemy Filtering
+      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
+      
       const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === AI_STATE.SPAWN) continue;
+      
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
+      
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
+      if (dist < 196 && dist < nearestDist) { 
+          nearestDist = dist; 
+          targetEnemy = e; 
+      }
     }
+
     if (!targetEnemy) return;
 
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
     
-    // NOTE: PlayerActor renders the reticle with a NEGATIVE rotation relative to RenderTransform
-    // We replicate that here so bullets match visual tips.
     const reticleRotation = pVisual ? -pVisual.rotation : 0;
 
     const shots = calculatePlayerShots(
         { x: pPos.x, y: pPos.y }, 
         { x: tPos.x, y: tPos.y }, 
         upgrades,
-        reticleRotation
+        reticleRotation,
+        this.fireCycle 
     );
 
     shots.forEach(shot => {
@@ -17834,14 +17855,12 @@ export class WeaponSystem implements IGameSystem {
             bullet.addComponent(new TargetData(null, 'ENEMY'));
             this.registry.updateCache(bullet); 
         }
-        
-        // REMOVED: No longer copying player render color to bullet.
-        // Projectiles now use the inherent color defined in Weapons.ts
     });
 
     this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });
     this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
+    this.fireCycle++; 
   }
 
   private getPlayerEntity() {
@@ -18146,7 +18165,7 @@ export class GuidanceSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/CombatSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService, IFastEventService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { EnemyTypes } from '@/engine/config/Identifiers';
@@ -18157,11 +18176,13 @@ import { TransformData } from '@/engine/ecs/components/TransformData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VFXKey } from '@/engine/config/AssetKeys';
+import { getFXCode, getSoundCode, FXCode, SoundCode } from '@/engine/signals/FastEventBus';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
-    private events: IGameEventService, // Unified Bus
+    private events: IGameEventService, // Slow Bus (Game Over, Score)
+    private fastBus: IFastEventService, // Fast Bus (VFX, Audio, Flash)
     private audio: IAudioService
   ) {}
 
@@ -18182,29 +18203,53 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
+              // Player hits are rare enough to stay on Slow Bus
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
+          
           spawnFX: (type, x, y) => {
-              // Simplified: Just emit. UnifiedService handles fast routing.
-              this.events.emit(GameEvents.SPAWN_FX, { type, x, y, angle: 0 });
+              // OPTIMIZATION: Direct FastBus write
+              const code = getFXCode(type);
+              if (code !== FXCode.NONE) {
+                  this.fastBus.spawnFX(code, x, y, 0);
+              } else {
+                  // Fallback for custom/complex FX not in Enum
+                  this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: 0 });
+              }
           },
+          
           spawnImpact: (x, y, r, g, b, angle) => {
+              // Impacts are complex objects, keep on Slow Bus for now or add FastBus support later
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
+          
           playAudio: (key) => {
-              this.events.emit(GameEvents.PLAY_SOUND, { key });
+              const code = getSoundCode(key);
+              if (code !== SoundCode.NONE) {
+                  this.fastBus.playSound(code, 0);
+              } else {
+                  this.events.emit(GameEvents.PLAY_SOUND, { key });
+              }
           },
+          
           playSpatialAudio: (key, x) => {
-              this.events.emit(GameEvents.PLAY_SOUND, { key, x });
+              const code = getSoundCode(key);
+              if (code !== SoundCode.NONE) {
+                  this.fastBus.playSound(code, x);
+              } else {
+                  this.events.emit(GameEvents.PLAY_SOUND, { key, x });
+              }
           },
+          
           addTrauma: (amount) => {
-              this.events.emit(GameEvents.TRAUMA_ADDED, { amount });
+              this.fastBus.camShake(amount);
           },
+          
           flashEntity: (id) => {
-              this.events.emit(GameEvents.ENEMY_DAMAGED, { id });
+              this.fastBus.flashEntity(id);
           }
       };
 
@@ -18243,12 +18288,18 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          this.events.emit(GameEvents.SPAWN_FX, { 
-              type: finalFX, 
-              x: transform.x, 
-              y: transform.y, 
-              angle: angleToUse 
-          });
+          // Use FastBus for destruction FX
+          const code = getFXCode(finalFX);
+          if (code !== FXCode.NONE) {
+              this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
+          } else {
+              this.events.emit(GameEvents.SPAWN_FX, { 
+                  type: finalFX as VFXKey, 
+                  x: transform.x, 
+                  y: transform.y, 
+                  angle: angleToUse 
+              });
+          }
       }
   }
 
@@ -18883,19 +18934,22 @@ export class WorldSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/TargetingSystem.ts
 =====================================
-import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class TargetingSystem implements IGameSystem {
   private playerCache: { x: number, y: number } | null = null;
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
 
   constructor(
     private registry: IEntityRegistry,
-    private panelSystem: IPanelSystem
+    private panelSystem: IPanelSystem,
+    private physics: IPhysicsSystem
   ) {}
 
   update(delta: number, time: number): void {
@@ -19007,14 +19061,19 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private findNearestEnemy(x: number, y: number) {
-      const enemies = this.registry.getByTag(Tag.ENEMY);
+      const SEARCH_RADIUS = 15;
+      const MAX_RANGE_SQ = SEARCH_RADIUS * SEARCH_RADIUS;
+      
+      const count = this.physics.spatialGrid.query(x, y, SEARCH_RADIUS, this.queryBuffer);
+      
       let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
-      const MAX_RANGE_SQ = 15 * 15; 
 
-      for (const e of enemies) {
-          if (!e.active) continue;
-          if (e.hasTag(Tag.BULLET)) continue;
+      for (let i = 0; i < count; i++) {
+          const id = this.queryBuffer[i];
+          const e = this.registry.getEntity(id);
+          
+          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
           if (!t) continue;
@@ -19928,7 +19987,8 @@ export const calculatePlayerShots = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
   upgrades: Record<string, number>,
-  reticleRotation: number = 0 
+  reticleRotation: number = 0,
+  fireCycle: number = 0
 ): ShotDef[] => {
   const shots: ShotDef[] = [];
   const config = ConfigService.player;
@@ -19992,7 +20052,8 @@ export const calculatePlayerShots = (
   }
 
   // --- 3. SNIFFER SHOTS ---
-  if (snifferLevel > 0) {
+  // UPDATED: Only fire every 3rd cycle
+  if (snifferLevel > 0 && fireCycle % 3 === 0) {
       const maxTips = 4;
       for (let i = 0; i < snifferLevel; i++) {
           const tipIndex = i % maxTips;
@@ -20006,8 +20067,11 @@ export const calculatePlayerShots = (
           
           shots.push({
               x: tipX, y: tipY, vx, vy,
-              damage: damage * 0.5, life: life * 2,
-              configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true
+              // UPDATED: Base Damage + 1
+              damage: damage + 1, 
+              life: life * 2,
+              configId: WeaponIDs.PLAYER_SNIFFER, 
+              isHoming: true
           });
       }
   }
@@ -20288,8 +20352,6 @@ import { WaveSystem } from '@/engine/systems/WaveSystem';
 export class EngineFactory {
   public static create(): GameEngineCore {
     // 1. PRESERVE CRITICAL SERVICES
-    // We must keep the AudioService alive because it holds the AudioContext and buffers.
-    // Recreating it destroys the audio graph and requires re-initialization (user gesture).
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -20340,7 +20402,7 @@ export class EngineFactory {
     const worldSystem = new WorldSystem(panelSystem, registry);
     
     const projectileSystem = new ProjectileSystem(registry);
-    const targetingSystem = new TargetingSystem(registry, panelSystem);
+    const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
@@ -20358,8 +20420,9 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
-    const combatSystem = new CombatSystem(registry, eventBus, audioService);
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem);
+    // UPDATED: Inject rawFastBus into CombatSystem
+    const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);

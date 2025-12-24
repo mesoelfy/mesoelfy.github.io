@@ -14,8 +14,7 @@ export class StateSyncSystem implements IGameSystem {
     xp: -1,
     xpNext: -1,
     level: -1,
-    points: -1,
-    upgradesHash: "" // Track changes to upgrades object
+    upgradesHash: ""
   };
 
   constructor(
@@ -37,19 +36,16 @@ export class StateSyncSystem implements IGameSystem {
 
     if (hp !== this.cache.health) {
       GameStream.set('PLAYER_HEALTH', hp);
-      useGameStore.setState({ playerHealth: hp });
       this.cache.health = hp;
     }
 
     if (max !== this.cache.maxHealth) {
       GameStream.set('PLAYER_MAX_HEALTH', max);
-      useGameStore.setState({ maxPlayerHealth: max });
       this.cache.maxHealth = max;
     }
 
     if (reboot !== this.cache.reboot) {
       GameStream.set('PLAYER_REBOOT', reboot);
-      useGameStore.setState({ playerRebootProgress: reboot });
       this.cache.reboot = reboot;
     }
   }
@@ -63,30 +59,29 @@ export class StateSyncSystem implements IGameSystem {
 
     if (score !== this.cache.score) {
       GameStream.set('SCORE', score);
+      // We still call this ONLY to update High Score, but the store no longer holds 'current score' for UI
       useGameStore.getState().setScore(score);
       this.cache.score = score;
     }
 
-    if (xp !== this.cache.xp || level !== this.cache.level || next !== this.cache.xpNext || points !== this.cache.points) {
+    if (xp !== this.cache.xp || level !== this.cache.level || next !== this.cache.xpNext) {
       GameStream.set('XP', xp);
       GameStream.set('XP_NEXT', next);
       GameStream.set('LEVEL', level);
       
-      useGameStore.getState().setProgressionData({
-        xp,
-        level,
-        nextXp: next,
-        points
-      });
-
+      // Removed setProgressionData call - UI now reads from Stream
       this.cache.xp = xp;
       this.cache.level = level;
       this.cache.xpNext = next;
-      this.cache.points = points;
+    }
+    
+    // Sync Points (Still needed in Store for UpgradeTerminal Logic)
+    if (points !== this.cache.points) {
+        useGameStore.setState({ upgradePoints: points });
+        this.cache.points = points;
     }
 
     // Sync Upgrades
-    // Optimization: JSON.stringify is relatively fast for small objects like this
     const upgradesStr = JSON.stringify(this.progSys.activeUpgrades);
     if (upgradesStr !== this.cache.upgradesHash) {
         useGameStore.getState().setActiveUpgrades(this.progSys.activeUpgrades as Record<string, number>);
@@ -96,14 +91,11 @@ export class StateSyncSystem implements IGameSystem {
 
   private syncIntegrity() {
     const integrity = this.panelSys.systemIntegrity;
-    
     if (integrity !== this.cache.integrity) {
         GameStream.set('SYSTEM_INTEGRITY', integrity);
         this.cache.integrity = integrity;
     }
   }
 
-  teardown(): void {
-    // No cleanup needed
-  }
+  teardown(): void {}
 }

@@ -1,4 +1,5 @@
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { useStreamValue } from '@/ui/hooks/useStreamValue';
 import identity from '@/engine/config/static/identity.json';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -9,12 +10,15 @@ import { SystemOps } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
 
 export const IdentityHUD = () => {
-  const hp = useGameStore(s => s.playerHealth);
-  const maxHp = useGameStore(s => s.maxPlayerHealth);
-  const xp = useGameStore(s => s.xp);
-  const nextXp = useGameStore(s => s.xpToNextLevel);
-  const level = useGameStore(s => s.level);
-  const rebootProgress = useGameStore(s => s.playerRebootProgress);
+  // NEW: Stream-based State
+  const hp = useStreamValue('PLAYER_HEALTH');
+  const maxHp = useStreamValue('PLAYER_MAX_HEALTH');
+  const xp = useStreamValue('XP');
+  const nextXp = useStreamValue('XP_NEXT');
+  const level = useStreamValue('LEVEL');
+  const rebootProgress = useStreamValue('PLAYER_REBOOT');
+
+  // Keep panel state (Slow Path, Structural)
   const panel = useGameStore(s => s.panels[PanelId.IDENTITY]);
   const isPanelDead = panel ? panel.isDestroyed : false;
   const isPlayerDead = hp <= 0;

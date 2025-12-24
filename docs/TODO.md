@@ -158,3 +158,9 @@ technical debt
 
 MICROINTERACTIONS - - - great motion graphic design prompt - ask for list of what could be added
 
+player ability, leave a snail slime trail where the cursor was. upgrades - can increase the frequency at which you drop slime and the length of time you drop slime, and damage. center reticle can change color like tip whenever dropping slime
+
+
+I'd like a prompt like this for my project taht doesn't visually change / break how I've calibrated my game site. Someone else used this prompt to great success on their project, but I need it finetuned for mine.
+
+"Improve the entire codebase for SEO, implement programmatic SEO (scalable pages, dynamic metadata, internal linking), and refactor for performance, readability, and maintainability."
