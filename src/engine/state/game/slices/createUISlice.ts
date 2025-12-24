@@ -5,7 +5,7 @@ import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DamageOptions } from '@/engine/interfaces';
-import { GameStream } from '@/engine/state/GameStream';
+import { GameStream, StreamKey } from '@/engine/state/GameStream';
 
 const MAX_PANEL_HEALTH = 100;
 
@@ -25,6 +25,10 @@ export interface UISlice {
   destroyAllPanels: () => void;
   resetUIState: () => void;
 }
+
+const getStreamKey = (id: PanelId): StreamKey => {
+    return `PANEL_HEALTH_${id.toUpperCase()}` as StreamKey;
+};
 
 const calculateIntegrity = (panels: Record<string, { health: number, isDestroyed: boolean }>) => {
     let current = 0;
@@ -88,9 +92,13 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       newHealth = Math.min(MAX_PANEL_HEALTH, newHealth + amount);
 
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
+
       if (wasDestroyed && newHealth >= MAX_PANEL_HEALTH) {
           newDestroyed = false;
           newHealth = MAX_PANEL_HEALTH * 0.3; 
+          GameStream.set(getStreamKey(id), newHealth); // Reset visual to 30%
           GameEventBus.emit(GameEvents.PANEL_RESTORED, { id, x: sourceX });
           GameEventBus.emit(GameEvents.LOG_DEBUG, { msg: `SECTOR RESTORED: ${id}`, source: 'UISlice' });
       } else if (!wasDestroyed) {
@@ -114,6 +122,9 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
 
       let newHealth = Math.max(0, panel.health - amount);
       let newDestroyed = panel.isDestroyed;
+
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
 
       if (newHealth <= 0) {
           newDestroyed = true;
@@ -142,6 +153,10 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
       if (!panel || !panel.isDestroyed) return;
 
       const newHealth = Math.max(0, panel.health - amount);
+      
+      // Fast Path Update
+      GameStream.set(getStreamKey(id), newHealth);
+
       if (newHealth !== panel.health) {
           set(s => ({
               panels: { ...s.panels, [id]: { ...panel, health: newHealth } }
@@ -158,11 +173,14 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           const pid = key as PanelId;
           const p = nextPanels[key];
           if (p.isDestroyed) {
-              nextPanels[key] = { ...p, isDestroyed: false, health: MAX_PANEL_HEALTH * 0.3 };
+              const startHealth = MAX_PANEL_HEALTH * 0.3;
+              nextPanels[key] = { ...p, isDestroyed: false, health: startHealth };
+              GameStream.set(getStreamKey(pid), startHealth);
               GameEventBus.emit(GameEvents.PANEL_RESTORED, { id: pid });
               restoredCount++;
           } else if (p.health < MAX_PANEL_HEALTH) {
               nextPanels[key] = { ...p, health: MAX_PANEL_HEALTH };
+              GameStream.set(getStreamKey(pid), MAX_PANEL_HEALTH);
           }
       }
 
@@ -180,6 +198,7 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
           const pid = key as PanelId;
           const p = nextPanels[key];
           nextPanels[key] = { ...p, health: 0, isDestroyed: true };
+          GameStream.set(getStreamKey(pid), 0);
           GameEventBus.emit(GameEvents.PANEL_DESTROYED, { id: pid });
       }
       set(s => {
@@ -191,7 +210,10 @@ export const createUISlice: StateCreator<GameState, [], [], UISlice> = (set, get
   resetUIState: () => {
       const { panels } = get();
       const resetPanels = Object.fromEntries(
-          Object.entries(panels).map(([k, v]) => [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }])
+          Object.entries(panels).map(([k, v]) => {
+              GameStream.set(getStreamKey(k as PanelId), MAX_PANEL_HEALTH);
+              return [k, { ...v, health: MAX_PANEL_HEALTH, isDestroyed: false }];
+          })
       );
       set({ panels: resetPanels, interactionTarget: null, availableUpgrades: [] });
       GameStream.set('SYSTEM_INTEGRITY', 100);

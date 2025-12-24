@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Skull, Zap, Power, RefreshCw, AlertTriangle, Check } from 'lucide-react';
@@ -7,6 +7,9 @@ import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { IPanelSystem } from '@/engine/interfaces';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { useGameStream } from '@/ui/hooks/useGameStream';
+import { StreamKey } from '@/engine/state/GameStream';
+import { PanelId } from '@/engine/config/PanelConfig';
 
 interface IntelligentHeaderProps {
   title: string;
@@ -17,13 +20,27 @@ interface IntelligentHeaderProps {
   gameId?: string;
 }
 
-export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
+export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
-  const healthPercent = Math.max(0, Math.min(100, (health / maxHealth) * 100));
-  const isDamaged = !isDestroyed && healthPercent < 100;
+  const isDamaged = !isDestroyed && health < maxHealth; // Use Slow prop for logic state
   const [showOptimal, setShowOptimal] = useState(false);
+  
+  const barRef = useRef<HTMLDivElement>(null);
 
+  // FAST PATH: Direct DOM Update for Width
+  if (gameId) {
+      const streamKey = `PANEL_HEALTH_${gameId.toUpperCase()}` as StreamKey;
+      // eslint-disable-next-line
+      useGameStream(streamKey, (val) => {
+          if (barRef.current) {
+              const percent = Math.max(0, Math.min(100, (val / maxHealth) * 100));
+              barRef.current.style.width = `${percent}%`;
+          }
+      });
+  }
+
+  // SLOW PATH: Status Logic & Audio Triggers
   useEffect(() => {
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
@@ -33,7 +50,7 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
       if (gameId) {
           try {
               const panels = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
-              const rect = panels.getPanelRect(gameId);
+              const rect = panels.getPanelRect(gameId as PanelId);
               if (rect) {
                   const halfWidth = ViewportHelper.viewport.width / 2;
                   if (halfWidth > 0) {
@@ -42,7 +59,7 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                   }
               }
           } catch (e) {
-              // Engine system not ready or available, fallback to center pan
+              // Engine system not ready or available
           }
       }
 
@@ -67,7 +84,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
           statusText = "OFFLINE";
       }
   } else if (isInteracting && isDamaged) {
-      // REPLACED: service-cyan -> service-pink
       mainColor = "text-service-pink";
       statusText = "HEALING...";
   } else if (isDamaged) {
@@ -83,7 +99,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         "relative flex flex-col border-b transition-colors duration-300 shrink-0 z-10",
         isGameOver ? "bg-critical-red/10 border-critical-red/50" :
         isDestroyed ? (isInteracting ? "bg-latent-purple/10 border-latent-purple/50" : "bg-critical-red/10 border-critical-red/50") :
-        // REPLACED: service-cyan -> service-pink
         (isInteracting && isDamaged) ? "bg-service-pink/10 border-service-pink/50" :
         isDamaged ? "bg-alert-yellow/10 border-alert-yellow/30" : 
         "bg-primary-green/5 border-primary-green-dim/30"
@@ -108,7 +123,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
                             <motion.div key="destroyed" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 border border-latent-purple rounded-full flex items-center justify-center opacity-80"><Power size={10} className="text-latent-purple" /></motion.div>
                         )
                     ) : isInteracting && isDamaged ? (
-                        // REPLACED: service-cyan -> service-pink
                         <motion.div key="healing" initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-4 h-4 bg-service-pink rounded-full flex items-center justify-center shadow-[0_0_10px_currentColor]">
                             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><RefreshCw size={10} className="text-black" /></motion.div>
                         </motion.div>
@@ -122,20 +136,20 @@ export const IntelligentHeader = ({ title, health, maxHealth = 1000, isDestroyed
         </div>
         {!isGameOver && (
             <div className="w-full h-1 bg-black/50 relative overflow-hidden">
-                <motion.div 
+                {/* FAST PATH DIV: Width controlled via GameStream ref + CSS Transition */}
+                <div 
+                    ref={barRef}
                     className={clsx(
-                        "h-full transition-colors duration-200",
+                        "h-full transition-all duration-300 ease-out", // UPDATED: Changed from transition-colors to transition-all
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
-                        (isDestroyed && healthPercent > 0) ? "bg-latent-purple opacity-60" : 
+                        (isDestroyed && health > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
-                        // REPLACED: service-cyan -> service-pink
                         (isInteracting && isDamaged) ? "bg-service-pink" :
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}
-                    initial={{ width: "100%" }}
-                    animate={{ width: `${healthPercent}%` }}
-                    transition={{ type: "tween", ease: "easeOut", duration: 0.3 }}
+                    // Initialize with current value to avoid pop
+                    style={{ width: `${(health / maxHealth) * 100}%` }}
                 />
             </div>
         )}

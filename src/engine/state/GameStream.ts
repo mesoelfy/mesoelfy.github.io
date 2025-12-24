@@ -8,7 +8,13 @@ export type StreamKey =
   | 'SCORE' 
   | 'XP' 
   | 'XP_NEXT' 
-  | 'LEVEL';
+  | 'LEVEL'
+  // Panel Health Keys
+  | 'PANEL_HEALTH_IDENTITY'
+  | 'PANEL_HEALTH_SOCIAL'
+  | 'PANEL_HEALTH_FEED'
+  | 'PANEL_HEALTH_ART'
+  | 'PANEL_HEALTH_VIDEO';
 
 type Listener = (val: number) => void;
 
@@ -26,6 +32,13 @@ class GameStreamService {
     this.values.set('XP_NEXT', 100);
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
+    
+    // Panel Defaults
+    this.values.set('PANEL_HEALTH_IDENTITY', 100);
+    this.values.set('PANEL_HEALTH_SOCIAL', 100);
+    this.values.set('PANEL_HEALTH_FEED', 100);
+    this.values.set('PANEL_HEALTH_ART', 100);
+    this.values.set('PANEL_HEALTH_VIDEO', 100);
   }
 
   public set(key: StreamKey, value: number) {
