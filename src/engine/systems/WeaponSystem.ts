@@ -1,4 +1,4 @@
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
 import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
@@ -12,6 +12,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -26,6 +27,7 @@ export class WeaponSystem implements IGameSystem {
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
   private fireCycle = 0;
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   
   private purgeState: PurgeState = {
       active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0
@@ -36,7 +38,8 @@ export class WeaponSystem implements IGameSystem {
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
-    private config: typeof ConfigService
+    private config: typeof ConfigService,
+    private physics: IPhysicsSystem // NEW DEPENDENCY
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
@@ -139,24 +142,37 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
-    const enemies = this.registry.getByTag(Tag.ENEMY);
-    let nearestDist = Infinity; let targetEnemy = null;
-    for (const e of enemies) {
-      if (!e.active || e.hasTag(Tag.BULLET)) continue;
+    const RANGE = 14; // SQRT(196) = 14
+    const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
+    
+    let nearestDist = Infinity; 
+    let targetEnemy = null;
+
+    for (let i = 0; i < count; i++) {
+      const id = this.queryBuffer[i];
+      const e = this.registry.getEntity(id);
+      
+      // Strict Enemy Filtering
+      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
+      
       const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === AI_STATE.SPAWN) continue;
+      
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
+      
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
+      if (dist < 196 && dist < nearestDist) { 
+          nearestDist = dist; 
+          targetEnemy = e; 
+      }
     }
+
     if (!targetEnemy) return;
 
     const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
     
-    // NOTE: PlayerActor renders the reticle with a NEGATIVE rotation relative to RenderTransform
-    // We replicate that here so bullets match visual tips.
     const reticleRotation = pVisual ? -pVisual.rotation : 0;
 
     const shots = calculatePlayerShots(
@@ -164,7 +180,7 @@ export class WeaponSystem implements IGameSystem {
         { x: tPos.x, y: tPos.y }, 
         upgrades,
         reticleRotation,
-        this.fireCycle // Pass cycle
+        this.fireCycle 
     );
 
     shots.forEach(shot => {
@@ -179,7 +195,7 @@ export class WeaponSystem implements IGameSystem {
     this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });
     this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
     this.lastFireTime = time;
-    this.fireCycle++; // Increment
+    this.fireCycle++; 
   }
 
   private getPlayerEntity() {

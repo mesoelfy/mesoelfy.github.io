@@ -1,16 +1,19 @@
-import { IGameSystem, IPanelSystem, IEntityRegistry } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class TargetingSystem implements IGameSystem {
   private playerCache: { x: number, y: number } | null = null;
+  private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
 
   constructor(
     private registry: IEntityRegistry,
-    private panelSystem: IPanelSystem
+    private panelSystem: IPanelSystem,
+    private physics: IPhysicsSystem
   ) {}
 
   update(delta: number, time: number): void {
@@ -122,14 +125,19 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private findNearestEnemy(x: number, y: number) {
-      const enemies = this.registry.getByTag(Tag.ENEMY);
+      const SEARCH_RADIUS = 15;
+      const MAX_RANGE_SQ = SEARCH_RADIUS * SEARCH_RADIUS;
+      
+      const count = this.physics.spatialGrid.query(x, y, SEARCH_RADIUS, this.queryBuffer);
+      
       let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
-      const MAX_RANGE_SQ = 15 * 15; 
 
-      for (const e of enemies) {
-          if (!e.active) continue;
-          if (e.hasTag(Tag.BULLET)) continue;
+      for (let i = 0; i < count; i++) {
+          const id = this.queryBuffer[i];
+          const e = this.registry.getEntity(id);
+          
+          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
           if (!t) continue;

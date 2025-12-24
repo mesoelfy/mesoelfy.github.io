@@ -47,8 +47,6 @@ import { WaveSystem } from '@/engine/systems/WaveSystem';
 export class EngineFactory {
   public static create(): GameEngineCore {
     // 1. PRESERVE CRITICAL SERVICES
-    // We must keep the AudioService alive because it holds the AudioContext and buffers.
-    // Recreating it destroys the audio graph and requires re-initialization (user gesture).
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -99,7 +97,8 @@ export class EngineFactory {
     const worldSystem = new WorldSystem(panelSystem, registry);
     
     const projectileSystem = new ProjectileSystem(registry);
-    const targetingSystem = new TargetingSystem(registry, panelSystem);
+    // INJECT PHYSICS INTO TARGETING
+    const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
     const guidanceSystem = new GuidanceSystem(registry);
     
@@ -117,7 +116,8 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService);
+    // INJECT PHYSICS INTO WEAPON
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem);
     const combatSystem = new CombatSystem(registry, eventBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 

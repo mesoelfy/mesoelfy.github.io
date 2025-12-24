@@ -155,3 +155,8 @@ multi shot just isn't satisfying or aimable. let's just make the upgrade make yo
 
 SFX text too low in toggle
 
+
+
+MICROINTERACTIONS - - - great motion graphic design prompt - ask for list of what could be added
+
+drillers do too much damage.
