@@ -6,15 +6,15 @@ import { Wait } from '@/engine/ai/nodes/actions';
 import { OrbitControl, DaemonAim, ChargeMechanic, HasTargetLock, FireDaemonShot } from '@/engine/ai/nodes/daemonNodes';
 
 const DAEMON_TREE = new Sequence([
-  new SpawnPhase(1.0),
+  new SpawnPhase(),
   new Parallel([
     new OrbitControl('ACTIVE'),
     new DaemonAim(),
     new MemSequence([
-      new ChargeMechanic(2.0),
+      new ChargeMechanic(),
       new HasTargetLock(),
-      new FireDaemonShot(35.0, 20),
-      new Wait(0.5)
+      new FireDaemonShot(),
+      new Wait('waitDuration')
     ], 'daemon_cycle')
   ])
 ]);

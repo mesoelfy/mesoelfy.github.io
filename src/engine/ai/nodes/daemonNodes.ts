@@ -6,8 +6,10 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { EnemyType } from '@/engine/config/Identifiers';
 
 export class OrbitControl extends BTNode {
   constructor(private state: 'ACTIVE' | 'IDLE') { super(); }
@@ -21,17 +23,19 @@ export class OrbitControl extends BTNode {
 }
 
 export class ChargeMechanic extends BTNode {
-  constructor(private duration: number) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
-    if (!state) return NodeState.FAILURE;
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+    if (!state || !identity) return NodeState.FAILURE;
 
-    // Type-safe access to 'chargeProgress' defined in AIBlackboard
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const duration = params.chargeDuration ?? 2.0;
+
     const currentProgress = state.data.chargeProgress || 0;
 
     if (currentProgress < 1.0) {
-        state.data.chargeProgress = currentProgress + (context.delta / this.duration);
+        state.data.chargeProgress = currentProgress + (context.delta / duration);
         
         if (state.data.chargeProgress >= 1.0) {
             state.data.chargeProgress = 1.0;
@@ -48,14 +52,18 @@ export class ChargeMechanic extends BTNode {
 }
 
 export class FireDaemonShot extends BTNode {
-  constructor(private speed: number, private damage: number) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
 
-    if (!transform || !target || !state) return NodeState.FAILURE;
+    if (!transform || !target || !state || !identity) return NodeState.FAILURE;
+
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const speed = params.fireSpeed ?? 35.0;
+    const damage = params.fireDamage ?? 20;
 
     const dx = target.x - transform.x;
     const dy = target.y - transform.y;
@@ -71,9 +79,9 @@ export class FireDaemonShot extends BTNode {
     context.spawnProjectile(
         transform.x + (dirX * 0.5), 
         transform.y + (dirY * 0.5), 
-        dirX * this.speed, 
-        dirY * this.speed, 
-        this.damage, 
+        dirX * speed, 
+        dirY * speed, 
+        damage, 
         'DAEMON_ORB', 
         entity.id as number
     );
@@ -81,7 +89,6 @@ export class FireDaemonShot extends BTNode {
     context.spawnFX('IMPACT_WHITE', transform.x, transform.y);
     context.playSound('fx_teleport', transform.x);
 
-    // Type-safe reset
     state.data.chargeProgress = 0;
     state.data.lastFireTime = context.time;
     state.current = AI_STATE.ORBIT;

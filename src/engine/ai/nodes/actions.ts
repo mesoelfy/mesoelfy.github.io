@@ -4,24 +4,36 @@ import { AIContext } from '@/engine/handlers/ai/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
+import { EnemyType } from '@/engine/config/Identifiers';
 
 export class MoveToTarget extends BTNode {
-  constructor(private speed: number, private stopDistance: number = 0) { super(); }
+  // Optional override keys for specific param names
+  constructor(private speedKey: string = 'moveSpeed', private stopKey: string = 'approachStopDist') { super(); }
+  
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
-    if (!transform || !motion || !target) return NodeState.FAILURE;
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+
+    if (!transform || !motion || !target || !identity) return NodeState.FAILURE;
+    
     if (state && state.stunTimer > 0) {
         state.stunTimer -= context.delta;
         return NodeState.RUNNING;
     }
+
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const speed = params[this.speedKey] ?? 10;
+    const stopDistance = params[this.stopKey] ?? 0;
+
     let tx = target.x, ty = target.y;
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
@@ -32,27 +44,32 @@ export class MoveToTarget extends BTNode {
     }
     const dx = tx - transform.x, dy = ty - transform.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist <= this.stopDistance) {
+    
+    if (dist <= stopDistance) {
         motion.vx = 0; motion.vy = 0;
         return NodeState.SUCCESS;
     }
-    motion.vx = (dx / dist) * this.speed;
-    motion.vy = (dy / dist) * this.speed;
+    motion.vx = (dx / dist) * speed;
+    motion.vy = (dy / dist) * speed;
     transform.rotation = Math.atan2(dy, dx);
     return NodeState.RUNNING;
   }
 }
 
 export class Wait extends BTNode {
-  private min: number; private max: number;
-  constructor(min: number, max?: number) { 
-    super(); this.min = min; this.max = max ?? min;
-  }
+  constructor(private minKey: string = 'waitDuration', private maxKey?: string) { super(); }
+  
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
-    if (!state) return NodeState.FAILURE;
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+    if (!state || !identity) return NodeState.FAILURE;
+
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const min = params[this.minKey] ?? 0.5;
+    const max = this.maxKey ? (params[this.maxKey] ?? min) : min;
+
     if (state.timers[AITimerID.WAIT] === undefined) {
-        state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
+        state.timers[AITimerID.WAIT] = min + Math.random() * (max - min);
     }
     state.timers[AITimerID.WAIT]! -= context.delta;
     if (state.timers[AITimerID.WAIT]! <= 0) {
@@ -64,10 +81,18 @@ export class Wait extends BTNode {
 }
 
 export class SpinVisual extends BTNode {
-  constructor(private speed: number) { super(); }
+  constructor(private speedKey: string = 'spinSpeed', private fallback: number = 5.0) { super(); }
   tick(entity: Entity, context: AIContext): NodeState {
       const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      if (visual) visual.rotation += context.delta * this.speed;
+      const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+      if (visual) {
+          let speed = this.fallback;
+          if (identity) {
+              const params = context.config.enemies[identity.variant as EnemyType]?.params;
+              if (params && params[this.speedKey] !== undefined) speed = params[this.speedKey];
+          }
+          visual.rotation += context.delta * speed;
+      }
       return NodeState.SUCCESS;
   }
 }

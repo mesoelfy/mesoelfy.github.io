@@ -7,30 +7,33 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { EnemyType } from '@/engine/config/Identifiers';
 import * as THREE from 'three';
 
 const IDLE_SPIN_TARGET = -2.5;  // CW
 const CHARGE_SPIN_TARGET = 22.0; // CCW
 
 export class RoamPanelZone extends BTNode {
-  constructor(private speed: number, private padding: number) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
 
-    if (!transform || !motion || !state || !visual) return NodeState.FAILURE;
+    if (!transform || !motion || !state || !visual || !identity) return NodeState.FAILURE;
 
-    // Reset State
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const padding = params.roamPadding ?? 1.0;
+
     state.current = AI_STATE.ACTIVE;
 
-    // Visual Spin (Idle)
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 3.0);
     state.data.spinVel = currentVel;
@@ -40,8 +43,8 @@ export class RoamPanelZone extends BTNode {
         const panels = context.getAllPanelRects();
         if (panels.length > 0) {
             const panel = panels[Math.floor(Math.random() * panels.length)];
-            const halfW = (panel.width / 2) + this.padding;
-            const halfH = (panel.height / 2) + this.padding;
+            const halfW = (panel.width / 2) + padding;
+            const halfH = (panel.height / 2) + padding;
             
             state.data.roamTargetX = panel.x + (Math.random() * 2 - 1) * halfW;
             state.data.roamTargetY = panel.y + (Math.random() * 2 - 1) * halfH;
@@ -80,7 +83,7 @@ export class RoamPanelZone extends BTNode {
 }
 
 export class AimAndFire extends BTNode {
-  constructor(private aimDuration: number, private projectileSpeed: number, private configId: string) { super(); }
+  constructor(private configId: string) { super(); }
 
   tick(entity: Entity, context: AIContext): NodeState {
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -89,9 +92,15 @@ export class AimAndFire extends BTNode {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
 
-    if (!transform || !target || !state || !visual) return NodeState.FAILURE;
+    if (!transform || !target || !state || !visual || !identity) return NodeState.FAILURE;
     
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const aimDuration = params.aimDuration ?? 1.2;
+    const projectileSpeed = params.projectileSpeed ?? 40.0;
+
     state.current = AI_STATE.CHARGING;
 
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
@@ -100,7 +109,7 @@ export class AimAndFire extends BTNode {
     visual.rotation += currentVel * context.delta;
 
     if (state.timers[AITimerID.AIM] === undefined) {
-        state.timers[AITimerID.AIM] = this.aimDuration;
+        state.timers[AITimerID.AIM] = aimDuration;
     }
 
     if (motion) {
@@ -121,7 +130,6 @@ export class AimAndFire extends BTNode {
 
     const rearAngle = transform.rotation + Math.PI;
     
-    // Dynamic Exhaust Offset
     let offset = 1.3;
     if (renderEffect) {
         offset *= (1.0 - (0.4 * renderEffect.squashFactor));
@@ -150,8 +158,8 @@ export class AimAndFire extends BTNode {
         context.spawnProjectile(
             transform.x + dirX * 1.5, 
             transform.y + dirY * 1.5, 
-            dirX * this.projectileSpeed, 
-            dirY * this.projectileSpeed, 
+            dirX * projectileSpeed, 
+            dirY * projectileSpeed, 
             undefined, 
             this.configId, 
             entity.id as number
@@ -173,42 +181,40 @@ export class AimAndFire extends BTNode {
 }
 
 export class HunterCooldown extends BTNode {
-  constructor(private min: number, private max: number) { super(); }
-
   tick(entity: Entity, context: AIContext): NodeState {
     const state = entity.getComponent<AIStateData>(ComponentType.State);
     const transform = entity.getComponent<TransformData>(ComponentType.Transform);
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const target = entity.getComponent<TargetData>(ComponentType.Target);
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
 
-    if (!state || !transform || !visual) return NodeState.FAILURE;
+    if (!state || !transform || !visual || !identity) return NodeState.FAILURE;
 
-    // Init Timer
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const min = params.cooldownMin ?? 0.3;
+    const max = params.cooldownMax ?? 0.6;
+
     if (state.timers[AITimerID.WAIT] === undefined) {
-        state.timers[AITimerID.WAIT] = this.min + Math.random() * (this.max - this.min);
+        state.timers[AITimerID.WAIT] = min + Math.random() * (max - min);
     }
 
-    // 1. Visually Spin Down (Graceful Transition)
-    // Lerp from high charge speed back to idle speed
     let currentVel = state.data.spinVel ?? CHARGE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, IDLE_SPIN_TARGET, context.delta * 2.0);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
 
-    // 2. Keep Facing Target (Track Player while drifting)
     if (target && target.x !== undefined) {
         const dx = target.x - transform.x;
         const dy = target.y - transform.y;
         const desiredAngle = Math.atan2(dy, dx);
         
-        // Smooth turn
         let diff = desiredAngle - transform.rotation;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
         transform.rotation += diff * 5.0 * context.delta;
     }
 
-    // 3. Tick Timer
     state.timers[AITimerID.WAIT]! -= context.delta;
     if (state.timers[AITimerID.WAIT]! <= 0) {
         state.timers[AITimerID.WAIT] = undefined;

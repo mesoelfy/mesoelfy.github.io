@@ -15,12 +15,17 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
       material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
     },
-    params: { spawnOffset: 0.32 }
+    params: { 
+        spawnOffset: 0.32,
+        spawnDuration: 1.5,
+        approachSpeed: 8.0,
+        approachStopDist: 1.2,
+        drillInterval: 0.08
+    }
   },
   [EnemyTypes.KAMIKAZE]: {
     id: EnemyTypes.KAMIKAZE,
-    health: 4, // Doubled from 2
-    damage: 3, score: 200, xp: 20,
+    health: 4, damage: 3, score: 200, xp: 20,
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
     visual: { 
@@ -29,6 +34,11 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE', 
       radius: 0.69, detail: 0 
+    },
+    params: {
+        spawnDuration: 1.5,
+        spinSpeed: 10.0,
+        moveSpeed: 12.0
     }
   },
   [EnemyTypes.HUNTER]: {
@@ -41,6 +51,15 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
       color: PALETTE.ORANGE.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
+    },
+    params: {
+        spawnDuration: 1.5,
+        roamSpeed: 12.0,
+        roamPadding: 1.0,
+        aimDuration: 1.2,
+        projectileSpeed: 40.0,
+        cooldownMin: 0.3,
+        cooldownMax: 0.6
     }
   },
   [EnemyTypes.DAEMON]: {
@@ -53,6 +72,13 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
       color: PALETTE.PINK.PRIMARY, 
       scale: [1, 1, 1], 
       material: 'ENEMY_BASE'
+    },
+    params: {
+        spawnDuration: 1.0,
+        chargeDuration: 2.0,
+        fireSpeed: 35.0,
+        fireDamage: 20,
+        waitDuration: 0.5
     }
   }
 };

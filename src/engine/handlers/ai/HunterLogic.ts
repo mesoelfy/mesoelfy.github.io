@@ -5,17 +5,11 @@ import { SpawnPhase } from '@/engine/ai/nodes/logic';
 import { RoamPanelZone, AimAndFire, HunterCooldown } from '@/engine/ai/nodes/hunterNodes';
 
 const HUNTER_TREE = new Sequence([
-  new SpawnPhase(1.5),
+  new SpawnPhase(),
   new MemSequence([
-    // 1. Reposition to a random spot in the panel area
-    // speed: 12.0, padding: 1.0 (margin outside panel)
-    new RoamPanelZone(12.0, 1.0),
-    
-    // 2. Aim & Fire (AimDuration, Speed, ConfigID)
-    new AimAndFire(1.2, 40.0, 'ENEMY_HUNTER'),
-    
-    // 3. Cooldown with Animation Support (Graceful Spin Down)
-    new HunterCooldown(0.3, 0.6)
+    new RoamPanelZone(),
+    new AimAndFire('ENEMY_HUNTER'),
+    new HunterCooldown()
   ], 'hunter_tactics')
 ]);
 

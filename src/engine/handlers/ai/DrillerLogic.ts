@@ -8,22 +8,16 @@ import { IsTargetInRange } from '@/engine/ai/nodes/conditions';
 import { DrillAttack } from '@/engine/ai/nodes/drillerNodes';
 
 const DRILLER_TREE = new Sequence([
-  new SpawnPhase(1.5),
+  new SpawnPhase(),
   new Sequence([
-    // Always spin slowly while moving
-    new Succeeder(new SpinVisual(5.0)),
-    
+    new Succeeder(new SpinVisual()), // Defaults to 'spinSpeed'
     new Selector([
-      // A. Attack Sequence
       new Sequence([
         new IsTargetInRange(1.5),
-        new Succeeder(new SpinVisual(15.0)), // Spin faster when drilling
-        // Updated Interval: 0.08s (12.5Hz) for sustained panel shake
-        new DrillAttack(0.08) 
+        new Succeeder(new SpinVisual('spinSpeed', 15.0)), 
+        new DrillAttack()
       ]),
-      
-      // B. Approach (Fallback / Repath)
-      new MoveToTarget(8, 1.2)
+      new MoveToTarget('approachSpeed', 'approachStopDist')
     ])
   ])
 ]);

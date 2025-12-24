@@ -5,14 +5,13 @@ import { Succeeder } from '@/engine/ai/behavior/decorators';
 import { SpawnPhase } from '@/engine/ai/nodes/logic';
 import { SpinVisual, MoveToTarget } from '@/engine/ai/nodes/actions';
 
-// Direct Instantiation: Type-safe and clearer
 const KAMIKAZE_TREE = new Sequence([
-  new SpawnPhase(1.5),
+  new SpawnPhase(),
   new Parallel([
     new Succeeder(
-      new SpinVisual(10.0)
+      new SpinVisual()
     ),
-    new MoveToTarget(12) // Speed
+    new MoveToTarget('moveSpeed')
   ])
 ]);
 

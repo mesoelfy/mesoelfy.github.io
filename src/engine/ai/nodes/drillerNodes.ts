@@ -6,16 +6,18 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { CombatData } from '@/engine/ecs/components/CombatData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AITimerID } from '@/engine/ai/AITimerID';
 import { getNearestPointOnRect } from '@/engine/math/GeometryUtils';
+import { EnemyType } from '@/engine/config/Identifiers';
 
 export class DrillAttack extends BTNode {
   private readonly DETACH_THRESHOLD = 0.8;
   private readonly SPRING_STRENGTH = 12.0;
-  constructor(private interval: number) { super(); }
+  
   tick(entity: Entity, context: AIContext): NodeState {
     const target = entity.getComponent<TargetData>(ComponentType.Target);
     const state = entity.getComponent<AIStateData>(ComponentType.State);
@@ -23,7 +25,14 @@ export class DrillAttack extends BTNode {
     const visual = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
     const motion = entity.getComponent<MotionData>(ComponentType.Motion);
     const combat = entity.getComponent<CombatData>(ComponentType.Combat);
-    if (!target || !state || !transform || !visual) return NodeState.FAILURE;
+    const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+
+    if (!target || !state || !transform || !visual || !identity) return NodeState.FAILURE;
+    
+    // LOOKUP
+    const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
+    const interval = params.drillInterval ?? 0.1;
+
     if (target.type !== 'PANEL' || !target.id) {
         state.data.drillTarget = undefined;
         return NodeState.FAILURE;
@@ -61,7 +70,7 @@ export class DrillAttack extends BTNode {
         }
         context.spawnFX('DRILL_SPARKS', tX, tY, tA);
         this.handleAudio(state, transform.x, context);
-        this.handleDamage(state, target.id as PanelId, transform, combat, context);
+        this.handleDamage(state, target.id as PanelId, transform, combat, context, interval);
     }
     if (motion) { motion.vx = 0; motion.vy = 0; }
     return NodeState.RUNNING;
@@ -72,10 +81,10 @@ export class DrillAttack extends BTNode {
           state.timers[AITimerID.DRILL_AUDIO] = 0.25;
       } else state.timers[AITimerID.DRILL_AUDIO]! -= context.delta;
   }
-  private handleDamage(state: AIStateData, id: PanelId, t: TransformData, c: CombatData | undefined, ctx: AIContext) {
+  private handleDamage(state: AIStateData, id: PanelId, t: TransformData, c: CombatData | undefined, ctx: AIContext, interval: number) {
       if (!state.timers[AITimerID.DRILL_DMG] || state.timers[AITimerID.DRILL_DMG] <= 0) {
           ctx.damagePanel(id, c ? c.damage : 1, { source: { x: t.x, y: t.y } });
-          state.timers[AITimerID.DRILL_DMG] = this.interval;
+          state.timers[AITimerID.DRILL_DMG] = interval;
       } else state.timers[AITimerID.DRILL_DMG]! -= ctx.delta;
   }
 }
