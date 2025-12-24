@@ -18,7 +18,9 @@ export const registerAllAssets = () => {
     return mat;
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
+  
+  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true }));
 
   // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
@@ -74,16 +76,10 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
 
-    // Offset Projectiles so origin is at the Tail (Bottom)
-    // Projectiles align +Y to velocity. Scaling Y stretches them.
-    // If centered (default), scaling Y stretches back and front.
-    // Moving geometry UP (+Y) by half height puts Bottom at 0.
-    // Then scaling Y grows UP (Forward).
     if (isProjectile) {
         if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
             geo.translate(0, 0.5, 0);
         } else if (visual.model === 'TETRA') {
-            // Tetra is weird, usually centered. Let's shift it a bit.
             geo.translate(0, 0.3, 0);
         }
     }

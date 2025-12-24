@@ -39,7 +39,7 @@ export class WeaponSystem implements IGameSystem {
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
     private config: typeof ConfigService,
-    private physics: IPhysicsSystem // NEW DEPENDENCY
+    private physics: IPhysicsSystem 
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
@@ -70,7 +70,6 @@ export class WeaponSystem implements IGameSystem {
     if (time > this.lastFireTime + currentFireRate) {
         const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
         const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
-        // Get the visual rotation to align Sniffer shots with reticle
         const renderTransform = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
         
         if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel, renderTransform);
@@ -108,7 +107,8 @@ export class WeaponSystem implements IGameSystem {
           const b = this.spawner.spawnBullet(t.x, t.y, vx, vy, Faction.FRIENDLY, 2.0, damage, WeaponIDs.PLAYER_PURGE);
           const model = b.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { 
-              this.tempColor.setHSL(ratio, 0.9, 0.6);
+              // FIX: Use 0.5 Lightness for Pure Color (No white tint)
+              this.tempColor.setHSL(ratio, 1.0, 0.5);
               model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b;
           }
       }
@@ -131,7 +131,8 @@ export class WeaponSystem implements IGameSystem {
           const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
-          this.tempColor.setHSL(hue, 1.0, 0.6); 
+          // FIX: Use 0.5 Lightness for Pure Color
+          this.tempColor.setHSL(hue, 1.0, 0.5); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
 
@@ -142,7 +143,7 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
-    const RANGE = 14; // SQRT(196) = 14
+    const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
     
     let nearestDist = Infinity; 
@@ -152,7 +153,6 @@ export class WeaponSystem implements IGameSystem {
       const id = this.queryBuffer[i];
       const e = this.registry.getEntity(id);
       
-      // Strict Enemy Filtering
       if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
       
       const state = e.getComponent<AIStateData>(ComponentType.State);
