@@ -163,3 +163,4 @@ player ability, leave a snail slime trail where the cursor was. upgrades - can i
 
 Increase Lighthouse Score.
 Is my site optimized for things Google loves? (without unnecessary bloat)
+
