@@ -76,7 +76,7 @@ export const ToggleButton = ({
           active ? "" : "opacity-80"
       )}>
           {label ? (
-            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[4px]">
+            <span className="text-[11px] font-mono font-bold tracking-tighter decoration-1 underline-offset-2 leading-none pt-[2.5px]">
                 {label}
             </span> 
           ) : (
