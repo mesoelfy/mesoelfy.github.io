@@ -34,10 +34,8 @@ import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 import { SemanticContent } from '@/ui/system/SemanticContent';
+import { PWARegister } from '@/ui/system/PWARegister';
 
-// --- DYNAMIC IMPORTS FOR PERFORMANCE ---
-// These components are heavy on JS/WebGL. Loading them dynamically with ssr: false
-// ensures the initial HTML payload is light and the "Poster Image" is seen first.
 const SceneCanvas = dynamic(() => import('@/ui/sim/SceneCanvas').then(m => m.SceneCanvas), { ssr: false });
 const GameOverlay = dynamic(() => import('@/ui/sim/GameCanvas').then(m => m.GameOverlay), { ssr: false });
 
@@ -65,17 +63,13 @@ export default function Home() {
   const [dashboardScale, setDashboardScale] = useState(1);
   const contentRef = useRef<HTMLDivElement>(null);
   
-  // Gate Logic
   const [showGate, setShowGate] = useState(false);
   const [gateVariant, setGateVariant] = useState<GateVariant>('MOBILE');
   const [checkDone, setCheckDone] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Check Hardware
     const w = window.innerWidth;
-    
     if (w <= 1100) {
         setGateVariant('MOBILE');
         setShowGate(true);
@@ -95,88 +89,53 @@ export default function Home() {
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-
     const handleResize = () => {
         if (!contentRef.current) return;
         if (window.innerWidth >= 1024) {
-            const HEADER_H = 48;
-            const FOOTER_H = 32;
-            const PADDING_Y = 48; 
+            const HEADER_H = 48; const FOOTER_H = 32; const PADDING_Y = 48; 
             const availableHeight = window.innerHeight - HEADER_H - FOOTER_H;
             const naturalHeight = contentRef.current.scrollHeight + PADDING_Y;
             const ratio = Math.min(1, availableHeight / naturalHeight);
             setDashboardScale(Math.floor(ratio * 1000) / 1000);
-        } else {
-            setDashboardScale(1);
-        }
+        } else { setDashboardScale(1); }
     };
-
-    const debouncedResize = () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(handleResize, 100);
-    };
-
+    const debouncedResize = () => { clearTimeout(timeoutId); timeoutId = setTimeout(handleResize, 100); };
     handleResize();
     const observer = new ResizeObserver(debouncedResize);
     if (contentRef.current) observer.observe(contentRef.current);
     window.addEventListener('resize', debouncedResize);
-    
-    return () => {
-        window.removeEventListener('resize', debouncedResize);
-        observer.disconnect();
-        clearTimeout(timeoutId);
-    };
+    return () => { window.removeEventListener('resize', debouncedResize); observer.disconnect(); clearTimeout(timeoutId); };
   }, [bootState]); 
 
   useEffect(() => {
     if (bootState !== 'active') return;
-
     const checkPauseState = () => {
         const isMenuOpen = activeModal !== 'none';
         const isDebugActive = isDebugOpen && !isDebugMinimized;
-
-        if (isMenuOpen || isDebugActive || showGate) {
-            setSimulationPaused(true);
-        } else {
-            setSimulationPaused(false);
-        }
+        if (isMenuOpen || isDebugActive || showGate) { setSimulationPaused(true); } 
+        else { setSimulationPaused(false); }
     };
-
     checkPauseState();
     window.addEventListener('resize', checkPauseState);
     return () => window.removeEventListener('resize', checkPauseState);
   }, [bootState, activeModal, isDebugOpen, isDebugMinimized, setSimulationPaused, showGate]);
 
-  useEffect(() => {
-      AudioSystem.init();
-  }, []);
+  useEffect(() => { AudioSystem.init(); }, []);
 
-  const handleBreachStart = () => {
-    AudioSystem.playSound('initialize_impact');
-    startBreach();
-  };
+  const handleBreachStart = () => { AudioSystem.playSound('initialize_impact'); startBreach(); };
 
   const handleBootComplete = () => {
-    setTimeout(() => {
-      setBootState('active');
-      setIntroDone(true);
-      AudioSystem.startMusic(); 
-      startGame();
-    }, 0);
+    setTimeout(() => { setBootState('active'); setIntroDone(true); AudioSystem.startMusic(); startGame(); }, 0);
   };
 
   const isSceneVisible = bootState !== 'standby' || isBreaching;
 
   return (
     <GameProvider>
-      {/* 1. SEMANTIC SEO LAYER (INVISIBLE) */}
+      <PWARegister />
       <SemanticContent />
 
-      <div 
-        id={DOM_ID.APP_ROOT} 
-        className="relative w-full h-screen overflow-hidden cursor-none bg-black"
-        style={{ backgroundColor: '#000000' }}
-      >
+      <div id={DOM_ID.APP_ROOT} className="relative w-full h-screen overflow-hidden cursor-none bg-black" style={{ backgroundColor: '#000000' }}>
         <MetaManager />
         <CustomCursor />
         <GlobalBackdrop />
@@ -184,39 +143,21 @@ export default function Home() {
         <MobileGateModal isOpen={showGate} variant={gateVariant} onOverride={handleGateOverride} />
 
         <main className="relative w-full h-full flex flex-col overflow-hidden text-primary-green selection:bg-primary-green selection:text-black font-mono">
-          
           <AnimatePresence>
               {showHoloBackground && (
-                  <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="absolute inset-0 z-holo"
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="absolute inset-0 z-holo">
                       <HoloBackground />
                   </motion.div>
               )}
           </AnimatePresence>
 
-          {/* 2. THE POSTER IMAGE STRATEGY */}
-          {/* This static image sits behind the canvas. It provides:
-              a) A valid 'thumbnail' for Google Mobile Search results.
-              b) A loading screen before the heavy JS executes. 
-          */}
           <div className="absolute inset-0 z-deep bg-black pointer-events-none">
-             <img 
-               src="/assets/images/social-card.jpg" 
-               alt="MESOELFY_OS Background"
-               className="w-full h-full object-cover opacity-50"
-             />
-             <div className="absolute inset-0 bg-black/50" /> {/* Dimmer */}
+             <img src="/assets/images/social-card.jpg" alt="MESOELFY_OS Background" className="w-full h-full object-cover opacity-50" />
+             <div className="absolute inset-0 bg-black/50" />
           </div>
 
           <WebGLErrorBoundary key={sessionId}>
-              {/* 3. DYNAMIC 3D LAYERS (Fades In Over Poster) */}
               <SceneCanvas className={clsx("blur-0 transition-opacity duration-[500ms]", isSceneVisible ? "opacity-100" : "opacity-0")} />
-              
               <div className={clsx("absolute inset-0 z-game-overlay transition-opacity duration-[500ms] pointer-events-none", isSceneVisible ? "opacity-100" : "opacity-0")}>
                   <GameOverlay />
               </div>
@@ -226,76 +167,32 @@ export default function Home() {
 
           {!isSandbox && (
               <>
-                  <AboutModal />
-                  <FeedModal />
-                  <GalleryModal />
-                  <ContactModal />
-                  <SettingsModal />
-                  <ZenBomb />
+                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <ZenBomb />
               </>
           )}
 
           {checkDone && bootState === 'standby' && !showGate && (
-            <MatrixBootSequence 
-               onComplete={handleBootComplete} 
-               onBreachStart={handleBreachStart} 
-            />
+            <MatrixBootSequence onComplete={handleBootComplete} onBreachStart={handleBreachStart} />
           )}
 
           {!isSandbox && (
               <div className={`relative z-base flex-1 flex flex-col h-full transition-all duration-1000 ease-in-out ${bootState === 'active' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <Header />
-
                 <div className="flex-1 min-h-0 relative w-full overflow-y-auto lg:overflow-hidden">
-                  <div 
-                      className="w-full origin-top transition-transform duration-300 ease-out"
-                      style={{ 
-                          transform: `scale(${dashboardScale})`,
-                          marginBottom: `-${(1 - dashboardScale) * 100}%` 
-                      }}
-                  >
+                  <div className="w-full origin-top transition-transform duration-300 ease-out" style={{ transform: `scale(${dashboardScale})`, marginBottom: `-${(1 - dashboardScale) * 100}%` }}>
                       <div ref={contentRef} className="w-full max-w-[1600px] mx-auto p-4 md:p-6">
                       <AnimatePresence>
                           {!isZenMode && (
-                          <motion.div 
-                              className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8"
-                              initial="hidden"
-                              animate="visible"
-                              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} 
-                              variants={{
-                              hidden: { opacity: 0 },
-                              visible: { 
-                                  opacity: 1, 
-                                  transition: { 
-                                  staggerChildren: 0.05,
-                                  delayChildren: 0.0
-                                  } 
-                              }
-                              }}
-                          >
+                          <motion.div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 w-full pb-8" initial="hidden" animate="visible" exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)", transition: { duration: 2.0, ease: "easeInOut" } }} variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.0 } } }}>
                               <div className="md:col-span-4 flex flex-col gap-4 md:gap-6 h-auto">
-                              <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId={PanelId.IDENTITY}>
-                                  <IdentityHUD />
-                              </GlassPanel>
-
-                              <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId={PanelId.SOCIAL}>
-                                  <SocialRow />
-                              </GlassPanel>
+                              <GlassPanel title="IDENTITY_CORE" className="h-auto min-h-[400px]" gameId={PanelId.IDENTITY}> <IdentityHUD /> </GlassPanel>
+                              <GlassPanel title="SOCIAL_UPLINK" className="h-52 shrink-0" gameId={PanelId.SOCIAL}> <SocialRow /> </GlassPanel>
                               </div>
-
                               <div className="md:col-span-8 flex flex-col gap-4 md:gap-6 h-auto">
-                              <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId={PanelId.FEED}>
-                                  <FeedAccessTerminal />
-                              </GlassPanel>
-
+                              <GlassPanel title="LATEST_LOGS" className="h-[30vh] min-h-[150px] shrink-0" gameId={PanelId.FEED}> <FeedAccessTerminal /> </GlassPanel>
                               <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start w-full">
-                                  <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId={PanelId.ART}>
-                                  <LiveArtGrid />
-                                  </GlassPanel>
-
-                                  <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId={PanelId.VIDEO}>
-                                  <HoloCommLog />
-                                  </GlassPanel>
+                                  <GlassPanel title="ART_DB" className="flex-1 h-auto" gameId={PanelId.ART}> <LiveArtGrid /> </GlassPanel>
+                                  <GlassPanel title="HOLO_COMM" className="w-full md:w-[45%] shrink-0 h-auto" gameId={PanelId.VIDEO}> <HoloCommLog /> </GlassPanel>
                               </div>
                               </div>
                           </motion.div>
@@ -304,7 +201,6 @@ export default function Home() {
                       </div>
                   </div>
                 </div>
-                
                 <Footer />
               </div>
           )}

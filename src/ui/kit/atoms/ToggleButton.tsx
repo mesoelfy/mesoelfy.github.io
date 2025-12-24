@@ -9,7 +9,9 @@ interface ToggleButtonProps {
   active: boolean;
   onClick: () => void;
   variant?: 'icon' | 'panel'; 
-  color?: string; // e.g. "text-primary-green"
+  color?: string;
+  /** Accessibility Label (Required for icon-only buttons) */
+  'aria-label'?: string; 
 }
 
 export const ToggleButton = ({ 
@@ -19,7 +21,8 @@ export const ToggleButton = ({
   active, 
   onClick, 
   variant = 'icon',
-  color
+  color,
+  'aria-label': ariaLabel 
 }: ToggleButtonProps) => {
   const audio = useAudio();
   const Icon = active ? IconOn : (IconOff || IconOn);
@@ -29,12 +32,16 @@ export const ToggleButton = ({
       audio.playClick(getPan(e));
   };
 
+  // Safe fallback for aria-label if not provided
+  const a11yLabel = ariaLabel || label || (active ? "Toggle Off" : "Toggle On");
+
   // 1. PANEL VARIANT (Settings Menu)
   if (variant === 'panel') {
       return (
         <button
           onClick={handleClick}
           onMouseEnter={(e) => audio.playHover(getPan(e))}
+          aria-label={a11yLabel}
           className={clsx(
             "flex flex-col items-center justify-center p-2 border transition-all duration-200 w-full h-14 relative overflow-hidden group",
             active 
@@ -60,9 +67,10 @@ export const ToggleButton = ({
     <button 
       onClick={handleClick}
       onMouseEnter={(e) => audio.playHover(getPan(e))}
+      aria-label={a11yLabel}
       className={clsx(
         "group flex items-center justify-center h-7 transition-all duration-200 border rounded-sm",
-        "w-8", // Uniform width for both Icons and Text labels (SFX)
+        "w-8", 
         color || 'text-white',
         "hover:bg-current hover:border-transparent",
         active 
