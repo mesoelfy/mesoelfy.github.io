@@ -9,7 +9,7 @@ import { TypedLog } from './atoms/TypedLog';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
-import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle } from 'lucide-react';
+import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle, Heart } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
 const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (m: 'HIGH' | 'POTATO') => void }) => {
@@ -153,7 +153,7 @@ const DangerTriangle = () => (
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: () => void, onBreachStart: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { graphicsMode, setGraphicsMode } = useStore();
+  const { graphicsMode, setGraphicsMode, openModal } = useStore();
   const [uiScale, setUiScale] = useState(1.0);
   const { step, isBreaching, handleInitialize, logsToShow, showMatrix, showPayloadWindow, showButton } = useBootSequence({ onComplete, onBreachStart });
   
@@ -166,6 +166,18 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
     window.addEventListener('resize', res); 
     return () => window.removeEventListener('resize', res);
   }, []);
+
+  // --- NEW: Hotkey Listener for Donation Modal ---
+  useEffect(() => {
+      const handleKey = (e: KeyboardEvent) => {
+          if (e.key === '4') {
+              AudioSystem.playSound('ui_menu_open');
+              openModal('donate');
+          }
+      };
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+  }, [openModal]);
 
   return (
     <motion.div animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }} className="fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden">
@@ -224,9 +236,17 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                                         className="w-full flex flex-col gap-6 pt-4 border-t border-white/10"
                                     >
                                         <div className="flex flex-col gap-3">
-                                            <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
-                                                <Cpu size={12} /> 
-                                                <span>Graphics_Kernel_Config</span>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
+                                                    <Cpu size={12} /> 
+                                                    <span>Graphics_Kernel_Config</span>
+                                                </div>
+                                                
+                                                {/* --- SECRET TIP JAR HINT --- */}
+                                                <div className="flex items-center gap-2 text-[9px] text-gray-600 font-mono opacity-50 hover:opacity-100 transition-opacity cursor-help" title="Press 4 to Support">
+                                                    <Heart size={10} className="fill-current" />
+                                                    <span>CMD_4: SUPPORT</span>
+                                                </div>
                                             </div>
                                             <GraphicsToggle mode={graphicsMode} setMode={setGraphicsMode} />
                                         </div>

@@ -164,3 +164,43 @@ player ability, leave a snail slime trail where the cursor was. upgrades - can i
 Increase Lighthouse Score.
 Is my site optimized for things Google loves? (without unnecessary bloat)
 
+should I be implementing GSAP into my project in any way?
+
+Lenis github page has great README banner:
+https://github.com/darkroomengineering/lenis
+
+
+Now one of Elfy's closest allies, Zing
+
+player isn't properly dying to red state
+
+
+
+
+
+
+
+MONEY // CRYPTO // BLOCKCHAIN
+Etherscan Watch List:
+Go to Etherscan.io.
+Create a free account.
+Add your 0x address to your "Watch List".
+Enable "Email Notification on Incoming Tx".
+Result: You get an email instantly when someone tips you.
+
+
+Proposal for a new Component: CryptoTipJar.tsx
+Visual: A QR Code rendered in a "pixelated" style (using a library like react-qr-code styled with CSS filters to look green/CRT).
+Interaction: Click to Copy Address.
+Feedback: Sound effect (syn_data_burst) and a toast message: ADDRESS_COPIED_TO_CLIPBOARD.
+
+    "ens": "mesoelfy.eth",
+    "eth_address": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    "signature": "0x[PENDING_CRYPTOGRAPHIC_PROOF_OF_OWNERSHIP]",
+    "kofi_url": "https://ko-fi.com/mesoelfy"
+
+
+
+Send me $5 for teaching you how to buy and send crypto.
+
+If you're clever you can figure it out on your own. AI will know right away what the password is if you ask it.

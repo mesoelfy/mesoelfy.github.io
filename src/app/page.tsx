@@ -15,6 +15,7 @@ import { FeedModal } from '@/ui/os/apps/feed/FeedModal';
 import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
+import { DonationModal } from '@/ui/os/apps/donate/DonationModal'; // NEW
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
@@ -167,7 +168,7 @@ export default function Home() {
 
           {!isSandbox && (
               <>
-                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <ZenBomb />
+                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <DonationModal /> <ZenBomb />
               </>
           )}
 

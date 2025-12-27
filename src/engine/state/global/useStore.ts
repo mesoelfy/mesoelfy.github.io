@@ -28,14 +28,15 @@ interface AudioSettings {
 const DEFAULT_AUDIO: AudioSettings = {
   master: true, music: false, sfx: true, ambience: true,
   volumeMaster: 1.0, 
-  volumeMusic: 0.75, // UPDATED: 75% Default
+  volumeMusic: 0.75,
   volumeSfx: 1.0, 
   volumeAmbience: 1.0,
   ambFilter: 0.5, ambSpeed: 0.5, ambWidth: 0.5, ambModSpeed: 0.5, ambModDepth: 0.5, 
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
 
-type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
+// UPDATED: Added 'donate'
+type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' | 'donate';
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';

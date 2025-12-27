@@ -7,5 +7,11 @@
     "INT": 9001,
     "CHA": 50
   },
-  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters."
+  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters.",
+  "crypto": {
+    "ens": "mesoelfy.eth",
+    "eth_address": "0x7738659258bc7dcd6a7d57774b3d60493b7987bb",
+    "signature": "0x9e02ccac2b78d88fabff6905a8681e0435fef2cda4ab518ee720b142c5eaa63d343a4346875713b38e0b92ed6f7ac9853c467770a00b7ef0263dd2c3fbbdbfdc1b",
+    "kofi_url": "https://ko-fi.com/mesoelfy"
+  }
 }
