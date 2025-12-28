@@ -1,15 +1,15 @@
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
-import { UpgradeOption } from '@/engine/types/game.types';
+import { Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
+import { UpgradePath } from '@/engine/types/game.types';
 
-const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
+// Updated: Removed REPAIR_NANITES
+const SYSTEM_OPS: UpgradePath[] = ['RESTORE', 'PURGE'];
 
 const OP_INFO: Record<string, { label: string, desc: string, icon: any }> = {
   'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
   'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
-  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
 };
 
 interface SystemOpsProps {
@@ -17,10 +17,18 @@ interface SystemOpsProps {
 }
 
 export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
+  // Purge/Restore don't necessarily cost "points" in the new design logic unless specified.
+  // The prompt implies Purge is the Zen Bomb.
+  // Restore is the button.
+  // We'll keep them as clickable buttons.
+  // Note: Previous logic checked upgradePoints. If these are free cooldowns now, we remove check.
+  // User said "restore... behave like presently does" -> Presently it costs an Upgrade Point.
+  // So we KEEP the point check.
+  
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
+  const handleUpgrade = (u: UpgradePath, e: React.MouseEvent) => {
       if (isPanelDead || upgradePoints <= 0) return; 
       AudioSystem.playClick(getPan(e));
       selectUpgrade(u);
@@ -29,7 +37,7 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
   if (upgradePoints <= 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5 mt-4">
+    <div className="flex flex-col gap-1.5 mt-4 border-t border-white/10 pt-4">
         <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
         {SYSTEM_OPS.map(u => {
             const info = OP_INFO[u];
@@ -58,7 +66,9 @@ export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
                         </div>
                     </div>
                     
-                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-alert-yellow bg-black/50 px-1.5 py-0.5 rounded border border-alert-yellow/30">1 PT</span>
+                    </div>
                 </button>
             );
         })}

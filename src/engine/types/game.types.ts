@@ -7,16 +7,30 @@ export interface RegisteredPanel {
   isDestroyed: boolean;
 }
 
-export type UpgradeOption = 
-  | 'OVERCLOCK'      // Attack Speed
-  | 'EXECUTE'        // Damage
-  | 'FORK'           // Multishot
-  | 'SNIFFER'        // Homing
-  | 'BACKDOOR'       // Rear Guard
-  | 'DAEMON'         // Summon Ally
-  | 'REPAIR_NANITES' // Heal
-  | 'RESTORE'        // System Op
-  | 'PURGE';         // System Op
+export interface RailgunState {
+  widthLevel: number; // 0-10
+  damageLevel: number; // 0-3
+  rateLevel: number; // 0-3
+}
+
+export interface SnifferState {
+  capacityLevel: number; // 0-4
+  damageLevel: number; // 0-3
+  rateLevel: number; // 0-3
+}
+
+// Replaces the old string-based keys
+export type UpgradePath = 
+  | 'RAILGUN_WIDTH'
+  | 'RAILGUN_DAMAGE'
+  | 'RAILGUN_RATE'
+  | 'SNIFFER_CAPACITY'
+  | 'SNIFFER_DAMAGE'
+  | 'SNIFFER_RATE'
+  | 'REPAIR_NANITES' // Kept for logic compatibility if needed, though button removed
+  | 'RESTORE'
+  | 'PURGE'
+  | 'DAEMON'; // Kept as deprecated reference or for event compatibility
 
 export interface GameState {
   isPlaying: boolean;

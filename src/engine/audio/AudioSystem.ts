@@ -31,6 +31,10 @@ class AudioSystemFacade implements IAudioService {
   public playBootSequence() { this.service.playBootSequence(); }
   public playDrillSound() { this.service.playDrillSound(); }
   public playRebootZap() { this.service.playRebootZap(); }
+
+  // --- NEW PROXIES ---
+  public startHealingTone() { this.service.startHealingTone(); }
+  public stopHealingTone() { this.service.stopHealingTone(); }
 }
 
 export const AudioSystem = new AudioSystemFacade();

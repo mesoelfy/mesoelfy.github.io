@@ -2,6 +2,7 @@ import { IGameSystem, IGameStateSystem, IPanelSystem, IGameEventService, IAudioS
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
@@ -15,10 +16,8 @@ export class GameStateSystem implements IGameStateSystem {
     private audio: IAudioService
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'REPAIR_NANITES') {
-            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
-            this.audio.playSound('ui_optimal');
-        } else if (p.option === 'DAEMON') {
+        if (p.option === 'DAEMON') {
+            // Keeping for logic check, though UI button removed
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
     }));
@@ -60,7 +59,10 @@ export class GameStateSystem implements IGameStateSystem {
   get level() { return this.progSys.level; }
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
   get upgradePoints() { return this.progSys.upgradePoints; }
-  get activeUpgrades() { return this.progSys.activeUpgrades; }
+  
+  // Direct store access for new granular state
+  get railgun() { return useGameStore.getState().railgun; }
+  get sniffer() { return useGameStore.getState().sniffer; }
 
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }

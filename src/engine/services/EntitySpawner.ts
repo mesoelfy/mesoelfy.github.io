@@ -25,6 +25,7 @@ export class EntitySpawner implements IEntitySpawner {
     extraTags.forEach(tag => e.addTag(tag));
 
     for (const compDef of blueprint.components) {
+        // Deep merge data if possible, otherwise spread
         const mergedData = { ...(compDef.data || {}), ...(overrides[compDef.type] || {}) };
         e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
@@ -45,11 +46,21 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, faction: Faction, life: number, damage: number = 1, projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, ownerId?: number): Entity {
+  public spawnBullet(
+      x: number, y: number, 
+      vx: number, vy: number, 
+      faction: Faction, 
+      life: number, 
+      damage: number = 1, 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_RAILGUN, 
+      ownerId?: number,
+      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string } // NEW
+  ): Entity {
     let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_RAILGUN;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    const overrides = {
+    
+    const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
         [ComponentType.Motion]: { vx, vy },
         [ComponentType.Lifetime]: { remaining: life, total: life },
@@ -57,6 +68,23 @@ export class EntitySpawner implements IEntitySpawner {
         [ComponentType.Health]: { max: damage },
         [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
+
+    // Apply Visual Scaling if provided
+    if (visualOverrides) {
+        const transformData: any = {};
+        if (visualOverrides.scaleX) transformData.baseScaleX = visualOverrides.scaleX;
+        if (visualOverrides.scaleY) transformData.baseScaleY = visualOverrides.scaleY;
+        overrides[ComponentType.RenderTransform] = transformData;
+
+        if (visualOverrides.color) {
+            // Hex parsing handled in RenderModel component logic usually, 
+            // but here we might need to manually set it if the spawner doesn't auto-parse overrides.
+            // ComponentRegistry.create handles the object, RenderModel.reset does copying.
+            // RenderModel stores r,g,b. We need to pass those if we change color.
+            // For now, we'll assume color overrides are handled via specific Archetypes or we add hex support to RenderModel.reset
+        }
+    }
+
     return this.spawn(id, overrides);
   }
 

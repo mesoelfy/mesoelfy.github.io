@@ -209,8 +209,7 @@ https://app.ens.domains/mesoelfy.eth
 
 
 
-
-
+Update crypto section to mention bitcoin vs ethereum and the technical reasons why I don't accept bitcoin but do accept ethereum (and others I do accept)
 
 
 
@@ -234,7 +233,7 @@ Instead of creating new accounts and passwords on every website, just connect yo
 
 
 
-
+OPTION A/B should in the Step 2 section. Any other mistakes?
 
 
 

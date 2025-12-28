@@ -15,6 +15,7 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import { PALETTE } from '@/engine/config/Palette';
 import { GAME_MATH } from '@/engine/config/constants/MathConstants';
+import { PanelId } from '@/engine/config/PanelConfig';
 import * as THREE from 'three';
 
 const createCoreGeo = () => {
@@ -46,20 +47,13 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
-// --- DYNAMIC CHEVRON RIBBON GENERATOR ---
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
-    
-    // Config
-    const rTip = 0.92;      
-    const rValley = 0.84;   
-    const thickness = 0.06; 
-    
+    const rTip = 0.92; const rValley = 0.84; const thickness = 0.06; 
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
     const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
     const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
 
-    // 1. OUTER EDGE (CW: Left -> Right)
     const startBaseAngle = startAngle + (spread * 0.4); 
     const pStartBase = pt(rValley, startBaseAngle);
     shape.moveTo(pStartBase[0], pStartBase[1]);
@@ -68,7 +62,6 @@ const createForkedChevronGeo = (tipCount: number) => {
         const angle = startAngle - (i * spread);
         const pTip = pt(rTip, angle);
         shape.lineTo(pTip[0], pTip[1]);
-        
         if (i < tipCount - 1) {
             const midAngle = angle - (spread / 2);
             const pValley = pt(rValley, midAngle);
@@ -80,10 +73,8 @@ const createForkedChevronGeo = (tipCount: number) => {
     const pEndBase = pt(rValley, endBaseAngle);
     shape.lineTo(pEndBase[0], pEndBase[1]);
 
-    // 2. INNER EDGE (CCW: Right -> Left)
     const rInnerTip = rTip - thickness;
     const rInnerValley = rValley - thickness;
-
     const pInnerEnd = pt(rInnerValley, endBaseAngle);
     shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
 
@@ -91,7 +82,6 @@ const createForkedChevronGeo = (tipCount: number) => {
         const angle = startAngle - (i * spread);
         const pInTip = pt(rInnerTip, angle);
         shape.lineTo(pInTip[0], pInTip[1]);
-        
         if (i > 0) {
             const midAngle = angle + (spread / 2);
             const pInValley = pt(rInnerValley, midAngle);
@@ -101,9 +91,7 @@ const createForkedChevronGeo = (tipCount: number) => {
 
     const pInnerStart = pt(rInnerValley, startBaseAngle);
     shape.lineTo(pInnerStart[0], pInnerStart[1]);
-    
     shape.closePath();
-
     return new THREE.ShapeGeometry(shape);
 };
 
@@ -143,9 +131,14 @@ const SnifferOverlayShader = {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink/Cyan
+const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD); // New Gold
+const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_DEAD = new THREE.Color('#FF003C');
+const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
-const COL_SNIFFER = new THREE.Color(PALETTE.PINK.PRIMARY);
+const COL_SNIFFER = new THREE.Color(PALETTE.PURPLE.LIGHT); // Sniffer default
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
@@ -158,7 +151,9 @@ export const PlayerActor = () => {
   
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
-  const activeUpgrades = useGameStore(state => state.activeUpgrades);
+  // Replaced activeUpgrades with new state access if needed, but here we only need SNIFFER level
+  // Actually, we need to access the new 'sniffer' state object
+  const snifferState = useGameStore(state => state.sniffer);
   
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
@@ -167,12 +162,14 @@ export const PlayerActor = () => {
   
   const currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
-  const forkLevel = activeUpgrades['FORK'] || 0;
-  const forkGeo = useMemo(() => {
-      const tips = 1 + forkLevel; 
-      return createForkedChevronGeo(tips);
-  }, [forkLevel]);
-
+  // We only care about Sniffer Capacity for the overlay
+  const forkGeo = useMemo(() => createForkedChevronGeo(1), []); // Assuming base railgun has 1 tip? Or is it dynamic? 
+  // Wait, Railgun doesn't have "forks" anymore, it gets wider. 
+  // We can keep the chevron aesthetic but it shouldn't split.
+  // The User said: "single shot that increases in width".
+  // So the Chevron geometry should likely just be a single tip, maybe scaled wider?
+  // Let's stick to single tip for now.
+  
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', { ...ShaderLib.presets.playerAmbient, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.6 }, [Uniforms.ENERGY]: { value: 0.0 } } });
       mat.blending = THREE.AdditiveBlending; return mat;
@@ -205,9 +202,7 @@ export const PlayerActor = () => {
   }, [events]);
 
   useLayoutEffect(() => {
-      if (forkRef.current) {
-          forkRef.current.geometry = forkGeo;
-      }
+      if (forkRef.current) forkRef.current.geometry = forkGeo;
   }, [forkGeo]);
 
   useFrame((state, delta) => {
@@ -221,8 +216,18 @@ export const PlayerActor = () => {
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
-    const iState = getSystem<IInteractionSystem>('InteractionSystem')?.repairState || 'IDLE';
-    const isActive = iState === 'HEALING' || iState === 'REBOOTING' || isZenMode;
+    
+    // Interaction State Logic
+    const interaction = getSystem<IInteractionSystem>('InteractionSystem');
+    const iState = interaction?.repairState || 'IDLE';
+    const hoverId = interaction?.hoveringPanelId;
+    
+    // Determine Healing Type
+    const isHealingSelf = (iState === 'HEALING' && hoverId === PanelId.IDENTITY);
+    const isHealingPanel = (iState === 'HEALING' && hoverId !== PanelId.IDENTITY);
+    const isRebooting = (iState === 'REBOOTING');
+    const isActive = iState !== 'IDLE' || isZenMode;
+
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     if (ambientMaterial.uniforms[Uniforms.ENERGY]) ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
@@ -250,14 +255,11 @@ export const PlayerActor = () => {
         }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
-        reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
+        reticleRef.current.rotation.z = (isDeadState && !isRebooting) ? Math.PI*0.25 : -renderTrans.rotation;
         
-        // --- SNIFFER COLOR CALCULATION (Complementary to Main) ---
-        // We use this for both the Sniffer Tip AND now the Chevron Ribbon
-        if (snifferRef.current || forkRef.current) {
-            snifferRef.current!.rotation.z = reticleRef.current.rotation.z;
-            const levels = useGameStore.getState().activeUpgrades;
-            snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
+        if (snifferRef.current) {
+            snifferRef.current.rotation.z = reticleRef.current.rotation.z;
+            snifferMaterial.uniforms.uLevel.value = snifferState.capacityLevel;
             snifferMaterial.uniforms.uTime.value = time;
             snifferColor.current.copy(tempColor.current);
             const hsl = { h: 0, s: 0, l: 0 };
@@ -267,8 +269,8 @@ export const PlayerActor = () => {
         }
 
         if (isZenMode) {
-            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); // Bright Center
-            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6); // Saturated Reticle
+            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); 
+            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
             
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
             ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
@@ -279,12 +281,18 @@ export const PlayerActor = () => {
             }
 
         } else {
-            // STANDARD MODE LOGIC
-            let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+            // DETERMINE COLOR STATE
+            let target = COL_BASE;
+            
+            if (isDeadState) target = COL_DEAD;
+            else if (isRebooting) target = COL_REBOOT;
+            else if (isHealingSelf) target = COL_HEAL_SELF; // GOLD
+            else if (isHealingPanel) target = COL_REPAIR_PANEL; // CYAN/PINK
+
             tempColor.current.lerp(target, 0.2);
             
             if (isDeadState) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
-            else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
+            else if (isHealingPanel || isHealingSelf) reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
             
             if (hitFlash.current > 0.01) { 
@@ -295,14 +303,11 @@ export const PlayerActor = () => {
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
 
-            // --- FORK COLOR UPDATE ---
-            // If Dead: Use Red/Hit color.
-            // If Alive: Use Sniffer Color (Complementary Pink/Magenta).
             if (forkRef.current) {
                 if (isDeadState || hitFlash.current > 0.01) {
-                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current); // Red when dead/hit
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
                 } else {
-                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(snifferColor.current); // Complementary when alive
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(snifferColor.current);
                 }
                 forkRef.current.rotation.z = centerDotRef.current.rotation.z;
             }
@@ -310,6 +315,9 @@ export const PlayerActor = () => {
         
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
+        // Spin Logic for Self Heal/Reboot is handled in AnimationSystem via Rotation Speed, 
+        // this only applies scale/color.
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * (isZenMode ? 3.0 : 1.0));
         (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
     }

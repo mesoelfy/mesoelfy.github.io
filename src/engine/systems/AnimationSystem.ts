@@ -9,6 +9,7 @@ import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { PanelId } from '@/engine/config/PanelConfig';
 import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
@@ -36,6 +37,7 @@ export class AnimationSystem implements IGameSystem {
     const isZenMode = useGameStore.getState().isZenMode;
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
+    const hoverId = this.interactionSystem.hoveringPanelId;
 
     const entities = this.registry.query(this.animationQuery);
 
@@ -63,9 +65,13 @@ export class AnimationSystem implements IGameSystem {
           if (isZenMode) {
               spinSpeed = -0.03;
           } else if (isDead) {
+              // Dead but Reviving = Fast Spin
               spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
           } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
-              spinSpeed = -0.24;
+              // Healing Self or Panel = Fast Spin
+              // Maybe faster for self-heal?
+              const isSelf = hoverId === PanelId.IDENTITY;
+              spinSpeed = isSelf ? -0.4 : -0.24;
           }
           
           render.rotation += spinSpeed;

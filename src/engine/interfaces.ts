@@ -9,6 +9,7 @@ import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ArchetypeID } from '@/engine/config/Identifiers';
+import { RailgunState, SnifferState } from '@/engine/types/game.types';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -59,7 +60,7 @@ export interface IFastEventService {
   duckMusic(intensity: number, duration: number): void;
   flashEntity(id: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
-  swap(): void; // NEW: Flip buffers
+  swap(): void;
   clear(): void;
   getCursor(): number;
 }
@@ -83,7 +84,6 @@ export interface IProgressionRead {
   level: number;
   xpToNextLevel: number;
   upgradePoints: number;
-  activeUpgrades: Record<string, number>;
 }
 
 export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
@@ -93,6 +93,8 @@ export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgression
   addXp(amount: number): void;
   tickReboot(amount: number): void;
   decayReboot(amount: number): void;
+  railgun?: RailgunState;
+  sniffer?: SnifferState;
 }
 
 export interface IEntityRegistry {
@@ -118,7 +120,8 @@ export interface IEntitySpawner {
       life: number, 
       damage?: number, 
       projectileId?: ArchetypeID, 
-      ownerId?: number
+      ownerId?: number,
+      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity;
   spawnParticle(
       x: number, y: number, 
@@ -145,6 +148,9 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
+  // NEW METHODS
+  startHealingTone(): void;
+  stopHealingTone(): void;
 }
 
 export interface IInputService {

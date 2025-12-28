@@ -4,12 +4,43 @@ import { PALETTE } from '@/engine/config/Palette';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 
 export const WEAPONS: Record<WeaponID, WeaponDef> = {
-  // --- PLAYER WEAPONS ---
+  // --- PLAYER: RAILGUN (New Default) ---
+  [WeaponIDs.PLAYER_RAILGUN]: {
+    id: WeaponIDs.PLAYER_RAILGUN,
+    damage: 1, 
+    speed: 50, 
+    life: 1.5,
+    // Visual scale will be dynamic based on width upgrades in WeaponSystem
+    visual: { model: 'CAPSULE', color: PALETTE.PURPLE.PRIMARY, scale: [0.2, 0.8, 0.2], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+
+  // --- PLAYER: SNIFFER (Auxiliary) ---
+  [WeaponIDs.PLAYER_SNIFFER]: {
+    id: WeaponIDs.PLAYER_SNIFFER,
+    damage: 1, 
+    speed: 22, 
+    life: 3.0,
+    visual: { model: 'OCTA', color: PALETTE.PURPLE.LIGHT, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
+    behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+
+  // --- PLAYER: PURGE (Zen Bomb) ---
+  [WeaponIDs.PLAYER_PURGE]: {
+    id: WeaponIDs.PLAYER_PURGE,
+    damage: 50, speed: 24, life: 2.4,
+    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.ORANGE.BRIGHT, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.BULLET, Tag.PLAYER]
+  },
+
+  // --- DEPRECATED LEGACY WEAPONS (Kept to prevent crash if save data exists) ---
   [WeaponIDs.PLAYER_STANDARD]: {
     id: WeaponIDs.PLAYER_STANDARD,
     damage: 1, speed: 45, life: 1.5,
-    // UPDATED: Now Purple (was Green)
-    visual: { model: 'CAPSULE', color: PALETTE.PURPLE.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
+    visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -20,26 +51,11 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
     behavior: { faceVelocity: true, spinSpeed: 5.0 },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
-  [WeaponIDs.PLAYER_SNIFFER]: {
-    id: WeaponIDs.PLAYER_SNIFFER,
-    damage: 0.5, speed: 22, life: 3.0,
-    // UPDATED: Scale increased by 10% (0.3 -> 0.33)
-    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
-    behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
-    tags: [Tag.BULLET, Tag.PLAYER]
-  },
   [WeaponIDs.PLAYER_BACKDOOR]: {
     id: WeaponIDs.PLAYER_BACKDOOR,
     damage: 1, speed: 45, life: 1.5,
     visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
-    tags: [Tag.BULLET, Tag.PLAYER]
-  },
-  [WeaponIDs.PLAYER_PURGE]: {
-    id: WeaponIDs.PLAYER_PURGE,
-    damage: 50, speed: 24, life: 2.4,
-    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.ORANGE.BRIGHT, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
 

@@ -2,11 +2,12 @@
 
 import { Canvas } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { PALETTE } from '@/engine/config/Palette';
+import { useGameStream } from '@/ui/hooks/useGameStream';
 
 const COLORS = {
   SAFE: new THREE.Color(PALETTE.GREEN.PRIMARY),
@@ -15,6 +16,12 @@ const COLORS = {
   EMISSIVE_SAFE: new THREE.Color(PALETTE.GREEN.DARK),
   EMISSIVE_WARN: new THREE.Color(PALETTE.YELLOW.DIM),
   EMISSIVE_CRIT: new THREE.Color(PALETTE.RED.DIM), 
+  // Healing Colors
+  HEAL_BASE: new THREE.Color(PALETTE.YELLOW.GOLD),
+  HEAL_EMISSIVE: new THREE.Color(PALETTE.YELLOW.ALERT),
+  // Revive Colors
+  REVIVE_BASE: new THREE.Color(PALETTE.PURPLE.PRIMARY),
+  REVIVE_EMISSIVE: new THREE.Color(PALETTE.PURPLE.DEEP),
 };
 
 const SpinningGem = () => {
@@ -22,6 +29,10 @@ const SpinningGem = () => {
   const materialRef = useRef<any>(null);
   
   const integrity = useGameStore(state => state.systemIntegrity);
+  const [interactionState, setInteractionState] = useState(0);
+
+  // Sync high-frequency state
+  useGameStream('PLAYER_INTERACTION_STATE', setInteractionState);
 
   const currentColor = useRef(COLORS.SAFE.clone());
   const currentEmissive = useRef(COLORS.EMISSIVE_SAFE.clone());
@@ -34,21 +45,39 @@ const SpinningGem = () => {
     let speed = 0.01;
     let distort = 0.3;
     let shake = 0;
+    let wireframe = true;
 
-    if (integrity < 30) {
-        targetColor = COLORS.CRIT;
-        targetEmissive = COLORS.EMISSIVE_CRIT;
-        speed = 0.08; 
-        distort = 0.8;
-        shake = 0.1;
-    } else if (integrity < 60) {
-        targetColor = COLORS.WARN;
-        targetEmissive = COLORS.EMISSIVE_WARN;
-        speed = 0.04;
-        distort = 0.5;
-        shake = 0.02;
+    // 1. STATE LOGIC
+    if (interactionState === 1) { // HEALING
+        targetColor = COLORS.HEAL_BASE;
+        targetEmissive = COLORS.HEAL_EMISSIVE;
+        speed = 0.15; // Fast spin
+        distort = 0.6;
+        wireframe = false; // SOLID
+    } else if (interactionState === 2) { // REVIVING
+        targetColor = COLORS.REVIVE_BASE;
+        targetEmissive = COLORS.REVIVE_EMISSIVE;
+        speed = 0.05;
+        distort = 1.0; // Extreme distortion
+        wireframe = false; // SOLID
+    } else {
+        // IDLE Logic
+        if (integrity < 30) {
+            targetColor = COLORS.CRIT;
+            targetEmissive = COLORS.EMISSIVE_CRIT;
+            speed = 0.08; 
+            distort = 0.8;
+            shake = 0.1;
+        } else if (integrity < 60) {
+            targetColor = COLORS.WARN;
+            targetEmissive = COLORS.EMISSIVE_WARN;
+            speed = 0.04;
+            distort = 0.5;
+            shake = 0.02;
+        }
     }
 
+    // 2. APPLY PHYSICS
     meshRef.current.rotation.y += speed;
     meshRef.current.rotation.z += speed * 0.5;
     
@@ -60,12 +89,15 @@ const SpinningGem = () => {
         meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, 0.1);
     }
 
-    currentColor.current.lerp(targetColor, delta * 3.0);
-    currentEmissive.current.lerp(targetEmissive, delta * 3.0);
+    // 3. COLOR LERP
+    currentColor.current.lerp(targetColor, delta * 5.0);
+    currentEmissive.current.lerp(targetEmissive, delta * 5.0);
 
+    // 4. UPDATE MATERIAL
     materialRef.current.color.copy(currentColor.current);
     materialRef.current.emissive.copy(currentEmissive.current);
     materialRef.current.distort = THREE.MathUtils.lerp(materialRef.current.distort, distort, delta);
+    materialRef.current.wireframe = wireframe;
   });
 
   return (
@@ -77,10 +109,10 @@ const SpinningGem = () => {
           color={PALETTE.GREEN.PRIMARY}
           emissive={PALETTE.GREEN.DARK}
           roughness={0.1}
-          metalness={0.8}
+          metalness={0.9}
           distort={0.3}
           speed={2}
-          wireframe
+          wireframe={true}
         />
       </mesh>
     </Float>
@@ -97,6 +129,7 @@ export const MiniCrystalCanvas = () => {
       >
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color={PALETTE.GREEN.GLOW} />
+        <pointLight position={[-10, -10, -10]} intensity={0.5} color={PALETTE.PURPLE.PRIMARY} />
         <SpinningGem />
       </Canvas>
     </div>

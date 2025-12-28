@@ -6,6 +6,7 @@ import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
 import { VoiceManager } from './modules/VoiceManager';
+import { ShepardTone } from './modules/ShepardTone'; // NEW
 import { AudioKey } from '@/engine/config/AssetKeys';
 
 const CRITICAL_SOUNDS: AudioKey[] = ['ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 'fx_boot_sequence', 'ambience_core'];
@@ -15,6 +16,9 @@ export class AudioServiceImpl implements IAudioService {
   private mixer = new AudioMixer(this.ctxManager);
   private bank = new SoundBank();
   private voices = new VoiceManager(this.ctxManager, this.bank, this.mixer);
+  
+  private shepard: ShepardTone | null = null; // NEW
+
   public isReady = false;
   private hasInteracted = false; 
   private _autoStartAmbience = false; 
@@ -28,6 +32,10 @@ export class AudioServiceImpl implements IAudioService {
     if (!ctx) return;
     this.mixer.init();
     this.updateVolumes();
+    
+    // Init Shepard Tone connected to SFX bus (or create dedicated bus if preferred, SFX is fine)
+    this.shepard = new ShepardTone(ctx, this.mixer.sfxGain);
+
     await this.generateList(CRITICAL_SOUNDS);
     const allKeys = Object.keys(AUDIO_MANIFEST) as AudioKey[];
     this.genQueue = allKeys.filter(k => !this.bank.has(k));
@@ -93,7 +101,6 @@ export class AudioServiceImpl implements IAudioService {
       if (this.bank.has(key)) {
           this.voices.playSFX(key, pan);
       } else if (AUDIO_MANIFEST[key]) {
-          // On-demand generation for missing sounds (e.g. Audio Matrix)
           this.generateSingle(key).then(() => {
               if (this.bank.has(key)) {
                   this.voices.playSFX(key, pan);
@@ -108,6 +115,15 @@ export class AudioServiceImpl implements IAudioService {
       else this.generateSingle(key).then(() => this.voices.playAmbience(key));
   }
 
+  // --- SHEPARD TONE CONTROLS ---
+  public startHealingTone() {
+      if (this.shepard) this.shepard.start();
+  }
+
+  public stopHealingTone() {
+      if (this.shepard) this.shepard.stop();
+  }
+
   public startMusic() {
     this.ctxManager.resume();
     this.voices.startMusic();
@@ -115,14 +131,13 @@ export class AudioServiceImpl implements IAudioService {
     else this._autoStartAmbience = true;
   }
 
-  public nextTrack() {
-    this.voices.nextTrack();
-  }
-  
+  public nextTrack() { this.voices.nextTrack(); }
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
+  
   public stopAll() {
       this.voices.stopAll();
+      if (this.shepard) this.shepard.stop();
       this._autoStartAmbience = false;
       this.pendingSounds = [];
   }

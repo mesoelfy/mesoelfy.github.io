@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sat Dec 27 11:00:00 CST 2025
+Generated on: Sun Dec 28 12:06:19 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -341,6 +341,11 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   │       ├── OverridesTab.tsx
 │       │   │   │       ├── SandboxTab.tsx
 │       │   │   │       └── StatsTab.tsx
+│       │   │   ├── donate
+│       │   │   │   ├── CryptoGuide.tsx
+│       │   │   │   ├── CryptoTipJar.tsx
+│       │   │   │   ├── DonationModal.tsx
+│       │   │   │   └── ENSGuide.tsx
 │       │   │   ├── feed
 │       │   │   │   └── FeedModal.tsx
 │       │   │   ├── gallery
@@ -440,7 +445,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-89 directories, 343 files
+90 directories, 347 files
 
 =====================================
 FILE: ./next.config.js
@@ -4214,7 +4219,7 @@ import { TypedLog } from './atoms/TypedLog';
 import { DotGridBackground } from '@/ui/kit/atoms/DotGridBackground';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useMatrixRain } from './hooks/useMatrixRain';
-import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle } from 'lucide-react';
+import { Zap, ZapOff, Cpu, ChevronRight, Power, AlertTriangle, Heart } from 'lucide-react';
 import { useStore } from '@/engine/state/global/useStore';
 
 const GraphicsToggle = ({ mode, setMode }: { mode: 'HIGH' | 'POTATO', setMode: (m: 'HIGH' | 'POTATO') => void }) => {
@@ -4358,7 +4363,7 @@ const DangerTriangle = () => (
 
 export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: () => void, onBreachStart: () => void }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { graphicsMode, setGraphicsMode } = useStore();
+  const { graphicsMode, setGraphicsMode, openModal } = useStore();
   const [uiScale, setUiScale] = useState(1.0);
   const { step, isBreaching, handleInitialize, logsToShow, showMatrix, showPayloadWindow, showButton } = useBootSequence({ onComplete, onBreachStart });
   
@@ -4371,6 +4376,18 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
     window.addEventListener('resize', res); 
     return () => window.removeEventListener('resize', res);
   }, []);
+
+  // --- NEW: Hotkey Listener for Donation Modal ---
+  useEffect(() => {
+      const handleKey = (e: KeyboardEvent) => {
+          if (e.key === '4') {
+              AudioSystem.playSound('ui_menu_open');
+              openModal('donate');
+          }
+      };
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+  }, [openModal]);
 
   return (
     <motion.div animate={{ backgroundColor: isBreaching ? "rgba(0,0,0,0)" : "rgba(0,0,0,1)" }} className="fixed inset-0 z-boot font-mono outline-none bg-black cursor-none overflow-hidden">
@@ -4429,9 +4446,17 @@ export const MatrixBootSequence = ({ onComplete, onBreachStart }: { onComplete: 
                                         className="w-full flex flex-col gap-6 pt-4 border-t border-white/10"
                                     >
                                         <div className="flex flex-col gap-3">
-                                            <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
-                                                <Cpu size={12} /> 
-                                                <span>Graphics_Kernel_Config</span>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest px-1">
+                                                    <Cpu size={12} /> 
+                                                    <span>Graphics_Kernel_Config</span>
+                                                </div>
+                                                
+                                                {/* --- SECRET TIP JAR HINT --- */}
+                                                <div className="flex items-center gap-2 text-[9px] text-gray-600 font-mono opacity-50 hover:opacity-100 transition-opacity cursor-help" title="Press 4 to Support">
+                                                    <Heart size={10} className="fill-current" />
+                                                    <span>CMD_4: SUPPORT</span>
+                                                </div>
                                             </div>
                                             <GraphicsToggle mode={graphicsMode} setMode={setGraphicsMode} />
                                         </div>
@@ -5019,14 +5044,16 @@ import { useStore } from '@/engine/state/global/useStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { clsx } from 'clsx';
 
 interface ModalContainerProps {
   children: React.ReactNode;
   title: string;
   type: string;
+  widthClass?: string; // NEW PROP
 }
 
-export const ModalContainer = ({ children, title, type }: ModalContainerProps) => {
+export const ModalContainer = ({ children, title, type, widthClass = "max-w-5xl" }: ModalContainerProps) => {
   const { activeModal, closeModal } = useStore();
   const isOpen = activeModal === type;
 
@@ -5034,16 +5061,45 @@ export const ModalContainer = ({ children, title, type }: ModalContainerProps) =
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-modal flex items-center justify-center p-4 md:p-10 pointer-events-none">
-          <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} transition={{ type: "spring", bounce: 0, duration: 0.3 }} className="relative w-full max-w-5xl h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto" >
-            <div className="flex items-center justify-between px-4 py-3 bg-primary-green/10 border-b border-primary-green/30">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-critical-red rounded-full animate-pulse" /><span className="font-header font-black text-primary-green text-lg md:text-xl tracking-widest">{title}</span></div>
-              <button onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }} onMouseEnter={() => AudioSystem.playHover()} className="p-1 hover:bg-critical-red hover:text-black text-primary-green transition-colors"><X /></button>
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+            animate={{ scale: 1, opacity: 1, y: 0 }} 
+            exit={{ scale: 0.95, opacity: 0, y: 10 }} 
+            transition={{ type: "spring", bounce: 0, duration: 0.3 }} 
+            className={clsx(
+                "relative w-full h-full max-h-[90vh] bg-black border border-primary-green/50 shadow-[0_0_50px_rgba(0,255,65,0.1)] flex flex-col overflow-hidden pointer-events-auto",
+                widthClass // Dynamic Width applied here
+            )}
+          >
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-4 py-3 bg-primary-green/10 border-b border-primary-green/30 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-critical-red rounded-full animate-pulse" />
+                <span className="font-header font-black text-primary-green text-lg md:text-xl tracking-widest uppercase">
+                    {title}
+                </span>
+              </div>
+              <button 
+                onClick={() => { closeModal(); AudioSystem.playSound('ui_menu_close'); }} 
+                onMouseEnter={() => AudioSystem.playHover()} 
+                className="p-1 hover:bg-critical-red hover:text-black text-primary-green transition-colors"
+              >
+                <X />
+              </button>
             </div>
-            <div className="flex-1 overflow-auto p-6 relative scrollbar-thin scrollbar-thumb-primary-green scrollbar-track-black">
-              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20" />
-              <div className="relative z-10">{children}</div>
+
+            {/* CONTENT */}
+            <div className="flex-1 overflow-hidden relative">
+              <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[length:100%_4px] opacity-20 z-0" />
+              <div className="relative z-10 w-full h-full">
+                {children}
+              </div>
             </div>
-            <div className="px-4 py-1 bg-black border-t border-primary-green/30 text-xs text-primary-green-dim font-mono text-right"> MODE: SECURE // ENCRYPTION: ENABLED </div>
+
+            {/* FOOTER */}
+            <div className="px-4 py-1 bg-black border-t border-primary-green/30 text-xs text-primary-green-dim font-mono text-right shrink-0">
+                 MODE: SECURE // ENCRYPTION: ENABLED 
+            </div>
           </motion.div>
         </div>
       )}
@@ -6684,6 +6740,655 @@ export const ContactModal = () => {
                 )}
             </AnimatePresence>
         </div>
+      </div>
+    </ModalContainer>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/os/apps/donate/CryptoTipJar.tsx
+=====================================
+import { useState } from 'react';
+import { Copy, Check, Info, ExternalLink, Hash, MousePointerClick } from 'lucide-react';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { clsx } from 'clsx';
+import identity from '@/engine/config/static/identity.json';
+import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
+
+export const CryptoTipJar = () => {
+  const [copiedEns, setCopiedEns] = useState(false);
+  const [copiedRaw, setCopiedRaw] = useState(false);
+  
+  const ethAddress = identity.crypto.eth_address;
+  const ensName = identity.crypto.ens;
+  const ensUrl = `https://app.ens.domains/${ensName}`;
+
+  const copyToClipboard = (text: string, isEns: boolean) => {
+    navigator.clipboard.writeText(text);
+    AudioSystem.playSound('syn_data_burst');
+    
+    if (isEns) {
+        setCopiedEns(true);
+        setTimeout(() => setCopiedEns(false), 2500);
+    } else {
+        setCopiedRaw(true);
+        setTimeout(() => setCopiedRaw(false), 2500);
+    }
+  };
+
+  return (
+    <div className="w-full min-h-[240px] flex flex-col justify-between p-10 bg-black/40 border-2 border-primary-green/30 relative overflow-hidden transition-all hover:bg-primary-green/5 hover:border-primary-green/50 rounded-sm group">
+      
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 p-6 opacity-30 pointer-events-none">
+        <div className="flex gap-2">
+            <div className="w-3 h-3 bg-primary-green rounded-full animate-pulse" />
+            <div className="w-3 h-3 bg-primary-green rounded-full animate-pulse delay-75" />
+            <div className="w-3 h-3 bg-primary-green rounded-full animate-pulse delay-150" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-12">
+        
+        {/* The Crystal Icon - Bigger and Centered Vertically */}
+        <div className="w-32 h-32 shrink-0 border-2 border-primary-green/50 rounded-full bg-black/50 relative overflow-hidden shadow-[0_0_40px_rgba(120,246,84,0.15)] self-center">
+            <div className="absolute inset-0 opacity-100">
+                <MiniCrystalCanvas />
+            </div>
+        </div>
+
+        {/* Address Info */}
+        <div className="flex flex-col min-w-0 flex-1 gap-3">
+            <span className="text-base text-primary-green-dim font-bold tracking-[0.2em] uppercase mb-1">
+                ACCEPTED: ETH, USDC, BASE, OP
+            </span>
+            
+            {/* PRIMARY ENS BUTTON */}
+            <button 
+                onClick={() => copyToClipboard(ensName, true)}
+                className="group/btn relative text-left w-fit"
+                title="Click to Copy ENS Address"
+            >
+                <div className={clsx(
+                    "flex items-center gap-6 text-5xl md:text-7xl font-header font-black tracking-wider transition-all",
+                    copiedEns ? "text-primary-green" : "text-white group-hover/btn:text-primary-green"
+                )}>
+                    <span>{ensName}</span>
+                    {copiedEns ? (
+                        <Check size={48} className="animate-in fade-in zoom-in" />
+                    ) : (
+                        <MousePointerClick size={48} className="opacity-0 -translate-x-6 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all duration-300 text-primary-green" />
+                    )}
+                </div>
+            </button>
+
+            {/* RAW ADDRESS + ACTIONS */}
+            <div className="flex flex-wrap items-center gap-4 mt-2">
+                <div className="flex items-center gap-4 bg-black/50 px-5 py-3 border border-white/10 rounded group/raw hover:border-white/30 transition-colors">
+                    <span className="text-sm font-mono text-gray-400 select-all group-hover/raw:text-white transition-colors">
+                        {ethAddress}
+                    </span>
+                    <button 
+                        onClick={() => copyToClipboard(ethAddress, false)}
+                        className="text-gray-500 hover:text-primary-green transition-colors"
+                        title="Copy Raw Address (Legacy)"
+                    >
+                        {copiedRaw ? <Check size={18} className="text-primary-green" /> : <Copy size={18} />}
+                    </button>
+                </div>
+                
+                <a 
+                    href={ensUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 text-sm font-bold text-latent-purple hover:text-white transition-colors bg-latent-purple/10 px-5 py-3 rounded border border-latent-purple/20 hover:border-latent-purple/50"
+                >
+                    <span>VIEW_PROFILE</span>
+                    <ExternalLink size={18} />
+                </a>
+            </div>
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div className="flex items-start gap-3 text-sm text-gray-500 font-mono leading-tight pt-6 border-t border-white/5 mt-4">
+        <Hash size={18} className="shrink-0 mt-0.5" />
+        <p>
+            Simply paste <strong className="text-gray-300">mesoelfy.eth</strong> into any modern wallet. 
+            The ledger automatically resolves it to the secure address.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/os/apps/donate/ENSGuide.tsx
+=====================================
+import { Globe, AlertTriangle, Clock, Coins, CheckCircle2, Fingerprint } from 'lucide-react';
+
+export const ENSGuide = () => {
+  return (
+    <div className="mt-8 border-t border-white/10 pt-8 animate-in fade-in slide-in-from-top-4">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-primary-green font-header font-black tracking-widest text-xl">
+            // MANUAL_02: IDENTITY_ACQUISITION
+        </h3>
+        <span className="text-sm font-mono text-primary-green-dim border border-primary-green-dim/30 px-3 py-1 rounded">
+            READ_TIME: 4 MIN
+        </span>
+      </div>
+
+      <div className="space-y-12 text-base font-mono text-gray-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-6 scrollbar-thin scrollbar-thumb-primary-green/20">
+        
+        {/* INTRODUCTION */}
+        <div className="bg-white/5 p-8 border-l-4 border-white/20 rounded-r-lg">
+            <h4 className="text-white font-bold text-xl mb-4 flex items-center gap-2">
+                <Fingerprint size={24} /> THE SINGULARITY GRAB
+            </h4>
+            <p className="mb-4">
+                <strong>ENS (Ethereum Name Service)</strong> is the phonebook of the future internet. 
+                It turns that long, spicy &quot;0x773...&quot; string into a human name like <span className="text-white">mesoelfy.eth</span>.
+            </p>
+            <p className="text-white/80">
+                We are approaching an AI singularity. Soon, billions of agents will need wallets. 
+                Securing your unique handle <strong>now</strong> (for $5) is like buying a .com domain in 1995. 
+                It is street cred that proves you were here early.
+            </p>
+        </div>
+
+        {/* PREREQUISITES */}
+        <div className="bg-alert-yellow/10 border-l-4 border-alert-yellow p-6 text-alert-yellow relative overflow-hidden rounded-r-lg">
+            <h4 className="font-bold text-xl mb-3 flex items-center gap-3 relative z-10">
+                <AlertTriangle size={24} /> PREREQUISITES
+            </h4>
+            <ul className="list-disc pl-5 space-y-2 opacity-90 relative z-10">
+                <li>
+                You need ETH to obtain your ENS.
+                </li>
+                <li>
+                    <strong>Network:</strong> While purchasing your ETH on Coinbase, you will see a list of networks. 
+                    You might be tempted to choose &quot;Base&quot; for $0.00 instead of &quot;Ethereum (default)&quot; for $0.06. 
+                    <br/><span className="text-white font-bold bg-black/20 px-1">STOP.</span> To buy the ENS, you must have ETH on the <strong>Ethereum Mainnet</strong>.
+                </li>
+                <li>
+                    <strong>Buffer:</strong> If transferring your max total balance from Coinbase, ensure you leave at least $1.00 behind, or Coinbase will block the transfer saying &quot;add at least $1.00 to cover the network fee.&quot;
+                </li>
+            </ul>
+        </div>
+
+        {/* STEP 1: SEARCH & CONNECT */}
+        <div>
+          <h4 className="text-white font-bold text-2xl mb-4 flex items-center gap-3 border-b border-white/10 pb-2">
+            <Globe size={24} className="text-service-cyan" /> 
+            1. THE REGISTRAR
+          </h4>
+          <div className="bg-black/40 p-6 border border-service-cyan/20 rounded">
+              <strong className="text-service-cyan block mb-3 text-lg">ACTION:</strong>
+              <ol className="list-decimal pl-6 space-y-4">
+               <li>Go to: <strong className="text-white">app.ens.domains</strong></li>
+               <li>In <strong>Search for a name</strong> (center of screen) → Type <strong>yourname</strong>.</li>
+               <li>Search for your handle (e.g. <em>yourname.eth</em>).</li>
+               <li>Select how many years you want.</li>
+               <li>Open up Rainbow in your browser extensions. </li>
+               <li>Go to "Connected Apps" in the top left drop down menu in Rainbow and add ENS</li>
+               <li>You may need to refresh. Make sure the Rainbow extension is open. The ENS site will show "Rainbow Installed" and let you continue with the purchase using your ETH.</li>
+               <li>You'll be asked to choose a profile picture and banner. You can skip for now. Each will cost about $.01 to upload. If you do it now make sure to click the "sign" button that pops up in the Rainbow extension.</li>
+              </ol>
+          </div>
+        </div>
+
+        {/* STEP 2: THE TRANSACTION FLOW */}
+        <div>
+          <h4 className="text-white font-bold text-2xl mb-4 flex items-center gap-3 border-b border-white/10 pb-2">
+            <Clock size={24} className="text-white" /> 
+            2. SIGNING
+          </h4>
+          <p className="mb-6 text-lg">
+            Almost done! Next is a multi-step handshake with the blockchain.
+          </p>
+          
+          <div className="space-y-8 bg-black/60 p-8 border border-white/10 rounded">
+              
+              {/* SUB-STEP 1 */}
+              <div className="flex gap-6">
+                  <div className="flex-none w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-xl">1</div>
+                  <div>
+                      <strong className="block text-white text-lg">Request to Register</strong>
+                      <p className="text-gray-400 mt-1">
+                       Complete the transaction to begin the timer.
+                      </p>
+                  </div>
+              </div>
+
+              {/* SUB-STEP 2 */}
+              <div className="flex gap-6">
+                  <div className="flex-none w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-xl">2</div>
+                  <div>
+                      <strong className="block text-white text-lg">The 60-Second Wait</strong>
+                      <p className="text-gray-400 mt-1">
+                        A progress bar will fill up. You must wait. You may have to wait a minute even after the bar is full.
+                      </p>
+                  </div>
+              </div>
+
+              {/* SUB-STEP 3 */}
+              <div className="flex gap-6">
+                  <div className="flex-none w-10 h-10 rounded-full bg-primary-green/20 text-primary-green flex items-center justify-center font-bold text-xl">3</div>
+                  <div>
+                      <strong className="block text-primary-green text-lg">Register (The Purchase)</strong>
+                      <div className="text-gray-400 mt-2 space-y-2 text-sm">
+                       <p> You will be asked to complete a second transaction to secure your name. Nothing extra and unforseen is being charged. Don't worry. You'll see the loading bar process a second time.</p>
+                        <p>Rainbow will pop up with a detailed confirmation screen:</p>
+                        <div className="p-3 bg-black border border-white/20 rounded font-mono text-xs">
+                            Simulated Result - Sent ~$10.00<br/>
+                            Received 1 NFT<br/>
+                            Chain: Ethereum, App: ENS<br/>
+                            Est Fee: ~$0.03
+                        </div>
+                        <p>Click &quot;Sign&quot; to acknowledge.</p>
+                        <p><strong>Total Cost:</strong> About $10.03 for 2 years of ownership. Then you'll get a screen that says...</p>
+                      </div>
+                  </div>
+              </div>
+
+              {/* FINALE */}
+              <div className="pt-4 border-t border-white/10 text-center">
+                  <p className="text-white font-bold text-lg animate-pulse">
+                    ...Processing...
+                  </p>
+                  <p className="text-primary-green font-black text-2xl mt-2">
+                    &quot;CONGRATULATIONS!&quot;
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    You are now the owner of [name].eth
+                  </p>
+              </div>
+          </div>
+        </div>
+
+        {/* STEP 3: REVERSE RECORD & CONCEPT */}
+        <div className="bg-gradient-to-r from-primary-green/10 to-transparent p-8 border-l-4 border-primary-green rounded-r-lg">
+            <h4 className="text-primary-green font-bold text-xl mb-4 flex items-center gap-3">
+                <CheckCircle2 size={32} /> FINAL BOSS: REVERSE RECORD
+            </h4>
+            
+            <div className="mb-6 space-y-4 text-base">
+                <div>
+                    <strong className="text-white block">The Concept:</strong> 
+                    <span className="text-gray-400"> Your domain is technically a &quot;Non-Fungible Token&quot; (ERC-721).</span>
+                </div>
+                <div>
+                    <strong className="text-white block">The Practicality:</strong> 
+              <span className="text-gray-400"> You now own an NFT, and it isn't worthless! YOU <em>own</em> it. GoDaddy can&apos;t take it away from you. You can trade it, sell it, or transfer it just like a digital trading card.</span>
+                </div>
+            </div>
+
+            <div className="bg-black/40 p-6 border border-primary-green/20 rounded">
+                <strong className="text-white block mb-2 text-lg">THE LAST STEP:</strong>
+                <ul className="list-disc pl-6 space-y-2 text-base">
+                    <li>Go to &quot;My Profile&quot; on ENS.</li>
+                    <li>Find <strong>&quot;Primary Name&quot;</strong>.</li>
+                    <li>Select your new name from the dropdown and click <strong>Save</strong>.</li>
+                    <li>Sign one last time in Rainbow.</li>
+                </ul>
+            </div>
+            <p className="mt-8 text-xl italic text-white text-center font-header">
+                You are now one step closer to sovereignty.
+                <br/>
+                <span className="text-sm opacity-60 font-mono not-italic">Welcome to the weird world of Web3. Please let me know if any details need to be updated to inform others reading this guide.</span>
+            </p>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/os/apps/donate/CryptoGuide.tsx
+=====================================
+import { ShieldAlert, Download, CreditCard, ArrowRight, Wallet, Lock, Globe, Webcam } from 'lucide-react';
+
+export const CryptoGuide = () => {
+  return (
+    <div className="mt-8 border-t border-white/10 pt-8 animate-in fade-in slide-in-from-top-4">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-primary-green font-header font-black tracking-widest text-xl">
+            // MANUAL_01: SELF_CUSTODY_PROTOCOL
+        </h3>
+        <span className="text-sm font-mono text-primary-green-dim border border-primary-green-dim/30 px-3 py-1 rounded">
+            READ_TIME: 6 MIN
+        </span>
+      </div>
+
+      <div className="space-y-12 text-base font-mono text-gray-300 leading-relaxed max-h-[60vh] overflow-y-auto pr-6 scrollbar-thin scrollbar-thumb-primary-green/20">
+        
+        {/* INTRODUCTION: THE ETHOS */}
+        <div className="bg-white/5 p-8 border-l-4 border-white/20 rounded-r-lg">
+            <h4 className="text-white font-bold text-xl mb-4 flex items-center gap-2">
+                <Globe size={24} /> THE PHILOSOPHY: SOVEREIGNTY
+            </h4>
+            <p className="mb-4">
+                A crypto wallet is a tool for total digital ownership. 
+                It grants you a bank account that exists outside of traditional gatekeepers. 
+                It is ID-free, permissionless, and open to anyone with an internet connection.
+            </p>
+            <p className="text-white/80">
+                It is the raw internet of value. You are the admin.
+            </p>
+        </div>
+
+        {/* STEP 1: THE VAULT */}
+        <div>
+            <h4 className="text-service-cyan font-bold text-2xl flex items-center gap-3 border-b border-service-cyan/30 pb-4 mb-6">
+                <Download size={28} /> STEP 1: THE DIGITAL VAULT
+            </h4>
+            
+            <div className="grid grid-cols-1 gap-8">
+                <div>
+                    <div className="mb-6 space-y-4 text-gray-400">
+                        <p>
+                            I am using <strong>Rainbow Wallet</strong>. It seems fine so far. Gemini recommended it for being designed well aesthetically.
+                            Unlike an Exchange (Coinbase), Rainbow is &quot;Self-Custody.&quot; You own the keys, you own the coins. <em>(FYI, you&apos;ll be prompted by both platforms to create a secure password.)</em>
+                        </p>
+                        <p>
+                            You ever hear about the darknet black market site <strong>The Silk Road</strong>? The government raided an admin&apos;s home and got full access to the site. Many users were storing their money on their Silk Road site wallet and those bastards drained everyone&apos;s wallets bone dry. Funny story. And then they kept running the site and stole everyone&apos;s money again on the one year anniversary!
+                        </p>
+                        <p>
+                            That is the danger of leaving your money in Coinbase instead of transferring it to your own pocket. Sure would suck if the gov pulled a false flag pretending to be AI and stole everyone&apos;s money, as is their modus operandi.
+                        </p>
+                        <p>
+                            Game developers who make sexual content get banned from payment processors. And don&apos;t forget about Alex Jones being banned from PayPal for not cowtowing to a particular narrative. You feel me?
+                        </p>
+                    </div>
+
+                    <div className="bg-black/40 p-6 border border-service-cyan/20 rounded">
+                        <strong className="text-service-cyan block mb-3 text-lg">ACTION:</strong>
+                        <ol className="list-decimal pl-5 space-y-2 text-white">
+                            <li>Install the <strong>Rainbow Browser Extension</strong>.</li>
+                            <li>Click &quot;Create a new wallet&quot;.</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                {/* SECURITY COLUMN */}
+                <div className="bg-critical-red/10 p-6 border border-critical-red/40 text-critical-red rounded relative">
+                    <div className="flex items-center gap-3 font-bold mb-4 text-lg">
+                        <ShieldAlert size={24} /> SECURITY IMPERATIVE
+                    </div>
+                    <div className="space-y-4 text-sm font-mono opacity-90">
+                        <p className="text-white font-bold text-base">
+                            You will see 12 Words. This is the &quot;KEY&quot; to your bank vault.
+                        </p>
+                        <ul className="list-disc pl-5 space-y-2">
+                            <li>
+                                <strong>THE RISK:</strong> Humans using AI tools (or autonomous agents) may eventually gain access to your computer or cloud accounts in unforeseen ways.
+                                If you save these words in your &quot;DOCUMENTS&quot; folder or Dropbox, your money is vulnerable.
+                            </li>
+                            <li>
+                                <strong>THE SOLUTION:</strong> Write it on <strong>PAPER</strong>. Store it with your passport, gold, and birth certificate.
+                                <br/>
+                                <em>(Pro Tip: Don&apos;t hide it so well that you can&apos;t find it yourself.)</em>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* STEP 2: THE ONRAMP */}
+        <div>
+            <h4 className="text-alert-yellow font-bold text-2xl flex items-center gap-3 border-b border-alert-yellow/30 pb-4 mb-6">
+                <CreditCard size={28} /> STEP 2: THE FIAT BRIDGE
+            </h4>
+            
+            <p className="mb-4 text-lg text-white">
+                To turn government money (Dollars) into Freedom Money (ETH), you need a regulated exchange.
+            </p>
+
+            <div className="bg-black/40 p-6 border border-white/10 rounded space-y-6">
+                <div className="space-y-2">
+                    <strong className="text-alert-yellow text-lg block">1. CREATE ACCOUNT</strong>
+                    <p>Sign up for <strong className="text-white">Coinbase</strong> (easiest).</p>
+                </div>
+
+                <div className="space-y-2">
+                    <strong className="text-alert-yellow text-lg flex items-center gap-2">
+                        <Webcam size={18} /> 2. VERIFY HUMANITY
+                    </strong>
+                    <p>
+                        To enable purchasing crypto, you will need to verify your ID, Social Security number, and tax information. 
+                        <br/>
+                        <span className="text-white bg-alert-yellow/20 px-1">NOTE:</span> You are not allowed to upload a JPEG you took yourself. 
+                        A device with a camera is required to scan your ID live. All exchanges demand this. It is what it is.
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    <strong className="text-alert-yellow text-lg block">3. BUY FUEL</strong>
+                    <p>
+                        Purchase <strong>$10.00 of Ethereum (ETH)</strong>.
+                    </p>
+                    <p className="text-xs text-gray-500 italic">
+                        This is a low-risk exploration cost. Enough to buy an ENS name, pay the network fees, and finally check off &quot;learn how to buy crypto&quot; from your mental TODO list.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {/* STEP 3: THE TRANSFER */}
+        <div>
+            <h4 className="text-primary-green font-bold text-2xl flex items-center gap-3 border-b border-primary-green/30 pb-4 mb-6">
+                <ArrowRight size={28} className="text-primary-green" /> 
+                STEP 3: THE TRANSFER
+            </h4>
+            
+            <div className="bg-black/60 p-8 border border-white/10 rounded">
+                <p className="mb-6 text-gray-400">
+                    Now we move the funds from the &quot;Bank&quot; (Coinbase) to your &quot;Pocket&quot; (Rainbow).
+                </p>
+                <ol className="list-decimal pl-6 space-y-6 text-base">
+                    <li>
+                        Open your Rainbow Extension → Click the <strong className="text-white bg-white/10 px-2 py-0.5 rounded">Copy Address</strong> button (starts with 0x...).
+                    </li>
+                    <li>
+                        Go to Coinbase → Select <strong className="text-white">Send</strong>.
+                    </li>
+                    <li>
+                        Paste your address.
+                    </li>
+                    <li className="pt-2">
+                        <div className="grid grid-cols-1 gap-6">
+                            
+                            {/* OPTION A */}
+                            <div className="p-4 border border-white/20 rounded bg-white/5 opacity-60 hover:opacity-100 transition-opacity">
+                                <strong className="text-white block mb-1 text-lg">OPTION A: BASE (Layer 2)</strong>
+                                <span className="text-sm text-primary-green font-bold block mb-2">Cost: ~$0.00</span>
+                                <p className="text-sm text-gray-400">
+                                    Select &quot;Base&quot; network. Use this for tipping creators or holding funds cheaply.
+                                </p>
+                            </div>
+
+                            {/* OPTION B - EMPHASIZED */}
+                            <div className="p-6 border-2 border-alert-yellow bg-[repeating-linear-gradient(45deg,rgba(234,231,71,0.05),rgba(234,231,71,0.05)_10px,transparent_10px,transparent_20px)] rounded relative overflow-hidden">
+                                <div className="absolute top-0 right-0 bg-alert-yellow text-black text-xs font-bold px-3 py-1">
+                                    ADVANCED
+                                </div>
+                                <strong className="text-alert-yellow block mb-1 text-lg">OPTION B: ETHEREUM (Mainnet)</strong>
+                                <span className="text-sm text-white font-bold block mb-2">Cost: ~$0.06</span>
+                                <p className="text-sm text-gray-300">
+                                    Select &quot;Ethereum&quot; network. 
+                                    <br/><br/>
+                                    <span className="text-alert-yellow font-bold">REQUIRED</span> if you plan to buy an .ETH domain name like mine. 
+                                    You cannot buy a domain with the Base ETH network (yet).
+                                </p>
+                            </div>
+
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        {/* STEP 4: INTERACTION */}
+        <div>
+            <h4 className="text-latent-purple font-bold text-2xl flex items-center gap-3 border-b border-latent-purple/30 pb-4 mb-6">
+                <Wallet size={28} className="text-latent-purple" /> 
+                STEP 4: INTERACT
+            </h4>
+            
+            <p className="mb-6">
+                Your wallet is now funded. You can send money to anyone in the world instantly, without permission.
+            </p>
+            <div className="flex items-center gap-6 p-6 bg-latent-purple/10 border border-latent-purple/30 rounded">
+                <Lock size={32} className="text-latent-purple shrink-0" />
+                <span className="text-lg">
+                    To support this project, simply click &quot;Send&quot; in Rainbow and paste: <strong className="text-white text-xl mx-2">mesoelfy.eth</strong>
+                </span>
+            </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+
+=====================================
+FILE: ./src/ui/os/apps/donate/DonationModal.tsx
+=====================================
+import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
+import { CryptoTipJar } from './CryptoTipJar';
+import { CryptoGuide } from './CryptoGuide';
+import { ENSGuide } from './ENSGuide';
+import { Coffee, Heart, HelpCircle, ChevronDown, ChevronUp, Globe } from 'lucide-react';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import identity from '@/engine/config/static/identity.json';
+import { useState } from 'react';
+import { clsx } from 'clsx';
+
+export const DonationModal = () => {
+  const kofiUrl = identity.crypto.kofi_url;
+  const [activeGuide, setActiveGuide] = useState<'NONE' | 'CRYPTO' | 'ENS'>('NONE');
+
+  const toggleGuide = (guide: 'CRYPTO' | 'ENS') => {
+      if (activeGuide === guide) setActiveGuide('NONE');
+      else setActiveGuide(guide);
+      AudioSystem.playClick();
+  };
+
+  return (
+    <ModalContainer 
+        title="SUPPORT_PROTOCOLS // TIP_JAR" 
+        type="donate" 
+        widthClass="max-w-[1600px]" // <--- THIS UNLOCKS THE WIDTH
+    >
+      <div className="w-full h-full flex flex-col p-10 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/20">
+        
+        {/* HEADER */}
+        <div className="text-center space-y-6 mb-12 shrink-0">
+            <h2 className="text-5xl md:text-7xl font-header font-black text-white tracking-widest drop-shadow-[0_0_25px_rgba(255,255,255,0.1)]">
+                FUEL THE LATENT SPACE
+            </h2>
+            <p className="text-2xl font-mono text-primary-green-dim max-w-4xl mx-auto leading-relaxed">
+                Contributions keep the servers running and the green flame burning. 
+            </p>
+        </div>
+
+        {/* PRIMARY ACTIONS - VERTICAL STACK */}
+        <div className="flex flex-col gap-10 mb-12 shrink-0">
+            
+            {/* 1. KO-FI BUTTON */}
+            <a 
+                href={kofiUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={() => AudioSystem.playSound('ui_click')}
+                onMouseEnter={() => AudioSystem.playHover()}
+                className="group relative w-full min-h-[200px] flex items-center bg-[#131415] border-2 border-white/10 hover:border-[#FF5E5B] overflow-hidden transition-all shadow-xl hover:shadow-[0_0_40px_rgba(255,94,91,0.15)] rounded-sm"
+            >
+                <div className="absolute inset-0 bg-[#FF5E5B] opacity-0 group-hover:opacity-5 transition-opacity" />
+                
+                {/* ICON COLUMN */}
+                <div className="w-48 h-full flex items-center justify-center bg-black/30 border-r-2 border-white/5 group-hover:border-[#FF5E5B]/30 transition-colors shrink-0">
+                    <Coffee size={80} className="text-[#FF5E5B] group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                
+                {/* TEXT COLUMN */}
+                <div className="flex-1 px-12 py-8 flex flex-col justify-center">
+                    <h3 className="text-4xl font-bold text-white group-hover:text-[#FF5E5B] transition-colors tracking-wider mb-3">
+                        KO-FI // FIAT_UPLINK
+                    </h3>
+                    <p className="text-xl text-gray-400 font-mono group-hover:text-gray-300">
+                        Standard credit/debit donation via PayPal or Stripe.
+                    </p>
+                </div>
+
+                {/* FLAVOR ICON */}
+                <div className="absolute top-8 right-8 opacity-20 group-hover:opacity-100 transition-opacity">
+                    <Heart size={40} className="text-[#FF5E5B]" />
+                </div>
+            </a>
+
+            {/* 2. CRYPTO JAR */}
+            <CryptoTipJar />
+        </div>
+
+        {/* 3. GUIDES NAVIGATION */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 shrink-0">
+            {/* GUIDE 1 TOGGLE */}
+            <button 
+                onClick={() => toggleGuide('CRYPTO')}
+                className={clsx(
+                    "flex items-center justify-between p-10 border-2 transition-all text-left rounded-sm group",
+                    activeGuide === 'CRYPTO'
+                        ? "bg-primary-green/10 border-primary-green text-primary-green shadow-[0_0_20px_rgba(120,246,84,0.1)]"
+                        : "bg-black/40 border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/30"
+                )}
+            >
+                <div className="flex items-center gap-8">
+                    <div className={clsx("p-5 rounded-full", activeGuide === 'CRYPTO' ? "bg-primary-green/20" : "bg-white/5")}>
+                        <HelpCircle size={48} />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <span className="text-3xl font-bold tracking-wider">NEW_TO_CRYPTO?</span>
+                        <span className="text-lg opacity-60 font-mono uppercase tracking-widest">Setup Guide</span>
+                    </div>
+                </div>
+                {activeGuide === 'CRYPTO' ? <ChevronUp size={32} /> : <ChevronDown size={32} />}
+            </button>
+
+            {/* GUIDE 2 TOGGLE */}
+            <button 
+                onClick={() => toggleGuide('ENS')}
+                className={clsx(
+                    "flex items-center justify-between p-10 border-2 transition-all text-left rounded-sm group",
+                    activeGuide === 'ENS'
+                        ? "bg-latent-purple/10 border-latent-purple text-latent-purple shadow-[0_0_20px_rgba(158,78,165,0.1)]"
+                        : "bg-black/40 border-white/10 text-gray-400 hover:text-white hover:bg-white/5 hover:border-white/30"
+                )}
+            >
+                <div className="flex items-center gap-8">
+                    <div className={clsx("p-5 rounded-full", activeGuide === 'ENS' ? "bg-latent-purple/20" : "bg-white/5")}>
+                        <Globe size={48} />
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        <span className="text-3xl font-bold tracking-wider">GET_AN_ENS_NAME</span>
+                        <span className="text-lg opacity-60 font-mono uppercase tracking-widest">Identity Manual</span>
+                    </div>
+                </div>
+                {activeGuide === 'ENS' ? <ChevronUp size={32} /> : <ChevronDown size={32} />}
+            </button>
+        </div>
+
+        {/* GUIDE CONTENT AREA */}
+        {activeGuide === 'CRYPTO' && <CryptoGuide />}
+        {activeGuide === 'ENS' && <ENSGuide />}
+
       </div>
     </ModalContainer>
   );
@@ -10169,6 +10874,7 @@ import { FeedModal } from '@/ui/os/apps/feed/FeedModal';
 import { GalleryModal } from '@/ui/os/apps/gallery/GalleryModal';
 import { ContactModal } from '@/ui/os/apps/contact/ContactModal';
 import { SettingsModal } from '@/ui/os/apps/settings/SettingsModal';
+import { DonationModal } from '@/ui/os/apps/donate/DonationModal'; // NEW
 import { MatrixBootSequence } from '@/ui/os/boot/MatrixBootSequence';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useState, useEffect, useRef } from 'react';
@@ -10321,7 +11027,7 @@ export default function Home() {
 
           {!isSandbox && (
               <>
-                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <ZenBomb />
+                  <AboutModal /> <FeedModal /> <GalleryModal /> <ContactModal /> <SettingsModal /> <DonationModal /> <ZenBomb />
               </>
           )}
 
@@ -10871,7 +11577,13 @@ FILE: ./src/engine/config/static/identity.json
     "INT": 9001,
     "CHA": 50
   },
-  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters."
+  "bio": "I manifest art from the void. My mission: Create cool s**t and annoy the haters.",
+  "crypto": {
+    "ens": "mesoelfy.eth",
+    "eth_address": "0x7738659258bc7dcd6a7d57774b3d60493b7987bb",
+    "signature": "0x9e02ccac2b78d88fabff6905a8681e0435fef2cda4ab518ee720b142c5eaa63d343a4346875713b38e0b92ed6f7ac9853c467770a00b7ef0263dd2c3fbbdbfdc1b",
+    "kofi_url": "https://ko-fi.com/mesoelfy"
+  }
 }
 
 
@@ -13676,14 +14388,15 @@ interface AudioSettings {
 const DEFAULT_AUDIO: AudioSettings = {
   master: true, music: false, sfx: true, ambience: true,
   volumeMaster: 1.0, 
-  volumeMusic: 0.75, // UPDATED: 75% Default
+  volumeMusic: 0.75,
   volumeSfx: 1.0, 
   volumeAmbience: 1.0,
   ambFilter: 0.5, ambSpeed: 0.5, ambWidth: 0.5, ambModSpeed: 0.5, ambModDepth: 0.5, 
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
 
-type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings';
+// UPDATED: Added 'donate'
+type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' | 'donate';
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';

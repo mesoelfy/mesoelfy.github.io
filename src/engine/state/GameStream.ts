@@ -9,6 +9,7 @@ export type StreamKey =
   | 'XP' 
   | 'XP_NEXT' 
   | 'LEVEL'
+  | 'PLAYER_INTERACTION_STATE' // 0: Idle, 1: Healing Self, 2: Reviving Self
   // Panel Health Keys
   | 'PANEL_HEALTH_IDENTITY'
   | 'PANEL_HEALTH_SOCIAL'
@@ -32,6 +33,7 @@ class GameStreamService {
     this.values.set('XP_NEXT', 100);
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
+    this.values.set('PLAYER_INTERACTION_STATE', 0);
     
     // Panel Defaults
     this.values.set('PANEL_HEALTH_IDENTITY', 100);
@@ -42,15 +44,10 @@ class GameStreamService {
   }
 
   public set(key: StreamKey, value: number) {
-    // Only notify if value actually changed (Micro-optimization)
     if (this.values.get(key) === value) return;
-    
     this.values.set(key, value);
-    
     const subs = this.listeners.get(key);
-    if (subs) {
-      subs.forEach(fn => fn(value));
-    }
+    if (subs) subs.forEach(fn => fn(value));
   }
 
   public get(key: StreamKey): number {
@@ -62,15 +59,10 @@ class GameStreamService {
       this.listeners.set(key, new Set());
     }
     this.listeners.get(key)!.add(callback);
-    
-    // Immediate callback with current value
     callback(this.get(key));
-
     return () => {
       const subs = this.listeners.get(key);
-      if (subs) {
-        subs.delete(callback);
-      }
+      if (subs) subs.delete(callback);
     };
   }
 }
