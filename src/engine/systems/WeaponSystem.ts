@@ -46,13 +46,14 @@ export class WeaponSystem implements IGameSystem {
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
+        if (p.option === 'NOVA') this.triggerNova(); // New Trigger
     }));
   }
 
   update(delta: number, time: number): void {
     this.updateProjectiles(delta, time);
 
-    // If Purge is active, override standard fire
+    // If Purge Spiral is active, override standard fire
     if (this.purgeState.active) {
         const player = this.getPlayerEntity();
         if (player) {
@@ -211,21 +212,26 @@ export class WeaponSystem implements IGameSystem {
       return base * 3.0;
   }
 
+  // Phase 1: Spiral
   private triggerPurge() {
-      // 1. Initialize Spiral State
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
-      
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              // 2. Spawn Effects
               this.events.emit(GameEvents.SPAWN_FX, { type: 'PURGE_BLAST', x: t.x, y: t.y, angle: 0 });
               this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
+          }
+      }
+  }
 
-              // 3. NEW: Spawn Concentric Circle Wave (Burst)
-              // Increased count for visibility
-              const BURST_COUNT = 72; 
+  // Phase 2: Concentric Nova (Rainbow Ring)
+  private triggerNova() {
+      const player = this.getPlayerEntity();
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) {
+              const BURST_COUNT = 72;
               const BURST_SPEED = 24;
               
               for(let i=0; i<BURST_COUNT; i++) {
@@ -233,14 +239,24 @@ export class WeaponSystem implements IGameSystem {
                   const vx = Math.cos(angle) * BURST_SPEED;
                   const vy = Math.sin(angle) * BURST_SPEED;
                   
-                  // Pass visualOverrides to make them larger
-                  this.spawner.spawnProjectile(
+                  const bullet = this.spawner.spawnProjectile(
                       t.x, t.y, vx, vy, 
                       Faction.FRIENDLY, 2.4, 50, 
                       WeaponIDs.PLAYER_PURGE, 
                       undefined,
                       { scaleX: 1.5, scaleY: 1.5 }
                   );
+
+                  // PRISMATIC COLORING
+                  const hue = i / BURST_COUNT;
+                  this.tempColor.setHSL(hue, 1.0, 0.5);
+                  
+                  const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
+                  if (model) { 
+                      model.r = this.tempColor.r; 
+                      model.g = this.tempColor.g; 
+                      model.b = this.tempColor.b; 
+                  }
               }
           }
       }
