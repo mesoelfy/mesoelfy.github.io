@@ -2,11 +2,11 @@ export const GAMEPLAY_CONFIG = {
   INTERACTION: {
     REPAIR_RATE: 0.05,
     QUERY_RADIUS: 1.0,
-    REPAIR_HEAL_AMOUNT: 3.6, // Increased from 3.25
-    REBOOT_TICK_AMOUNT: 5.1  // Increased from 4.6
+    REPAIR_HEAL_AMOUNT: 3.6, // Fast for panels
+    SELF_HEAL_AMOUNT: 0.2,   // Slow for player (Creates tension)
+    REBOOT_TICK_AMOUNT: 5.1  // Revive speed
   },
   WEAPON: {
-    // Updated: Matches new larger Chevron Tip Radius (0.92)
     MUZZLE_OFFSET: 0.92
   },
   STRUCTURE: {

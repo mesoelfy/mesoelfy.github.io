@@ -19,23 +19,21 @@ export const registerAllAssets = () => {
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
-  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true }));
+  // Keep toneMapped: false for neon brightness
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }));
 
   // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
-  // 3. Dynamic Registration (Enemies)
+  // 3. Dynamic Registration
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
       AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
-  // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      // Pass true for isProjectile
       AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
   });
 };
@@ -51,6 +49,32 @@ const createEnemyGeometry = (id: string, visual: any) => {
     return createGeometry(visual, false);
 };
 
+const createCrescentGeo = () => {
+    // FIX: Using Shape + Hole for robust triangulation
+    const shape = new THREE.Shape();
+    
+    // 1. Outer Circle (Clockwise)
+    // Draw full circle for outer edge
+    // We want the 'front' to be at X+, so angle 0.
+    shape.absarc(0, 0, 1.0, 0, Math.PI * 2, false);
+    
+    // 2. Inner Cutout (Hole)
+    // We shift the inner circle slightly left (-X) to create the crescent on the right (+X)
+    const hole = new THREE.Path();
+    hole.absarc(-0.4, 0, 0.8, 0, Math.PI * 2, true); // Counter-Clockwise for hole
+    
+    shape.holes.push(hole);
+    
+    const geo = new THREE.ShapeGeometry(shape, 12); // Curve segments
+    geo.center();
+    
+    // The resulting shape is a crescent facing Right (+X).
+    // Width (Thickness) is Y-axis. Length is X-axis.
+    // This matches the scaling logic in WeaponLogic.ts
+    
+    return addBarycentricCoordinates(geo);
+};
+
 const createGeometry = (visual: any, isProjectile: boolean = false) => {
     let geo;
     switch (visual.model) {
@@ -64,6 +88,7 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
         case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
         case 'CUSTOM_HUNTER': return createHunterSpear();
+        case 'CRESCENT': return createCrescentGeo(); 
         case 'CUSTOM_CHEVRON': {
             const shape = new THREE.Shape();
             const w = 0.8, h = 0.8, t = 0.3;
@@ -76,7 +101,7 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
 
-    if (isProjectile) {
+    if (isProjectile && visual.model !== 'CRESCENT') {
         if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
             geo.translate(0, 0.5, 0);
         } else if (visual.model === 'TETRA') {

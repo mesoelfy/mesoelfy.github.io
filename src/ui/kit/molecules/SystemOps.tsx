@@ -1,77 +1,61 @@
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
+import { Bomb, Wrench } from 'lucide-react';
 import { UpgradePath } from '@/engine/types/game.types';
+import { clsx } from 'clsx';
 
-// Updated: Removed REPAIR_NANITES
-const SYSTEM_OPS: UpgradePath[] = ['RESTORE', 'PURGE'];
-
-const OP_INFO: Record<string, { label: string, desc: string, icon: any }> = {
-  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
-  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
-};
-
-interface SystemOpsProps {
+interface OpButtonProps {
   isPanelDead: boolean;
 }
 
-export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
-  // Purge/Restore don't necessarily cost "points" in the new design logic unless specified.
-  // The prompt implies Purge is the Zen Bomb.
-  // Restore is the button.
-  // We'll keep them as clickable buttons.
-  // Note: Previous logic checked upgradePoints. If these are free cooldowns now, we remove check.
-  // User said "restore... behave like presently does" -> Presently it costs an Upgrade Point.
-  // So we KEEP the point check.
-  
+const OpButton = ({ isPanelDead, type }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE' }) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradePath, e: React.MouseEvent) => {
-      if (isPanelDead || upgradePoints <= 0) return; 
+  const handleUpgrade = (e: React.MouseEvent) => {
+      if (upgradePoints <= 0) return; 
       AudioSystem.playClick(getPan(e));
-      selectUpgrade(u);
+      selectUpgrade(type);
   };
 
   if (upgradePoints <= 0) return null;
 
+  const isPurge = type === 'PURGE';
+  const label = isPurge ? 'PURGE' : 'REPAIR';
+  const Icon = isPurge ? Bomb : Wrench;
+  
+  const baseColor = isPurge ? 'border-critical-red/50 bg-critical-red/10' : 'border-alert-yellow/30 bg-alert-yellow/5';
+  const hoverColor = isPurge ? 'hover:border-critical-red' : 'hover:border-alert-yellow';
+  const textColor = isPurge ? 'text-critical-red' : 'text-alert-yellow';
+  const fillClass = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
+
   return (
-    <div className="flex flex-col gap-1.5 mt-4 border-t border-white/10 pt-4">
-        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
-        {SYSTEM_OPS.map(u => {
-            const info = OP_INFO[u];
-            const Icon = info.icon;
-            
-            return (
-                <button
-                    key={u}
-                    onClick={(e) => handleUpgrade(u, e)}
-                    onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
-                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
-                >
-                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
-                    
-                    <div className="flex items-center gap-3 relative z-10">
-                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
-                            <Icon size={14} />
-                        </div>
-                        <div className="flex flex-col items-start">
-                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
-                                {info.label}
-                            </span>
-                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
-                                {info.desc}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-alert-yellow bg-black/50 px-1.5 py-0.5 rounded border border-alert-yellow/30">1 PT</span>
-                    </div>
-                </button>
-            );
-        })}
-    </div>
+    <button
+        onClick={handleUpgrade}
+        onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
+        className={clsx(
+            "group relative flex flex-col items-center justify-center p-2 border transition-all duration-200 overflow-hidden text-center w-24 h-24 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.3)]",
+            baseColor, hoverColor
+        )}
+        title={`${label} (1 PT)`}
+    >
+        <div className={clsx("absolute inset-0 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out opacity-20", fillClass)} />
+        
+        <div className="relative z-10 flex flex-col items-center gap-2">
+            <Icon size={32} className={clsx("transition-transform group-hover:scale-110 duration-200", textColor, "group-hover:text-white")} />
+            <div className="flex flex-col leading-none">
+                <span className={clsx("text-[10px] font-bold font-header tracking-wider group-hover:text-white transition-colors", textColor)}>
+                    {label}
+                </span>
+                <span className="text-[8px] text-gray-500 font-mono group-hover:text-white/70">
+                    1 PT
+                </span>
+            </div>
+        </div>
+    </button>
   );
 };
+
+export const RepairButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="RESTORE" />;
+export const PurgeButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="PURGE" />;

@@ -15,7 +15,7 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private previousHoverId: PanelId | null = null;
-  private isTonePlaying = false; // Track tone state
+  private isTonePlaying = false; 
 
   constructor(
     private input: IInputService,
@@ -30,7 +30,7 @@ export class InteractionSystem implements IInteractionSystem {
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
-    let interactionCode = 0;
+    let interactionCode = 0; // 0: Normal/Panel, 1: Self Heal, 2: Revive
     
     const cursor = this.input.getCursor();
 
@@ -41,26 +41,32 @@ export class InteractionSystem implements IInteractionSystem {
         return; 
     }
     
-    // 1. Check Identity Core Interaction
+    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Self Heal / Revive) ---
+    let handledByCrystal = false;
     const identityRect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
     
     if (identityRect) {
-        const padding = 0.5; 
-        const isHoveringIdentity = 
-            cursor.x >= identityRect.left - padding && 
-            cursor.x <= identityRect.right + padding && 
-            cursor.y >= identityRect.bottom - padding && 
-            cursor.y <= identityRect.top + padding;
+        // RE-ALIGNMENT: Center of Panel, Top offset
+        const zoneRadius = 2.2; 
+        const zoneX = identityRect.x; 
+        const zoneY = identityRect.top - 2.8; 
+        
+        const distSq = (cursor.x - zoneX)**2 + (cursor.y - zoneY)**2;
+        const isHoveringCrystal = distSq < (zoneRadius * zoneRadius);
 
-        if (isHoveringIdentity) {
+        if (isHoveringCrystal) {
             const isPlayerDead = this.gameSystem.playerHealth <= 0;
-            const isPanelDead = this.panelSystem.getPanelState(PanelId.IDENTITY)?.isDestroyed ?? false;
-            const isHealthFull = this.gameSystem.playerHealth >= this.gameSystem.maxPlayerHealth;
+            const isPlayerHurt = this.gameSystem.playerHealth < this.gameSystem.maxPlayerHealth;
+            
+            const panelState = this.panelSystem.getPanelState(PanelId.IDENTITY);
+            const isPanelDead = panelState?.isDestroyed ?? false;
 
             if (isPlayerDead) {
+                // REVIVE (Priority 1)
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'REBOOTING';
                 interactionCode = 2; 
+                handledByCrystal = true;
                 
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
@@ -69,13 +75,16 @@ export class InteractionSystem implements IInteractionSystem {
                     this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
                 }
             } 
-            else if (!isPanelDead && !isHealthFull) {
+            else if (isPlayerHurt && !isPanelDead) {
+                // SELF HEAL (Priority 2)
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'HEALING';
                 interactionCode = 1; 
+                handledByCrystal = true;
                 
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                    this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT);
+                    // FIX: Use SELF_HEAL_AMOUNT for slower healing
+                    this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
                     this.lastRepairTime = time;
                     this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
                 }
@@ -83,18 +92,19 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 2. Check Other Panels (Standard Repair)
-    if (!this.hoveringPanelId) {
+    // --- 2. GENERAL PANEL REPAIR (If not consuming crystal action) ---
+    if (!handledByCrystal) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
         if (panelId) {
             const panelState = this.panelSystem.getPanelState(panelId);
-            if (panelState && panelId !== PanelId.IDENTITY) {
+            if (panelState) {
                 if (panelState.isDestroyed || panelState.health < 100) {
                     this.hoveringPanelId = panelId;
                     this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
                     
                     if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+                        // Keep using fast REPAIR_HEAL_AMOUNT for panels
                         this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
                         this.lastRepairTime = time;
 
@@ -112,9 +122,7 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 3. TONE MANAGEMENT
-    // Play Shepard Tone if Self-Healing (interactionCode 1) or Reviving (interactionCode 2)
-    // Note: Standard panel healing doesn't trigger the Shepard Tone, it uses 'loop_heal' event.
+    // 3. Tone Management
     this.manageTone(interactionCode === 1 || interactionCode === 2);
 
     // 4. Revive Decay

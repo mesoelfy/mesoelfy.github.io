@@ -10,8 +10,8 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
     damage: 1, 
     speed: 50, 
     life: 1.5,
-    // Visual scale will be dynamic based on width upgrades in WeaponSystem
-    visual: { model: 'CAPSULE', color: PALETTE.PURPLE.PRIMARY, scale: [0.2, 0.8, 0.2], material: 'PROJECTILE' },
+    // VISUAL UPDATE: Use CRESCENT, Smaller base scale
+    visual: { model: 'CRESCENT', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
     tags: [Tag.BULLET, Tag.PLAYER]
   },
@@ -36,7 +36,7 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
     tags: [Tag.BULLET, Tag.PLAYER]
   },
 
-  // --- DEPRECATED LEGACY WEAPONS (Kept to prevent crash if save data exists) ---
+  // --- DEPRECATED LEGACY WEAPONS ---
   [WeaponIDs.PLAYER_STANDARD]: {
     id: WeaponIDs.PLAYER_STANDARD,
     damage: 1, speed: 45, life: 1.5,
