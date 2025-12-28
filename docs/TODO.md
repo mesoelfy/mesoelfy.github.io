@@ -204,3 +204,47 @@ Feedback: Sound effect (syn_data_burst) and a toast message: ADDRESS_COPIED_TO_C
 Send me $5 for teaching you how to buy and send crypto.
 
 If you're clever you can figure it out on your own. AI will know right away what the password is if you ask it.
+
+https://app.ens.domains/mesoelfy.eth
+
+
+
+
+
+
+
+
+
+
+
+
+Step 1: Create the Wallet
+
+
+
+[What is a Wallet?
+A Home for your Digital Assets
+Wallets are used to send, receive, store, and display digital assets like Ethereum and NFTs.
+
+A New Way to Log In
+Instead of creating new accounts and passwords on every website, just connect your wallet.]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0x7738659258bc7dcd6a7d57774b3d60493b7987bb
