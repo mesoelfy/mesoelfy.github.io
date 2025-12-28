@@ -9,7 +9,7 @@ import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
-  // Materials
+  // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -18,24 +18,26 @@ export const registerAllAssets = () => {
     return mat;
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide }));
+  
+  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true, side: THREE.DoubleSide }));
 
-  // Basic Geo
+  // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
-  // Enemies
+  // 3. Dynamic Registration (Enemies)
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
       AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
-  // --- WEAPONS (UNIFIED SPHERES) ---
+  // 4. Dynamic Registration (Weapons)
+  // Shared Sphere for all projectiles
   const sharedProjectileGeo = addBarycentricCoordinates(new THREE.SphereGeometry(0.5, 8, 8));
-  
+
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      // Force simple circle/sphere for all projectiles
       AssetService.registerGenerator(key, () => sharedProjectileGeo); 
   });
 };
@@ -57,7 +59,13 @@ const createGeometry = (visual: any) => {
         case 'CONE': geo = new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4); break;
         case 'ICOSA': geo = new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0); break;
         case 'OCTA': geo = new THREE.OctahedronGeometry(visual.radius || 0.5, 0); break;
-        case 'CUSTOM_HUNTER': return createHunterSpear(); // RESTORED
+        case 'TETRA': geo = new THREE.TetrahedronGeometry(1, 0); break;
+        case 'SPHERE': geo = new THREE.IcosahedronGeometry(1, 1); break;
+        case 'CAPSULE': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); break;
+        case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
+        case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
+        case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
+        case 'CUSTOM_HUNTER': return createHunterSpear(); // Hunter restored
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
     return addBarycentricCoordinates(geo);

@@ -47,7 +47,6 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
-// Simplified chevron for visual only (not projectile)
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
     const rTip = 0.92; const rValley = 0.84; 
@@ -108,9 +107,9 @@ const SnifferOverlayShader = {
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair);
+const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink
 const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-// UPDATED: Use Dim/Dark Purple for Reboot Interaction
+// UPDATED: Using DIM Purple for Rebooting a Dead Panel
 const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C');
@@ -188,6 +187,7 @@ export const PlayerActor = () => {
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     
+    // Check interaction system for visual state
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
     const isPlayerDead = useGameStore.getState().playerHealth <= 0;
@@ -195,7 +195,7 @@ export const PlayerActor = () => {
     const isReviving = interactionCode === 2; // Self Revive
     const isSelfHealing = interactionCode === 1; // Self Heal
     
-    // Distinguish between REBOOTING (Destroyed Panel) and HEALING (Damaged Panel)
+    // Panel Interaction Logic
     const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
     const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
     
@@ -270,11 +270,11 @@ export const PlayerActor = () => {
                 reticleTarget = COL_RET_HEAL;
             } else if (isPanelRebooting) {
                 // EXPLICIT: Darker Purple for Reboot
-                target = COL_REBOOT;
+                target = COL_REBOOT; // #822B8A
                 reticleTarget = COL_REBOOT;
             } else if (isPanelHealing) {
                 // Pink for Healing
-                target = COL_REPAIR_PANEL;
+                target = COL_REPAIR_PANEL; // #FFCCFF
                 reticleTarget = COL_RET_HEAL;
             }
             
