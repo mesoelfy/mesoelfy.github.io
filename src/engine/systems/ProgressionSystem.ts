@@ -1,7 +1,6 @@
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { UpgradePath } from '@/engine/types/game.types';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -9,9 +8,6 @@ export class ProgressionSystem implements IGameSystem {
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
-  
-  // Deprecated but kept for interface compatibility until full cleanup
-  public activeUpgrades: any = {}; 
   
   private unsubs: (() => void)[] = [];
 

@@ -15,9 +15,6 @@ export interface ProgressionSlice {
   setScore: (val: number) => void; // Updates high score
   selectUpgrade: (path: UpgradePath) => void;
   resetProgressionState: () => void;
-  
-  // Internal Helpers to sync with store if needed, mostly for dev tools
-  setActiveUpgrades: (deprecated: any) => void; 
 }
 
 const DEFAULT_RAILGUN: RailgunState = { widthLevel: 0, damageLevel: 0, rateLevel: 0 };
@@ -33,9 +30,6 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
       const newHigh = Math.max(state.highScore, val);
       return { highScore: newHigh };
   }),
-
-  // Deprecated support for old save data re-hydration if necessary, or just no-op
-  setActiveUpgrades: () => {},
 
   selectUpgrade: (path: UpgradePath) => {
     // 1 Point = 1 Notch Logic
@@ -71,17 +65,11 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         success = true;
     }
     
-    // One-offs (Do not consume points automatically here, logic handled in Systems, but we emit event)
-    // Actually, Purge/Restore usually cost nothing or are special interactions.
-    // If they cost points, we handle it here. Assuming Purge/Restore are free/cooldown based for now?
-    // User instruction: "restore... behave like presently does" (Currently no point cost, just click).
-    // "bomb purge button... activating zen mode" (Zen mode is special).
-    
     if (success) {
         set(s => ({ upgradePoints: s.upgradePoints - 1 }));
     }
 
-    // Always emit for systems (Audio, VFX, One-offs)
+    // Always emit for systems (Audio, VFX, One-offs like PURGE/NOVA)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
   },
 

@@ -14,7 +14,7 @@ export class StateSyncSystem implements IGameSystem {
     xp: -1,
     xpNext: -1,
     level: -1,
-    upgradesHash: ""
+    points: -1
   };
 
   constructor(
@@ -69,7 +69,6 @@ export class StateSyncSystem implements IGameSystem {
       GameStream.set('XP_NEXT', next);
       GameStream.set('LEVEL', level);
       
-      // Removed setProgressionData call - UI now reads from Stream
       this.cache.xp = xp;
       this.cache.level = level;
       this.cache.xpNext = next;
@@ -79,13 +78,6 @@ export class StateSyncSystem implements IGameSystem {
     if (points !== this.cache.points) {
         useGameStore.setState({ upgradePoints: points });
         this.cache.points = points;
-    }
-
-    // Sync Upgrades
-    const upgradesStr = JSON.stringify(this.progSys.activeUpgrades);
-    if (upgradesStr !== this.cache.upgradesHash) {
-        useGameStore.getState().setActiveUpgrades(this.progSys.activeUpgrades as Record<string, number>);
-        this.cache.upgradesHash = upgradesStr;
     }
   }
 

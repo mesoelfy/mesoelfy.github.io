@@ -34,9 +34,6 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
                 <h3 className="text-xl font-header font-black text-primary-green tracking-widest">RAILGUN</h3>
                 <span className="text-[9px] font-mono text-primary-green-dim block mt-0.5">CLASS: KINETIC_BEAM</span>
             </div>
-            <div className="text-xs font-bold text-primary-green bg-primary-green/10 px-3 py-1 border border-primary-green/20">
-                MK.{1 + Math.floor((railgun.widthLevel + railgun.damageLevel + railgun.rateLevel) / 3)}
-            </div>
         </div>
 
         <div className="flex flex-col gap-2 w-full">

@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 16:40:26 CST 2025
+Generated on: Sun Dec 28 17:41:49 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -429,6 +429,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   └── GlitchGhost.tsx
 │       │   ├── hooks
 │       │   │   ├── useHeartbeat.ts
+│       │   │   ├── useInteractionZone.ts
 │       │   │   ├── usePanelRegistry.ts
 │       │   │   ├── usePanelTracker.ts
 │       │   │   └── useWindowFocus.ts
@@ -452,7 +453,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-92 directories, 352 files
+92 directories, 353 files
 
 =====================================
 FILE: ./next.config.js
@@ -2019,14 +2020,15 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { Bomb, Wrench } from 'lucide-react';
-import { UpgradePath } from '@/engine/types/game.types';
 import { clsx } from 'clsx';
+import { motion } from 'framer-motion';
 
 interface OpButtonProps {
   isPanelDead: boolean;
+  onHoverCost: (cost: number | null) => void;
 }
 
-const OpButton = ({ isPanelDead, type }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE' }) => {
+const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE', onHoverCost: (n: number | null) => void }) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
@@ -2042,31 +2044,63 @@ const OpButton = ({ isPanelDead, type }: { isPanelDead: boolean, type: 'RESTORE'
   const label = isPurge ? 'PURGE' : 'REPAIR';
   const Icon = isPurge ? Bomb : Wrench;
   
-  const baseColor = isPurge ? 'border-critical-red/50 bg-critical-red/10' : 'border-alert-yellow/30 bg-alert-yellow/5';
-  const hoverColor = isPurge ? 'hover:border-critical-red' : 'hover:border-alert-yellow';
-  const textColor = isPurge ? 'text-critical-red' : 'text-alert-yellow';
-  const fillClass = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
+  const borderColor = isPurge ? 'border-critical-red' : 'border-alert-yellow';
+  // FIX: Using full static class strings for shadows instead of dynamic interpolation
+  const shadowClass = isPurge 
+    ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" 
+    : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]";
+    
+  const bgInner = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
+  const textInner = isPurge ? 'text-critical-red' : 'text-alert-yellow';
+  
+  const groupHoverBg = isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow';
+  const groupHoverText = 'group-hover/opbtn:text-black';
+  const stripeColor = isPurge ? '#FF003C' : '#eae747';
 
   return (
     <button
         onClick={handleUpgrade}
-        onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
+        onMouseEnter={(e) => {
+            if (!isPanelDead) {
+                AudioSystem.playHover(getPan(e));
+                onHoverCost(1);
+            }
+        }}
+        onMouseLeave={() => onHoverCost(null)}
         className={clsx(
-            "group relative flex flex-col items-center justify-center p-2 border transition-all duration-200 overflow-hidden text-center w-24 h-24 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.3)]",
-            baseColor, hoverColor
+            "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-shadow duration-300 rounded-sm",
+            borderColor,
+            shadowClass
         )}
         title={`${label} (1 PT)`}
     >
-        <div className={clsx("absolute inset-0 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out opacity-20", fillClass)} />
+        {/* Hazard Stripes Background */}
+        <div 
+            className="absolute inset-0 opacity-20 pointer-events-none" 
+            style={{ backgroundImage: `repeating-linear-gradient(45deg, ${stripeColor} 0, ${stripeColor} 5px, transparent 5px, transparent 10px)` }} 
+        />
         
-        <div className="relative z-10 flex flex-col items-center gap-2">
-            <Icon size={32} className={clsx("transition-transform group-hover:scale-110 duration-200", textColor, "group-hover:text-white")} />
-            <div className="flex flex-col leading-none">
-                <span className={clsx("text-[10px] font-bold font-header tracking-wider group-hover:text-white transition-colors", textColor)}>
+        {/* Inner Box */}
+        <div className={clsx(
+            "relative w-full h-full border flex flex-col items-center justify-center gap-1 bg-black transition-colors duration-300",
+            isPurge ? "border-critical-red/50" : "border-alert-yellow/50",
+            textInner,
+            groupHoverBg,
+            groupHoverText
+        )}>
+            <motion.div 
+                animate={isPurge 
+                    ? { rotate: [0, -10, 10, 0] } 
+                    : { rotate: [0, -15, 15, 0] }
+                } 
+                transition={{ repeat: Infinity, duration: isPurge ? 0.3 : 2.0, repeatDelay: isPurge ? 2 : 0.5, ease: "easeInOut" }} 
+            >
+                <Icon size={32} strokeWidth={2} />
+            </motion.div>
+            
+            <div className="flex flex-col leading-none items-center">
+                <span className="text-[10px] font-bold font-header tracking-wider">
                     {label}
-                </span>
-                <span className="text-[8px] text-gray-500 font-mono group-hover:text-white/70">
-                    1 PT
                 </span>
             </div>
         </div>
@@ -2074,8 +2108,8 @@ const OpButton = ({ isPanelDead, type }: { isPanelDead: boolean, type: 'RESTORE'
   );
 };
 
-export const RepairButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="RESTORE" />;
-export const PurgeButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="PURGE" />;
+export const RepairButton = ({ isPanelDead, onHoverCost }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} onHoverCost={onHoverCost} type="RESTORE" />;
+export const PurgeButton = ({ isPanelDead, onHoverCost }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} onHoverCost={onHoverCost} type="PURGE" />;
 
 
 =====================================
@@ -2146,52 +2180,17 @@ FILE: ./src/ui/kit/molecules/UpgradeTerminal.tsx
 =====================================
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpCircle } from 'lucide-react';
 import { RailgunBadge } from './badges/RailgunBadge';
 import { SnifferBadge } from './badges/SnifferBadge';
-import { useState, useCallback } from 'react';
 
 interface UpgradeTerminalProps {
   isPanelDead: boolean;
+  onHoverCost: (cost: number | null) => void;
 }
 
-export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
-  const upgradePoints = useGameStore(s => s.upgradePoints);
-  const [hoverCost, setHoverCost] = useState<number | null>(null);
-
-  const handleCostHover = useCallback((cost: number | null) => {
-      setHoverCost(cost);
-  }, []);
-
+export const UpgradeTerminal = ({ isPanelDead, onHoverCost }: UpgradeTerminalProps) => {
   return (
     <div className="flex flex-col gap-4 pb-4">
-      <div className="flex items-center justify-between border-b border-white/10 pb-2 h-10">
-          <div className="flex items-center gap-2">
-              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
-              <span className="text-[10px] font-bold tracking-widest text-white">
-                  AVAILABLE_POINTS
-              </span>
-          </div>
-          
-          <div className="flex items-center gap-3">
-              <AnimatePresence>
-                  {hoverCost !== null && (
-                      <motion.span 
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 10 }}
-                          className="text-xl font-header font-black text-critical-red drop-shadow-[0_0_5px_rgba(255,0,60,0.5)]"
-                      >
-                          -{hoverCost}
-                      </motion.span>
-                  )}
-              </AnimatePresence>
-              <span className="font-header font-black text-xl text-primary-green">
-                  {upgradePoints.toString().padStart(2, '0')}
-              </span>
-          </div>
-      </div>
-
       <AnimatePresence mode="wait">
         <motion.div 
             key="badges"
@@ -2199,8 +2198,8 @@ export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4"
         >
-            <RailgunBadge isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
-            <SnifferBadge isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
+            <RailgunBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
+            <SnifferBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
         </motion.div>
       </AnimatePresence>
     </div>
@@ -2439,6 +2438,20 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
 
   const canAfford = upgradePoints > 0;
 
+  // VISUAL MAPPING:
+  // We map the visual slots (TL, TR, BR, BL) to the logic index (0, 1, 2, 3)
+  // Desired Order: Top Left (0) -> Bottom Right (1) -> Top Right (2) -> Bottom Left (3)
+  //
+  // visualIndex 0 = Top Left
+  // visualIndex 1 = Top Right
+  // visualIndex 2 = Bottom Right
+  // visualIndex 3 = Bottom Left
+  //
+  // Array format: [Index for Pos 0, Index for Pos 1, Index for Pos 2, Index for Pos 3]
+  // Result: [0, 2, 1, 3]
+  
+  const slotMapping = [0, 2, 1, 3];
+
   return (
     <div className={clsx("p-5 border border-latent-purple/30 bg-black/40 relative overflow-hidden transition-all", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
         <div className="flex justify-between items-center mb-6 border-b border-latent-purple/20 pb-3">
@@ -2455,13 +2468,15 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
             <div className="shrink-0 flex flex-col items-center gap-4">
                 <div className="relative w-24 h-24 flex items-center justify-center border border-latent-purple/20 rounded-full bg-black/40 shadow-[inset_0_0_20px_rgba(158,78,165,0.1)]">
                     <div className="absolute inset-3 border border-latent-purple/10 rounded-full" />
-                    {[0, 1, 3, 2].map((mappedIndex, visualIndex) => {
+                    {slotMapping.map((mappedIndex, visualIndex) => {
                         const isActive = mappedIndex < sniffer.capacityLevel;
                         let posClass = "";
-                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4";
-                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4";
-                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4";
-                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4";
+                        // Visual Positions
+                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4"; // TL
+                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4"; // TR
+                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4"; // BR
+                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4"; // BL
+                        
                         return (
                             <div key={mappedIndex} className={clsx("absolute w-6 h-6 border-2 transition-all duration-300 rounded-full flex items-center justify-center", posClass, isActive ? "bg-latent-purple border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "bg-black border-latent-purple/30")}>
                                 {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
@@ -2524,6 +2539,9 @@ import { VitalsRing } from '@/ui/kit/atoms/VitalsRing';
 import { UpgradeTerminal } from './UpgradeTerminal';
 import { RepairButton, PurgeButton } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUpCircle } from 'lucide-react';
 
 export const IdentityHUD = () => {
   const hp = useStreamValue('PLAYER_HEALTH');
@@ -2536,16 +2554,51 @@ export const IdentityHUD = () => {
   const panel = useGameStore(s => s.panels[PanelId.IDENTITY]);
   const isPanelDead = panel ? panel.isDestroyed : false;
   const isPlayerDead = hp <= 0;
+  
+  const upgradePoints = useGameStore(s => s.upgradePoints);
+  const [hoverCost, setHoverCost] = useState<number | null>(null);
+
+  const handleCostHover = useCallback((cost: number | null) => {
+      setHoverCost(cost);
+  }, []);
 
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* TOP SECTION: Centered Layout */}
+      {/* HEADER: Points Display */}
+      <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
+          <div className="flex items-center gap-2">
+              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
+              <span className="text-xl font-bold tracking-widest text-white">
+                  AVAILABLE_POINTS
+              </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+              <AnimatePresence>
+                  {hoverCost !== null && (
+                      <motion.span 
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="text-xl font-header font-black text-critical-red drop-shadow-[0_0_5px_rgba(255,0,60,0.5)]"
+                      >
+                          -{hoverCost}
+                      </motion.span>
+                  )}
+              </AnimatePresence>
+              <span className="font-header font-black text-xl text-primary-green">
+                  {upgradePoints.toString().padStart(2, '0')}
+              </span>
+          </div>
+      </div>
+
+      {/* TOP SECTION: Vitals & Ops */}
       <div className="flex-none flex items-center justify-center gap-8 p-6 pb-2 border-b border-primary-green/10">
           
           {/* Left: Repair */}
           <div className="flex items-center">
-              <RepairButton isPanelDead={isPanelDead} />
+              <RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
           </div>
 
           {/* Center: Crystal */}
@@ -2555,14 +2608,14 @@ export const IdentityHUD = () => {
 
           {/* Right: Purge */}
           <div className="flex items-center">
-              <PurgeButton isPanelDead={isPanelDead} />
+              <PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
           </div>
       </div>
 
       {/* BOTTOM SECTION: Upgrade Badges */}
       <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative py-4">
          <div className={isPlayerDead ? "opacity-50 pointer-events-none" : ""}>
-             <UpgradeTerminal isPanelDead={isPanelDead} />
+             <UpgradeTerminal isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
          </div>
       </div>
       
@@ -3534,9 +3587,9 @@ import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { UI_METRICS, UI_COLORS } from '@/engine/config/constants/UIConstants';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useInteractionZone } from '@/ui/sim/hooks/useInteractionZone';
 
 interface VitalsRingProps {
   health: number;
@@ -3546,7 +3599,9 @@ interface VitalsRingProps {
 }
 
 export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // NEW: Hook replaces manual ref
+  const containerRef = useInteractionZone('crystal');
+  
   const levelRef = useRef<SVGTSpanElement>(null);
   
   const [deadState, setDeadState] = useState(isDead);
@@ -9240,9 +9295,9 @@ const COLORS = {
   // Healing Colors
   HEAL_BASE: new THREE.Color(PALETTE.YELLOW.GOLD),
   HEAL_EMISSIVE: new THREE.Color(PALETTE.YELLOW.ALERT),
-  // Revive Colors
-  REVIVE_BASE: new THREE.Color(PALETTE.PURPLE.PRIMARY),
-  REVIVE_EMISSIVE: new THREE.Color(PALETTE.PURPLE.DEEP),
+  // Revive Colors (Dark Yellow)
+  REVIVE_BASE: new THREE.Color('#8A7000'),
+  REVIVE_EMISSIVE: new THREE.Color('#665200'),
 };
 
 const SpinningGem = () => {
@@ -9269,13 +9324,13 @@ const SpinningGem = () => {
     let wireframe = true;
 
     // 1. STATE LOGIC
-    if (interactionState === 1) { // HEALING
+    if (interactionState === 1) { // HEALING (Standard)
         targetColor = COLORS.HEAL_BASE;
         targetEmissive = COLORS.HEAL_EMISSIVE;
         speed = 0.15; // Fast spin
         distort = 0.6;
         wireframe = false; // SOLID
-    } else if (interactionState === 2) { // REVIVING
+    } else if (interactionState === 2) { // REVIVING (Dark Yellow)
         targetColor = COLORS.REVIVE_BASE;
         targetEmissive = COLORS.REVIVE_EMISSIVE;
         speed = 0.05;
@@ -9771,6 +9826,64 @@ export const usePanelTracker = (id: PanelId) => {
 
 
 =====================================
+FILE: ./src/ui/sim/hooks/useInteractionZone.ts
+=====================================
+import { useEffect, useRef } from 'react';
+import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { IInteractionSystem } from '@/engine/interfaces';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
+
+export const useInteractionZone = (id: string) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = elementRef.current;
+    if (!el) return;
+
+    let sys: IInteractionSystem | undefined;
+    let registered = false;
+
+    // Polling logic to wait for engine init
+    const attemptReg = () => {
+        try {
+            sys = ServiceLocator.getSystem<IInteractionSystem>('InteractionSystem');
+            if (sys) {
+                const rect = el.getBoundingClientRect();
+                const worldRect = ViewportHelper.domToWorld(id, rect);
+                sys.registerZone(id, worldRect);
+                registered = true;
+            }
+        } catch {}
+    };
+
+    const interval = setInterval(() => {
+        if (!registered) attemptReg();
+    }, 100);
+
+    const observer = new ResizeObserver(() => {
+        if (sys) {
+            const rect = el.getBoundingClientRect();
+            const worldRect = ViewportHelper.domToWorld(id, rect);
+            sys.registerZone(id, worldRect);
+        }
+    });
+    observer.observe(el);
+
+    // Initial attempt
+    attemptReg();
+
+    return () => {
+        clearInterval(interval);
+        observer.disconnect();
+        if (sys) sys.unregisterZone(id);
+    };
+  }, [id]);
+
+  return elementRef;
+};
+
+
+=====================================
 FILE: ./src/ui/sim/hooks/useWindowFocus.ts
 =====================================
 import { useEffect } from 'react';
@@ -10048,11 +10161,13 @@ const SnifferOverlayShader = {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+
+// --- COLOR PALETTE ---
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base); // Green
 const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink
-const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
-const COL_DEAD = new THREE.Color('#FF003C');
+const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD); // Bright Yellow
+const COL_REBOOT = new THREE.Color('#8A7000'); // DARK YELLOW (Matches Crystal)
+const COL_DEAD = new THREE.Color('#FF003C'); // Critical Red
 const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
 
@@ -10069,6 +10184,10 @@ export const PlayerActor = () => {
   const isZenMode = useGameStore(state => state.isZenMode);
   const snifferState = useGameStore(state => state.sniffer);
   
+  // REAL-TIME STATE SYNC
+  const healthRef = useRef(100);
+  useGameStream('PLAYER_HEALTH', (v) => healthRef.current = v);
+
   const [interactionCode, setInteractionCode] = useState(0);
   useGameStream('PLAYER_INTERACTION_STATE', setInteractionCode);
 
@@ -10118,7 +10237,11 @@ export const PlayerActor = () => {
 
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
+    
+    // --- STATE CHECKS ---
     const isSysFail = useGameStore.getState().systemIntegrity <= 0;
+    const isPlayerDead = healthRef.current <= 0; 
+    
     if (!isZenMode) zenStartTime.current = -1; else if (zenStartTime.current === -1) zenStartTime.current = state.clock.elapsedTime;
 
     let targetScale = (introDone && (isZenMode ? (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) : !isSysFail)) ? 1 : 0;
@@ -10130,17 +10253,15 @@ export const PlayerActor = () => {
     
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
-    const isPlayerDead = useGameStore.getState().playerHealth <= 0;
     
     // --- COLOR STATE LOGIC ---
-    const isReviving = interactionCode === 2; // Self Revive
-    const isSelfHealing = interactionCode === 1; // Self Heal
+    const isReviving = interactionCode === 2; 
+    const isSelfHealing = interactionCode === 1; 
+    // FIX: Ensure DEAD state is ignored in Zen Mode
+    const isDeadVisual = !isZenMode && isPlayerDead && !isReviving;
     
-    // Panel Interaction Logic
     const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
     const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
-    
-    const isDeadVisual = isPlayerDead && !isReviving;
     
     const isActive = iState !== 'IDLE' || isZenMode;
 
@@ -10201,18 +10322,19 @@ export const PlayerActor = () => {
             let target = COL_BASE;
             let reticleTarget = null;
             
+            // PRIORITY ORDER
             if (isReviving) {
-                target = COL_REBOOT; 
+                target = COL_REBOOT; // Dark Yellow
+                reticleTarget = COL_REBOOT;
             } else if (isDeadVisual) {
-                target = COL_DEAD;
-                reticleTarget = new THREE.Color('#76000C');
+                target = COL_DEAD; // Red
+                reticleTarget = COL_DEAD; 
             } else if (isSelfHealing) {
-                // FIXED: Use Yellow for Self-Healing Reticle
-                target = COL_HEAL_SELF; 
+                target = COL_HEAL_SELF; // Bright Yellow
                 reticleTarget = COL_HEAL_SELF; 
             } else if (isPanelRebooting) {
-                target = COL_REBOOT; // Dark Purple
-                reticleTarget = COL_REBOOT;
+                target = new THREE.Color('#9E4EA5'); // Purple
+                reticleTarget = new THREE.Color('#9E4EA5');
             } else if (isPanelHealing) {
                 target = COL_REPAIR_PANEL; // Pink
                 reticleTarget = COL_RET_HEAL; // Deep Pink
@@ -12405,6 +12527,9 @@ export const AUDIO_MANIFEST: Record<string, SoundDef> = {
 
   // --- PRODUCTION AMBIENCE ---
   'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' },
+  'loop_heal_high': { type: 'oscillator', wave: 'sine', frequency: [600, 900], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop High', category: 'AMBIENCE' },
+  // NEW: Higher pitch for player revive
+  'loop_player_revive': { type: 'oscillator', wave: 'sine', frequency: [1000, 2000], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Player Revive', category: 'AMBIENCE' },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.6, pitchVariance: 0, label: 'Reboot Loop', category: 'AMBIENCE' },
   'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 }, label: 'Low Health', category: 'AMBIENCE' },
   'loop_drill': { type: 'noise', frequency: [0,0], filter: [300, 50], duration: 0.25, volume: 0.5, pitchVariance: 50, distortion: 60, label: 'Drill Grind', category: 'COMBAT' },
@@ -15131,7 +15256,6 @@ import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
 import { VoiceManager } from './modules/VoiceManager';
-import { ShepardTone } from './modules/ShepardTone'; // NEW
 import { AudioKey } from '@/engine/config/AssetKeys';
 
 const CRITICAL_SOUNDS: AudioKey[] = ['ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 'fx_boot_sequence', 'ambience_core'];
@@ -15142,8 +15266,6 @@ export class AudioServiceImpl implements IAudioService {
   private bank = new SoundBank();
   private voices = new VoiceManager(this.ctxManager, this.bank, this.mixer);
   
-  private shepard: ShepardTone | null = null; // NEW
-
   public isReady = false;
   private hasInteracted = false; 
   private _autoStartAmbience = false; 
@@ -15158,9 +15280,6 @@ export class AudioServiceImpl implements IAudioService {
     this.mixer.init();
     this.updateVolumes();
     
-    // Init Shepard Tone connected to SFX bus (or create dedicated bus if preferred, SFX is fine)
-    this.shepard = new ShepardTone(ctx, this.mixer.sfxGain);
-
     await this.generateList(CRITICAL_SOUNDS);
     const allKeys = Object.keys(AUDIO_MANIFEST) as AudioKey[];
     this.genQueue = allKeys.filter(k => !this.bank.has(k));
@@ -15235,18 +15354,9 @@ export class AudioServiceImpl implements IAudioService {
   }
 
   public playAmbience(key: AudioKey) {
-      if (!this.isReady) return;
-      if (this.bank.has(key)) this.voices.playAmbience(key);
-      else this.generateSingle(key).then(() => this.voices.playAmbience(key));
-  }
-
-  // --- SHEPARD TONE CONTROLS ---
-  public startHealingTone() {
-      if (this.shepard) this.shepard.start();
-  }
-
-  public stopHealingTone() {
-      if (this.shepard) this.shepard.stop();
+    if (!this.isReady) return;
+    if (this.bank.has(key)) this.voices.playAmbience(key);
+    else this.generateSingle(key).then(() => this.voices.playAmbience(key));
   }
 
   public startMusic() {
@@ -15262,7 +15372,6 @@ export class AudioServiceImpl implements IAudioService {
   
   public stopAll() {
       this.voices.stopAll();
-      if (this.shepard) this.shepard.stop();
       this._autoStartAmbience = false;
       this.pendingSounds = [];
   }
@@ -15387,7 +15496,6 @@ class AudioSystemFacade implements IAudioService {
     try {
       return ServiceLocator.getAudioService();
     } catch (e) {
-      // Lazy Initialization
       const impl = new AudioServiceImpl();
       ServiceLocator.register('AudioService', impl);
       return impl;
@@ -15410,10 +15518,6 @@ class AudioSystemFacade implements IAudioService {
   public playBootSequence() { this.service.playBootSequence(); }
   public playDrillSound() { this.service.playDrillSound(); }
   public playRebootZap() { this.service.playRebootZap(); }
-
-  // --- NEW PROXIES ---
-  public startHealingTone() { this.service.startHealingTone(); }
-  public stopHealingTone() { this.service.stopHealingTone(); }
 }
 
 export const AudioSystem = new AudioSystemFacade();
@@ -15584,111 +15688,7 @@ export class AudioDirector implements IGameSystem {
 =====================================
 FILE: ./src/engine/audio/modules/ShepardTone.ts
 =====================================
-export class ShepardTone {
-  private ctx: AudioContext;
-  private output: GainNode;
-  private oscillators: OscillatorNode[] = [];
-  private gains: GainNode[] = [];
-  private isRunning = false;
-  private volume: number = 0.3;
-  private speed: number = 0.4; // Octaves per second
-  private offset: number = 0;
-  private animationFrame: number | null = null;
-
-  private readonly NUM_OSC = 4;
-  private readonly BASE_FREQ = 110; // A2
-  private readonly FREQ_MAX = 8000;
-
-  constructor(ctx: AudioContext, destination: AudioNode) {
-    this.ctx = ctx;
-    this.output = ctx.createGain();
-    this.output.gain.value = 0;
-    this.output.connect(destination);
-  }
-
-  public start() {
-    if (this.isRunning) return;
-    this.isRunning = true;
-    this.offset = 0;
-
-    // Create Nodes
-    for (let i = 0; i < this.NUM_OSC; i++) {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(this.output);
-        
-        osc.start();
-        
-        this.oscillators.push(osc);
-        this.gains.push(gain);
-    }
-
-    // Ramp up volume
-    this.output.gain.cancelScheduledValues(this.ctx.currentTime);
-    this.output.gain.setValueAtTime(0, this.ctx.currentTime);
-    this.output.gain.linearRampToValueAtTime(this.volume, this.ctx.currentTime + 0.5);
-
-    this.tick();
-  }
-
-  public stop() {
-    if (!this.isRunning) return;
-    this.isRunning = false;
-
-    if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
-
-    const now = this.ctx.currentTime;
-    this.output.gain.cancelScheduledValues(now);
-    this.output.gain.setValueAtTime(this.output.gain.value, now);
-    this.output.gain.linearRampToValueAtTime(0, now + 0.2);
-
-    // Cleanup after fade
-    setTimeout(() => {
-        if (this.isRunning) return; // Restarted?
-        this.oscillators.forEach(o => { try { o.stop(); o.disconnect(); } catch {} });
-        this.gains.forEach(g => g.disconnect());
-        this.oscillators = [];
-        this.gains = [];
-    }, 250);
-  }
-
-  private tick = () => {
-    if (!this.isRunning) return;
-
-    // Increment offset based on real time would be smoother, 
-    // but simple increment works for visual/audio sync feel here.
-    // 60fps assumption for "0.005" step.
-    this.offset += this.speed * 0.01; 
-    
-    // Wrap offset (0 to NUM_OSC)
-    // Actually standard shepard uses 0 to 1 wrapping per octave, mapped across oscillators
-    
-    for (let i = 0; i < this.NUM_OSC; i++) {
-        // Calculate relative position (0.0 to 1.0) for this oscillator within the full range
-        // Stagger them evenly
-        let pos = (this.offset + i * (1 / this.NUM_OSC)) % 1.0;
-        
-        // Frequency moves exponentially from BASE to a higher octave range
-        // Let's cover 4 octaves
-        // f(x) = BASE * 2^(x * 4)
-        const freq = this.BASE_FREQ * Math.pow(2, pos * 6); // 6 octaves range
-        
-        // Amplitude is a bell curve (Hanning window) to hide the wrap-around
-        // sin(PI * x) is 0 at 0, 1 at 0.5, 0 at 1
-        const gain = Math.sin(Math.PI * pos);
-        
-        // Apply (Smoothing prevents clicking)
-        const now = this.ctx.currentTime;
-        this.oscillators[i].frequency.setValueAtTime(freq, now);
-        this.gains[i].gain.setValueAtTime(gain * 0.5, now); // 0.5 individual max to prevent clip
-    }
-
-    this.animationFrame = requestAnimationFrame(this.tick);
-  }
-}
+export {};
 
 
 =====================================
@@ -18057,6 +18057,7 @@ import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { PALETTE } from '@/engine/config/Palette';
 import { GameStream } from '@/engine/state/GameStream';
+import { WorldRect, ViewportHelper } from '@/engine/math/ViewportHelper';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -18066,7 +18067,7 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private previousHoverId: PanelId | null = null;
-  private isTonePlaying = false; 
+  private zones = new Map<string, WorldRect>(); 
 
   constructor(
     private input: IInputService,
@@ -18078,31 +18079,38 @@ export class InteractionSystem implements IInteractionSystem {
     private registry: IEntityRegistry
   ) {}
 
+  public registerZone(id: string, rect: WorldRect) {
+      this.zones.set(id, rect);
+  }
+
+  public unregisterZone(id: string) {
+      this.zones.delete(id);
+  }
+
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
-    let interactionCode = 0; // 0: Normal/Panel, 1: Self Heal, 2: Revive
+    let interactionCode = 0; 
     
     const cursor = this.input.getCursor();
+    
+    // Calculate Stereo Pan based on cursor world position
+    const halfWidth = ViewportHelper.viewport.width / 2;
+    const pan = halfWidth > 0 ? Math.max(-1, Math.min(1, cursor.x / halfWidth)) : 0;
 
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         GameStream.set('PLAYER_INTERACTION_STATE', 0);
-        this.manageTone(false);
         return; 
     }
     
-    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Self Heal / Revive) ---
+    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Dynamic) ---
     let handledByCrystal = false;
-    const identityRect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
+    const crystalZone = this.zones.get('crystal');
     
-    if (identityRect) {
-        // RE-ALIGNMENT: Center of Panel, Top offset
-        const zoneRadius = 2.2; 
-        const zoneX = identityRect.x; 
-        const zoneY = identityRect.top - 2.8; 
-        
-        const distSq = (cursor.x - zoneX)**2 + (cursor.y - zoneY)**2;
+    if (crystalZone) {
+        const zoneRadius = crystalZone.width / 2; 
+        const distSq = (cursor.x - crystalZone.x)**2 + (cursor.y - crystalZone.y)**2;
         const isHoveringCrystal = distSq < (zoneRadius * zoneRadius);
 
         if (isHoveringCrystal) {
@@ -18113,7 +18121,7 @@ export class InteractionSystem implements IInteractionSystem {
             const isPanelDead = panelState?.isDestroyed ?? false;
 
             if (isPlayerDead) {
-                // REVIVE (Priority 1)
+                // REVIVE
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'REBOOTING';
                 interactionCode = 2; 
@@ -18122,28 +18130,30 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    AudioSystem.playSound('loop_reboot'); 
-                    this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
+                    // UPDATED: High pitch revive sound
+                    AudioSystem.playSound('loop_player_revive', pan); 
+                    // Darker Yellow for Reboot/Revive
+                    this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 
             else if (isPlayerHurt && !isPanelDead) {
-                // SELF HEAL (Priority 2)
+                // SELF HEAL
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'HEALING';
                 interactionCode = 1; 
                 handledByCrystal = true;
                 
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                    // FIX: Use SELF_HEAL_AMOUNT for slower healing
                     this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
                     this.lastRepairTime = time;
                     this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
+                    AudioSystem.playSound('loop_heal_high', pan); 
                 }
             }
         }
     }
 
-    // --- 2. GENERAL PANEL REPAIR (If not consuming crystal action) ---
+    // --- 2. GENERAL PANEL REPAIR ---
     if (!handledByCrystal) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
@@ -18155,12 +18165,11 @@ export class InteractionSystem implements IInteractionSystem {
                     this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
                     
                     if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                        // Keep using fast REPAIR_HEAL_AMOUNT for panels
                         this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
                         this.lastRepairTime = time;
 
                         if (panelState.isDestroyed) {
-                            AudioSystem.playSound('loop_reboot');
+                            AudioSystem.playSound('loop_reboot', pan); // Standard reboot for panels
                         } else {
                             this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
@@ -18173,26 +18182,13 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 3. Tone Management
-    this.manageTone(interactionCode === 1 || interactionCode === 2);
-
-    // 4. Revive Decay
+    // 3. Revive Decay
     if (this.gameSystem.playerHealth <= 0 && this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
         this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
     }
 
     this.syncInteractionState();
     GameStream.set('PLAYER_INTERACTION_STATE', interactionCode);
-  }
-
-  private manageTone(shouldPlay: boolean) {
-      if (shouldPlay && !this.isTonePlaying) {
-          AudioSystem.startHealingTone();
-          this.isTonePlaying = true;
-      } else if (!shouldPlay && this.isTonePlaying) {
-          AudioSystem.stopHealingTone();
-          this.isTonePlaying = false;
-      }
   }
 
   private syncInteractionState() {
@@ -18204,7 +18200,7 @@ export class InteractionSystem implements IInteractionSystem {
 
   teardown(): void {
       useGameStore.getState().setInteractionTarget(null);
-      this.manageTone(false);
+      this.zones.clear();
   }
 
   private spawnRepairParticles(cursor: {x: number, y: number}, color: string) {
@@ -19167,13 +19163,14 @@ export class WeaponSystem implements IGameSystem {
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
+        if (p.option === 'NOVA') this.triggerNova(); // New Trigger
     }));
   }
 
   update(delta: number, time: number): void {
     this.updateProjectiles(delta, time);
 
-    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+    // If Purge Spiral is active, override standard fire
     if (this.purgeState.active) {
         const player = this.getPlayerEntity();
         if (player) {
@@ -19183,7 +19180,9 @@ export class WeaponSystem implements IGameSystem {
         return;
     }
 
+    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
     if (isDead) return;
+    
     this.handleAutoFire(delta, time);
   }
 
@@ -19330,6 +19329,7 @@ export class WeaponSystem implements IGameSystem {
       return base * 3.0;
   }
 
+  // Phase 1: Spiral
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
       const player = this.getPlayerEntity();
@@ -19338,6 +19338,43 @@ export class WeaponSystem implements IGameSystem {
           if (t) {
               this.events.emit(GameEvents.SPAWN_FX, { type: 'PURGE_BLAST', x: t.x, y: t.y, angle: 0 });
               this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
+          }
+      }
+  }
+
+  // Phase 2: Concentric Nova (Rainbow Ring)
+  private triggerNova() {
+      const player = this.getPlayerEntity();
+      if (player) {
+          const t = player.getComponent<TransformData>(ComponentType.Transform);
+          if (t) {
+              const BURST_COUNT = 72;
+              const BURST_SPEED = 24;
+              
+              for(let i=0; i<BURST_COUNT; i++) {
+                  const angle = (i / BURST_COUNT) * Math.PI * 2;
+                  const vx = Math.cos(angle) * BURST_SPEED;
+                  const vy = Math.sin(angle) * BURST_SPEED;
+                  
+                  const bullet = this.spawner.spawnProjectile(
+                      t.x, t.y, vx, vy, 
+                      Faction.FRIENDLY, 2.4, 50, 
+                      WeaponIDs.PLAYER_PURGE, 
+                      undefined,
+                      { scaleX: 1.5, scaleY: 1.5 }
+                  );
+
+                  // PRISMATIC COLORING
+                  const hue = i / BURST_COUNT;
+                  this.tempColor.setHSL(hue, 1.0, 0.5);
+                  
+                  const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
+                  if (model) { 
+                      model.r = this.tempColor.r; 
+                      model.g = this.tempColor.g; 
+                      model.b = this.tempColor.b; 
+                  }
+              }
           }
       }
   }
@@ -21039,6 +21076,8 @@ export class LifeCycleSystem implements IGameSystem {
 
     for (const entity of mortals) {
       if (!entity.active) continue;
+      
+      // 1. LIFETIME CHECK
       const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -21047,21 +21086,32 @@ export class LifeCycleSystem implements IGameSystem {
           continue;
         }
       }
+
+      // 2. HEALTH CHECK
       const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
+          // CRITICAL FIX: Do not destroy the Player entity on 0 HP.
+          // The HealthSystem handles the "Game Over" logic state.
+          // The PlayerActor handles the "Wireframe/Red" visual state.
+          if (entity.hasTag(Tag.PLAYER)) continue;
+
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+          
           if (identity && transform) {
              const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
              if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
                  this.events.emit(GameEvents.ENEMY_DESTROYED, { id: entity.id as number, type: identity.variant, x: transform.x, y: transform.y });
              }
+             
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
              else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
+             
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
+          
           this.registry.destroyEntity(entity.id);
       }
     }
@@ -21071,6 +21121,8 @@ export class LifeCycleSystem implements IGameSystem {
       const allies = this.registry.getByTag(Tag.PLAYER);
       for (const entity of allies) {
           if (!entity.active) continue;
+          
+          // Only destroy summons (Daemon), not the player itself
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity && identity.variant === EnemyTypes.DAEMON) {
               const transform = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -22472,8 +22524,6 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
-  startHealingTone(): void;
-  stopHealingTone(): void;
 }
 
 export interface IInputService {
@@ -22505,9 +22555,12 @@ export interface ICombatSystem extends IGameSystem {
   resolveCollision(e1: Entity, e2: Entity): void;
 }
 
+// UPDATED INTERFACE
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: PanelId | null;
+  registerZone(id: string, rect: WorldRect): void; // NEW
+  unregisterZone(id: string): void; // NEW
 }
 
 export interface DamageOptions {

@@ -8,15 +8,10 @@ export const EnemyTypes = {
 } as const;
 
 export const WeaponIDs = {
-  // --- NEW CORE WEAPONS ---
+  // --- CORE WEAPONS ---
   PLAYER_RAILGUN: 'PLAYER_RAILGUN',
   PLAYER_SNIFFER: 'PLAYER_SNIFFER',
   PLAYER_PURGE: 'PLAYER_PURGE', // Zen Bomb
-
-  // --- DEPRECATED / LEGACY ---
-  PLAYER_STANDARD: 'PLAYER_STANDARD',
-  PLAYER_FORK: 'PLAYER_FORK',
-  PLAYER_BACKDOOR: 'PLAYER_BACKDOOR',
   
   // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',

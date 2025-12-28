@@ -26,18 +26,6 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
 
   const canAfford = upgradePoints > 0;
 
-  // VISUAL MAPPING:
-  // We map the visual slots (TL, TR, BR, BL) to the logic index (0, 1, 2, 3)
-  // Desired Order: Top Left (0) -> Bottom Right (1) -> Top Right (2) -> Bottom Left (3)
-  //
-  // visualIndex 0 = Top Left
-  // visualIndex 1 = Top Right
-  // visualIndex 2 = Bottom Right
-  // visualIndex 3 = Bottom Left
-  //
-  // Array format: [Index for Pos 0, Index for Pos 1, Index for Pos 2, Index for Pos 3]
-  // Result: [0, 2, 1, 3]
-  
   const slotMapping = [0, 2, 1, 3];
 
   return (
@@ -46,9 +34,6 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
             <div>
                 <h3 className="text-xl font-header font-black text-latent-purple tracking-widest">SNIFFER</h3>
                 <span className="text-[9px] font-mono text-latent-purple-light block mt-0.5">CLASS: HOMING_SWARM</span>
-            </div>
-            <div className="text-xs font-bold text-latent-purple bg-latent-purple/10 px-3 py-1 border border-latent-purple/20">
-                MK.{1 + Math.floor((sniffer.capacityLevel + sniffer.damageLevel + sniffer.rateLevel) / 3)}
             </div>
         </div>
 

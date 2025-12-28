@@ -7,7 +7,6 @@ import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
-import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
@@ -64,7 +63,6 @@ export class EngineFactory {
     const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
 
     const inputSystem = new InputSystem();
-    const hudService = new HUDService(); 
     const spawner = new EntitySpawner(registry);
     
     ServiceLocator.register('EntityRegistry', registry);
@@ -72,7 +70,6 @@ export class EngineFactory {
     ServiceLocator.register('FastEventService', rawFastBus); 
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
-    ServiceLocator.register('HUDService', hudService);
 
     // 4. Content Registration
     registerAllComponents();
@@ -113,7 +110,6 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    // UPDATED: Inject ParticleSystem into WeaponSystem
     const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem, particleSystem);
     
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
@@ -155,7 +151,6 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
-    register(hudService, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
@@ -170,7 +165,7 @@ export class EngineFactory {
     engine.setup(ServiceLocator);
     spawner.spawnPlayer();
 
-    ServiceLocator.register('ParticleSystem', particleSystem); // Explicit register for safety
+    ServiceLocator.register('ParticleSystem', particleSystem);
 
     return engine;
   }

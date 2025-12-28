@@ -36,20 +36,9 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
-  getHUDService(): IHUDService; 
 
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
-}
-
-export interface IHUDService extends IGameSystem {
-  bindScore(el: HTMLElement | null): void;
-  bindVitals(el: HTMLElement | null): void;
-  bindLevelText(el: Element | null): void;
-  updateScore(val: number): void;
-  updateHealth(percent: number, color: string): void;
-  updateXP(percent: number): void;
-  updateLevel(level: number): void;
 }
 
 export interface IFastEventService {
@@ -179,12 +168,11 @@ export interface ICombatSystem extends IGameSystem {
   resolveCollision(e1: Entity, e2: Entity): void;
 }
 
-// UPDATED INTERFACE
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: PanelId | null;
-  registerZone(id: string, rect: WorldRect): void; // NEW
-  unregisterZone(id: string): void; // NEW
+  registerZone(id: string, rect: WorldRect): void;
+  unregisterZone(id: string): void;
 }
 
 export interface DamageOptions {
