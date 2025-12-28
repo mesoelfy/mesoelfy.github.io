@@ -3,19 +3,23 @@ import { VFX_MANIFEST } from './assets/VFXManifest';
 
 // --- GEOMETRY ---
 export const GEOMETRY_IDS = {
+  // Actors
+  PLAYER: 'PLAYER_GEO',
+  PARTICLE: 'GEO_PARTICLE',
+  
+  // Enemies (Dynamic keys used in code: GEO_DRILLER, etc.)
   DRILLER: 'GEO_DRILLER',
   KAMIKAZE: 'GEO_KAMIKAZE',
   HUNTER: 'GEO_HUNTER',
   DAEMON: 'GEO_DAEMON',
-  PARTICLE: 'GEO_PARTICLE',
-  PLAYER: 'PLAYER_GEO',
-  PRJ_SPHERE: 'GEO_PRJ_SPHERE',
-  PRJ_CAPSULE: 'GEO_PRJ_CAPSULE',
-  PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
-  PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
-  PRJ_RING: 'GEO_PRJ_RING',
-  PRJ_ARROW: 'GEO_PRJ_ARROW',
-  PRJ_CHEVRON: 'GEO_PRJ_CHEVRON' // NEW
+
+  // Projectiles (Now unified or dynamic)
+  // We keep these descriptive keys for reference if needed, but the code uses dynamic IDs
+  SPHERE_RAILGUN: 'GEO_PLAYER_RAILGUN',
+  SPHERE_SNIFFER: 'GEO_PLAYER_SNIFFER',
+  SPHERE_PURGE: 'GEO_PLAYER_PURGE',
+  SPHERE_HUNTER: 'GEO_ENEMY_HUNTER',
+  SPHERE_DAEMON: 'GEO_DAEMON_ORB'
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];

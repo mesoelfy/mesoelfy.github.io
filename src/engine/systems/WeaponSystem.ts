@@ -1,12 +1,11 @@
 import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem, IParticleSystem } from '@/engine/interfaces';
-import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -17,7 +16,6 @@ import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
-import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -76,53 +74,20 @@ export class WeaponSystem implements IGameSystem {
 
           const transform = p.getComponent<TransformData>(ComponentType.Transform)!;
           const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
-          const projData = p.getComponent<ProjectileData>(ComponentType.Projectile)!;
           const target = p.getComponent<TargetData>(ComponentType.Target);
 
-          // A. STEERING
+          // A. STEERING (Homing Logic)
           if (target && target.type === 'ENEMY') {
               this.handleSteering(p, transform, motion, delta);
           }
 
-          // B. KINEMATIC MOVE
+          // B. KINEMATIC MOVE (Linear)
           transform.prevX = transform.x;
           transform.prevY = transform.y;
           transform.prevRotation = transform.rotation;
 
-          const speedSq = motion.vx*motion.vx + motion.vy*motion.vy;
-          const speed = Math.sqrt(speedSq);
-
           transform.x += motion.vx * delta;
           transform.y += motion.vy * delta;
-          
-          if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
-              transform.rotation = Math.atan2(motion.vy, motion.vx);
-          }
-
-          // C. SNAKE TRAIL (SOLID BODY)
-          if (projData.configId === WeaponIDs.PLAYER_SNIFFER && speed > 1.0) {
-              // Calculate steps needed to fill the gap since last frame
-              // We want a particle every ~0.25 units to ensure overlap
-              const distMoved = speed * delta;
-              const stepSize = 0.25; 
-              const steps = Math.ceil(distMoved / stepSize);
-              
-              for (let i = 0; i < steps; i++) {
-                  // Interpolate position backwards from current to previous
-                  const t = i / steps;
-                  const tx = transform.x - (motion.vx * delta * t);
-                  const ty = transform.y - (motion.vy * delta * t);
-                  
-                  this.particleSystem.spawn(
-                      tx, ty,
-                      PALETTE.PURPLE.DIM, 
-                      0, 0, 
-                      0.4, // Longer life = longer tail
-                      0.5, // Larger size = solid overlap
-                      ParticleShape.SQUARE
-                  );
-              }
-          }
       }
   }
 
@@ -198,9 +163,7 @@ export class WeaponSystem implements IGameSystem {
         
         this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId, 
-            undefined,
-            { scaleX: shot.scaleX, scaleY: shot.scaleY } 
+            Faction.FRIENDLY, shot.life, shot.damage, shot.configId
         );
 
         this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });

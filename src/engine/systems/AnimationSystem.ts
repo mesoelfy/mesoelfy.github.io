@@ -2,14 +2,13 @@ import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } fr
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
-import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
@@ -45,10 +44,9 @@ export class AnimationSystem implements IGameSystem {
       if (!entity.active) continue;
 
       const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect); // Will be undefined for Projectiles
       const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
-      const aiState = entity.getComponent<AIStateData>(ComponentType.State);
+      const aiState = entity.getComponent<any>(ComponentType.State); // Typed as any to access current
 
       if (!render) continue;
 
@@ -57,97 +55,61 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      // State-based spin overrides (Player/Interaction)
-      if (entity.hasTag('PLAYER')) {
-          // Default Idle Spin
+      if (entity.hasTag(Tag.PLAYER)) {
           let spinSpeed = 0.02; 
-
-          if (isZenMode) {
-              spinSpeed = -0.03;
-          } else if (isDead) {
-              // Dead but Reviving = Fast Spin
-              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
-          } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
-              // Healing Self or Panel = Fast Spin
-              // Maybe faster for self-heal?
+          if (isZenMode) spinSpeed = -0.03;
+          else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+          else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
               const isSelf = hoverId === PanelId.IDENTITY;
               spinSpeed = isSelf ? -0.4 : -0.24;
           }
-          
           render.rotation += spinSpeed;
       }
 
-      // 2. SCALE & DEFORMATION
+      // 2. SCALE & DEFORMATION (Only applies if RenderEffect exists)
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
+          // Spawn Animation
           if (effect.spawnProgress < 1.0) {
               if (effect.spawnVelocity > 0) {
                   effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
               }
-
               const t = effect.spawnProgress;
               const scaleCurve = easeOutElastic(t);
-              
-              dX *= scaleCurve;
-              dY *= scaleCurve;
-              dZ *= scaleCurve;
-
+              dX *= scaleCurve; dY *= scaleCurve; dZ *= scaleCurve;
               render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
-              
               const riseT = t * (2 - t); 
               render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
           } else {
               render.offsetY = 0;
           }
 
+          // Damage Flash / Pulse
           if (effect.flash > 0) {
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
           }
-
           if (effect.pulseSpeed > 0) {
               const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
+          // Squash & Stretch (ONLY runs if effect exists)
           if (effect.spawnProgress >= 1.0) {
               let targetSquash = 0.0;
               if (aiState && aiState.current === AI_STATE.CHARGING) {
                   targetSquash = 1.0;
               }
-
               effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
 
               if (effect.squashFactor > 0.01) {
                   const compression = 0.4 * effect.squashFactor; 
                   const expansion = 0.8 * effect.squashFactor;   
-
                   dY *= (1.0 - compression); 
                   dX *= (1.0 + expansion);   
                   dZ *= (1.0 + expansion);   
               } 
-              else if (motion && effect.elasticity > 0.01) {
-                  const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-                  const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
-
-                  if (speedSq > threshold) {
-                      const speed = Math.sqrt(speedSq);
-                      let stretchY = 1.0, squashXZ = 1.0;
-                      
-                      if (effect.elasticity > 1.0) {
-                          stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
-                          squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
-                      } else {
-                          stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
-                          squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
-                      }
-                      
-                      dY *= stretchY;
-                      dX *= squashXZ;
-                      dZ *= squashXZ;
-                  }
-              }
           }
       }
 

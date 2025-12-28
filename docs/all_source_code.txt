@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 12:06:19 CST 2025
+Generated on: Sun Dec 28 15:55:57 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -130,6 +130,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │       ├── AudioContextManager.ts
 │   │   │       ├── AudioMixer.ts
 │   │   │       ├── AudioSynthesizer.ts
+│   │   │       ├── ShepardTone.ts
 │   │   │       ├── SoundBank.ts
 │   │   │       └── VoiceManager.ts
 │   │   ├── config
@@ -165,6 +166,8 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   ├── Enemies.ts
 │   │   │   │   ├── Weapons.ts
 │   │   │   │   └── types.ts
+│   │   │   ├── deprecated
+│   │   │   │   └── LegacyWeapons.ts
 │   │   │   └── static
 │   │   │       ├── feed.json
 │   │   │       ├── gallery.json
@@ -216,6 +219,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── ai
 │   │   │   │   ├── AIRegistry.ts
 │   │   │   │   ├── BehaviorCatalog.ts
+│   │   │   │   ├── BehaviorSystem.ts
 │   │   │   │   ├── DaemonLogic.ts
 │   │   │   │   ├── DrillerLogic.ts
 │   │   │   │   ├── HunterLogic.ts
@@ -266,7 +270,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── CollisionSystem.ts
 │   │   │   ├── CombatSystem.ts
 │   │   │   ├── GameStateSystem.ts
-│   │   │   ├── GuidanceSystem.ts
 │   │   │   ├── HealthSystem.ts
 │   │   │   ├── InputSystem.ts
 │   │   │   ├── InteractionSystem.ts
@@ -312,6 +315,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   ├── SafePanelContent.tsx
 │       │   │   ├── StatsRadar.tsx
 │       │   │   ├── ToggleButton.tsx
+│       │   │   ├── UpgradeButton.tsx
 │       │   │   ├── VitalsRing.tsx
 │       │   │   └── ZenBomb.tsx
 │       │   ├── hooks
@@ -326,6 +330,9 @@ PROJECT DIRECTORY STRUCTURE:
 │       │       ├── SystemOps.tsx
 │       │       ├── UpgradeTerminal.tsx
 │       │       ├── VideoPlaylistService.ts
+│       │       ├── badges
+│       │       │   ├── RailgunBadge.tsx
+│       │       │   └── SnifferBadge.tsx
 │       │       └── panel
 │       │           ├── BreachOverlay.tsx
 │       │           ├── IntelligentHeader.tsx
@@ -445,7 +452,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-90 directories, 347 files
+92 directories, 352 files
 
 =====================================
 FILE: ./next.config.js
@@ -2011,70 +2018,64 @@ FILE: ./src/ui/kit/molecules/SystemOps.tsx
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Unplug, Biohazard, CircleDotDashed, AlertTriangle } from 'lucide-react';
-import { UpgradeOption } from '@/engine/types/game.types';
+import { Bomb, Wrench } from 'lucide-react';
+import { UpgradePath } from '@/engine/types/game.types';
+import { clsx } from 'clsx';
 
-const SYSTEM_OPS: UpgradeOption[] = ['REPAIR_NANITES', 'RESTORE', 'PURGE'];
-
-const OP_INFO: Record<string, { label: string, desc: string, icon: any }> = {
-  'PURGE': { label: 'Purge', desc: 'Nuke Screen', icon: Biohazard },
-  'RESTORE': { label: 'Restore', desc: 'Heal System', icon: CircleDotDashed },
-  'REPAIR_NANITES': { label: 'Repair', desc: 'Heal Self', icon: Unplug }
-};
-
-interface SystemOpsProps {
+interface OpButtonProps {
   isPanelDead: boolean;
 }
 
-export const SystemOps = ({ isPanelDead }: SystemOpsProps) => {
+const OpButton = ({ isPanelDead, type }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE' }) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
-  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
-      if (isPanelDead || upgradePoints <= 0) return; 
+  const handleUpgrade = (e: React.MouseEvent) => {
+      if (upgradePoints <= 0) return; 
       AudioSystem.playClick(getPan(e));
-      selectUpgrade(u);
+      selectUpgrade(type);
   };
 
   if (upgradePoints <= 0) return null;
 
+  const isPurge = type === 'PURGE';
+  const label = isPurge ? 'PURGE' : 'REPAIR';
+  const Icon = isPurge ? Bomb : Wrench;
+  
+  const baseColor = isPurge ? 'border-critical-red/50 bg-critical-red/10' : 'border-alert-yellow/30 bg-alert-yellow/5';
+  const hoverColor = isPurge ? 'hover:border-critical-red' : 'hover:border-alert-yellow';
+  const textColor = isPurge ? 'text-critical-red' : 'text-alert-yellow';
+  const fillClass = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
+
   return (
-    <div className="flex flex-col gap-1.5 mt-4">
-        <span className="text-[8px] font-bold text-alert-yellow/50 uppercase tracking-widest px-1">System_Ops</span>
-        {SYSTEM_OPS.map(u => {
-            const info = OP_INFO[u];
-            const Icon = info.icon;
-            
-            return (
-                <button
-                    key={u}
-                    onClick={(e) => handleUpgrade(u, e)}
-                    onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
-                    className="group relative flex items-center justify-between p-2 border border-alert-yellow/30 bg-alert-yellow/5 hover:border-alert-yellow transition-all duration-200 overflow-hidden"
-                >
-                    <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-alert-yellow opacity-20" />
-                    
-                    <div className="flex items-center gap-3 relative z-10">
-                        <div className="p-1.5 rounded-sm bg-alert-yellow/10 text-alert-yellow group-hover:bg-alert-yellow group-hover:text-black">
-                            <Icon size={14} />
-                        </div>
-                        <div className="flex flex-col items-start">
-                            <span className="text-[10px] font-bold font-header tracking-wider uppercase text-alert-yellow">
-                                {info.label}
-                            </span>
-                            <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
-                                {info.desc}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <AlertTriangle size={12} className="text-alert-yellow/50 group-hover:text-alert-yellow" />
-                </button>
-            );
-        })}
-    </div>
+    <button
+        onClick={handleUpgrade}
+        onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
+        className={clsx(
+            "group relative flex flex-col items-center justify-center p-2 border transition-all duration-200 overflow-hidden text-center w-24 h-24 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.3)]",
+            baseColor, hoverColor
+        )}
+        title={`${label} (1 PT)`}
+    >
+        <div className={clsx("absolute inset-0 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out opacity-20", fillClass)} />
+        
+        <div className="relative z-10 flex flex-col items-center gap-2">
+            <Icon size={32} className={clsx("transition-transform group-hover:scale-110 duration-200", textColor, "group-hover:text-white")} />
+            <div className="flex flex-col leading-none">
+                <span className={clsx("text-[10px] font-bold font-header tracking-wider group-hover:text-white transition-colors", textColor)}>
+                    {label}
+                </span>
+                <span className="text-[8px] text-gray-500 font-mono group-hover:text-white/70">
+                    1 PT
+                </span>
+            </div>
+        </div>
+    </button>
   );
 };
+
+export const RepairButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="RESTORE" />;
+export const PurgeButton = ({ isPanelDead }: OpButtonProps) => <OpButton isPanelDead={isPanelDead} type="PURGE" />;
 
 
 =====================================
@@ -2144,22 +2145,11 @@ export const VideoPlaylistService = new VideoPlaylistController();
 FILE: ./src/ui/kit/molecules/UpgradeTerminal.tsx
 =====================================
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
-import { getPan } from '@/engine/audio/AudioUtils';
-import { Zap, Swords, GitFork, Gitlab, DoorOpen, Bot, ArrowUpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeOption } from '@/engine/types/game.types';
-
-const CORE_UPGRADES: UpgradeOption[] = ['OVERCLOCK', 'EXECUTE', 'FORK', 'SNIFFER', 'BACKDOOR', 'DAEMON'];
-
-const UPGRADE_INFO: Partial<Record<UpgradeOption, { label: string, desc: string, icon: any }>> = {
-  'OVERCLOCK': { label: 'Overclock', desc: 'Fire Rate ++', icon: Zap },
-  'EXECUTE': { label: 'Execute', desc: 'Damage ++', icon: Swords },
-  'FORK': { label: 'Fork', desc: 'Multishot ++', icon: GitFork }, 
-  'SNIFFER': { label: 'Sniffer', desc: 'Homing', icon: Gitlab }, 
-  'BACKDOOR': { label: 'Backdoor', desc: 'Rear Guard', icon: DoorOpen }, 
-  'DAEMON': { label: 'Daemon', desc: 'Summon Ally', icon: Bot },
-};
+import { ArrowUpCircle } from 'lucide-react';
+import { RailgunBadge } from './badges/RailgunBadge';
+import { SnifferBadge } from './badges/SnifferBadge';
+import { useState, useCallback } from 'react';
 
 interface UpgradeTerminalProps {
   isPanelDead: boolean;
@@ -2167,87 +2157,53 @@ interface UpgradeTerminalProps {
 
 export const UpgradeTerminal = ({ isPanelDead }: UpgradeTerminalProps) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
-  const activeUpgrades = useGameStore(s => s.activeUpgrades);
-  const selectUpgrade = useGameStore(s => s.selectUpgrade);
+  const [hoverCost, setHoverCost] = useState<number | null>(null);
 
-  const handleUpgrade = (u: UpgradeOption, e: React.MouseEvent) => {
-      if (isPanelDead || upgradePoints <= 0) return; 
-      AudioSystem.playClick(getPan(e));
-      selectUpgrade(u);
-  };
+  const handleCostHover = useCallback((cost: number | null) => {
+      setHoverCost(cost);
+  }, []);
 
   return (
-    <AnimatePresence mode="wait">
-      {upgradePoints > 0 ? (
+    <div className="flex flex-col gap-4 pb-4">
+      <div className="flex items-center justify-between border-b border-white/10 pb-2 h-10">
+          <div className="flex items-center gap-2">
+              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
+              <span className="text-[10px] font-bold tracking-widest text-white">
+                  AVAILABLE_POINTS
+              </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+              <AnimatePresence>
+                  {hoverCost !== null && (
+                      <motion.span 
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="text-xl font-header font-black text-critical-red drop-shadow-[0_0_5px_rgba(255,0,60,0.5)]"
+                      >
+                          -{hoverCost}
+                      </motion.span>
+                  )}
+              </AnimatePresence>
+              <span className="font-header font-black text-xl text-primary-green">
+                  {upgradePoints.toString().padStart(2, '0')}
+              </span>
+          </div>
+      </div>
+
+      <AnimatePresence mode="wait">
         <motion.div 
-            key="upgrades"
+            key="badges"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
             className="flex flex-col gap-4"
         >
-            <div className="flex items-center gap-2 pb-1 border-b border-primary-green/20 pt-2">
-                <ArrowUpCircle size={12} className="text-primary-green animate-bounce" />
-                <span className="text-[9px] font-bold text-primary-green tracking-widest">
-                    SYSTEM_UPGRADE_AVAILABLE [{upgradePoints}]
-                </span>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-                <span className="text-[8px] font-bold text-primary-green-dim/50 uppercase tracking-widest px-1">Kernel_Modules</span>
-                {CORE_UPGRADES.map(u => {
-                    const info = UPGRADE_INFO[u];
-                    if (!info) return null;
-                    
-                    const Icon = info.icon;
-                    const currentLvl = activeUpgrades[u] || 0;
-
-                    return (
-                        <button
-                            key={u}
-                            onClick={(e) => handleUpgrade(u, e)}
-                            onMouseEnter={(e) => !isPanelDead && AudioSystem.playHover(getPan(e))}
-                            className="group relative flex items-center justify-between p-2 border border-primary-green-dim/30 bg-black/40 hover:border-primary-green transition-all duration-200 overflow-hidden"
-                        >
-                            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 ease-out bg-primary-green opacity-20" />
-                            
-                            <div className="flex items-center gap-3 relative z-10">
-                                <div className="p-1.5 rounded-sm bg-primary-green/10 text-primary-green group-hover:bg-primary-green group-hover:text-black">
-                                    <Icon size={14} />
-                                </div>
-                                <div className="flex flex-col items-start">
-                                    <span className="text-[10px] font-bold font-header tracking-wider uppercase text-primary-green">
-                                        {info.label}
-                                    </span>
-                                    <span className="text-[8px] text-gray-400 font-mono group-hover:text-white">
-                                        {info.desc}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="text-[9px] font-mono text-primary-green-dim border border-primary-green-dim/30 px-1.5 py-0.5 rounded bg-black/50 group-hover:border-primary-green group-hover:text-primary-green relative z-10">
-                                v{currentLvl}
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+            <RailgunBadge isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
+            <SnifferBadge isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
         </motion.div>
-      ) : (
-        <motion.div 
-            key="status"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="h-full flex flex-col justify-center items-center text-center opacity-40 font-mono space-y-2 p-4 rounded bg-black/20 marching-ants [--ant-color:rgba(255,255,255,0.1)]"
-        >
-            <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center animate-spin-slow">
-                <div className="w-1 h-1 bg-white/50 rounded-full" />
-            </div>
-            <span className="text-[9px] tracking-widest">SYSTEM_OPTIMIZED</span>
-            <span className="text-[8px]">WAITING FOR DATA...</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </AnimatePresence>
+    </div>
   );
 };
 
@@ -2351,21 +2307,225 @@ export const IdentityFooter = ({ isPanelDead }: IdentityFooterProps) => {
 
 
 =====================================
+FILE: ./src/ui/kit/molecules/badges/RailgunBadge.tsx
+=====================================
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
+import { Zap, Swords, Maximize } from 'lucide-react';
+import { clsx } from 'clsx';
+import { PALETTE } from '@/engine/config/Palette';
+import { memo, useCallback } from 'react';
+import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
+
+interface RailgunBadgeProps {
+  isPanelDead: boolean;
+  onHoverCost: (cost: number | null) => void;
+}
+
+export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProps) => {
+  const { railgun, upgradePoints, selectUpgrade } = useGameStore(state => ({
+    railgun: state.railgun,
+    upgradePoints: state.upgradePoints,
+    selectUpgrade: state.selectUpgrade
+  }));
+
+  const handleUpgrade = useCallback((path: any, e: React.MouseEvent) => {
+    if (isPanelDead || upgradePoints <= 0) return;
+    selectUpgrade(path);
+    AudioSystem.playClick(getPan(e));
+  }, [isPanelDead, upgradePoints, selectUpgrade]);
+
+  const canAfford = upgradePoints > 0;
+
+  return (
+    <div className={clsx("p-5 border border-primary-green/30 bg-black/40 relative overflow-hidden transition-all flex flex-col gap-6", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
+        <div className="flex justify-between items-center border-b border-primary-green/20 pb-3">
+            <div>
+                <h3 className="text-xl font-header font-black text-primary-green tracking-widest">RAILGUN</h3>
+                <span className="text-[9px] font-mono text-primary-green-dim block mt-0.5">CLASS: KINETIC_BEAM</span>
+            </div>
+            <div className="text-xs font-bold text-primary-green bg-primary-green/10 px-3 py-1 border border-primary-green/20">
+                MK.{1 + Math.floor((railgun.widthLevel + railgun.damageLevel + railgun.rateLevel) / 3)}
+            </div>
+        </div>
+
+        <div className="flex flex-col gap-2 w-full">
+            <div className="flex justify-between items-end">
+                <div className="flex items-center gap-1 text-[10px] text-primary-green font-mono tracking-widest font-bold">
+                    <Maximize size={12} /> BEAM_WIDTH
+                </div>
+                <div className="flex items-center gap-4">
+                    <span className="text-[9px] font-mono text-primary-green-dim">{railgun.widthLevel}/10</span>
+                    <UpgradeButton 
+                        path="RAILGUN_WIDTH" 
+                        disabled={railgun.widthLevel >= 10} 
+                        canAfford={canAfford} 
+                        onUpgrade={handleUpgrade} 
+                        onHoverCost={onHoverCost} 
+                    />
+                </div>
+            </div>
+            <div className="flex h-6 gap-0.5 w-full bg-black/60 p-1 border border-primary-green/20">
+                {Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className={clsx("flex-1 h-full transition-all duration-300 relative overflow-hidden", i < railgun.widthLevel ? "bg-primary-green shadow-[0_0_5px_#78F654]" : "bg-primary-green/5")} >
+                        {i < railgun.widthLevel && <div className="absolute inset-0 bg-white/20" />}
+                    </div>
+                ))}
+            </div>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+            {[
+                { label: "DAMAGE", level: railgun.damageLevel, max: 3, icon: Swords, path: "RAILGUN_DAMAGE" },
+                { label: "RATE", level: railgun.rateLevel, max: 3, icon: Zap, path: "RAILGUN_RATE" }
+            ].map(stat => (
+                <div key={stat.path} className="flex flex-col gap-2 flex-1 p-3 bg-black/20 border border-primary-green/10">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-1.5 text-[10px] text-primary-green font-mono tracking-widest font-bold">
+                            <stat.icon size={12} /> {stat.label}
+                        </div>
+                        <UpgradeButton 
+                            path={stat.path} 
+                            disabled={stat.level >= stat.max} 
+                            canAfford={canAfford} 
+                            onUpgrade={handleUpgrade} 
+                            onHoverCost={onHoverCost} 
+                        />
+                    </div>
+                    <div className="flex gap-1 h-4 mt-1">
+                        {Array.from({ length: stat.max }).map((_, i) => (
+                            <div key={i} className={clsx("flex-1 h-full skew-x-[-15deg] border transition-colors", i < stat.level ? "bg-primary-green border-primary-green shadow-[0_0_5px_#78F654]" : "bg-transparent border-primary-green/20")} />
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>
+        <div className="absolute top-0 right-0 w-24 h-24 opacity-5 pointer-events-none" style={{ backgroundImage: `linear-gradient(135deg, transparent 50%, ${PALETTE.GREEN.PRIMARY} 50%)` }} />
+    </div>
+  );
+});
+RailgunBadge.displayName = 'RailgunBadge';
+
+
+=====================================
+FILE: ./src/ui/kit/molecules/badges/SnifferBadge.tsx
+=====================================
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
+import { Zap, Swords, GitFork } from 'lucide-react';
+import { clsx } from 'clsx';
+import { memo, useCallback } from 'react';
+import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
+
+interface SnifferBadgeProps {
+  isPanelDead: boolean;
+  onHoverCost: (cost: number | null) => void;
+}
+
+export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProps) => {
+  const { sniffer, upgradePoints, selectUpgrade } = useGameStore(state => ({
+    sniffer: state.sniffer,
+    upgradePoints: state.upgradePoints,
+    selectUpgrade: state.selectUpgrade
+  }));
+
+  const handleUpgrade = useCallback((path: any, e: React.MouseEvent) => {
+    if (isPanelDead || upgradePoints <= 0) return;
+    selectUpgrade(path);
+    AudioSystem.playClick(getPan(e));
+  }, [isPanelDead, upgradePoints, selectUpgrade]);
+
+  const canAfford = upgradePoints > 0;
+
+  return (
+    <div className={clsx("p-5 border border-latent-purple/30 bg-black/40 relative overflow-hidden transition-all", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
+        <div className="flex justify-between items-center mb-6 border-b border-latent-purple/20 pb-3">
+            <div>
+                <h3 className="text-xl font-header font-black text-latent-purple tracking-widest">SNIFFER</h3>
+                <span className="text-[9px] font-mono text-latent-purple-light block mt-0.5">CLASS: HOMING_SWARM</span>
+            </div>
+            <div className="text-xs font-bold text-latent-purple bg-latent-purple/10 px-3 py-1 border border-latent-purple/20">
+                MK.{1 + Math.floor((sniffer.capacityLevel + sniffer.damageLevel + sniffer.rateLevel) / 3)}
+            </div>
+        </div>
+
+        <div className="flex flex-row items-stretch gap-6">
+            <div className="shrink-0 flex flex-col items-center gap-4">
+                <div className="relative w-24 h-24 flex items-center justify-center border border-latent-purple/20 rounded-full bg-black/40 shadow-[inset_0_0_20px_rgba(158,78,165,0.1)]">
+                    <div className="absolute inset-3 border border-latent-purple/10 rounded-full" />
+                    {[0, 1, 3, 2].map((mappedIndex, visualIndex) => {
+                        const isActive = mappedIndex < sniffer.capacityLevel;
+                        let posClass = "";
+                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4";
+                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4";
+                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4";
+                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4";
+                        return (
+                            <div key={mappedIndex} className={clsx("absolute w-6 h-6 border-2 transition-all duration-300 rounded-full flex items-center justify-center", posClass, isActive ? "bg-latent-purple border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "bg-black border-latent-purple/30")}>
+                                {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                            </div>
+                        );
+                    })}
+                    <GitFork className="text-latent-purple opacity-50" size={24} />
+                </div>
+                <UpgradeButton 
+                    path="SNIFFER_CAPACITY" 
+                    disabled={sniffer.capacityLevel >= 4} 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost} 
+                    width="w-24"
+                />
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center gap-4">
+                {[
+                    { label: "DMG", level: sniffer.damageLevel, max: 3, icon: Swords, path: "SNIFFER_DAMAGE" },
+                    { label: "SPD", level: sniffer.rateLevel, max: 3, icon: Zap, path: "SNIFFER_RATE" }
+                ].map(stat => (
+                    <div key={stat.path} className="flex flex-col gap-2 p-3 bg-black/20 border border-latent-purple/10 w-full">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-1.5 text-[10px] text-latent-purple font-mono tracking-widest font-bold">
+                                <stat.icon size={12} /> {stat.label}
+                            </div>
+                            <UpgradeButton 
+                                path={stat.path} 
+                                disabled={stat.level >= stat.max} 
+                                canAfford={canAfford} 
+                                onUpgrade={handleUpgrade} 
+                                onHoverCost={onHoverCost} 
+                            />
+                        </div>
+                        <div className="flex gap-1 h-3 mt-1">
+                            {Array.from({ length: stat.max }).map((_, i) => (
+                                <div key={i} className={clsx("flex-1 h-full rounded-[1px] transition-colors", i < stat.level ? "bg-latent-purple shadow-[0_0_5px_#9E4EA5]" : "bg-latent-purple/10")} />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+  );
+});
+SnifferBadge.displayName = 'SnifferBadge';
+
+
+=====================================
 FILE: ./src/ui/kit/molecules/IdentityHUD.tsx
 =====================================
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { useStreamValue } from '@/ui/hooks/useStreamValue';
-import identity from '@/engine/config/static/identity.json';
 import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
-import { PALETTE } from '@/engine/config/Palette';
 import { VitalsRing } from '@/ui/kit/atoms/VitalsRing';
 import { UpgradeTerminal } from './UpgradeTerminal';
-import { SystemOps } from './SystemOps';
+import { RepairButton, PurgeButton } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
 
 export const IdentityHUD = () => {
-  // NEW: Stream-based State
   const hp = useStreamValue('PLAYER_HEALTH');
   const maxHp = useStreamValue('PLAYER_MAX_HEALTH');
   const xp = useStreamValue('XP');
@@ -2373,30 +2533,94 @@ export const IdentityHUD = () => {
   const level = useStreamValue('LEVEL');
   const rebootProgress = useStreamValue('PLAYER_REBOOT');
 
-  // Keep panel state (Slow Path, Structural)
   const panel = useGameStore(s => s.panels[PanelId.IDENTITY]);
   const isPanelDead = panel ? panel.isDestroyed : false;
   const isPlayerDead = hp <= 0;
 
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
-      <div className="flex-none flex flex-col items-center pt-4 relative z-10">
-        <VitalsRing health={hp} maxHealth={maxHp} xp={xp} xpToNext={nextXp} level={level} isDead={isPlayerDead} rebootProgress={rebootProgress} />
-        <div className="text-center z-20 mb-2">
-            <h2 className="text-xl font-header font-black tracking-wider drop-shadow-md" style={{ color: PALETTE.GREEN.PRIMARY }}>{identity.name}</h2>
-            <div className="text-[8px] uppercase tracking-[0.2em] opacity-80 bg-black/60 px-2 py-0.5 rounded-full border" style={{ color: PALETTE.PURPLE.LIGHT, borderColor: `${PALETTE.PURPLE.PRIMARY}33` }}>{identity.class}</div>
-        </div>
+      
+      {/* TOP SECTION: Centered Layout */}
+      <div className="flex-none flex items-center justify-center gap-8 p-6 pb-2 border-b border-primary-green/10">
+          
+          {/* Left: Repair */}
+          <div className="flex items-center">
+              <RepairButton isPanelDead={isPanelDead} />
+          </div>
+
+          {/* Center: Crystal */}
+          <div className="flex items-center justify-center">
+              <VitalsRing health={hp} maxHealth={maxHp} xp={xp} xpToNext={nextXp} level={level} isDead={isPlayerDead} rebootProgress={rebootProgress} />
+          </div>
+
+          {/* Right: Purge */}
+          <div className="flex items-center">
+              <PurgeButton isPanelDead={isPanelDead} />
+          </div>
       </div>
-      <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative pb-4">
+
+      {/* BOTTOM SECTION: Upgrade Badges */}
+      <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative py-4">
          <div className={isPlayerDead ? "opacity-50 pointer-events-none" : ""}>
              <UpgradeTerminal isPanelDead={isPanelDead} />
-             <SystemOps isPanelDead={isPanelDead} />
          </div>
       </div>
+      
       <IdentityFooter isPanelDead={isPanelDead} />
     </div>
   );
 };
+
+
+=====================================
+FILE: ./src/ui/kit/atoms/UpgradeButton.tsx
+=====================================
+import { clsx } from 'clsx';
+import { ArrowUpCircle } from 'lucide-react';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { getPan } from '@/engine/audio/AudioUtils';
+import { memo } from 'react';
+
+interface Props {
+  path: any; // Using any to avoid circular type deps with game.types easily, or strict if preferred
+  disabled: boolean;
+  canAfford: boolean;
+  onUpgrade: (path: any, e: React.MouseEvent) => void;
+  onHoverCost: (cost: number | null) => void;
+  width?: string;
+}
+
+export const UpgradeButton = memo(({ path, disabled, canAfford, onUpgrade, onHoverCost, width = "w-24" }: Props) => {
+  const isDisabled = disabled || !canAfford;
+
+  return (
+      <button 
+          onClick={(e) => {
+              if (!isDisabled) onUpgrade(path, e);
+          }}
+          onMouseEnter={() => {
+              if (!isDisabled) {
+                  onHoverCost(1);
+                  AudioSystem.playHover();
+              }
+          }}
+          onMouseLeave={() => onHoverCost(null)}
+          disabled={isDisabled}
+          className={clsx(
+              "flex items-center justify-center gap-1.5 px-4 h-6 text-[9px] font-bold tracking-widest border transition-all shrink-0",
+              width,
+              isDisabled 
+                  ? "border-gray-800 text-gray-700 bg-transparent cursor-default" 
+                  : "border-primary-green bg-primary-green/10 text-primary-green hover:bg-primary-green hover:text-black cursor-pointer shadow-[0_0_10px_rgba(120,246,84,0.1)]"
+          )}
+      >
+          {!isDisabled && <ArrowUpCircle size={10} className="mb-0.5" />}
+          <span className="leading-none mt-0.5">{isDisabled ? "MAXED" : "UPGRADE"}</span>
+      </button>
+  );
+});
+
+UpgradeButton.displayName = 'UpgradeButton';
 
 
 =====================================
@@ -8999,11 +9223,12 @@ FILE: ./src/ui/sim/props/MiniCrystalCanvas.tsx
 
 import { Canvas } from '@react-three/fiber';
 import { Float, MeshDistortMaterial } from '@react-three/drei';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { PALETTE } from '@/engine/config/Palette';
+import { useGameStream } from '@/ui/hooks/useGameStream';
 
 const COLORS = {
   SAFE: new THREE.Color(PALETTE.GREEN.PRIMARY),
@@ -9012,6 +9237,12 @@ const COLORS = {
   EMISSIVE_SAFE: new THREE.Color(PALETTE.GREEN.DARK),
   EMISSIVE_WARN: new THREE.Color(PALETTE.YELLOW.DIM),
   EMISSIVE_CRIT: new THREE.Color(PALETTE.RED.DIM), 
+  // Healing Colors
+  HEAL_BASE: new THREE.Color(PALETTE.YELLOW.GOLD),
+  HEAL_EMISSIVE: new THREE.Color(PALETTE.YELLOW.ALERT),
+  // Revive Colors
+  REVIVE_BASE: new THREE.Color(PALETTE.PURPLE.PRIMARY),
+  REVIVE_EMISSIVE: new THREE.Color(PALETTE.PURPLE.DEEP),
 };
 
 const SpinningGem = () => {
@@ -9019,6 +9250,10 @@ const SpinningGem = () => {
   const materialRef = useRef<any>(null);
   
   const integrity = useGameStore(state => state.systemIntegrity);
+  const [interactionState, setInteractionState] = useState(0);
+
+  // Sync high-frequency state
+  useGameStream('PLAYER_INTERACTION_STATE', setInteractionState);
 
   const currentColor = useRef(COLORS.SAFE.clone());
   const currentEmissive = useRef(COLORS.EMISSIVE_SAFE.clone());
@@ -9031,21 +9266,39 @@ const SpinningGem = () => {
     let speed = 0.01;
     let distort = 0.3;
     let shake = 0;
+    let wireframe = true;
 
-    if (integrity < 30) {
-        targetColor = COLORS.CRIT;
-        targetEmissive = COLORS.EMISSIVE_CRIT;
-        speed = 0.08; 
-        distort = 0.8;
-        shake = 0.1;
-    } else if (integrity < 60) {
-        targetColor = COLORS.WARN;
-        targetEmissive = COLORS.EMISSIVE_WARN;
-        speed = 0.04;
-        distort = 0.5;
-        shake = 0.02;
+    // 1. STATE LOGIC
+    if (interactionState === 1) { // HEALING
+        targetColor = COLORS.HEAL_BASE;
+        targetEmissive = COLORS.HEAL_EMISSIVE;
+        speed = 0.15; // Fast spin
+        distort = 0.6;
+        wireframe = false; // SOLID
+    } else if (interactionState === 2) { // REVIVING
+        targetColor = COLORS.REVIVE_BASE;
+        targetEmissive = COLORS.REVIVE_EMISSIVE;
+        speed = 0.05;
+        distort = 1.0; // Extreme distortion
+        wireframe = false; // SOLID
+    } else {
+        // IDLE Logic
+        if (integrity < 30) {
+            targetColor = COLORS.CRIT;
+            targetEmissive = COLORS.EMISSIVE_CRIT;
+            speed = 0.08; 
+            distort = 0.8;
+            shake = 0.1;
+        } else if (integrity < 60) {
+            targetColor = COLORS.WARN;
+            targetEmissive = COLORS.EMISSIVE_WARN;
+            speed = 0.04;
+            distort = 0.5;
+            shake = 0.02;
+        }
     }
 
+    // 2. APPLY PHYSICS
     meshRef.current.rotation.y += speed;
     meshRef.current.rotation.z += speed * 0.5;
     
@@ -9057,12 +9310,15 @@ const SpinningGem = () => {
         meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, 0, 0.1);
     }
 
-    currentColor.current.lerp(targetColor, delta * 3.0);
-    currentEmissive.current.lerp(targetEmissive, delta * 3.0);
+    // 3. COLOR LERP
+    currentColor.current.lerp(targetColor, delta * 5.0);
+    currentEmissive.current.lerp(targetEmissive, delta * 5.0);
 
+    // 4. UPDATE MATERIAL
     materialRef.current.color.copy(currentColor.current);
     materialRef.current.emissive.copy(currentEmissive.current);
     materialRef.current.distort = THREE.MathUtils.lerp(materialRef.current.distort, distort, delta);
+    materialRef.current.wireframe = wireframe;
   });
 
   return (
@@ -9074,10 +9330,10 @@ const SpinningGem = () => {
           color={PALETTE.GREEN.PRIMARY}
           emissive={PALETTE.GREEN.DARK}
           roughness={0.1}
-          metalness={0.8}
+          metalness={0.9}
           distort={0.3}
           speed={2}
-          wireframe
+          wireframe={true}
         />
       </mesh>
     </Float>
@@ -9094,6 +9350,7 @@ export const MiniCrystalCanvas = () => {
       >
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color={PALETTE.GREEN.GLOW} />
+        <pointLight position={[-10, -10, -10]} intensity={0.5} color={PALETTE.PURPLE.PRIMARY} />
         <SpinningGem />
       </Canvas>
     </div>
@@ -9597,6 +9854,7 @@ import * as THREE from 'three';
 import { useGameContext } from '@/engine/state/GameContext';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
+import { ParticleShape } from '@/engine/ecs/types';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
@@ -9635,24 +9893,28 @@ export const ParticleActor = () => {
         const baseSize = sys.size[i]; const shape = sys.shape[i];
         
         const zDepth = getZDepth(i);
-        
         dummy.position.set(x, y, zDepth);
+        
         const speedSq = vx*vx + vy*vy;
-        const speed = Math.sqrt(speedSq);
         const lifeScale = life / maxLife;
         
-        if (speed > 1.0) {
+        if (speedSq > 1.0) {
+            // Moving particles align to velocity (Sparks, Debris)
             const angle = Math.atan2(vy, vx);
             dummy.rotation.set(0, 0, angle);
-            const stretchMult = shape === 1 ? 0.3 : 0.2;
+            
+            const speed = Math.sqrt(speedSq);
+            const stretchMult = shape === ParticleShape.SQUARE ? 0.3 : 0.2;
             const scaleX = lifeScale * baseSize * (1 + speed * stretchMult);
             const scaleY = lifeScale * baseSize * 0.5;
             dummy.scale.set(scaleX, scaleY, 1);
-            const shift = (0.3 * scaleX) * 0.5;
-            dummy.position.x += Math.cos(angle) * shift;
-            dummy.position.y += Math.sin(angle) * shift;
         } else {
-            dummy.rotation.set(0, 0, 0);
+            // Stationary particles (Sniffer Trail)
+            if (shape === ParticleShape.SQUARE) {
+                dummy.rotation.set(0, 0, Math.PI / 4); // 45 deg = Diamond
+            } else {
+                dummy.rotation.set(0, 0, 0);
+            }
             dummy.scale.set(lifeScale * baseSize, lifeScale * baseSize, 1);
         }
         
@@ -9678,7 +9940,7 @@ export const ParticleActor = () => {
 =====================================
 FILE: ./src/ui/sim/actors/PlayerActor.tsx
 =====================================
-import { useRef, useMemo, useEffect, useLayoutEffect } from 'react';
+import { useRef, useMemo, useEffect, useLayoutEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { GAME_THEME } from '@/ui/sim/config/theme';
 import { Tag } from '@/engine/ecs/types';
@@ -9695,6 +9957,7 @@ import { useGameContext } from '@/engine/state/GameContext';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import { PALETTE } from '@/engine/config/Palette';
 import { GAME_MATH } from '@/engine/config/constants/MathConstants';
+import { useGameStream } from '@/ui/hooks/useGameStream';
 import * as THREE from 'three';
 
 const createCoreGeo = () => {
@@ -9726,20 +9989,13 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
-// --- DYNAMIC CHEVRON RIBBON GENERATOR ---
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
-    
-    // Config
-    const rTip = 0.92;      
-    const rValley = 0.84;   
-    const thickness = 0.06; 
-    
+    const rTip = 0.92; const rValley = 0.84; const thickness = 0.06; 
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
     const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
     const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
 
-    // 1. OUTER EDGE (CW: Left -> Right)
     const startBaseAngle = startAngle + (spread * 0.4); 
     const pStartBase = pt(rValley, startBaseAngle);
     shape.moveTo(pStartBase[0], pStartBase[1]);
@@ -9748,7 +10004,6 @@ const createForkedChevronGeo = (tipCount: number) => {
         const angle = startAngle - (i * spread);
         const pTip = pt(rTip, angle);
         shape.lineTo(pTip[0], pTip[1]);
-        
         if (i < tipCount - 1) {
             const midAngle = angle - (spread / 2);
             const pValley = pt(rValley, midAngle);
@@ -9760,10 +10015,8 @@ const createForkedChevronGeo = (tipCount: number) => {
     const pEndBase = pt(rValley, endBaseAngle);
     shape.lineTo(pEndBase[0], pEndBase[1]);
 
-    // 2. INNER EDGE (CCW: Right -> Left)
     const rInnerTip = rTip - thickness;
     const rInnerValley = rValley - thickness;
-
     const pInnerEnd = pt(rInnerValley, endBaseAngle);
     shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
 
@@ -9771,7 +10024,6 @@ const createForkedChevronGeo = (tipCount: number) => {
         const angle = startAngle - (i * spread);
         const pInTip = pt(rInnerTip, angle);
         shape.lineTo(pInTip[0], pInTip[1]);
-        
         if (i > 0) {
             const midAngle = angle + (spread / 2);
             const pInValley = pt(rInnerValley, midAngle);
@@ -9781,9 +10033,7 @@ const createForkedChevronGeo = (tipCount: number) => {
 
     const pInnerStart = pt(rInnerValley, startBaseAngle);
     shape.lineTo(pInnerStart[0], pInnerStart[1]);
-    
     shape.closePath();
-
     return new THREE.ShapeGeometry(shape);
 };
 
@@ -9823,9 +10073,14 @@ const SnifferOverlayShader = {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base), COL_REPAIR = new THREE.Color(GAME_THEME.turret.repair), COL_REBOOT = new THREE.Color('#9E4EA5'), COL_DEAD = new THREE.Color('#FF003C'), COL_HIT = new THREE.Color('#FF003C');
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair);
+const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
+const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_DEAD = new THREE.Color('#FF003C');
+const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
-const COL_SNIFFER = new THREE.Color(PALETTE.PINK.PRIMARY);
+const COL_SNIFFER = new THREE.Color(PALETTE.PURPLE.LIGHT);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
@@ -9838,8 +10093,11 @@ export const PlayerActor = () => {
   
   const { introDone } = useStore(); 
   const isZenMode = useGameStore(state => state.isZenMode);
-  const activeUpgrades = useGameStore(state => state.activeUpgrades);
+  const snifferState = useGameStore(state => state.sniffer);
   
+  const [interactionCode, setInteractionCode] = useState(0);
+  useGameStream('PLAYER_INTERACTION_STATE', setInteractionCode);
+
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
   const reticleColor = useRef(new THREE.Color());
@@ -9847,12 +10105,8 @@ export const PlayerActor = () => {
   
   const currentEnergy = useRef(0.0), hitFlash = useRef(0.0), zenStartTime = useRef(-1), lastFireTimeRef = useRef(-100), targetAimAngle = useRef(0), rotationOffsetRef = useRef(0);
 
-  const forkLevel = activeUpgrades['FORK'] || 0;
-  const forkGeo = useMemo(() => {
-      const tips = 1 + forkLevel; 
-      return createForkedChevronGeo(tips);
-  }, [forkLevel]);
-
+  const forkGeo = useMemo(() => createForkedChevronGeo(1), []); 
+  
   const ambientMaterial = useMemo(() => {
       const mat = MaterialFactory.create('MAT_PLAYER_AMBIENT', { ...ShaderLib.presets.playerAmbient, uniforms: { [Uniforms.COLOR]: { value: new THREE.Color(GAME_THEME.turret.glow) }, [Uniforms.OPACITY]: { value: 0.6 }, [Uniforms.ENERGY]: { value: 0.0 } } });
       mat.blending = THREE.AdditiveBlending; return mat;
@@ -9885,9 +10139,7 @@ export const PlayerActor = () => {
   }, [events]);
 
   useLayoutEffect(() => {
-      if (forkRef.current) {
-          forkRef.current.geometry = forkGeo;
-      }
+      if (forkRef.current) forkRef.current.geometry = forkGeo;
   }, [forkGeo]);
 
   useFrame((state, delta) => {
@@ -9901,15 +10153,27 @@ export const PlayerActor = () => {
     containerRef.current.visible = true;
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
-    const iState = getSystem<IInteractionSystem>('InteractionSystem')?.repairState || 'IDLE';
-    const isActive = iState === 'HEALING' || iState === 'REBOOTING' || isZenMode;
+    
+    // Interaction State Logic
+    const interaction = getSystem<IInteractionSystem>('InteractionSystem');
+    const iState = interaction?.repairState || 'IDLE';
+    const isPlayerDead = useGameStore.getState().playerHealth <= 0;
+    
+    // Use Interaction Code for explicit actions, fallback to iState/Dead status
+    const isReviving = interactionCode === 2;
+    const isSelfHealing = interactionCode === 1;
+    const isPanelRepairing = interactionCode === 0 && iState === 'HEALING'; // Panel repair (Standard)
+    const isDeadVisual = isPlayerDead && !isReviving;
+    
+    const isActive = iState !== 'IDLE' || isZenMode;
+
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     if (ambientMaterial.uniforms[Uniforms.ENERGY]) ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
 
     let playerEntity; for(const p of registry.getByTag(Tag.PLAYER)) { playerEntity = p; break; }
     if (!playerEntity) return;
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform), renderTrans = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-    const isPlayerDead = useGameStore.getState().playerHealth <= 0, isDeadState = (isPlayerDead || isSysFail) && !isZenMode;
+    
     if (transform) containerRef.current.position.set(transform.x, transform.y, 0);
 
     if (renderTrans && reticleRef.current && centerDotRef.current && ambientGlowRef.current) {
@@ -9930,14 +10194,11 @@ export const PlayerActor = () => {
         }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
-        reticleRef.current.rotation.z = (isDeadState && iState !== 'REBOOTING') ? Math.PI*0.25 : -renderTrans.rotation;
+        reticleRef.current.rotation.z = (isDeadVisual && !isReviving) ? Math.PI*0.25 : -renderTrans.rotation;
         
-        // --- SNIFFER COLOR CALCULATION (Complementary to Main) ---
-        // We use this for both the Sniffer Tip AND now the Chevron Ribbon
-        if (snifferRef.current || forkRef.current) {
-            snifferRef.current!.rotation.z = reticleRef.current.rotation.z;
-            const levels = useGameStore.getState().activeUpgrades;
-            snifferMaterial.uniforms.uLevel.value = levels['SNIFFER'] || 0;
+        if (snifferRef.current) {
+            snifferRef.current.rotation.z = reticleRef.current.rotation.z;
+            snifferMaterial.uniforms.uLevel.value = snifferState.capacityLevel;
             snifferMaterial.uniforms.uTime.value = time;
             snifferColor.current.copy(tempColor.current);
             const hsl = { h: 0, s: 0, l: 0 };
@@ -9947,8 +10208,8 @@ export const PlayerActor = () => {
         }
 
         if (isZenMode) {
-            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); // Bright Center
-            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6); // Saturated Reticle
+            tempColor.current.setHSL((time*0.1)%1, 1, 0.9); 
+            reticleColor.current.setHSL((time*0.1-0.1)%1, 0.9, 0.6);
             
             backingMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.2)%1, 0.8, 0.5);
             ambientMaterial.uniforms[Uniforms.COLOR].value.setHSL((time*0.1-0.3)%1, 0.8, 0.4);
@@ -9959,12 +10220,18 @@ export const PlayerActor = () => {
             }
 
         } else {
-            // STANDARD MODE LOGIC
-            let target = isDeadState ? COL_DEAD : (iState === 'HEALING' ? COL_REPAIR : (iState === 'REBOOTING' ? COL_REBOOT : COL_BASE));
+            // DETERMINE COLOR STATE (PRECEDENCE)
+            let target = COL_BASE;
+            
+            if (isReviving) target = COL_REBOOT; // Purple (Highest Active Priority)
+            else if (isDeadVisual) target = COL_DEAD; // Red (Dead but not reviving)
+            else if (isSelfHealing) target = COL_HEAL_SELF; // Yellow
+            else if (isPanelRepairing) target = COL_REPAIR_PANEL; // Pink
+            
             tempColor.current.lerp(target, 0.2);
             
-            if (isDeadState) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
-            else if (iState === 'HEALING') reticleColor.current.lerp(COL_RET_HEAL, 0.1);
+            if (isDeadVisual) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
+            else if (isPanelRepairing || isSelfHealing) reticleColor.current.lerp(COL_RET_HEAL, 0.1);
             else reticleColor.current.lerp(tempColor.current, 0.2);
             
             if (hitFlash.current > 0.01) { 
@@ -9975,14 +10242,11 @@ export const PlayerActor = () => {
             ambientMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
             backingMaterial.uniforms[Uniforms.COLOR].value.copy(tempColor.current);
 
-            // --- FORK COLOR UPDATE ---
-            // If Dead: Use Red/Hit color.
-            // If Alive: Use Sniffer Color (Complementary Pink/Magenta).
             if (forkRef.current) {
-                if (isDeadState || hitFlash.current > 0.01) {
-                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current); // Red when dead/hit
+                if (isDeadVisual || hitFlash.current > 0.01) {
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
                 } else {
-                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(snifferColor.current); // Complementary when alive
+                    (forkRef.current.material as THREE.MeshBasicMaterial).color.copy(snifferColor.current);
                 }
                 forkRef.current.rotation.z = centerDotRef.current.rotation.z;
             }
@@ -9990,8 +10254,9 @@ export const PlayerActor = () => {
         
         (reticleRef.current.material as THREE.MeshBasicMaterial).color.copy(reticleColor.current);
         (centerDotRef.current.material as THREE.MeshBasicMaterial).color.copy(tempColor.current);
+        
         containerRef.current.scale.setScalar(renderTrans.scale * animScale.current * (isZenMode ? 3.0 : 1.0));
-        (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadState; 
+        (centerDotRef.current.material as THREE.MeshBasicMaterial).wireframe = isDeadVisual; 
     }
   });
 
@@ -10109,7 +10374,7 @@ export const ProjectileActor = () => {
         <InstancedActor
           key={key} 
           renderKey={`${key}|MAT_PROJECTILE`}
-          tag={Tag.BULLET} 
+          tag={Tag.PROJECTILE} 
           geometry={AssetService.get(key)} 
           material={material} 
           maxCount={2000}
@@ -10602,7 +10867,6 @@ import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
-  // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -10611,24 +10875,18 @@ export const registerAllAssets = () => {
     return mat;
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  
-  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true }));
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide }));
 
-  // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
-  // 3. Dynamic Registration (Enemies)
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
       AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
-  // 4. Dynamic Registration (Weapons)
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      // Pass true for isProjectile
       AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
   });
 };
@@ -10644,6 +10902,24 @@ const createEnemyGeometry = (id: string, visual: any) => {
     return createGeometry(visual, false);
 };
 
+const createCrescentGeo = () => {
+    const shape = new THREE.Shape();
+    const outerRadius = 1.0;
+    const innerRadius = 0.7; 
+    const arcAngle = Math.PI / 1.5; 
+
+    shape.absarc(0, 0, outerRadius, -arcAngle/2, arcAngle/2, false);
+    shape.absarc(0.2, 0, innerRadius, arcAngle/2, -arcAngle/2, true);
+    
+    shape.closePath();
+
+    const extrudeSettings = { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2 };
+    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    geo.center(); 
+    geo.rotateZ(Math.PI / 2); // Correct orientation to +Y
+    return addBarycentricCoordinates(geo);
+};
+
 const createGeometry = (visual: any, isProjectile: boolean = false) => {
     let geo;
     switch (visual.model) {
@@ -10657,6 +10933,7 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
         case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
         case 'CUSTOM_HUNTER': return createHunterSpear();
+        case 'CRESCENT': return createCrescentGeo(); 
         case 'CUSTOM_CHEVRON': {
             const shape = new THREE.Shape();
             const w = 0.8, h = 0.8, t = 0.3;
@@ -10664,19 +10941,11 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
             shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
             geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
             geo.center();
+            geo.rotateZ(Math.PI / 2); // FIX: Rotate to +Y for correct orientation
             break;
         }
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
-
-    if (isProjectile) {
-        if (visual.model === 'CAPSULE' || visual.model === 'CYLINDER' || visual.model === 'CONE') {
-            geo.translate(0, 0.5, 0);
-        } else if (visual.model === 'TETRA') {
-            geo.translate(0, 0.3, 0);
-        }
-    }
-
     return addBarycentricCoordinates(geo);
 };
 
@@ -11185,16 +11454,30 @@ export interface RegisteredPanel {
   isDestroyed: boolean;
 }
 
-export type UpgradeOption = 
-  | 'OVERCLOCK'      // Attack Speed
-  | 'EXECUTE'        // Damage
-  | 'FORK'           // Multishot
-  | 'SNIFFER'        // Homing
-  | 'BACKDOOR'       // Rear Guard
-  | 'DAEMON'         // Summon Ally
-  | 'REPAIR_NANITES' // Heal
-  | 'RESTORE'        // System Op
-  | 'PURGE';         // System Op
+export interface RailgunState {
+  widthLevel: number; // 0-10
+  damageLevel: number; // 0-3
+  rateLevel: number; // 0-3
+}
+
+export interface SnifferState {
+  capacityLevel: number; // 0-4
+  damageLevel: number; // 0-3
+  rateLevel: number; // 0-3
+}
+
+// Replaces the old string-based keys
+export type UpgradePath = 
+  | 'RAILGUN_WIDTH'
+  | 'RAILGUN_DAMAGE'
+  | 'RAILGUN_RATE'
+  | 'SNIFFER_CAPACITY'
+  | 'SNIFFER_DAMAGE'
+  | 'SNIFFER_RATE'
+  | 'REPAIR_NANITES' // Kept for logic compatibility if needed, though button removed
+  | 'RESTORE'
+  | 'PURGE'
+  | 'DAEMON'; // Kept as deprecated reference or for event compatibility
 
 export interface GameState {
   isPlaying: boolean;
@@ -11678,14 +11961,17 @@ export const EnemyTypes = {
 } as const;
 
 export const WeaponIDs = {
-  // Player
+  // --- NEW CORE WEAPONS ---
+  PLAYER_RAILGUN: 'PLAYER_RAILGUN',
+  PLAYER_SNIFFER: 'PLAYER_SNIFFER',
+  PLAYER_PURGE: 'PLAYER_PURGE', // Zen Bomb
+
+  // --- DEPRECATED / LEGACY ---
   PLAYER_STANDARD: 'PLAYER_STANDARD',
   PLAYER_FORK: 'PLAYER_FORK',
-  PLAYER_SNIFFER: 'PLAYER_SNIFFER',
   PLAYER_BACKDOOR: 'PLAYER_BACKDOOR',
-  PLAYER_PURGE: 'PLAYER_PURGE',
   
-  // Enemies
+  // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',
   DAEMON_ORB: 'DAEMON_ORB',
 } as const;
@@ -11798,7 +12084,7 @@ FILE: ./src/engine/config/Archetypes.ts
 =====================================
 import { PLAYER_CONFIG } from './PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
-import { ArchetypeIDs } from './Identifiers';
+import { ArchetypeIDs, WeaponIDs } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
@@ -11870,7 +12156,7 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      // Enemies use spawnProgress: 0.0 to animate in
+      // Enemies KEEP RenderEffect for spawn animation
       ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
@@ -11899,7 +12185,7 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// --- WEAPON GENERATION ---
+// --- WEAPON GENERATION (FIXED) ---
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     const matId = 'MAT_PROJECTILE';
@@ -11917,17 +12203,12 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Collider, data: { radius, layer, mask } },
       { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
+      // NO RENDER EFFECT HERE. This ensures pure rigid body rendering.
       { type: ComponentType.RenderTransform, data: { 
           scale: 1.0, 
           baseScaleX: def.visual.scale[0], 
           baseScaleY: def.visual.scale[1], 
           baseScaleZ: def.visual.scale[2] 
-      }},
-      // FIX: Set spawnProgress to 1.0
-      { type: ComponentType.RenderEffect, data: { 
-          elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, 
-          pulseSpeed: def.behavior?.pulseSpeed || 0,
-          spawnProgress: 1.0 
       }}
     ];
 
@@ -11942,8 +12223,12 @@ Object.values(WEAPONS).forEach(def => {
     };
 });
 
-BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
-BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
+if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) {
+    BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+}
+if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) {
+    BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
+}
 
 export const ARCHETYPES = BLUEPRINTS;
 
@@ -12227,11 +12512,11 @@ export const GAMEPLAY_CONFIG = {
   INTERACTION: {
     REPAIR_RATE: 0.05,
     QUERY_RADIUS: 1.0,
-    REPAIR_HEAL_AMOUNT: 3.6, // Increased from 3.25
-    REBOOT_TICK_AMOUNT: 5.1  // Increased from 4.6
+    REPAIR_HEAL_AMOUNT: 3.6, // Fast for panels
+    SELF_HEAL_AMOUNT: 0.2,   // Slow for player (Creates tension)
+    REBOOT_TICK_AMOUNT: 5.1  // Revive speed
   },
   WEAPON: {
-    // Updated: Matches new larger Chevron Tip Radius (0.92)
     MUZZLE_OFFSET: 0.92
   },
   STRUCTURE: {
@@ -12249,44 +12534,36 @@ import { Tag } from '@/engine/ecs/types';
 import { PALETTE } from '@/engine/config/Palette';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 
-export const WEAPONS: Record<WeaponID, WeaponDef> = {
-  // --- PLAYER WEAPONS ---
-  [WeaponIDs.PLAYER_STANDARD]: {
-    id: WeaponIDs.PLAYER_STANDARD,
-    damage: 1, speed: 45, life: 1.5,
-    // UPDATED: Now Purple (was Green)
-    visual: { model: 'CAPSULE', color: PALETTE.PURPLE.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
+export const WEAPONS: Record<string, WeaponDef> = {
+  // --- PLAYER: RAILGUN (New Default) ---
+  [WeaponIDs.PLAYER_RAILGUN]: {
+    id: WeaponIDs.PLAYER_RAILGUN,
+    damage: 1, 
+    speed: 50, 
+    life: 1.5,
+    visual: { model: 'CRESCENT', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
-    tags: [Tag.BULLET, Tag.PLAYER]
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
-  [WeaponIDs.PLAYER_FORK]: {
-    id: WeaponIDs.PLAYER_FORK,
-    damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'TETRA', color: PALETTE.YELLOW.SOFT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true, spinSpeed: 5.0 },
-    tags: [Tag.BULLET, Tag.PLAYER]
-  },
+
+  // --- PLAYER: SNIFFER (Auxiliary) ---
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
-    damage: 0.5, speed: 22, life: 3.0,
-    // UPDATED: Scale increased by 10% (0.3 -> 0.33)
-    visual: { model: 'OCTA', color: PALETTE.PURPLE.PRIMARY, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
+    damage: 1, 
+    speed: 22, 
+    life: 3.0,
+    visual: { model: 'OCTA', color: PALETTE.PURPLE.LIGHT, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
     behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
-    tags: [Tag.BULLET, Tag.PLAYER]
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
-  [WeaponIDs.PLAYER_BACKDOOR]: {
-    id: WeaponIDs.PLAYER_BACKDOOR,
-    damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
-    behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
-    tags: [Tag.BULLET, Tag.PLAYER]
-  },
+
+  // --- PLAYER: PURGE (Zen Bomb) ---
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
     visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.ORANGE.BRIGHT, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
-    tags: [Tag.BULLET, Tag.PLAYER]
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
 
   // --- ENEMY WEAPONS ---
@@ -12295,14 +12572,14 @@ export const WEAPONS: Record<WeaponID, WeaponDef> = {
     damage: 10, speed: 25, life: 3.0,
     visual: { model: 'CONE', color: PALETTE.ORANGE.PRIMARY, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
     behavior: { faceVelocity: true },
-    tags: [Tag.BULLET, Tag.ENEMY]
+    tags: [Tag.PROJECTILE, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
     id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
     visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
     behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
-    tags: [Tag.BULLET, Tag.PLAYER] 
+    tags: [Tag.PROJECTILE, Tag.PLAYER] 
   }
 };
 
@@ -12314,7 +12591,7 @@ import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export interface VisualDef {
-  model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON';
+  model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON' | 'CRESCENT';
   color: string; // Hex
   scale: [number, number, number];
   material: 'ENEMY_BASE' | 'PROJECTILE' | 'PLAYER';
@@ -12327,7 +12604,7 @@ export interface VisualDef {
 
 export interface PhysicsDef {
   radius: number;
-  mass: number; // For knockback resistance? (Future proofing)
+  mass: number; 
   friction: number;
 }
 
@@ -12336,7 +12613,7 @@ export interface WeaponDef {
   damage: number;
   speed: number;
   life: number;
-  fireRate?: number; // Only for player/enemies
+  fireRate?: number; 
   behavior?: {
     spinSpeed?: number;
     pulseSpeed?: number;
@@ -12350,13 +12627,12 @@ export interface WeaponDef {
 export interface EnemyDef {
   id: string;
   health: number;
-  damage: number; // Collision damage
+  damage: number; 
   score: number;
   xp: number;
-  ai: string; // Behavior Tree ID
+  ai: string; 
   visual: VisualDef;
   physics: PhysicsDef;
-  // Specific AI Params
   params?: Record<string, any>;
 }
 
@@ -12463,6 +12739,39 @@ export const BOOT_SEQUENCE = {
     READY: 12700           // Log 7
   },
   COMPLETION_DELAY: 500
+};
+
+
+=====================================
+FILE: ./src/engine/config/deprecated/LegacyWeapons.ts
+=====================================
+import { WeaponDef } from '../defs/types';
+import { Tag } from '@/engine/ecs/types';
+import { PALETTE } from '@/engine/config/Palette';
+import { WeaponIDs } from '@/engine/config/Identifiers';
+
+export const LEGACY_WEAPONS: Record<string, WeaponDef> = {
+  [WeaponIDs.PLAYER_STANDARD]: {
+    id: WeaponIDs.PLAYER_STANDARD,
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true },
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
+  },
+  [WeaponIDs.PLAYER_FORK]: {
+    id: WeaponIDs.PLAYER_FORK,
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'TETRA', color: PALETTE.YELLOW.SOFT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
+    behavior: { faceVelocity: true, spinSpeed: 5.0 },
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
+  },
+  [WeaponIDs.PLAYER_BACKDOOR]: {
+    id: WeaponIDs.PLAYER_BACKDOOR,
+    damage: 1, speed: 45, life: 1.5,
+    visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
+    behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
+    tags: [Tag.PROJECTILE, Tag.PLAYER]
+  }
 };
 
 
@@ -12950,7 +13259,7 @@ export const createEntityID = (id: number): EntityID => id as EntityID;
 export enum Tag {
   PLAYER = 'PLAYER',
   ENEMY = 'ENEMY',
-  BULLET = 'BULLET',
+  PROJECTILE = 'PROJECTILE', // RENAMED
   PARTICLE = 'PARTICLE',
   OBSTACLE = 'OBSTACLE',
   WORLD = 'WORLD' 
@@ -13831,6 +14140,7 @@ export type StreamKey =
   | 'XP' 
   | 'XP_NEXT' 
   | 'LEVEL'
+  | 'PLAYER_INTERACTION_STATE' // 0: Idle, 1: Healing Self, 2: Reviving Self
   // Panel Health Keys
   | 'PANEL_HEALTH_IDENTITY'
   | 'PANEL_HEALTH_SOCIAL'
@@ -13854,6 +14164,7 @@ class GameStreamService {
     this.values.set('XP_NEXT', 100);
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
+    this.values.set('PLAYER_INTERACTION_STATE', 0);
     
     // Panel Defaults
     this.values.set('PANEL_HEALTH_IDENTITY', 100);
@@ -13864,15 +14175,10 @@ class GameStreamService {
   }
 
   public set(key: StreamKey, value: number) {
-    // Only notify if value actually changed (Micro-optimization)
     if (this.values.get(key) === value) return;
-    
     this.values.set(key, value);
-    
     const subs = this.listeners.get(key);
-    if (subs) {
-      subs.forEach(fn => fn(value));
-    }
+    if (subs) subs.forEach(fn => fn(value));
   }
 
   public get(key: StreamKey): number {
@@ -13884,15 +14190,10 @@ class GameStreamService {
       this.listeners.set(key, new Set());
     }
     this.listeners.get(key)!.add(callback);
-    
-    // Immediate callback with current value
     callback(this.get(key));
-
     return () => {
       const subs = this.listeners.get(key);
-      if (subs) {
-        subs.delete(callback);
-      }
+      if (subs) subs.delete(callback);
     };
   }
 }
@@ -13989,46 +14290,95 @@ FILE: ./src/engine/state/game/slices/createProgressionSlice.ts
 =====================================
 import { StateCreator } from 'zustand';
 import { GameState } from '../useGameStore';
-import { UpgradeOption } from '@/engine/types/game.types';
+import { UpgradePath, RailgunState, SnifferState } from '@/engine/types/game.types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 
 export interface ProgressionSlice {
   highScore: number;
   upgradePoints: number;
-  activeUpgrades: Record<string, number>;
+  
+  // NEW STRUCTURE
+  railgun: RailgunState;
+  sniffer: SnifferState;
   
   setScore: (val: number) => void; // Updates high score
-  setActiveUpgrades: (upgrades: Record<string, number>) => void;
-  selectUpgrade: (option: UpgradeOption) => void;
+  selectUpgrade: (path: UpgradePath) => void;
   resetProgressionState: () => void;
+  
+  // Internal Helpers to sync with store if needed, mostly for dev tools
+  setActiveUpgrades: (deprecated: any) => void; 
 }
 
-export const createProgressionSlice: StateCreator<GameState, [], [], ProgressionSlice> = (set) => ({
+const DEFAULT_RAILGUN: RailgunState = { widthLevel: 0, damageLevel: 0, rateLevel: 0 };
+const DEFAULT_SNIFFER: SnifferState = { capacityLevel: 0, damageLevel: 0, rateLevel: 0 };
+
+export const createProgressionSlice: StateCreator<GameState, [], [], ProgressionSlice> = (set, get) => ({
   highScore: 0,
   upgradePoints: 0,
-  activeUpgrades: { 
-    'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0, 
-    'SNIFFER': 0, 'BACKDOOR': 0, 'DAEMON': 0 
-  },
+  railgun: { ...DEFAULT_RAILGUN },
+  sniffer: { ...DEFAULT_SNIFFER },
 
   setScore: (val) => set((state) => {
       const newHigh = Math.max(state.highScore, val);
       return { highScore: newHigh };
   }),
 
-  setActiveUpgrades: (upgrades) => set({ activeUpgrades: { ...upgrades } }),
+  // Deprecated support for old save data re-hydration if necessary, or just no-op
+  setActiveUpgrades: () => {},
 
-  selectUpgrade: (option) => {
-    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option });
+  selectUpgrade: (path: UpgradePath) => {
+    // 1 Point = 1 Notch Logic
+    // Validation handled here to ensure we don't overspend or over-level
+    const state = get();
+    if (state.upgradePoints <= 0) return;
+
+    let success = false;
+
+    // Apply Logic
+    if (path === 'RAILGUN_WIDTH' && state.railgun.widthLevel < 10) {
+        set(s => ({ railgun: { ...s.railgun, widthLevel: s.railgun.widthLevel + 1 } }));
+        success = true;
+    } 
+    else if (path === 'RAILGUN_DAMAGE' && state.railgun.damageLevel < 3) {
+        set(s => ({ railgun: { ...s.railgun, damageLevel: s.railgun.damageLevel + 1 } }));
+        success = true;
+    }
+    else if (path === 'RAILGUN_RATE' && state.railgun.rateLevel < 3) {
+        set(s => ({ railgun: { ...s.railgun, rateLevel: s.railgun.rateLevel + 1 } }));
+        success = true;
+    }
+    else if (path === 'SNIFFER_CAPACITY' && state.sniffer.capacityLevel < 4) {
+        set(s => ({ sniffer: { ...s.sniffer, capacityLevel: s.sniffer.capacityLevel + 1 } }));
+        success = true;
+    }
+    else if (path === 'SNIFFER_DAMAGE' && state.sniffer.damageLevel < 3) {
+        set(s => ({ sniffer: { ...s.sniffer, damageLevel: s.sniffer.damageLevel + 1 } }));
+        success = true;
+    }
+    else if (path === 'SNIFFER_RATE' && state.sniffer.rateLevel < 3) {
+        set(s => ({ sniffer: { ...s.sniffer, rateLevel: s.sniffer.rateLevel + 1 } }));
+        success = true;
+    }
+    
+    // One-offs (Do not consume points automatically here, logic handled in Systems, but we emit event)
+    // Actually, Purge/Restore usually cost nothing or are special interactions.
+    // If they cost points, we handle it here. Assuming Purge/Restore are free/cooldown based for now?
+    // User instruction: "restore... behave like presently does" (Currently no point cost, just click).
+    // "bomb purge button... activating zen mode" (Zen mode is special).
+    
+    if (success) {
+        set(s => ({ upgradePoints: s.upgradePoints - 1 }));
+    }
+
+    // Always emit for systems (Audio, VFX, One-offs)
+    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
   },
 
   resetProgressionState: () => set({
       upgradePoints: 0,
-      activeUpgrades: { 
-        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0, 
-        'SNIFFER': 0, 'BACKDOOR': 0, 'DAEMON': 0 
-      }
+      railgun: { ...DEFAULT_RAILGUN },
+      sniffer: { ...DEFAULT_SNIFFER }
   })
 });
 
@@ -14834,6 +15184,7 @@ import { AudioSynthesizer } from './modules/AudioSynthesizer';
 import { AudioMixer } from './modules/AudioMixer';
 import { SoundBank } from './modules/SoundBank';
 import { VoiceManager } from './modules/VoiceManager';
+import { ShepardTone } from './modules/ShepardTone'; // NEW
 import { AudioKey } from '@/engine/config/AssetKeys';
 
 const CRITICAL_SOUNDS: AudioKey[] = ['ui_click', 'ui_hover', 'ui_menu_open', 'ui_menu_close', 'fx_boot_sequence', 'ambience_core'];
@@ -14843,6 +15194,9 @@ export class AudioServiceImpl implements IAudioService {
   private mixer = new AudioMixer(this.ctxManager);
   private bank = new SoundBank();
   private voices = new VoiceManager(this.ctxManager, this.bank, this.mixer);
+  
+  private shepard: ShepardTone | null = null; // NEW
+
   public isReady = false;
   private hasInteracted = false; 
   private _autoStartAmbience = false; 
@@ -14856,6 +15210,10 @@ export class AudioServiceImpl implements IAudioService {
     if (!ctx) return;
     this.mixer.init();
     this.updateVolumes();
+    
+    // Init Shepard Tone connected to SFX bus (or create dedicated bus if preferred, SFX is fine)
+    this.shepard = new ShepardTone(ctx, this.mixer.sfxGain);
+
     await this.generateList(CRITICAL_SOUNDS);
     const allKeys = Object.keys(AUDIO_MANIFEST) as AudioKey[];
     this.genQueue = allKeys.filter(k => !this.bank.has(k));
@@ -14921,7 +15279,6 @@ export class AudioServiceImpl implements IAudioService {
       if (this.bank.has(key)) {
           this.voices.playSFX(key, pan);
       } else if (AUDIO_MANIFEST[key]) {
-          // On-demand generation for missing sounds (e.g. Audio Matrix)
           this.generateSingle(key).then(() => {
               if (this.bank.has(key)) {
                   this.voices.playSFX(key, pan);
@@ -14936,6 +15293,15 @@ export class AudioServiceImpl implements IAudioService {
       else this.generateSingle(key).then(() => this.voices.playAmbience(key));
   }
 
+  // --- SHEPARD TONE CONTROLS ---
+  public startHealingTone() {
+      if (this.shepard) this.shepard.start();
+  }
+
+  public stopHealingTone() {
+      if (this.shepard) this.shepard.stop();
+  }
+
   public startMusic() {
     this.ctxManager.resume();
     this.voices.startMusic();
@@ -14943,14 +15309,13 @@ export class AudioServiceImpl implements IAudioService {
     else this._autoStartAmbience = true;
   }
 
-  public nextTrack() {
-    this.voices.nextTrack();
-  }
-  
+  public nextTrack() { this.voices.nextTrack(); }
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
+  
   public stopAll() {
       this.voices.stopAll();
+      if (this.shepard) this.shepard.stop();
       this._autoStartAmbience = false;
       this.pendingSounds = [];
   }
@@ -15098,6 +15463,10 @@ class AudioSystemFacade implements IAudioService {
   public playBootSequence() { this.service.playBootSequence(); }
   public playDrillSound() { this.service.playDrillSound(); }
   public playRebootZap() { this.service.playRebootZap(); }
+
+  // --- NEW PROXIES ---
+  public startHealingTone() { this.service.startHealingTone(); }
+  public stopHealingTone() { this.service.stopHealingTone(); }
 }
 
 export const AudioSystem = new AudioSystemFacade();
@@ -15262,6 +15631,116 @@ export class AudioDirector implements IGameSystem {
   }
 
   teardown(): void {}
+}
+
+
+=====================================
+FILE: ./src/engine/audio/modules/ShepardTone.ts
+=====================================
+export class ShepardTone {
+  private ctx: AudioContext;
+  private output: GainNode;
+  private oscillators: OscillatorNode[] = [];
+  private gains: GainNode[] = [];
+  private isRunning = false;
+  private volume: number = 0.3;
+  private speed: number = 0.4; // Octaves per second
+  private offset: number = 0;
+  private animationFrame: number | null = null;
+
+  private readonly NUM_OSC = 4;
+  private readonly BASE_FREQ = 110; // A2
+  private readonly FREQ_MAX = 8000;
+
+  constructor(ctx: AudioContext, destination: AudioNode) {
+    this.ctx = ctx;
+    this.output = ctx.createGain();
+    this.output.gain.value = 0;
+    this.output.connect(destination);
+  }
+
+  public start() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.offset = 0;
+
+    // Create Nodes
+    for (let i = 0; i < this.NUM_OSC; i++) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(this.output);
+        
+        osc.start();
+        
+        this.oscillators.push(osc);
+        this.gains.push(gain);
+    }
+
+    // Ramp up volume
+    this.output.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.output.gain.setValueAtTime(0, this.ctx.currentTime);
+    this.output.gain.linearRampToValueAtTime(this.volume, this.ctx.currentTime + 0.5);
+
+    this.tick();
+  }
+
+  public stop() {
+    if (!this.isRunning) return;
+    this.isRunning = false;
+
+    if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
+
+    const now = this.ctx.currentTime;
+    this.output.gain.cancelScheduledValues(now);
+    this.output.gain.setValueAtTime(this.output.gain.value, now);
+    this.output.gain.linearRampToValueAtTime(0, now + 0.2);
+
+    // Cleanup after fade
+    setTimeout(() => {
+        if (this.isRunning) return; // Restarted?
+        this.oscillators.forEach(o => { try { o.stop(); o.disconnect(); } catch {} });
+        this.gains.forEach(g => g.disconnect());
+        this.oscillators = [];
+        this.gains = [];
+    }, 250);
+  }
+
+  private tick = () => {
+    if (!this.isRunning) return;
+
+    // Increment offset based on real time would be smoother, 
+    // but simple increment works for visual/audio sync feel here.
+    // 60fps assumption for "0.005" step.
+    this.offset += this.speed * 0.01; 
+    
+    // Wrap offset (0 to NUM_OSC)
+    // Actually standard shepard uses 0 to 1 wrapping per octave, mapped across oscillators
+    
+    for (let i = 0; i < this.NUM_OSC; i++) {
+        // Calculate relative position (0.0 to 1.0) for this oscillator within the full range
+        // Stagger them evenly
+        let pos = (this.offset + i * (1 / this.NUM_OSC)) % 1.0;
+        
+        // Frequency moves exponentially from BASE to a higher octave range
+        // Let's cover 4 octaves
+        // f(x) = BASE * 2^(x * 4)
+        const freq = this.BASE_FREQ * Math.pow(2, pos * 6); // 6 octaves range
+        
+        // Amplitude is a bell curve (Hanning window) to hide the wrap-around
+        // sin(PI * x) is 0 at 0, 1 at 0.5, 0 at 1
+        const gain = Math.sin(Math.PI * pos);
+        
+        // Apply (Smoothing prevents clicking)
+        const now = this.ctx.currentTime;
+        this.oscillators[i].frequency.setValueAtTime(freq, now);
+        this.gains[i].gain.setValueAtTime(gain * 0.5, now); // 0.5 individual max to prevent clip
+    }
+
+    this.animationFrame = requestAnimationFrame(this.tick);
+  }
 }
 
 
@@ -16511,7 +16990,15 @@ export class DrillAttack extends BTNode {
             visual.offsetX = (Math.random() - 0.5) * panelStress * 0.15;
             visual.offsetY = (Math.random() - 0.5) * panelStress * 0.15;
         }
-        context.spawnFX('DRILL_SPARKS', tX, tY, tA);
+        
+        // FIX: Offset sparks back along the reverse vector so they spawn on the drill bit, not inside the wall
+        // tA points INTO the wall. tA + PI points OUT.
+        const spawnOffset = 0.25; 
+        const sparkX = tX + Math.cos(tA + Math.PI) * spawnOffset;
+        const sparkY = tY + Math.sin(tA + Math.PI) * spawnOffset;
+        
+        context.spawnFX('DRILL_SPARKS', sparkX, sparkY, tA);
+        
         this.handleAudio(state, transform.x, context);
         this.handleDamage(state, target.id as PanelId, transform, combat, context, interval);
     }
@@ -17292,6 +17779,7 @@ import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { PanelId } from '@/engine/config/PanelConfig';
 import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
@@ -17319,6 +17807,7 @@ export class AnimationSystem implements IGameSystem {
     const isZenMode = useGameStore.getState().isZenMode;
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
+    const hoverId = this.interactionSystem.hoveringPanelId;
 
     const entities = this.registry.query(this.animationQuery);
 
@@ -17346,9 +17835,13 @@ export class AnimationSystem implements IGameSystem {
           if (isZenMode) {
               spinSpeed = -0.03;
           } else if (isDead) {
+              // Dead but Reviving = Fast Spin
               spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
           } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
-              spinSpeed = -0.24;
+              // Healing Self or Panel = Fast Spin
+              // Maybe faster for self-heal?
+              const isSelf = hoverId === PanelId.IDENTITY;
+              spinSpeed = isSelf ? -0.4 : -0.24;
           }
           
           render.rotation += spinSpeed;
@@ -17654,6 +18147,7 @@ import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { PALETTE } from '@/engine/config/Palette';
+import { GameStream } from '@/engine/state/GameStream';
 
 export type RepairState = 'IDLE' | 'HEALING' | 'REBOOTING';
 
@@ -17663,6 +18157,7 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private previousHoverId: PanelId | null = null;
+  private isTonePlaying = false; 
 
   constructor(
     private input: IInputService,
@@ -17677,25 +18172,118 @@ export class InteractionSystem implements IInteractionSystem {
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
+    let interactionCode = 0; // 0: Normal/Panel, 1: Self Heal, 2: Revive
     
     const cursor = this.input.getCursor();
 
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
+        GameStream.set('PLAYER_INTERACTION_STATE', 0);
+        this.manageTone(false);
         return; 
     }
     
-    // Handle Continuous Interaction (Repair/Revive)
-    if (this.gameSystem.playerHealth <= 0) {
-        this.handleRevival(cursor, time);
-        if (this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
-            this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
+    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Self Heal / Revive) ---
+    let handledByCrystal = false;
+    const identityRect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
+    
+    if (identityRect) {
+        // RE-ALIGNMENT: Center of Panel, Top offset
+        const zoneRadius = 2.2; 
+        const zoneX = identityRect.x; 
+        const zoneY = identityRect.top - 2.8; 
+        
+        const distSq = (cursor.x - zoneX)**2 + (cursor.y - zoneY)**2;
+        const isHoveringCrystal = distSq < (zoneRadius * zoneRadius);
+
+        if (isHoveringCrystal) {
+            const isPlayerDead = this.gameSystem.playerHealth <= 0;
+            const isPlayerHurt = this.gameSystem.playerHealth < this.gameSystem.maxPlayerHealth;
+            
+            const panelState = this.panelSystem.getPanelState(PanelId.IDENTITY);
+            const isPanelDead = panelState?.isDestroyed ?? false;
+
+            if (isPlayerDead) {
+                // REVIVE (Priority 1)
+                this.hoveringPanelId = PanelId.IDENTITY;
+                this.repairState = 'REBOOTING';
+                interactionCode = 2; 
+                handledByCrystal = true;
+                
+                if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+                    this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
+                    this.lastRepairTime = time;
+                    AudioSystem.playSound('loop_reboot'); 
+                    this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
+                }
+            } 
+            else if (isPlayerHurt && !isPanelDead) {
+                // SELF HEAL (Priority 2)
+                this.hoveringPanelId = PanelId.IDENTITY;
+                this.repairState = 'HEALING';
+                interactionCode = 1; 
+                handledByCrystal = true;
+                
+                if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+                    // FIX: Use SELF_HEAL_AMOUNT for slower healing
+                    this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
+                    this.lastRepairTime = time;
+                    this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
+                }
+            }
         }
-    } else {
-        this.handlePanelRepair(cursor, time);
+    }
+
+    // --- 2. GENERAL PANEL REPAIR (If not consuming crystal action) ---
+    if (!handledByCrystal) {
+        const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
+        
+        if (panelId) {
+            const panelState = this.panelSystem.getPanelState(panelId);
+            if (panelState) {
+                if (panelState.isDestroyed || panelState.health < 100) {
+                    this.hoveringPanelId = panelId;
+                    this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
+                    
+                    if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
+                        // Keep using fast REPAIR_HEAL_AMOUNT for panels
+                        this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
+                        this.lastRepairTime = time;
+
+                        if (panelState.isDestroyed) {
+                            AudioSystem.playSound('loop_reboot');
+                        } else {
+                            this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
+                        }
+
+                        const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.PINK.PRIMARY;
+                        this.spawnRepairParticles(cursor, color);
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Tone Management
+    this.manageTone(interactionCode === 1 || interactionCode === 2);
+
+    // 4. Revive Decay
+    if (this.gameSystem.playerHealth <= 0 && this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
+        this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
     }
 
     this.syncInteractionState();
+    GameStream.set('PLAYER_INTERACTION_STATE', interactionCode);
+  }
+
+  private manageTone(shouldPlay: boolean) {
+      if (shouldPlay && !this.isTonePlaying) {
+          AudioSystem.startHealingTone();
+          this.isTonePlaying = true;
+      } else if (!shouldPlay && this.isTonePlaying) {
+          AudioSystem.stopHealingTone();
+          this.isTonePlaying = false;
+      }
   }
 
   private syncInteractionState() {
@@ -17707,59 +18295,7 @@ export class InteractionSystem implements IInteractionSystem {
 
   teardown(): void {
       useGameStore.getState().setInteractionTarget(null);
-  }
-
-  private handleRevival(cursor: {x: number, y: number}, time: number) {
-    const rect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
-    if (!rect) return;
-    
-    const padding = 0.1; 
-    const isHovering = 
-        cursor.x >= rect.left - padding && 
-        cursor.x <= rect.right + padding && 
-        cursor.y >= rect.bottom - padding && 
-        cursor.y <= rect.top + padding;
-
-    if (isHovering) {
-        this.hoveringPanelId = PanelId.IDENTITY;
-        this.repairState = 'REBOOTING';
-        if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-            this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
-            this.lastRepairTime = time;
-            AudioSystem.playSound('loop_reboot'); 
-            this.spawnRepairParticles(cursor, PALETTE.PURPLE.PRIMARY);
-        }
-    }
-  }
-
-  private handlePanelRepair(cursor: {x: number, y: number}, time: number) {
-    const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
-
-    if (panelId) {
-        this.hoveringPanelId = panelId;
-
-        const panelState = this.panelSystem.getPanelState(panelId);
-        if (!panelState) return;
-
-        if (!panelState.isDestroyed && panelState.health >= 100) return;
-
-        this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
-
-        if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-            this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
-            this.lastRepairTime = time;
-
-            if (panelState.isDestroyed) {
-                AudioSystem.playSound('loop_reboot');
-            } else {
-                this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
-            }
-
-            // --- COLOR SWAP HERE: Cyan -> Pink ---
-            const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.PINK.PRIMARY;
-            this.spawnRepairParticles(cursor, color);
-        }
-    }
+      this.manageTone(false);
   }
 
   private spawnRepairParticles(cursor: {x: number, y: number}, color: string) {
@@ -18674,21 +19210,26 @@ export class TimeSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/WeaponSystem.ts
 =====================================
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
-import { Tag, Faction } from '@/engine/ecs/types';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem, IParticleSystem } from '@/engine/interfaces';
+import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
+import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculatePlayerShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculateRailgunShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { Query } from '@/engine/ecs/Query';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -18699,15 +19240,14 @@ interface PurgeState {
 }
 
 export class WeaponSystem implements IGameSystem {
-  private lastFireTime = 0;
+  private lastRailgunTime = 0;
+  private lastSnifferTime = 0;
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
-  private fireCycle = 0;
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   
-  private purgeState: PurgeState = {
-      active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0
-  };
+  private purgeState: PurgeState = { active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0 };
+  private projectileQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform, ComponentType.Motion] });
 
   constructor(
     private spawner: IEntitySpawner,
@@ -18715,41 +19255,207 @@ export class WeaponSystem implements IGameSystem {
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
     private config: typeof ConfigService,
-    private physics: IPhysicsSystem 
+    private physics: IPhysicsSystem,
+    private particleSystem: IParticleSystem
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
-        if (p.option === 'NOVA') this.triggerNova();
     }));
   }
 
   update(delta: number, time: number): void {
+    this.updateProjectiles(delta, time);
+
     const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
-    if (isDead && !this.purgeState.active) return;
-
-    const playerEntity = this.getPlayerEntity();
-    if (!playerEntity) return;
-
     if (this.purgeState.active) {
-        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-        if (transform) this.processPurgeFrame(delta, transform.x, transform.y);
+        const player = this.getPlayerEntity();
+        if (player) {
+            const t = player.getComponent<TransformData>(ComponentType.Transform);
+            if (t) this.processPurgeFrame(delta, t.x, t.y);
+        }
+        return;
     }
 
-    if (this.purgeState.active || isDead) return;
+    if (isDead) return;
+    this.handleAutoFire(delta, time);
+  }
+
+  private updateProjectiles(delta: number, time: number) {
+      const projectiles = this.registry.query(this.projectileQuery);
+
+      for (const p of projectiles) {
+          if (!p.active) continue;
+
+          const transform = p.getComponent<TransformData>(ComponentType.Transform)!;
+          const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
+          const projData = p.getComponent<ProjectileData>(ComponentType.Projectile)!;
+          const target = p.getComponent<TargetData>(ComponentType.Target);
+
+          // A. STEERING
+          if (target && target.type === 'ENEMY') {
+              this.handleSteering(p, transform, motion, delta);
+          }
+
+          // B. KINEMATIC MOVE
+          transform.prevX = transform.x;
+          transform.prevY = transform.y;
+          transform.prevRotation = transform.rotation;
+
+          const speedSq = motion.vx*motion.vx + motion.vy*motion.vy;
+          const speed = Math.sqrt(speedSq);
+
+          transform.x += motion.vx * delta;
+          transform.y += motion.vy * delta;
+          
+          if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
+              transform.rotation = Math.atan2(motion.vy, motion.vx);
+          }
+
+          // C. SNAKE TRAIL (SOLID BODY)
+          if (projData.configId === WeaponIDs.PLAYER_SNIFFER && speed > 1.0) {
+              // Calculate steps needed to fill the gap since last frame
+              // We want a particle every ~0.25 units to ensure overlap
+              const distMoved = speed * delta;
+              const stepSize = 0.25; 
+              const steps = Math.ceil(distMoved / stepSize);
+              
+              for (let i = 0; i < steps; i++) {
+                  // Interpolate position backwards from current to previous
+                  const t = i / steps;
+                  const tx = transform.x - (motion.vx * delta * t);
+                  const ty = transform.y - (motion.vy * delta * t);
+                  
+                  this.particleSystem.spawn(
+                      tx, ty,
+                      PALETTE.PURPLE.DIM, 
+                      0, 0, 
+                      0.4, // Longer life = longer tail
+                      0.5, // Larger size = solid overlap
+                      ParticleShape.SQUARE
+                  );
+              }
+          }
+      }
+  }
+
+  private handleSteering(entity: Entity, transform: TransformData, motion: MotionData, delta: number) {
+      const targetData = entity.getComponent<TargetData>(ComponentType.Target);
+      if (!targetData) return;
+
+      if (!targetData.id || targetData.id === 'ENEMY_LOCKED') {
+          const RANGE = 20;
+          const count = this.physics.spatialGrid.query(transform.x, transform.y, RANGE, this.queryBuffer);
+          let minDist = Infinity;
+          let bestTarget: Entity | null = null;
+
+          for(let i=0; i<count; i++) {
+              const other = this.registry.getEntity(this.queryBuffer[i]);
+              if (!other || !other.active || !other.hasTag(Tag.ENEMY)) continue;
+              const t2 = other.getComponent<TransformData>(ComponentType.Transform);
+              if (!t2) continue;
+              const d = (t2.x - transform.x)**2 + (t2.y - transform.y)**2;
+              if (d < minDist) { minDist = d; bestTarget = other; }
+          }
+          if (bestTarget) targetData.id = bestTarget.id.toString();
+      }
+
+      if (targetData.id) {
+          const targetEntity = this.registry.getEntity(parseInt(targetData.id));
+          if (!targetEntity || !targetEntity.active) { targetData.id = null; return; }
+
+          const t2 = targetEntity.getComponent<TransformData>(ComponentType.Transform);
+          if (t2) {
+              const desiredAngle = Math.atan2(t2.y - transform.y, t2.x - transform.x);
+              const currentAngle = Math.atan2(motion.vy, motion.vx);
+              let diff = desiredAngle - currentAngle;
+              while (diff > Math.PI) diff -= Math.PI * 2;
+              while (diff < -Math.PI) diff += Math.PI * 2;
+
+              const TURN_SPEED = 8.0; 
+              const turn = Math.max(-TURN_SPEED * delta, Math.min(TURN_SPEED * delta, diff));
+              const newAngle = currentAngle + turn;
+              const speed = Math.sqrt(motion.vx*motion.vx + motion.vy*motion.vy);
+              
+              motion.vx = Math.cos(newAngle) * speed;
+              motion.vy = Math.sin(newAngle) * speed;
+          }
+      }
+  }
+
+  private handleAutoFire(delta: number, time: number) {
+    const playerEntity = this.getPlayerEntity();
+    if (!playerEntity) return;
 
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
 
-    const upgrades = this.gameSystem.activeUpgrades;
-    const currentFireRate = this.config.player.fireRate / Math.pow(1.5, upgrades['OVERCLOCK'] || 0);
+    const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
+    if (!transform) return;
 
-    if (time > this.lastFireTime + currentFireRate) {
-        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-        const renderModel = playerEntity.getComponent<RenderModel>(ComponentType.RenderModel);
-        const renderTransform = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+    const target = this.acquireTarget(transform);
+    if (!target) return;
+
+    const railgunState = useGameStore.getState().railgun;
+    const snifferState = useGameStore.getState().sniffer;
+    const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+
+    // RAILGUN
+    const railgunInterval = this.getRailgunInterval(railgunState.rateLevel);
+    if (time > this.lastRailgunTime + railgunInterval) {
+        const shot = calculateRailgunShot(
+            { x: transform.x, y: transform.y },
+            { x: target.x, y: target.y },
+            railgunState
+        );
         
-        if (transform) this.attemptAutoFire(time, transform, upgrades, renderModel, renderTransform);
+        this.spawner.spawnProjectile(
+            shot.x, shot.y, shot.vx, shot.vy, 
+            Faction.FRIENDLY, shot.life, shot.damage, shot.configId, 
+            undefined,
+            { scaleX: shot.scaleX, scaleY: shot.scaleY } 
+        );
+
+        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
+        this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
+        this.lastRailgunTime = time;
     }
+
+    // SNIFFER
+    if (snifferState.capacityLevel > 0) {
+        const snifferInterval = this.getSnifferInterval(snifferState.rateLevel);
+        if (time > this.lastSnifferTime + snifferInterval) {
+            const reticleRot = pVisual ? -pVisual.rotation : 0;
+            const shots = calculateSnifferShots(
+                { x: transform.x, y: transform.y },
+                snifferState,
+                reticleRot
+            );
+
+            shots.forEach(s => {
+                const b = this.spawner.spawnProjectile(
+                    s.x, s.y, s.vx, s.vy, 
+                    Faction.FRIENDLY, s.life, s.damage, s.configId
+                );
+                b.addComponent(new TargetData(null, 'ENEMY'));
+                this.registry.updateCache(b);
+            });
+            this.lastSnifferTime = time;
+        }
+    }
+  }
+
+  private getRailgunInterval(level: number): number {
+      const base = 0.15;
+      return base / Math.pow(1.1, level);
+  }
+
+  private getSnifferInterval(level: number): number {
+      const base = 0.15;
+      if (level === 0) return base * 3.0;
+      if (level === 1) return base * 1.5;
+      if (level === 2) return base;
+      if (level >= 3) return base * 0.75;
+      return base * 3.0;
   }
 
   private triggerPurge() {
@@ -18762,33 +19468,6 @@ export class WeaponSystem implements IGameSystem {
               this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
           }
       }
-  }
-
-  private triggerNova() {
-      const player = this.getPlayerEntity();
-      if (!player) return;
-      const t = player.getComponent<TransformData>(ComponentType.Transform);
-      if (!t) return;
-
-      const bulletCount = 80; 
-      const speed = 42.0;
-      const damage = 999;
-
-      for (let i = 0; i < bulletCount; i++) {
-          const ratio = i / bulletCount;
-          const angle = ratio * Math.PI * 2;
-          const vx = Math.cos(angle) * speed;
-          const vy = Math.sin(angle) * speed;
-          
-          const b = this.spawner.spawnBullet(t.x, t.y, vx, vy, Faction.FRIENDLY, 2.0, damage, WeaponIDs.PLAYER_PURGE);
-          const model = b.getComponent<RenderModel>(ComponentType.RenderModel);
-          if (model) { 
-              // FIX: Use 0.5 Lightness for Pure Color (No white tint)
-              this.tempColor.setHSL(ratio, 1.0, 0.5);
-              model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b;
-          }
-      }
-      this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.8 });
   }
 
   private processPurgeFrame(delta: number, originX: number, originY: number) {
@@ -18804,10 +19483,9 @@ export class WeaponSystem implements IGameSystem {
           }
           const angle = this.purgeState.currentAngle;
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
-          const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
+          const bullet = this.spawner.spawnProjectile(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
-          // FIX: Use 0.5 Lightness for Pure Color
           this.tempColor.setHSL(hue, 1.0, 0.5); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
@@ -18818,60 +19496,25 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  private attemptAutoFire(time: number, pPos: TransformData, upgrades: Record<string, number>, pRender?: RenderModel, pVisual?: RenderTransform) {
+  private acquireTarget(pPos: TransformData) {
     const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
-    
-    let nearestDist = Infinity; 
-    let targetEnemy = null;
+    let nearestDist = Infinity; let targetEnemy = null;
 
     for (let i = 0; i < count; i++) {
       const id = this.queryBuffer[i];
       const e = this.registry.getEntity(id);
-      
-      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
-      
+      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
       const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === AI_STATE.SPAWN) continue;
-      
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { 
-          nearestDist = dist; 
-          targetEnemy = e; 
-      }
+      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
     }
-
-    if (!targetEnemy) return;
-
-    const tPos = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-    const baseAngle = Math.atan2(tPos.y - pPos.y, tPos.x - pPos.x);
-    
-    const reticleRotation = pVisual ? -pVisual.rotation : 0;
-
-    const shots = calculatePlayerShots(
-        { x: pPos.x, y: pPos.y }, 
-        { x: tPos.x, y: tPos.y }, 
-        upgrades,
-        reticleRotation,
-        this.fireCycle 
-    );
-
-    shots.forEach(shot => {
-        const bullet = this.spawner.spawnBullet(shot.x, shot.y, shot.vx, shot.vy, Faction.FRIENDLY, shot.life, shot.damage, shot.configId);
-        
-        if (shot.isHoming) {
-            bullet.addComponent(new TargetData(null, 'ENEMY'));
-            this.registry.updateCache(bullet); 
-        }
-    });
-
-    this.events.emit(GameEvents.PLAYER_FIRED, { x: pPos.x, y: pPos.y, angle: baseAngle });
-    this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: pPos.x });
-    this.lastFireTime = time;
-    this.fireCycle++; 
+    if (!targetEnemy) return null;
+    const t = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
+    return { x: t.x, y: t.y };
   }
 
   private getPlayerEntity() {
@@ -19121,59 +19764,6 @@ export class RenderSystem implements IGameSystem {
 
 
 =====================================
-FILE: ./src/engine/systems/GuidanceSystem.ts
-=====================================
-import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { MotionData } from '@/engine/ecs/components/MotionData';
-import { TargetData } from '@/engine/ecs/components/TargetData';
-import { Tag } from '@/engine/ecs/types';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-
-export class GuidanceSystem implements IGameSystem {
-  constructor(private registry: IEntityRegistry) {}
-
-  update(delta: number, time: number): void {
-    const bullets = this.registry.getByTag(Tag.BULLET);
-
-    for (const b of bullets) {
-        if (!b.active) continue;
-        
-        const target = b.getComponent<TargetData>(ComponentType.Target);
-        const motion = b.getComponent<MotionData>(ComponentType.Motion);
-        const transform = b.getComponent<TransformData>(ComponentType.Transform);
-
-        if (!target || !motion || !transform || !target.id) continue;
-
-        const dx = target.x - transform.x;
-        const dy = target.y - transform.y;
-        
-        const desiredAngle = Math.atan2(dy, dx);
-        const currentAngle = Math.atan2(motion.vy, motion.vx);
-        
-        let diff = desiredAngle - currentAngle;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-
-        const turnSpeed = 4.0; 
-        
-        const maxTurn = turnSpeed * delta;
-        const actualTurn = Math.max(-maxTurn, Math.min(maxTurn, diff));
-        const newAngle = currentAngle + actualTurn;
-        
-        const speed = Math.sqrt(motion.vx * motion.vx + motion.vy * motion.vy);
-        motion.vx = Math.cos(newAngle) * speed;
-        motion.vy = Math.sin(newAngle) * speed;
-        
-        transform.rotation = newAngle;
-    }
-  }
-
-  teardown(): void {}
-}
-
-
-=====================================
 FILE: ./src/engine/systems/CombatSystem.ts
 =====================================
 import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService, IFastEventService } from '@/engine/interfaces';
@@ -19188,12 +19778,13 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { getFXCode, getSoundCode, FXCode, SoundCode } from '@/engine/signals/FastEventBus';
+import { Tag } from '@/engine/ecs/types';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
-    private events: IGameEventService, // Slow Bus (Game Over, Score)
-    private fastBus: IFastEventService, // Fast Bus (VFX, Audio, Flash)
+    private events: IGameEventService, 
+    private fastBus: IFastEventService, 
     private audio: IAudioService
   ) {}
 
@@ -19214,54 +19805,31 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              // Player hits are rare enough to stay on Slow Bus
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
-          
           spawnFX: (type, x, y) => {
-              // OPTIMIZATION: Direct FastBus write
               const code = getFXCode(type);
-              if (code !== FXCode.NONE) {
-                  this.fastBus.spawnFX(code, x, y, 0);
-              } else {
-                  // Fallback for custom/complex FX not in Enum
-                  this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: 0 });
-              }
+              if (code !== FXCode.NONE) this.fastBus.spawnFX(code, x, y, 0);
+              else this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: 0 });
           },
-          
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Impacts are complex objects, keep on Slow Bus for now or add FastBus support later
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
-          
           playAudio: (key) => {
               const code = getSoundCode(key);
-              if (code !== SoundCode.NONE) {
-                  this.fastBus.playSound(code, 0);
-              } else {
-                  this.events.emit(GameEvents.PLAY_SOUND, { key });
-              }
+              if (code !== SoundCode.NONE) this.fastBus.playSound(code, 0);
+              else this.events.emit(GameEvents.PLAY_SOUND, { key });
           },
-          
           playSpatialAudio: (key, x) => {
               const code = getSoundCode(key);
-              if (code !== SoundCode.NONE) {
-                  this.fastBus.playSound(code, x);
-              } else {
-                  this.events.emit(GameEvents.PLAY_SOUND, { key, x });
-              }
+              if (code !== SoundCode.NONE) this.fastBus.playSound(code, x);
+              else this.events.emit(GameEvents.PLAY_SOUND, { key, x });
           },
-          
-          addTrauma: (amount) => {
-              this.fastBus.camShake(amount);
-          },
-          
-          flashEntity: (id) => {
-              this.fastBus.flashEntity(id);
-          }
+          addTrauma: (amount) => this.fastBus.camShake(amount),
+          flashEntity: (id) => this.fastBus.flashEntity(id)
       };
 
       handler(a, b, context);
@@ -19299,18 +19867,9 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          // Use FastBus for destruction FX
           const code = getFXCode(finalFX);
-          if (code !== FXCode.NONE) {
-              this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
-          } else {
-              this.events.emit(GameEvents.SPAWN_FX, { 
-                  type: finalFX as VFXKey, 
-                  x: transform.x, 
-                  y: transform.y, 
-                  angle: angleToUse 
-              });
-          }
+          if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
+          else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
       }
   }
 
@@ -19692,7 +20251,6 @@ export * from './BehaviorSystem';
 export * from './CollisionSystem';
 export * from './CombatSystem';
 export * from './GameStateSystem';
-export * from './GuidanceSystem';
 export * from './HealthSystem';
 export * from './InputSystem';
 export * from './InteractionSystem';
@@ -19723,7 +20281,7 @@ FILE: ./src/engine/systems/ProgressionSystem.ts
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { UpgradeOption } from '@/engine/types/game.types';
+import { UpgradePath } from '@/engine/types/game.types';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -19732,14 +20290,12 @@ export class ProgressionSystem implements IGameSystem {
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
   
-  public activeUpgrades: Partial<Record<UpgradeOption, number>> = {};
+  // Deprecated but kept for interface compatibility until full cleanup
+  public activeUpgrades: any = {}; 
+  
   private unsubs: (() => void)[] = [];
 
   constructor(private events: IGameEventService) {
-    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        this.applyUpgrade(p.option as UpgradeOption);
-    }));
-    
     this.unsubs.push(this.events.subscribe(GameEvents.ENEMY_DESTROYED, () => {
         this.addScore(1);
         this.addXp(10);
@@ -19766,29 +20322,12 @@ export class ProgressionSystem implements IGameSystem {
     }
   }
 
-  public applyUpgrade(option: UpgradeOption) {
-      if (this.upgradePoints > 0) {
-          this.upgradePoints--;
-          
-          if (option === 'PURGE' || option === 'RESTORE' || option === 'DAEMON') {
-              return;
-          }
-          
-          const current = this.activeUpgrades[option] || 0;
-          this.activeUpgrades[option] = current + 1;
-      }
-  }
-
   public reset() {
       this.score = 0;
       this.xp = 0;
       this.level = 1;
       this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
       this.upgradePoints = 0;
-      this.activeUpgrades = { 
-        'OVERCLOCK': 0, 'EXECUTE': 0, 'FORK': 0,
-        'SNIFFER': 0, 'BACKDOOR': 0, 'REPAIR_NANITES': 0
-      };
   }
 
   teardown(): void {
@@ -19805,6 +20344,7 @@ import { IGameSystem, IGameStateSystem, IPanelSystem, IGameEventService, IAudioS
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
+import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
@@ -19818,10 +20358,8 @@ export class GameStateSystem implements IGameStateSystem {
     private audio: IAudioService
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'REPAIR_NANITES') {
-            this.healthSys.healPlayer(this.healthSys.maxPlayerHealth * 0.75);
-            this.audio.playSound('ui_optimal');
-        } else if (p.option === 'DAEMON') {
+        if (p.option === 'DAEMON') {
+            // Keeping for logic check, though UI button removed
             this.events.emit(GameEvents.SPAWN_DAEMON, null);
         }
     }));
@@ -19863,7 +20401,10 @@ export class GameStateSystem implements IGameStateSystem {
   get level() { return this.progSys.level; }
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
   get upgradePoints() { return this.progSys.upgradePoints; }
-  get activeUpgrades() { return this.progSys.activeUpgrades; }
+  
+  // Direct store access for new granular state
+  get railgun() { return useGameStore.getState().railgun; }
+  get sniffer() { return useGameStore.getState().sniffer; }
 
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }
@@ -20101,7 +20642,8 @@ export class TargetingSystem implements IGameSystem {
           const id = this.queryBuffer[i];
           const e = this.registry.getEntity(id);
           
-          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
+          // Updated: Exclude PROJECTILE
+          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
           if (!t) continue;
@@ -20137,7 +20679,7 @@ import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Faction } from '@/engine/ecs/types';
+import { Faction, Tag } from '@/engine/ecs/types';
 import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
@@ -20173,11 +20715,13 @@ export class BehaviorSystem implements IGameSystem {
           let bullet;
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
+              // UPDATED: Using spawnProjectile instead of spawnBullet
+              bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
-              bullet = this.spawner.spawnBullet(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
+              // UPDATED: Using spawnProjectile instead of spawnBullet
+              bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
           if (ownerId !== undefined) {
               const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
@@ -20701,11 +21245,14 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    // 1. INTEGRATION STEP
+    // 1. INTEGRATION STEP (Standard Physics Entities Only)
     const movables = this.registry.query(this.motionQuery);
     
     for (const entity of movables) {
       if (!entity.active) continue;
+
+      // EXCLUSION: Skip Projectiles (Handled by WeaponSystem)
+      if (entity.hasComponent(ComponentType.Projectile)) continue;
 
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
@@ -20728,7 +21275,7 @@ export class PhysicsSystem implements IPhysicsSystem {
       }
     }
 
-    // 2. BROADPHASE STEP
+    // 2. BROADPHASE STEP (Includes Projectiles for Collision)
     const collidables = this.registry.query(this.colliderQuery);
 
     for (const entity of collidables) {
@@ -20971,8 +21518,8 @@ FILE: ./src/engine/handlers/weapons/WeaponLogic.ts
 =====================================
 import { ConfigService } from '@/engine/services/ConfigService';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
-import { GAME_MATH } from '@/engine/config/constants/MathConstants';
 import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
+import { RailgunState, SnifferState } from '@/engine/types/game.types';
 
 export interface ShotDef {
   x: number;
@@ -20983,119 +21530,91 @@ export interface ShotDef {
   life: number;
   configId: ArchetypeID;
   isHoming: boolean;
+  scaleX?: number;
+  scaleY?: number;
 }
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
 const RETICLE_RADIUS = 1.65; 
 const TWIST_OFFSET = -0.55;  
 
-const ANGLES = {
-    RIGHT: 0,
-    TOP: Math.PI / 2,
-    LEFT: Math.PI,
-    BOTTOM: Math.PI * 1.5
-};
-
 const SNIFFER_TIPS = [
-    ANGLES.LEFT + TWIST_OFFSET,   
-    ANGLES.RIGHT + TWIST_OFFSET,  
-    ANGLES.BOTTOM + TWIST_OFFSET, 
-    ANGLES.TOP + TWIST_OFFSET     
+    Math.PI + TWIST_OFFSET,           // Left
+    0 + TWIST_OFFSET,                 // Right
+    Math.PI * 1.5 + TWIST_OFFSET,     // Bottom
+    Math.PI / 2 + TWIST_OFFSET        // Top
 ];
 
-export const calculatePlayerShots = (
+export const calculateRailgunShot = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  upgrades: Record<string, number>,
-  reticleRotation: number = 0,
-  fireCycle: number = 0
-): ShotDef[] => {
-  const shots: ShotDef[] = [];
+  state: RailgunState
+): ShotDef => {
   const config = ConfigService.player;
-
-  const forkLevel = upgrades['FORK'] || 0;
-  const dmgLevel = upgrades['EXECUTE'] || 0;
-  const snifferLevel = upgrades['SNIFFER'] || 0;
-  const backdoorLevel = upgrades['BACKDOOR'] || 0;
-
-  // UPDATED: Increase by 1 projectile per level (1, 2, 3, 4...)
-  const projectileCount = 1 + forkLevel;
-  
-  const damage = 1 + dmgLevel;
-  const speed = config.bulletSpeed;
+  const damage = 1 + state.damageLevel;
+  const speed = config.bulletSpeed; 
   const life = config.bulletLife;
+
+  // --- RAILGUN SCALING (CORRECTED) ---
+  // Model is Y-Up.
+  // Scale X = Width (Side-to-Side)
+  // Scale Y = Length (Forward)
+  
+  const BASE_WIDTH = 0.6; 
+  const MAX_WIDTH = 2.5; 
+  
+  // Linear interpolation based on level (0-10)
+  const widthMult = BASE_WIDTH + ((MAX_WIDTH - BASE_WIDTH) * (state.widthLevel / 10));
+  
+  const lengthMult = 0.6; // Constant thickness
 
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
-  const baseAngle = Math.atan2(dy, dx);
+  const angle = Math.atan2(dy, dx);
 
-  const configId: ArchetypeID = WeaponIDs.PLAYER_STANDARD;
-  
-  const spreadAngle = GAME_MATH.WEAPON_SPREAD_BASE; 
-  const startAngle = baseAngle - ((projectileCount - 1) * spreadAngle) / 2;
+  const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
+  const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
 
-  // --- 1. STANDARD / FORK SHOTS ---
-  for (let i = 0; i < projectileCount; i++) {
-      const angle = startAngle + (i * spreadAngle);
+  return {
+      x: spawnX,
+      y: spawnY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      damage,
+      life,
+      configId: WeaponIDs.PLAYER_RAILGUN,
+      isHoming: false,
+      scaleX: widthMult,  // Width maps to X
+      scaleY: lengthMult  // Length maps to Y
+  };
+};
+
+export const calculateSnifferShots = (
+  origin: { x: number, y: number },
+  state: SnifferState,
+  reticleRotation: number
+): ShotDef[] => {
+  const shots: ShotDef[] = [];
+  const activeCount = state.capacityLevel; 
+  if (activeCount <= 0) return [];
+
+  const damage = 1 + state.damageLevel;
+  const speed = 22;
+  const life = 3.0;
+
+  for (let i = 0; i < activeCount; i++) {
+      const localAngle = SNIFFER_TIPS[i % 4];
+      const globalAngle = reticleRotation + localAngle;
+      const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
+      const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
+      const vx = Math.cos(globalAngle) * speed * 0.5;
+      const vy = Math.sin(globalAngle) * speed * 0.5;
       
-      const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-      const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
-
       shots.push({
-          x: spawnX,
-          y: spawnY,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          damage,
-          life,
-          configId,
-          isHoming: false
+          x: tipX, y: tipY, vx, vy,
+          damage, life, configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true
       });
   }
-
-  // --- 2. BACKDOOR SHOTS ---
-  if (backdoorLevel > 0) {
-      const rearAngle = baseAngle + Math.PI; 
-      const spawnX = origin.x + Math.cos(rearAngle) * MUZZLE_OFFSET;
-      const spawnY = origin.y + Math.sin(rearAngle) * MUZZLE_OFFSET;
-
-      shots.push({
-          x: spawnX,
-          y: spawnY,
-          vx: Math.cos(rearAngle) * speed,
-          vy: Math.sin(rearAngle) * speed,
-          damage,
-          life,
-          configId: WeaponIDs.PLAYER_BACKDOOR,
-          isHoming: false
-      });
-  }
-
-  // --- 3. SNIFFER SHOTS ---
-  // UPDATED: Only fire every 3rd cycle
-  if (snifferLevel > 0 && fireCycle % 3 === 0) {
-      const maxTips = 4;
-      for (let i = 0; i < snifferLevel; i++) {
-          const tipIndex = i % maxTips;
-          const localAngle = SNIFFER_TIPS[tipIndex];
-          const globalAngle = reticleRotation + localAngle;
-          
-          const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
-          const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
-          const vx = Math.cos(globalAngle) * speed * 0.5;
-          const vy = Math.sin(globalAngle) * speed * 0.5;
-          
-          shots.push({
-              x: tipX, y: tipY, vx, vy,
-              // UPDATED: Base Damage + 1
-              damage: damage + 1, 
-              life: life * 2,
-              configId: WeaponIDs.PLAYER_SNIFFER, 
-              isHoming: true
-          });
-      }
-  }
-
   return shots;
 };
 
@@ -21284,6 +21803,105 @@ export const DrillerLogic: EnemyLogic = {
 
 
 =====================================
+FILE: ./src/engine/handlers/ai/BehaviorSystem.ts
+=====================================
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService } from '@/engine/interfaces';
+import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
+import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
+import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
+import { GameEvents } from '@/engine/signals/GameEvents'; 
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { ConfigService } from '@/engine/services/ConfigService';
+import { ViewportHelper } from '@/engine/math/ViewportHelper';
+import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
+import { AIContext } from '@/engine/handlers/ai/types';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { Faction, Tag } from '@/engine/ecs/types';
+import { VFXKey } from '@/engine/config/AssetKeys';
+
+export class BehaviorSystem implements IGameSystem {
+  private unsubs: (() => void)[] = [];
+
+  constructor(
+    private registry: IEntityRegistry,
+    private spawner: IEntitySpawner,
+    private config: typeof ConfigService,
+    private panelSystem: IPanelSystem,
+    private particleSystem: IParticleSystem,
+    private audio: IAudioService,
+    private events: IGameEventService
+  ) {
+    this.unsubs.push(events.subscribe(GameEvents.SPAWN_DAEMON, () => {
+        const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
+        const orbital = e.getComponent<OrbitalData>(ComponentType.Orbital);
+        if (orbital) {
+            orbital.radius = 4.0;
+            orbital.speed = 1.5 + Math.random() * 1.0; 
+            orbital.angle = Math.random() * Math.PI * 2;
+        }
+    }));
+  }
+
+  update(delta: number, time: number): void {
+    const upgrades = useGameStore.getState().activeUpgrades;
+
+    const aiContext: AIContext = {
+      delta,
+      time,
+      spawnProjectile: (x, y, vx, vy, damage, configId, ownerId) => {
+          let bullet;
+          if (damage) {
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
+              bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
+              bullet.addComponent(new IdentityData('DAEMON_SHOT'));
+          } else {
+              const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
+              bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
+          }
+          if (ownerId !== undefined) {
+              const proj = bullet.getComponent<ProjectileData>(ComponentType.Projectile);
+              if (proj) proj.ownerId = ownerId;
+          }
+          return bullet;
+      },
+      spawnFX: (type, x, y, angle) => {
+          this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: angle || 0 });
+      },
+      spawnParticle: (x, y, color, vx, vy, life, size) => {
+          this.particleSystem.spawn(x, y, color, vx, vy, life, size, 1);
+      },
+      damagePanel: (id, amount, options) => this.panelSystem.damagePanel(id, amount, options),
+      getPanelRect: (id) => this.panelSystem.getPanelRect(id),
+      getAllPanelRects: () => this.panelSystem.getAllPanels(),
+      getPanelStress: (id) => this.panelSystem.getPanelStress(id),
+      playSound: (key, x) => {
+          this.events.emit(GameEvents.PLAY_SOUND, { key, x });
+      },
+      getUpgradeLevel: (key) => upgrades[key] || 0,
+      config: this.config
+    };
+
+    const entities = this.registry.getAll();
+    for (const entity of entities) {
+        if (!entity.active) continue;
+        const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
+        if (!identity) continue;
+        const behavior = AIRegistry.get(identity.variant);
+        if (behavior) {
+            behavior.update(entity, aiContext);
+        }
+    }
+  }
+
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
+}
+
+
+=====================================
 FILE: ./src/engine/handlers/ai/BehaviorCatalog.ts
 =====================================
 import { AIRegistry } from './AIRegistry';
@@ -21343,7 +21961,6 @@ import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
@@ -21411,7 +22028,6 @@ export class EngineFactory {
     const projectileSystem = new ProjectileSystem(registry);
     const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
-    const guidanceSystem = new GuidanceSystem(registry);
     
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
@@ -21427,8 +22043,9 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem);
-    // UPDATED: Inject rawFastBus into CombatSystem
+    // UPDATED: Inject ParticleSystem into WeaponSystem
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem, particleSystem);
+    
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
@@ -21460,7 +22077,6 @@ export class EngineFactory {
 
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
-    register(guidanceSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
 
     register(collisionSystem, SystemPhase.COLLISION);
@@ -21483,6 +22099,8 @@ export class EngineFactory {
 
     engine.setup(ServiceLocator);
     spawner.spawnPlayer();
+
+    ServiceLocator.register('ParticleSystem', particleSystem); // Explicit register for safety
 
     return engine;
   }
@@ -21583,19 +22201,47 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(x: number, y: number, vx: number, vy: number, faction: Faction, life: number, damage: number = 1, projectileId: ArchetypeID = WeaponIDs.PLAYER_STANDARD, ownerId?: number): Entity {
+  public spawnProjectile(
+      x: number, y: number, 
+      vx: number, vy: number, 
+      faction: Faction, 
+      life: number, 
+      damage: number = 1, 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_RAILGUN, 
+      ownerId?: number,
+      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
+  ): Entity {
     let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_STANDARD;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_RAILGUN;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    const overrides = {
+    
+    // PROJECTILE REFACTOR: 
+    // 1. MotionData is added but friction is 0 (handled via kinematics in WeaponSystem Phase 2)
+    // 2. RenderEffect removed to prevent squash/stretch artifacts
+    
+    const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
-        [ComponentType.Motion]: { vx, vy },
+        [ComponentType.Motion]: { vx, vy, friction: 0 }, 
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
         [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
-    return this.spawn(id, overrides);
+
+    if (visualOverrides) {
+        const transformData: any = {};
+        if (visualOverrides.scaleX) transformData.baseScaleX = visualOverrides.scaleX;
+        if (visualOverrides.scaleY) transformData.baseScaleY = visualOverrides.scaleY;
+        overrides[ComponentType.RenderTransform] = transformData;
+    }
+
+    const entity = this.spawn(id, overrides);
+    
+    // Explicitly remove RenderEffect if blueprint added it, to stop bouncing
+    // (We do this safely by not adding it, but if archetype has it, we might need to strip it)
+    // For now, we assume the new Archetypes for projectiles won't include RenderEffect
+    
+    return entity;
   }
 
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: ParticleShape = ParticleShape.CIRCLE): void {
@@ -21830,6 +22476,7 @@ import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ArchetypeID } from '@/engine/config/Identifiers';
+import { RailgunState, SnifferState } from '@/engine/types/game.types';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -21880,7 +22527,7 @@ export interface IFastEventService {
   duckMusic(intensity: number, duration: number): void;
   flashEntity(id: number): void;
   process(callback: (id: number, a1: number, a2: number, a3: number, a4: number) => void): void;
-  swap(): void; // NEW: Flip buffers
+  swap(): void;
   clear(): void;
   getCursor(): number;
 }
@@ -21904,7 +22551,6 @@ export interface IProgressionRead {
   level: number;
   xpToNextLevel: number;
   upgradePoints: number;
-  activeUpgrades: Record<string, number>;
 }
 
 export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
@@ -21914,6 +22560,8 @@ export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgression
   addXp(amount: number): void;
   tickReboot(amount: number): void;
   decayReboot(amount: number): void;
+  railgun?: RailgunState;
+  sniffer?: SnifferState;
 }
 
 export interface IEntityRegistry {
@@ -21932,14 +22580,15 @@ export interface IEntitySpawner {
   spawn(archetypeId: ArchetypeID, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
   spawnEnemy(type: ArchetypeID, x: number, y: number): Entity;
-  spawnBullet(
+  spawnProjectile(
       x: number, y: number, 
       vx: number, vy: number, 
       faction: Faction, 
       life: number, 
       damage?: number, 
       projectileId?: ArchetypeID, 
-      ownerId?: number
+      ownerId?: number,
+      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity;
   spawnParticle(
       x: number, y: number, 
@@ -21966,6 +22615,8 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
+  startHealingTone(): void;
+  stopHealingTone(): void;
 }
 
 export interface IInputService {

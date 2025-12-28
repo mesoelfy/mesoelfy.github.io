@@ -47,15 +47,15 @@ const createReticleGeo = () => {
     return new THREE.ShapeGeometry(shape);
 };
 
+// Simplified chevron for visual only (not projectile)
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
-    const rTip = 0.92; const rValley = 0.84; const thickness = 0.06; 
+    const rTip = 0.92; const rValley = 0.84; 
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
     const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
     const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
 
-    const startBaseAngle = startAngle + (spread * 0.4); 
-    const pStartBase = pt(rValley, startBaseAngle);
+    const pStartBase = pt(rValley, startAngle + (spread * 0.4));
     shape.moveTo(pStartBase[0], pStartBase[1]);
 
     for (let i = 0; i < tipCount; i++) {
@@ -63,34 +63,10 @@ const createForkedChevronGeo = (tipCount: number) => {
         const pTip = pt(rTip, angle);
         shape.lineTo(pTip[0], pTip[1]);
         if (i < tipCount - 1) {
-            const midAngle = angle - (spread / 2);
-            const pValley = pt(rValley, midAngle);
+            const pValley = pt(rValley, angle - (spread / 2));
             shape.lineTo(pValley[0], pValley[1]);
         }
     }
-    
-    const endBaseAngle = (startAngle - ((tipCount - 1) * spread)) - (spread * 0.4);
-    const pEndBase = pt(rValley, endBaseAngle);
-    shape.lineTo(pEndBase[0], pEndBase[1]);
-
-    const rInnerTip = rTip - thickness;
-    const rInnerValley = rValley - thickness;
-    const pInnerEnd = pt(rInnerValley, endBaseAngle);
-    shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
-
-    for (let i = tipCount - 1; i >= 0; i--) {
-        const angle = startAngle - (i * spread);
-        const pInTip = pt(rInnerTip, angle);
-        shape.lineTo(pInTip[0], pInTip[1]);
-        if (i > 0) {
-            const midAngle = angle + (spread / 2);
-            const pInValley = pt(rInnerValley, midAngle);
-            shape.lineTo(pInValley[0], pInValley[1]);
-        }
-    }
-
-    const pInnerStart = pt(rInnerValley, startBaseAngle);
-    shape.lineTo(pInnerStart[0], pInnerStart[1]);
     shape.closePath();
     return new THREE.ShapeGeometry(shape);
 };
@@ -134,11 +110,11 @@ const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo =
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair);
 const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
+// UPDATED: Use Dim/Dark Purple for Reboot Interaction
+const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
-const COL_SNIFFER = new THREE.Color(PALETTE.PURPLE.LIGHT);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
@@ -212,15 +188,17 @@ export const PlayerActor = () => {
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     
-    // Interaction State Logic
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
     const isPlayerDead = useGameStore.getState().playerHealth <= 0;
     
-    // Use Interaction Code for explicit actions, fallback to iState/Dead status
-    const isReviving = interactionCode === 2;
-    const isSelfHealing = interactionCode === 1;
-    const isPanelRepairing = interactionCode === 0 && iState === 'HEALING'; // Panel repair (Standard)
+    const isReviving = interactionCode === 2; // Self Revive
+    const isSelfHealing = interactionCode === 1; // Self Heal
+    
+    // Distinguish between REBOOTING (Destroyed Panel) and HEALING (Damaged Panel)
+    const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
+    const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
+    
     const isDeadVisual = isPlayerDead && !isReviving;
     
     const isActive = iState !== 'IDLE' || isZenMode;
@@ -278,19 +256,35 @@ export const PlayerActor = () => {
             }
 
         } else {
-            // DETERMINE COLOR STATE (PRECEDENCE)
+            // DETERMINE COLOR STATE
             let target = COL_BASE;
+            let reticleTarget = null;
             
-            if (isReviving) target = COL_REBOOT; // Purple (Highest Active Priority)
-            else if (isDeadVisual) target = COL_DEAD; // Red (Dead but not reviving)
-            else if (isSelfHealing) target = COL_HEAL_SELF; // Yellow
-            else if (isPanelRepairing) target = COL_REPAIR_PANEL; // Pink
+            if (isReviving) {
+                target = COL_REBOOT; 
+            } else if (isDeadVisual) {
+                target = COL_DEAD;
+                reticleTarget = new THREE.Color('#76000C');
+            } else if (isSelfHealing) {
+                target = COL_HEAL_SELF; 
+                reticleTarget = COL_RET_HEAL;
+            } else if (isPanelRebooting) {
+                // EXPLICIT: Darker Purple for Reboot
+                target = COL_REBOOT;
+                reticleTarget = COL_REBOOT;
+            } else if (isPanelHealing) {
+                // Pink for Healing
+                target = COL_REPAIR_PANEL;
+                reticleTarget = COL_RET_HEAL;
+            }
             
             tempColor.current.lerp(target, 0.2);
             
-            if (isDeadVisual) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
-            else if (isPanelRepairing || isSelfHealing) reticleColor.current.lerp(COL_RET_HEAL, 0.1);
-            else reticleColor.current.lerp(tempColor.current, 0.2);
+            if (reticleTarget) {
+                reticleColor.current.lerp(reticleTarget, 0.1);
+            } else {
+                reticleColor.current.lerp(tempColor.current, 0.2);
+            }
             
             if (hitFlash.current > 0.01) { 
                 tempColor.current.lerp(COL_HIT, hitFlash.current); 

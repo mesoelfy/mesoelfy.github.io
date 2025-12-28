@@ -9,6 +9,7 @@ import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
+  // Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -19,17 +20,23 @@ export const registerAllAssets = () => {
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide }));
 
+  // Basic Geo
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
+  // Enemies
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
       AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
+  // --- WEAPONS (UNIFIED SPHERES) ---
+  const sharedProjectileGeo = addBarycentricCoordinates(new THREE.SphereGeometry(0.5, 8, 8));
+  
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
+      // Force simple circle/sphere for all projectiles
+      AssetService.registerGenerator(key, () => sharedProjectileGeo); 
   });
 };
 
@@ -41,51 +48,16 @@ const createEnemyGeometry = (id: string, visual: any) => {
         geo.translate(0, -height / 2, 0);
         return addBarycentricCoordinates(geo);
     }
-    return createGeometry(visual, false);
+    return createGeometry(visual);
 };
 
-const createCrescentGeo = () => {
-    const shape = new THREE.Shape();
-    const outerRadius = 1.0;
-    const innerRadius = 0.7; 
-    const arcAngle = Math.PI / 1.5; 
-
-    shape.absarc(0, 0, outerRadius, -arcAngle/2, arcAngle/2, false);
-    shape.absarc(0.2, 0, innerRadius, arcAngle/2, -arcAngle/2, true);
-    
-    shape.closePath();
-
-    const extrudeSettings = { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2 };
-    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    geo.center(); 
-    geo.rotateZ(Math.PI / 2); // Correct orientation to +Y
-    return addBarycentricCoordinates(geo);
-};
-
-const createGeometry = (visual: any, isProjectile: boolean = false) => {
+const createGeometry = (visual: any) => {
     let geo;
     switch (visual.model) {
         case 'CONE': geo = new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4); break;
         case 'ICOSA': geo = new THREE.IcosahedronGeometry(visual.radius || 1, visual.detail || 0); break;
         case 'OCTA': geo = new THREE.OctahedronGeometry(visual.radius || 0.5, 0); break;
-        case 'TETRA': geo = new THREE.TetrahedronGeometry(1, 0); break;
-        case 'SPHERE': geo = new THREE.IcosahedronGeometry(1, 1); break;
-        case 'CAPSULE': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 6); break;
-        case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
-        case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
-        case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
-        case 'CUSTOM_HUNTER': return createHunterSpear();
-        case 'CRESCENT': return createCrescentGeo(); 
-        case 'CUSTOM_CHEVRON': {
-            const shape = new THREE.Shape();
-            const w = 0.8, h = 0.8, t = 0.3;
-            shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
-            shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
-            geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
-            geo.center();
-            geo.rotateZ(Math.PI / 2); // FIX: Rotate to +Y for correct orientation
-            break;
-        }
+        case 'CUSTOM_HUNTER': return createHunterSpear(); // RESTORED
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
     return addBarycentricCoordinates(geo);

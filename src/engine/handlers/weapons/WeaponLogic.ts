@@ -37,19 +37,6 @@ export const calculateRailgunShot = (
   const speed = config.bulletSpeed; 
   const life = config.bulletLife;
 
-  // --- RAILGUN SCALING (CORRECTED) ---
-  // Model is Y-Up.
-  // Scale X = Width (Side-to-Side)
-  // Scale Y = Length (Forward)
-  
-  const BASE_WIDTH = 0.6; 
-  const MAX_WIDTH = 2.5; 
-  
-  // Linear interpolation based on level (0-10)
-  const widthMult = BASE_WIDTH + ((MAX_WIDTH - BASE_WIDTH) * (state.widthLevel / 10));
-  
-  const lengthMult = 0.6; // Constant thickness
-
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
   const angle = Math.atan2(dy, dx);
@@ -65,9 +52,7 @@ export const calculateRailgunShot = (
       damage,
       life,
       configId: WeaponIDs.PLAYER_RAILGUN,
-      isHoming: false,
-      scaleX: widthMult,  // Width maps to X
-      scaleY: lengthMult  // Length maps to Y
+      isHoming: false
   };
 };
 

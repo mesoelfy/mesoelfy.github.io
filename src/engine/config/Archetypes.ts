@@ -18,6 +18,7 @@ const parseHex = (hex: string) => {
     };
 };
 
+// Helper for standard entities (Player/Enemies)
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
@@ -33,7 +34,6 @@ export interface EntityBlueprint {
 }
 
 const BLUEPRINTS: Record<string, EntityBlueprint> = {
-  // --- PLAYER (Manual) ---
   [ArchetypeIDs.PLAYER]: {
     id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
@@ -43,11 +43,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
       { type: ComponentType.State, data: { current: AI_STATE.IDLE } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.PLAYER, 
-          layer: CollisionLayers.PLAYER, 
-          mask: PhysicsConfig.MASKS.PLAYER 
-      }},
+      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.PLAYER, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.StateColor, data: {
           base: GAME_THEME.turret.base,
           damaged: GAME_THEME.vfx.damage,
@@ -60,7 +56,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
   }
 };
 
-// --- ENEMY GENERATION ---
+// Enemies
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
     const matId = 'MAT_ENEMY_BASE'; 
@@ -72,22 +68,16 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      // Enemies KEEP RenderEffect for spawn animation
       ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
-    if (def.damage > 0) {
-        comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
-    }
+    if (def.damage > 0) comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
 
     if (def.ai === 'daemon') {
         comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
         comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
         const col = comps.find((c: any) => c.type === ComponentType.Collider);
-        if (col) {
-            col.data.layer = CollisionLayers.PLAYER;
-            col.data.mask = PhysicsConfig.MASKS.PLAYER;
-        }
+        if (col) { col.data.layer = CollisionLayers.PLAYER; col.data.mask = PhysicsConfig.MASKS.PLAYER; }
     } else {
         comps.push({ type: ComponentType.Target, data: { type: def.ai === 'driller' ? 'PANEL' : 'PLAYER' } });
     }
@@ -101,7 +91,7 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// --- WEAPON GENERATION (FIXED) ---
+// WEAPONS (SCRUBBED RENDER EFFECT)
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     const matId = 'MAT_PROJECTILE';
@@ -110,6 +100,7 @@ Object.values(WEAPONS).forEach(def => {
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
+    // NOTE: Explicitly NOT adding RenderEffect here.
     const comps: any[] = [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
       { type: ComponentType.Motion, data: { friction: 0 } },
@@ -117,9 +108,8 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Combat, data: { damage: def.damage } },
       { type: ComponentType.Health, data: { max: def.damage } }, 
       { type: ComponentType.Collider, data: { radius, layer, mask } },
-      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
+      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT', ownerId: -1 } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
-      // NO RENDER EFFECT HERE. This ensures pure rigid body rendering.
       { type: ComponentType.RenderTransform, data: { 
           scale: 1.0, 
           baseScaleX: def.visual.scale[0], 
@@ -128,22 +118,10 @@ Object.values(WEAPONS).forEach(def => {
       }}
     ];
 
-    if (def.behavior?.spinSpeed) {
-        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
-    }
-    
-    BLUEPRINTS[def.id] = {
-        id: def.id,
-        tags: def.tags,
-        components: comps
-    };
+    BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
 
-if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) {
-    BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
-}
-if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) {
-    BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
-}
+if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;
