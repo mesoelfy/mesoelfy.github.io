@@ -16,7 +16,7 @@ export const ProjectileActor = () => {
         <InstancedActor
           key={key} 
           renderKey={`${key}|MAT_PROJECTILE`}
-          tag={Tag.BULLET} 
+          tag={Tag.PROJECTILE} 
           geometry={AssetService.get(key)} 
           material={material} 
           maxCount={2000}

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useGameContext } from '@/engine/state/GameContext';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { ParticleSystem } from '@/engine/systems/ParticleSystem';
+import { ParticleShape } from '@/engine/ecs/types';
 
 const dummy = new THREE.Object3D();
 const color = new THREE.Color();
@@ -42,24 +43,28 @@ export const ParticleActor = () => {
         const baseSize = sys.size[i]; const shape = sys.shape[i];
         
         const zDepth = getZDepth(i);
-        
         dummy.position.set(x, y, zDepth);
+        
         const speedSq = vx*vx + vy*vy;
-        const speed = Math.sqrt(speedSq);
         const lifeScale = life / maxLife;
         
-        if (speed > 1.0) {
+        if (speedSq > 1.0) {
+            // Moving particles align to velocity (Sparks, Debris)
             const angle = Math.atan2(vy, vx);
             dummy.rotation.set(0, 0, angle);
-            const stretchMult = shape === 1 ? 0.3 : 0.2;
+            
+            const speed = Math.sqrt(speedSq);
+            const stretchMult = shape === ParticleShape.SQUARE ? 0.3 : 0.2;
             const scaleX = lifeScale * baseSize * (1 + speed * stretchMult);
             const scaleY = lifeScale * baseSize * 0.5;
             dummy.scale.set(scaleX, scaleY, 1);
-            const shift = (0.3 * scaleX) * 0.5;
-            dummy.position.x += Math.cos(angle) * shift;
-            dummy.position.y += Math.sin(angle) * shift;
         } else {
-            dummy.rotation.set(0, 0, 0);
+            // Stationary particles (Sniffer Trail)
+            if (shape === ParticleShape.SQUARE) {
+                dummy.rotation.set(0, 0, Math.PI / 4); // 45 deg = Diamond
+            } else {
+                dummy.rotation.set(0, 0, 0);
+            }
             dummy.scale.set(lifeScale * baseSize, lifeScale * baseSize, 1);
         }
         

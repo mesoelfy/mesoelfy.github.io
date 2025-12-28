@@ -1,10 +1,12 @@
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
-import { Tag, Faction } from '@/engine/ecs/types';
+import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem, IParticleSystem } from '@/engine/interfaces';
+import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
+import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -14,6 +16,8 @@ import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { Query } from '@/engine/ecs/Query';
+import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -26,14 +30,12 @@ interface PurgeState {
 export class WeaponSystem implements IGameSystem {
   private lastRailgunTime = 0;
   private lastSnifferTime = 0;
-  
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
   
-  private purgeState: PurgeState = {
-      active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0
-  };
+  private purgeState: PurgeState = { active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0 };
+  private projectileQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform, ComponentType.Motion] });
 
   constructor(
     private spawner: IEntitySpawner,
@@ -41,7 +43,8 @@ export class WeaponSystem implements IGameSystem {
     private gameSystem: IGameStateSystem,
     private events: IGameEventService,
     private config: typeof ConfigService,
-    private physics: IPhysicsSystem 
+    private physics: IPhysicsSystem,
+    private particleSystem: IParticleSystem
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
@@ -49,37 +52,142 @@ export class WeaponSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
-    if (isDead && !this.purgeState.active) return;
+    this.updateProjectiles(delta, time);
 
+    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+    if (this.purgeState.active) {
+        const player = this.getPlayerEntity();
+        if (player) {
+            const t = player.getComponent<TransformData>(ComponentType.Transform);
+            if (t) this.processPurgeFrame(delta, t.x, t.y);
+        }
+        return;
+    }
+
+    if (isDead) return;
+    this.handleAutoFire(delta, time);
+  }
+
+  private updateProjectiles(delta: number, time: number) {
+      const projectiles = this.registry.query(this.projectileQuery);
+
+      for (const p of projectiles) {
+          if (!p.active) continue;
+
+          const transform = p.getComponent<TransformData>(ComponentType.Transform)!;
+          const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
+          const projData = p.getComponent<ProjectileData>(ComponentType.Projectile)!;
+          const target = p.getComponent<TargetData>(ComponentType.Target);
+
+          // A. STEERING
+          if (target && target.type === 'ENEMY') {
+              this.handleSteering(p, transform, motion, delta);
+          }
+
+          // B. KINEMATIC MOVE
+          transform.prevX = transform.x;
+          transform.prevY = transform.y;
+          transform.prevRotation = transform.rotation;
+
+          const speedSq = motion.vx*motion.vx + motion.vy*motion.vy;
+          const speed = Math.sqrt(speedSq);
+
+          transform.x += motion.vx * delta;
+          transform.y += motion.vy * delta;
+          
+          if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
+              transform.rotation = Math.atan2(motion.vy, motion.vx);
+          }
+
+          // C. SNAKE TRAIL (SOLID BODY)
+          if (projData.configId === WeaponIDs.PLAYER_SNIFFER && speed > 1.0) {
+              // Calculate steps needed to fill the gap since last frame
+              // We want a particle every ~0.25 units to ensure overlap
+              const distMoved = speed * delta;
+              const stepSize = 0.25; 
+              const steps = Math.ceil(distMoved / stepSize);
+              
+              for (let i = 0; i < steps; i++) {
+                  // Interpolate position backwards from current to previous
+                  const t = i / steps;
+                  const tx = transform.x - (motion.vx * delta * t);
+                  const ty = transform.y - (motion.vy * delta * t);
+                  
+                  this.particleSystem.spawn(
+                      tx, ty,
+                      PALETTE.PURPLE.DIM, 
+                      0, 0, 
+                      0.4, // Longer life = longer tail
+                      0.5, // Larger size = solid overlap
+                      ParticleShape.SQUARE
+                  );
+              }
+          }
+      }
+  }
+
+  private handleSteering(entity: Entity, transform: TransformData, motion: MotionData, delta: number) {
+      const targetData = entity.getComponent<TargetData>(ComponentType.Target);
+      if (!targetData) return;
+
+      if (!targetData.id || targetData.id === 'ENEMY_LOCKED') {
+          const RANGE = 20;
+          const count = this.physics.spatialGrid.query(transform.x, transform.y, RANGE, this.queryBuffer);
+          let minDist = Infinity;
+          let bestTarget: Entity | null = null;
+
+          for(let i=0; i<count; i++) {
+              const other = this.registry.getEntity(this.queryBuffer[i]);
+              if (!other || !other.active || !other.hasTag(Tag.ENEMY)) continue;
+              const t2 = other.getComponent<TransformData>(ComponentType.Transform);
+              if (!t2) continue;
+              const d = (t2.x - transform.x)**2 + (t2.y - transform.y)**2;
+              if (d < minDist) { minDist = d; bestTarget = other; }
+          }
+          if (bestTarget) targetData.id = bestTarget.id.toString();
+      }
+
+      if (targetData.id) {
+          const targetEntity = this.registry.getEntity(parseInt(targetData.id));
+          if (!targetEntity || !targetEntity.active) { targetData.id = null; return; }
+
+          const t2 = targetEntity.getComponent<TransformData>(ComponentType.Transform);
+          if (t2) {
+              const desiredAngle = Math.atan2(t2.y - transform.y, t2.x - transform.x);
+              const currentAngle = Math.atan2(motion.vy, motion.vx);
+              let diff = desiredAngle - currentAngle;
+              while (diff > Math.PI) diff -= Math.PI * 2;
+              while (diff < -Math.PI) diff += Math.PI * 2;
+
+              const TURN_SPEED = 8.0; 
+              const turn = Math.max(-TURN_SPEED * delta, Math.min(TURN_SPEED * delta, diff));
+              const newAngle = currentAngle + turn;
+              const speed = Math.sqrt(motion.vx*motion.vx + motion.vy*motion.vy);
+              
+              motion.vx = Math.cos(newAngle) * speed;
+              motion.vy = Math.sin(newAngle) * speed;
+          }
+      }
+  }
+
+  private handleAutoFire(delta: number, time: number) {
     const playerEntity = this.getPlayerEntity();
     if (!playerEntity) return;
 
-    // --- PURGE LOGIC ---
-    if (this.purgeState.active) {
-        const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
-        if (transform) this.processPurgeFrame(delta, transform.x, transform.y);
-    }
-
-    if (this.purgeState.active || isDead) return;
-
-    // --- AUTO FIRE LOGIC ---
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (!stateComp || (stateComp.current !== AI_STATE.ACTIVE && stateComp.current !== AI_STATE.REBOOTING)) return;
 
-    // 1. Acquire Targets
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     if (!transform) return;
 
     const target = this.acquireTarget(transform);
-    if (!target) return; // No enemies in range, don't fire
+    if (!target) return;
 
-    // 2. Read State
     const railgunState = useGameStore.getState().railgun;
     const snifferState = useGameStore.getState().sniffer;
     const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
-    // 3. RAILGUN FIRE
+    // RAILGUN
     const railgunInterval = this.getRailgunInterval(railgunState.rateLevel);
     if (time > this.lastRailgunTime + railgunInterval) {
         const shot = calculateRailgunShot(
@@ -88,27 +196,19 @@ export class WeaponSystem implements IGameSystem {
             railgunState
         );
         
-        // Pass Scale Override (scaleX maps to width in Capsule geometry context usually Y or radius, 
-        // but let's assume we map scaleX to the prop we want. 
-        // Our Railgun visual is a CAPSULE. [0.2, 0.8, 0.2].
-        // Scale X/Z is width. Scale Y is length.
-        // Logic returns 'scaleX' as the width multiplier.
-        this.spawner.spawnBullet(
+        this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
             Faction.FRIENDLY, shot.life, shot.damage, shot.configId, 
             undefined,
-            { scaleX: shot.scaleX, scaleY: 0.8 } // Pass length explicitly to maintain aspect? Or handled in logic.
+            { scaleX: shot.scaleX, scaleY: shot.scaleY } 
         );
 
-        this.events.emit(GameEvents.PLAYER_FIRED, { 
-            x: transform.x, y: transform.y, 
-            angle: Math.atan2(shot.vy, shot.vx) 
-        });
+        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
         this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
         this.lastRailgunTime = time;
     }
 
-    // 4. SNIFFER FIRE
+    // SNIFFER
     if (snifferState.capacityLevel > 0) {
         const snifferInterval = this.getSnifferInterval(snifferState.rateLevel);
         if (time > this.lastSnifferTime + snifferInterval) {
@@ -120,20 +220,13 @@ export class WeaponSystem implements IGameSystem {
             );
 
             shots.forEach(s => {
-                const b = this.spawner.spawnBullet(
+                const b = this.spawner.spawnProjectile(
                     s.x, s.y, s.vx, s.vy, 
                     Faction.FRIENDLY, s.life, s.damage, s.configId
                 );
-                // Sniffers need homing
                 b.addComponent(new TargetData(null, 'ENEMY'));
                 this.registry.updateCache(b);
             });
-            
-            // Only play sound if shots were actually generated
-            if (shots.length > 0) {
-                // Slightly different sound or pitch?
-                // For now, reuse or add 'fx_sniffer_fire' later
-            }
             this.lastSnifferTime = time;
         }
     }
@@ -141,19 +234,14 @@ export class WeaponSystem implements IGameSystem {
 
   private getRailgunInterval(level: number): number {
       const base = 0.15;
-      // 10% faster per level: 0.15 / (1.1 ^ level)
       return base / Math.pow(1.1, level);
   }
 
   private getSnifferInterval(level: number): number {
-      const base = 0.15; // Railgun Base
-      // Lvl 0: 1/3 rate -> 3x interval -> 0.45s
+      const base = 0.15;
       if (level === 0) return base * 3.0;
-      // Lvl 1: 2/3 rate -> 1.5x interval -> 0.225s
       if (level === 1) return base * 1.5;
-      // Lvl 2: 1:1 rate -> 1x interval -> 0.15s
       if (level === 2) return base;
-      // Lvl 3: 1.33x rate -> 0.75x interval -> 0.1125s
       if (level >= 3) return base * 0.75;
       return base * 3.0;
   }
@@ -183,7 +271,7 @@ export class WeaponSystem implements IGameSystem {
           }
           const angle = this.purgeState.currentAngle;
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
-          const bullet = this.spawner.spawnBullet(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
+          const bullet = this.spawner.spawnProjectile(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.5); 
@@ -199,29 +287,19 @@ export class WeaponSystem implements IGameSystem {
   private acquireTarget(pPos: TransformData) {
     const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
-    
-    let nearestDist = Infinity; 
-    let targetEnemy = null;
+    let nearestDist = Infinity; let targetEnemy = null;
 
     for (let i = 0; i < count; i++) {
       const id = this.queryBuffer[i];
       const e = this.registry.getEntity(id);
-      
-      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
-      
+      if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
       const state = e.getComponent<AIStateData>(ComponentType.State);
       if (state && state.current === AI_STATE.SPAWN) continue;
-      
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      
       const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { 
-          nearestDist = dist; 
-          targetEnemy = e; 
-      }
+      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
     }
-
     if (!targetEnemy) return null;
     const t = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
     return { x: t.x, y: t.y };

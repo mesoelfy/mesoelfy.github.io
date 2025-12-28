@@ -12,8 +12,8 @@ export interface ShotDef {
   life: number;
   configId: ArchetypeID;
   isHoming: boolean;
-  scaleX?: number; // Visual Length (Forward axis)
-  scaleY?: number; // Visual Width (Side axis)
+  scaleX?: number;
+  scaleY?: number;
 }
 
 const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
@@ -37,20 +37,18 @@ export const calculateRailgunShot = (
   const speed = config.bulletSpeed; 
   const life = config.bulletLife;
 
-  // --- WIDTH LOGIC ---
-  // The Crescent geometry faces +X. 
-  // Scale X = Length. Scale Y = Width.
+  // --- RAILGUN SCALING (CORRECTED) ---
+  // Model is Y-Up.
+  // Scale X = Width (Side-to-Side)
+  // Scale Y = Length (Forward)
   
-  // Base scales (Visual units)
-  const BASE_LEN = 0.4;
-  const BASE_WID = 0.3;
-
-  // Level 0: 1.0x width
-  // Level 10: 8.0x width (Massive crescent expansion)
-  const widthMult = 1.0 + (state.widthLevel * 0.7); 
+  const BASE_WIDTH = 0.6; 
+  const MAX_WIDTH = 2.5; 
   
-  // Length stays relatively compact to look like a "wave" front
-  const lengthMult = 1.0; 
+  // Linear interpolation based on level (0-10)
+  const widthMult = BASE_WIDTH + ((MAX_WIDTH - BASE_WIDTH) * (state.widthLevel / 10));
+  
+  const lengthMult = 0.6; // Constant thickness
 
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
@@ -68,8 +66,8 @@ export const calculateRailgunShot = (
       life,
       configId: WeaponIDs.PLAYER_RAILGUN,
       isHoming: false,
-      scaleX: BASE_LEN * lengthMult, 
-      scaleY: BASE_WID * widthMult   
+      scaleX: widthMult,  // Width maps to X
+      scaleY: lengthMult  // Length maps to Y
   };
 };
 

@@ -25,7 +25,6 @@ export class EntitySpawner implements IEntitySpawner {
     extraTags.forEach(tag => e.addTag(tag));
 
     for (const compDef of blueprint.components) {
-        // Deep merge data if possible, otherwise spread
         const mergedData = { ...(compDef.data || {}), ...(overrides[compDef.type] || {}) };
         e.addComponent(ComponentRegistry.create(compDef.type, mergedData));
     }
@@ -46,7 +45,7 @@ export class EntitySpawner implements IEntitySpawner {
     return this.spawn(type, { [ComponentType.Transform]: { x, y } });
   }
 
-  public spawnBullet(
+  public spawnProjectile(
       x: number, y: number, 
       vx: number, vy: number, 
       faction: Faction, 
@@ -54,38 +53,39 @@ export class EntitySpawner implements IEntitySpawner {
       damage: number = 1, 
       projectileId: ArchetypeID = WeaponIDs.PLAYER_RAILGUN, 
       ownerId?: number,
-      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string } // NEW
+      visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
     let id = projectileId;
     if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_RAILGUN;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
     
+    // PROJECTILE REFACTOR: 
+    // 1. MotionData is added but friction is 0 (handled via kinematics in WeaponSystem Phase 2)
+    // 2. RenderEffect removed to prevent squash/stretch artifacts
+    
     const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
-        [ComponentType.Motion]: { vx, vy },
+        [ComponentType.Motion]: { vx, vy, friction: 0 }, 
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
         [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
 
-    // Apply Visual Scaling if provided
     if (visualOverrides) {
         const transformData: any = {};
         if (visualOverrides.scaleX) transformData.baseScaleX = visualOverrides.scaleX;
         if (visualOverrides.scaleY) transformData.baseScaleY = visualOverrides.scaleY;
         overrides[ComponentType.RenderTransform] = transformData;
-
-        if (visualOverrides.color) {
-            // Hex parsing handled in RenderModel component logic usually, 
-            // but here we might need to manually set it if the spawner doesn't auto-parse overrides.
-            // ComponentRegistry.create handles the object, RenderModel.reset does copying.
-            // RenderModel stores r,g,b. We need to pass those if we change color.
-            // For now, we'll assume color overrides are handled via specific Archetypes or we add hex support to RenderModel.reset
-        }
     }
 
-    return this.spawn(id, overrides);
+    const entity = this.spawn(id, overrides);
+    
+    // Explicitly remove RenderEffect if blueprint added it, to stop bouncing
+    // (We do this safely by not adding it, but if archetype has it, we might need to strip it)
+    // For now, we assume the new Archetypes for projectiles won't include RenderEffect
+    
+    return entity;
   }
 
   public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: ParticleShape = ParticleShape.CIRCLE): void {

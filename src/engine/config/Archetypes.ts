@@ -1,6 +1,6 @@
 import { PLAYER_CONFIG } from './PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
-import { ArchetypeIDs } from './Identifiers';
+import { ArchetypeIDs, WeaponIDs } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
@@ -72,7 +72,7 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      // Enemies use spawnProgress: 0.0 to animate in
+      // Enemies KEEP RenderEffect for spawn animation
       ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
@@ -101,7 +101,7 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// --- WEAPON GENERATION ---
+// --- WEAPON GENERATION (FIXED) ---
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     const matId = 'MAT_PROJECTILE';
@@ -119,17 +119,12 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Collider, data: { radius, layer, mask } },
       { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
+      // NO RENDER EFFECT HERE. This ensures pure rigid body rendering.
       { type: ComponentType.RenderTransform, data: { 
           scale: 1.0, 
           baseScaleX: def.visual.scale[0], 
           baseScaleY: def.visual.scale[1], 
           baseScaleZ: def.visual.scale[2] 
-      }},
-      // FIX: Set spawnProgress to 1.0
-      { type: ComponentType.RenderEffect, data: { 
-          elasticity: def.id === 'PLAYER_PURGE' ? 0.0 : 2.0, 
-          pulseSpeed: def.behavior?.pulseSpeed || 0,
-          spawnProgress: 1.0 
       }}
     ];
 
@@ -144,7 +139,11 @@ Object.values(WEAPONS).forEach(def => {
     };
 });
 
-BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS['PLAYER_STANDARD'];
-BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS['ENEMY_HUNTER'];
+if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) {
+    BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+}
+if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) {
+    BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
+}
 
 export const ARCHETYPES = BLUEPRINTS;

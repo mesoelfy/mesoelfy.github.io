@@ -137,7 +137,8 @@ export class TargetingSystem implements IGameSystem {
           const id = this.queryBuffer[i];
           const e = this.registry.getEntity(id);
           
-          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.BULLET)) continue;
+          // Updated: Exclude PROJECTILE
+          if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
           if (!t) continue;

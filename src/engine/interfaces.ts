@@ -113,7 +113,7 @@ export interface IEntitySpawner {
   spawn(archetypeId: ArchetypeID, overrides?: Record<string, any>, extraTags?: Tag[]): Entity;
   spawnPlayer(): Entity;
   spawnEnemy(type: ArchetypeID, x: number, y: number): Entity;
-  spawnBullet(
+  spawnProjectile(
       x: number, y: number, 
       vx: number, vy: number, 
       faction: Faction, 
@@ -148,7 +148,6 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
-  // NEW METHODS
   startHealingTone(): void;
   stopHealingTone(): void;
 }

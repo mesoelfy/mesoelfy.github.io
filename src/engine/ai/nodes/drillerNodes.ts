@@ -68,7 +68,15 @@ export class DrillAttack extends BTNode {
             visual.offsetX = (Math.random() - 0.5) * panelStress * 0.15;
             visual.offsetY = (Math.random() - 0.5) * panelStress * 0.15;
         }
-        context.spawnFX('DRILL_SPARKS', tX, tY, tA);
+        
+        // FIX: Offset sparks back along the reverse vector so they spawn on the drill bit, not inside the wall
+        // tA points INTO the wall. tA + PI points OUT.
+        const spawnOffset = 0.25; 
+        const sparkX = tX + Math.cos(tA + Math.PI) * spawnOffset;
+        const sparkY = tY + Math.sin(tA + Math.PI) * spawnOffset;
+        
+        context.spawnFX('DRILL_SPARKS', sparkX, sparkY, tA);
+        
         this.handleAudio(state, transform.x, context);
         this.handleDamage(state, target.id as PanelId, transform, combat, context, interval);
     }

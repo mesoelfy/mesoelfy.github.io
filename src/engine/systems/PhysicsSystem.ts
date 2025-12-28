@@ -23,11 +23,14 @@ export class PhysicsSystem implements IPhysicsSystem {
   update(delta: number, time: number): void {
     this.spatialGrid.clear();
     
-    // 1. INTEGRATION STEP
+    // 1. INTEGRATION STEP (Standard Physics Entities Only)
     const movables = this.registry.query(this.motionQuery);
     
     for (const entity of movables) {
       if (!entity.active) continue;
+
+      // EXCLUSION: Skip Projectiles (Handled by WeaponSystem)
+      if (entity.hasComponent(ComponentType.Projectile)) continue;
 
       const transform = entity.getComponent<TransformData>(ComponentType.Transform);
       const motion = entity.getComponent<MotionData>(ComponentType.Motion);
@@ -50,7 +53,7 @@ export class PhysicsSystem implements IPhysicsSystem {
       }
     }
 
-    // 2. BROADPHASE STEP
+    // 2. BROADPHASE STEP (Includes Projectiles for Collision)
     const collidables = this.registry.query(this.colliderQuery);
 
     for (const entity of collidables) {

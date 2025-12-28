@@ -31,7 +31,6 @@ import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
 import { TargetingSystem } from '@/engine/systems/TargetingSystem';
 import { OrbitalSystem } from '@/engine/systems/OrbitalSystem';
-import { GuidanceSystem } from '@/engine/systems/GuidanceSystem';
 import { ProjectileSystem } from '@/engine/systems/ProjectileSystem';
 import { WorldSystem } from '@/engine/systems/WorldSystem';
 import { BehaviorSystem } from '@/engine/systems/BehaviorSystem';
@@ -99,7 +98,6 @@ export class EngineFactory {
     const projectileSystem = new ProjectileSystem(registry);
     const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
-    const guidanceSystem = new GuidanceSystem(registry);
     
     const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
     
@@ -115,8 +113,9 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem);
-    // UPDATED: Inject rawFastBus into CombatSystem
+    // UPDATED: Inject ParticleSystem into WeaponSystem
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem, particleSystem);
+    
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
@@ -148,7 +147,6 @@ export class EngineFactory {
 
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
-    register(guidanceSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
 
     register(collisionSystem, SystemPhase.COLLISION);
@@ -171,6 +169,8 @@ export class EngineFactory {
 
     engine.setup(ServiceLocator);
     spawner.spawnPlayer();
+
+    ServiceLocator.register('ParticleSystem', particleSystem); // Explicit register for safety
 
     return engine;
   }

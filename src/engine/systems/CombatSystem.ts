@@ -10,12 +10,13 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { getFXCode, getSoundCode, FXCode, SoundCode } from '@/engine/signals/FastEventBus';
+import { Tag } from '@/engine/ecs/types';
 
 export class CombatSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
-    private events: IGameEventService, // Slow Bus (Game Over, Score)
-    private fastBus: IFastEventService, // Fast Bus (VFX, Audio, Flash)
+    private events: IGameEventService, 
+    private fastBus: IFastEventService, 
     private audio: IAudioService
   ) {}
 
@@ -36,54 +37,31 @@ export class CombatSystem implements IGameSystem {
 
       const context: CombatContext = {
           damagePlayer: (amount) => {
-              // Player hits are rare enough to stay on Slow Bus
               this.events.emit(GameEvents.PLAYER_HIT, { damage: amount });
           },
           destroyEntity: (entity, fx, angle) => this.destroyEntity(entity, fx, angle),
-          
           spawnFX: (type, x, y) => {
-              // OPTIMIZATION: Direct FastBus write
               const code = getFXCode(type);
-              if (code !== FXCode.NONE) {
-                  this.fastBus.spawnFX(code, x, y, 0);
-              } else {
-                  // Fallback for custom/complex FX not in Enum
-                  this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: 0 });
-              }
+              if (code !== FXCode.NONE) this.fastBus.spawnFX(code, x, y, 0);
+              else this.events.emit(GameEvents.SPAWN_FX, { type: type as VFXKey, x, y, angle: 0 });
           },
-          
           spawnImpact: (x, y, r, g, b, angle) => {
-              // Impacts are complex objects, keep on Slow Bus for now or add FastBus support later
               const toHex = (c: number) => Math.floor(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0');
               const hexColor = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
               this.events.emit(GameEvents.SPAWN_IMPACT, { x, y, hexColor, angle });
           },
-          
           playAudio: (key) => {
               const code = getSoundCode(key);
-              if (code !== SoundCode.NONE) {
-                  this.fastBus.playSound(code, 0);
-              } else {
-                  this.events.emit(GameEvents.PLAY_SOUND, { key });
-              }
+              if (code !== SoundCode.NONE) this.fastBus.playSound(code, 0);
+              else this.events.emit(GameEvents.PLAY_SOUND, { key });
           },
-          
           playSpatialAudio: (key, x) => {
               const code = getSoundCode(key);
-              if (code !== SoundCode.NONE) {
-                  this.fastBus.playSound(code, x);
-              } else {
-                  this.events.emit(GameEvents.PLAY_SOUND, { key, x });
-              }
+              if (code !== SoundCode.NONE) this.fastBus.playSound(code, x);
+              else this.events.emit(GameEvents.PLAY_SOUND, { key, x });
           },
-          
-          addTrauma: (amount) => {
-              this.fastBus.camShake(amount);
-          },
-          
-          flashEntity: (id) => {
-              this.fastBus.flashEntity(id);
-          }
+          addTrauma: (amount) => this.fastBus.camShake(amount),
+          flashEntity: (id) => this.fastBus.flashEntity(id)
       };
 
       handler(a, b, context);
@@ -121,18 +99,9 @@ export class CombatSystem implements IGameSystem {
               finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
           }
           
-          // Use FastBus for destruction FX
           const code = getFXCode(finalFX);
-          if (code !== FXCode.NONE) {
-              this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
-          } else {
-              this.events.emit(GameEvents.SPAWN_FX, { 
-                  type: finalFX as VFXKey, 
-                  x: transform.x, 
-                  y: transform.y, 
-                  angle: angleToUse 
-              });
-          }
+          if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
+          else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
       }
   }
 

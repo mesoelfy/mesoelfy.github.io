@@ -3,7 +3,6 @@ export * from './BehaviorSystem';
 export * from './CollisionSystem';
 export * from './CombatSystem';
 export * from './GameStateSystem';
-export * from './GuidanceSystem';
 export * from './HealthSystem';
 export * from './InputSystem';
 export * from './InteractionSystem';
