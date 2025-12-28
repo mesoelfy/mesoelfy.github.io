@@ -106,11 +106,13 @@ const SnifferOverlayShader = {
 };
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
-const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
+
+// --- COLOR PALETTE ---
+const COL_BASE = new THREE.Color(GAME_THEME.turret.base); // Green
 const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink
-const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
-const COL_DEAD = new THREE.Color('#FF003C');
+const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD); // Bright Yellow
+const COL_REBOOT = new THREE.Color('#8A7000'); // DARK YELLOW (Matches Crystal)
+const COL_DEAD = new THREE.Color('#FF003C'); // Critical Red
 const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
 
@@ -127,6 +129,10 @@ export const PlayerActor = () => {
   const isZenMode = useGameStore(state => state.isZenMode);
   const snifferState = useGameStore(state => state.sniffer);
   
+  // REAL-TIME STATE SYNC
+  const healthRef = useRef(100);
+  useGameStream('PLAYER_HEALTH', (v) => healthRef.current = v);
+
   const [interactionCode, setInteractionCode] = useState(0);
   useGameStream('PLAYER_INTERACTION_STATE', setInteractionCode);
 
@@ -176,7 +182,11 @@ export const PlayerActor = () => {
 
   useFrame((state, delta) => {
     if (!containerRef.current || !centerDotRef.current) return;
+    
+    // --- STATE CHECKS ---
     const isSysFail = useGameStore.getState().systemIntegrity <= 0;
+    const isPlayerDead = healthRef.current <= 0; 
+    
     if (!isZenMode) zenStartTime.current = -1; else if (zenStartTime.current === -1) zenStartTime.current = state.clock.elapsedTime;
 
     let targetScale = (introDone && (isZenMode ? (zenStartTime.current !== -1 && state.clock.elapsedTime > zenStartTime.current + 1.5) : !isSysFail)) ? 1 : 0;
@@ -188,17 +198,15 @@ export const PlayerActor = () => {
     
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
-    const isPlayerDead = useGameStore.getState().playerHealth <= 0;
     
     // --- COLOR STATE LOGIC ---
-    const isReviving = interactionCode === 2; // Self Revive
-    const isSelfHealing = interactionCode === 1; // Self Heal
+    const isReviving = interactionCode === 2; 
+    const isSelfHealing = interactionCode === 1; 
+    // FIX: Ensure DEAD state is ignored in Zen Mode
+    const isDeadVisual = !isZenMode && isPlayerDead && !isReviving;
     
-    // Panel Interaction Logic
     const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
     const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
-    
-    const isDeadVisual = isPlayerDead && !isReviving;
     
     const isActive = iState !== 'IDLE' || isZenMode;
 
@@ -259,18 +267,19 @@ export const PlayerActor = () => {
             let target = COL_BASE;
             let reticleTarget = null;
             
+            // PRIORITY ORDER
             if (isReviving) {
-                target = COL_REBOOT; 
+                target = COL_REBOOT; // Dark Yellow
+                reticleTarget = COL_REBOOT;
             } else if (isDeadVisual) {
-                target = COL_DEAD;
-                reticleTarget = new THREE.Color('#76000C');
+                target = COL_DEAD; // Red
+                reticleTarget = COL_DEAD; 
             } else if (isSelfHealing) {
-                // FIXED: Use Yellow for Self-Healing Reticle
-                target = COL_HEAL_SELF; 
+                target = COL_HEAL_SELF; // Bright Yellow
                 reticleTarget = COL_HEAL_SELF; 
             } else if (isPanelRebooting) {
-                target = COL_REBOOT; // Dark Purple
-                reticleTarget = COL_REBOOT;
+                target = new THREE.Color('#9E4EA5'); // Purple
+                reticleTarget = new THREE.Color('#9E4EA5');
             } else if (isPanelHealing) {
                 target = COL_REPAIR_PANEL; // Pink
                 reticleTarget = COL_RET_HEAL; // Deep Pink

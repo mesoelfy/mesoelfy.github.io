@@ -26,15 +26,18 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const label = isPurge ? 'PURGE' : 'REPAIR';
   const Icon = isPurge ? Bomb : Wrench;
   
-  // Dynamic Styles based on type
   const borderColor = isPurge ? 'border-critical-red' : 'border-alert-yellow';
-  const shadowColor = isPurge ? '#FF003C' : '#eae747';
+  // FIX: Using full static class strings for shadows instead of dynamic interpolation
+  const shadowClass = isPurge 
+    ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" 
+    : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]";
+    
   const bgInner = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
   const textInner = isPurge ? 'text-critical-red' : 'text-alert-yellow';
   
-  // Use named group 'opbtn' to avoid conflict with parent panel hover
   const groupHoverBg = isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow';
   const groupHoverText = 'group-hover/opbtn:text-black';
+  const stripeColor = isPurge ? '#FF003C' : '#eae747';
 
   return (
     <button
@@ -49,14 +52,14 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
         className={clsx(
             "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-shadow duration-300 rounded-sm",
             borderColor,
-            `shadow-[0_0_20px_${shadowColor}] hover:shadow-[0_0_40px_${shadowColor}]`
+            shadowClass
         )}
         title={`${label} (1 PT)`}
     >
         {/* Hazard Stripes Background */}
         <div 
             className="absolute inset-0 opacity-20 pointer-events-none" 
-            style={{ backgroundImage: `repeating-linear-gradient(45deg, ${shadowColor} 0, ${shadowColor} 5px, transparent 5px, transparent 10px)` }} 
+            style={{ backgroundImage: `repeating-linear-gradient(45deg, ${stripeColor} 0, ${stripeColor} 5px, transparent 5px, transparent 10px)` }} 
         />
         
         {/* Inner Box */}

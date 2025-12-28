@@ -27,6 +27,8 @@ export class LifeCycleSystem implements IGameSystem {
 
     for (const entity of mortals) {
       if (!entity.active) continue;
+      
+      // 1. LIFETIME CHECK
       const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -35,21 +37,32 @@ export class LifeCycleSystem implements IGameSystem {
           continue;
         }
       }
+
+      // 2. HEALTH CHECK
       const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
+          // CRITICAL FIX: Do not destroy the Player entity on 0 HP.
+          // The HealthSystem handles the "Game Over" logic state.
+          // The PlayerActor handles the "Wireframe/Red" visual state.
+          if (entity.hasTag(Tag.PLAYER)) continue;
+
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+          
           if (identity && transform) {
              const isEnemy = Object.values(EnemyTypes).includes(identity.variant as any);
              if (isEnemy && identity.variant !== EnemyTypes.DAEMON) {
                  this.events.emit(GameEvents.ENEMY_DESTROYED, { id: entity.id as number, type: identity.variant, x: transform.x, y: transform.y });
              }
+             
              let fx: FXVariant = 'EXPLOSION_PURPLE';
              if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
              else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
              else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
+             
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
+          
           this.registry.destroyEntity(entity.id);
       }
     }
@@ -59,6 +72,8 @@ export class LifeCycleSystem implements IGameSystem {
       const allies = this.registry.getByTag(Tag.PLAYER);
       for (const entity of allies) {
           if (!entity.active) continue;
+          
+          // Only destroy summons (Daemon), not the player itself
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity && identity.variant === EnemyTypes.DAEMON) {
               const transform = entity.getComponent<TransformData>(ComponentType.Transform);

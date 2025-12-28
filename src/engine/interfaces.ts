@@ -179,9 +179,12 @@ export interface ICombatSystem extends IGameSystem {
   resolveCollision(e1: Entity, e2: Entity): void;
 }
 
+// UPDATED INTERFACE
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: PanelId | null;
+  registerZone(id: string, rect: WorldRect): void; // NEW
+  unregisterZone(id: string): void; // NEW
 }
 
 export interface DamageOptions {

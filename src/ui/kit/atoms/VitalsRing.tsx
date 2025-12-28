@@ -2,9 +2,9 @@ import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 import { Unplug } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useGameStream } from '@/ui/hooks/useGameStream';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { UI_METRICS, UI_COLORS } from '@/engine/config/constants/UIConstants';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
+import { useInteractionZone } from '@/ui/sim/hooks/useInteractionZone';
 
 interface VitalsRingProps {
   health: number;
@@ -14,7 +14,9 @@ interface VitalsRingProps {
 }
 
 export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // NEW: Hook replaces manual ref
+  const containerRef = useInteractionZone('crystal');
+  
   const levelRef = useRef<SVGTSpanElement>(null);
   
   const [deadState, setDeadState] = useState(isDead);

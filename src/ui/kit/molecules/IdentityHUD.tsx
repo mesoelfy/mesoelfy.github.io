@@ -32,11 +32,11 @@ export const IdentityHUD = () => {
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* HEADER: Points Display (Moved from UpgradeTerminal) */}
+      {/* HEADER: Points Display */}
       <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
           <div className="flex items-center gap-2">
               <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
-              <span className="text-[10px] font-bold tracking-widest text-white">
+              <span className="text-xl font-bold tracking-widest text-white">
                   AVAILABLE_POINTS
               </span>
           </div>

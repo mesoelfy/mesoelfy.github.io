@@ -19,9 +19,9 @@ const COLORS = {
   // Healing Colors
   HEAL_BASE: new THREE.Color(PALETTE.YELLOW.GOLD),
   HEAL_EMISSIVE: new THREE.Color(PALETTE.YELLOW.ALERT),
-  // Revive Colors
-  REVIVE_BASE: new THREE.Color(PALETTE.PURPLE.PRIMARY),
-  REVIVE_EMISSIVE: new THREE.Color(PALETTE.PURPLE.DEEP),
+  // Revive Colors (Dark Yellow)
+  REVIVE_BASE: new THREE.Color('#8A7000'),
+  REVIVE_EMISSIVE: new THREE.Color('#665200'),
 };
 
 const SpinningGem = () => {
@@ -48,13 +48,13 @@ const SpinningGem = () => {
     let wireframe = true;
 
     // 1. STATE LOGIC
-    if (interactionState === 1) { // HEALING
+    if (interactionState === 1) { // HEALING (Standard)
         targetColor = COLORS.HEAL_BASE;
         targetEmissive = COLORS.HEAL_EMISSIVE;
         speed = 0.15; // Fast spin
         distort = 0.6;
         wireframe = false; // SOLID
-    } else if (interactionState === 2) { // REVIVING
+    } else if (interactionState === 2) { // REVIVING (Dark Yellow)
         targetColor = COLORS.REVIVE_BASE;
         targetEmissive = COLORS.REVIVE_EMISSIVE;
         speed = 0.05;

@@ -52,7 +52,7 @@ export class WeaponSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.updateProjectiles(delta, time);
 
-    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+    // If Purge is active, override standard fire
     if (this.purgeState.active) {
         const player = this.getPlayerEntity();
         if (player) {
@@ -62,7 +62,9 @@ export class WeaponSystem implements IGameSystem {
         return;
     }
 
+    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
     if (isDead) return;
+    
     this.handleAutoFire(delta, time);
   }
 
@@ -210,13 +212,36 @@ export class WeaponSystem implements IGameSystem {
   }
 
   private triggerPurge() {
+      // 1. Initialize Spiral State
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
+      
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
+              // 2. Spawn Effects
               this.events.emit(GameEvents.SPAWN_FX, { type: 'PURGE_BLAST', x: t.x, y: t.y, angle: 0 });
               this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.5 });
+
+              // 3. NEW: Spawn Concentric Circle Wave (Burst)
+              // Increased count for visibility
+              const BURST_COUNT = 72; 
+              const BURST_SPEED = 24;
+              
+              for(let i=0; i<BURST_COUNT; i++) {
+                  const angle = (i / BURST_COUNT) * Math.PI * 2;
+                  const vx = Math.cos(angle) * BURST_SPEED;
+                  const vy = Math.sin(angle) * BURST_SPEED;
+                  
+                  // Pass visualOverrides to make them larger
+                  this.spawner.spawnProjectile(
+                      t.x, t.y, vx, vy, 
+                      Faction.FRIENDLY, 2.4, 50, 
+                      WeaponIDs.PLAYER_PURGE, 
+                      undefined,
+                      { scaleX: 1.5, scaleY: 1.5 }
+                  );
+              }
           }
       }
   }
