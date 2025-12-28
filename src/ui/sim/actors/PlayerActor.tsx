@@ -109,7 +109,6 @@ const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo =
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
 const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink
 const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-// UPDATED: Using DIM Purple for Rebooting a Dead Panel
 const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C');
@@ -187,11 +186,11 @@ export const PlayerActor = () => {
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     
-    // Check interaction system for visual state
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
     const isPlayerDead = useGameStore.getState().playerHealth <= 0;
     
+    // --- COLOR STATE LOGIC ---
     const isReviving = interactionCode === 2; // Self Revive
     const isSelfHealing = interactionCode === 1; // Self Heal
     
@@ -266,16 +265,15 @@ export const PlayerActor = () => {
                 target = COL_DEAD;
                 reticleTarget = new THREE.Color('#76000C');
             } else if (isSelfHealing) {
+                // FIXED: Use Yellow for Self-Healing Reticle
                 target = COL_HEAL_SELF; 
-                reticleTarget = COL_RET_HEAL;
+                reticleTarget = COL_HEAL_SELF; 
             } else if (isPanelRebooting) {
-                // EXPLICIT: Darker Purple for Reboot
-                target = COL_REBOOT; // #822B8A
+                target = COL_REBOOT; // Dark Purple
                 reticleTarget = COL_REBOOT;
             } else if (isPanelHealing) {
-                // Pink for Healing
-                target = COL_REPAIR_PANEL; // #FFCCFF
-                reticleTarget = COL_RET_HEAL;
+                target = COL_REPAIR_PANEL; // Pink
+                reticleTarget = COL_RET_HEAL; // Deep Pink
             }
             
             tempColor.current.lerp(target, 0.2);

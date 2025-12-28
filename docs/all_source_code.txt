@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 15:55:57 CST 2025
+Generated on: Sun Dec 28 16:40:26 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -9991,13 +9991,12 @@ const createReticleGeo = () => {
 
 const createForkedChevronGeo = (tipCount: number) => {
     const shape = new THREE.Shape();
-    const rTip = 0.92; const rValley = 0.84; const thickness = 0.06; 
+    const rTip = 0.92; const rValley = 0.84; 
     const spread = GAME_MATH.WEAPON_SPREAD_BASE; 
     const startAngle = (Math.PI / 2) + ((tipCount - 1) * spread / 2);
     const pt = (r: number, a: number) => [r * Math.cos(a), r * Math.sin(a)];
 
-    const startBaseAngle = startAngle + (spread * 0.4); 
-    const pStartBase = pt(rValley, startBaseAngle);
+    const pStartBase = pt(rValley, startAngle + (spread * 0.4));
     shape.moveTo(pStartBase[0], pStartBase[1]);
 
     for (let i = 0; i < tipCount; i++) {
@@ -10005,34 +10004,10 @@ const createForkedChevronGeo = (tipCount: number) => {
         const pTip = pt(rTip, angle);
         shape.lineTo(pTip[0], pTip[1]);
         if (i < tipCount - 1) {
-            const midAngle = angle - (spread / 2);
-            const pValley = pt(rValley, midAngle);
+            const pValley = pt(rValley, angle - (spread / 2));
             shape.lineTo(pValley[0], pValley[1]);
         }
     }
-    
-    const endBaseAngle = (startAngle - ((tipCount - 1) * spread)) - (spread * 0.4);
-    const pEndBase = pt(rValley, endBaseAngle);
-    shape.lineTo(pEndBase[0], pEndBase[1]);
-
-    const rInnerTip = rTip - thickness;
-    const rInnerValley = rValley - thickness;
-    const pInnerEnd = pt(rInnerValley, endBaseAngle);
-    shape.lineTo(pInnerEnd[0], pInnerEnd[1]);
-
-    for (let i = tipCount - 1; i >= 0; i--) {
-        const angle = startAngle - (i * spread);
-        const pInTip = pt(rInnerTip, angle);
-        shape.lineTo(pInTip[0], pInTip[1]);
-        if (i > 0) {
-            const midAngle = angle + (spread / 2);
-            const pInValley = pt(rInnerValley, midAngle);
-            shape.lineTo(pInValley[0], pInValley[1]);
-        }
-    }
-
-    const pInnerStart = pt(rInnerValley, startBaseAngle);
-    shape.lineTo(pInnerStart[0], pInnerStart[1]);
     shape.closePath();
     return new THREE.ShapeGeometry(shape);
 };
@@ -10074,13 +10049,12 @@ const SnifferOverlayShader = {
 
 const coreGeo = createCoreGeo(), reticleGeo = createReticleGeo(), glowPlaneGeo = new THREE.PlaneGeometry(1, 1);
 const COL_BASE = new THREE.Color(GAME_THEME.turret.base);
-const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair);
+const COL_REPAIR_PANEL = new THREE.Color(GAME_THEME.turret.repair); // Pink
 const COL_HEAL_SELF = new THREE.Color(PALETTE.YELLOW.GOLD);
-const COL_REBOOT = new THREE.Color('#9E4EA5');
+const COL_REBOOT = new THREE.Color(PALETTE.PURPLE.DIM); 
 const COL_DEAD = new THREE.Color('#FF003C');
 const COL_HIT = new THREE.Color('#FF003C');
 const COL_RET_HEAL = new THREE.Color(PALETTE.PINK.DEEP);
-const COL_SNIFFER = new THREE.Color(PALETTE.PURPLE.LIGHT);
 
 export const PlayerActor = () => {
   const { registry, getSystem, events } = useGameContext();
@@ -10154,15 +10128,18 @@ export const PlayerActor = () => {
 
     if (hitFlash.current > 0) hitFlash.current = Math.max(0, hitFlash.current - delta * 4.0);
     
-    // Interaction State Logic
     const interaction = getSystem<IInteractionSystem>('InteractionSystem');
     const iState = interaction?.repairState || 'IDLE';
     const isPlayerDead = useGameStore.getState().playerHealth <= 0;
     
-    // Use Interaction Code for explicit actions, fallback to iState/Dead status
-    const isReviving = interactionCode === 2;
-    const isSelfHealing = interactionCode === 1;
-    const isPanelRepairing = interactionCode === 0 && iState === 'HEALING'; // Panel repair (Standard)
+    // --- COLOR STATE LOGIC ---
+    const isReviving = interactionCode === 2; // Self Revive
+    const isSelfHealing = interactionCode === 1; // Self Heal
+    
+    // Panel Interaction Logic
+    const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
+    const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
+    
     const isDeadVisual = isPlayerDead && !isReviving;
     
     const isActive = iState !== 'IDLE' || isZenMode;
@@ -10220,19 +10197,34 @@ export const PlayerActor = () => {
             }
 
         } else {
-            // DETERMINE COLOR STATE (PRECEDENCE)
+            // DETERMINE COLOR STATE
             let target = COL_BASE;
+            let reticleTarget = null;
             
-            if (isReviving) target = COL_REBOOT; // Purple (Highest Active Priority)
-            else if (isDeadVisual) target = COL_DEAD; // Red (Dead but not reviving)
-            else if (isSelfHealing) target = COL_HEAL_SELF; // Yellow
-            else if (isPanelRepairing) target = COL_REPAIR_PANEL; // Pink
+            if (isReviving) {
+                target = COL_REBOOT; 
+            } else if (isDeadVisual) {
+                target = COL_DEAD;
+                reticleTarget = new THREE.Color('#76000C');
+            } else if (isSelfHealing) {
+                // FIXED: Use Yellow for Self-Healing Reticle
+                target = COL_HEAL_SELF; 
+                reticleTarget = COL_HEAL_SELF; 
+            } else if (isPanelRebooting) {
+                target = COL_REBOOT; // Dark Purple
+                reticleTarget = COL_REBOOT;
+            } else if (isPanelHealing) {
+                target = COL_REPAIR_PANEL; // Pink
+                reticleTarget = COL_RET_HEAL; // Deep Pink
+            }
             
             tempColor.current.lerp(target, 0.2);
             
-            if (isDeadVisual) reticleColor.current.lerp(new THREE.Color('#76000C'), 0.2);
-            else if (isPanelRepairing || isSelfHealing) reticleColor.current.lerp(COL_RET_HEAL, 0.1);
-            else reticleColor.current.lerp(tempColor.current, 0.2);
+            if (reticleTarget) {
+                reticleColor.current.lerp(reticleTarget, 0.1);
+            } else {
+                reticleColor.current.lerp(tempColor.current, 0.2);
+            }
             
             if (hitFlash.current > 0.01) { 
                 tempColor.current.lerp(COL_HIT, hitFlash.current); 
@@ -10867,6 +10859,7 @@ import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 
 export const registerAllAssets = () => {
+  // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
@@ -10875,19 +10868,27 @@ export const registerAllAssets = () => {
     return mat;
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide }));
+  
+  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true, side: THREE.DoubleSide }));
 
+  // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
   AssetService.registerGenerator(GEOMETRY_IDS.PARTICLE, () => new THREE.PlaneGeometry(0.3, 0.3));
 
+  // 3. Dynamic Registration (Enemies)
   Object.values(ENEMIES).forEach(def => {
       const key = `GEO_${def.id.toUpperCase()}`;
       AssetService.registerGenerator(key, () => createEnemyGeometry(def.id, def.visual));
   });
 
+  // 4. Dynamic Registration (Weapons)
+  // Shared Sphere for all projectiles
+  const sharedProjectileGeo = addBarycentricCoordinates(new THREE.SphereGeometry(0.5, 8, 8));
+
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => createGeometry(def.visual, true)); 
+      AssetService.registerGenerator(key, () => sharedProjectileGeo); 
   });
 };
 
@@ -10899,28 +10900,10 @@ const createEnemyGeometry = (id: string, visual: any) => {
         geo.translate(0, -height / 2, 0);
         return addBarycentricCoordinates(geo);
     }
-    return createGeometry(visual, false);
+    return createGeometry(visual);
 };
 
-const createCrescentGeo = () => {
-    const shape = new THREE.Shape();
-    const outerRadius = 1.0;
-    const innerRadius = 0.7; 
-    const arcAngle = Math.PI / 1.5; 
-
-    shape.absarc(0, 0, outerRadius, -arcAngle/2, arcAngle/2, false);
-    shape.absarc(0.2, 0, innerRadius, arcAngle/2, -arcAngle/2, true);
-    
-    shape.closePath();
-
-    const extrudeSettings = { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2 };
-    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    geo.center(); 
-    geo.rotateZ(Math.PI / 2); // Correct orientation to +Y
-    return addBarycentricCoordinates(geo);
-};
-
-const createGeometry = (visual: any, isProjectile: boolean = false) => {
+const createGeometry = (visual: any) => {
     let geo;
     switch (visual.model) {
         case 'CONE': geo = new THREE.ConeGeometry(0.5, visual.height || 1, visual.segments || 4); break;
@@ -10932,18 +10915,7 @@ const createGeometry = (visual: any, isProjectile: boolean = false) => {
         case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
         case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
         case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
-        case 'CUSTOM_HUNTER': return createHunterSpear();
-        case 'CRESCENT': return createCrescentGeo(); 
-        case 'CUSTOM_CHEVRON': {
-            const shape = new THREE.Shape();
-            const w = 0.8, h = 0.8, t = 0.3;
-            shape.moveTo(0, h); shape.lineTo(w, -h); shape.lineTo(w - t, -h);
-            shape.lineTo(0, h - (t*2.5)); shape.lineTo(-(w - t), -h); shape.lineTo(-w, -h); shape.lineTo(0, h);
-            geo = new THREE.ExtrudeGeometry(shape, { depth: 0.2, bevelEnabled: false });
-            geo.center();
-            geo.rotateZ(Math.PI / 2); // FIX: Rotate to +Y for correct orientation
-            break;
-        }
+        case 'CUSTOM_HUNTER': return createHunterSpear(); // Hunter restored
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
     return addBarycentricCoordinates(geo);
@@ -12102,6 +12074,7 @@ const parseHex = (hex: string) => {
     };
 };
 
+// Helper for standard entities (Player/Enemies)
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
@@ -12117,7 +12090,6 @@ export interface EntityBlueprint {
 }
 
 const BLUEPRINTS: Record<string, EntityBlueprint> = {
-  // --- PLAYER (Manual) ---
   [ArchetypeIDs.PLAYER]: {
     id: ArchetypeIDs.PLAYER,
     tags: [Tag.PLAYER],
@@ -12127,11 +12099,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
       { type: ComponentType.Motion, data: { friction: 0.9 } },
       { type: ComponentType.Health, data: { max: PLAYER_CONFIG.maxHealth } },
       { type: ComponentType.State, data: { current: AI_STATE.IDLE } },
-      { type: ComponentType.Collider, data: { 
-          radius: PhysicsConfig.HITBOX.PLAYER, 
-          layer: CollisionLayers.PLAYER, 
-          mask: PhysicsConfig.MASKS.PLAYER 
-      }},
+      { type: ComponentType.Collider, data: { radius: PhysicsConfig.HITBOX.PLAYER, layer: CollisionLayers.PLAYER, mask: PhysicsConfig.MASKS.PLAYER } },
       { type: ComponentType.StateColor, data: {
           base: GAME_THEME.turret.base,
           damaged: GAME_THEME.vfx.damage,
@@ -12144,7 +12112,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
   }
 };
 
-// --- ENEMY GENERATION ---
+// Enemies
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
     const matId = 'MAT_ENEMY_BASE'; 
@@ -12156,22 +12124,16 @@ Object.values(ENEMIES).forEach(def => {
       { type: ComponentType.Motion, data: { friction: def.physics.friction } },
       { type: ComponentType.Collider, data: { radius: def.physics.radius, layer: CollisionLayers.ENEMY, mask: PhysicsConfig.MASKS.ENEMY } },
       { type: ComponentType.State, data: { current: AI_STATE.SPAWN, timers: { spawn: 1.5 } } },
-      // Enemies KEEP RenderEffect for spawn animation
       ...RenderComps(geoId, matId, def.visual.color, { elasticity: 0.1, spawnProgress: 0.0 }) 
     ];
 
-    if (def.damage > 0) {
-        comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
-    }
+    if (def.damage > 0) comps.push({ type: ComponentType.Combat, data: { damage: def.damage } });
 
     if (def.ai === 'daemon') {
         comps.push({ type: ComponentType.Orbital, data: { radius: 4.0, speed: 1.5, angle: 0 } });
         comps.push({ type: ComponentType.Target, data: { type: 'ENEMY' } });
         const col = comps.find((c: any) => c.type === ComponentType.Collider);
-        if (col) {
-            col.data.layer = CollisionLayers.PLAYER;
-            col.data.mask = PhysicsConfig.MASKS.PLAYER;
-        }
+        if (col) { col.data.layer = CollisionLayers.PLAYER; col.data.mask = PhysicsConfig.MASKS.PLAYER; }
     } else {
         comps.push({ type: ComponentType.Target, data: { type: def.ai === 'driller' ? 'PANEL' : 'PLAYER' } });
     }
@@ -12185,7 +12147,7 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// --- WEAPON GENERATION (FIXED) ---
+// WEAPONS (SCRUBBED RENDER EFFECT)
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     const matId = 'MAT_PROJECTILE';
@@ -12194,6 +12156,7 @@ Object.values(WEAPONS).forEach(def => {
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
+    // NOTE: Explicitly NOT adding RenderEffect here.
     const comps: any[] = [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
       { type: ComponentType.Motion, data: { friction: 0 } },
@@ -12201,9 +12164,8 @@ Object.values(WEAPONS).forEach(def => {
       { type: ComponentType.Combat, data: { damage: def.damage } },
       { type: ComponentType.Health, data: { max: def.damage } }, 
       { type: ComponentType.Collider, data: { radius, layer, mask } },
-      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT' } },
+      { type: ComponentType.Projectile, data: { configId: def.id, state: 'FLIGHT', ownerId: -1 } },
       { type: ComponentType.RenderModel, data: { geometryId: geoId, materialId: matId, ...parseHex(def.visual.color) } },
-      // NO RENDER EFFECT HERE. This ensures pure rigid body rendering.
       { type: ComponentType.RenderTransform, data: { 
           scale: 1.0, 
           baseScaleX: def.visual.scale[0], 
@@ -12212,23 +12174,11 @@ Object.values(WEAPONS).forEach(def => {
       }}
     ];
 
-    if (def.behavior?.spinSpeed) {
-        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
-    }
-    
-    BLUEPRINTS[def.id] = {
-        id: def.id,
-        tags: def.tags,
-        components: comps
-    };
+    BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
 
-if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) {
-    BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
-}
-if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) {
-    BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
-}
+if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;
 
@@ -12241,19 +12191,23 @@ import { VFX_MANIFEST } from './assets/VFXManifest';
 
 // --- GEOMETRY ---
 export const GEOMETRY_IDS = {
+  // Actors
+  PLAYER: 'PLAYER_GEO',
+  PARTICLE: 'GEO_PARTICLE',
+  
+  // Enemies (Dynamic keys used in code: GEO_DRILLER, etc.)
   DRILLER: 'GEO_DRILLER',
   KAMIKAZE: 'GEO_KAMIKAZE',
   HUNTER: 'GEO_HUNTER',
   DAEMON: 'GEO_DAEMON',
-  PARTICLE: 'GEO_PARTICLE',
-  PLAYER: 'PLAYER_GEO',
-  PRJ_SPHERE: 'GEO_PRJ_SPHERE',
-  PRJ_CAPSULE: 'GEO_PRJ_CAPSULE',
-  PRJ_DIAMOND: 'GEO_PRJ_DIAMOND',
-  PRJ_PYRAMID: 'GEO_PRJ_PYRAMID',
-  PRJ_RING: 'GEO_PRJ_RING',
-  PRJ_ARROW: 'GEO_PRJ_ARROW',
-  PRJ_CHEVRON: 'GEO_PRJ_CHEVRON' // NEW
+
+  // Projectiles (Now unified or dynamic)
+  // We keep these descriptive keys for reference if needed, but the code uses dynamic IDs
+  SPHERE_RAILGUN: 'GEO_PLAYER_RAILGUN',
+  SPHERE_SNIFFER: 'GEO_PLAYER_SNIFFER',
+  SPHERE_PURGE: 'GEO_PLAYER_PURGE',
+  SPHERE_HUNTER: 'GEO_ENEMY_HUNTER',
+  SPHERE_DAEMON: 'GEO_DAEMON_ORB'
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
@@ -12534,51 +12488,44 @@ import { Tag } from '@/engine/ecs/types';
 import { PALETTE } from '@/engine/config/Palette';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 
+// Standard "Dot" size
+const DOT_SCALE: [number, number, number] = [0.4, 0.4, 0.4];
+
 export const WEAPONS: Record<string, WeaponDef> = {
-  // --- PLAYER: RAILGUN (New Default) ---
   [WeaponIDs.PLAYER_RAILGUN]: {
     id: WeaponIDs.PLAYER_RAILGUN,
-    damage: 1, 
-    speed: 50, 
-    life: 1.5,
-    visual: { model: 'CRESCENT', color: PALETTE.PURPLE.PRIMARY, scale: [0.3, 0.3, 0.3], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true },
+    damage: 1, speed: 50, life: 1.5,
+    visual: { model: 'SPHERE', color: PALETTE.PURPLE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE' },
+    behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
-
-  // --- PLAYER: SNIFFER (Auxiliary) ---
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
-    damage: 1, 
-    speed: 22, 
-    life: 3.0,
-    visual: { model: 'OCTA', color: PALETTE.PURPLE.LIGHT, scale: [0.33, 0.33, 0.33], material: 'PROJECTILE', radius: 1.0 },
-    behavior: { faceVelocity: false, spinSpeed: 15.0, homing: true },
+    damage: 1, speed: 22, life: 3.0,
+    visual: { model: 'SPHERE', color: PALETTE.PURPLE.LIGHT, scale: DOT_SCALE, material: 'PROJECTILE' },
+    behavior: { faceVelocity: false, homing: true },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
-
-  // --- PLAYER: PURGE (Zen Bomb) ---
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
-    visual: { model: 'CUSTOM_CHEVRON', color: PALETTE.ORANGE.BRIGHT, scale: [2.5, 0.7, 1.5], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true },
+    // Larger dot for the bomb
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE' },
+    behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
-
-  // --- ENEMY WEAPONS ---
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'CONE', color: PALETTE.ORANGE.PRIMARY, scale: [0.3, 1.0, 0.3], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true },
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE' },
+    behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
     id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
     visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
-    behavior: { faceVelocity: false, spinSpeed: 1.0, pulseSpeed: 4.0 },
+    behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER] 
   }
 };
@@ -17772,14 +17719,13 @@ import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } fr
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
-import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { Tag } from '@/engine/ecs/types';
 import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
@@ -17815,10 +17761,9 @@ export class AnimationSystem implements IGameSystem {
       if (!entity.active) continue;
 
       const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-      const motion = entity.getComponent<MotionData>(ComponentType.Motion);
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect); // Will be undefined for Projectiles
       const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
-      const aiState = entity.getComponent<AIStateData>(ComponentType.State);
+      const aiState = entity.getComponent<any>(ComponentType.State); // Typed as any to access current
 
       if (!render) continue;
 
@@ -17827,97 +17772,61 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      // State-based spin overrides (Player/Interaction)
-      if (entity.hasTag('PLAYER')) {
-          // Default Idle Spin
+      if (entity.hasTag(Tag.PLAYER)) {
           let spinSpeed = 0.02; 
-
-          if (isZenMode) {
-              spinSpeed = -0.03;
-          } else if (isDead) {
-              // Dead but Reviving = Fast Spin
-              spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
-          } else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
-              // Healing Self or Panel = Fast Spin
-              // Maybe faster for self-heal?
+          if (isZenMode) spinSpeed = -0.03;
+          else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+          else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
               const isSelf = hoverId === PanelId.IDENTITY;
               spinSpeed = isSelf ? -0.4 : -0.24;
           }
-          
           render.rotation += spinSpeed;
       }
 
-      // 2. SCALE & DEFORMATION
+      // 2. SCALE & DEFORMATION (Only applies if RenderEffect exists)
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
+          // Spawn Animation
           if (effect.spawnProgress < 1.0) {
               if (effect.spawnVelocity > 0) {
                   effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
               }
-
               const t = effect.spawnProgress;
               const scaleCurve = easeOutElastic(t);
-              
-              dX *= scaleCurve;
-              dY *= scaleCurve;
-              dZ *= scaleCurve;
-
+              dX *= scaleCurve; dY *= scaleCurve; dZ *= scaleCurve;
               render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
-              
               const riseT = t * (2 - t); 
               render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
           } else {
               render.offsetY = 0;
           }
 
+          // Damage Flash / Pulse
           if (effect.flash > 0) {
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
           }
-
           if (effect.pulseSpeed > 0) {
               const pulse = Math.sin(time * effect.pulseSpeed) * 0.2;
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
+          // Squash & Stretch (ONLY runs if effect exists)
           if (effect.spawnProgress >= 1.0) {
               let targetSquash = 0.0;
               if (aiState && aiState.current === AI_STATE.CHARGING) {
                   targetSquash = 1.0;
               }
-
               effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
 
               if (effect.squashFactor > 0.01) {
                   const compression = 0.4 * effect.squashFactor; 
                   const expansion = 0.8 * effect.squashFactor;   
-
                   dY *= (1.0 - compression); 
                   dX *= (1.0 + expansion);   
                   dZ *= (1.0 + expansion);   
               } 
-              else if (motion && effect.elasticity > 0.01) {
-                  const speedSq = motion.vx * motion.vx + motion.vy * motion.vy;
-                  const threshold = effect.elasticity > 1.0 ? 1.0 : 4.0;
-
-                  if (speedSq > threshold) {
-                      const speed = Math.sqrt(speedSq);
-                      let stretchY = 1.0, squashXZ = 1.0;
-                      
-                      if (effect.elasticity > 1.0) {
-                          stretchY = Math.min(CFG.MAX_STRETCH_CAP, 1.0 + (speed * CFG.BASE_STRETCH * effect.elasticity));
-                          squashXZ = Math.max(CFG.MIN_SQUASH_CAP, 1.0 - (speed * CFG.BASE_SQUASH * effect.elasticity));
-                      } else {
-                          stretchY = Math.min(CFG.MAX_STRETCH, 1.0 + (speed * CFG.STRETCH_FACTOR));
-                          squashXZ = Math.max(CFG.MIN_SQUASH, 1.0 - (speed * CFG.SQUASH_FACTOR));
-                      }
-                      
-                      dY *= stretchY;
-                      dX *= squashXZ;
-                      dZ *= squashXZ;
-                  }
-              }
           }
       }
 
@@ -19211,14 +19120,13 @@ export class TimeSystem implements IGameSystem {
 FILE: ./src/engine/systems/WeaponSystem.ts
 =====================================
 import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem, IParticleSystem } from '@/engine/interfaces';
-import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
@@ -19229,7 +19137,6 @@ import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
-import { PALETTE } from '@/engine/config/Palette';
 import * as THREE from 'three';
 
 interface PurgeState {
@@ -19288,53 +19195,20 @@ export class WeaponSystem implements IGameSystem {
 
           const transform = p.getComponent<TransformData>(ComponentType.Transform)!;
           const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
-          const projData = p.getComponent<ProjectileData>(ComponentType.Projectile)!;
           const target = p.getComponent<TargetData>(ComponentType.Target);
 
-          // A. STEERING
+          // A. STEERING (Homing Logic)
           if (target && target.type === 'ENEMY') {
               this.handleSteering(p, transform, motion, delta);
           }
 
-          // B. KINEMATIC MOVE
+          // B. KINEMATIC MOVE (Linear)
           transform.prevX = transform.x;
           transform.prevY = transform.y;
           transform.prevRotation = transform.rotation;
 
-          const speedSq = motion.vx*motion.vx + motion.vy*motion.vy;
-          const speed = Math.sqrt(speedSq);
-
           transform.x += motion.vx * delta;
           transform.y += motion.vy * delta;
-          
-          if (Math.abs(motion.vx) > 0.1 || Math.abs(motion.vy) > 0.1) {
-              transform.rotation = Math.atan2(motion.vy, motion.vx);
-          }
-
-          // C. SNAKE TRAIL (SOLID BODY)
-          if (projData.configId === WeaponIDs.PLAYER_SNIFFER && speed > 1.0) {
-              // Calculate steps needed to fill the gap since last frame
-              // We want a particle every ~0.25 units to ensure overlap
-              const distMoved = speed * delta;
-              const stepSize = 0.25; 
-              const steps = Math.ceil(distMoved / stepSize);
-              
-              for (let i = 0; i < steps; i++) {
-                  // Interpolate position backwards from current to previous
-                  const t = i / steps;
-                  const tx = transform.x - (motion.vx * delta * t);
-                  const ty = transform.y - (motion.vy * delta * t);
-                  
-                  this.particleSystem.spawn(
-                      tx, ty,
-                      PALETTE.PURPLE.DIM, 
-                      0, 0, 
-                      0.4, // Longer life = longer tail
-                      0.5, // Larger size = solid overlap
-                      ParticleShape.SQUARE
-                  );
-              }
-          }
       }
   }
 
@@ -19410,9 +19284,7 @@ export class WeaponSystem implements IGameSystem {
         
         this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId, 
-            undefined,
-            { scaleX: shot.scaleX, scaleY: shot.scaleY } 
+            Faction.FRIENDLY, shot.life, shot.damage, shot.configId
         );
 
         this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
@@ -21555,19 +21427,6 @@ export const calculateRailgunShot = (
   const speed = config.bulletSpeed; 
   const life = config.bulletLife;
 
-  // --- RAILGUN SCALING (CORRECTED) ---
-  // Model is Y-Up.
-  // Scale X = Width (Side-to-Side)
-  // Scale Y = Length (Forward)
-  
-  const BASE_WIDTH = 0.6; 
-  const MAX_WIDTH = 2.5; 
-  
-  // Linear interpolation based on level (0-10)
-  const widthMult = BASE_WIDTH + ((MAX_WIDTH - BASE_WIDTH) * (state.widthLevel / 10));
-  
-  const lengthMult = 0.6; // Constant thickness
-
   const dx = target.x - origin.x;
   const dy = target.y - origin.y;
   const angle = Math.atan2(dy, dx);
@@ -21583,9 +21442,7 @@ export const calculateRailgunShot = (
       damage,
       life,
       configId: WeaponIDs.PLAYER_RAILGUN,
-      isHoming: false,
-      scaleX: widthMult,  // Width maps to X
-      scaleY: lengthMult  // Length maps to Y
+      isHoming: false
   };
 };
 
