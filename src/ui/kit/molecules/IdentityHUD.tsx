@@ -6,6 +6,9 @@ import { VitalsRing } from '@/ui/kit/atoms/VitalsRing';
 import { UpgradeTerminal } from './UpgradeTerminal';
 import { RepairButton, PurgeButton } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowUpCircle } from 'lucide-react';
 
 export const IdentityHUD = () => {
   const hp = useStreamValue('PLAYER_HEALTH');
@@ -18,16 +21,51 @@ export const IdentityHUD = () => {
   const panel = useGameStore(s => s.panels[PanelId.IDENTITY]);
   const isPanelDead = panel ? panel.isDestroyed : false;
   const isPlayerDead = hp <= 0;
+  
+  const upgradePoints = useGameStore(s => s.upgradePoints);
+  const [hoverCost, setHoverCost] = useState<number | null>(null);
+
+  const handleCostHover = useCallback((cost: number | null) => {
+      setHoverCost(cost);
+  }, []);
 
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* TOP SECTION: Centered Layout */}
+      {/* HEADER: Points Display (Moved from UpgradeTerminal) */}
+      <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
+          <div className="flex items-center gap-2">
+              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
+              <span className="text-[10px] font-bold tracking-widest text-white">
+                  AVAILABLE_POINTS
+              </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+              <AnimatePresence>
+                  {hoverCost !== null && (
+                      <motion.span 
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="text-xl font-header font-black text-critical-red drop-shadow-[0_0_5px_rgba(255,0,60,0.5)]"
+                      >
+                          -{hoverCost}
+                      </motion.span>
+                  )}
+              </AnimatePresence>
+              <span className="font-header font-black text-xl text-primary-green">
+                  {upgradePoints.toString().padStart(2, '0')}
+              </span>
+          </div>
+      </div>
+
+      {/* TOP SECTION: Vitals & Ops */}
       <div className="flex-none flex items-center justify-center gap-8 p-6 pb-2 border-b border-primary-green/10">
           
           {/* Left: Repair */}
           <div className="flex items-center">
-              <RepairButton isPanelDead={isPanelDead} />
+              <RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
           </div>
 
           {/* Center: Crystal */}
@@ -37,14 +75,14 @@ export const IdentityHUD = () => {
 
           {/* Right: Purge */}
           <div className="flex items-center">
-              <PurgeButton isPanelDead={isPanelDead} />
+              <PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
           </div>
       </div>
 
       {/* BOTTOM SECTION: Upgrade Badges */}
       <div className="flex-1 min-h-0 w-full px-4 overflow-y-auto scrollbar-hide relative py-4">
          <div className={isPlayerDead ? "opacity-50 pointer-events-none" : ""}>
-             <UpgradeTerminal isPanelDead={isPanelDead} />
+             <UpgradeTerminal isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
          </div>
       </div>
       

@@ -148,8 +148,6 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
-  startHealingTone(): void;
-  stopHealingTone(): void;
 }
 
 export interface IInputService {

@@ -26,6 +26,20 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
 
   const canAfford = upgradePoints > 0;
 
+  // VISUAL MAPPING:
+  // We map the visual slots (TL, TR, BR, BL) to the logic index (0, 1, 2, 3)
+  // Desired Order: Top Left (0) -> Bottom Right (1) -> Top Right (2) -> Bottom Left (3)
+  //
+  // visualIndex 0 = Top Left
+  // visualIndex 1 = Top Right
+  // visualIndex 2 = Bottom Right
+  // visualIndex 3 = Bottom Left
+  //
+  // Array format: [Index for Pos 0, Index for Pos 1, Index for Pos 2, Index for Pos 3]
+  // Result: [0, 2, 1, 3]
+  
+  const slotMapping = [0, 2, 1, 3];
+
   return (
     <div className={clsx("p-5 border border-latent-purple/30 bg-black/40 relative overflow-hidden transition-all", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
         <div className="flex justify-between items-center mb-6 border-b border-latent-purple/20 pb-3">
@@ -42,13 +56,15 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
             <div className="shrink-0 flex flex-col items-center gap-4">
                 <div className="relative w-24 h-24 flex items-center justify-center border border-latent-purple/20 rounded-full bg-black/40 shadow-[inset_0_0_20px_rgba(158,78,165,0.1)]">
                     <div className="absolute inset-3 border border-latent-purple/10 rounded-full" />
-                    {[0, 1, 3, 2].map((mappedIndex, visualIndex) => {
+                    {slotMapping.map((mappedIndex, visualIndex) => {
                         const isActive = mappedIndex < sniffer.capacityLevel;
                         let posClass = "";
-                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4";
-                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4";
-                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4";
-                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4";
+                        // Visual Positions
+                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4"; // TL
+                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4"; // TR
+                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4"; // BR
+                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4"; // BL
+                        
                         return (
                             <div key={mappedIndex} className={clsx("absolute w-6 h-6 border-2 transition-all duration-300 rounded-full flex items-center justify-center", posClass, isActive ? "bg-latent-purple border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "bg-black border-latent-purple/30")}>
                                 {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}

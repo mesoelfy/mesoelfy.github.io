@@ -15,7 +15,6 @@ export class InteractionSystem implements IInteractionSystem {
   
   private lastRepairTime = 0;
   private previousHoverId: PanelId | null = null;
-  private isTonePlaying = false; 
 
   constructor(
     private input: IInputService,
@@ -30,23 +29,20 @@ export class InteractionSystem implements IInteractionSystem {
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
     this.hoveringPanelId = null;
-    let interactionCode = 0; // 0: Normal/Panel, 1: Self Heal, 2: Revive
+    let interactionCode = 0; 
     
     const cursor = this.input.getCursor();
 
     if (this.gameSystem.isGameOver) {
         this.syncInteractionState();
         GameStream.set('PLAYER_INTERACTION_STATE', 0);
-        this.manageTone(false);
         return; 
     }
     
-    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Self Heal / Revive) ---
     let handledByCrystal = false;
     const identityRect = this.panelSystem.getPanelRect(PanelId.IDENTITY);
     
     if (identityRect) {
-        // RE-ALIGNMENT: Center of Panel, Top offset
         const zoneRadius = 2.2; 
         const zoneX = identityRect.x; 
         const zoneY = identityRect.top - 2.8; 
@@ -62,7 +58,6 @@ export class InteractionSystem implements IInteractionSystem {
             const isPanelDead = panelState?.isDestroyed ?? false;
 
             if (isPlayerDead) {
-                // REVIVE (Priority 1)
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'REBOOTING';
                 interactionCode = 2; 
@@ -76,23 +71,21 @@ export class InteractionSystem implements IInteractionSystem {
                 }
             } 
             else if (isPlayerHurt && !isPanelDead) {
-                // SELF HEAL (Priority 2)
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'HEALING';
                 interactionCode = 1; 
                 handledByCrystal = true;
                 
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                    // FIX: Use SELF_HEAL_AMOUNT for slower healing
                     this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
                     this.lastRepairTime = time;
                     this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
+                    AudioSystem.playSound('loop_heal_high'); 
                 }
             }
         }
     }
 
-    // --- 2. GENERAL PANEL REPAIR (If not consuming crystal action) ---
     if (!handledByCrystal) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
@@ -104,7 +97,6 @@ export class InteractionSystem implements IInteractionSystem {
                     this.repairState = panelState.isDestroyed ? 'REBOOTING' : 'HEALING';
                     
                     if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
-                        // Keep using fast REPAIR_HEAL_AMOUNT for panels
                         this.panelSystem.healPanel(panelId, GAMEPLAY_CONFIG.INTERACTION.REPAIR_HEAL_AMOUNT, cursor.x);
                         this.lastRepairTime = time;
 
@@ -122,26 +114,12 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 3. Tone Management
-    this.manageTone(interactionCode === 1 || interactionCode === 2);
-
-    // 4. Revive Decay
     if (this.gameSystem.playerHealth <= 0 && this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
         this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
     }
 
     this.syncInteractionState();
     GameStream.set('PLAYER_INTERACTION_STATE', interactionCode);
-  }
-
-  private manageTone(shouldPlay: boolean) {
-      if (shouldPlay && !this.isTonePlaying) {
-          AudioSystem.startHealingTone();
-          this.isTonePlaying = true;
-      } else if (!shouldPlay && this.isTonePlaying) {
-          AudioSystem.stopHealingTone();
-          this.isTonePlaying = false;
-      }
   }
 
   private syncInteractionState() {
@@ -153,7 +131,6 @@ export class InteractionSystem implements IInteractionSystem {
 
   teardown(): void {
       useGameStore.getState().setInteractionTarget(null);
-      this.manageTone(false);
   }
 
   private spawnRepairParticles(cursor: {x: number, y: number}, color: string) {
