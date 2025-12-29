@@ -55,7 +55,8 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      if (entity.hasTag(Tag.PLAYER)) {
+      // FIX: Ensure we don't rotate projectiles that happen to have the PLAYER tag (friendly fire)
+      if (entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.PROJECTILE)) {
           let spinSpeed = 0.02; 
           if (isZenMode) spinSpeed = -0.03;
           else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;

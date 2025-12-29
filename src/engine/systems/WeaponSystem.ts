@@ -162,8 +162,8 @@ export class WeaponSystem implements IGameSystem {
         );
         
         // --- SCALE CALCULATION ---
-        // Each Girth Level increases size by 50%
-        const girthMult = 1.0 + (spitterState.girthLevel * 0.5);
+        // Each Girth Level increases size by 75%
+        const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
