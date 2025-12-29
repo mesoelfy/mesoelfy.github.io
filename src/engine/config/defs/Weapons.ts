@@ -23,14 +23,14 @@ export const WEAPONS: Record<string, WeaponDef> = {
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
-    visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE_PLAYER' },
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE_PURGE' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_ENEMY' },
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_HUNTER' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.ENEMY]
   },

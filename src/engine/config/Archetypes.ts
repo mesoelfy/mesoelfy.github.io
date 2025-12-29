@@ -95,6 +95,8 @@ Object.values(WEAPONS).forEach(def => {
     // MAP VISUAL DEF STRING TO MATERIAL CONSTANT
     let matId = MATERIAL_IDS.PROJECTILE_PLAYER;
     if (def.visual.material === 'PROJECTILE_ENEMY') matId = MATERIAL_IDS.PROJECTILE_ENEMY;
+    if (def.visual.material === 'PROJECTILE_HUNTER') matId = MATERIAL_IDS.PROJECTILE_HUNTER;
+    if (def.visual.material === 'PROJECTILE_PURGE') matId = MATERIAL_IDS.PROJECTILE_PURGE;
     
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;

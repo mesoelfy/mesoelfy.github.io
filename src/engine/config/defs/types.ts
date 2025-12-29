@@ -6,7 +6,7 @@ export interface VisualDef {
   color: string; // Hex
   scale: [number, number, number];
   // Updated to include specific projectile materials
-  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY';
+  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY' | 'PROJECTILE_HUNTER' | 'PROJECTILE_PURGE';
   // Procedural Params
   height?: number;
   radius?: number;

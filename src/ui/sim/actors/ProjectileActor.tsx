@@ -15,17 +15,15 @@ export const ProjectileActor = () => {
   const renderItems = Object.values(WEAPONS).map(def => {
       let matKey = MATERIAL_IDS.PROJECTILE_PLAYER;
       
-      if (def.visual.material === 'PROJECTILE_ENEMY') {
-          matKey = MATERIAL_IDS.PROJECTILE_ENEMY;
-      }
+      if (def.visual.material === 'PROJECTILE_ENEMY') matKey = MATERIAL_IDS.PROJECTILE_ENEMY;
+      if (def.visual.material === 'PROJECTILE_HUNTER') matKey = MATERIAL_IDS.PROJECTILE_HUNTER;
+      if (def.visual.material === 'PROJECTILE_PURGE') matKey = MATERIAL_IDS.PROJECTILE_PURGE;
 
       return {
           baseId: def.id,
           geoKey: `GEO_${def.id}${suffix}`,
           // The renderKey MUST match what Spawner/RenderSystem uses to pack the buffer.
           // Spawner uses the Material ID defined in Archetypes.
-          // Archetypes.ts maps visual.material string to the actual material ID.
-          // So we reconstruct the key: GeometryID|MaterialID
           renderKey: `GEO_${def.id}|${matKey}`,
           matKey: matKey
       };
