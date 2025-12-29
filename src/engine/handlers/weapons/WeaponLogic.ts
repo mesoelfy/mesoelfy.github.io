@@ -1,5 +1,4 @@
 import { ConfigService } from '@/engine/services/ConfigService';
-import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
@@ -16,8 +15,15 @@ export interface ShotDef {
   scaleY?: number;
 }
 
-const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
-const RETICLE_RADIUS = 1.65; 
+// Geometry Constants derived from PlayerActor.tsx
+const RETICLE_EXTENT_RADIUS = 0.65; 
+// Geometry Constants derived from AssetCatalog (Sphere Radius 0.5 * Base Scale 0.4)
+const PROJ_BASE_RADIUS = 0.2; 
+// Increased margin for better visual clearance (was 0.15)
+const SPAWN_MARGIN = 0.3; 
+
+// Sniffer Reticle config
+const SNIFFER_OFFSET_RADIUS = 1.65; 
 const TWIST_OFFSET = -0.55;  
 
 const SNIFFER_TIPS = [
@@ -41,8 +47,16 @@ export const calculateSpitterShot = (
   const dy = target.y - origin.y;
   const angle = Math.atan2(dy, dx);
 
-  const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-  const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+  // --- DYNAMIC OFFSET CALCULATION ---
+  // Matches WeaponSystem.ts scaling logic: 1.0 + (level * 0.75)
+  const sizeMultiplier = 1.0 + (state.girthLevel * 0.75);
+  const currentProjRadius = PROJ_BASE_RADIUS * sizeMultiplier;
+  
+  // Place center of projectile so its edge touches reticle edge + margin
+  const dynamicOffset = RETICLE_EXTENT_RADIUS + currentProjRadius + SPAWN_MARGIN;
+
+  const spawnX = origin.x + Math.cos(angle) * dynamicOffset;
+  const spawnY = origin.y + Math.sin(angle) * dynamicOffset;
 
   return {
       x: spawnX,
@@ -72,8 +86,8 @@ export const calculateSnifferShots = (
   for (let i = 0; i < activeCount; i++) {
       const localAngle = SNIFFER_TIPS[i % 4];
       const globalAngle = reticleRotation + localAngle;
-      const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
-      const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
+      const tipX = origin.x + Math.cos(globalAngle) * SNIFFER_OFFSET_RADIUS;
+      const tipY = origin.y + Math.sin(globalAngle) * SNIFFER_OFFSET_RADIUS;
       const vx = Math.cos(globalAngle) * speed * 0.5;
       const vy = Math.sin(globalAngle) * speed * 0.5;
       
