@@ -3,6 +3,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { Query } from '@/engine/ecs/Query';
 
 export class ProjectileSystem implements IGameSystem {
@@ -34,7 +35,22 @@ export class ProjectileSystem implements IGameSystem {
 
             const ownerTransform = owner.getComponent<TransformData>(ComponentType.Transform);
             if (ownerTransform) {
-                const offsetDist = 1.6; 
+                // DYNAMIC OFFSET CALCULATION
+                // We want the "back" of the ball to touch the pivot of the owner (0,0).
+                
+                const pRender = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+                let visualRadius = 0.2; // Fallback (0.5 geo * 0.4 base)
+                
+                if (pRender) {
+                    // Geometry Radius is 0.5 (SphereGeometry(0.5))
+                    // Base Scale is usually 0.4 (from Weapon Config)
+                    // Dynamic Scale varies (0.5 to 3.5)
+                    visualRadius = 0.5 * pRender.baseScaleX * pRender.scale;
+                }
+
+                // Offset = Visual Radius so the edge touches the center
+                const offsetDist = visualRadius; 
+                
                 const cos = Math.cos(ownerTransform.rotation);
                 const sin = Math.sin(ownerTransform.rotation);
                 
