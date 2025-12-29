@@ -10,12 +10,16 @@ interface OpButtonProps {
   onHoverCost: (cost: number | null) => void;
 }
 
+const OPS_COST = 2;
+
 const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE', onHoverCost: (n: number | null) => void }) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
+  const canAfford = upgradePoints >= OPS_COST;
+
   const handleUpgrade = (e: React.MouseEvent) => {
-      if (upgradePoints <= 0) return; 
+      if (!canAfford) return; 
       AudioSystem.playClick(getPan(e));
       selectUpgrade(type);
   };
@@ -27,34 +31,36 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const Icon = isPurge ? Bomb : Wrench;
   
   const borderColor = isPurge ? 'border-critical-red' : 'border-alert-yellow';
-  // FIX: Using full static class strings for shadows instead of dynamic interpolation
-  const shadowClass = isPurge 
-    ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" 
-    : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]";
+  
+  const shadowClass = canAfford 
+    ? (isPurge ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]")
+    : "shadow-none";
     
   const bgInner = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
   const textInner = isPurge ? 'text-critical-red' : 'text-alert-yellow';
   
-  const groupHoverBg = isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow';
-  const groupHoverText = 'group-hover/opbtn:text-black';
+  const groupHoverBg = canAfford ? (isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow') : '';
+  const groupHoverText = canAfford ? 'group-hover/opbtn:text-black' : '';
   const stripeColor = isPurge ? '#FF003C' : '#eae747';
 
   return (
     <button
         onClick={handleUpgrade}
         onMouseEnter={(e) => {
-            if (!isPanelDead) {
+            if (!isPanelDead && canAfford) {
                 AudioSystem.playHover(getPan(e));
-                onHoverCost(1);
+                onHoverCost(OPS_COST);
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
+        disabled={!canAfford}
         className={clsx(
             "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-shadow duration-300 rounded-sm",
             borderColor,
-            shadowClass
+            shadowClass,
+            !canAfford && "opacity-50 cursor-not-allowed grayscale"
         )}
-        title={`${label} (1 PT)`}
+        title={`${label} (${OPS_COST} PTS)`}
     >
         {/* Hazard Stripes Background */}
         <div 

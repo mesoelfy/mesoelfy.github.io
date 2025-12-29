@@ -32,14 +32,20 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   }),
 
   selectUpgrade: (path: UpgradePath) => {
-    // 1 Point = 1 Notch Logic
-    // Validation handled here to ensure we don't overspend or over-level
     const state = get();
-    if (state.upgradePoints <= 0) return;
+    
+    // 1. Determine Cost
+    let cost = 1;
+    if (path === 'RESTORE' || path === 'PURGE') {
+        cost = 2;
+    }
+
+    // 2. Validate Affordability
+    if (state.upgradePoints < cost) return;
 
     let success = false;
 
-    // Apply Logic
+    // 3. Weapon Upgrade Logic
     if (path === 'RAILGUN_WIDTH' && state.railgun.widthLevel < 10) {
         set(s => ({ railgun: { ...s.railgun, widthLevel: s.railgun.widthLevel + 1 } }));
         success = true;
@@ -65,12 +71,17 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         success = true;
     }
     
-    if (success) {
-        set(s => ({ upgradePoints: s.upgradePoints - 1 }));
+    // 4. Operations Logic (Always successful if affordable)
+    if (path === 'RESTORE' || path === 'PURGE') {
+        success = true;
     }
-
-    // Always emit for systems (Audio, VFX, One-offs like PURGE/NOVA)
-    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
+    
+    // 5. Deduct Points & Emit
+    if (success) {
+        set(s => ({ upgradePoints: s.upgradePoints - cost }));
+        // Only emit if state actually changed/operation was valid
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
+    }
   },
 
   resetProgressionState: () => set({
