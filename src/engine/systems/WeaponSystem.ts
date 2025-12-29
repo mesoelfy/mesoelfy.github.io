@@ -15,8 +15,12 @@ import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameStream } from '@/engine/state/GameStream';
 import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
+
+// Same offset as VFXManifest for visual alignment
+const PURGE_OFFSET = 1.2;
 
 interface PurgeState {
     active: boolean;
@@ -162,7 +166,6 @@ export class WeaponSystem implements IGameSystem {
         );
         
         // --- SCALE CALCULATION ---
-        // Each Girth Level increases size by 75%
         const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
@@ -217,6 +220,7 @@ export class WeaponSystem implements IGameSystem {
 
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
+      GameStream.set('PLAYER_PURGE_ACTIVE', 1); // <--- SYNC ON
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
@@ -237,11 +241,16 @@ export class WeaponSystem implements IGameSystem {
               
               for(let i=0; i<BURST_COUNT; i++) {
                   const angle = (i / BURST_COUNT) * Math.PI * 2;
+                  
+                  // OFFSET ORIGIN
+                  const startX = t.x + Math.cos(angle) * PURGE_OFFSET;
+                  const startY = t.y + Math.sin(angle) * PURGE_OFFSET;
+                  
                   const vx = Math.cos(angle) * BURST_SPEED;
                   const vy = Math.sin(angle) * BURST_SPEED;
                   
                   const bullet = this.spawner.spawnProjectile(
-                      t.x, t.y, vx, vy, 
+                      startX, startY, vx, vy, 
                       Faction.FRIENDLY, 2.4, 50, 
                       WeaponIDs.PLAYER_PURGE, 
                       undefined,
@@ -270,12 +279,18 @@ export class WeaponSystem implements IGameSystem {
           this.purgeState.accumulator -= 1.0;
           if (this.purgeState.shotsRemaining <= 0) { 
               this.purgeState.active = false; 
+              GameStream.set('PLAYER_PURGE_ACTIVE', 0); // <--- SYNC OFF
               this.events.emit(GameEvents.PURGE_COMPLETE, null); 
               break; 
           }
           const angle = this.purgeState.currentAngle;
+          
+          // OFFSET ORIGIN
+          const startX = originX + Math.cos(angle) * PURGE_OFFSET;
+          const startY = originY + Math.sin(angle) * PURGE_OFFSET;
+          
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
-          const bullet = this.spawner.spawnProjectile(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
+          const bullet = this.spawner.spawnProjectile(startX, startY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.5); 

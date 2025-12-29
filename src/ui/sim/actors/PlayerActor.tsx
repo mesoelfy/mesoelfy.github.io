@@ -97,8 +97,8 @@ const SnifferOverlayShader = {
       if (uLevel >= 4.0 && sector == 1) isActive = true;
       if (!isActive) discard;
       float dist = length(vPos);
-      float tipMask = smoothstep(0.35, 0.65, dist);
-      if (tipMask < 0.1) discard;
+      float mask = smoothstep(0.35, 0.65, dist);
+      if (mask < 0.1) discard;
       float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
       gl_FragColor = vec4(uColor, 1.0); 
     }
@@ -135,6 +135,9 @@ export const PlayerActor = () => {
 
   const [interactionCode, setInteractionCode] = useState(0);
   useGameStream('PLAYER_INTERACTION_STATE', setInteractionCode);
+
+  const [purgeState, setPurgeState] = useState(0);
+  useGameStream('PLAYER_PURGE_ACTIVE', setPurgeState);
 
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
@@ -202,13 +205,13 @@ export const PlayerActor = () => {
     // --- COLOR STATE LOGIC ---
     const isReviving = interactionCode === 2; 
     const isSelfHealing = interactionCode === 1; 
-    // FIX: Ensure DEAD state is ignored in Zen Mode
     const isDeadVisual = !isZenMode && isPlayerDead && !isReviving;
     
     const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
     const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
+    const isPurging = purgeState === 1; // NEW: Stream flag
     
-    const isActive = iState !== 'IDLE' || isZenMode;
+    const isActive = iState !== 'IDLE' || isZenMode || isPurging;
 
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     if (ambientMaterial.uniforms[Uniforms.ENERGY]) ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
@@ -237,7 +240,13 @@ export const PlayerActor = () => {
         }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
-        reticleRef.current.rotation.z = (isDeadVisual && !isReviving) ? Math.PI*0.25 : -renderTrans.rotation;
+        
+        // --- RETICLE ROTATION ---
+        if (isPurging) {
+            reticleRef.current.rotation.z = -time * 20.0; // Fast spin
+        } else {
+            reticleRef.current.rotation.z = (isDeadVisual && !isReviving) ? Math.PI*0.25 : -renderTrans.rotation;
+        }
         
         if (snifferRef.current) {
             snifferRef.current.rotation.z = reticleRef.current.rotation.z;
@@ -268,7 +277,13 @@ export const PlayerActor = () => {
             let reticleTarget = null;
             
             // PRIORITY ORDER
-            if (isReviving) {
+            if (isPurging) {
+                // Prismatic Cycle
+                tempColor.current.setHSL((time * 2.5) % 1.0, 1.0, 0.5);
+                reticleColor.current.copy(tempColor.current);
+                // Override target so backing matches
+                target = tempColor.current;
+            } else if (isReviving) {
                 target = COL_REBOOT; // Dark Yellow
                 reticleTarget = COL_REBOOT;
             } else if (isDeadVisual) {
@@ -285,12 +300,13 @@ export const PlayerActor = () => {
                 reticleTarget = COL_RET_HEAL; // Deep Pink
             }
             
-            tempColor.current.lerp(target, 0.2);
-            
-            if (reticleTarget) {
-                reticleColor.current.lerp(reticleTarget, 0.1);
-            } else {
-                reticleColor.current.lerp(tempColor.current, 0.2);
+            if (!isPurging) {
+                tempColor.current.lerp(target, 0.2);
+                if (reticleTarget) {
+                    reticleColor.current.lerp(reticleTarget, 0.1);
+                } else {
+                    reticleColor.current.lerp(tempColor.current, 0.2);
+                }
             }
             
             if (hitFlash.current > 0.01) { 

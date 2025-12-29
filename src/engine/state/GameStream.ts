@@ -10,6 +10,7 @@ export type StreamKey =
   | 'XP_NEXT' 
   | 'LEVEL'
   | 'PLAYER_INTERACTION_STATE' // 0: Idle, 1: Healing Self, 2: Reviving Self
+  | 'PLAYER_PURGE_ACTIVE'      // 0: Inactive, 1: Active
   // Panel Health Keys
   | 'PANEL_HEALTH_IDENTITY'
   | 'PANEL_HEALTH_SOCIAL'
@@ -34,6 +35,7 @@ class GameStreamService {
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
     this.values.set('PLAYER_INTERACTION_STATE', 0);
+    this.values.set('PLAYER_PURGE_ACTIVE', 0);
     
     // Panel Defaults
     this.values.set('PANEL_HEALTH_IDENTITY', 100);

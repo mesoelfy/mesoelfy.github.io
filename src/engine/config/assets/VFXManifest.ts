@@ -12,6 +12,7 @@ export interface VFXRecipe {
   size?: [number, number];
   shape?: number; 
   omniChance?: number; 
+  offsetRadius?: number; // NEW: Spawn distance from center
 }
 
 const createExplosion = (
@@ -92,13 +93,14 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.PINK, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
   
-  // UPDATED PURGE BLAST: 150-200 particles, very fast decay
+  // UPDATED PURGE BLAST: 75-100 particles, Offset 1.2 (Spitter Distance)
   'PURGE_BLAST': { 
       pattern: 'RADIAL', 
       colors: PRISMATIC_COLORS, 
-      count: [150, 200], 
+      count: [75, 100], 
       speed: [10, 50], 
       life: [0.375, 0.75],
-      size: [0.8, 2.5]
+      size: [0.8, 2.5],
+      offsetRadius: 1.2 // NEW
   }
 };

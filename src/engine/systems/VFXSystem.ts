@@ -92,7 +92,6 @@ export class VFXSystem implements IGameSystem {
       this.tempColor.lerp(this.white, 0.6); // Lighter "hot" version
       const lightHex = '#' + this.tempColor.getHexString();
       
-      // REVERTED: Original Physics Counts
       const count = this.randomRange(2, 3); 
       
       for(let i=0; i<count; i++) {
@@ -100,13 +99,12 @@ export class VFXSystem implements IGameSystem {
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
-          // REVERTED: Original Speed/Life
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          // 2. Color Variant Logic (Kept)
+          // 2. Color Variant Logic
           const randC = Math.random();
           let finalColor = hexColor;
           let size = 1.0;
@@ -135,6 +133,9 @@ export class VFXSystem implements IGameSystem {
       let count = Math.floor(rawCount * multiplier);
       if (rawCount > 0 && count === 0) count = 1;
 
+      // Check for offset (Ring spawning)
+      const offsetRadius = recipe.offsetRadius || 0;
+
       for (let i = 0; i < count; i++) {
           const color = recipe.colors[Math.floor(Math.random() * recipe.colors.length)];
           const speed = this.randomRange(recipe.speed[0], recipe.speed[1]);
@@ -147,6 +148,10 @@ export class VFXSystem implements IGameSystem {
           
           let vx = 0;
           let vy = 0;
+          
+          // Calculate Spawn Position (Offset from Center)
+          let spawnX = x;
+          let spawnY = y;
 
           const isBackblast = recipe.omniChance && Math.random() < recipe.omniChance;
           const isDirectional = recipe.pattern === 'DIRECTIONAL';
@@ -158,6 +163,11 @@ export class VFXSystem implements IGameSystem {
               const a = Math.random() * Math.PI * 2;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
+              
+              if (offsetRadius > 0) {
+                  spawnX += Math.cos(a) * offsetRadius;
+                  spawnY += Math.sin(a) * offsetRadius;
+              }
           } 
           else if (isDirectional) {
               let dir = angle + Math.PI; 
@@ -171,10 +181,16 @@ export class VFXSystem implements IGameSystem {
               const a = dir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
+              
+              // Directional usually spawns at origin, but if offset is needed:
+              if (offsetRadius > 0) {
+                  spawnX += Math.cos(a) * offsetRadius;
+                  spawnY += Math.sin(a) * offsetRadius;
+              }
           }
 
           const shape = (recipe.shape === 1) ? ParticleShape.SQUARE : ParticleShape.CIRCLE;
-          this.particleSystem.spawn(x, y, color, vx, vy, finalLife, size, shape);
+          this.particleSystem.spawn(spawnX, spawnY, color, vx, vy, finalLife, size, shape);
       }
   }
 
