@@ -43,7 +43,6 @@ export type FXVariant =
   | 'EXPLOSION_RED'
   | 'IMPACT_WHITE'
   | 'IMPACT_RED'
-  | 'IMPACT_YELLOW'
   | 'DRILL_SPARKS'
   | 'HUNTER_RECOIL'
   | 'CLASH_YELLOW'

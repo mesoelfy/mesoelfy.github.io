@@ -12,14 +12,6 @@ export const GEOMETRY_IDS = {
   KAMIKAZE: 'GEO_KAMIKAZE',
   HUNTER: 'GEO_HUNTER',
   DAEMON: 'GEO_DAEMON',
-
-  // Projectiles (Now unified or dynamic)
-  // We keep these descriptive keys for reference if needed, but the code uses dynamic IDs
-  SPHERE_RAILGUN: 'GEO_PLAYER_RAILGUN',
-  SPHERE_SNIFFER: 'GEO_PLAYER_SNIFFER',
-  SPHERE_PURGE: 'GEO_PLAYER_PURGE',
-  SPHERE_HUNTER: 'GEO_ENEMY_HUNTER',
-  SPHERE_DAEMON: 'GEO_DAEMON_ORB'
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];

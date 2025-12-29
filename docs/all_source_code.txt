@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 18:08:59 CST 2025
+Generated on: Sun Dec 28 19:17:56 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -13541,9 +13541,11 @@ export class AIStateData extends Component {
 
   public reset(data: Partial<AIStateData>) {
     this.current = data.current ?? AI_STATE.IDLE;
-    this.timers = data.timers ?? {};
-    this.data = data.data ?? {};
-    this.treeState = data.treeState ?? {};
+    // CRITICAL FIX: Spread operators (...) ensure we create NEW objects 
+    // instead of copying references from the Archetype definitions.
+    this.timers = { ...(data.timers ?? {}) };
+    this.data = { ...(data.data ?? {}) };
+    this.treeState = { ...(data.treeState ?? {}) };
     this.stunTimer = data.stunTimer ?? 0;
     return this;
   }
@@ -16191,6 +16193,7 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
@@ -16279,21 +16282,28 @@ export class AimAndFire extends BTNode {
 
     if (!transform || !target || !state || !visual || !identity) return NodeState.FAILURE;
     
-    // LOOKUP
     const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
-    const aimDuration = params.aimDuration ?? 1.2;
+    const totalDuration = params.aimDuration ?? 1.2;
     const projectileSpeed = params.projectileSpeed ?? 40.0;
+
+    // PHASES:
+    // 1. SQUISH (0.0 -> 0.4s) - Hunter contracts, no ball.
+    // 2. GROW   (0.4 -> 1.0s) - Ball appears and grows.
+    // 3. HOLD   (1.0 -> 1.2s) - Ball size locked.
+    // 4. FIRE   (1.2s)
+    const TIME_SQUISH = 0.4;
+    const TIME_GROW_START = TIME_SQUISH;
+    const TIME_GROW_END = 1.0;
+    const SCALE_MIN = 0.1; // Start tiny
+    const SCALE_MAX = 3.5;
 
     state.current = AI_STATE.CHARGING;
 
+    // --- 1. ROTATE TO TARGET ---
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
-
-    if (state.timers[AITimerID.AIM] === undefined) {
-        state.timers[AITimerID.AIM] = aimDuration;
-    }
 
     if (motion) {
         motion.vx *= 0.8;
@@ -16304,57 +16314,124 @@ export class AimAndFire extends BTNode {
     const dy = target.y - transform.y;
     transform.rotation = Math.atan2(dy, dx);
 
-    if (!state.timers[AITimerID.SIZZLE] || state.timers[AITimerID.SIZZLE]! <= 0) {
-        context.playSound('fx_exhaust_sizzle', transform.x);
-        state.timers[AITimerID.SIZZLE] = 0.15;
-    } else {
-        state.timers[AITimerID.SIZZLE]! -= context.delta;
+    // --- 2. MANAGE TIMER ---
+    if (state.timers[AITimerID.AIM] === undefined) {
+        state.timers[AITimerID.AIM] = totalDuration;
     }
 
-    const rearAngle = transform.rotation + Math.PI;
-    
-    let offset = 1.3;
-    if (renderEffect) {
-        offset *= (1.0 - (0.4 * renderEffect.squashFactor));
-    }
+    const timerLeft = state.timers[AITimerID.AIM]!;
+    const elapsed = totalDuration - timerLeft;
 
-    const spreadAngle = 0.25; 
-    const density = 2; 
+    // --- 3. PROJECTILE LOGIC ---
+    if (elapsed > TIME_GROW_START) {
+        if (state.data.chargingProjectileId === undefined) {
+            // Spawn charging projectile
+            const proj = context.spawnProjectile(
+                transform.x, transform.y, 0, 0, undefined, this.configId, entity.id as number
+            );
+            
+            const pData = proj.getComponent<ProjectileData>(ComponentType.Projectile);
+            if (pData) {
+                pData.state = 'CHARGING';
+                pData.ownerId = entity.id as number;
+            }
+            
+            // Start tiny
+            const pRender = proj.getComponent<RenderTransform>(ComponentType.RenderTransform);
+            if (pRender) pRender.scale = SCALE_MIN;
 
-    for (let i = 0; i < density; i++) {
-        const spread = (Math.random() - 0.5) * spreadAngle;
-        const angle = rearAngle + spread;
-        const speed = 12.0 + (Math.random() * 8.0);
-        const px = transform.x + Math.cos(rearAngle) * offset;
-        const py = transform.y + Math.sin(rearAngle) * offset;
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed;
-        context.spawnParticle(px, py, '#F7D277', vx, vy, 0.2 + (Math.random() * 0.3), 0.8, 1);
-    }
-
-    state.timers[AITimerID.AIM]! -= context.delta;
-    if (state.timers[AITimerID.AIM]! <= 0) {
-        state.timers[AITimerID.AIM] = undefined; 
-        const dirX = Math.cos(transform.rotation);
-        const dirY = Math.sin(transform.rotation);
-
-        context.spawnProjectile(
-            transform.x + dirX * 1.5, 
-            transform.y + dirY * 1.5, 
-            dirX * projectileSpeed, 
-            dirY * projectileSpeed, 
-            undefined, 
-            this.configId, 
-            entity.id as number
-        );
-
-        context.playSound('fx_enemy_fire', transform.x);
-        if (motion) {
-            motion.vx = -dirX * 5.0;
-            motion.vy = -dirY * 5.0;
+            state.data.chargingProjectileId = proj.id as number;
         }
 
-        context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+        const projEntity = context.getEntity(state.data.chargingProjectileId);
+        
+        if (projEntity && projEntity.active) {
+            const pRender = projEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+            if (pRender) {
+                // Normalize growth time (0.0 to 1.0)
+                const growDuration = TIME_GROW_END - TIME_GROW_START;
+                const growProgress = Math.min(1.0, (elapsed - TIME_GROW_START) / growDuration);
+                
+                // Scale Lerp
+                const currentScale = SCALE_MIN + (growProgress * (SCALE_MAX - SCALE_MIN));
+                pRender.scale = currentScale;
+            }
+        } else {
+            state.data.chargingProjectileId = undefined;
+        }
+    }
+
+    // --- 4. PARTICLES & SOUND ---
+    // Only sizzle during growth
+    if (elapsed > TIME_GROW_START && elapsed < TIME_GROW_END) {
+        if (!state.timers[AITimerID.SIZZLE] || state.timers[AITimerID.SIZZLE]! <= 0) {
+            context.playSound('fx_exhaust_sizzle', transform.x);
+            state.timers[AITimerID.SIZZLE] = 0.15;
+        } else {
+            state.timers[AITimerID.SIZZLE]! -= context.delta;
+        }
+
+        const rearAngle = transform.rotation + Math.PI;
+        let offset = 1.3;
+        if (renderEffect) {
+            offset *= (1.0 - (0.4 * renderEffect.squashFactor));
+        }
+
+        const spreadAngle = 0.25; 
+        const density = 2; 
+
+        for (let i = 0; i < density; i++) {
+            const spread = (Math.random() - 0.5) * spreadAngle;
+            const angle = rearAngle + spread;
+            const speed = 12.0 + (Math.random() * 8.0);
+            const px = transform.x + Math.cos(rearAngle) * offset;
+            const py = transform.y + Math.sin(rearAngle) * offset;
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            context.spawnParticle(px, py, '#F7D277', vx, vy, 0.2 + (Math.random() * 0.3), 0.8, 1);
+        }
+    }
+
+    // --- 5. FIRE ---
+    state.timers[AITimerID.AIM]! -= context.delta;
+    
+    if (state.timers[AITimerID.AIM]! <= 0) {
+        state.timers[AITimerID.AIM] = undefined; 
+        
+        const dirX = Math.cos(transform.rotation);
+        const dirY = Math.sin(transform.rotation);
+        
+        const projEntity = state.data.chargingProjectileId !== undefined 
+            ? context.getEntity(state.data.chargingProjectileId) 
+            : undefined;
+
+        if (projEntity && projEntity.active) {
+            const pData = projEntity.getComponent<ProjectileData>(ComponentType.Projectile);
+            const pMotion = projEntity.getComponent<MotionData>(ComponentType.Motion);
+            const pRender = projEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+            
+            if (pData) {
+                pData.state = 'FLIGHT';
+                pData.ownerId = -1; 
+            }
+            if (pMotion) {
+                pMotion.vx = dirX * projectileSpeed;
+                pMotion.vy = dirY * projectileSpeed;
+            }
+            if (pRender) {
+                pRender.scale = SCALE_MAX; // Lock Size
+            }
+            
+            if (motion) {
+                motion.vx = -dirX * 5.0;
+                motion.vy = -dirY * 5.0;
+            }
+
+            context.playSound('fx_enemy_fire', transform.x);
+            context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+        }
+
+        state.data.chargingProjectileId = undefined;
         state.current = AI_STATE.ATTACK; 
         
         return NodeState.SUCCESS;
@@ -16373,7 +16450,6 @@ export class HunterCooldown extends BTNode {
 
     if (!state || !transform || !visual || !identity) return NodeState.FAILURE;
 
-    // LOOKUP
     const params = context.config.enemies[identity.variant as EnemyType]?.params || {};
     const min = params.cooldownMin ?? 0.3;
     const max = params.cooldownMax ?? 0.6;
@@ -16913,6 +16989,7 @@ export interface AIBlackboard {
   spinVel?: number;
   roamTargetX?: number;
   roamTargetY?: number;
+  chargingProjectileId?: number; // New field for Hunter charge
 }
 
 
@@ -17863,6 +17940,7 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { Query } from '@/engine/ecs/Query';
 
 export class ProjectileSystem implements IGameSystem {
@@ -17894,7 +17972,22 @@ export class ProjectileSystem implements IGameSystem {
 
             const ownerTransform = owner.getComponent<TransformData>(ComponentType.Transform);
             if (ownerTransform) {
-                const offsetDist = 1.6; 
+                // DYNAMIC OFFSET CALCULATION
+                // We want the "back" of the ball to touch the pivot of the owner (0,0).
+                
+                const pRender = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+                let visualRadius = 0.2; // Fallback (0.5 geo * 0.4 base)
+                
+                if (pRender) {
+                    // Geometry Radius is 0.5 (SphereGeometry(0.5))
+                    // Base Scale is usually 0.4 (from Weapon Config)
+                    // Dynamic Scale varies (0.5 to 3.5)
+                    visualRadius = 0.5 * pRender.baseScaleX * pRender.scale;
+                }
+
+                // Offset = Visual Radius so the edge touches the center
+                const offsetDist = visualRadius; 
+                
                 const cos = Math.cos(ownerTransform.rotation);
                 const sin = Math.sin(ownerTransform.rotation);
                 
@@ -20222,11 +20315,10 @@ import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers'
 import { GameEvents } from '@/engine/signals/GameEvents'; 
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Faction, Tag } from '@/engine/ecs/types';
+import { Faction } from '@/engine/ecs/types';
 import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
@@ -20253,7 +20345,7 @@ export class BehaviorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const upgrades = useGameStore.getState().activeUpgrades;
+    const upgrades = useGameStore.getState().activeUpgrades || {};
 
     const aiContext: AIContext = {
       delta,
@@ -20262,12 +20354,10 @@ export class BehaviorSystem implements IGameSystem {
           let bullet;
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
-              // UPDATED: Using spawnProjectile instead of spawnBullet
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
-              // UPDATED: Using spawnProjectile instead of spawnBullet
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
           if (ownerId !== undefined) {
@@ -20290,6 +20380,7 @@ export class BehaviorSystem implements IGameSystem {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
+      getEntity: (id) => this.registry.getEntity(id), // <--- IMPLEMENTATION ADDED HERE
       config: this.config
     };
 
@@ -21242,6 +21333,7 @@ export interface AIContext {
   getAllPanelRects: () => WorldRect[];
   getPanelStress: (id: PanelId) => number;
   getUpgradeLevel: (key: string) => number;
+  getEntity: (id: number) => Entity | undefined; // New method
   
   config: typeof ConfigService;
 }
@@ -21418,6 +21510,7 @@ export class BehaviorSystem implements IGameSystem {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
+      getEntity: (id) => this.registry.getEntity(id),
       config: this.config
     };
 

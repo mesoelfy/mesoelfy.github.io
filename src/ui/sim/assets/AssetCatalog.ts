@@ -38,7 +38,9 @@ export const registerAllAssets = () => {
 
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => sharedProjectileGeo); 
+      // CRITICAL FIX: Return a CLONE so that InstancedActor can attach unique attributes 
+      // (like spawnProgress) to each weapon type without conflicts.
+      AssetService.registerGenerator(key, () => sharedProjectileGeo.clone()); 
   });
 };
 
