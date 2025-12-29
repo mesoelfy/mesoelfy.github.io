@@ -39,7 +39,7 @@ type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' 
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
-export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'SPITTER_OPT'; // UPDATED
+export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'SPITTER_OPT';
 
 interface DebugFlags {
   godMode: boolean;
@@ -59,6 +59,7 @@ interface AppState {
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
+  labDetail: number; // NEW
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   audioSettings: AudioSettings;
@@ -72,6 +73,7 @@ interface AppState {
   startBreach: () => void;
   setSandboxView: (view: SandboxView) => void;
   setLabExperiment: (exp: LabExperiment) => void;
+  setLabDetail: (val: number) => void; // NEW
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   openModal: (modal: ModalType) => void;
@@ -105,6 +107,7 @@ export const useStore = create<AppState>()(
       isSimulationPaused: false,
       sandboxView: 'lab',
       labExperiment: 'NONE',
+      labDetail: 1, // Default Low Poly
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
       audioSettings: { ...DEFAULT_AUDIO },
@@ -119,6 +122,7 @@ export const useStore = create<AppState>()(
       startBreach: () => set({ isBreaching: true }),
       setSandboxView: (view) => set({ sandboxView: view }),
       setLabExperiment: (exp) => set({ labExperiment: exp }),
+      setLabDetail: (val) => set({ labDetail: val }),
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       setGalleryAction: (action) => set({ galleryAction: action }),
       openModal: (modal) => set({ activeModal: modal }),

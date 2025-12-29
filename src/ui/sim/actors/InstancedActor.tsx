@@ -14,7 +14,7 @@ interface InstancedActorProps {
   material: THREE.Material;
   maxCount: number;
   renderKey?: string; 
-  interactive?: boolean; // Kept for API compat, but ignored now
+  interactive?: boolean; 
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -29,13 +29,19 @@ export const InstancedActor = ({
   
   useLayoutEffect(() => {
     if (meshRef.current) {
-        meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
+        // Ensure instanceColor exists on the mesh
+        if (!meshRef.current.instanceColor) {
+             meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
+        }
+        
+        // Attach custom attributes to the CURRENT geometry
+        // We do this every time 'geometry' changes (e.g. Potato Mode toggle)
         meshRef.current.geometry.setAttribute(
             'spawnProgress', 
             new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1)
         );
     }
-  }, [maxCount]);
+  }, [maxCount, geometry]); // <--- FIX: Added geometry dependency
 
   useFrame(() => {
     if (!meshRef.current || !renderKey) return;
@@ -50,6 +56,9 @@ export const InstancedActor = ({
     }
 
     const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
+    
+    // Safety check in case frame runs before effect (rare but possible during swap)
+    if (!spawnAttr) return;
 
     for (let i = 0; i < count; i++) {
         const offset = i * RENDER_STRIDE;

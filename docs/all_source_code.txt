@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 20:48:45 CST 2025
+Generated on: Sun Dec 28 22:20:25 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -325,8 +325,8 @@ PROJECT DIRECTORY STRUCTURE:
 │       │       ├── UpgradeTerminal.tsx
 │       │       ├── VideoPlaylistService.ts
 │       │       ├── badges
-│       │       │   ├── RailgunBadge.tsx
-│       │       │   └── SnifferBadge.tsx
+│       │       │   ├── SnifferBadge.tsx
+│       │       │   └── SpitterBadge.tsx
 │       │       └── panel
 │       │           ├── BreachOverlay.tsx
 │       │           ├── IntelligentHeader.tsx
@@ -420,7 +420,9 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   ├── config
 │       │   │   └── theme.ts
 │       │   ├── experiments
-│       │   │   └── GlitchGhost.tsx
+│       │   │   ├── GlitchGhost.tsx
+│       │   │   ├── SpitterOptimized.tsx
+│       │   │   └── SpitterPrototype.tsx
 │       │   ├── hooks
 │       │   │   ├── useHeartbeat.ts
 │       │   │   ├── useInteractionZone.ts
@@ -443,7 +445,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-90 directories, 345 files
+90 directories, 347 files
 
 =====================================
 FILE: ./next.config.js
@@ -2208,7 +2210,7 @@ FILE: ./src/ui/kit/molecules/UpgradeTerminal.tsx
 =====================================
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RailgunBadge } from './badges/RailgunBadge';
+import { SpitterBadge } from './badges/SpitterBadge';
 import { SnifferBadge } from './badges/SnifferBadge';
 
 interface UpgradeTerminalProps {
@@ -2226,7 +2228,7 @@ export const UpgradeTerminal = ({ isPanelDead, onHoverCost }: UpgradeTerminalPro
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4"
         >
-            <RailgunBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
+            <SpitterBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
             <SnifferBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
         </motion.div>
       </AnimatePresence>
@@ -2334,7 +2336,7 @@ export const IdentityFooter = ({ isPanelDead }: IdentityFooterProps) => {
 
 
 =====================================
-FILE: ./src/ui/kit/molecules/badges/RailgunBadge.tsx
+FILE: ./src/ui/kit/molecules/badges/SpitterBadge.tsx
 =====================================
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
@@ -2344,12 +2346,16 @@ import { clsx } from 'clsx';
 import { memo, useCallback } from 'react';
 import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
 
-interface RailgunBadgeProps {
+interface SpitterBadgeProps {
   isPanelDead: boolean;
   onHoverCost: (cost: number | null) => void;
 }
 
-const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, color = "bg-primary-green", text = "text-primary-green" }: any) => (
+const StatRow = ({ 
+    label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, 
+    color = "bg-primary-green", text = "text-primary-green",
+    barMaxWidth = "max-w-[120px]" 
+}: any) => (
     <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
         {/* Left: Injector Button */}
         <UpgradeButton 
@@ -2365,7 +2371,7 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
         {/* Right: Data Display */}
         <div className="flex-1 flex items-center justify-between px-3 relative">
             {/* Label */}
-            <div className="flex items-center gap-2 z-10">
+            <div className="flex items-center gap-2 z-10 shrink-0">
                 <Icon size={12} className={clsx(text, "opacity-70")} />
                 <span className={clsx("text-[9px] font-mono font-bold tracking-widest", text)}>
                     {label}
@@ -2373,7 +2379,7 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
             </div>
 
             {/* Diagonal Bar Graph */}
-            <div className="flex gap-1 h-3 ml-4 flex-1 justify-end max-w-[120px]">
+            <div className={clsx("flex gap-1 h-3 ml-4 flex-1 justify-end", barMaxWidth)}>
                 {Array.from({ length: max }).map((_, i) => (
                     <div 
                         key={i} 
@@ -2390,9 +2396,9 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
     </div>
 );
 
-export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProps) => {
-  const { railgun, upgradePoints, selectUpgrade } = useGameStore(state => ({
-    railgun: state.railgun,
+export const SpitterBadge = memo(({ isPanelDead, onHoverCost }: SpitterBadgeProps) => {
+  const { spitter, upgradePoints, selectUpgrade } = useGameStore(state => ({
+    spitter: state.spitter,
     upgradePoints: state.upgradePoints,
     selectUpgrade: state.selectUpgrade
   }));
@@ -2411,7 +2417,7 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
         {/* Header */}
         <div className="flex items-center justify-between pl-1 border-l-2 border-primary-green">
             <h3 className="text-sm font-header font-black text-primary-green tracking-widest uppercase ml-2">
-                RAILGUN
+                SPITTER
             </h3>
             <Crosshair size={14} className="text-primary-green opacity-50" />
         </div>
@@ -2419,23 +2425,24 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
         {/* Stats Grid */}
         <div className="flex flex-col gap-2">
             <StatRow 
-                label="BEAM_WIDTH" 
+                label="GIRTH" 
                 icon={Maximize} 
-                level={railgun.widthLevel} 
+                level={spitter.girthLevel} 
                 max={10} 
-                path="RAILGUN_WIDTH" 
+                path="SPITTER_GIRTH" 
                 canAfford={canAfford} 
                 onUpgrade={handleUpgrade} 
                 onHoverCost={onHoverCost}
+                barMaxWidth="max-w-[200px]"
             />
             
             <div className="grid grid-cols-2 gap-2">
                 <StatRow 
                     label="DAMAGE" 
                     icon={Swords} 
-                    level={railgun.damageLevel} 
+                    level={spitter.damageLevel} 
                     max={3} 
-                    path="RAILGUN_DAMAGE" 
+                    path="SPITTER_DAMAGE" 
                     canAfford={canAfford} 
                     onUpgrade={handleUpgrade} 
                     onHoverCost={onHoverCost}
@@ -2443,9 +2450,9 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
                 <StatRow 
                     label="RATE" 
                     icon={Zap} 
-                    level={railgun.rateLevel} 
+                    level={spitter.rateLevel} 
                     max={3} 
-                    path="RAILGUN_RATE" 
+                    path="SPITTER_RATE" 
                     canAfford={canAfford} 
                     onUpgrade={handleUpgrade} 
                     onHoverCost={onHoverCost}
@@ -2455,7 +2462,7 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
     </div>
   );
 });
-RailgunBadge.displayName = 'RailgunBadge';
+SpitterBadge.displayName = 'SpitterBadge';
 
 
 =====================================
@@ -2616,8 +2623,9 @@ import { IdentityFooter } from './IdentityFooter';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { PALETTE } from '@/engine/config/Palette';
+import { Cpu } from 'lucide-react';
 
-const PointCounter = ({ value }: { value: number }) => {
+const PointCounter = ({ value, isActive }: { value: number, isActive: boolean }) => {
     const count = useMotionValue(value);
     const rounded = useTransform(count, latest => Math.round(latest).toString().padStart(2, '0'));
     const [flash, setFlash] = useState<'none'|'up'|'down'>('none');
@@ -2635,14 +2643,14 @@ const PointCounter = ({ value }: { value: number }) => {
     }, [value, count]);
 
     const colors = {
-        none: PALETTE.GREEN.PRIMARY,
+        none: isActive ? PALETTE.GREEN.PRIMARY : '#555', // Dim grey when inactive
         up: '#7FF65F', 
         down: PALETTE.RED.CRITICAL
     };
 
     return (
         <motion.span 
-            className="font-header font-black text-2xl tabular-nums block relative z-10" 
+            className="font-header font-black text-xl tabular-nums block relative z-10" 
             animate={{ 
                 color: colors[flash],
                 scale: flash !== 'none' ? 1.1 : 1,
@@ -2652,21 +2660,6 @@ const PointCounter = ({ value }: { value: number }) => {
         >
             {rounded}
         </motion.span>
-    );
-};
-
-const AnimatedLabel = ({ value }: { value: number }) => {
-    return (
-        <motion.div
-            key={value}
-            initial={{ opacity: 0.5, filter: 'brightness(1)' }}
-            animate={{ opacity: 0.7, filter: 'brightness(1.5)' }}
-            exit={{ opacity: 0.5 }}
-            transition={{ duration: 0.1, yoyo: Infinity }}
-            className="text-[10px] font-mono font-bold tracking-widest text-primary-green-dim"
-        >
-            AVAILABLE_POINTS
-        </motion.div>
     );
 };
 
@@ -2683,6 +2676,7 @@ export const IdentityHUD = () => {
   const isPlayerDead = hp <= 0;
   
   const upgradePoints = useGameStore(s => s.upgradePoints);
+  const hasPoints = upgradePoints > 0;
   const [hoverCost, setHoverCost] = useState<number | null>(null);
 
   const handleCostHover = useCallback((cost: number | null) => {
@@ -2692,34 +2686,56 @@ export const IdentityHUD = () => {
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* HEADER: Points Display (CENTERED) */}
-      <div className="flex-none flex items-center justify-center px-6 h-14 border-b border-primary-green/10 bg-black/20 relative">
-          
-          <div className="flex items-center gap-4 bg-primary-green/5 px-4 py-1.5 rounded-sm border border-primary-green/10 relative overflow-hidden transition-all duration-300 hover:border-primary-green/30">
-              {/* Scanline */}
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(120,246,84,0.05)_50%,transparent_100%)] w-full h-full pointer-events-none" />
-              
-              <AnimatedLabel value={upgradePoints} />
-              
-              <div className="w-px h-4 bg-primary-green/20" />
+      {/* HEADER: Points Display (Redesigned to match Badges) */}
+      <div className="flex-none px-6 py-4 border-b border-primary-green/10 bg-black/20">
+          <div className="flex flex-col gap-2 w-full">
+                {/* Badge Header */}
+                <div className={clsx("flex items-center justify-between pl-1 border-l-2 transition-colors duration-300", hasPoints ? "border-primary-green" : "border-white/20")}>
+                    <h3 className={clsx("text-xs font-header font-black tracking-widest uppercase ml-2 transition-colors duration-300", hasPoints ? "text-primary-green" : "text-gray-600")}>
+                        SYSTEM_RESOURCES
+                    </h3>
+                    <Cpu size={14} className={clsx("transition-colors duration-300", hasPoints ? "text-primary-green opacity-50" : "text-gray-700")} />
+                </div>
 
-              {/* Fixed Width Container: w-14 (56px) is enough for "00 -1" without gap */}
-              <div className="flex items-center justify-start w-14">
-                  <PointCounter value={upgradePoints} />
-                  
-                  <AnimatePresence>
-                      {hoverCost !== null && (
-                          <motion.span 
-                              initial={{ opacity: 0, x: -5 }}
-                              animate={{ opacity: 1, x: 4 }}
-                              exit={{ opacity: 0, x: -2 }}
-                              className="text-lg font-header font-black text-critical-red drop-shadow-[0_0_5px_#FF003C]"
-                          >
-                              -{hoverCost}
-                          </motion.span>
-                      )}
-                  </AnimatePresence>
-              </div>
+                {/* Data Row */}
+                <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
+                    {/* Left Indicator */}
+                    <div className={clsx("w-10 h-full flex items-center justify-center border-r border-white/10 transition-colors duration-300", hasPoints ? "bg-primary-green/10" : "bg-white/5")}>
+                        <div className={clsx("w-1.5 h-1.5 transition-all duration-500", hasPoints ? "bg-primary-green shadow-[0_0_5px_#78F654]" : "bg-transparent border border-white/20 rounded-full")} />
+                    </div>
+
+                    {/* Right Content */}
+                    <div className="flex-1 flex items-center justify-between px-3 relative">
+                        <span className={clsx("text-[9px] font-mono font-bold tracking-widest transition-colors duration-300", hasPoints ? "text-primary-green-dim group-hover:text-primary-green" : "text-gray-700")}>
+                            AVAILABLE_PTS
+                        </span>
+                        
+                        <div className="flex items-center gap-3 relative">
+                            {/* Cost Indicator */}
+                            <AnimatePresence>
+                                {hoverCost !== null && hasPoints && (
+                                    <motion.span 
+                                        initial={{ opacity: 0, x: 10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 5 }}
+                                        className="text-lg font-header font-black text-critical-red drop-shadow-[0_0_5px_#FF003C] absolute right-full mr-3"
+                                    >
+                                        -{hoverCost}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                            
+                            <div className={clsx("transition-all duration-500", hasPoints ? "opacity-100" : "opacity-30")}>
+                                <PointCounter value={upgradePoints} isActive={hasPoints} />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Decorative Diagonal Lines */}
+                    <div className={clsx("absolute right-0 top-0 bottom-0 w-12 flex justify-end pointer-events-none transition-opacity duration-500", hasPoints ? "opacity-10" : "opacity-0")}>
+                         <div className="w-full h-full" style={{ backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 2px, ${PALETTE.GREEN.PRIMARY} 2px, ${PALETTE.GREEN.PRIMARY} 3px)` }} />
+                    </div>
+                </div>
           </div>
       </div>
 
@@ -8621,22 +8637,35 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Zap, RefreshCcw } from 'lucide-react';
+import { Atom, Zap, RefreshCcw, Droplets, ZapOff, Info, Layers } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
 const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
+  { id: 'SPITTER', label: 'SPITTER_PROTO', icon: Droplets },
 ];
 
 export const VisualLab = () => {
-  const { labExperiment, setLabExperiment } = useStore();
+  const { labExperiment, setLabExperiment, labDetail, setLabDetail } = useStore();
   const [paramA, setParamA] = useState(0.5);
+
+  // Math for Icosahedron subdivisions
+  const calculateStats = (detail: number) => {
+      // Formula: Vertices = 10 * 4^d + 2
+      // Formula: Faces = 20 * 4^d
+      const d = Math.floor(detail);
+      const verts = 10 * Math.pow(4, d) + 2;
+      const faces = 20 * Math.pow(4, d);
+      return { verts, faces };
+  };
+
+  const stats = calculateStats(labDetail);
 
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col">
-        <div className="absolute top-20 left-10 w-72 bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 rounded-sm shadow-xl pointer-events-auto p-4 flex flex-col gap-6">
+        <div className="absolute top-20 left-10 w-80 bg-[#020408]/90 backdrop-blur-md border border-service-cyan/20 rounded-sm shadow-xl pointer-events-auto p-4 flex flex-col gap-6">
             <div>
                 <h3 className="text-service-cyan font-header font-black tracking-widest text-xs mb-2 border-b border-service-cyan/20 pb-2 flex justify-between items-center">
                     <span>VISUAL_CORTEX</span>
@@ -8661,19 +8690,74 @@ export const VisualLab = () => {
                     ))}
                 </div>
             </div>
-            {labExperiment === 'GLITCH' && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                    <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">Parameters</div>
-                    <RangeSlider 
-                        label="CORRUPTION" 
-                        value={paramA} 
-                        max={2.0} 
-                        onChange={setParamA} 
-                        color="text-service-cyan"
-                    />
+            
+            {labExperiment !== 'NONE' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+                    
+                    {/* Distortion Slider */}
+                    <div className="space-y-2">
+                        <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">
+                            {labExperiment === 'GLITCH' ? "CORRUPTION" : "DISTORTION"}
+                        </div>
+                        <RangeSlider 
+                            label="INTENSITY" 
+                            value={paramA} 
+                            max={labExperiment === 'GLITCH' ? 2.0 : 1.0} 
+                            onChange={setParamA} 
+                            color="text-service-cyan"
+                        />
+                    </div>
+
+                    {/* Detail Slider (Up to 16, though 7+ will crash browser likely) */}
+                    <div className="space-y-2">
+                        <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest flex justify-between">
+                            <span>GEOMETRY_DETAIL</span>
+                            <span className="text-white">{labDetail}</span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" max="6" step="1"
+                            value={labDetail}
+                            onChange={(e) => setLabDetail(parseInt(e.target.value))}
+                            className="w-full h-1.5 bg-service-cyan/20 rounded-full appearance-none cursor-pointer accent-service-cyan hover:accent-white transition-all"
+                        />
+                        <div className="flex justify-between text-[8px] font-mono text-gray-500">
+                            <span>LOW (0)</span>
+                            <span>CRITICAL (6)</span>
+                        </div>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="bg-black/40 border border-service-cyan/20 p-3 space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-service-cyan border-b border-service-cyan/10 pb-1">
+                            <Layers size={12} /> MESH_TOPOLOGY
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-[9px] font-mono text-gray-400">
+                            <div>
+                                <span className="block text-gray-600">VERTICES</span>
+                                <span className="text-white text-xs">{stats.verts.toLocaleString()}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-600">FACES</span>
+                                <span className="text-white text-xs">{stats.faces.toLocaleString()}</span>
+                            </div>
+                        </div>
+                        <div className="pt-2 border-t border-service-cyan/10 flex items-start gap-2">
+                            <Info size={12} className="text-service-cyan shrink-0 mt-0.5" />
+                            <p className="text-[9px] leading-tight text-gray-500">
+                                <strong>Warning:</strong> Vertex displacement (Noise) is calculated 
+                                per-vertex on the GPU. Higher detail creates smoother liquid effects 
+                                but increases render cost exponentially ($4^d$). 
+                                <br/><br/>
+                                <span className="text-service-cyan">Rec: Detail 1-2 for gameplay.</span>
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
             )}
         </div>
+        
         {labExperiment === 'NONE' && (
             <div className="flex-1 w-full h-full flex items-center justify-center animate-in fade-in zoom-in-95 duration-500">
                 <div className="text-center opacity-50 flex flex-col items-center gap-4">
@@ -9312,13 +9396,14 @@ FILE: ./src/ui/sim/stages/LabStage.tsx
 import { useStore } from '@/engine/state/global/useStore';
 import { OrbitControls } from '@react-three/drei';
 import { GlitchGhost } from '../experiments/GlitchGhost';
+import { SpitterPrototype } from '../experiments/SpitterPrototype';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
 export const LabStage = () => {
-  const { labExperiment } = useStore();
+  const { labExperiment, labDetail } = useStore();
   const [intensity, setIntensity] = useState(0.5);
 
   useFrame((state) => {
@@ -9340,6 +9425,7 @@ export const LabStage = () => {
         <pointLight position={[-10, -5, -5]} intensity={0.5} color="#FF003C" />
         <group position={[0, 0, 0]}>
             {labExperiment === 'GLITCH' && <GlitchGhost intensity={intensity} />}
+            {labExperiment === 'SPITTER' && <SpitterPrototype intensity={intensity} detail={labDetail} />}
         </group>
     </>
   );
@@ -9588,6 +9674,55 @@ export const MiniCrystalCanvas = () => {
 
 
 =====================================
+FILE: ./src/ui/sim/experiments/SpitterPrototype.tsx
+=====================================
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
+import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
+
+interface Props {
+    intensity: number;
+    detail: number;
+}
+
+export const SpitterPrototype = ({ intensity = 0.5, detail = 1 }: Props) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  // Dynamically regenerate based on slider
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, detail), [detail]);
+
+  const material = useMemo(() => {
+      return MaterialFactory.create('MAT_SPITTER_PROTO', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.COLOR]: { value: new THREE.Color(PALETTE.PURPLE.PRIMARY) },
+              [Uniforms.INTENSITY]: { value: 0.5 },
+              [Uniforms.SPEED]: { value: 2.0 }
+          }
+      });
+  }, []);
+
+  useFrame((state) => {
+      if (!meshRef.current) return;
+      MaterialFactory.updateUniforms(state.clock.elapsedTime);
+      
+      meshRef.current.rotation.y += 0.005;
+      meshRef.current.rotation.z += 0.002;
+      
+      if (material.uniforms[Uniforms.INTENSITY]) {
+          material.uniforms[Uniforms.INTENSITY].value = intensity;
+      }
+  });
+
+  return <mesh ref={meshRef} geometry={geometry} material={material} />;
+};
+
+
+=====================================
 FILE: ./src/ui/sim/experiments/GlitchGhost.tsx
 =====================================
 import { useRef, useMemo } from 'react';
@@ -9630,6 +9765,51 @@ export const GlitchGhost = ({ intensity = 0.5 }: { intensity: number }) => {
   });
 
   return <mesh ref={meshRef} geometry={geometry} material={material} />;
+};
+
+
+=====================================
+FILE: ./src/ui/sim/experiments/SpitterOptimized.tsx
+=====================================
+import { useRef, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
+import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
+
+export const SpitterOptimized = ({ intensity = 0.5 }: { intensity: number }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  // ULTRA-LITE: Detail 1 (80 vertices).
+  // Looks like a low-poly liquid crystal. Very fast.
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
+
+  const material = useMemo(() => {
+      return MaterialFactory.create('MAT_SPITTER_PROTO', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.COLOR]: { value: new THREE.Color(PALETTE.PURPLE.PRIMARY) },
+              [Uniforms.INTENSITY]: { value: 0.5 },
+              [Uniforms.SPEED]: { value: 2.0 }
+          }
+      });
+  }, []);
+
+  useFrame((state) => {
+      if (!meshRef.current) return;
+      MaterialFactory.updateUniforms(state.clock.elapsedTime);
+      
+      meshRef.current.rotation.y += 0.005;
+      meshRef.current.rotation.z += 0.002;
+      
+      if (material.uniforms[Uniforms.INTENSITY]) {
+          material.uniforms[Uniforms.INTENSITY].value = intensity;
+      }
+  });
+
+  return <group><mesh ref={meshRef} geometry={geometry} material={material} /></group>;
 };
 
 
@@ -10491,23 +10671,44 @@ import { InstancedActor } from './InstancedActor';
 import { AssetService } from '@/ui/sim/assets/AssetService';
 import { Tag } from '@/engine/ecs/types';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
+import { useStore } from '@/engine/state/global/useStore';
+import { MATERIAL_IDS } from '@/engine/config/AssetKeys';
 import * as THREE from 'three';
 
 export const ProjectileActor = () => {
-  const material = AssetService.get<THREE.Material>('MAT_PROJECTILE');
+  const graphicsMode = useStore(s => s.graphicsMode);
+  
+  const suffix = graphicsMode === 'HIGH' ? '_HIGH' : '_LOW';
 
-  // Generate keys based on the Weapons definition
-  const renderKeys = Object.values(WEAPONS).map(def => `GEO_${def.id}`);
+  // Map weapons to their specific materials
+  const renderItems = Object.values(WEAPONS).map(def => {
+      let matKey = MATERIAL_IDS.PROJECTILE_PLAYER;
+      
+      if (def.visual.material === 'PROJECTILE_ENEMY') {
+          matKey = MATERIAL_IDS.PROJECTILE_ENEMY;
+      }
+
+      return {
+          baseId: def.id,
+          geoKey: `GEO_${def.id}${suffix}`,
+          // The renderKey MUST match what Spawner/RenderSystem uses to pack the buffer.
+          // Spawner uses the Material ID defined in Archetypes.
+          // Archetypes.ts maps visual.material string to the actual material ID.
+          // So we reconstruct the key: GeometryID|MaterialID
+          renderKey: `GEO_${def.id}|${matKey}`,
+          matKey: matKey
+      };
+  });
 
   return (
     <>
-      {renderKeys.map(key => (
+      {renderItems.map(item => (
         <InstancedActor
-          key={key} 
-          renderKey={`${key}|MAT_PROJECTILE`}
+          key={item.baseId} 
+          renderKey={item.renderKey}
           tag={Tag.PROJECTILE} 
-          geometry={AssetService.get(key)} 
-          material={material} 
+          geometry={AssetService.get(item.geoKey)} 
+          material={AssetService.get(item.matKey)} 
           maxCount={2000}
           interactive={false}
         />
@@ -10622,7 +10823,7 @@ interface InstancedActorProps {
   material: THREE.Material;
   maxCount: number;
   renderKey?: string; 
-  interactive?: boolean; // Kept for API compat, but ignored now
+  interactive?: boolean; 
   updateEntity?: any; 
   filter?: any;
   baseColor?: string;
@@ -10637,13 +10838,19 @@ export const InstancedActor = ({
   
   useLayoutEffect(() => {
     if (meshRef.current) {
-        meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
+        // Ensure instanceColor exists on the mesh
+        if (!meshRef.current.instanceColor) {
+             meshRef.current.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxCount * 3), 3);
+        }
+        
+        // Attach custom attributes to the CURRENT geometry
+        // We do this every time 'geometry' changes (e.g. Potato Mode toggle)
         meshRef.current.geometry.setAttribute(
             'spawnProgress', 
             new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1)
         );
     }
-  }, [maxCount]);
+  }, [maxCount, geometry]); // <--- FIX: Added geometry dependency
 
   useFrame(() => {
     if (!meshRef.current || !renderKey) return;
@@ -10658,6 +10865,9 @@ export const InstancedActor = ({
     }
 
     const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
+    
+    // Safety check in case frame runs before effect (rare but possible during swap)
+    if (!spawnAttr) return;
 
     for (let i = 0; i < count; i++) {
         const offset = i * RENDER_STRIDE;
@@ -10976,6 +11186,7 @@ import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
+import { Uniforms } from '@/engine/graphics/Uniforms';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
@@ -10988,8 +11199,29 @@ export const registerAllAssets = () => {
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
-  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true, side: THREE.DoubleSide }));
+  // NEW: Projectile Materials (Player vs Enemy)
+  
+  // Player: 25% Distortion
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_PLAYER, () => {
+      return MaterialFactory.create('MAT_SPITTER_PLAYER', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.25 }, 
+              [Uniforms.SPEED]: { value: 2.0 }
+          }
+      });
+  });
+
+  // Enemy: 60% Distortion
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_ENEMY, () => {
+      return MaterialFactory.create('MAT_SPITTER_ENEMY', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.60 }, 
+              [Uniforms.SPEED]: { value: 3.0 }
+          }
+      });
+  });
 
   // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
@@ -11002,14 +11234,24 @@ export const registerAllAssets = () => {
   });
 
   // 4. Dynamic Registration (Weapons)
-  // Shared Sphere for all projectiles
-  const sharedProjectileGeo = addBarycentricCoordinates(new THREE.SphereGeometry(0.5, 8, 8));
+  // GAME CONFIG:
+  // Spitter (Player): Detail 1 (Low Poly / Retro)
+  // Hunter (Enemy): Detail 12 (Ultra High Fidelity)
+  
+  // High Voltage Mode:
+  const spitterHigh = new THREE.IcosahedronGeometry(0.5, 1); 
+  const hunterHigh = new THREE.IcosahedronGeometry(0.5, 12); 
+  
+  // Potato Mode (Both Low):
+  const lowPoly = new THREE.IcosahedronGeometry(0.5, 0); 
 
   Object.values(WEAPONS).forEach(def => {
-      const key = `GEO_${def.id}`;
-      // CRITICAL FIX: Return a CLONE so that InstancedActor can attach unique attributes 
-      // (like spawnProgress) to each weapon type without conflicts.
-      AssetService.registerGenerator(key, () => sharedProjectileGeo.clone()); 
+      // Determine if Player or Enemy weapon for High Mode config
+      const isEnemy = def.tags.includes('ENEMY');
+      
+      AssetService.registerGenerator(`GEO_${def.id}_HIGH`, () => isEnemy ? hunterHigh.clone() : spitterHigh.clone());
+      AssetService.registerGenerator(`GEO_${def.id}_LOW`, () => lowPoly.clone());
+      AssetService.registerGenerator(`GEO_${def.id}`, () => lowPoly.clone());
   });
 };
 
@@ -11036,7 +11278,7 @@ const createGeometry = (visual: any) => {
         case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
         case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
         case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
-        case 'CUSTOM_HUNTER': return createHunterSpear(); // Hunter restored
+        case 'CUSTOM_HUNTER': return createHunterSpear(); 
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
     return addBarycentricCoordinates(geo);
@@ -11547,52 +11789,71 @@ export interface RegisteredPanel {
   isDestroyed: boolean;
 }
 
-export interface RailgunState {
-  widthLevel: number; // 0-10
-  damageLevel: number; // 0-3
-  rateLevel: number; // 0-3
+export interface SpitterState { // RENAMED
+  girthLevel: number; // RENAMED from widthLevel
+  damageLevel: number; 
+  rateLevel: number; 
 }
 
 export interface SnifferState {
-  capacityLevel: number; // 0-4
-  damageLevel: number; // 0-3
-  rateLevel: number; // 0-3
+  capacityLevel: number; 
+  damageLevel: number; 
+  rateLevel: number; 
 }
 
-// Replaces the old string-based keys
 export type UpgradePath = 
-  | 'RAILGUN_WIDTH'
-  | 'RAILGUN_DAMAGE'
-  | 'RAILGUN_RATE'
+  | 'SPITTER_GIRTH'   // RENAMED
+  | 'SPITTER_DAMAGE'  // RENAMED
+  | 'SPITTER_RATE'    // RENAMED
   | 'SNIFFER_CAPACITY'
   | 'SNIFFER_DAMAGE'
   | 'SNIFFER_RATE'
-  | 'REPAIR_NANITES' // Kept for logic compatibility if needed, though button removed
   | 'RESTORE'
-  | 'PURGE'
-  | 'DAEMON'; // Kept as deprecated reference or for event compatibility
+  | 'PURGE';
+
+export type UpgradeOption = {
+    id: string;
+    cost: number;
+}
 
 export interface GameState {
   isPlaying: boolean;
   score: number;
-  threatLevel: number;
   panels: Record<string, RegisteredPanel>;
   
+  // Slices
+  highScore: number;
+  upgradePoints: number;
+  spitter: SpitterState; // RENAMED
+  sniffer: SnifferState;
+
   startGame: () => void;
   stopGame: () => void;
+  resetGame: () => void;
+  
+  // Combat Slice
+  isZenMode: boolean;
+  systemIntegrity: number;
+  setPlaying: (isPlaying: boolean) => void;
+  activateZenMode: () => void;
+  setSystemIntegrity: (val: number) => void;
+  resetCombatState: () => void;
+
+  // Progression Slice
+  setScore: (val: number) => void;
+  selectUpgrade: (path: UpgradePath) => void;
+  resetProgressionState: () => void;
+
+  // UI Slice
   registerPanel: (id: PanelId, element: HTMLElement) => void;
   unregisterPanel: (id: PanelId) => void;
-  damagePanel: (id: PanelId, amount: number) => void;
-  healPanel: (id: PanelId, amount: number) => void;
-}
-
-export interface Entity {
-  id: number;
-  x: number;
-  y: number;
-  radius: number;
-  active: boolean;
-  spawnTime: number; 
+  setInteractionTarget: (id: PanelId | null) => void;
+  healPanel: (id: PanelId, amount: number, sourceX?: number) => void;
+  damagePanel: (id: PanelId, amount: number, options?: any) => void;
+  decayPanel: (id: PanelId, amount: number) => void;
+  restoreAllPanels: () => number;
+  destroyAllPanels: () => void;
+  resetUIState: () => void;
 }
 
 
@@ -12018,9 +12279,9 @@ export const EnemyTypes = {
 
 export const WeaponIDs = {
   // --- CORE WEAPONS ---
-  PLAYER_RAILGUN: 'PLAYER_RAILGUN',
+  PLAYER_SPITTER: 'PLAYER_SPITTER', // RENAMED FROM RAILGUN
   PLAYER_SNIFFER: 'PLAYER_SNIFFER',
-  PLAYER_PURGE: 'PLAYER_PURGE', // Zen Bomb
+  PLAYER_PURGE: 'PLAYER_PURGE', 
   
   // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',
@@ -12034,7 +12295,7 @@ export const ArchetypeIDs = {
   ...EnemyTypes,
   ...WeaponIDs,
 
-  // Legacy/Generic Fallbacks (Mapped in Spawner)
+  // Legacy/Generic Fallbacks
   BULLET_PLAYER: 'BULLET_PLAYER',
   BULLET_ENEMY: 'BULLET_ENEMY',
 } as const;
@@ -12043,7 +12304,6 @@ export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
 export type WeaponID = typeof WeaponIDs[keyof typeof WeaponIDs];
 export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs];
 
-// Direct re-export for cleaner imports
 export const GameEvents = Events;
 
 
@@ -12153,7 +12413,6 @@ const parseHex = (hex: string) => {
     };
 };
 
-// Helper for standard entities (Player/Enemies)
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
@@ -12191,10 +12450,9 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
   }
 };
 
-// Enemies
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
-    const matId = 'MAT_ENEMY_BASE'; 
+    const matId = MATERIAL_IDS.ENEMY_BASE; 
     
     const comps: any[] = [
       { type: ComponentType.Identity, data: { variant: def.id } },
@@ -12226,16 +12484,18 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// WEAPONS (SCRUBBED RENDER EFFECT)
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
-    const matId = 'MAT_PROJECTILE';
+    
+    // MAP VISUAL DEF STRING TO MATERIAL CONSTANT
+    let matId = MATERIAL_IDS.PROJECTILE_PLAYER;
+    if (def.visual.material === 'PROJECTILE_ENEMY') matId = MATERIAL_IDS.PROJECTILE_ENEMY;
+    
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
-    // NOTE: Explicitly NOT adding RenderEffect here.
     const comps: any[] = [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
       { type: ComponentType.Motion, data: { friction: 0 } },
@@ -12256,7 +12516,7 @@ Object.values(WEAPONS).forEach(def => {
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
 
-if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+if (BLUEPRINTS[WeaponIDs.PLAYER_SPITTER]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_SPITTER];
 if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;
@@ -12292,7 +12552,9 @@ export const MATERIAL_IDS = {
   PLAYER_AMBIENT: 'MAT_PLAYER_AMBIENT',
   PLAYER_BACKING: 'MAT_PLAYER_BACKING',
   GALLERY_BODY: 'MAT_GALLERY_BODY',
-  PROJECTILE: 'MAT_PROJECTILE'
+  // Specific Projectile Materials
+  PROJECTILE_PLAYER: 'MAT_PROJECTILE_PLAYER',
+  PROJECTILE_ENEMY: 'MAT_PROJECTILE_ENEMY'
 } as const;
 
 export type MaterialKey = typeof MATERIAL_IDS[keyof typeof MATERIAL_IDS];
@@ -12562,43 +12824,41 @@ import { Tag } from '@/engine/ecs/types';
 import { PALETTE } from '@/engine/config/Palette';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 
-// Standard "Dot" size
 const DOT_SCALE: [number, number, number] = [0.4, 0.4, 0.4];
 
 export const WEAPONS: Record<string, WeaponDef> = {
-  [WeaponIDs.PLAYER_RAILGUN]: {
-    id: WeaponIDs.PLAYER_RAILGUN,
+  [WeaponIDs.PLAYER_SPITTER]: {
+    id: WeaponIDs.PLAYER_SPITTER,
     damage: 1, speed: 50, life: 1.5,
-    visual: { model: 'SPHERE', color: PALETTE.PURPLE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.PURPLE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_PLAYER' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
   [WeaponIDs.PLAYER_SNIFFER]: {
     id: WeaponIDs.PLAYER_SNIFFER,
     damage: 1, speed: 22, life: 3.0,
-    visual: { model: 'SPHERE', color: PALETTE.PURPLE.LIGHT, scale: DOT_SCALE, material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.PURPLE.LIGHT, scale: DOT_SCALE, material: 'PROJECTILE_PLAYER' },
     behavior: { faceVelocity: false, homing: true },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
-    // Larger dot for the bomb
-    visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE_PLAYER' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]
   },
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
     damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_ENEMY' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
     id: WeaponIDs.DAEMON_ORB,
     damage: 20, speed: 35, life: 2.0,
-    visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE' },
+    visual: { model: 'SPHERE', color: PALETTE.PINK.DIM, scale: [0.5, 0.5, 0.5], material: 'PROJECTILE_ENEMY' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER] 
   }
@@ -12615,7 +12875,8 @@ export interface VisualDef {
   model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON' | 'CRESCENT';
   color: string; // Hex
   scale: [number, number, number];
-  material: 'ENEMY_BASE' | 'PROJECTILE' | 'PLAYER';
+  // Updated to include specific projectile materials
+  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY';
   // Procedural Params
   height?: number;
   radius?: number;
@@ -14279,7 +14540,7 @@ FILE: ./src/engine/state/game/slices/createProgressionSlice.ts
 =====================================
 import { StateCreator } from 'zustand';
 import { GameState } from '../useGameStore';
-import { UpgradePath, RailgunState, SnifferState } from '@/engine/types/game.types';
+import { UpgradePath, SpitterState, SnifferState } from '@/engine/types/game.types';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 
@@ -14287,22 +14548,21 @@ export interface ProgressionSlice {
   highScore: number;
   upgradePoints: number;
   
-  // NEW STRUCTURE
-  railgun: RailgunState;
+  spitter: SpitterState; // Renamed
   sniffer: SnifferState;
   
-  setScore: (val: number) => void; // Updates high score
+  setScore: (val: number) => void;
   selectUpgrade: (path: UpgradePath) => void;
   resetProgressionState: () => void;
 }
 
-const DEFAULT_RAILGUN: RailgunState = { widthLevel: 0, damageLevel: 0, rateLevel: 0 };
+const DEFAULT_SPITTER: SpitterState = { girthLevel: 0, damageLevel: 0, rateLevel: 0 };
 const DEFAULT_SNIFFER: SnifferState = { capacityLevel: 0, damageLevel: 0, rateLevel: 0 };
 
 export const createProgressionSlice: StateCreator<GameState, [], [], ProgressionSlice> = (set, get) => ({
   highScore: 0,
   upgradePoints: 0,
-  railgun: { ...DEFAULT_RAILGUN },
+  spitter: { ...DEFAULT_SPITTER },
   sniffer: { ...DEFAULT_SNIFFER },
 
   setScore: (val) => set((state) => {
@@ -14313,28 +14573,26 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   selectUpgrade: (path: UpgradePath) => {
     const state = get();
     
-    // 1. Determine Cost
     let cost = 1;
     if (path === 'RESTORE' || path === 'PURGE') {
         cost = 2;
     }
 
-    // 2. Validate Affordability
     if (state.upgradePoints < cost) return;
 
     let success = false;
 
     // 3. Weapon Upgrade Logic
-    if (path === 'RAILGUN_WIDTH' && state.railgun.widthLevel < 10) {
-        set(s => ({ railgun: { ...s.railgun, widthLevel: s.railgun.widthLevel + 1 } }));
+    if (path === 'SPITTER_GIRTH' && state.spitter.girthLevel < 10) {
+        set(s => ({ spitter: { ...s.spitter, girthLevel: s.spitter.girthLevel + 1 } }));
         success = true;
     } 
-    else if (path === 'RAILGUN_DAMAGE' && state.railgun.damageLevel < 3) {
-        set(s => ({ railgun: { ...s.railgun, damageLevel: s.railgun.damageLevel + 1 } }));
+    else if (path === 'SPITTER_DAMAGE' && state.spitter.damageLevel < 3) {
+        set(s => ({ spitter: { ...s.spitter, damageLevel: s.spitter.damageLevel + 1 } }));
         success = true;
     }
-    else if (path === 'RAILGUN_RATE' && state.railgun.rateLevel < 3) {
-        set(s => ({ railgun: { ...s.railgun, rateLevel: s.railgun.rateLevel + 1 } }));
+    else if (path === 'SPITTER_RATE' && state.spitter.rateLevel < 3) {
+        set(s => ({ spitter: { ...s.spitter, rateLevel: s.spitter.rateLevel + 1 } }));
         success = true;
     }
     else if (path === 'SNIFFER_CAPACITY' && state.sniffer.capacityLevel < 4) {
@@ -14350,22 +14608,19 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         success = true;
     }
     
-    // 4. Operations Logic (Always successful if affordable)
     if (path === 'RESTORE' || path === 'PURGE') {
         success = true;
     }
     
-    // 5. Deduct Points & Emit
     if (success) {
         set(s => ({ upgradePoints: s.upgradePoints - cost }));
-        // Only emit if state actually changed/operation was valid
         GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
     }
   },
 
   resetProgressionState: () => set({
       upgradePoints: 0,
-      railgun: { ...DEFAULT_RAILGUN },
+      spitter: { ...DEFAULT_SPITTER },
       sniffer: { ...DEFAULT_SNIFFER }
   })
 });
@@ -14733,12 +14988,11 @@ const DEFAULT_AUDIO: AudioSettings = {
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
 
-// UPDATED: Added 'donate'
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' | 'donate';
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
-export type LabExperiment = 'NONE' | 'GLITCH';
+export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'SPITTER_OPT';
 
 interface DebugFlags {
   godMode: boolean;
@@ -14758,6 +15012,7 @@ interface AppState {
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
+  labDetail: number; // NEW
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   audioSettings: AudioSettings;
@@ -14771,6 +15026,7 @@ interface AppState {
   startBreach: () => void;
   setSandboxView: (view: SandboxView) => void;
   setLabExperiment: (exp: LabExperiment) => void;
+  setLabDetail: (val: number) => void; // NEW
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   openModal: (modal: ModalType) => void;
@@ -14804,6 +15060,7 @@ export const useStore = create<AppState>()(
       isSimulationPaused: false,
       sandboxView: 'lab',
       labExperiment: 'NONE',
+      labDetail: 1, // Default Low Poly
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
       audioSettings: { ...DEFAULT_AUDIO },
@@ -14818,6 +15075,7 @@ export const useStore = create<AppState>()(
       startBreach: () => set({ isBreaching: true }),
       setSandboxView: (view) => set({ sandboxView: view }),
       setLabExperiment: (exp) => set({ labExperiment: exp }),
+      setLabDetail: (val) => set({ labDetail: val }),
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       setGalleryAction: (action) => set({ galleryAction: action }),
       openModal: (modal) => set({ activeModal: modal }),
@@ -17341,30 +17599,18 @@ export const ShaderLib = {
         uniform vec3 uColor;
         uniform float uLevel;
         void main() {
-          // 1. Calculate angle and compensate for the 0.55 twist
           float angle = atan(vPos.y, vPos.x) + 0.55;
           float PI = 3.14159265359;
-          
-          // 2. Identify Quadrant (0: Right, 1: Top, 2: Left, 3: Bottom)
           int q = int(mod(floor(angle / (PI / 2.0) + 0.5), 4.0));
-          
-          // 3. Match quadrants to firing order: 
-          // Order: [Left (2), Right (0), Bottom (3), Top (1)]
           bool active = false;
           if (uLevel >= 1.0 && q == 2) active = true;
           if (uLevel >= 2.0 && q == 0) active = true;
           if (uLevel >= 3.0 && q == 3) active = true;
           if (uLevel >= 4.0 && q == 1) active = true;
-          
           if (!active) discard;
-
-          // 4. Gradient masking so only the outer tips glow
           float dist = length(vPos);
           float mask = smoothstep(0.4, 0.65, dist);
-          
-          // 5. Pulsing Effect
           float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
-          
           gl_FragColor = vec4(uColor * pulse * 2.0, mask);
         }
       `
@@ -17458,6 +17704,95 @@ export const ShaderLib = {
           vec3 edgeColor = vec3(1.0);
           vec3 finalColor = mix(coreColor, edgeColor, 1.0 - smoothstep(0.0, 0.1, edge));
           finalColor += coreColor * uGlow * 0.5;
+          gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    },
+
+    glitch: {
+      vertex: `
+        varying float vNoise;
+        uniform float uIntensity;
+        
+        void main() {
+          vBarycentric = barycentric;
+          vUv = uv;
+          vPos = position;
+          float n = snoise(vec3(position.x * 2.0, position.y * 2.0, uTime * 5.0));
+          vNoise = n;
+          vec3 pos = position + normal * n * uIntensity * 0.5;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        uniform float uIntensity;
+        uniform float uFrequency;
+        uniform float uSpeed;
+        
+        void main() {
+          float width = 1.0 + uIntensity * 2.0;
+          float edge = edgeFactor(vBarycentric, width);
+          float alpha = 1.0 - smoothstep(0.0, 0.1, edge);
+          vec3 baseColor = vec3(0.0, 1.0, 1.0); 
+          vec3 flashColor = vec3(1.0, 1.0, 1.0); 
+          float scan = sin(gl_FragCoord.y * uFrequency * 0.1 + uTime * uSpeed * 10.0);
+          float glitchMix = smoothstep(0.8, 1.0, scan * vNoise);
+          if (glitchMix > 0.5) discard;
+          vec3 finalColor = mix(baseColor, flashColor, vNoise * uIntensity);
+          float fill = uIntensity * 0.2;
+          gl_FragColor = vec4(finalColor, max(alpha, fill));
+        }
+      `
+    },
+
+    spitter_proto: {
+      vertex: `
+        varying float vNoise;
+        uniform float uIntensity;
+        uniform float uSpeed;
+        uniform vec3 uColor;
+        
+        void main() {
+          vUv = uv;
+          vPos = position;
+          
+          #ifdef USE_INSTANCING
+            vColor = instanceColor;
+          #else
+            vColor = uColor;
+          #endif
+
+          vec3 p = position * 2.0;
+          float time = uTime * uSpeed;
+          float n = snoise(p + vec3(time));
+          vNoise = n;
+          
+          vec3 newPos = position + (normal * n * uIntensity * 0.5);
+          
+          #ifdef USE_INSTANCING
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(newPos, 1.0);
+          #else
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+          #endif
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        // vColor is supplied by vertex shader (either from instance or uniform)
+        
+        void main() {
+          float n = vNoise * 0.5 + 0.5;
+          vec3 core = vColor;
+          
+          // Hotter highlights based on base color + white mix
+          vec3 highlight = mix(core, vec3(1.0, 1.0, 1.0), 0.6);
+          // Darker shadows
+          vec3 shadow = core * 0.3;
+          
+          vec3 finalColor = mix(shadow, core, n);
+          finalColor = mix(finalColor, highlight, smoothstep(0.7, 1.0, n));
+          
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
@@ -17706,7 +18041,8 @@ export class AnimationSystem implements IGameSystem {
           render.rotation += rotate.speed * delta;
       }
 
-      if (entity.hasTag(Tag.PLAYER)) {
+      // FIX: Ensure we don't rotate projectiles that happen to have the PLAYER tag (friendly fire)
+      if (entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.PROJECTILE)) {
           let spinSpeed = 0.02; 
           if (isZenMode) spinSpeed = -0.03;
           else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
@@ -19156,7 +19492,7 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculateRailgunShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculateSpitterShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
@@ -19172,7 +19508,7 @@ interface PurgeState {
 }
 
 export class WeaponSystem implements IGameSystem {
-  private lastRailgunTime = 0;
+  private lastSpitterTime = 0; 
   private lastSnifferTime = 0;
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
@@ -19192,14 +19528,13 @@ export class WeaponSystem implements IGameSystem {
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
-        if (p.option === 'NOVA') this.triggerNova(); // New Trigger
+        if (p.option === 'NOVA') this.triggerNova(); 
     }));
   }
 
   update(delta: number, time: number): void {
     this.updateProjectiles(delta, time);
 
-    // If Purge Spiral is active, override standard fire
     if (this.purgeState.active) {
         const player = this.getPlayerEntity();
         if (player) {
@@ -19225,12 +19560,10 @@ export class WeaponSystem implements IGameSystem {
           const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
           const target = p.getComponent<TargetData>(ComponentType.Target);
 
-          // A. STEERING (Homing Logic)
           if (target && target.type === 'ENEMY') {
               this.handleSteering(p, transform, motion, delta);
           }
 
-          // B. KINEMATIC MOVE (Linear)
           transform.prevX = transform.x;
           transform.prevY = transform.y;
           transform.prevRotation = transform.rotation;
@@ -19297,27 +19630,33 @@ export class WeaponSystem implements IGameSystem {
     const target = this.acquireTarget(transform);
     if (!target) return;
 
-    const railgunState = useGameStore.getState().railgun;
+    const spitterState = useGameStore.getState().spitter;
     const snifferState = useGameStore.getState().sniffer;
     const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
-    // RAILGUN
-    const railgunInterval = this.getRailgunInterval(railgunState.rateLevel);
-    if (time > this.lastRailgunTime + railgunInterval) {
-        const shot = calculateRailgunShot(
+    // SPITTER
+    const spitterInterval = this.getSpitterInterval(spitterState.rateLevel);
+    if (time > this.lastSpitterTime + spitterInterval) {
+        const shot = calculateSpitterShot(
             { x: transform.x, y: transform.y },
             { x: target.x, y: target.y },
-            railgunState
+            spitterState
         );
+        
+        // --- SCALE CALCULATION ---
+        // Each Girth Level increases size by 75%
+        const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId
+            Faction.FRIENDLY, shot.life, shot.damage, shot.configId,
+            undefined, 
+            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult } // Override base 0.4
         );
 
         this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
         this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
-        this.lastRailgunTime = time;
+        this.lastSpitterTime = time;
     }
 
     // SNIFFER
@@ -19344,7 +19683,7 @@ export class WeaponSystem implements IGameSystem {
     }
   }
 
-  private getRailgunInterval(level: number): number {
+  private getSpitterInterval(level: number): number {
       const base = 0.15;
       return base / Math.pow(1.1, level);
   }
@@ -19358,7 +19697,6 @@ export class WeaponSystem implements IGameSystem {
       return base * 3.0;
   }
 
-  // Phase 1: Spiral
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
       const player = this.getPlayerEntity();
@@ -19371,7 +19709,6 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  // Phase 2: Concentric Nova (Rainbow Ring)
   private triggerNova() {
       const player = this.getPlayerEntity();
       if (player) {
@@ -19393,7 +19730,6 @@ export class WeaponSystem implements IGameSystem {
                       { scaleX: 1.5, scaleY: 1.5 }
                   );
 
-                  // PRISMATIC COLORING
                   const hue = i / BURST_COUNT;
                   this.tempColor.setHSL(hue, 1.0, 0.5);
                   
@@ -20292,10 +20628,7 @@ export class GameStateSystem implements IGameStateSystem {
     private audio: IAudioService
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'DAEMON') {
-            // Keeping for logic check, though UI button removed
-            this.events.emit(GameEvents.SPAWN_DAEMON, null);
-        }
+        // DAEMON logic check if needed
     }));
   }
 
@@ -20336,8 +20669,8 @@ export class GameStateSystem implements IGameStateSystem {
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
   get upgradePoints() { return this.progSys.upgradePoints; }
   
-  // Direct store access for new granular state
-  get railgun() { return useGameStore.getState().railgun; }
+  // Update Getters
+  get spitter() { return useGameStore.getState().spitter; } 
   get sniffer() { return useGameStore.getState().sniffer; }
 
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
@@ -21458,7 +21791,7 @@ FILE: ./src/engine/handlers/weapons/WeaponLogic.ts
 import { ConfigService } from '@/engine/services/ConfigService';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
-import { RailgunState, SnifferState } from '@/engine/types/game.types';
+import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
 export interface ShotDef {
   x: number;
@@ -21478,16 +21811,16 @@ const RETICLE_RADIUS = 1.65;
 const TWIST_OFFSET = -0.55;  
 
 const SNIFFER_TIPS = [
-    Math.PI + TWIST_OFFSET,           // Left
-    0 + TWIST_OFFSET,                 // Right
-    Math.PI * 1.5 + TWIST_OFFSET,     // Bottom
-    Math.PI / 2 + TWIST_OFFSET        // Top
+    Math.PI + TWIST_OFFSET,           
+    0 + TWIST_OFFSET,                 
+    Math.PI * 1.5 + TWIST_OFFSET,     
+    Math.PI / 2 + TWIST_OFFSET        
 ];
 
-export const calculateRailgunShot = (
+export const calculateSpitterShot = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  state: RailgunState
+  state: SpitterState
 ): ShotDef => {
   const config = ConfigService.player;
   const damage = 1 + state.damageLevel;
@@ -21508,7 +21841,7 @@ export const calculateRailgunShot = (
       vy: Math.sin(angle) * speed,
       damage,
       life,
-      configId: WeaponIDs.PLAYER_RAILGUN,
+      configId: WeaponIDs.PLAYER_SPITTER,
       isHoming: false
   };
 };
@@ -22135,17 +22468,13 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: ArchetypeID = WeaponIDs.PLAYER_RAILGUN, 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER, // Updated default
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
     let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_RAILGUN;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_SPITTER;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    
-    // PROJECTILE REFACTOR: 
-    // 1. MotionData is added but friction is 0 (handled via kinematics in WeaponSystem Phase 2)
-    // 2. RenderEffect removed to prevent squash/stretch artifacts
     
     const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
@@ -22164,10 +22493,6 @@ export class EntitySpawner implements IEntitySpawner {
     }
 
     const entity = this.spawn(id, overrides);
-    
-    // Explicitly remove RenderEffect if blueprint added it, to stop bouncing
-    // (We do this safely by not adding it, but if archetype has it, we might need to strip it)
-    // For now, we assume the new Archetypes for projectiles won't include RenderEffect
     
     return entity;
   }

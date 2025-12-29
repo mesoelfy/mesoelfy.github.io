@@ -232,36 +232,48 @@ export const ShaderLib = {
         varying float vNoise;
         uniform float uIntensity;
         uniform float uSpeed;
+        uniform vec3 uColor;
         
         void main() {
           vUv = uv;
           vPos = position;
+          
+          #ifdef USE_INSTANCING
+            vColor = instanceColor;
+          #else
+            vColor = uColor;
+          #endif
+
           vec3 p = position * 2.0;
           float time = uTime * uSpeed;
           float n = snoise(p + vec3(time));
           vNoise = n;
-          // Displace along normal
+          
           vec3 newPos = position + (normal * n * uIntensity * 0.5);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+          
+          #ifdef USE_INSTANCING
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(newPos, 1.0);
+          #else
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+          #endif
         }
       `,
       fragment: `
         varying float vNoise;
-        uniform vec3 uColor;
+        // vColor is supplied by vertex shader (either from instance or uniform)
         
         void main() {
-          // Normalize noise -1..1 to 0..1
           float n = vNoise * 0.5 + 0.5;
-          vec3 core = uColor;
-          // Hotter highlights
-          vec3 highlight = mix(core, vec3(1.0, 0.8, 1.0), 0.5);
+          vec3 core = vColor;
+          
+          // Hotter highlights based on base color + white mix
+          vec3 highlight = mix(core, vec3(1.0, 1.0, 1.0), 0.6);
           // Darker shadows
-          vec3 shadow = core * 0.2;
+          vec3 shadow = core * 0.3;
           
           vec3 finalColor = mix(shadow, core, n);
           finalColor = mix(finalColor, highlight, smoothstep(0.7, 1.0, n));
           
-          // Slight rim glow faked by noise
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `

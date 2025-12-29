@@ -5,7 +5,8 @@ export interface VisualDef {
   model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON' | 'CRESCENT';
   color: string; // Hex
   scale: [number, number, number];
-  material: 'ENEMY_BASE' | 'PROJECTILE' | 'PLAYER';
+  // Updated to include specific projectile materials
+  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY';
   // Procedural Params
   height?: number;
   radius?: number;

@@ -57,7 +57,7 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
 
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
-    const matId = 'MAT_ENEMY_BASE'; 
+    const matId = MATERIAL_IDS.ENEMY_BASE; 
     
     const comps: any[] = [
       { type: ComponentType.Identity, data: { variant: def.id } },
@@ -91,7 +91,11 @@ Object.values(ENEMIES).forEach(def => {
 
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
-    const matId = 'MAT_PROJECTILE';
+    
+    // MAP VISUAL DEF STRING TO MATERIAL CONSTANT
+    let matId = MATERIAL_IDS.PROJECTILE_PLAYER;
+    if (def.visual.material === 'PROJECTILE_ENEMY') matId = MATERIAL_IDS.PROJECTILE_ENEMY;
+    
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;

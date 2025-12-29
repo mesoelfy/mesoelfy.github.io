@@ -7,6 +7,7 @@ import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
+import { Uniforms } from '@/engine/graphics/Uniforms';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
@@ -19,8 +20,29 @@ export const registerAllAssets = () => {
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
-  // FIX: toneMapped: true prevents "blown out" white look, preserving the raw color
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE, () => new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true, side: THREE.DoubleSide }));
+  // NEW: Projectile Materials (Player vs Enemy)
+  
+  // Player: 10% Distortion
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_PLAYER, () => {
+      return MaterialFactory.create('MAT_SPITTER_PLAYER', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.10 }, 
+              [Uniforms.SPEED]: { value: 2.0 }
+          }
+      });
+  });
+
+  // Enemy (Hunter): 40% Distortion
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_ENEMY, () => {
+      return MaterialFactory.create('MAT_SPITTER_ENEMY', {
+          ...ShaderLib.presets.spitter_proto,
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.40 }, 
+              [Uniforms.SPEED]: { value: 3.0 }
+          }
+      });
+  });
 
   // 2. Static Geometries
   AssetService.registerGenerator(GEOMETRY_IDS.PLAYER, () => new THREE.BoxGeometry(1, 1, 1));
@@ -33,14 +55,24 @@ export const registerAllAssets = () => {
   });
 
   // 4. Dynamic Registration (Weapons)
-  // Shared Sphere for all projectiles
-  const sharedProjectileGeo = addBarycentricCoordinates(new THREE.SphereGeometry(0.5, 8, 8));
+  // GAME CONFIG:
+  // Spitter (Player): Detail 5 (High Fidelity)
+  // Hunter (Enemy): Detail 10 (Very High Fidelity)
+  
+  // High Voltage Mode:
+  const spitterHigh = new THREE.IcosahedronGeometry(0.5, 5); 
+  const hunterHigh = new THREE.IcosahedronGeometry(0.5, 10); 
+  
+  // Potato Mode (Both Low):
+  const lowPoly = new THREE.IcosahedronGeometry(0.5, 0); 
 
   Object.values(WEAPONS).forEach(def => {
-      const key = `GEO_${def.id}`;
-      // CRITICAL FIX: Return a CLONE so that InstancedActor can attach unique attributes 
-      // (like spawnProgress) to each weapon type without conflicts.
-      AssetService.registerGenerator(key, () => sharedProjectileGeo.clone()); 
+      // Determine if Player or Enemy weapon for High Mode config
+      const isEnemy = def.tags.includes('ENEMY');
+      
+      AssetService.registerGenerator(`GEO_${def.id}_HIGH`, () => isEnemy ? hunterHigh.clone() : spitterHigh.clone());
+      AssetService.registerGenerator(`GEO_${def.id}_LOW`, () => lowPoly.clone());
+      AssetService.registerGenerator(`GEO_${def.id}`, () => lowPoly.clone());
   });
 };
 
@@ -67,7 +99,7 @@ const createGeometry = (visual: any) => {
         case 'CYLINDER': geo = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); break;
         case 'TORUS': geo = new THREE.TorusGeometry(0.8, 0.2, 4, 8); break;
         case 'BOX': geo = new THREE.BoxGeometry(1, 1, 1); break;
-        case 'CUSTOM_HUNTER': return createHunterSpear(); // Hunter restored
+        case 'CUSTOM_HUNTER': return createHunterSpear(); 
         default: geo = new THREE.BoxGeometry(1,1,1); break;
     }
     return addBarycentricCoordinates(geo);
