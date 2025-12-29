@@ -72,6 +72,7 @@ export class BehaviorSystem implements IGameSystem {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
+      getEntity: (id) => this.registry.getEntity(id),
       config: this.config
     };
 

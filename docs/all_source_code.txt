@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 17:52:53 CST 2025
+Generated on: Sun Dec 28 18:08:59 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -130,7 +130,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │       ├── AudioContextManager.ts
 │   │   │       ├── AudioMixer.ts
 │   │   │       ├── AudioSynthesizer.ts
-│   │   │       ├── ShepardTone.ts
 │   │   │       ├── SoundBank.ts
 │   │   │       └── VoiceManager.ts
 │   │   ├── config
@@ -207,11 +206,9 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── RenderSchema.ts
 │   │   │   ├── ShaderLib.ts
 │   │   │   ├── Uniforms.ts
-│   │   │   ├── glsl
-│   │   │   │   ├── math.ts
-│   │   │   │   └── noise.ts
-│   │   │   └── gpgpu
-│   │   │       └── GPGPUManager.ts
+│   │   │   └── glsl
+│   │   │       ├── math.ts
+│   │   │       └── noise.ts
 │   │   ├── handlers
 │   │   │   ├── ai
 │   │   │   │   ├── AIRegistry.ts
@@ -427,12 +424,10 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   ├── useHeartbeat.ts
 │       │   │   ├── useInteractionZone.ts
 │       │   │   ├── usePanelRegistry.ts
-│       │   │   ├── usePanelTracker.ts
 │       │   │   └── useWindowFocus.ts
 │       │   ├── props
 │       │   │   └── MiniCrystalCanvas.tsx
 │       │   ├── registry
-│       │   │   ├── PanelElementRegistry.ts
 │       │   │   ├── RenderCatalog.ts
 │       │   │   └── RenderRegistry.ts
 │       │   ├── stages
@@ -440,8 +435,6 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   └── LabStage.tsx
 │       │   └── vfx
 │       │       ├── CameraRig.tsx
-│       │       ├── PostProcessing.tsx
-│       │       ├── UISyncDirector.tsx
 │       │       └── WireframeFloor.tsx
 │       └── system
 │           ├── PWARegister.tsx
@@ -449,7 +442,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-91 directories, 350 files
+90 directories, 344 files
 
 =====================================
 FILE: ./next.config.js
@@ -9468,88 +9461,6 @@ export const RenderDirector = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/vfx/UISyncDirector.tsx
-=====================================
-import { useFrame, useThree } from '@react-three/fiber';
-import { PanelElementRegistry } from '../registry/PanelElementRegistry';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
-import { IdentityData } from '@/engine/ecs/components/IdentityData';
-import { TransformData } from '@/engine/ecs/components/TransformData';
-import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
-import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { ComponentType } from '@/engine/ecs/ComponentType';
-import { PanelId } from '@/engine/config/PanelConfig';
-import * as THREE from 'three';
-import { useRef } from 'react';
-
-const vec = new THREE.Vector3();
-
-export const UISyncDirector = () => {
-  const { size, camera } = useThree();
-  const entityCache = useRef(new Map<PanelId, number>());
-
-  useFrame(() => {
-    const registry = ServiceLocator.getRegistry();
-    if (!registry) return;
-
-    const elements = PanelElementRegistry.getAll();
-    const halfW = size.width / 2;
-    const halfH = size.height / 2;
-
-    for (const [id, el] of elements) {
-        let eid = entityCache.current.get(id);
-        if (eid === undefined) {
-            for (const e of registry.getAll()) {
-                const identity = e.getComponent<IdentityData>(ComponentType.Identity);
-                if (identity && identity.variant === id) {
-                    eid = e.id;
-                    entityCache.current.set(id, eid);
-                    break;
-                }
-            }
-        }
-        if (eid === undefined) continue;
-
-        const entity = registry.getEntity(eid);
-        if (!entity || !entity.active) {
-            entityCache.current.delete(id);
-            continue;
-        }
-
-        const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-        const collider = entity.getComponent<ColliderData>(ComponentType.Collider);
-        const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-
-        if (transform && collider) {
-            let x = transform.x, y = transform.y;
-            if (render) { x += render.offsetX; y += render.offsetY; }
-
-            vec.set(x, y, 0);
-            vec.project(camera);
-            const cx = vec.x * halfW + halfW;
-            const cy = -vec.y * halfH + halfH;
-
-            vec.set(x + collider.width / 2, y + collider.height / 2, 0);
-            vec.project(camera);
-            const cornerX = vec.x * halfW + halfW;
-            const cornerY = -vec.y * halfH + halfH;
-
-            const width = Math.abs(cornerX - cx) * 2;
-            const height = Math.abs(cornerY - cy) * 2;
-            const left = cx - (width / 2);
-            const top = cy - (height / 2);
-
-            el.style.transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0)`;
-            el.style.width = `${width.toFixed(1)}px`;
-            el.style.height = `${height.toFixed(1)}px`;
-        }
-    }
-  });
-  return null;
-};
-
-
-=====================================
 FILE: ./src/ui/sim/vfx/CameraRig.tsx
 =====================================
 import { useFrame, useThree } from '@react-three/fiber';
@@ -9653,57 +9564,6 @@ export const WireframeFloor = () => {
 
 
 =====================================
-FILE: ./src/ui/sim/vfx/PostProcessing.tsx
-=====================================
-import { useThree, extend, useFrame } from '@react-three/fiber';
-import { Effects } from '@react-three/drei';
-import { useRef, useMemo, useEffect } from 'react';
-import * as THREE from 'three';
-import { RenderPass, UnrealBloomPass, AfterimagePass, ShaderPass } from 'three-stdlib';
-import { useStore } from '@/engine/state/global/useStore';
-import { Uniforms } from '@/engine/graphics/Uniforms';
-
-extend({ RenderPass, UnrealBloomPass, AfterimagePass, ShaderPass });
-
-const VignetteShader = {
-  uniforms: { 
-      "tDiffuse": { value: null }, 
-      [Uniforms.OFFSET]: { value: 1.0 }, 
-      [Uniforms.DARKNESS]: { value: 1.0 } 
-  },
-  vertexShader: `varying vec2 vUv;
-    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 ); }`,
-  fragmentShader: `uniform float offset; uniform float darkness; uniform sampler2D tDiffuse; varying vec2 vUv;
-    void main() { 
-      vec4 texel = texture2D( tDiffuse, vUv );
-      vec2 uv = ( vUv - vec2( 0.5 ) ) * vec2( offset );
-      gl_FragColor = vec4( mix( texel.rgb, vec3( 1.0 - darkness ), dot( uv, uv ) ), texel.a ); 
-    }`
-};
-
-export const EffectsLayer = () => {
-  const { graphicsMode } = useStore();
-  const { size, scene, camera } = useThree();
-  const afterimageRef = useRef<any>(null);
-  const bloomRef = useRef<any>(null);
-  const resolution = useMemo(() => new THREE.Vector2(size.width, size.height), [size]);
-
-  useEffect(() => { if (bloomRef.current) bloomRef.current.resolution = new THREE.Vector2(size.width, size.height); }, [size]);
-  useFrame(() => { if (afterimageRef.current) afterimageRef.current.uniforms[Uniforms.DAMP].value = 0.92; });
-
-  if (graphicsMode === 'POTATO') return null;
-  return (
-    <Effects disableGamma>
-      <renderPass args={[scene, camera]} />
-      <afterimagePass ref={afterimageRef} />
-      <unrealBloomPass ref={bloomRef} args={[resolution, 1.5, 0.4, 0.2]} strength={1.5} radius={0.4} threshold={0.2} />
-      <shaderPass args={[VignetteShader]} uniforms-offset-value={0.9} uniforms-darkness-value={0.6} />
-    </Effects>
-  );
-};
-
-
-=====================================
 FILE: ./src/ui/sim/hooks/usePanelRegistry.ts
 =====================================
 import { useEffect, useRef } from 'react';
@@ -9774,30 +9634,6 @@ export const usePanelRegistry = (id: string) => {
       } catch {}
     };
   }, [id, registerPanel, unregisterPanel]);
-
-  return elementRef;
-};
-
-
-=====================================
-FILE: ./src/ui/sim/hooks/usePanelTracker.ts
-=====================================
-import { useEffect, useRef } from 'react';
-import { PanelId } from '@/engine/config/PanelConfig';
-import { PanelElementRegistry } from '../registry/PanelElementRegistry';
-
-export const usePanelTracker = (id: PanelId) => {
-  const elementRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (elementRef.current) {
-      PanelElementRegistry.register(id, elementRef.current);
-    }
-
-    return () => {
-      PanelElementRegistry.unregister(id);
-    };
-  }, [id]);
 
   return elementRef;
 };
@@ -10675,34 +10511,6 @@ export const InstancedActor = ({
     />
   );
 };
-
-
-=====================================
-FILE: ./src/ui/sim/registry/PanelElementRegistry.ts
-=====================================
-import { PanelId } from '@/engine/config/PanelConfig';
-
-class PanelElementRegistryController {
-  private elements = new Map<PanelId, HTMLElement>();
-
-  public register(id: PanelId, element: HTMLElement) {
-    this.elements.set(id, element);
-  }
-
-  public unregister(id: PanelId) {
-    this.elements.delete(id);
-  }
-
-  public get(id: PanelId) {
-    return this.elements.get(id);
-  }
-
-  public getAll() {
-    return this.elements;
-  }
-}
-
-export const PanelElementRegistry = new PanelElementRegistryController();
 
 
 =====================================
@@ -15577,12 +15385,6 @@ export class AudioDirector implements IGameSystem {
 
 
 =====================================
-FILE: ./src/engine/audio/modules/ShepardTone.ts
-=====================================
-export {};
-
-
-=====================================
 FILE: ./src/engine/audio/modules/AudioMixer.ts
 =====================================
 import { AudioContextManager } from './AudioContextManager';
@@ -17111,57 +16913,6 @@ export interface AIBlackboard {
   spinVel?: number;
   roamTargetX?: number;
   roamTargetY?: number;
-}
-
-
-=====================================
-FILE: ./src/engine/graphics/gpgpu/GPGPUManager.ts
-=====================================
-import { GPUComputationRenderer, Variable } from 'three/examples/jsm/misc/GPUComputationRenderer';
-import * as THREE from 'three';
-
-export class GPGPUManager {
-  private gpuCompute: GPUComputationRenderer;
-  private variables = new Map<string, Variable>();
-
-  constructor(renderer: THREE.WebGLRenderer, size: number) {
-    this.gpuCompute = new GPUComputationRenderer(size, size, renderer);
-    
-    // Check support
-    const status = this.gpuCompute.init();
-    if (status !== null) {
-        console.error("GPGPU Init Failed:", status);
-    }
-  }
-
-  public createVariable(name: string, shader: string, initialData: THREE.DataTexture) {
-    const variable = this.gpuCompute.addVariable(`texture${name}`, shader, initialData);
-    variable.wrapS = THREE.RepeatWrapping;
-    variable.wrapT = THREE.RepeatWrapping;
-    this.variables.set(name, variable);
-    
-    // Resolve dependencies automatically (self-referential for simulation)
-    this.gpuCompute.setVariableDependencies(variable, [variable]);
-    
-    return variable;
-  }
-
-  public init() {
-    const error = this.gpuCompute.init();
-    if (error !== null) {
-        console.error(error);
-    }
-  }
-
-  public update() {
-    this.gpuCompute.compute();
-  }
-
-  public getTexture(name: string) {
-    const v = this.variables.get(name);
-    if (!v) return null;
-    return this.gpuCompute.getCurrentRenderTarget(v).texture;
-  }
 }
 
 

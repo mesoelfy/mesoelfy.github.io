@@ -27,6 +27,7 @@ export interface AIContext {
   getAllPanelRects: () => WorldRect[];
   getPanelStress: (id: PanelId) => number;
   getUpgradeLevel: (key: string) => number;
+  getEntity: (id: number) => Entity | undefined; // New method
   
   config: typeof ConfigService;
 }

@@ -20,9 +20,11 @@ export class AIStateData extends Component {
 
   public reset(data: Partial<AIStateData>) {
     this.current = data.current ?? AI_STATE.IDLE;
-    this.timers = data.timers ?? {};
-    this.data = data.data ?? {};
-    this.treeState = data.treeState ?? {};
+    // CRITICAL FIX: Spread operators (...) ensure we create NEW objects 
+    // instead of copying references from the Archetype definitions.
+    this.timers = { ...(data.timers ?? {}) };
+    this.data = { ...(data.data ?? {}) };
+    this.treeState = { ...(data.treeState ?? {}) };
     this.stunTimer = data.stunTimer ?? 0;
     return this;
   }

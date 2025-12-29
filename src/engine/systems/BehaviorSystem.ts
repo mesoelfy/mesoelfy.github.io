@@ -6,11 +6,10 @@ import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers'
 import { GameEvents } from '@/engine/signals/GameEvents'; 
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { Faction, Tag } from '@/engine/ecs/types';
+import { Faction } from '@/engine/ecs/types';
 import { VFXKey } from '@/engine/config/AssetKeys';
 
 export class BehaviorSystem implements IGameSystem {
@@ -37,7 +36,7 @@ export class BehaviorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const upgrades = useGameStore.getState().activeUpgrades;
+    const upgrades = useGameStore.getState().activeUpgrades || {};
 
     const aiContext: AIContext = {
       delta,
@@ -46,12 +45,10 @@ export class BehaviorSystem implements IGameSystem {
           let bullet;
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
-              // UPDATED: Using spawnProjectile instead of spawnBullet
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
-              // UPDATED: Using spawnProjectile instead of spawnBullet
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
           }
           if (ownerId !== undefined) {
@@ -74,6 +71,7 @@ export class BehaviorSystem implements IGameSystem {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => upgrades[key] || 0,
+      getEntity: (id) => this.registry.getEntity(id), // <--- IMPLEMENTATION ADDED HERE
       config: this.config
     };
 

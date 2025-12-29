@@ -16,4 +16,5 @@ export interface AIBlackboard {
   spinVel?: number;
   roamTargetX?: number;
   roamTargetY?: number;
+  chargingProjectileId?: number; // New field for Hunter charge
 }

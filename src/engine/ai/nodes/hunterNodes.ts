@@ -8,6 +8,7 @@ import { AIStateData } from '@/engine/ecs/components/AIStateData';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
+import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { AITimerID } from '@/engine/ai/AITimerID';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
@@ -103,14 +104,11 @@ export class AimAndFire extends BTNode {
 
     state.current = AI_STATE.CHARGING;
 
+    // --- 1. ROTATE TO TARGET ---
     let currentVel = state.data.spinVel ?? IDLE_SPIN_TARGET;
     currentVel = THREE.MathUtils.lerp(currentVel, CHARGE_SPIN_TARGET, context.delta * 2.5);
     state.data.spinVel = currentVel;
     visual.rotation += currentVel * context.delta;
-
-    if (state.timers[AITimerID.AIM] === undefined) {
-        state.timers[AITimerID.AIM] = aimDuration;
-    }
 
     if (motion) {
         motion.vx *= 0.8;
@@ -121,6 +119,54 @@ export class AimAndFire extends BTNode {
     const dy = target.y - transform.y;
     transform.rotation = Math.atan2(dy, dx);
 
+    // --- 2. MANAGE TIMER ---
+    if (state.timers[AITimerID.AIM] === undefined) {
+        state.timers[AITimerID.AIM] = aimDuration;
+    }
+
+    const timer = state.timers[AITimerID.AIM]!;
+    const progress = Math.max(0, 1.0 - (timer / aimDuration));
+
+    // --- 3. SPAWN/MANAGE PROJECTILE ---
+    if (state.data.chargingProjectileId === undefined) {
+        // Spawn charging projectile
+        const proj = context.spawnProjectile(
+            transform.x, transform.y, 0, 0, undefined, this.configId, entity.id as number
+        );
+        
+        // Attach logic
+        const pData = proj.getComponent<ProjectileData>(ComponentType.Projectile);
+        if (pData) {
+            pData.state = 'CHARGING';
+            pData.ownerId = entity.id as number;
+        }
+        
+        // Ensure it starts small
+        const pRender = proj.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        if (pRender) pRender.scale = 0.5;
+
+        state.data.chargingProjectileId = proj.id as number;
+    }
+
+    const projEntity = context.getEntity(state.data.chargingProjectileId);
+    
+    // Update Size (Grow 0.5x -> 3.5x over first 80%, then hold)
+    if (projEntity && projEntity.active) {
+        const pRender = projEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+        if (pRender) {
+            // Growth phase (0.0 - 0.8)
+            const growthT = Math.min(1.0, progress / 0.8); 
+            // Scale Range: 0.5 (Start) to 3.5 (End - Bigger!)
+            const targetScale = 0.5 + (growthT * 3.0);
+            pRender.scale = targetScale;
+        }
+    } else {
+        // If projectile was destroyed (e.g. anti-projectile defense), we should probably abort or restart
+        // For now, we'll just let the timer finish and "misfire" (no projectile logic later)
+        state.data.chargingProjectileId = undefined;
+    }
+
+    // --- 4. PARTICLES & SOUND ---
     if (!state.timers[AITimerID.SIZZLE] || state.timers[AITimerID.SIZZLE]! <= 0) {
         context.playSound('fx_exhaust_sizzle', transform.x);
         state.timers[AITimerID.SIZZLE] = 0.15;
@@ -129,7 +175,6 @@ export class AimAndFire extends BTNode {
     }
 
     const rearAngle = transform.rotation + Math.PI;
-    
     let offset = 1.3;
     if (renderEffect) {
         offset *= (1.0 - (0.4 * renderEffect.squashFactor));
@@ -149,29 +194,45 @@ export class AimAndFire extends BTNode {
         context.spawnParticle(px, py, '#F7D277', vx, vy, 0.2 + (Math.random() * 0.3), 0.8, 1);
     }
 
+    // --- 5. FIRE ---
     state.timers[AITimerID.AIM]! -= context.delta;
+    
     if (state.timers[AITimerID.AIM]! <= 0) {
         state.timers[AITimerID.AIM] = undefined; 
+        
         const dirX = Math.cos(transform.rotation);
         const dirY = Math.sin(transform.rotation);
 
-        context.spawnProjectile(
-            transform.x + dirX * 1.5, 
-            transform.y + dirY * 1.5, 
-            dirX * projectileSpeed, 
-            dirY * projectileSpeed, 
-            undefined, 
-            this.configId, 
-            entity.id as number
-        );
+        if (projEntity && projEntity.active) {
+            const pData = projEntity.getComponent<ProjectileData>(ComponentType.Projectile);
+            const pMotion = projEntity.getComponent<MotionData>(ComponentType.Motion);
+            const pRender = projEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+            
+            if (pData) {
+                pData.state = 'FLIGHT';
+                pData.ownerId = -1; // Detach
+            }
+            if (pMotion) {
+                pMotion.vx = dirX * projectileSpeed;
+                pMotion.vy = dirY * projectileSpeed;
+            }
+            if (pRender) {
+                // FORCE SCALE LOCK ON LAUNCH
+                pRender.scale = 3.5; 
+            }
+            
+            // Recoil
+            if (motion) {
+                motion.vx = -dirX * 5.0;
+                motion.vy = -dirY * 5.0;
+            }
 
-        context.playSound('fx_enemy_fire', transform.x);
-        if (motion) {
-            motion.vx = -dirX * 5.0;
-            motion.vy = -dirY * 5.0;
+            context.playSound('fx_enemy_fire', transform.x);
+            context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
         }
 
-        context.spawnFX('HUNTER_RECOIL', transform.x + dirX, transform.y + dirY, transform.rotation);
+        // Cleanup
+        state.data.chargingProjectileId = undefined;
         state.current = AI_STATE.ATTACK; 
         
         return NodeState.SUCCESS;
