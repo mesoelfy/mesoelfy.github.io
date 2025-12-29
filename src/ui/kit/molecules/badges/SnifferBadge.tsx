@@ -61,8 +61,7 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
 
   const canAfford = upgradePoints > 0;
   
-  // Visual mapping for the circular radar display
-  const slotMapping = [0, 2, 1, 3]; // Order of firing
+  const slotMapping = [0, 2, 1, 3]; 
 
   return (
     <div className={clsx("flex flex-col gap-3 transition-all duration-500", isPanelDead ? "opacity-30 grayscale pointer-events-none" : "opacity-100")}>
@@ -70,16 +69,16 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
         {/* Header */}
         <div className="flex items-center justify-between pl-1 border-l-2 border-latent-purple">
             <h3 className="text-sm font-header font-black text-latent-purple tracking-widest uppercase ml-2">
-                SNIFFER_SWARM
+                SNIFFER
             </h3>
             <Radar size={14} className="text-latent-purple opacity-50" />
         </div>
 
-        {/* Capacity Row (with Radar Visual) */}
+        {/* Capacity Row */}
         <div className="flex gap-2">
             <div className="flex-1">
                 <StatRow 
-                    label="SWARM_SIZE" 
+                    label="CAPACITY" 
                     icon={GitFork} 
                     level={sniffer.capacityLevel} 
                     max={4} 
@@ -90,14 +89,13 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
                 />
             </div>
             
-            {/* The Radar Visual (Purely Decorative now) */}
+            {/* Radar Visual */}
             <div className="w-10 h-10 border border-latent-purple/30 bg-black/40 relative rounded-sm flex items-center justify-center shrink-0">
                 <div className="absolute inset-0 opacity-20 bg-latent-purple/10" />
                 <div className="relative w-6 h-6">
                     {slotMapping.map((mappedIndex, visualIndex) => {
                         const isActive = mappedIndex < sniffer.capacityLevel;
                         let posClass = "";
-                        // Visual Positions (Corners)
                         if (visualIndex === 0) posClass = "top-0 left-0"; 
                         if (visualIndex === 1) posClass = "top-0 right-0"; 
                         if (visualIndex === 2) posClass = "bottom-0 right-0"; 

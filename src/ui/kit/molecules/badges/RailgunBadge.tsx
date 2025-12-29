@@ -73,7 +73,7 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
         {/* Header */}
         <div className="flex items-center justify-between pl-1 border-l-2 border-primary-green">
             <h3 className="text-sm font-header font-black text-primary-green tracking-widest uppercase ml-2">
-                RAILGUN_ARRAY
+                RAILGUN
             </h3>
             <Crosshair size={14} className="text-primary-green opacity-50" />
         </div>

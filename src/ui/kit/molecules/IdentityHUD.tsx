@@ -8,7 +8,6 @@ import { RepairButton, PurgeButton } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpCircle } from 'lucide-react';
 
 export const IdentityHUD = () => {
   const hp = useStreamValue('PLAYER_HEALTH');
@@ -35,10 +34,9 @@ export const IdentityHUD = () => {
       {/* HEADER: Points Display */}
       <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
           <div className="flex items-center gap-2">
-              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
-              {/* UPDATED: text-xl -> text-sm (approx 20-30% reduction depending on font metric) */}
-              <span className="text-sm font-bold tracking-widest text-white">
-                  AVAILABLE_POINTS
+              {/* Simplified Label */}
+              <span className="text-xs font-mono font-bold tracking-widest text-primary-green-dim">
+                  AVAILABLE_POINTS:
               </span>
           </div>
           
