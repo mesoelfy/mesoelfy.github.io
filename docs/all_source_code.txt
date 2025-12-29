@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 17:41:49 CST 2025
+Generated on: Sun Dec 28 17:52:53 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -148,7 +148,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── PanelConfig.ts
 │   │   │   ├── PhysicsConfig.ts
 │   │   │   ├── PlayerConfig.ts
-│   │   │   ├── ProjectileConfig.ts
 │   │   │   ├── StorageConfig.ts
 │   │   │   ├── TextAssets.ts
 │   │   │   ├── VisualConfig.ts
@@ -166,8 +165,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   │   ├── Enemies.ts
 │   │   │   │   ├── Weapons.ts
 │   │   │   │   └── types.ts
-│   │   │   ├── deprecated
-│   │   │   │   └── LegacyWeapons.ts
 │   │   │   └── static
 │   │   │       ├── feed.json
 │   │   │       ├── gallery.json
@@ -245,7 +242,6 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── EntitySpawner.ts
 │   │   │   ├── GameBootstrapper.ts
 │   │   │   ├── GameEngine.ts
-│   │   │   ├── HUDService.ts
 │   │   │   └── ServiceLocator.ts
 │   │   ├── signals
 │   │   │   ├── FastEventBus.ts
@@ -453,7 +449,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-92 directories, 353 files
+91 directories, 350 files
 
 =====================================
 FILE: ./next.config.js
@@ -2344,9 +2340,6 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
                 <h3 className="text-xl font-header font-black text-primary-green tracking-widest">RAILGUN</h3>
                 <span className="text-[9px] font-mono text-primary-green-dim block mt-0.5">CLASS: KINETIC_BEAM</span>
             </div>
-            <div className="text-xs font-bold text-primary-green bg-primary-green/10 px-3 py-1 border border-primary-green/20">
-                MK.{1 + Math.floor((railgun.widthLevel + railgun.damageLevel + railgun.rateLevel) / 3)}
-            </div>
         </div>
 
         <div className="flex flex-col gap-2 w-full">
@@ -2438,18 +2431,6 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
 
   const canAfford = upgradePoints > 0;
 
-  // VISUAL MAPPING:
-  // We map the visual slots (TL, TR, BR, BL) to the logic index (0, 1, 2, 3)
-  // Desired Order: Top Left (0) -> Bottom Right (1) -> Top Right (2) -> Bottom Left (3)
-  //
-  // visualIndex 0 = Top Left
-  // visualIndex 1 = Top Right
-  // visualIndex 2 = Bottom Right
-  // visualIndex 3 = Bottom Left
-  //
-  // Array format: [Index for Pos 0, Index for Pos 1, Index for Pos 2, Index for Pos 3]
-  // Result: [0, 2, 1, 3]
-  
   const slotMapping = [0, 2, 1, 3];
 
   return (
@@ -2458,9 +2439,6 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
             <div>
                 <h3 className="text-xl font-header font-black text-latent-purple tracking-widest">SNIFFER</h3>
                 <span className="text-[9px] font-mono text-latent-purple-light block mt-0.5">CLASS: HOMING_SWARM</span>
-            </div>
-            <div className="text-xs font-bold text-latent-purple bg-latent-purple/10 px-3 py-1 border border-latent-purple/20">
-                MK.{1 + Math.floor((sniffer.capacityLevel + sniffer.damageLevel + sniffer.rateLevel) / 3)}
             </div>
         </div>
 
@@ -11598,43 +11576,6 @@ export interface Entity {
 
 
 =====================================
-FILE: ./src/engine/config/ProjectileConfig.ts
-=====================================
-import { WEAPONS } from './defs/Weapons';
-
-export interface LegacyProjectileDef {
-  geometry: string;
-  color: [number, number, number];
-  scale: [number, number, number];
-  spinSpeed: number;  
-  pulseSpeed: number; 
-  faceVelocity: boolean; 
-}
-
-const parseHexTuple = (hex: string): [number, number, number] => {
-    const c = parseInt(hex.replace('#', ''), 16);
-    return [
-        ((c >> 16) & 255) / 255, 
-        ((c >> 8) & 255) / 255, 
-        (c & 255) / 255
-    ];
-};
-
-export const PROJECTILE_CONFIG: Record<string, LegacyProjectileDef> = {};
-
-Object.values(WEAPONS).forEach(def => {
-    PROJECTILE_CONFIG[def.id] = {
-        geometry: def.visual.model,
-        color: parseHexTuple(def.visual.color),
-        scale: def.visual.scale,
-        spinSpeed: def.behavior?.spinSpeed || 0,
-        pulseSpeed: def.behavior?.pulseSpeed || 0,
-        faceVelocity: def.behavior?.faceVelocity ?? true
-    };
-});
-
-
-=====================================
 FILE: ./src/engine/config/LayoutConfig.ts
 =====================================
 import { PanelId } from './PanelConfig';
@@ -12055,15 +11996,10 @@ export const EnemyTypes = {
 } as const;
 
 export const WeaponIDs = {
-  // --- NEW CORE WEAPONS ---
+  // --- CORE WEAPONS ---
   PLAYER_RAILGUN: 'PLAYER_RAILGUN',
   PLAYER_SNIFFER: 'PLAYER_SNIFFER',
   PLAYER_PURGE: 'PLAYER_PURGE', // Zen Bomb
-
-  // --- DEPRECATED / LEGACY ---
-  PLAYER_STANDARD: 'PLAYER_STANDARD',
-  PLAYER_FORK: 'PLAYER_FORK',
-  PLAYER_BACKDOOR: 'PLAYER_BACKDOOR',
   
   // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',
@@ -12811,39 +12747,6 @@ export const BOOT_SEQUENCE = {
     READY: 12700           // Log 7
   },
   COMPLETION_DELAY: 500
-};
-
-
-=====================================
-FILE: ./src/engine/config/deprecated/LegacyWeapons.ts
-=====================================
-import { WeaponDef } from '../defs/types';
-import { Tag } from '@/engine/ecs/types';
-import { PALETTE } from '@/engine/config/Palette';
-import { WeaponIDs } from '@/engine/config/Identifiers';
-
-export const LEGACY_WEAPONS: Record<string, WeaponDef> = {
-  [WeaponIDs.PLAYER_STANDARD]: {
-    id: WeaponIDs.PLAYER_STANDARD,
-    damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'CAPSULE', color: PALETTE.GREEN.PRIMARY, scale: [0.15, 0.6, 0.15], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true },
-    tags: [Tag.PROJECTILE, Tag.PLAYER]
-  },
-  [WeaponIDs.PLAYER_FORK]: {
-    id: WeaponIDs.PLAYER_FORK,
-    damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'TETRA', color: PALETTE.YELLOW.SOFT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
-    behavior: { faceVelocity: true, spinSpeed: 5.0 },
-    tags: [Tag.PROJECTILE, Tag.PLAYER]
-  },
-  [WeaponIDs.PLAYER_BACKDOOR]: {
-    id: WeaponIDs.PLAYER_BACKDOOR,
-    damage: 1, speed: 45, life: 1.5,
-    visual: { model: 'TORUS', color: PALETTE.RED.LIGHT, scale: [0.4, 0.4, 0.4], material: 'PROJECTILE' },
-    behavior: { faceVelocity: false, spinSpeed: -2.0, pulseSpeed: 2.0 },
-    tags: [Tag.PROJECTILE, Tag.PLAYER]
-  }
 };
 
 
@@ -14377,9 +14280,6 @@ export interface ProgressionSlice {
   setScore: (val: number) => void; // Updates high score
   selectUpgrade: (path: UpgradePath) => void;
   resetProgressionState: () => void;
-  
-  // Internal Helpers to sync with store if needed, mostly for dev tools
-  setActiveUpgrades: (deprecated: any) => void; 
 }
 
 const DEFAULT_RAILGUN: RailgunState = { widthLevel: 0, damageLevel: 0, rateLevel: 0 };
@@ -14395,9 +14295,6 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
       const newHigh = Math.max(state.highScore, val);
       return { highScore: newHigh };
   }),
-
-  // Deprecated support for old save data re-hydration if necessary, or just no-op
-  setActiveUpgrades: () => {},
 
   selectUpgrade: (path: UpgradePath) => {
     // 1 Point = 1 Notch Logic
@@ -14433,17 +14330,11 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         success = true;
     }
     
-    // One-offs (Do not consume points automatically here, logic handled in Systems, but we emit event)
-    // Actually, Purge/Restore usually cost nothing or are special interactions.
-    // If they cost points, we handle it here. Assuming Purge/Restore are free/cooldown based for now?
-    // User instruction: "restore... behave like presently does" (Currently no point cost, just click).
-    // "bomb purge button... activating zen mode" (Zen mode is special).
-    
     if (success) {
         set(s => ({ upgradePoints: s.upgradePoints - 1 }));
     }
 
-    // Always emit for systems (Audio, VFX, One-offs)
+    // Always emit for systems (Audio, VFX, One-offs like PURGE/NOVA)
     GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
   },
 
@@ -20190,7 +20081,6 @@ FILE: ./src/engine/systems/ProgressionSystem.ts
 import { IGameSystem, IGameEventService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { UpgradePath } from '@/engine/types/game.types';
 
 export class ProgressionSystem implements IGameSystem {
   public score: number = 0;
@@ -20198,9 +20088,6 @@ export class ProgressionSystem implements IGameSystem {
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
   public upgradePoints: number = 0;
-  
-  // Deprecated but kept for interface compatibility until full cleanup
-  public activeUpgrades: any = {}; 
   
   private unsubs: (() => void)[] = [];
 
@@ -20693,7 +20580,7 @@ export class StateSyncSystem implements IGameSystem {
     xp: -1,
     xpNext: -1,
     level: -1,
-    upgradesHash: ""
+    points: -1
   };
 
   constructor(
@@ -20748,7 +20635,6 @@ export class StateSyncSystem implements IGameSystem {
       GameStream.set('XP_NEXT', next);
       GameStream.set('LEVEL', level);
       
-      // Removed setProgressionData call - UI now reads from Stream
       this.cache.xp = xp;
       this.cache.level = level;
       this.cache.xpNext = next;
@@ -20758,13 +20644,6 @@ export class StateSyncSystem implements IGameSystem {
     if (points !== this.cache.points) {
         useGameStore.setState({ upgradePoints: points });
         this.cache.points = points;
-    }
-
-    // Sync Upgrades
-    const upgradesStr = JSON.stringify(this.progSys.activeUpgrades);
-    if (upgradesStr !== this.cache.upgradesHash) {
-        useGameStore.getState().setActiveUpgrades(this.progSys.activeUpgrades as Record<string, number>);
-        this.cache.upgradesHash = upgradesStr;
     }
   }
 
@@ -21846,7 +21725,6 @@ import { AudioServiceImpl } from '@/engine/audio/AudioService';
 import { SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { FastEventBusImpl } from '@/engine/signals/FastEventBus';
 import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
-import { HUDService } from '@/engine/services/HUDService'; 
 import { registerAllComponents } from '@/engine/ecs/ComponentCatalog';
 import { registerAllBehaviors } from '@/engine/handlers/ai/BehaviorCatalog';
 import { registerAllAssets } from '@/ui/sim/assets/AssetCatalog';
@@ -21903,7 +21781,6 @@ export class EngineFactory {
     const eventBus = new UnifiedEventService(rawSlowBus, rawFastBus);
 
     const inputSystem = new InputSystem();
-    const hudService = new HUDService(); 
     const spawner = new EntitySpawner(registry);
     
     ServiceLocator.register('EntityRegistry', registry);
@@ -21911,7 +21788,6 @@ export class EngineFactory {
     ServiceLocator.register('FastEventService', rawFastBus); 
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
-    ServiceLocator.register('HUDService', hudService);
 
     // 4. Content Registration
     registerAllComponents();
@@ -21952,7 +21828,6 @@ export class EngineFactory {
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
     
-    // UPDATED: Inject ParticleSystem into WeaponSystem
     const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem, particleSystem);
     
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
@@ -21994,7 +21869,6 @@ export class EngineFactory {
     register(healthSystem, SystemPhase.STATE, 'HealthSystem');
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
-    register(hudService, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
@@ -22009,7 +21883,7 @@ export class EngineFactory {
     engine.setup(ServiceLocator);
     spawner.spawnPlayer();
 
-    ServiceLocator.register('ParticleSystem', particleSystem); // Explicit register for safety
+    ServiceLocator.register('ParticleSystem', particleSystem);
 
     return engine;
   }
@@ -22167,31 +22041,6 @@ export class EntitySpawner implements IEntitySpawner {
 
 
 =====================================
-FILE: ./src/engine/services/HUDService.ts
-=====================================
-import { IGameSystem } from '@/engine/interfaces';
-
-/**
- * @deprecated
- * UI Updates are now handled reactively via GameStream.
- * This service is kept for interface compatibility until full removal.
- */
-export class HUDService implements IGameSystem {
-  update(delta: number, time: number): void {}
-  teardown(): void {}
-
-  // Stubs for backward compatibility if any legacy code calls these
-  public bindScore(el: HTMLElement | null) {}
-  public bindVitals(el: HTMLElement | null) {}
-  public bindLevelText(el: Element | null) {}
-  public updateScore(val: number) {}
-  public updateHealth(percent: number, color: string) {}
-  public updateXP(percent: number) {}
-  public updateLevel(level: number) {}
-}
-
-
-=====================================
 FILE: ./src/engine/services/ServiceLocator.ts
 =====================================
 import { 
@@ -22203,8 +22052,7 @@ import {
   IEntitySpawner, 
   IParticleSystem,
   IGameEventService,
-  IFastEventService,
-  IHUDService
+  IFastEventService
 } from '@/engine/interfaces';
 import { ConfigService } from '@/engine/services/ConfigService';
 
@@ -22237,7 +22085,6 @@ class ServiceLocatorImpl implements IServiceLocator {
   public getAudioService(): IAudioService { return this.get<IAudioService>('AudioService'); }
   public getInputService(): IInputService { return this.get<IInputService>('InputSystem'); }
   public getParticleSystem(): IParticleSystem { return this.get<IParticleSystem>('ParticleSystem'); }
-  public getHUDService(): IHUDService { return this.get<IHUDService>('HUDService'); }
   
   public getRegistry(): IEntityRegistry { return this.get<IEntityRegistry>('EntityRegistry'); }
   public getSpawner(): IEntitySpawner { return this.get<IEntitySpawner>('EntitySpawner'); }
@@ -22245,8 +22092,6 @@ class ServiceLocatorImpl implements IServiceLocator {
 
   public registerSystem(id: string, system: IGameSystem) { this.register(id, system); }
   public getSystem<T extends IGameSystem>(id: string): T { return this.get<T>(id); }
-  public registerRegistry(r: IEntityRegistry) { this.register('EntityRegistry', r); }
-  public registerSpawner(s: IEntitySpawner) { this.register('EntitySpawner', s); }
 }
 
 export const ServiceLocator = new ServiceLocatorImpl();
@@ -22412,20 +22257,9 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
-  getHUDService(): IHUDService; 
 
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
-}
-
-export interface IHUDService extends IGameSystem {
-  bindScore(el: HTMLElement | null): void;
-  bindVitals(el: HTMLElement | null): void;
-  bindLevelText(el: Element | null): void;
-  updateScore(val: number): void;
-  updateHealth(percent: number, color: string): void;
-  updateXP(percent: number): void;
-  updateLevel(level: number): void;
 }
 
 export interface IFastEventService {
@@ -22555,12 +22389,11 @@ export interface ICombatSystem extends IGameSystem {
   resolveCollision(e1: Entity, e2: Entity): void;
 }
 
-// UPDATED INTERFACE
 export interface IInteractionSystem extends IGameSystem {
   repairState: 'IDLE' | 'HEALING' | 'REBOOTING';
   hoveringPanelId: PanelId | null;
-  registerZone(id: string, rect: WorldRect): void; // NEW
-  unregisterZone(id: string): void; // NEW
+  registerZone(id: string, rect: WorldRect): void;
+  unregisterZone(id: string): void;
 }
 
 export interface DamageOptions {
