@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Mon Dec 29 11:28:52 CST 2025
+Generated on: Mon Dec 29 12:28:45 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -10489,8 +10489,8 @@ const SnifferOverlayShader = {
       if (uLevel >= 4.0 && sector == 1) isActive = true;
       if (!isActive) discard;
       float dist = length(vPos);
-      float tipMask = smoothstep(0.35, 0.65, dist);
-      if (tipMask < 0.1) discard;
+      float mask = smoothstep(0.35, 0.65, dist);
+      if (mask < 0.1) discard;
       float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
       gl_FragColor = vec4(uColor, 1.0); 
     }
@@ -10527,6 +10527,9 @@ export const PlayerActor = () => {
 
   const [interactionCode, setInteractionCode] = useState(0);
   useGameStream('PLAYER_INTERACTION_STATE', setInteractionCode);
+
+  const [purgeState, setPurgeState] = useState(0);
+  useGameStream('PLAYER_PURGE_ACTIVE', setPurgeState);
 
   const animScale = useRef(0);
   const tempColor = useRef(new THREE.Color());
@@ -10594,13 +10597,13 @@ export const PlayerActor = () => {
     // --- COLOR STATE LOGIC ---
     const isReviving = interactionCode === 2; 
     const isSelfHealing = interactionCode === 1; 
-    // FIX: Ensure DEAD state is ignored in Zen Mode
     const isDeadVisual = !isZenMode && isPlayerDead && !isReviving;
     
     const isPanelRebooting = interactionCode === 0 && iState === 'REBOOTING';
     const isPanelHealing = interactionCode === 0 && iState === 'HEALING';
+    const isPurging = purgeState === 1; // NEW: Stream flag
     
-    const isActive = iState !== 'IDLE' || isZenMode;
+    const isActive = iState !== 'IDLE' || isZenMode || isPurging;
 
     currentEnergy.current = THREE.MathUtils.lerp(currentEnergy.current, isActive ? 1.0 : 0.0, delta * (isActive ? 12.0 : 3.0));
     if (ambientMaterial.uniforms[Uniforms.ENERGY]) ambientMaterial.uniforms[Uniforms.ENERGY].value = Math.min(1.0, currentEnergy.current + hitFlash.current);
@@ -10629,7 +10632,13 @@ export const PlayerActor = () => {
         }
 
         centerDotRef.current.scale.setScalar(1.0 + Math.sin(time * Math.PI) * 0.075);
-        reticleRef.current.rotation.z = (isDeadVisual && !isReviving) ? Math.PI*0.25 : -renderTrans.rotation;
+        
+        // --- RETICLE ROTATION ---
+        if (isPurging) {
+            reticleRef.current.rotation.z = -time * 20.0; // Fast spin
+        } else {
+            reticleRef.current.rotation.z = (isDeadVisual && !isReviving) ? Math.PI*0.25 : -renderTrans.rotation;
+        }
         
         if (snifferRef.current) {
             snifferRef.current.rotation.z = reticleRef.current.rotation.z;
@@ -10660,7 +10669,13 @@ export const PlayerActor = () => {
             let reticleTarget = null;
             
             // PRIORITY ORDER
-            if (isReviving) {
+            if (isPurging) {
+                // Prismatic Cycle
+                tempColor.current.setHSL((time * 2.5) % 1.0, 1.0, 0.5);
+                reticleColor.current.copy(tempColor.current);
+                // Override target so backing matches
+                target = tempColor.current;
+            } else if (isReviving) {
                 target = COL_REBOOT; // Dark Yellow
                 reticleTarget = COL_REBOOT;
             } else if (isDeadVisual) {
@@ -10677,12 +10692,13 @@ export const PlayerActor = () => {
                 reticleTarget = COL_RET_HEAL; // Deep Pink
             }
             
-            tempColor.current.lerp(target, 0.2);
-            
-            if (reticleTarget) {
-                reticleColor.current.lerp(reticleTarget, 0.1);
-            } else {
-                reticleColor.current.lerp(tempColor.current, 0.2);
+            if (!isPurging) {
+                tempColor.current.lerp(target, 0.2);
+                if (reticleTarget) {
+                    reticleColor.current.lerp(reticleTarget, 0.1);
+                } else {
+                    reticleColor.current.lerp(tempColor.current, 0.2);
+                }
             }
             
             if (hitFlash.current > 0.01) { 
@@ -12745,6 +12761,7 @@ export interface VFXRecipe {
   size?: [number, number];
   shape?: number; 
   omniChance?: number; 
+  offsetRadius?: number; // NEW: Spawn distance from center
 }
 
 const createExplosion = (
@@ -12772,6 +12789,16 @@ const createExplosion = (
     life: [0.4, 0.8]
   };
 };
+
+const PRISMATIC_COLORS = [
+    '#FF0000', '#FF4000', '#FF8000', '#FFBF00', // Red -> Orange
+    '#FFFF00', '#BFFF00', '#80FF00', '#40FF00', // Yellow -> Green
+    '#00FF00', '#00FF40', '#00FF80', '#00FFBF', // Green -> Cyan
+    '#00FFFF', '#00BFFF', '#0080FF', '#0040FF', // Cyan -> Blue
+    '#0000FF', '#4000FF', '#8000FF', '#BF00FF', // Blue -> Purple
+    '#FF00FF', '#FF00BF', '#FF0080', '#FF0040', // Magenta -> Red
+    '#FFFFFF' // Sparkle
+];
 
 export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   // Driller (Using PURPLE which now contains INDIGO)
@@ -12814,7 +12841,17 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   },
   
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.PINK, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
-  'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
+  
+  // UPDATED PURGE BLAST: 75-100 particles, Offset 1.2 (Spitter Distance)
+  'PURGE_BLAST': { 
+      pattern: 'RADIAL', 
+      colors: PRISMATIC_COLORS, 
+      count: [75, 100], 
+      speed: [10, 50], 
+      life: [0.375, 0.75],
+      size: [0.8, 2.5],
+      offsetRadius: 1.2 // NEW
+  }
 };
 
 
@@ -14549,6 +14586,7 @@ export type StreamKey =
   | 'XP_NEXT' 
   | 'LEVEL'
   | 'PLAYER_INTERACTION_STATE' // 0: Idle, 1: Healing Self, 2: Reviving Self
+  | 'PLAYER_PURGE_ACTIVE'      // 0: Inactive, 1: Active
   // Panel Health Keys
   | 'PANEL_HEALTH_IDENTITY'
   | 'PANEL_HEALTH_SOCIAL'
@@ -14573,6 +14611,7 @@ class GameStreamService {
     this.values.set('LEVEL', 1);
     this.values.set('PLAYER_REBOOT', 0);
     this.values.set('PLAYER_INTERACTION_STATE', 0);
+    this.values.set('PLAYER_PURGE_ACTIVE', 0);
     
     // Panel Defaults
     this.values.set('PANEL_HEALTH_IDENTITY', 100);
@@ -18965,7 +19004,6 @@ export class VFXSystem implements IGameSystem {
       this.tempColor.lerp(this.white, 0.6); // Lighter "hot" version
       const lightHex = '#' + this.tempColor.getHexString();
       
-      // REVERTED: Original Physics Counts
       const count = this.randomRange(2, 3); 
       
       for(let i=0; i<count; i++) {
@@ -18973,13 +19011,12 @@ export class VFXSystem implements IGameSystem {
           const deflection = 0.6 + (Math.random() * 1.2);
           const angle = impactAngle + (side * deflection);
           
-          // REVERTED: Original Speed/Life
           const speed = this.randomRange(10, 22); 
           const vx = Math.cos(angle) * speed;
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          // 2. Color Variant Logic (Kept)
+          // 2. Color Variant Logic
           const randC = Math.random();
           let finalColor = hexColor;
           let size = 1.0;
@@ -19008,6 +19045,9 @@ export class VFXSystem implements IGameSystem {
       let count = Math.floor(rawCount * multiplier);
       if (rawCount > 0 && count === 0) count = 1;
 
+      // Check for offset (Ring spawning)
+      const offsetRadius = recipe.offsetRadius || 0;
+
       for (let i = 0; i < count; i++) {
           const color = recipe.colors[Math.floor(Math.random() * recipe.colors.length)];
           const speed = this.randomRange(recipe.speed[0], recipe.speed[1]);
@@ -19020,6 +19060,10 @@ export class VFXSystem implements IGameSystem {
           
           let vx = 0;
           let vy = 0;
+          
+          // Calculate Spawn Position (Offset from Center)
+          let spawnX = x;
+          let spawnY = y;
 
           const isBackblast = recipe.omniChance && Math.random() < recipe.omniChance;
           const isDirectional = recipe.pattern === 'DIRECTIONAL';
@@ -19031,6 +19075,11 @@ export class VFXSystem implements IGameSystem {
               const a = Math.random() * Math.PI * 2;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
+              
+              if (offsetRadius > 0) {
+                  spawnX += Math.cos(a) * offsetRadius;
+                  spawnY += Math.sin(a) * offsetRadius;
+              }
           } 
           else if (isDirectional) {
               let dir = angle + Math.PI; 
@@ -19044,10 +19093,16 @@ export class VFXSystem implements IGameSystem {
               const a = dir + (Math.random() - 0.5) * spread;
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
+              
+              // Directional usually spawns at origin, but if offset is needed:
+              if (offsetRadius > 0) {
+                  spawnX += Math.cos(a) * offsetRadius;
+                  spawnY += Math.sin(a) * offsetRadius;
+              }
           }
 
           const shape = (recipe.shape === 1) ? ParticleShape.SQUARE : ParticleShape.CIRCLE;
-          this.particleSystem.spawn(x, y, color, vx, vy, finalLife, size, shape);
+          this.particleSystem.spawn(spawnX, spawnY, color, vx, vy, finalLife, size, shape);
       }
   }
 
@@ -19730,8 +19785,12 @@ import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
+import { GameStream } from '@/engine/state/GameStream';
 import { Query } from '@/engine/ecs/Query';
 import * as THREE from 'three';
+
+// Same offset as VFXManifest for visual alignment
+const PURGE_OFFSET = 1.2;
 
 interface PurgeState {
     active: boolean;
@@ -19877,7 +19936,6 @@ export class WeaponSystem implements IGameSystem {
         );
         
         // --- SCALE CALCULATION ---
-        // Each Girth Level increases size by 75%
         const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
@@ -19932,6 +19990,7 @@ export class WeaponSystem implements IGameSystem {
 
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
+      GameStream.set('PLAYER_PURGE_ACTIVE', 1); // <--- SYNC ON
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
@@ -19952,11 +20011,16 @@ export class WeaponSystem implements IGameSystem {
               
               for(let i=0; i<BURST_COUNT; i++) {
                   const angle = (i / BURST_COUNT) * Math.PI * 2;
+                  
+                  // OFFSET ORIGIN
+                  const startX = t.x + Math.cos(angle) * PURGE_OFFSET;
+                  const startY = t.y + Math.sin(angle) * PURGE_OFFSET;
+                  
                   const vx = Math.cos(angle) * BURST_SPEED;
                   const vy = Math.sin(angle) * BURST_SPEED;
                   
                   const bullet = this.spawner.spawnProjectile(
-                      t.x, t.y, vx, vy, 
+                      startX, startY, vx, vy, 
                       Faction.FRIENDLY, 2.4, 50, 
                       WeaponIDs.PLAYER_PURGE, 
                       undefined,
@@ -19985,12 +20049,18 @@ export class WeaponSystem implements IGameSystem {
           this.purgeState.accumulator -= 1.0;
           if (this.purgeState.shotsRemaining <= 0) { 
               this.purgeState.active = false; 
+              GameStream.set('PLAYER_PURGE_ACTIVE', 0); // <--- SYNC OFF
               this.events.emit(GameEvents.PURGE_COMPLETE, null); 
               break; 
           }
           const angle = this.purgeState.currentAngle;
+          
+          // OFFSET ORIGIN
+          const startX = originX + Math.cos(angle) * PURGE_OFFSET;
+          const startY = originY + Math.sin(angle) * PURGE_OFFSET;
+          
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
-          const bullet = this.spawner.spawnProjectile(originX, originY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
+          const bullet = this.spawner.spawnProjectile(startX, startY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
           const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
           this.tempColor.setHSL(hue, 1.0, 0.5); 
