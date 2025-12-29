@@ -10,6 +10,39 @@ import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 
+// --- ASSETS ---
+const LOGO_COMBINATION = "/assets/ui/logo_combination.svg";
+const LOGO_MARK = "/assets/ui/logo_mark.svg";
+
+// --- HELPER: CSS MASK COMPONENT (AUTO-SIZING) ---
+// Uses an invisible img to set layout bounds, then overlays a colored mask.
+const MaskedLogo = ({ src, className }: { src: string, className?: string }) => (
+    <div className="relative inline-flex items-center justify-center">
+        {/* Layout Spacer: Sets width/height based on aspect ratio */}
+        <img 
+            src={src} 
+            alt="" 
+            className={clsx("opacity-0 select-none pointer-events-none relative z-0", className)} 
+            aria-hidden="true" 
+        />
+        
+        {/* Visual Layer: Takes the text color (bg-current) */}
+        <div 
+            className="absolute inset-0 bg-current z-10" 
+            style={{ 
+                maskImage: `url('${src}')`, 
+                WebkitMaskImage: `url('${src}')`,
+                maskSize: 'contain', 
+                WebkitMaskSize: 'contain',
+                maskRepeat: 'no-repeat', 
+                WebkitMaskRepeat: 'no-repeat',
+                maskPosition: 'center',
+                WebkitMaskPosition: 'center'
+            }} 
+        />
+    </div>
+);
+
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
     <div className="absolute inset-0 border-current opacity-20" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
@@ -102,27 +135,38 @@ export const Header = () => {
       </AnimatePresence>
 
       <div className="flex items-center gap-4">
-        <motion.span 
+        <motion.div 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             variants={{ 
-                idle: { scale: 1, textShadow: "0 0 0px transparent" },
+                idle: { scale: 1, filter: "drop-shadow(0 0 0px transparent)" },
                 heartbeat: { 
                     scale: [1, 1.05, 1], 
-                    textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], 
+                    filter: ["drop-shadow(0 0 0px #FF003C)", "drop-shadow(0 0 15px #FF003C)", "drop-shadow(0 0 0px #FF003C)"], 
                     transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
                 } 
             }} 
-            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide", slowTransition, statusColor)}
+            className={clsx("flex items-center", slowTransition, statusColor)}
         >
           {isZenMode ? (
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
-                  ZEN_OS
-              </span>
-          ) : "MESOELFY_OS"}
-        </motion.span>
+              <div className="flex items-center gap-3">
+                  {/* Icon uses parent statusColor via bg-current */}
+                  <MaskedLogo src={LOGO_MARK} className="h-8 w-auto" />
+                  
+                  {/* Text uses custom gradient */}
+                  <span className="font-header font-black text-xl md:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
+                      ZEN_OS
+                  </span>
+              </div>
+          ) : (
+              <MaskedLogo 
+                  src={LOGO_COMBINATION} 
+                  className="h-8 w-auto mb-1" // Height 32px to match Zen icon
+              />
+          )}
+        </motion.div>
         
         {mounted && (
           <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l", slowTransition, statusColor, borderColor)}>
