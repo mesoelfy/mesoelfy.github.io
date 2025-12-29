@@ -13,17 +13,20 @@ export const ProjectileActor = () => {
 
   // Map weapons to their specific materials
   const renderItems = Object.values(WEAPONS).map(def => {
-      let matKey = MATERIAL_IDS.PROJECTILE_PLAYER;
+      // Fallback strings added to prevent runtime crash during HMR cycles
+      let matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_PLAYER) || 'MAT_PROJECTILE_PLAYER';
       
-      if (def.visual.material === 'PROJECTILE_ENEMY') matKey = MATERIAL_IDS.PROJECTILE_ENEMY;
-      if (def.visual.material === 'PROJECTILE_HUNTER') matKey = MATERIAL_IDS.PROJECTILE_HUNTER;
-      if (def.visual.material === 'PROJECTILE_PURGE') matKey = MATERIAL_IDS.PROJECTILE_PURGE;
+      if (def.visual.material === 'PROJECTILE_ENEMY') {
+          matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_ENEMY) || 'MAT_PROJECTILE_ENEMY';
+      }
+      else if (def.visual.material === 'PROJECTILE_HUNTER') {
+          matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_HUNTER) || 'MAT_PROJECTILE_HUNTER';
+      }
 
       return {
           baseId: def.id,
           geoKey: `GEO_${def.id}${suffix}`,
           // The renderKey MUST match what Spawner/RenderSystem uses to pack the buffer.
-          // Spawner uses the Material ID defined in Archetypes.
           renderKey: `GEO_${def.id}|${matKey}`,
           matKey: matKey
       };

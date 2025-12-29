@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Zap, RefreshCcw, Droplets, ZapOff, Info, Layers } from 'lucide-react';
+import { Atom, Zap, RefreshCcw, Droplets, Flame, Layers, Info } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
@@ -10,16 +10,20 @@ const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
   { id: 'SPITTER', label: 'SPITTER_PROTO', icon: Droplets },
+  { id: 'HUNTER', label: 'HUNTER_ENERGY', icon: Flame }, // NEW
 ];
 
 export const VisualLab = () => {
   const { labExperiment, setLabExperiment, labDetail, setLabDetail } = useStore();
-  const [paramA, setParamA] = useState(0.5);
+  
+  // Param State (Shared by DOM data attributes)
+  const [paramA, setParamA] = useState(0.5); // Intensity / Distortion
+  const [paramB, setParamB] = useState(2.0); // Fresnel Power
+  const [paramC, setParamC] = useState(0.5); // Noise Color
+  const [paramD, setParamD] = useState(0.8); // Core Opacity
 
   // Math for Icosahedron subdivisions
   const calculateStats = (detail: number) => {
-      // Formula: Vertices = 10 * 4^d + 2
-      // Formula: Faces = 20 * 4^d
       const d = Math.floor(detail);
       const verts = 10 * Math.pow(4, d) + 2;
       const faces = 20 * Math.pow(4, d);
@@ -59,21 +63,36 @@ export const VisualLab = () => {
             {labExperiment !== 'NONE' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
                     
-                    {/* Distortion Slider */}
+                    {/* PRIMARY SLIDER (Displacement) */}
                     <div className="space-y-2">
                         <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">
-                            {labExperiment === 'GLITCH' ? "CORRUPTION" : "DISTORTION"}
+                            DISTORTION
                         </div>
                         <RangeSlider 
                             label="INTENSITY" 
                             value={paramA} 
-                            max={labExperiment === 'GLITCH' ? 2.0 : 1.0} 
+                            max={2.0} 
                             onChange={setParamA} 
                             color="text-service-cyan"
                         />
                     </div>
 
-                    {/* Detail Slider (Updated to 20) */}
+                    {/* HUNTER SPECIFIC SLIDERS */}
+                    {labExperiment === 'HUNTER' && (
+                        <>
+                            <div className="space-y-2">
+                                <RangeSlider label="GLOW_RIM" value={paramB} max={5.0} onChange={setParamB} color="text-latent-purple" />
+                            </div>
+                            <div className="space-y-2">
+                                <RangeSlider label="NOISE_HEAT" value={paramC} max={1.0} onChange={setParamC} color="text-alert-yellow" />
+                            </div>
+                            <div className="space-y-2">
+                                <RangeSlider label="CORE_SOLIDITY" value={paramD} max={1.0} onChange={setParamD} color="text-white" />
+                            </div>
+                        </>
+                    )}
+
+                    {/* GEOMETRY DETAIL */}
                     <div className="space-y-2">
                         <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest flex justify-between">
                             <span>GEOMETRY_DETAIL</span>
@@ -81,18 +100,18 @@ export const VisualLab = () => {
                         </div>
                         <input 
                             type="range" 
-                            min="0" max="20" step="1"
+                            min="0" max="6" step="1"
                             value={labDetail}
                             onChange={(e) => setLabDetail(parseInt(e.target.value))}
                             className="w-full h-1.5 bg-service-cyan/20 rounded-full appearance-none cursor-pointer accent-service-cyan hover:accent-white transition-all"
                         />
                         <div className="flex justify-between text-[8px] font-mono text-gray-500">
                             <span>LOW (0)</span>
-                            <span>GODLIKE (20)</span>
+                            <span>CRITICAL (6)</span>
                         </div>
                     </div>
 
-                    {/* Info Box */}
+                    {/* INFO BOX */}
                     <div className="bg-black/40 border border-service-cyan/20 p-3 space-y-2">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-service-cyan border-b border-service-cyan/10 pb-1">
                             <Layers size={12} /> MESH_TOPOLOGY
@@ -106,14 +125,6 @@ export const VisualLab = () => {
                                 <span className="block text-gray-600">FACES</span>
                                 <span className="text-white text-xs">{stats.faces.toLocaleString()}</span>
                             </div>
-                        </div>
-                        <div className="pt-2 border-t border-service-cyan/10 flex items-start gap-2">
-                            <Info size={12} className="text-service-cyan shrink-0 mt-0.5" />
-                            <p className="text-[9px] leading-tight text-gray-500">
-                                <strong>Warning:</strong> High detail levels increase render cost exponentially ($4^d$). 
-                                <br/><br/>
-                                <span className="text-service-cyan">Detail &gt; 7 may cause GPU hang.</span>
-                            </p>
                         </div>
                     </div>
 
@@ -135,7 +146,15 @@ export const VisualLab = () => {
                 </div>
             </div>
         )}
-        <div id={DOM_ID.LAB_PARAMS} data-a={paramA} className="hidden" />
+        
+        {/* DATA BRIDGE for Scene */}
+        <div id={DOM_ID.LAB_PARAMS} 
+             data-a={paramA} 
+             data-b={paramB} 
+             data-c={paramC} 
+             data-d={paramD} 
+             className="hidden" 
+        />
     </div>
   );
 };

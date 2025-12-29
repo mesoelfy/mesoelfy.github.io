@@ -265,16 +265,91 @@ export const ShaderLib = {
         void main() {
           float n = vNoise * 0.5 + 0.5;
           vec3 core = vColor;
-          
-          // Hotter highlights based on base color + white mix
           vec3 highlight = mix(core, vec3(1.0, 1.0, 1.0), 0.6);
-          // Darker shadows
           vec3 shadow = core * 0.3;
-          
           vec3 finalColor = mix(shadow, core, n);
           finalColor = mix(finalColor, highlight, smoothstep(0.7, 1.0, n));
-          
           gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    },
+
+    hunter_energy: {
+      vertex: `
+        varying float vNoise;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        uniform float uIntensity;
+        uniform float uSpeed;
+        uniform vec3 uColor;
+
+        void main() {
+          vUv = uv;
+          
+          #ifdef USE_INSTANCING
+            vColor = instanceColor;
+          #else
+            vColor = uColor;
+          #endif
+
+          // Re-calculate noise for displacement
+          vec3 p = position * 3.0; // Higher frequency than spitter
+          float time = uTime * uSpeed;
+          float n = snoise(p + vec3(0.0, time, 0.0)); // Scroll vertically
+          vNoise = n;
+
+          vec3 newPos = position + (normal * n * uIntensity * 0.4);
+          
+          // Pass normal and view for Fresnel
+          #ifdef USE_INSTANCING
+            vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(newPos, 1.0);
+            
+            // Calculate normal with instance matrix
+            // Note: For non-uniform scaling this is technically incorrect without inverse transpose, 
+            // but for uniform projectiles it is fine.
+            vNormal = normalize(mat3(modelViewMatrix) * mat3(instanceMatrix) * normal);
+          #else
+            vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
+            vNormal = normalize(normalMatrix * normal);
+          #endif
+
+          gl_Position = projectionMatrix * mvPosition;
+          vViewPosition = -mvPosition.xyz;
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        
+        uniform float uFresnelPower; // 0.0 to 5.0 (Rim Sharpness)
+        uniform float uNoiseStr;     // 0.0 to 1.0 (Heat from displacement)
+        uniform float uCoreOpacity;  // 0.0 to 1.0 (Center solidity)
+        
+        void main() {
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewPosition);
+          
+          // 1. Calculate Fresnel (Rim Glow)
+          float fresnel = 1.0 - abs(dot(normal, viewDir));
+          float rim = pow(fresnel, max(0.1, uFresnelPower));
+          
+          // 2. Calculate Heat from Noise
+          float n = vNoise * 0.5 + 0.5;
+          float heat = smoothstep(0.4, 1.0, n); // Only peaks get hot
+          
+          // 3. Compose Color
+          vec3 baseColor = vColor;
+          vec3 hotColor = mix(baseColor, vec3(1.0, 1.0, 1.0), 0.8);
+          vec3 bodyColor = mix(baseColor, hotColor, heat * uNoiseStr);
+          
+          // Add Fresnel Rim (Additive)
+          vec3 finalColor = bodyColor + (baseColor * rim * 2.0);
+          
+          // 4. Alpha Logic
+          float alpha = max(uCoreOpacity, rim);
+          
+          gl_FragColor = vec4(finalColor, alpha);
         }
       `
     }

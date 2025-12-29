@@ -1,6 +1,6 @@
 import { PLAYER_CONFIG } from './PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
-import { ArchetypeIDs, WeaponIDs } from './Identifiers';
+import { ArchetypeIDs, WeaponIDs, EnemyTypes } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
@@ -92,11 +92,9 @@ Object.values(ENEMIES).forEach(def => {
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     
-    // MAP VISUAL DEF STRING TO MATERIAL CONSTANT
     let matId = MATERIAL_IDS.PROJECTILE_PLAYER;
     if (def.visual.material === 'PROJECTILE_ENEMY') matId = MATERIAL_IDS.PROJECTILE_ENEMY;
     if (def.visual.material === 'PROJECTILE_HUNTER') matId = MATERIAL_IDS.PROJECTILE_HUNTER;
-    if (def.visual.material === 'PROJECTILE_PURGE') matId = MATERIAL_IDS.PROJECTILE_PURGE;
     
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
@@ -119,6 +117,11 @@ Object.values(WEAPONS).forEach(def => {
           baseScaleZ: def.visual.scale[2] 
       }}
     ];
+
+    // INJECT SPIN COMPONENT
+    if (def.behavior?.spinSpeed) {
+        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
+    }
 
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });

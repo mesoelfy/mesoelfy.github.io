@@ -39,7 +39,7 @@ type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' 
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
-export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'SPITTER_OPT';
+export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'HUNTER';
 
 interface DebugFlags {
   godMode: boolean;

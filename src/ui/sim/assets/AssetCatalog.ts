@@ -6,12 +6,14 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { MATERIAL_IDS, GEOMETRY_IDS } from '@/engine/config/AssetKeys';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
-import { EnemyTypes, WeaponIDs } from '@/engine/config/Identifiers';
+import { EnemyTypes } from '@/engine/config/Identifiers';
 import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
+  
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
     mat.blending = THREE.AdditiveBlending;
@@ -20,37 +22,42 @@ export const registerAllAssets = () => {
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
-  // --- PROJECTILE MATERIALS ---
+  // Projectile Materials
   
-  // SPITTER (Player Default): 10% Distortion
+  // Player: 25% Distortion
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_PLAYER, () => {
       return MaterialFactory.create('MAT_SPITTER_PLAYER', {
           ...ShaderLib.presets.spitter_proto,
-          uniforms: { [Uniforms.INTENSITY]: { value: 0.10 }, [Uniforms.SPEED]: { value: 2.0 } }
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.25 }, 
+              [Uniforms.SPEED]: { value: 2.0 }
+          }
       });
   });
 
-  // HUNTER (Enemy Sniper): 40% Distortion
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_HUNTER, () => {
-      return MaterialFactory.create('MAT_SPITTER_HUNTER', {
-          ...ShaderLib.presets.spitter_proto,
-          uniforms: { [Uniforms.INTENSITY]: { value: 0.40 }, [Uniforms.SPEED]: { value: 3.0 } }
-      });
-  });
-
-  // PURGE (Player Ultimate): 10% Distortion (Matches Spitter feel but independent)
-  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_PURGE, () => {
-      return MaterialFactory.create('MAT_SPITTER_PURGE', {
-          ...ShaderLib.presets.spitter_proto,
-          uniforms: { [Uniforms.INTENSITY]: { value: 0.10 }, [Uniforms.SPEED]: { value: 2.5 } }
-      });
-  });
-
-  // DAEMON/GENERIC ENEMY: 40% Distortion
+  // Enemy Generic: 60% Distortion
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_ENEMY, () => {
       return MaterialFactory.create('MAT_SPITTER_ENEMY', {
           ...ShaderLib.presets.spitter_proto,
-          uniforms: { [Uniforms.INTENSITY]: { value: 0.40 }, [Uniforms.SPEED]: { value: 3.0 } }
+          uniforms: {
+              [Uniforms.INTENSITY]: { value: 0.60 }, 
+              [Uniforms.SPEED]: { value: 3.0 }
+          }
+      });
+  });
+
+  // NEW: Hunter Projectile Energy Shader
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_HUNTER, () => {
+      return MaterialFactory.create(MATERIAL_IDS.PROJECTILE_HUNTER, {
+          ...ShaderLib.presets.hunter_energy,
+          uniforms: {
+              [Uniforms.COLOR]: { value: new THREE.Color(PALETTE.ORANGE.PRIMARY) },
+              [Uniforms.INTENSITY]: { value: 0.5 }, // Base distortion
+              [Uniforms.SPEED]: { value: 1.0 },
+              uFresnelPower: { value: 2.25 }, // 45%
+              uNoiseStr: { value: 0.8 },      // 80%
+              uCoreOpacity: { value: 0.8 }    // 80%
+          }
       });
   });
 
@@ -65,26 +72,15 @@ export const registerAllAssets = () => {
   });
 
   // 4. Dynamic Registration (Weapons)
-  // SPITTER: Detail 5
-  const geoSpitter = new THREE.IcosahedronGeometry(0.5, 5); 
-  // HUNTER: Detail 10
-  const geoHunter = new THREE.IcosahedronGeometry(0.5, 10); 
-  // PURGE: Detail 5 (Consistent with Spitter but independent)
-  const geoPurge = new THREE.IcosahedronGeometry(0.5, 5);
-  // POTATO: Detail 0
+  const spitterHigh = new THREE.IcosahedronGeometry(0.5, 1); 
+  const hunterHigh = new THREE.IcosahedronGeometry(0.5, 12); 
   const lowPoly = new THREE.IcosahedronGeometry(0.5, 0); 
 
   Object.values(WEAPONS).forEach(def => {
-      let highGeo = geoSpitter;
+      const isEnemy = def.tags.includes('ENEMY');
       
-      // Explicit Assignments to lock in settings
-      if (def.id === WeaponIDs.ENEMY_HUNTER) highGeo = geoHunter;
-      else if (def.id === WeaponIDs.PLAYER_PURGE) highGeo = geoPurge;
-      else if (def.tags.includes('ENEMY')) highGeo = geoHunter; // Default enemy fallback
-      
-      AssetService.registerGenerator(`GEO_${def.id}_HIGH`, () => highGeo.clone());
+      AssetService.registerGenerator(`GEO_${def.id}_HIGH`, () => isEnemy ? hunterHigh.clone() : spitterHigh.clone());
       AssetService.registerGenerator(`GEO_${def.id}_LOW`, () => lowPoly.clone());
-      // Default to LOW for safety if mode unknown
       AssetService.registerGenerator(`GEO_${def.id}`, () => lowPoly.clone());
   });
 };
