@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 22:20:25 CST 2025
+Generated on: Mon Dec 29 11:28:52 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -57,39 +57,42 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   ├── images
 │   │   │   ├── social-card.jpg
 │   │   │   └── social_preview_github_1280x640.jpg
-│   │   └── press_kit
-│   │       └── logos
-│   │           ├── combination-mark
-│   │           │   ├── mesoelfy_combination-mark_black-purple.jpg
-│   │           │   ├── mesoelfy_combination-mark_black-purple.png
-│   │           │   ├── mesoelfy_combination-mark_black-purple.svg
-│   │           │   ├── mesoelfy_combination-mark_black.jpg
-│   │           │   ├── mesoelfy_combination-mark_black.png
-│   │           │   ├── mesoelfy_combination-mark_black.svg
-│   │           │   ├── mesoelfy_combination-mark_white.jpg
-│   │           │   ├── mesoelfy_combination-mark_white.png
-│   │           │   └── mesoelfy_combination-mark_white.svg
-│   │           ├── logomark
-│   │           │   ├── mesoelfy_logomark_black-purple.jpg
-│   │           │   ├── mesoelfy_logomark_black-purple.png
-│   │           │   ├── mesoelfy_logomark_black-purple.svg
-│   │           │   ├── mesoelfy_logomark_black.jpg
-│   │           │   ├── mesoelfy_logomark_black.png
-│   │           │   ├── mesoelfy_logomark_black.svg
-│   │           │   ├── mesoelfy_logomark_white.jpg
-│   │           │   ├── mesoelfy_logomark_white.png
-│   │           │   └── mesoelfy_logomark_white.svg
-│   │           ├── mesoelfy_logos_master.afdesign
-│   │           └── wordmark
-│   │               ├── mesoelfy_wordmark_black-purple.jpg
-│   │               ├── mesoelfy_wordmark_black-purple.png
-│   │               ├── mesoelfy_wordmark_black-purple.svg
-│   │               ├── mesoelfy_wordmark_black.jpg
-│   │               ├── mesoelfy_wordmark_black.png
-│   │               ├── mesoelfy_wordmark_black.svg
-│   │               ├── mesoelfy_wordmark_white.jpg
-│   │               ├── mesoelfy_wordmark_white.png
-│   │               └── mesoelfy_wordmark_white.svg
+│   │   ├── press_kit
+│   │   │   └── logos
+│   │   │       ├── combination-mark
+│   │   │       │   ├── mesoelfy_combination-mark_black-purple.jpg
+│   │   │       │   ├── mesoelfy_combination-mark_black-purple.png
+│   │   │       │   ├── mesoelfy_combination-mark_black-purple.svg
+│   │   │       │   ├── mesoelfy_combination-mark_black.jpg
+│   │   │       │   ├── mesoelfy_combination-mark_black.png
+│   │   │       │   ├── mesoelfy_combination-mark_black.svg
+│   │   │       │   ├── mesoelfy_combination-mark_white.jpg
+│   │   │       │   ├── mesoelfy_combination-mark_white.png
+│   │   │       │   └── mesoelfy_combination-mark_white.svg
+│   │   │       ├── logomark
+│   │   │       │   ├── mesoelfy_logomark_black-purple.jpg
+│   │   │       │   ├── mesoelfy_logomark_black-purple.png
+│   │   │       │   ├── mesoelfy_logomark_black-purple.svg
+│   │   │       │   ├── mesoelfy_logomark_black.jpg
+│   │   │       │   ├── mesoelfy_logomark_black.png
+│   │   │       │   ├── mesoelfy_logomark_black.svg
+│   │   │       │   ├── mesoelfy_logomark_white.jpg
+│   │   │       │   ├── mesoelfy_logomark_white.png
+│   │   │       │   └── mesoelfy_logomark_white.svg
+│   │   │       ├── mesoelfy_logos_master.afdesign
+│   │   │       └── wordmark
+│   │   │           ├── mesoelfy_wordmark_black-purple.jpg
+│   │   │           ├── mesoelfy_wordmark_black-purple.png
+│   │   │           ├── mesoelfy_wordmark_black-purple.svg
+│   │   │           ├── mesoelfy_wordmark_black.jpg
+│   │   │           ├── mesoelfy_wordmark_black.png
+│   │   │           ├── mesoelfy_wordmark_black.svg
+│   │   │           ├── mesoelfy_wordmark_white.jpg
+│   │   │           ├── mesoelfy_wordmark_white.png
+│   │   │           └── mesoelfy_wordmark_white.svg
+│   │   └── ui
+│   │       ├── logo_combination.svg
+│   │       └── logo_mark.svg
 │   ├── favicon.ico
 │   ├── manifest.json
 │   ├── robots.txt
@@ -421,6 +424,7 @@ PROJECT DIRECTORY STRUCTURE:
 │       │   │   └── theme.ts
 │       │   ├── experiments
 │       │   │   ├── GlitchGhost.tsx
+│       │   │   ├── HunterExperiment.tsx
 │       │   │   ├── SpitterOptimized.tsx
 │       │   │   └── SpitterPrototype.tsx
 │       │   ├── hooks
@@ -445,7 +449,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-90 directories, 347 files
+91 directories, 350 files
 
 =====================================
 FILE: ./next.config.js
@@ -5709,6 +5713,39 @@ import { getPan } from '@/engine/audio/AudioUtils';
 import { ToggleButton } from '@/ui/kit/atoms/ToggleButton';
 import { useGameStream } from '@/ui/hooks/useGameStream';
 
+// --- ASSETS ---
+const LOGO_COMBINATION = "/assets/ui/logo_combination.svg";
+const LOGO_MARK = "/assets/ui/logo_mark.svg";
+
+// --- HELPER: CSS MASK COMPONENT (AUTO-SIZING) ---
+// Uses an invisible img to set layout bounds, then overlays a colored mask.
+const MaskedLogo = ({ src, className }: { src: string, className?: string }) => (
+    <div className="relative inline-flex items-center justify-center">
+        {/* Layout Spacer: Sets width/height based on aspect ratio */}
+        <img 
+            src={src} 
+            alt="" 
+            className={clsx("opacity-0 select-none pointer-events-none relative z-0", className)} 
+            aria-hidden="true" 
+        />
+        
+        {/* Visual Layer: Takes the text color (bg-current) */}
+        <div 
+            className="absolute inset-0 bg-current z-10" 
+            style={{ 
+                maskImage: `url('${src}')`, 
+                WebkitMaskImage: `url('${src}')`,
+                maskSize: 'contain', 
+                WebkitMaskSize: 'contain',
+                maskRepeat: 'no-repeat', 
+                WebkitMaskRepeat: 'no-repeat',
+                maskPosition: 'center',
+                WebkitMaskPosition: 'center'
+            }} 
+        />
+    </div>
+);
+
 const Radar = ({ active, panic, color }: { active: boolean, panic: boolean, color: string }) => (
   <div className={`relative w-8 h-8 rounded-full border border-current flex items-center justify-center overflow-hidden bg-black/50 ${color}`}>
     <div className="absolute inset-0 border-current opacity-20" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '8px 8px' }} />
@@ -5756,8 +5793,13 @@ export const Header = () => {
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
       if (barRef.current) barRef.current.style.width = `${val}%`;
-      if (integrityRef.current) integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
       setIntegrityState(val);
+      
+      // Only update text dynamically if NOT in Zen Mode
+      // In Zen Mode, we force the static 420% value via JSX below
+      if (!isZenMode && integrityRef.current) {
+          integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
+      }
   });
 
   const [mounted, setMounted] = useState(false);
@@ -5801,27 +5843,42 @@ export const Header = () => {
       </AnimatePresence>
 
       <div className="flex items-center gap-4">
-        <motion.span 
+        <motion.div 
             key={isZenMode ? "zen-logo" : "standard-logo"}
             animate={(!isZenMode && isCritical) ? heartbeatControls : "idle"} 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             variants={{ 
-                idle: { scale: 1, textShadow: "0 0 0px transparent" },
+                idle: { scale: 1, filter: "drop-shadow(0 0 0px transparent)" },
                 heartbeat: { 
                     scale: [1, 1.05, 1], 
-                    textShadow: ["0 0 0px #FF003C", "0 0 25px #FF003C", "0 0 0px #FF003C"], 
+                    filter: ["drop-shadow(0 0 0px #FF003C)", "drop-shadow(0 0 15px #FF003C)", "drop-shadow(0 0 0px #FF003C)"], 
                     transition: { duration: 0.8, times: [0, 0.04, 1], ease: "easeOut" } 
                 } 
             }} 
-            className={clsx("font-header font-black text-xl md:text-2xl tracking-wide", slowTransition, statusColor)}
+            className={clsx("flex items-center", slowTransition, statusColor)}
         >
           {isZenMode ? (
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
-                  ZEN_OS
-              </span>
-          ) : "MESOELFY_OS"}
-        </motion.span>
+              <div className="flex items-center gap-3">
+                  {/* Icon uses parent statusColor via bg-current */}
+                  <MaskedLogo src={LOGO_MARK} className="h-8 w-auto" />
+                  
+                  {/* Text uses custom prismatic gradient matching the bar */}
+                  <motion.span 
+                      className="font-header font-black text-xl md:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+                      animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  >
+                      ZEN_OS
+                  </motion.span>
+              </div>
+          ) : (
+              <MaskedLogo 
+                  src={LOGO_COMBINATION} 
+                  className="h-8 w-auto mb-1" 
+              />
+          )}
+        </motion.div>
         
         {mounted && (
           <div className={clsx("hidden md:flex items-center gap-4 text-xs font-mono pl-4 border-l", slowTransition, statusColor, borderColor)}>
@@ -5915,7 +5972,7 @@ export const Header = () => {
       
       <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1", slowTransition, isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
         {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
-        <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
+        <span ref={integrityRef}>{isZenMode ? "OS_INTEGRITY: 420%" : "OS_INTEGRITY: 100%"}</span>
       </div>
     </header>
   );
@@ -8637,7 +8694,7 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Zap, RefreshCcw, Droplets, ZapOff, Info, Layers } from 'lucide-react';
+import { Atom, Zap, RefreshCcw, Droplets, Flame, Layers, Info } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
@@ -8645,16 +8702,20 @@ const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
   { id: 'SPITTER', label: 'SPITTER_PROTO', icon: Droplets },
+  { id: 'HUNTER', label: 'HUNTER_ENERGY', icon: Flame }, // NEW
 ];
 
 export const VisualLab = () => {
   const { labExperiment, setLabExperiment, labDetail, setLabDetail } = useStore();
-  const [paramA, setParamA] = useState(0.5);
+  
+  // Param State (Shared by DOM data attributes)
+  const [paramA, setParamA] = useState(0.5); // Intensity / Distortion
+  const [paramB, setParamB] = useState(2.0); // Fresnel Power
+  const [paramC, setParamC] = useState(0.5); // Noise Color
+  const [paramD, setParamD] = useState(0.8); // Core Opacity
 
   // Math for Icosahedron subdivisions
   const calculateStats = (detail: number) => {
-      // Formula: Vertices = 10 * 4^d + 2
-      // Formula: Faces = 20 * 4^d
       const d = Math.floor(detail);
       const verts = 10 * Math.pow(4, d) + 2;
       const faces = 20 * Math.pow(4, d);
@@ -8694,21 +8755,36 @@ export const VisualLab = () => {
             {labExperiment !== 'NONE' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
                     
-                    {/* Distortion Slider */}
+                    {/* PRIMARY SLIDER (Displacement) */}
                     <div className="space-y-2">
                         <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">
-                            {labExperiment === 'GLITCH' ? "CORRUPTION" : "DISTORTION"}
+                            DISTORTION
                         </div>
                         <RangeSlider 
                             label="INTENSITY" 
                             value={paramA} 
-                            max={labExperiment === 'GLITCH' ? 2.0 : 1.0} 
+                            max={2.0} 
                             onChange={setParamA} 
                             color="text-service-cyan"
                         />
                     </div>
 
-                    {/* Detail Slider (Up to 16, though 7+ will crash browser likely) */}
+                    {/* HUNTER SPECIFIC SLIDERS */}
+                    {labExperiment === 'HUNTER' && (
+                        <>
+                            <div className="space-y-2">
+                                <RangeSlider label="GLOW_RIM" value={paramB} max={5.0} onChange={setParamB} color="text-latent-purple" />
+                            </div>
+                            <div className="space-y-2">
+                                <RangeSlider label="NOISE_HEAT" value={paramC} max={1.0} onChange={setParamC} color="text-alert-yellow" />
+                            </div>
+                            <div className="space-y-2">
+                                <RangeSlider label="CORE_SOLIDITY" value={paramD} max={1.0} onChange={setParamD} color="text-white" />
+                            </div>
+                        </>
+                    )}
+
+                    {/* GEOMETRY DETAIL */}
                     <div className="space-y-2">
                         <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest flex justify-between">
                             <span>GEOMETRY_DETAIL</span>
@@ -8727,7 +8803,7 @@ export const VisualLab = () => {
                         </div>
                     </div>
 
-                    {/* Info Box */}
+                    {/* INFO BOX */}
                     <div className="bg-black/40 border border-service-cyan/20 p-3 space-y-2">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-service-cyan border-b border-service-cyan/10 pb-1">
                             <Layers size={12} /> MESH_TOPOLOGY
@@ -8741,16 +8817,6 @@ export const VisualLab = () => {
                                 <span className="block text-gray-600">FACES</span>
                                 <span className="text-white text-xs">{stats.faces.toLocaleString()}</span>
                             </div>
-                        </div>
-                        <div className="pt-2 border-t border-service-cyan/10 flex items-start gap-2">
-                            <Info size={12} className="text-service-cyan shrink-0 mt-0.5" />
-                            <p className="text-[9px] leading-tight text-gray-500">
-                                <strong>Warning:</strong> Vertex displacement (Noise) is calculated 
-                                per-vertex on the GPU. Higher detail creates smoother liquid effects 
-                                but increases render cost exponentially ($4^d$). 
-                                <br/><br/>
-                                <span className="text-service-cyan">Rec: Detail 1-2 for gameplay.</span>
-                            </p>
                         </div>
                     </div>
 
@@ -8772,7 +8838,15 @@ export const VisualLab = () => {
                 </div>
             </div>
         )}
-        <div id={DOM_ID.LAB_PARAMS} data-a={paramA} className="hidden" />
+        
+        {/* DATA BRIDGE for Scene */}
+        <div id={DOM_ID.LAB_PARAMS} 
+             data-a={paramA} 
+             data-b={paramB} 
+             data-c={paramC} 
+             data-d={paramD} 
+             className="hidden" 
+        />
     </div>
   );
 };
@@ -9397,6 +9471,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { OrbitControls } from '@react-three/drei';
 import { GlitchGhost } from '../experiments/GlitchGhost';
 import { SpitterPrototype } from '../experiments/SpitterPrototype';
+import { HunterExperiment } from '../experiments/HunterExperiment';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
@@ -9426,6 +9501,7 @@ export const LabStage = () => {
         <group position={[0, 0, 0]}>
             {labExperiment === 'GLITCH' && <GlitchGhost intensity={intensity} />}
             {labExperiment === 'SPITTER' && <SpitterPrototype intensity={intensity} detail={labDetail} />}
+            {labExperiment === 'HUNTER' && <HunterExperiment detail={labDetail} />}
         </group>
     </>
   );
@@ -9670,6 +9746,70 @@ export const MiniCrystalCanvas = () => {
       </Canvas>
     </div>
   );
+};
+
+
+=====================================
+FILE: ./src/ui/sim/experiments/HunterExperiment.tsx
+=====================================
+import { useRef, useMemo, useEffect } from 'react';
+import { useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
+import { ShaderLib } from '@/engine/graphics/ShaderLib';
+import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
+import { DOM_ID } from '@/ui/config/DOMConfig';
+
+interface Props {
+    detail: number;
+}
+
+export const HunterExperiment = ({ detail = 1 }: Props) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, detail), [detail]);
+
+  const material = useMemo(() => {
+      // Define custom uniforms for the Energy Shader
+      const customUniforms = {
+          [Uniforms.COLOR]: { value: new THREE.Color(PALETTE.ORANGE.PRIMARY) },
+          [Uniforms.INTENSITY]: { value: 0.5 },
+          [Uniforms.SPEED]: { value: 1.0 },
+          uFresnelPower: { value: 2.0 },
+          uNoiseStr: { value: 0.5 },
+          uCoreOpacity: { value: 0.8 }
+      };
+
+      return MaterialFactory.create('MAT_HUNTER_LAB', {
+          ...ShaderLib.presets.hunter_energy,
+          uniforms: customUniforms
+      });
+  }, []);
+
+  useFrame((state) => {
+      if (!meshRef.current) return;
+      MaterialFactory.updateUniforms(state.clock.elapsedTime);
+      
+      meshRef.current.rotation.y += 0.005;
+      meshRef.current.rotation.z += 0.002;
+      
+      // Read params from DOM (Data attributes set by UI sliders)
+      const el = document.getElementById(DOM_ID.LAB_PARAMS);
+      if (el) {
+          const intensity = parseFloat(el.dataset.a || '0.5');
+          const fresnel = parseFloat(el.dataset.b || '2.0');
+          const noiseStr = parseFloat(el.dataset.c || '0.5');
+          const coreOp = parseFloat(el.dataset.d || '0.8');
+
+          if (material.uniforms[Uniforms.INTENSITY]) material.uniforms[Uniforms.INTENSITY].value = intensity;
+          if (material.uniforms.uFresnelPower) material.uniforms.uFresnelPower.value = fresnel;
+          if (material.uniforms.uNoiseStr) material.uniforms.uNoiseStr.value = noiseStr;
+          if (material.uniforms.uCoreOpacity) material.uniforms.uCoreOpacity.value = coreOp;
+      }
+  });
+
+  return <mesh ref={meshRef} geometry={geometry} material={material} />;
 };
 
 
@@ -10682,19 +10822,20 @@ export const ProjectileActor = () => {
 
   // Map weapons to their specific materials
   const renderItems = Object.values(WEAPONS).map(def => {
-      let matKey = MATERIAL_IDS.PROJECTILE_PLAYER;
+      // Fallback strings added to prevent runtime crash during HMR cycles
+      let matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_PLAYER) || 'MAT_PROJECTILE_PLAYER';
       
       if (def.visual.material === 'PROJECTILE_ENEMY') {
-          matKey = MATERIAL_IDS.PROJECTILE_ENEMY;
+          matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_ENEMY) || 'MAT_PROJECTILE_ENEMY';
+      }
+      else if (def.visual.material === 'PROJECTILE_HUNTER') {
+          matKey = (MATERIAL_IDS && MATERIAL_IDS.PROJECTILE_HUNTER) || 'MAT_PROJECTILE_HUNTER';
       }
 
       return {
           baseId: def.id,
           geoKey: `GEO_${def.id}${suffix}`,
           // The renderKey MUST match what Spawner/RenderSystem uses to pack the buffer.
-          // Spawner uses the Material ID defined in Archetypes.
-          // Archetypes.ts maps visual.material string to the actual material ID.
-          // So we reconstruct the key: GeometryID|MaterialID
           renderKey: `GEO_${def.id}|${matKey}`,
           matKey: matKey
       };
@@ -11187,10 +11328,12 @@ import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { WEAPONS } from '@/engine/config/defs/Weapons';
 import { EnemyTypes } from '@/engine/config/Identifiers';
 import { Uniforms } from '@/engine/graphics/Uniforms';
+import { PALETTE } from '@/engine/config/Palette';
 
 export const registerAllAssets = () => {
   // 1. Static Materials
   AssetService.registerGenerator(MATERIAL_IDS.ENEMY_BASE, () => MaterialFactory.create(MATERIAL_IDS.ENEMY_BASE, ShaderLib.presets.enemy));
+  
   AssetService.registerGenerator(MATERIAL_IDS.PARTICLE, () => {
     const mat = MaterialFactory.create(MATERIAL_IDS.PARTICLE, ShaderLib.presets.particle);
     mat.blending = THREE.AdditiveBlending;
@@ -11199,7 +11342,7 @@ export const registerAllAssets = () => {
   });
   AssetService.registerGenerator(MATERIAL_IDS.PLAYER, () => new THREE.MeshBasicMaterial({ color: 0xffffff }));
   
-  // NEW: Projectile Materials (Player vs Enemy)
+  // Projectile Materials
   
   // Player: 25% Distortion
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_PLAYER, () => {
@@ -11212,13 +11355,28 @@ export const registerAllAssets = () => {
       });
   });
 
-  // Enemy: 60% Distortion
+  // Enemy Generic: 60% Distortion
   AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_ENEMY, () => {
       return MaterialFactory.create('MAT_SPITTER_ENEMY', {
           ...ShaderLib.presets.spitter_proto,
           uniforms: {
               [Uniforms.INTENSITY]: { value: 0.60 }, 
               [Uniforms.SPEED]: { value: 3.0 }
+          }
+      });
+  });
+
+  // NEW: Hunter Projectile Energy Shader
+  AssetService.registerGenerator(MATERIAL_IDS.PROJECTILE_HUNTER, () => {
+      return MaterialFactory.create(MATERIAL_IDS.PROJECTILE_HUNTER, {
+          ...ShaderLib.presets.hunter_energy,
+          uniforms: {
+              [Uniforms.COLOR]: { value: new THREE.Color(PALETTE.ORANGE.PRIMARY) },
+              [Uniforms.INTENSITY]: { value: 0.5 }, // Base distortion
+              [Uniforms.SPEED]: { value: 1.0 },
+              uFresnelPower: { value: 2.25 }, // 45%
+              uNoiseStr: { value: 0.8 },      // 80%
+              uCoreOpacity: { value: 0.8 }    // 80%
           }
       });
   });
@@ -11234,19 +11392,11 @@ export const registerAllAssets = () => {
   });
 
   // 4. Dynamic Registration (Weapons)
-  // GAME CONFIG:
-  // Spitter (Player): Detail 1 (Low Poly / Retro)
-  // Hunter (Enemy): Detail 12 (Ultra High Fidelity)
-  
-  // High Voltage Mode:
   const spitterHigh = new THREE.IcosahedronGeometry(0.5, 1); 
   const hunterHigh = new THREE.IcosahedronGeometry(0.5, 12); 
-  
-  // Potato Mode (Both Low):
   const lowPoly = new THREE.IcosahedronGeometry(0.5, 0); 
 
   Object.values(WEAPONS).forEach(def => {
-      // Determine if Player or Enemy weapon for High Mode config
       const isEnemy = def.tags.includes('ENEMY');
       
       AssetService.registerGenerator(`GEO_${def.id}_HIGH`, () => isEnemy ? hunterHigh.clone() : spitterHigh.clone());
@@ -12395,7 +12545,7 @@ FILE: ./src/engine/config/Archetypes.ts
 =====================================
 import { PLAYER_CONFIG } from './PlayerConfig';
 import { PhysicsConfig, CollisionLayers } from './PhysicsConfig';
-import { ArchetypeIDs, WeaponIDs } from './Identifiers';
+import { ArchetypeIDs, WeaponIDs, EnemyTypes } from './Identifiers';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { GAME_THEME } from '@/ui/sim/config/theme';
@@ -12487,9 +12637,9 @@ Object.values(ENEMIES).forEach(def => {
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     
-    // MAP VISUAL DEF STRING TO MATERIAL CONSTANT
     let matId = MATERIAL_IDS.PROJECTILE_PLAYER;
     if (def.visual.material === 'PROJECTILE_ENEMY') matId = MATERIAL_IDS.PROJECTILE_ENEMY;
+    if (def.visual.material === 'PROJECTILE_HUNTER') matId = MATERIAL_IDS.PROJECTILE_HUNTER;
     
     const isEnemy = def.tags.includes(Tag.ENEMY);
     const layer = isEnemy ? CollisionLayers.ENEMY_PROJECTILE : CollisionLayers.PLAYER_PROJECTILE;
@@ -12512,6 +12662,11 @@ Object.values(WEAPONS).forEach(def => {
           baseScaleZ: def.visual.scale[2] 
       }}
     ];
+
+    // INJECT SPIN COMPONENT
+    if (def.behavior?.spinSpeed) {
+        comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
+    }
 
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
@@ -12554,7 +12709,8 @@ export const MATERIAL_IDS = {
   GALLERY_BODY: 'MAT_GALLERY_BODY',
   // Specific Projectile Materials
   PROJECTILE_PLAYER: 'MAT_PROJECTILE_PLAYER',
-  PROJECTILE_ENEMY: 'MAT_PROJECTILE_ENEMY'
+  PROJECTILE_ENEMY: 'MAT_PROJECTILE_ENEMY',
+  PROJECTILE_HUNTER: 'MAT_PROJECTILE_HUNTER' // NEW: Bespoke Energy Shader
 } as const;
 
 export type MaterialKey = typeof MATERIAL_IDS[keyof typeof MATERIAL_IDS];
@@ -12850,9 +13006,11 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
-    damage: 10, speed: 25, life: 3.0,
-    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_ENEMY' },
-    behavior: { faceVelocity: false },
+    damage: 10, 
+    speed: 16.0, // UPDATED: Increased to 16.0
+    life: 6.5,   // UPDATED: Increased by 30% (5.0 * 1.3)
+    visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_HUNTER' },
+    behavior: { faceVelocity: true, spinSpeed: 7.5 },
     tags: [Tag.PROJECTILE, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
@@ -12876,7 +13034,7 @@ export interface VisualDef {
   color: string; // Hex
   scale: [number, number, number];
   // Updated to include specific projectile materials
-  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY';
+  material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY' | 'PROJECTILE_HUNTER';
   // Procedural Params
   height?: number;
   radius?: number;
@@ -12962,7 +13120,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     params: {
         spawnDuration: 1.5,
         spinSpeed: 10.0,
-        moveSpeed: 12.0
+        moveSpeed: 9.6 // REDUCED: 12.0 -> 9.6 (-20%)
     }
   },
   [EnemyTypes.HUNTER]: {
@@ -12981,7 +13139,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
         roamSpeed: 12.0,
         roamPadding: 1.0,
         aimDuration: 1.2,
-        projectileSpeed: 40.0,
+        projectileSpeed: 16.0, 
         cooldownMin: 0.3,
         cooldownMax: 0.6
     }
@@ -14992,7 +15150,7 @@ type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' 
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
-export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'SPITTER_OPT';
+export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER' | 'HUNTER';
 
 interface DebugFlags {
   godMode: boolean;
@@ -17784,16 +17942,91 @@ export const ShaderLib = {
         void main() {
           float n = vNoise * 0.5 + 0.5;
           vec3 core = vColor;
-          
-          // Hotter highlights based on base color + white mix
           vec3 highlight = mix(core, vec3(1.0, 1.0, 1.0), 0.6);
-          // Darker shadows
           vec3 shadow = core * 0.3;
-          
           vec3 finalColor = mix(shadow, core, n);
           finalColor = mix(finalColor, highlight, smoothstep(0.7, 1.0, n));
-          
           gl_FragColor = vec4(finalColor, 1.0);
+        }
+      `
+    },
+
+    hunter_energy: {
+      vertex: `
+        varying float vNoise;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        uniform float uIntensity;
+        uniform float uSpeed;
+        uniform vec3 uColor;
+
+        void main() {
+          vUv = uv;
+          
+          #ifdef USE_INSTANCING
+            vColor = instanceColor;
+          #else
+            vColor = uColor;
+          #endif
+
+          // Re-calculate noise for displacement
+          vec3 p = position * 3.0; // Higher frequency than spitter
+          float time = uTime * uSpeed;
+          float n = snoise(p + vec3(0.0, time, 0.0)); // Scroll vertically
+          vNoise = n;
+
+          vec3 newPos = position + (normal * n * uIntensity * 0.4);
+          
+          // Pass normal and view for Fresnel
+          #ifdef USE_INSTANCING
+            vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(newPos, 1.0);
+            
+            // Calculate normal with instance matrix
+            // Note: For non-uniform scaling this is technically incorrect without inverse transpose, 
+            // but for uniform projectiles it is fine.
+            vNormal = normalize(mat3(modelViewMatrix) * mat3(instanceMatrix) * normal);
+          #else
+            vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
+            vNormal = normalize(normalMatrix * normal);
+          #endif
+
+          gl_Position = projectionMatrix * mvPosition;
+          vViewPosition = -mvPosition.xyz;
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        varying vec3 vNormal;
+        varying vec3 vViewPosition;
+        
+        uniform float uFresnelPower; // 0.0 to 5.0 (Rim Sharpness)
+        uniform float uNoiseStr;     // 0.0 to 1.0 (Heat from displacement)
+        uniform float uCoreOpacity;  // 0.0 to 1.0 (Center solidity)
+        
+        void main() {
+          vec3 normal = normalize(vNormal);
+          vec3 viewDir = normalize(vViewPosition);
+          
+          // 1. Calculate Fresnel (Rim Glow)
+          float fresnel = 1.0 - abs(dot(normal, viewDir));
+          float rim = pow(fresnel, max(0.1, uFresnelPower));
+          
+          // 2. Calculate Heat from Noise
+          float n = vNoise * 0.5 + 0.5;
+          float heat = smoothstep(0.4, 1.0, n); // Only peaks get hot
+          
+          // 3. Compose Color
+          vec3 baseColor = vColor;
+          vec3 hotColor = mix(baseColor, vec3(1.0, 1.0, 1.0), 0.8);
+          vec3 bodyColor = mix(baseColor, hotColor, heat * uNoiseStr);
+          
+          // Add Fresnel Rim (Additive)
+          vec3 finalColor = bodyColor + (baseColor * rim * 2.0);
+          
+          // 4. Alpha Logic
+          float alpha = max(uCoreOpacity, rim);
+          
+          gl_FragColor = vec4(finalColor, alpha);
         }
       `
     }
@@ -21789,7 +22022,6 @@ export type CollisionHandler = (entityA: Entity, entityB: Entity, ctx: CombatCon
 FILE: ./src/engine/handlers/weapons/WeaponLogic.ts
 =====================================
 import { ConfigService } from '@/engine/services/ConfigService';
-import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
@@ -21806,8 +22038,15 @@ export interface ShotDef {
   scaleY?: number;
 }
 
-const MUZZLE_OFFSET = GAMEPLAY_CONFIG.WEAPON.MUZZLE_OFFSET;
-const RETICLE_RADIUS = 1.65; 
+// Geometry Constants derived from PlayerActor.tsx
+const RETICLE_EXTENT_RADIUS = 0.65; 
+// Geometry Constants derived from AssetCatalog (Sphere Radius 0.5 * Base Scale 0.4)
+const PROJ_BASE_RADIUS = 0.2; 
+// Increased margin for better visual clearance (was 0.15)
+const SPAWN_MARGIN = 0.3; 
+
+// Sniffer Reticle config
+const SNIFFER_OFFSET_RADIUS = 1.65; 
 const TWIST_OFFSET = -0.55;  
 
 const SNIFFER_TIPS = [
@@ -21831,8 +22070,16 @@ export const calculateSpitterShot = (
   const dy = target.y - origin.y;
   const angle = Math.atan2(dy, dx);
 
-  const spawnX = origin.x + Math.cos(angle) * MUZZLE_OFFSET;
-  const spawnY = origin.y + Math.sin(angle) * MUZZLE_OFFSET;
+  // --- DYNAMIC OFFSET CALCULATION ---
+  // Matches WeaponSystem.ts scaling logic: 1.0 + (level * 0.75)
+  const sizeMultiplier = 1.0 + (state.girthLevel * 0.75);
+  const currentProjRadius = PROJ_BASE_RADIUS * sizeMultiplier;
+  
+  // Place center of projectile so its edge touches reticle edge + margin
+  const dynamicOffset = RETICLE_EXTENT_RADIUS + currentProjRadius + SPAWN_MARGIN;
+
+  const spawnX = origin.x + Math.cos(angle) * dynamicOffset;
+  const spawnY = origin.y + Math.sin(angle) * dynamicOffset;
 
   return {
       x: spawnX,
@@ -21862,8 +22109,8 @@ export const calculateSnifferShots = (
   for (let i = 0; i < activeCount; i++) {
       const localAngle = SNIFFER_TIPS[i % 4];
       const globalAngle = reticleRotation + localAngle;
-      const tipX = origin.x + Math.cos(globalAngle) * RETICLE_RADIUS;
-      const tipY = origin.y + Math.sin(globalAngle) * RETICLE_RADIUS;
+      const tipX = origin.x + Math.cos(globalAngle) * SNIFFER_OFFSET_RADIUS;
+      const tipY = origin.y + Math.sin(globalAngle) * SNIFFER_OFFSET_RADIUS;
       const vx = Math.cos(globalAngle) * speed * 0.5;
       const vy = Math.sin(globalAngle) * speed * 0.5;
       

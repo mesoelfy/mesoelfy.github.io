@@ -40,6 +40,16 @@ const createExplosion = (
   };
 };
 
+const PRISMATIC_COLORS = [
+    '#FF0000', '#FF4000', '#FF8000', '#FFBF00', // Red -> Orange
+    '#FFFF00', '#BFFF00', '#80FF00', '#40FF00', // Yellow -> Green
+    '#00FF00', '#00FF40', '#00FF80', '#00FFBF', // Green -> Cyan
+    '#00FFFF', '#00BFFF', '#0080FF', '#0040FF', // Cyan -> Blue
+    '#0000FF', '#4000FF', '#8000FF', '#BF00FF', // Blue -> Purple
+    '#FF00FF', '#FF00BF', '#FF0080', '#FF0040', // Magenta -> Red
+    '#FFFFFF' // Sparkle
+];
+
 export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   // Driller (Using PURPLE which now contains INDIGO)
   'EXPLOSION_PURPLE':     createExplosion(COLOR_SETS.PURPLE, false, [20, 30], [5, 10]),
@@ -81,5 +91,14 @@ export const VFX_MANIFEST: Record<string, VFXRecipe> = {
   },
   
   'REBOOT_HEAL': { pattern: 'RADIAL', colors: COLOR_SETS.PINK, count: [8, 12], speed: [2, 5], life: [0.5, 1.0] },
-  'PURGE_BLAST': { pattern: 'RADIAL', colors: [PALETTE.MONO.WHITE, PALETTE.RED.CRITICAL], count: [50, 50], speed: [10, 30], life: [1.5, 2.5] }
+  
+  // UPDATED PURGE BLAST: 150-200 particles, very fast decay
+  'PURGE_BLAST': { 
+      pattern: 'RADIAL', 
+      colors: PRISMATIC_COLORS, 
+      count: [150, 200], 
+      speed: [10, 50], 
+      life: [0.375, 0.75],
+      size: [0.8, 2.5]
+  }
 };
