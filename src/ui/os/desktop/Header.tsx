@@ -90,8 +90,13 @@ export const Header = () => {
   
   useGameStream('SYSTEM_INTEGRITY', (val) => {
       if (barRef.current) barRef.current.style.width = `${val}%`;
-      if (integrityRef.current) integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
       setIntegrityState(val);
+      
+      // Only update text dynamically if NOT in Zen Mode
+      // In Zen Mode, we force the static 420% value via JSX below
+      if (!isZenMode && integrityRef.current) {
+          integrityRef.current.innerText = `OS_INTEGRITY: ${Math.floor(val)}%`;
+      }
   });
 
   const [mounted, setMounted] = useState(false);
@@ -155,15 +160,19 @@ export const Header = () => {
                   {/* Icon uses parent statusColor via bg-current */}
                   <MaskedLogo src={LOGO_MARK} className="h-8 w-auto" />
                   
-                  {/* Text uses custom gradient */}
-                  <span className="font-header font-black text-xl md:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 animate-pulse">
+                  {/* Text uses custom prismatic gradient matching the bar */}
+                  <motion.span 
+                      className="font-header font-black text-xl md:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-green-500 to-blue-500"
+                      animate={{ filter: ["hue-rotate(0deg)", "hue-rotate(360deg)"] }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  >
                       ZEN_OS
-                  </span>
+                  </motion.span>
               </div>
           ) : (
               <MaskedLogo 
                   src={LOGO_COMBINATION} 
-                  className="h-8 w-auto mb-1" // Height 32px to match Zen icon
+                  className="h-8 w-auto mb-1" 
               />
           )}
         </motion.div>
@@ -260,7 +269,7 @@ export const Header = () => {
       
       <div className={clsx("absolute bottom-[-14px] right-2 text-[8px] font-mono flex items-center gap-1", slowTransition, isZenMode ? "text-purple-400" : (isCritical ? "text-critical-red" : isWarning ? "text-alert-yellow" : "text-primary-green-dim"))}>
         {isZenMode ? <InfinityIcon size={10} /> : <Activity size={8} className={isCritical ? "animate-pulse" : ""} />}
-        <span ref={integrityRef}>{isZenMode ? "STATE: ETERNAL" : "OS_INTEGRITY: 100%"}</span>
+        <span ref={integrityRef}>{isZenMode ? "OS_INTEGRITY: 420%" : "OS_INTEGRITY: 100%"}</span>
       </div>
     </header>
   );
