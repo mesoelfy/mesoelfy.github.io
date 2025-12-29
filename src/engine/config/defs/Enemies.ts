@@ -38,7 +38,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     params: {
         spawnDuration: 1.5,
         spinSpeed: 10.0,
-        moveSpeed: 12.0
+        moveSpeed: 9.6 // REDUCED: 12.0 -> 9.6 (-20%)
     }
   },
   [EnemyTypes.HUNTER]: {
@@ -57,7 +57,7 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
         roamSpeed: 12.0,
         roamPadding: 1.0,
         aimDuration: 1.2,
-        projectileSpeed: 40.0,
+        projectileSpeed: 16.0, 
         cooldownMin: 0.3,
         cooldownMax: 0.6
     }

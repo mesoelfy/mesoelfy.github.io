@@ -29,10 +29,11 @@ export const WEAPONS: Record<string, WeaponDef> = {
   },
   [WeaponIDs.ENEMY_HUNTER]: {
     id: WeaponIDs.ENEMY_HUNTER,
-    damage: 10, speed: 25, life: 3.0,
+    damage: 10, 
+    speed: 16.0, // UPDATED: Increased to 16.0
+    life: 6.5,   // UPDATED: Increased by 30% (5.0 * 1.3)
     visual: { model: 'SPHERE', color: PALETTE.ORANGE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE_HUNTER' },
-    // UPDATED: Enable facing velocity and add spin
-    behavior: { faceVelocity: true, spinSpeed: 15.0 },
+    behavior: { faceVelocity: true, spinSpeed: 7.5 },
     tags: [Tag.PROJECTILE, Tag.ENEMY]
   },
   [WeaponIDs.DAEMON_ORB]: {
