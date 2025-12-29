@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Zap, RefreshCcw, Droplets } from 'lucide-react';
+import { Atom, Zap, RefreshCcw, Droplets, ZapOff } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
 const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
-  { id: 'SPITTER', label: 'SPITTER_PROTO', icon: Droplets },
+  { id: 'SPITTER', label: 'SPITTER_MAX', icon: Droplets },
+  { id: 'SPITTER_OPT', label: 'SPITTER_LITE', icon: ZapOff },
 ];
 
 export const VisualLab = () => {
@@ -57,7 +58,7 @@ export const VisualLab = () => {
                 </div>
             )}
 
-            {labExperiment === 'SPITTER' && (
+            {(labExperiment === 'SPITTER' || labExperiment === 'SPITTER_OPT') && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">Parameters</div>
                     <RangeSlider 

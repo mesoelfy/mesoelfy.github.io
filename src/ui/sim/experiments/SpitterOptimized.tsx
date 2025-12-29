@@ -6,13 +6,12 @@ import { ShaderLib } from '@/engine/graphics/ShaderLib';
 import { Uniforms } from '@/engine/graphics/Uniforms';
 import { PALETTE } from '@/engine/config/Palette';
 
-export const SpitterPrototype = ({ intensity = 0.5 }: { intensity: number }) => {
+export const SpitterOptimized = ({ intensity = 0.5 }: { intensity: number }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  // MAX FIDELITY: Detail 5 (~10,242 vertices).
-  // Extremely smooth, liquid-like surface. 
-  // Heavy performance cost per instance.
-  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 5), []);
+  // ULTRA-LITE: Detail 1 (80 vertices).
+  // Looks like a low-poly liquid crystal. Very fast.
+  const geometry = useMemo(() => new THREE.IcosahedronGeometry(1, 1), []);
 
   const material = useMemo(() => {
       return MaterialFactory.create('MAT_SPITTER_PROTO', {
@@ -37,5 +36,5 @@ export const SpitterPrototype = ({ intensity = 0.5 }: { intensity: number }) => 
       }
   });
 
-  return <mesh ref={meshRef} geometry={geometry} material={material} />;
+  return <group><mesh ref={meshRef} geometry={geometry} material={material} /></group>;
 };

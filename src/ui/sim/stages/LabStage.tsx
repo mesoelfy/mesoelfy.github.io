@@ -2,6 +2,7 @@ import { useStore } from '@/engine/state/global/useStore';
 import { OrbitControls } from '@react-three/drei';
 import { GlitchGhost } from '../experiments/GlitchGhost';
 import { SpitterPrototype } from '../experiments/SpitterPrototype';
+import { SpitterOptimized } from '../experiments/SpitterOptimized';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
@@ -31,6 +32,7 @@ export const LabStage = () => {
         <group position={[0, 0, 0]}>
             {labExperiment === 'GLITCH' && <GlitchGhost intensity={intensity} />}
             {labExperiment === 'SPITTER' && <SpitterPrototype intensity={intensity} />}
+            {labExperiment === 'SPITTER_OPT' && <SpitterOptimized intensity={intensity} />}
         </group>
     </>
   );
