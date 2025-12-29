@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mesoelfy-os-cache-v2';
+const CACHE_NAME = 'mesoelfy-os-cache-v3';
 
 // Assets to cache immediately
 const PRECACHE_URLS = [
@@ -10,34 +10,37 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Force this SW to become the "waiting" worker immediately
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  // Clean up old caches immediately
+  // Force this SW to become the "active" worker immediately
+  event.waitUntil(self.clients.claim());
+  
+  // Clean up old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('// SW: CLEARING OLD CACHE', cacheName);
+            console.log('// SW: PURGING OLD CACHE', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
-  // STRATEGY 1: Network First (Navigation/HTML)
-  // Ensures we always get the latest build (latest commit hash)
+  // STRATEGY: Network First for HTML
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -48,18 +51,16 @@ self.addEventListener('fetch', (event) => {
           });
         })
         .catch(() => {
-          return caches.match(event.request); // Offline fallback
+          return caches.match(event.request);
         })
     );
     return;
   }
 
-  // STRATEGY 2: Cache First (Static Assets - JS, CSS, Images, Audio)
+  // STRATEGY: Cache First for Assets
   event.respondWith(
     caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
+      if (response) return response;
       return fetch(event.request).then((networkResponse) => {
         return caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());

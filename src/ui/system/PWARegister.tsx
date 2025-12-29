@@ -1,22 +1,36 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Registers the Service Worker to enable PWA capabilities.
- * This enables the 'Add to Home Screen' prompt on mobile/desktop.
+ * Registers the Service Worker and handles lifecycle updates.
+ * Forces a page reload when a new Service Worker takes control.
  */
 export const PWARegister = () => {
+  const refreshing = useRef(false);
+
   useEffect(() => {
     if (
       typeof window !== 'undefined' &&
       'serviceWorker' in navigator &&
-      window.location.hostname !== 'localhost' // Optional: skip on localhost to avoid caching issues during dev
+      window.location.hostname !== 'localhost'
     ) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => console.log('// PWA SERVICE_WORKER: ONLINE', reg.scope))
-        .catch((err) => console.error('// PWA SERVICE_WORKER: FAILED', err));
+      // 1. Register
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        // 2. Force an update check immediately on load
+        reg.update();
+        console.log('// PWA: REGISTERED', reg.scope);
+      });
+
+      // 3. Listen for the "controlling" event (when new SW takes over)
+      // This happens after self.clients.claim() in the SW
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing.current) {
+          refreshing.current = true;
+          console.log('// PWA: CONTROLLER CHANGED - RELOADING...');
+          window.location.reload();
+        }
+      });
     }
   }, []);
 
