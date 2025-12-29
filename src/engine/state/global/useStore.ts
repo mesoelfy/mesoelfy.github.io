@@ -35,12 +35,11 @@ const DEFAULT_AUDIO: AudioSettings = {
   fxReverbMix: 0.2, fxDelayMix: 0.1, fxDelayTime: 0.25, fxDelayFeedback: 0.3  
 };
 
-// UPDATED: Added 'donate'
 type ModalType = 'none' | 'about' | 'gallery' | 'feed' | 'contact' | 'settings' | 'donate';
 type BootState = 'standby' | 'active' | 'sandbox';
 export type SandboxView = 'lab' | 'arena' | 'gallery' | 'audio';
 type GraphicsMode = 'HIGH' | 'POTATO';
-export type LabExperiment = 'NONE' | 'GLITCH';
+export type LabExperiment = 'NONE' | 'GLITCH' | 'SPITTER'; // UPDATED
 
 interface DebugFlags {
   godMode: boolean;

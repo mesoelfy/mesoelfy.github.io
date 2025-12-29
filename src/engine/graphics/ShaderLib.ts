@@ -80,30 +80,18 @@ export const ShaderLib = {
         uniform vec3 uColor;
         uniform float uLevel;
         void main() {
-          // 1. Calculate angle and compensate for the 0.55 twist
           float angle = atan(vPos.y, vPos.x) + 0.55;
           float PI = 3.14159265359;
-          
-          // 2. Identify Quadrant (0: Right, 1: Top, 2: Left, 3: Bottom)
           int q = int(mod(floor(angle / (PI / 2.0) + 0.5), 4.0));
-          
-          // 3. Match quadrants to firing order: 
-          // Order: [Left (2), Right (0), Bottom (3), Top (1)]
           bool active = false;
           if (uLevel >= 1.0 && q == 2) active = true;
           if (uLevel >= 2.0 && q == 0) active = true;
           if (uLevel >= 3.0 && q == 3) active = true;
           if (uLevel >= 4.0 && q == 1) active = true;
-          
           if (!active) discard;
-
-          // 4. Gradient masking so only the outer tips glow
           float dist = length(vPos);
           float mask = smoothstep(0.4, 0.65, dist);
-          
-          // 5. Pulsing Effect
           float pulse = 0.8 + 0.2 * sin(uTime * 10.0);
-          
           gl_FragColor = vec4(uColor * pulse * 2.0, mask);
         }
       `
@@ -211,14 +199,9 @@ export const ShaderLib = {
           vBarycentric = barycentric;
           vUv = uv;
           vPos = position;
-          
-          // Glitch displacement based on noise and time
           float n = snoise(vec3(position.x * 2.0, position.y * 2.0, uTime * 5.0));
           vNoise = n;
-          
-          // Displace vertex along normal based on intensity
           vec3 pos = position + normal * n * uIntensity * 0.5;
-          
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
       `,
@@ -229,28 +212,57 @@ export const ShaderLib = {
         uniform float uSpeed;
         
         void main() {
-          // Wireframe edge calculation
           float width = 1.0 + uIntensity * 2.0;
           float edge = edgeFactor(vBarycentric, width);
           float alpha = 1.0 - smoothstep(0.0, 0.1, edge);
-          
-          // Colors
-          vec3 baseColor = vec3(0.0, 1.0, 1.0); // Cyan base
-          vec3 flashColor = vec3(1.0, 1.0, 1.0); // White flash
-          
-          // Glitch scanlines and banding
+          vec3 baseColor = vec3(0.0, 1.0, 1.0); 
+          vec3 flashColor = vec3(1.0, 1.0, 1.0); 
           float scan = sin(gl_FragCoord.y * uFrequency * 0.1 + uTime * uSpeed * 10.0);
           float glitchMix = smoothstep(0.8, 1.0, scan * vNoise);
-          
-          // Discard parts of the mesh to create "digital decay" look
           if (glitchMix > 0.5) discard;
-          
           vec3 finalColor = mix(baseColor, flashColor, vNoise * uIntensity);
-          
-          // Base opacity + fill based on intensity
           float fill = uIntensity * 0.2;
-          
           gl_FragColor = vec4(finalColor, max(alpha, fill));
+        }
+      `
+    },
+
+    spitter_proto: {
+      vertex: `
+        varying float vNoise;
+        uniform float uIntensity;
+        uniform float uSpeed;
+        
+        void main() {
+          vUv = uv;
+          vPos = position;
+          vec3 p = position * 2.0;
+          float time = uTime * uSpeed;
+          float n = snoise(p + vec3(time));
+          vNoise = n;
+          // Displace along normal
+          vec3 newPos = position + (normal * n * uIntensity * 0.5);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        uniform vec3 uColor;
+        
+        void main() {
+          // Normalize noise -1..1 to 0..1
+          float n = vNoise * 0.5 + 0.5;
+          vec3 core = uColor;
+          // Hotter highlights
+          vec3 highlight = mix(core, vec3(1.0, 0.8, 1.0), 0.5);
+          // Darker shadows
+          vec3 shadow = core * 0.2;
+          
+          vec3 finalColor = mix(shadow, core, n);
+          finalColor = mix(finalColor, highlight, smoothstep(0.7, 1.0, n));
+          
+          // Slight rim glow faked by noise
+          gl_FragColor = vec4(finalColor, 1.0);
         }
       `
     }

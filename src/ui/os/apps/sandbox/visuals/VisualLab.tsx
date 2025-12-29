@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useStore, LabExperiment } from '@/engine/state/global/useStore';
-import { Atom, Zap, RefreshCcw } from 'lucide-react';
+import { Atom, Zap, RefreshCcw, Droplets } from 'lucide-react';
 import { RangeSlider } from '@/ui/os/apps/settings/components/RangeSlider';
 import { DOM_ID } from '@/ui/config/DOMConfig';
 
 const EXPERIMENTS: { id: LabExperiment, label: string, icon: any }[] = [
   { id: 'NONE', label: 'STANDBY', icon: Atom },
   { id: 'GLITCH', label: 'GLITCH_GHOST', icon: Zap },
+  { id: 'SPITTER', label: 'SPITTER_PROTO', icon: Droplets },
 ];
 
 export const VisualLab = () => {
@@ -42,6 +43,7 @@ export const VisualLab = () => {
                     ))}
                 </div>
             </div>
+            
             {labExperiment === 'GLITCH' && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">Parameters</div>
@@ -49,6 +51,19 @@ export const VisualLab = () => {
                         label="CORRUPTION" 
                         value={paramA} 
                         max={2.0} 
+                        onChange={setParamA} 
+                        color="text-service-cyan"
+                    />
+                </div>
+            )}
+
+            {labExperiment === 'SPITTER' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="text-[10px] text-service-cyan/60 font-bold uppercase tracking-widest">Parameters</div>
+                    <RangeSlider 
+                        label="DISTORTION" 
+                        value={paramA} 
+                        max={1.0} 
                         onChange={setParamA} 
                         color="text-service-cyan"
                     />

@@ -1,6 +1,7 @@
 import { useStore } from '@/engine/state/global/useStore';
 import { OrbitControls } from '@react-three/drei';
 import { GlitchGhost } from '../experiments/GlitchGhost';
+import { SpitterPrototype } from '../experiments/SpitterPrototype';
 import { useFrame } from '@react-three/fiber';
 import { useState } from 'react';
 import { MaterialFactory } from '@/engine/graphics/MaterialFactory';
@@ -29,6 +30,7 @@ export const LabStage = () => {
         <pointLight position={[-10, -5, -5]} intensity={0.5} color="#FF003C" />
         <group position={[0, 0, 0]}>
             {labExperiment === 'GLITCH' && <GlitchGhost intensity={intensity} />}
+            {labExperiment === 'SPITTER' && <SpitterPrototype intensity={intensity} />}
         </group>
     </>
   );
