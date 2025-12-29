@@ -1,7 +1,7 @@
 import { ConfigService } from '@/engine/services/ConfigService';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
-import { RailgunState, SnifferState } from '@/engine/types/game.types';
+import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
 export interface ShotDef {
   x: number;
@@ -21,16 +21,16 @@ const RETICLE_RADIUS = 1.65;
 const TWIST_OFFSET = -0.55;  
 
 const SNIFFER_TIPS = [
-    Math.PI + TWIST_OFFSET,           // Left
-    0 + TWIST_OFFSET,                 // Right
-    Math.PI * 1.5 + TWIST_OFFSET,     // Bottom
-    Math.PI / 2 + TWIST_OFFSET        // Top
+    Math.PI + TWIST_OFFSET,           
+    0 + TWIST_OFFSET,                 
+    Math.PI * 1.5 + TWIST_OFFSET,     
+    Math.PI / 2 + TWIST_OFFSET        
 ];
 
-export const calculateRailgunShot = (
+export const calculateSpitterShot = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  state: RailgunState
+  state: SpitterState
 ): ShotDef => {
   const config = ConfigService.player;
   const damage = 1 + state.damageLevel;
@@ -51,7 +51,7 @@ export const calculateRailgunShot = (
       vy: Math.sin(angle) * speed,
       damage,
       life,
-      configId: WeaponIDs.PLAYER_RAILGUN,
+      configId: WeaponIDs.PLAYER_SPITTER,
       isHoming: false
   };
 };

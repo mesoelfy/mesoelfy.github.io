@@ -18,7 +18,6 @@ const parseHex = (hex: string) => {
     };
 };
 
-// Helper for standard entities (Player/Enemies)
 const RenderComps = (geo: string, mat: string, colorHex: string, effectData: any = {}) => [
     { type: ComponentType.RenderModel, data: { geometryId: geo, materialId: mat, ...parseHex(colorHex) } },
     { type: ComponentType.RenderTransform, data: { scale: 1.0 } },
@@ -56,7 +55,6 @@ const BLUEPRINTS: Record<string, EntityBlueprint> = {
   }
 };
 
-// Enemies
 Object.values(ENEMIES).forEach(def => {
     const geoId = `GEO_${def.id.toUpperCase()}`;
     const matId = 'MAT_ENEMY_BASE'; 
@@ -91,7 +89,6 @@ Object.values(ENEMIES).forEach(def => {
     };
 });
 
-// WEAPONS (SCRUBBED RENDER EFFECT)
 Object.values(WEAPONS).forEach(def => {
     const geoId = `GEO_${def.id}`;
     const matId = 'MAT_PROJECTILE';
@@ -100,7 +97,6 @@ Object.values(WEAPONS).forEach(def => {
     const mask = isEnemy ? PhysicsConfig.MASKS.ENEMY_PROJECTILE : PhysicsConfig.MASKS.PLAYER_PROJECTILE;
     const radius = isEnemy ? PhysicsConfig.HITBOX.HUNTER_BULLET : PhysicsConfig.HITBOX.BULLET;
 
-    // NOTE: Explicitly NOT adding RenderEffect here.
     const comps: any[] = [
       { type: ComponentType.Transform, data: { scale: 1.0 } },
       { type: ComponentType.Motion, data: { friction: 0 } },
@@ -121,7 +117,7 @@ Object.values(WEAPONS).forEach(def => {
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
 
-if (BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_RAILGUN];
+if (BLUEPRINTS[WeaponIDs.PLAYER_SPITTER]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_SPITTER];
 if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;

@@ -51,17 +51,13 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: ArchetypeID = WeaponIDs.PLAYER_RAILGUN, 
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER, // Updated default
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
     let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_RAILGUN;
+    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_SPITTER;
     if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    
-    // PROJECTILE REFACTOR: 
-    // 1. MotionData is added but friction is 0 (handled via kinematics in WeaponSystem Phase 2)
-    // 2. RenderEffect removed to prevent squash/stretch artifacts
     
     const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
@@ -80,10 +76,6 @@ export class EntitySpawner implements IEntitySpawner {
     }
 
     const entity = this.spawn(id, overrides);
-    
-    // Explicitly remove RenderEffect if blueprint added it, to stop bouncing
-    // (We do this safely by not adding it, but if archetype has it, we might need to strip it)
-    // For now, we assume the new Archetypes for projectiles won't include RenderEffect
     
     return entity;
   }

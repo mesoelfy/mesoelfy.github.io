@@ -6,12 +6,16 @@ import { clsx } from 'clsx';
 import { memo, useCallback } from 'react';
 import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
 
-interface RailgunBadgeProps {
+interface SpitterBadgeProps {
   isPanelDead: boolean;
   onHoverCost: (cost: number | null) => void;
 }
 
-const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, color = "bg-primary-green", text = "text-primary-green" }: any) => (
+const StatRow = ({ 
+    label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, 
+    color = "bg-primary-green", text = "text-primary-green",
+    barMaxWidth = "max-w-[120px]" 
+}: any) => (
     <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
         {/* Left: Injector Button */}
         <UpgradeButton 
@@ -27,7 +31,7 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
         {/* Right: Data Display */}
         <div className="flex-1 flex items-center justify-between px-3 relative">
             {/* Label */}
-            <div className="flex items-center gap-2 z-10">
+            <div className="flex items-center gap-2 z-10 shrink-0">
                 <Icon size={12} className={clsx(text, "opacity-70")} />
                 <span className={clsx("text-[9px] font-mono font-bold tracking-widest", text)}>
                     {label}
@@ -35,7 +39,7 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
             </div>
 
             {/* Diagonal Bar Graph */}
-            <div className="flex gap-1 h-3 ml-4 flex-1 justify-end max-w-[120px]">
+            <div className={clsx("flex gap-1 h-3 ml-4 flex-1 justify-end", barMaxWidth)}>
                 {Array.from({ length: max }).map((_, i) => (
                     <div 
                         key={i} 
@@ -52,9 +56,9 @@ const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, on
     </div>
 );
 
-export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProps) => {
-  const { railgun, upgradePoints, selectUpgrade } = useGameStore(state => ({
-    railgun: state.railgun,
+export const SpitterBadge = memo(({ isPanelDead, onHoverCost }: SpitterBadgeProps) => {
+  const { spitter, upgradePoints, selectUpgrade } = useGameStore(state => ({
+    spitter: state.spitter,
     upgradePoints: state.upgradePoints,
     selectUpgrade: state.selectUpgrade
   }));
@@ -73,7 +77,7 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
         {/* Header */}
         <div className="flex items-center justify-between pl-1 border-l-2 border-primary-green">
             <h3 className="text-sm font-header font-black text-primary-green tracking-widest uppercase ml-2">
-                RAILGUN
+                SPITTER
             </h3>
             <Crosshair size={14} className="text-primary-green opacity-50" />
         </div>
@@ -81,23 +85,24 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
         {/* Stats Grid */}
         <div className="flex flex-col gap-2">
             <StatRow 
-                label="BEAM_WIDTH" 
+                label="GIRTH" 
                 icon={Maximize} 
-                level={railgun.widthLevel} 
+                level={spitter.girthLevel} 
                 max={10} 
-                path="RAILGUN_WIDTH" 
+                path="SPITTER_GIRTH" 
                 canAfford={canAfford} 
                 onUpgrade={handleUpgrade} 
                 onHoverCost={onHoverCost}
+                barMaxWidth="max-w-[200px]"
             />
             
             <div className="grid grid-cols-2 gap-2">
                 <StatRow 
                     label="DAMAGE" 
                     icon={Swords} 
-                    level={railgun.damageLevel} 
+                    level={spitter.damageLevel} 
                     max={3} 
-                    path="RAILGUN_DAMAGE" 
+                    path="SPITTER_DAMAGE" 
                     canAfford={canAfford} 
                     onUpgrade={handleUpgrade} 
                     onHoverCost={onHoverCost}
@@ -105,9 +110,9 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
                 <StatRow 
                     label="RATE" 
                     icon={Zap} 
-                    level={railgun.rateLevel} 
+                    level={spitter.rateLevel} 
                     max={3} 
-                    path="RAILGUN_RATE" 
+                    path="SPITTER_RATE" 
                     canAfford={canAfford} 
                     onUpgrade={handleUpgrade} 
                     onHoverCost={onHoverCost}
@@ -117,4 +122,4 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
     </div>
   );
 });
-RailgunBadge.displayName = 'RailgunBadge';
+SpitterBadge.displayName = 'SpitterBadge';

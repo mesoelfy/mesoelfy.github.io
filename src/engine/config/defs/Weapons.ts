@@ -3,12 +3,11 @@ import { Tag } from '@/engine/ecs/types';
 import { PALETTE } from '@/engine/config/Palette';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 
-// Standard "Dot" size
 const DOT_SCALE: [number, number, number] = [0.4, 0.4, 0.4];
 
 export const WEAPONS: Record<string, WeaponDef> = {
-  [WeaponIDs.PLAYER_RAILGUN]: {
-    id: WeaponIDs.PLAYER_RAILGUN,
+  [WeaponIDs.PLAYER_SPITTER]: {
+    id: WeaponIDs.PLAYER_SPITTER,
     damage: 1, speed: 50, life: 1.5,
     visual: { model: 'SPHERE', color: PALETTE.PURPLE.PRIMARY, scale: DOT_SCALE, material: 'PROJECTILE' },
     behavior: { faceVelocity: false },
@@ -24,7 +23,6 @@ export const WEAPONS: Record<string, WeaponDef> = {
   [WeaponIDs.PLAYER_PURGE]: {
     id: WeaponIDs.PLAYER_PURGE,
     damage: 50, speed: 24, life: 2.4,
-    // Larger dot for the bomb
     visual: { model: 'SPHERE', color: PALETTE.ORANGE.BRIGHT, scale: [0.8, 0.8, 0.8], material: 'PROJECTILE' },
     behavior: { faceVelocity: false },
     tags: [Tag.PROJECTILE, Tag.PLAYER]

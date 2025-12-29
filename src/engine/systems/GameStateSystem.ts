@@ -16,10 +16,7 @@ export class GameStateSystem implements IGameStateSystem {
     private audio: IAudioService
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'DAEMON') {
-            // Keeping for logic check, though UI button removed
-            this.events.emit(GameEvents.SPAWN_DAEMON, null);
-        }
+        // DAEMON logic check if needed
     }));
   }
 
@@ -60,8 +57,8 @@ export class GameStateSystem implements IGameStateSystem {
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
   get upgradePoints() { return this.progSys.upgradePoints; }
   
-  // Direct store access for new granular state
-  get railgun() { return useGameStore.getState().railgun; }
+  // Update Getters
+  get spitter() { return useGameStore.getState().spitter; } 
   get sniffer() { return useGameStore.getState().sniffer; }
 
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }

@@ -7,50 +7,69 @@ export interface RegisteredPanel {
   isDestroyed: boolean;
 }
 
-export interface RailgunState {
-  widthLevel: number; // 0-10
-  damageLevel: number; // 0-3
-  rateLevel: number; // 0-3
+export interface SpitterState { // RENAMED
+  girthLevel: number; // RENAMED from widthLevel
+  damageLevel: number; 
+  rateLevel: number; 
 }
 
 export interface SnifferState {
-  capacityLevel: number; // 0-4
-  damageLevel: number; // 0-3
-  rateLevel: number; // 0-3
+  capacityLevel: number; 
+  damageLevel: number; 
+  rateLevel: number; 
 }
 
-// Replaces the old string-based keys
 export type UpgradePath = 
-  | 'RAILGUN_WIDTH'
-  | 'RAILGUN_DAMAGE'
-  | 'RAILGUN_RATE'
+  | 'SPITTER_GIRTH'   // RENAMED
+  | 'SPITTER_DAMAGE'  // RENAMED
+  | 'SPITTER_RATE'    // RENAMED
   | 'SNIFFER_CAPACITY'
   | 'SNIFFER_DAMAGE'
   | 'SNIFFER_RATE'
-  | 'REPAIR_NANITES' // Kept for logic compatibility if needed, though button removed
   | 'RESTORE'
-  | 'PURGE'
-  | 'DAEMON'; // Kept as deprecated reference or for event compatibility
+  | 'PURGE';
+
+export type UpgradeOption = {
+    id: string;
+    cost: number;
+}
 
 export interface GameState {
   isPlaying: boolean;
   score: number;
-  threatLevel: number;
   panels: Record<string, RegisteredPanel>;
   
+  // Slices
+  highScore: number;
+  upgradePoints: number;
+  spitter: SpitterState; // RENAMED
+  sniffer: SnifferState;
+
   startGame: () => void;
   stopGame: () => void;
+  resetGame: () => void;
+  
+  // Combat Slice
+  isZenMode: boolean;
+  systemIntegrity: number;
+  setPlaying: (isPlaying: boolean) => void;
+  activateZenMode: () => void;
+  setSystemIntegrity: (val: number) => void;
+  resetCombatState: () => void;
+
+  // Progression Slice
+  setScore: (val: number) => void;
+  selectUpgrade: (path: UpgradePath) => void;
+  resetProgressionState: () => void;
+
+  // UI Slice
   registerPanel: (id: PanelId, element: HTMLElement) => void;
   unregisterPanel: (id: PanelId) => void;
-  damagePanel: (id: PanelId, amount: number) => void;
-  healPanel: (id: PanelId, amount: number) => void;
-}
-
-export interface Entity {
-  id: number;
-  x: number;
-  y: number;
-  radius: number;
-  active: boolean;
-  spawnTime: number; 
+  setInteractionTarget: (id: PanelId | null) => void;
+  healPanel: (id: PanelId, amount: number, sourceX?: number) => void;
+  damagePanel: (id: PanelId, amount: number, options?: any) => void;
+  decayPanel: (id: PanelId, amount: number) => void;
+  restoreAllPanels: () => number;
+  destroyAllPanels: () => void;
+  resetUIState: () => void;
 }

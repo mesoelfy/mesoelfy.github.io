@@ -9,9 +9,9 @@ export const EnemyTypes = {
 
 export const WeaponIDs = {
   // --- CORE WEAPONS ---
-  PLAYER_RAILGUN: 'PLAYER_RAILGUN',
+  PLAYER_SPITTER: 'PLAYER_SPITTER', // RENAMED FROM RAILGUN
   PLAYER_SNIFFER: 'PLAYER_SNIFFER',
-  PLAYER_PURGE: 'PLAYER_PURGE', // Zen Bomb
+  PLAYER_PURGE: 'PLAYER_PURGE', 
   
   // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',
@@ -25,7 +25,7 @@ export const ArchetypeIDs = {
   ...EnemyTypes,
   ...WeaponIDs,
 
-  // Legacy/Generic Fallbacks (Mapped in Spawner)
+  // Legacy/Generic Fallbacks
   BULLET_PLAYER: 'BULLET_PLAYER',
   BULLET_ENEMY: 'BULLET_ENEMY',
 } as const;
@@ -34,5 +34,4 @@ export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
 export type WeaponID = typeof WeaponIDs[keyof typeof WeaponIDs];
 export type ArchetypeID = typeof ArchetypeIDs[keyof typeof ArchetypeIDs];
 
-// Direct re-export for cleaner imports
 export const GameEvents = Events;

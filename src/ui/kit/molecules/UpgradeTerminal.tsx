@@ -1,6 +1,6 @@
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RailgunBadge } from './badges/RailgunBadge';
+import { SpitterBadge } from './badges/SpitterBadge';
 import { SnifferBadge } from './badges/SnifferBadge';
 
 interface UpgradeTerminalProps {
@@ -18,7 +18,7 @@ export const UpgradeTerminal = ({ isPanelDead, onHoverCost }: UpgradeTerminalPro
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col gap-4"
         >
-            <RailgunBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
+            <SpitterBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
             <SnifferBadge isPanelDead={isPanelDead} onHoverCost={onHoverCost} />
         </motion.div>
       </AnimatePresence>

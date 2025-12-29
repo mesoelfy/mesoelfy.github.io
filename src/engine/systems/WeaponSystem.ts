@@ -10,7 +10,7 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculateRailgunShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculateSpitterShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
@@ -26,7 +26,7 @@ interface PurgeState {
 }
 
 export class WeaponSystem implements IGameSystem {
-  private lastRailgunTime = 0;
+  private lastSpitterTime = 0; 
   private lastSnifferTime = 0;
   private unsubs: (() => void)[] = [];
   private tempColor = new THREE.Color();
@@ -46,14 +46,13 @@ export class WeaponSystem implements IGameSystem {
   ) {
     this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         if (p.option === 'PURGE') this.triggerPurge();
-        if (p.option === 'NOVA') this.triggerNova(); // New Trigger
+        if (p.option === 'NOVA') this.triggerNova(); 
     }));
   }
 
   update(delta: number, time: number): void {
     this.updateProjectiles(delta, time);
 
-    // If Purge Spiral is active, override standard fire
     if (this.purgeState.active) {
         const player = this.getPlayerEntity();
         if (player) {
@@ -79,12 +78,10 @@ export class WeaponSystem implements IGameSystem {
           const motion = p.getComponent<MotionData>(ComponentType.Motion)!;
           const target = p.getComponent<TargetData>(ComponentType.Target);
 
-          // A. STEERING (Homing Logic)
           if (target && target.type === 'ENEMY') {
               this.handleSteering(p, transform, motion, delta);
           }
 
-          // B. KINEMATIC MOVE (Linear)
           transform.prevX = transform.x;
           transform.prevY = transform.y;
           transform.prevRotation = transform.rotation;
@@ -151,27 +148,33 @@ export class WeaponSystem implements IGameSystem {
     const target = this.acquireTarget(transform);
     if (!target) return;
 
-    const railgunState = useGameStore.getState().railgun;
+    const spitterState = useGameStore.getState().spitter;
     const snifferState = useGameStore.getState().sniffer;
     const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
-    // RAILGUN
-    const railgunInterval = this.getRailgunInterval(railgunState.rateLevel);
-    if (time > this.lastRailgunTime + railgunInterval) {
-        const shot = calculateRailgunShot(
+    // SPITTER
+    const spitterInterval = this.getSpitterInterval(spitterState.rateLevel);
+    if (time > this.lastSpitterTime + spitterInterval) {
+        const shot = calculateSpitterShot(
             { x: transform.x, y: transform.y },
             { x: target.x, y: target.y },
-            railgunState
+            spitterState
         );
+        
+        // --- SCALE CALCULATION ---
+        // Each Girth Level increases size by 50%
+        const girthMult = 1.0 + (spitterState.girthLevel * 0.5);
         
         this.spawner.spawnProjectile(
             shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId
+            Faction.FRIENDLY, shot.life, shot.damage, shot.configId,
+            undefined, 
+            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult } // Override base 0.4
         );
 
         this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
         this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
-        this.lastRailgunTime = time;
+        this.lastSpitterTime = time;
     }
 
     // SNIFFER
@@ -198,7 +201,7 @@ export class WeaponSystem implements IGameSystem {
     }
   }
 
-  private getRailgunInterval(level: number): number {
+  private getSpitterInterval(level: number): number {
       const base = 0.15;
       return base / Math.pow(1.1, level);
   }
@@ -212,7 +215,6 @@ export class WeaponSystem implements IGameSystem {
       return base * 3.0;
   }
 
-  // Phase 1: Spiral
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
       const player = this.getPlayerEntity();
@@ -225,7 +227,6 @@ export class WeaponSystem implements IGameSystem {
       }
   }
 
-  // Phase 2: Concentric Nova (Rainbow Ring)
   private triggerNova() {
       const player = this.getPlayerEntity();
       if (player) {
@@ -247,7 +248,6 @@ export class WeaponSystem implements IGameSystem {
                       { scaleX: 1.5, scaleY: 1.5 }
                   );
 
-                  // PRISMATIC COLORING
                   const hue = i / BURST_COUNT;
                   this.tempColor.setHSL(hue, 1.0, 0.5);
                   
