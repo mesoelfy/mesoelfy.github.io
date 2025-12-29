@@ -39,55 +39,60 @@ export class GameEngineCore implements IGameSystem {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
-    if (store.bootState === 'standby') return;
+    // --- STOP CONDITIONS ---
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // --- 0. SWAP EVENT BUFFERS ---
-    // Safely lock in all UI/Input events that occurred since the last frame.
-    // This prevents race conditions where events added during the loop might be cleared.
-    if (this.fastEventBus) {
-        this.fastEventBus.swap();
-    }
+    // --- PIPELINE WARMING LOGIC ---
+    // If in standby, skip Game Logic/Physics, but run Render Phase (for WarmupSystem)
+    const isWarmingUp = store.bootState === 'standby';
 
-    if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
-        gameStore.stopGame();
-    }
+    if (!isWarmingUp) {
+        // --- 0. SWAP EVENT BUFFERS ---
+        if (this.fastEventBus) {
+            this.fastEventBus.swap();
+        }
 
-    let timeScale = 1.0;
-    if (this.timeSystem) {
-        this.timeSystem.tickRealTime(renderDelta);
-        if (this.timeSystem.isFrozen()) timeScale = 0.0;
-        else timeScale = this.timeSystem.timeScale;
-    }
+        if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
+            gameStore.stopGame();
+        }
 
-    const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
-    this.accumulator += effectiveDelta;
+        let timeScale = 1.0;
+        if (this.timeSystem) {
+            this.timeSystem.tickRealTime(renderDelta);
+            if (this.timeSystem.isFrozen()) timeScale = 0.0;
+            else timeScale = this.timeSystem.timeScale;
+        }
 
-    if (this.accumulator > WorldConfig.time.maxAccumulator) {
-        this.accumulator = WorldConfig.time.maxAccumulator;
-    }
+        const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
+        this.accumulator += effectiveDelta;
 
-    const fixedStep = WorldConfig.time.fixedDelta;
-    
-    // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
-    while (this.accumulator >= fixedStep) {
-        for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
-            const phaseSystems = this.systems[phase];
-            for (let i = 0; i < phaseSystems.length; i++) {
-                try {
-                    phaseSystems[i].update(fixedStep, this.simulationTime);
-                } catch (e: any) {
-                    console.error(`ERR_PHASE_${phase}:`, e);
+        if (this.accumulator > WorldConfig.time.maxAccumulator) {
+            this.accumulator = WorldConfig.time.maxAccumulator;
+        }
+
+        const fixedStep = WorldConfig.time.fixedDelta;
+        
+        // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
+        while (this.accumulator >= fixedStep) {
+            for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
+                const phaseSystems = this.systems[phase];
+                for (let i = 0; i < phaseSystems.length; i++) {
+                    try {
+                        phaseSystems[i].update(fixedStep, this.simulationTime);
+                    } catch (e: any) {
+                        console.error(`ERR_PHASE_${phase}:`, e);
+                    }
                 }
             }
+            this.simulationTime += fixedStep;
+            this.accumulator -= fixedStep;
         }
-        this.simulationTime += fixedStep;
-        this.accumulator -= fixedStep;
     }
     
     // --- 2. RENDER UPDATE LOOP (Variable Timestep) ---
-    const alpha = this.accumulator / fixedStep;
+    // Runs even during Warmup to compile shaders
+    const alpha = isWarmingUp ? 1.0 : (this.accumulator / WorldConfig.time.fixedDelta);
     
     const renderSystems = this.systems[SystemPhase.RENDER];
     for (let i = 0; i < renderSystems.length; i++) {

@@ -41,6 +41,7 @@ import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
+import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
@@ -105,6 +106,7 @@ export class EngineFactory {
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
+    const warmupSystem = new WarmupSystem(); // NEW
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
@@ -153,9 +155,14 @@ export class EngineFactory {
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
+    // RENDER PHASE
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
+    
+    // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
+    register(warmupSystem, SystemPhase.RENDER); // Warmup AFTER RenderSystem to inject dummy data
+    
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');

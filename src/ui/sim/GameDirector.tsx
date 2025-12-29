@@ -7,16 +7,24 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
 
   useEffect(() => {
+    // 1. Boot Engine
     const engine = GameBootstrapper();
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
+    // 2. Pre-Warm Audio (Silent Generation)
+    // We call init() now so buffers generate during the intro.
+    // Audio won't play until user interacts and we call resume().
+    AudioSystem.init();
+
+    // 3. Panel Sync Loop
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
