@@ -200,6 +200,59 @@ export const ShaderLib = {
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
+    },
+
+    glitch: {
+      vertex: `
+        varying float vNoise;
+        uniform float uIntensity;
+        
+        void main() {
+          vBarycentric = barycentric;
+          vUv = uv;
+          vPos = position;
+          
+          // Glitch displacement based on noise and time
+          float n = snoise(vec3(position.x * 2.0, position.y * 2.0, uTime * 5.0));
+          vNoise = n;
+          
+          // Displace vertex along normal based on intensity
+          vec3 pos = position + normal * n * uIntensity * 0.5;
+          
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragment: `
+        varying float vNoise;
+        uniform float uIntensity;
+        uniform float uFrequency;
+        uniform float uSpeed;
+        
+        void main() {
+          // Wireframe edge calculation
+          float width = 1.0 + uIntensity * 2.0;
+          float edge = edgeFactor(vBarycentric, width);
+          float alpha = 1.0 - smoothstep(0.0, 0.1, edge);
+          
+          // Colors
+          vec3 baseColor = vec3(0.0, 1.0, 1.0); // Cyan base
+          vec3 flashColor = vec3(1.0, 1.0, 1.0); // White flash
+          
+          // Glitch scanlines and banding
+          float scan = sin(gl_FragCoord.y * uFrequency * 0.1 + uTime * uSpeed * 10.0);
+          float glitchMix = smoothstep(0.8, 1.0, scan * vNoise);
+          
+          // Discard parts of the mesh to create "digital decay" look
+          if (glitchMix > 0.5) discard;
+          
+          vec3 finalColor = mix(baseColor, flashColor, vNoise * uIntensity);
+          
+          // Base opacity + fill based on intensity
+          float fill = uIntensity * 0.2;
+          
+          gl_FragColor = vec4(finalColor, max(alpha, fill));
+        }
+      `
     }
   }
 };
