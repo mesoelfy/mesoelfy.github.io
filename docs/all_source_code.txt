@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 19:38:48 CST 2025
+Generated on: Sun Dec 28 20:48:45 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -283,6 +283,7 @@ PROJECT DIRECTORY STRUCTURE:
 │   │   │   ├── TargetingSystem.ts
 │   │   │   ├── TimeSystem.ts
 │   │   │   ├── VFXSystem.ts
+│   │   │   ├── WarmupSystem.ts
 │   │   │   ├── WaveSystem.ts
 │   │   │   ├── WeaponSystem.ts
 │   │   │   ├── WorldSystem.ts
@@ -442,7 +443,7 @@ PROJECT DIRECTORY STRUCTURE:
 ├── tailwind.config.ts
 └── tsconfig.json
 
-90 directories, 344 files
+90 directories, 345 files
 
 =====================================
 FILE: ./next.config.js
@@ -813,7 +814,7 @@ FILE: ./public/manifest.json
 =====================================
 FILE: ./public/sw.js
 =====================================
-const CACHE_NAME = 'mesoelfy-os-cache-v1';
+const CACHE_NAME = 'mesoelfy-os-cache-v3';
 
 // Assets to cache immediately
 const PRECACHE_URLS = [
@@ -825,40 +826,58 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Force this SW to become the "waiting" worker immediately
+  self.skipWaiting();
+  
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
+  // Force this SW to become the "active" worker immediately
+  event.waitUntil(self.clients.claim());
+  
   // Clean up old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('// SW: PURGING OLD CACHE', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  self.clients.claim();
 });
 
-// Cache First, Network Fallback Strategy
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests (like YouTube)
   if (!event.request.url.startsWith(self.location.origin)) return;
 
+  // STRATEGY: Network First for HTML
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // STRATEGY: Cache First for Assets
   event.respondWith(
     caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
+      if (response) return response;
       return fetch(event.request).then((networkResponse) => {
-        // Cache new resources dynamically (except heavy media if preferred)
         return caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
@@ -2026,67 +2045,81 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const canAfford = upgradePoints >= OPS_COST;
 
   const handleUpgrade = (e: React.MouseEvent) => {
-      if (!canAfford) return; 
+      if (!canAfford) {
+          AudioSystem.playSound('ui_error');
+          return;
+      } 
       AudioSystem.playClick(getPan(e));
       selectUpgrade(type);
   };
-
-  if (upgradePoints <= 0) return null;
 
   const isPurge = type === 'PURGE';
   const label = isPurge ? 'PURGE' : 'REPAIR';
   const Icon = isPurge ? Bomb : Wrench;
   
-  const borderColor = isPurge ? 'border-critical-red' : 'border-alert-yellow';
+  // Dynamic Styling based on Affordability
+  const borderColor = canAfford 
+    ? (isPurge ? 'border-critical-red' : 'border-alert-yellow') 
+    : 'border-white/10';
   
   const shadowClass = canAfford 
     ? (isPurge ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]")
     : "shadow-none";
     
-  const bgInner = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
-  const textInner = isPurge ? 'text-critical-red' : 'text-alert-yellow';
+  const textInner = canAfford 
+    ? (isPurge ? 'text-critical-red' : 'text-alert-yellow')
+    : 'text-gray-600';
   
-  const groupHoverBg = canAfford ? (isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow') : '';
+  const groupHoverBg = canAfford 
+    ? (isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow') 
+    : '';
+    
   const groupHoverText = canAfford ? 'group-hover/opbtn:text-black' : '';
-  const stripeColor = isPurge ? '#FF003C' : '#eae747';
+  
+  // Only show stripes if active
+  const stripeColor = canAfford ? (isPurge ? '#FF003C' : '#eae747') : 'transparent';
 
   return (
     <button
         onClick={handleUpgrade}
         onMouseEnter={(e) => {
-            if (!isPanelDead && canAfford) {
-                AudioSystem.playHover(getPan(e));
-                onHoverCost(OPS_COST);
+            if (!isPanelDead) {
+                if (canAfford) {
+                    AudioSystem.playHover(getPan(e));
+                    onHoverCost(OPS_COST);
+                }
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
-        disabled={!canAfford}
+        disabled={false} // Always clickable to play error sound
         className={clsx(
-            "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-shadow duration-300 rounded-sm",
+            "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-all duration-300 rounded-sm",
             borderColor,
             shadowClass,
-            !canAfford && "opacity-50 cursor-not-allowed grayscale"
+            !canAfford && "cursor-not-allowed opacity-50 grayscale"
         )}
         title={`${label} (${OPS_COST} PTS)`}
     >
         {/* Hazard Stripes Background */}
-        <div 
-            className="absolute inset-0 opacity-20 pointer-events-none" 
-            style={{ backgroundImage: `repeating-linear-gradient(45deg, ${stripeColor} 0, ${stripeColor} 5px, transparent 5px, transparent 10px)` }} 
-        />
+        {canAfford && (
+            <div 
+                className="absolute inset-0 opacity-20 pointer-events-none" 
+                style={{ backgroundImage: `repeating-linear-gradient(45deg, ${stripeColor} 0, ${stripeColor} 5px, transparent 5px, transparent 10px)` }} 
+            />
+        )}
         
         {/* Inner Box */}
         <div className={clsx(
             "relative w-full h-full border flex flex-col items-center justify-center gap-1 bg-black transition-colors duration-300",
-            isPurge ? "border-critical-red/50" : "border-alert-yellow/50",
+            canAfford ? (isPurge ? "border-critical-red/50" : "border-alert-yellow/50") : "border-white/5",
             textInner,
             groupHoverBg,
             groupHoverText
         )}>
             <motion.div 
-                animate={isPurge 
-                    ? { rotate: [0, -10, 10, 0] } 
-                    : { rotate: [0, -15, 15, 0] }
+                animate={canAfford && !isPanelDead
+                    ? (isPurge ? { rotate: [0, -10, 10, 0] } : { rotate: [0, -15, 15, 0] })
+                    : {}
                 } 
                 transition={{ repeat: Infinity, duration: isPurge ? 0.3 : 2.0, repeatDelay: isPurge ? 2 : 0.5, ease: "easeInOut" }} 
             >
@@ -2306,9 +2339,8 @@ FILE: ./src/ui/kit/molecules/badges/RailgunBadge.tsx
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Zap, Swords, Maximize } from 'lucide-react';
+import { Zap, Swords, Maximize, Crosshair } from 'lucide-react';
 import { clsx } from 'clsx';
-import { PALETTE } from '@/engine/config/Palette';
 import { memo, useCallback } from 'react';
 import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
 
@@ -2316,6 +2348,47 @@ interface RailgunBadgeProps {
   isPanelDead: boolean;
   onHoverCost: (cost: number | null) => void;
 }
+
+const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, color = "bg-primary-green", text = "text-primary-green" }: any) => (
+    <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
+        {/* Left: Injector Button */}
+        <UpgradeButton 
+            path={path}
+            disabled={level >= max}
+            canAfford={canAfford}
+            onUpgrade={onUpgrade}
+            onHoverCost={onHoverCost}
+            colorClass={color}
+            heightClass="h-full"
+        />
+        
+        {/* Right: Data Display */}
+        <div className="flex-1 flex items-center justify-between px-3 relative">
+            {/* Label */}
+            <div className="flex items-center gap-2 z-10">
+                <Icon size={12} className={clsx(text, "opacity-70")} />
+                <span className={clsx("text-[9px] font-mono font-bold tracking-widest", text)}>
+                    {label}
+                </span>
+            </div>
+
+            {/* Diagonal Bar Graph */}
+            <div className="flex gap-1 h-3 ml-4 flex-1 justify-end max-w-[120px]">
+                {Array.from({ length: max }).map((_, i) => (
+                    <div 
+                        key={i} 
+                        className={clsx(
+                            "flex-1 h-full skew-x-[-20deg] transition-all duration-300", 
+                            i < level 
+                                ? clsx(color, "shadow-[0_0_8px_currentColor] opacity-100") 
+                                : "bg-white/10 opacity-30"
+                        )} 
+                    />
+                ))}
+            </div>
+        </div>
+    </div>
+);
 
 export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProps) => {
   const { railgun, upgradePoints, selectUpgrade } = useGameStore(state => ({
@@ -2333,66 +2406,52 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
   const canAfford = upgradePoints > 0;
 
   return (
-    <div className={clsx("p-5 border border-primary-green/30 bg-black/40 relative overflow-hidden transition-all flex flex-col gap-6", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
-        <div className="flex justify-between items-center border-b border-primary-green/20 pb-3">
-            <div>
-                <h3 className="text-xl font-header font-black text-primary-green tracking-widest">RAILGUN</h3>
-                <span className="text-[9px] font-mono text-primary-green-dim block mt-0.5">CLASS: KINETIC_BEAM</span>
-            </div>
+    <div className={clsx("flex flex-col gap-3 transition-all duration-500", isPanelDead ? "opacity-30 grayscale pointer-events-none" : "opacity-100")}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between pl-1 border-l-2 border-primary-green">
+            <h3 className="text-sm font-header font-black text-primary-green tracking-widest uppercase ml-2">
+                RAILGUN
+            </h3>
+            <Crosshair size={14} className="text-primary-green opacity-50" />
         </div>
 
-        <div className="flex flex-col gap-2 w-full">
-            <div className="flex justify-between items-end">
-                <div className="flex items-center gap-1 text-[10px] text-primary-green font-mono tracking-widest font-bold">
-                    <Maximize size={12} /> BEAM_WIDTH
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-mono text-primary-green-dim">{railgun.widthLevel}/10</span>
-                    <UpgradeButton 
-                        path="RAILGUN_WIDTH" 
-                        disabled={railgun.widthLevel >= 10} 
-                        canAfford={canAfford} 
-                        onUpgrade={handleUpgrade} 
-                        onHoverCost={onHoverCost} 
-                    />
-                </div>
-            </div>
-            <div className="flex h-6 gap-0.5 w-full bg-black/60 p-1 border border-primary-green/20">
-                {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className={clsx("flex-1 h-full transition-all duration-300 relative overflow-hidden", i < railgun.widthLevel ? "bg-primary-green shadow-[0_0_5px_#78F654]" : "bg-primary-green/5")} >
-                        {i < railgun.widthLevel && <div className="absolute inset-0 bg-white/20" />}
-                    </div>
-                ))}
+        {/* Stats Grid */}
+        <div className="flex flex-col gap-2">
+            <StatRow 
+                label="BEAM_WIDTH" 
+                icon={Maximize} 
+                level={railgun.widthLevel} 
+                max={10} 
+                path="RAILGUN_WIDTH" 
+                canAfford={canAfford} 
+                onUpgrade={handleUpgrade} 
+                onHoverCost={onHoverCost}
+            />
+            
+            <div className="grid grid-cols-2 gap-2">
+                <StatRow 
+                    label="DAMAGE" 
+                    icon={Swords} 
+                    level={railgun.damageLevel} 
+                    max={3} 
+                    path="RAILGUN_DAMAGE" 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost}
+                />
+                <StatRow 
+                    label="RATE" 
+                    icon={Zap} 
+                    level={railgun.rateLevel} 
+                    max={3} 
+                    path="RAILGUN_RATE" 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost}
+                />
             </div>
         </div>
-        
-        <div className="flex flex-col md:flex-row gap-4 w-full">
-            {[
-                { label: "DAMAGE", level: railgun.damageLevel, max: 3, icon: Swords, path: "RAILGUN_DAMAGE" },
-                { label: "RATE", level: railgun.rateLevel, max: 3, icon: Zap, path: "RAILGUN_RATE" }
-            ].map(stat => (
-                <div key={stat.path} className="flex flex-col gap-2 flex-1 p-3 bg-black/20 border border-primary-green/10">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-1.5 text-[10px] text-primary-green font-mono tracking-widest font-bold">
-                            <stat.icon size={12} /> {stat.label}
-                        </div>
-                        <UpgradeButton 
-                            path={stat.path} 
-                            disabled={stat.level >= stat.max} 
-                            canAfford={canAfford} 
-                            onUpgrade={handleUpgrade} 
-                            onHoverCost={onHoverCost} 
-                        />
-                    </div>
-                    <div className="flex gap-1 h-4 mt-1">
-                        {Array.from({ length: stat.max }).map((_, i) => (
-                            <div key={i} className={clsx("flex-1 h-full skew-x-[-15deg] border transition-colors", i < stat.level ? "bg-primary-green border-primary-green shadow-[0_0_5px_#78F654]" : "bg-transparent border-primary-green/20")} />
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 opacity-5 pointer-events-none" style={{ backgroundImage: `linear-gradient(135deg, transparent 50%, ${PALETTE.GREEN.PRIMARY} 50%)` }} />
     </div>
   );
 });
@@ -2405,7 +2464,7 @@ FILE: ./src/ui/kit/molecules/badges/SnifferBadge.tsx
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Zap, Swords, GitFork } from 'lucide-react';
+import { Zap, Swords, GitFork, Radar } from 'lucide-react';
 import { clsx } from 'clsx';
 import { memo, useCallback } from 'react';
 import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
@@ -2414,6 +2473,41 @@ interface SnifferBadgeProps {
   isPanelDead: boolean;
   onHoverCost: (cost: number | null) => void;
 }
+
+const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, color = "bg-latent-purple", text = "text-latent-purple" }: any) => (
+    <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
+        <UpgradeButton 
+            path={path}
+            disabled={level >= max}
+            canAfford={canAfford}
+            onUpgrade={onUpgrade}
+            onHoverCost={onHoverCost}
+            colorClass={color}
+            heightClass="h-full"
+        />
+        <div className="flex-1 flex items-center justify-between px-3 relative">
+            <div className="flex items-center gap-2 z-10">
+                <Icon size={12} className={clsx(text, "opacity-70")} />
+                <span className={clsx("text-[9px] font-mono font-bold tracking-widest", text)}>
+                    {label}
+                </span>
+            </div>
+            <div className="flex gap-1 h-3 ml-4 flex-1 justify-end max-w-[120px]">
+                {Array.from({ length: max }).map((_, i) => (
+                    <div 
+                        key={i} 
+                        className={clsx(
+                            "flex-1 h-full skew-x-[-20deg] transition-all duration-300", 
+                            i < level 
+                                ? clsx(color, "shadow-[0_0_8px_currentColor] opacity-100") 
+                                : "bg-white/10 opacity-30"
+                        )} 
+                    />
+                ))}
+            </div>
+        </div>
+    </div>
+);
 
 export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProps) => {
   const { sniffer, upgradePoints, selectUpgrade } = useGameStore(state => ({
@@ -2429,75 +2523,78 @@ export const SnifferBadge = memo(({ isPanelDead, onHoverCost }: SnifferBadgeProp
   }, [isPanelDead, upgradePoints, selectUpgrade]);
 
   const canAfford = upgradePoints > 0;
-
-  const slotMapping = [0, 2, 1, 3];
+  
+  const slotMapping = [0, 2, 1, 3]; 
 
   return (
-    <div className={clsx("p-5 border border-latent-purple/30 bg-black/40 relative overflow-hidden transition-all", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
-        <div className="flex justify-between items-center mb-6 border-b border-latent-purple/20 pb-3">
-            <div>
-                <h3 className="text-xl font-header font-black text-latent-purple tracking-widest">SNIFFER</h3>
-                <span className="text-[9px] font-mono text-latent-purple-light block mt-0.5">CLASS: HOMING_SWARM</span>
-            </div>
+    <div className={clsx("flex flex-col gap-3 transition-all duration-500", isPanelDead ? "opacity-30 grayscale pointer-events-none" : "opacity-100")}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between pl-1 border-l-2 border-latent-purple">
+            <h3 className="text-sm font-header font-black text-latent-purple tracking-widest uppercase ml-2">
+                SNIFFER
+            </h3>
+            <Radar size={14} className="text-latent-purple opacity-50" />
         </div>
 
-        <div className="flex flex-row items-stretch gap-6">
-            <div className="shrink-0 flex flex-col items-center gap-4">
-                <div className="relative w-24 h-24 flex items-center justify-center border border-latent-purple/20 rounded-full bg-black/40 shadow-[inset_0_0_20px_rgba(158,78,165,0.1)]">
-                    <div className="absolute inset-3 border border-latent-purple/10 rounded-full" />
+        {/* Capacity Row */}
+        <div className="flex gap-2">
+            <div className="flex-1">
+                <StatRow 
+                    label="CAPACITY" 
+                    icon={GitFork} 
+                    level={sniffer.capacityLevel} 
+                    max={4} 
+                    path="SNIFFER_CAPACITY" 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost}
+                />
+            </div>
+            
+            {/* Radar Visual */}
+            <div className="w-10 h-10 border border-latent-purple/30 bg-black/40 relative rounded-sm flex items-center justify-center shrink-0">
+                <div className="absolute inset-0 opacity-20 bg-latent-purple/10" />
+                <div className="relative w-6 h-6">
                     {slotMapping.map((mappedIndex, visualIndex) => {
                         const isActive = mappedIndex < sniffer.capacityLevel;
                         let posClass = "";
-                        // Visual Positions
-                        if (visualIndex === 0) posClass = "top-0 left-0 -translate-x-1/4 -translate-y-1/4"; // TL
-                        if (visualIndex === 1) posClass = "top-0 right-0 translate-x-1/4 -translate-y-1/4"; // TR
-                        if (visualIndex === 2) posClass = "bottom-0 right-0 translate-x-1/4 translate-y-1/4"; // BR
-                        if (visualIndex === 3) posClass = "bottom-0 left-0 -translate-x-1/4 translate-y-1/4"; // BL
+                        if (visualIndex === 0) posClass = "top-0 left-0"; 
+                        if (visualIndex === 1) posClass = "top-0 right-0"; 
+                        if (visualIndex === 2) posClass = "bottom-0 right-0"; 
+                        if (visualIndex === 3) posClass = "bottom-0 left-0"; 
                         
                         return (
-                            <div key={mappedIndex} className={clsx("absolute w-6 h-6 border-2 transition-all duration-300 rounded-full flex items-center justify-center", posClass, isActive ? "bg-latent-purple border-latent-purple shadow-[0_0_10px_#9E4EA5]" : "bg-black border-latent-purple/30")}>
-                                {isActive && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
-                            </div>
+                            <div key={mappedIndex} className={clsx("absolute w-2 h-2 rounded-full transition-all duration-300", posClass, isActive ? "bg-latent-purple shadow-[0_0_5px_currentColor]" : "bg-white/10")} />
                         );
                     })}
-                    <GitFork className="text-latent-purple opacity-50" size={24} />
+                    <div className="absolute inset-0 m-auto w-1 h-1 bg-white/20 rounded-full" />
                 </div>
-                <UpgradeButton 
-                    path="SNIFFER_CAPACITY" 
-                    disabled={sniffer.capacityLevel >= 4} 
-                    canAfford={canAfford} 
-                    onUpgrade={handleUpgrade} 
-                    onHoverCost={onHoverCost} 
-                    width="w-24"
-                />
             </div>
+        </div>
 
-            <div className="flex-1 flex flex-col justify-center gap-4">
-                {[
-                    { label: "DMG", level: sniffer.damageLevel, max: 3, icon: Swords, path: "SNIFFER_DAMAGE" },
-                    { label: "SPD", level: sniffer.rateLevel, max: 3, icon: Zap, path: "SNIFFER_RATE" }
-                ].map(stat => (
-                    <div key={stat.path} className="flex flex-col gap-2 p-3 bg-black/20 border border-latent-purple/10 w-full">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1.5 text-[10px] text-latent-purple font-mono tracking-widest font-bold">
-                                <stat.icon size={12} /> {stat.label}
-                            </div>
-                            <UpgradeButton 
-                                path={stat.path} 
-                                disabled={stat.level >= stat.max} 
-                                canAfford={canAfford} 
-                                onUpgrade={handleUpgrade} 
-                                onHoverCost={onHoverCost} 
-                            />
-                        </div>
-                        <div className="flex gap-1 h-3 mt-1">
-                            {Array.from({ length: stat.max }).map((_, i) => (
-                                <div key={i} className={clsx("flex-1 h-full rounded-[1px] transition-colors", i < stat.level ? "bg-latent-purple shadow-[0_0_5px_#9E4EA5]" : "bg-latent-purple/10")} />
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-2">
+            <StatRow 
+                label="DAMAGE" 
+                icon={Swords} 
+                level={sniffer.damageLevel} 
+                max={3} 
+                path="SNIFFER_DAMAGE" 
+                canAfford={canAfford} 
+                onUpgrade={handleUpgrade} 
+                onHoverCost={onHoverCost}
+            />
+            <StatRow 
+                label="RATE" 
+                icon={Zap} 
+                level={sniffer.rateLevel} 
+                max={3} 
+                path="SNIFFER_RATE" 
+                canAfford={canAfford} 
+                onUpgrade={handleUpgrade} 
+                onHoverCost={onHoverCost}
+            />
         </div>
     </div>
   );
@@ -2516,9 +2613,62 @@ import { VitalsRing } from '@/ui/kit/atoms/VitalsRing';
 import { UpgradeTerminal } from './UpgradeTerminal';
 import { RepairButton, PurgeButton } from './SystemOps';
 import { IdentityFooter } from './IdentityFooter';
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpCircle } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
+import { PALETTE } from '@/engine/config/Palette';
+
+const PointCounter = ({ value }: { value: number }) => {
+    const count = useMotionValue(value);
+    const rounded = useTransform(count, latest => Math.round(latest).toString().padStart(2, '0'));
+    const [flash, setFlash] = useState<'none'|'up'|'down'>('none');
+    const prev = useRef(value);
+
+    useEffect(() => {
+        if (value !== prev.current) {
+            const dir = value > prev.current ? 'up' : 'down';
+            setFlash(dir);
+            const controls = animate(count, value, { duration: 0.3, ease: "circOut" });
+            const t = setTimeout(() => setFlash('none'), 300);
+            prev.current = value;
+            return () => { controls.stop(); clearTimeout(t); };
+        }
+    }, [value, count]);
+
+    const colors = {
+        none: PALETTE.GREEN.PRIMARY,
+        up: '#7FF65F', 
+        down: PALETTE.RED.CRITICAL
+    };
+
+    return (
+        <motion.span 
+            className="font-header font-black text-2xl tabular-nums block relative z-10" 
+            animate={{ 
+                color: colors[flash],
+                scale: flash !== 'none' ? 1.1 : 1,
+                textShadow: flash === 'up' ? `0 0 10px rgba(127, 246, 95, 0.4)` : (flash === 'down' ? "0 0 15px #FF003C" : "0 0 0px transparent")
+            }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        >
+            {rounded}
+        </motion.span>
+    );
+};
+
+const AnimatedLabel = ({ value }: { value: number }) => {
+    return (
+        <motion.div
+            key={value}
+            initial={{ opacity: 0.5, filter: 'brightness(1)' }}
+            animate={{ opacity: 0.7, filter: 'brightness(1.5)' }}
+            exit={{ opacity: 0.5 }}
+            transition={{ duration: 0.1, yoyo: Infinity }}
+            className="text-[10px] font-mono font-bold tracking-widest text-primary-green-dim"
+        >
+            AVAILABLE_POINTS
+        </motion.div>
+    );
+};
 
 export const IdentityHUD = () => {
   const hp = useStreamValue('PLAYER_HEALTH');
@@ -2542,52 +2692,44 @@ export const IdentityHUD = () => {
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* HEADER: Points Display */}
-      <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
-          <div className="flex items-center gap-2">
-              <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
-              {/* UPDATED: text-xl -> text-sm (approx 20-30% reduction depending on font metric) */}
-              <span className="text-sm font-bold tracking-widest text-white">
-                  AVAILABLE_POINTS
-              </span>
-          </div>
+      {/* HEADER: Points Display (CENTERED) */}
+      <div className="flex-none flex items-center justify-center px-6 h-14 border-b border-primary-green/10 bg-black/20 relative">
           
-          <div className="flex items-center gap-3">
-              <AnimatePresence>
-                  {hoverCost !== null && (
-                      <motion.span 
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 10 }}
-                          className="text-xl font-header font-black text-critical-red drop-shadow-[0_0_5px_rgba(255,0,60,0.5)]"
-                      >
-                          -{hoverCost}
-                      </motion.span>
-                  )}
-              </AnimatePresence>
-              <span className="font-header font-black text-xl text-primary-green">
-                  {upgradePoints.toString().padStart(2, '0')}
-              </span>
+          <div className="flex items-center gap-4 bg-primary-green/5 px-4 py-1.5 rounded-sm border border-primary-green/10 relative overflow-hidden transition-all duration-300 hover:border-primary-green/30">
+              {/* Scanline */}
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(120,246,84,0.05)_50%,transparent_100%)] w-full h-full pointer-events-none" />
+              
+              <AnimatedLabel value={upgradePoints} />
+              
+              <div className="w-px h-4 bg-primary-green/20" />
+
+              {/* Fixed Width Container: w-14 (56px) is enough for "00 -1" without gap */}
+              <div className="flex items-center justify-start w-14">
+                  <PointCounter value={upgradePoints} />
+                  
+                  <AnimatePresence>
+                      {hoverCost !== null && (
+                          <motion.span 
+                              initial={{ opacity: 0, x: -5 }}
+                              animate={{ opacity: 1, x: 4 }}
+                              exit={{ opacity: 0, x: -2 }}
+                              className="text-lg font-header font-black text-critical-red drop-shadow-[0_0_5px_#FF003C]"
+                          >
+                              -{hoverCost}
+                          </motion.span>
+                      )}
+                  </AnimatePresence>
+              </div>
           </div>
       </div>
 
       {/* TOP SECTION: Vitals & Ops */}
       <div className="flex-none flex items-center justify-center gap-8 p-6 pb-2 border-b border-primary-green/10">
-          
-          {/* Left: Repair */}
-          <div className="flex items-center">
-              <RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
-          </div>
-
-          {/* Center: Crystal */}
+          <div className="flex items-center"><RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} /></div>
           <div className="flex items-center justify-center">
               <VitalsRing health={hp} maxHealth={maxHp} xp={xp} xpToNext={nextXp} level={level} isDead={isPlayerDead} rebootProgress={rebootProgress} />
           </div>
-
-          {/* Right: Purge */}
-          <div className="flex items-center">
-              <PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
-          </div>
+          <div className="flex items-center"><PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} /></div>
       </div>
 
       {/* BOTTOM SECTION: Upgrade Badges */}
@@ -2607,46 +2749,86 @@ export const IdentityHUD = () => {
 FILE: ./src/ui/kit/atoms/UpgradeButton.tsx
 =====================================
 import { clsx } from 'clsx';
-import { ArrowUpCircle } from 'lucide-react';
+import { ChevronUp, Lock, Check } from 'lucide-react';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 
 interface Props {
-  path: any; // Using any to avoid circular type deps with game.types easily, or strict if preferred
+  path: any; 
   disabled: boolean;
   canAfford: boolean;
   onUpgrade: (path: any, e: React.MouseEvent) => void;
   onHoverCost: (cost: number | null) => void;
-  width?: string;
+  colorClass?: string; // e.g. "bg-primary-green"
+  heightClass?: string;
 }
 
-export const UpgradeButton = memo(({ path, disabled, canAfford, onUpgrade, onHoverCost, width = "w-24" }: Props) => {
-  const isDisabled = disabled || !canAfford;
+export const UpgradeButton = memo(({ 
+  path, 
+  disabled, 
+  canAfford, 
+  onUpgrade, 
+  onHoverCost, 
+  colorClass = "bg-primary-green",
+  heightClass = "h-12"
+}: Props) => {
+  
+  // Extract just the color name for text classes (e.g. "text-primary-green")
+  const textClass = colorClass.replace('bg-', 'text-');
+  const borderClass = colorClass.replace('bg-', 'border-');
 
   return (
       <button 
           onClick={(e) => {
-              if (!isDisabled) onUpgrade(path, e);
+              if (!disabled && canAfford) onUpgrade(path, e);
+              else if (!canAfford && !disabled) AudioSystem.playSound('ui_error');
           }}
           onMouseEnter={() => {
-              if (!isDisabled) {
+              if (!disabled) {
                   onHoverCost(1);
-                  AudioSystem.playHover();
+                  if (canAfford) AudioSystem.playHover();
               }
           }}
           onMouseLeave={() => onHoverCost(null)}
-          disabled={isDisabled}
+          disabled={disabled}
           className={clsx(
-              "flex items-center justify-center gap-1.5 px-4 h-6 text-[9px] font-bold tracking-widest border transition-all shrink-0",
-              width,
-              isDisabled 
-                  ? "border-gray-800 text-gray-700 bg-transparent cursor-default" 
-                  : "border-primary-green bg-primary-green/10 text-primary-green hover:bg-primary-green hover:text-black cursor-pointer shadow-[0_0_10px_rgba(120,246,84,0.1)]"
+              "group/btn relative w-8 flex flex-col items-center justify-center border-r transition-all duration-300 overflow-hidden shrink-0",
+              heightClass,
+              disabled 
+                  ? "border-white/5 cursor-default bg-white/5" 
+                  : canAfford 
+                      ? clsx("cursor-pointer border-white/10 hover:text-black", `hover:${colorClass}`) 
+                      : "cursor-not-allowed border-critical-red/30 bg-critical-red/5 text-critical-red/50"
           )}
       >
-          {!isDisabled && <ArrowUpCircle size={10} className="mb-0.5" />}
-          <span className="leading-none mt-0.5">{isDisabled ? "MAXED" : "UPGRADE"}</span>
+          {/* Background Slide Effect */}
+          {!disabled && canAfford && (
+              <div className={clsx(
+                  "absolute inset-0 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-200 ease-out",
+                  colorClass
+              )} />
+          )}
+
+          {/* Icon Layer */}
+          <div className="relative z-10">
+              {disabled ? (
+                  <Check size={14} className={textClass} />
+              ) : !canAfford ? (
+                  <Lock size={12} />
+              ) : (
+                  <motion.div
+                      whileHover={{ y: -2 }}
+                      transition={{ repeat: Infinity, duration: 0.5, repeatType: "reverse" }}
+                  >
+                      <ChevronUp size={18} strokeWidth={3} className={clsx("transition-colors duration-200", `group-hover/btn:text-black`, textClass)} />
+                  </motion.div>
+              )}
+          </div>
+
+          {/* Scanline Overlay (Aesthetic) */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none opacity-50" />
       </button>
   );
 });
@@ -3821,23 +4003,37 @@ FILE: ./src/ui/system/PWARegister.tsx
 =====================================
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Registers the Service Worker to enable PWA capabilities.
- * This enables the 'Add to Home Screen' prompt on mobile/desktop.
+ * Registers the Service Worker and handles lifecycle updates.
+ * Forces a page reload when a new Service Worker takes control.
  */
 export const PWARegister = () => {
+  const refreshing = useRef(false);
+
   useEffect(() => {
     if (
       typeof window !== 'undefined' &&
       'serviceWorker' in navigator &&
-      window.location.hostname !== 'localhost' // Optional: skip on localhost to avoid caching issues during dev
+      window.location.hostname !== 'localhost'
     ) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((reg) => console.log('// PWA SERVICE_WORKER: ONLINE', reg.scope))
-        .catch((err) => console.error('// PWA SERVICE_WORKER: FAILED', err));
+      // 1. Register
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        // 2. Force an update check immediately on load
+        reg.update();
+        console.log('// PWA: REGISTERED', reg.scope);
+      });
+
+      // 3. Listen for the "controlling" event (when new SW takes over)
+      // This happens after self.clients.claim() in the SW
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing.current) {
+          refreshing.current = true;
+          console.log('// PWA: CONTROLLER CHANGED - RELOADING...');
+          window.location.reload();
+        }
+      });
     }
   }, []);
 
@@ -10584,16 +10780,24 @@ import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
 
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
 
   useEffect(() => {
+    // 1. Boot Engine
     const engine = GameBootstrapper();
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
+    // 2. Pre-Warm Audio (Silent Generation)
+    // We call init() now so buffers generate during the intro.
+    // Audio won't play until user interacts and we call resume().
+    AudioSystem.init();
+
+    // 3. Panel Sync Loop
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
@@ -17777,6 +17981,85 @@ export class HealthSystem implements IGameSystem {
 
 
 =====================================
+FILE: ./src/engine/systems/WarmupSystem.ts
+=====================================
+import { IGameSystem } from '@/engine/interfaces';
+import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
+import { RENDER_STRIDE, RenderOffset } from '@/engine/graphics/RenderSchema';
+import { ARCHETYPES } from '@/engine/config/Archetypes';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { useStore } from '@/engine/state/global/useStore';
+
+export class WarmupSystem implements IGameSystem {
+  private renderKeys: string[] = [];
+  private isWarmedUp = false;
+
+  constructor() {
+    // 1. Collect all unique RenderKeys from Archetypes
+    const keys = new Set<string>();
+    
+    Object.values(ARCHETYPES).forEach(bp => {
+        const render = bp.components.find(c => c.type === ComponentType.RenderModel);
+        if (render && render.data) {
+            const k = `${render.data.geometryId}|${render.data.materialId}`;
+            keys.add(k);
+        }
+    });
+
+    // Manually add Particles as they don't have an Archetype
+    keys.add('GEO_PARTICLE|MAT_PARTICLE');
+
+    this.renderKeys = Array.from(keys);
+  }
+
+  update(delta: number, time: number): void {
+    const { bootState } = useStore.getState();
+    
+    // Only run during standby (Intro)
+    if (bootState !== 'standby') {
+        this.isWarmedUp = true;
+        return;
+    }
+
+    // Inject 1 dummy instance for every known render group
+    // Positioned far off-screen (y = -9000) so shaders compile but user sees nothing
+    this.renderKeys.forEach(key => {
+        const group = RenderBuffer.getGroup(key);
+        const idx = group.count * RENDER_STRIDE;
+        RenderBuffer.ensureCapacity(group, idx + RENDER_STRIDE);
+        
+        const buf = group.buffer;
+        
+        // Position: Far away
+        buf[idx + RenderOffset.POSITION_X] = 0;
+        buf[idx + RenderOffset.POSITION_Y] = -9000;
+        buf[idx + RenderOffset.POSITION_Z] = 0;
+        
+        // Scale: Microscopic (Safety net)
+        buf[idx + RenderOffset.SCALE_X] = 0.001;
+        buf[idx + RenderOffset.SCALE_Y] = 0.001;
+        buf[idx + RenderOffset.SCALE_Z] = 0.001;
+        
+        // Rotation: Identity
+        buf[idx + RenderOffset.ROTATION_W] = 1;
+        
+        // Color: Black
+        buf[idx + RenderOffset.COLOR_R] = 0;
+        buf[idx + RenderOffset.COLOR_G] = 0;
+        buf[idx + RenderOffset.COLOR_B] = 0;
+        
+        // Spawn Progress: 1 (Fully Visible to shader logic)
+        buf[idx + RenderOffset.SPAWN_PROGRESS] = 1.0;
+
+        group.count++;
+    });
+  }
+
+  teardown(): void {}
+}
+
+
+=====================================
 FILE: ./src/engine/systems/InteractionSystem.ts
 =====================================
 import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
@@ -21614,6 +21897,7 @@ import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
 import { WaveSystem } from '@/engine/systems/WaveSystem';
+import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
@@ -21678,6 +21962,7 @@ export class EngineFactory {
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
+    const warmupSystem = new WarmupSystem(); // NEW
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
@@ -21726,9 +22011,14 @@ export class EngineFactory {
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
+    // RENDER PHASE
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
+    
+    // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
+    register(warmupSystem, SystemPhase.RENDER); // Warmup AFTER RenderSystem to inject dummy data
+    
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');
@@ -21996,55 +22286,60 @@ export class GameEngineCore implements IGameSystem {
     const store = useStore.getState();
     const gameStore = useGameStore.getState();
     
-    if (store.bootState === 'standby') return;
+    // --- STOP CONDITIONS ---
     if (store.activeModal === 'settings' || store.isDebugOpen) return;
     if (store.isSimulationPaused) return;
 
-    // --- 0. SWAP EVENT BUFFERS ---
-    // Safely lock in all UI/Input events that occurred since the last frame.
-    // This prevents race conditions where events added during the loop might be cleared.
-    if (this.fastEventBus) {
-        this.fastEventBus.swap();
-    }
+    // --- PIPELINE WARMING LOGIC ---
+    // If in standby, skip Game Logic/Physics, but run Render Phase (for WarmupSystem)
+    const isWarmingUp = store.bootState === 'standby';
 
-    if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
-        gameStore.stopGame();
-    }
+    if (!isWarmingUp) {
+        // --- 0. SWAP EVENT BUFFERS ---
+        if (this.fastEventBus) {
+            this.fastEventBus.swap();
+        }
 
-    let timeScale = 1.0;
-    if (this.timeSystem) {
-        this.timeSystem.tickRealTime(renderDelta);
-        if (this.timeSystem.isFrozen()) timeScale = 0.0;
-        else timeScale = this.timeSystem.timeScale;
-    }
+        if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
+            gameStore.stopGame();
+        }
 
-    const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
-    this.accumulator += effectiveDelta;
+        let timeScale = 1.0;
+        if (this.timeSystem) {
+            this.timeSystem.tickRealTime(renderDelta);
+            if (this.timeSystem.isFrozen()) timeScale = 0.0;
+            else timeScale = this.timeSystem.timeScale;
+        }
 
-    if (this.accumulator > WorldConfig.time.maxAccumulator) {
-        this.accumulator = WorldConfig.time.maxAccumulator;
-    }
+        const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
+        this.accumulator += effectiveDelta;
 
-    const fixedStep = WorldConfig.time.fixedDelta;
-    
-    // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
-    while (this.accumulator >= fixedStep) {
-        for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
-            const phaseSystems = this.systems[phase];
-            for (let i = 0; i < phaseSystems.length; i++) {
-                try {
-                    phaseSystems[i].update(fixedStep, this.simulationTime);
-                } catch (e: any) {
-                    console.error(`ERR_PHASE_${phase}:`, e);
+        if (this.accumulator > WorldConfig.time.maxAccumulator) {
+            this.accumulator = WorldConfig.time.maxAccumulator;
+        }
+
+        const fixedStep = WorldConfig.time.fixedDelta;
+        
+        // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
+        while (this.accumulator >= fixedStep) {
+            for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
+                const phaseSystems = this.systems[phase];
+                for (let i = 0; i < phaseSystems.length; i++) {
+                    try {
+                        phaseSystems[i].update(fixedStep, this.simulationTime);
+                    } catch (e: any) {
+                        console.error(`ERR_PHASE_${phase}:`, e);
+                    }
                 }
             }
+            this.simulationTime += fixedStep;
+            this.accumulator -= fixedStep;
         }
-        this.simulationTime += fixedStep;
-        this.accumulator -= fixedStep;
     }
     
     // --- 2. RENDER UPDATE LOOP (Variable Timestep) ---
-    const alpha = this.accumulator / fixedStep;
+    // Runs even during Warmup to compile shaders
+    const alpha = isWarmingUp ? 1.0 : (this.accumulator / WorldConfig.time.fixedDelta);
     
     const renderSystems = this.systems[SystemPhase.RENDER];
     for (let i = 0; i < renderSystems.length; i++) {

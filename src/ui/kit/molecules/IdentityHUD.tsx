@@ -9,8 +9,9 @@ import { IdentityFooter } from './IdentityFooter';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'framer-motion';
 import { PALETTE } from '@/engine/config/Palette';
+import { Cpu } from 'lucide-react';
 
-const PointCounter = ({ value }: { value: number }) => {
+const PointCounter = ({ value, isActive }: { value: number, isActive: boolean }) => {
     const count = useMotionValue(value);
     const rounded = useTransform(count, latest => Math.round(latest).toString().padStart(2, '0'));
     const [flash, setFlash] = useState<'none'|'up'|'down'>('none');
@@ -28,14 +29,14 @@ const PointCounter = ({ value }: { value: number }) => {
     }, [value, count]);
 
     const colors = {
-        none: PALETTE.GREEN.PRIMARY,
+        none: isActive ? PALETTE.GREEN.PRIMARY : '#555', // Dim grey when inactive
         up: '#7FF65F', 
         down: PALETTE.RED.CRITICAL
     };
 
     return (
         <motion.span 
-            className="font-header font-black text-2xl tabular-nums block relative z-10" 
+            className="font-header font-black text-xl tabular-nums block relative z-10" 
             animate={{ 
                 color: colors[flash],
                 scale: flash !== 'none' ? 1.1 : 1,
@@ -45,21 +46,6 @@ const PointCounter = ({ value }: { value: number }) => {
         >
             {rounded}
         </motion.span>
-    );
-};
-
-const AnimatedLabel = ({ value }: { value: number }) => {
-    return (
-        <motion.div
-            key={value}
-            initial={{ opacity: 0.5, filter: 'brightness(1)' }}
-            animate={{ opacity: 0.7, filter: 'brightness(1.5)' }}
-            exit={{ opacity: 0.5 }}
-            transition={{ duration: 0.1, yoyo: Infinity }}
-            className="text-[10px] font-mono font-bold tracking-widest text-primary-green-dim"
-        >
-            AVAILABLE_POINTS
-        </motion.div>
     );
 };
 
@@ -76,6 +62,7 @@ export const IdentityHUD = () => {
   const isPlayerDead = hp <= 0;
   
   const upgradePoints = useGameStore(s => s.upgradePoints);
+  const hasPoints = upgradePoints > 0;
   const [hoverCost, setHoverCost] = useState<number | null>(null);
 
   const handleCostHover = useCallback((cost: number | null) => {
@@ -85,34 +72,56 @@ export const IdentityHUD = () => {
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* HEADER: Points Display (CENTERED) */}
-      <div className="flex-none flex items-center justify-center px-6 h-14 border-b border-primary-green/10 bg-black/20 relative">
-          
-          <div className="flex items-center gap-4 bg-primary-green/5 px-4 py-1.5 rounded-sm border border-primary-green/10 relative overflow-hidden transition-all duration-300 hover:border-primary-green/30">
-              {/* Scanline */}
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(120,246,84,0.05)_50%,transparent_100%)] w-full h-full pointer-events-none" />
-              
-              <AnimatedLabel value={upgradePoints} />
-              
-              <div className="w-px h-4 bg-primary-green/20" />
+      {/* HEADER: Points Display (Redesigned to match Badges) */}
+      <div className="flex-none px-6 py-4 border-b border-primary-green/10 bg-black/20">
+          <div className="flex flex-col gap-2 w-full">
+                {/* Badge Header */}
+                <div className={clsx("flex items-center justify-between pl-1 border-l-2 transition-colors duration-300", hasPoints ? "border-primary-green" : "border-white/20")}>
+                    <h3 className={clsx("text-xs font-header font-black tracking-widest uppercase ml-2 transition-colors duration-300", hasPoints ? "text-primary-green" : "text-gray-600")}>
+                        SYSTEM_RESOURCES
+                    </h3>
+                    <Cpu size={14} className={clsx("transition-colors duration-300", hasPoints ? "text-primary-green opacity-50" : "text-gray-700")} />
+                </div>
 
-              {/* Fixed Width Container: w-14 (56px) is enough for "00 -1" without gap */}
-              <div className="flex items-center justify-start w-14">
-                  <PointCounter value={upgradePoints} />
-                  
-                  <AnimatePresence>
-                      {hoverCost !== null && (
-                          <motion.span 
-                              initial={{ opacity: 0, x: -5 }}
-                              animate={{ opacity: 1, x: 4 }}
-                              exit={{ opacity: 0, x: -2 }}
-                              className="text-lg font-header font-black text-critical-red drop-shadow-[0_0_5px_#FF003C]"
-                          >
-                              -{hoverCost}
-                          </motion.span>
-                      )}
-                  </AnimatePresence>
-              </div>
+                {/* Data Row */}
+                <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
+                    {/* Left Indicator */}
+                    <div className={clsx("w-10 h-full flex items-center justify-center border-r border-white/10 transition-colors duration-300", hasPoints ? "bg-primary-green/10" : "bg-white/5")}>
+                        <div className={clsx("w-1.5 h-1.5 transition-all duration-500", hasPoints ? "bg-primary-green shadow-[0_0_5px_#78F654]" : "bg-transparent border border-white/20 rounded-full")} />
+                    </div>
+
+                    {/* Right Content */}
+                    <div className="flex-1 flex items-center justify-between px-3 relative">
+                        <span className={clsx("text-[9px] font-mono font-bold tracking-widest transition-colors duration-300", hasPoints ? "text-primary-green-dim group-hover:text-primary-green" : "text-gray-700")}>
+                            AVAILABLE_PTS
+                        </span>
+                        
+                        <div className="flex items-center gap-3 relative">
+                            {/* Cost Indicator */}
+                            <AnimatePresence>
+                                {hoverCost !== null && hasPoints && (
+                                    <motion.span 
+                                        initial={{ opacity: 0, x: 10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 5 }}
+                                        className="text-lg font-header font-black text-critical-red drop-shadow-[0_0_5px_#FF003C] absolute right-full mr-3"
+                                    >
+                                        -{hoverCost}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+                            
+                            <div className={clsx("transition-all duration-500", hasPoints ? "opacity-100" : "opacity-30")}>
+                                <PointCounter value={upgradePoints} isActive={hasPoints} />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Decorative Diagonal Lines */}
+                    <div className={clsx("absolute right-0 top-0 bottom-0 w-12 flex justify-end pointer-events-none transition-opacity duration-500", hasPoints ? "opacity-10" : "opacity-0")}>
+                         <div className="w-full h-full" style={{ backgroundImage: `repeating-linear-gradient(-45deg, transparent, transparent 2px, ${PALETTE.GREEN.PRIMARY} 2px, ${PALETTE.GREEN.PRIMARY} 3px)` }} />
+                    </div>
+                </div>
           </div>
       </div>
 
