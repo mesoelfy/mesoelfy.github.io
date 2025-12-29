@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Sun Dec 28 19:17:56 CST 2025
+Generated on: Sun Dec 28 19:38:48 CST 2025
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -2017,12 +2017,16 @@ interface OpButtonProps {
   onHoverCost: (cost: number | null) => void;
 }
 
+const OPS_COST = 2;
+
 const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, type: 'RESTORE' | 'PURGE', onHoverCost: (n: number | null) => void }) => {
   const upgradePoints = useGameStore(s => s.upgradePoints);
   const selectUpgrade = useGameStore(s => s.selectUpgrade);
 
+  const canAfford = upgradePoints >= OPS_COST;
+
   const handleUpgrade = (e: React.MouseEvent) => {
-      if (upgradePoints <= 0) return; 
+      if (!canAfford) return; 
       AudioSystem.playClick(getPan(e));
       selectUpgrade(type);
   };
@@ -2034,34 +2038,36 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const Icon = isPurge ? Bomb : Wrench;
   
   const borderColor = isPurge ? 'border-critical-red' : 'border-alert-yellow';
-  // FIX: Using full static class strings for shadows instead of dynamic interpolation
-  const shadowClass = isPurge 
-    ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" 
-    : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]";
+  
+  const shadowClass = canAfford 
+    ? (isPurge ? "shadow-[0_0_20px_#FF003C] hover:shadow-[0_0_40px_#FF003C]" : "shadow-[0_0_20px_#eae747] hover:shadow-[0_0_40px_#eae747]")
+    : "shadow-none";
     
   const bgInner = isPurge ? 'bg-critical-red' : 'bg-alert-yellow';
   const textInner = isPurge ? 'text-critical-red' : 'text-alert-yellow';
   
-  const groupHoverBg = isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow';
-  const groupHoverText = 'group-hover/opbtn:text-black';
+  const groupHoverBg = canAfford ? (isPurge ? 'group-hover/opbtn:bg-critical-red' : 'group-hover/opbtn:bg-alert-yellow') : '';
+  const groupHoverText = canAfford ? 'group-hover/opbtn:text-black' : '';
   const stripeColor = isPurge ? '#FF003C' : '#eae747';
 
   return (
     <button
         onClick={handleUpgrade}
         onMouseEnter={(e) => {
-            if (!isPanelDead) {
+            if (!isPanelDead && canAfford) {
                 AudioSystem.playHover(getPan(e));
-                onHoverCost(1);
+                onHoverCost(OPS_COST);
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
+        disabled={!canAfford}
         className={clsx(
             "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-shadow duration-300 rounded-sm",
             borderColor,
-            shadowClass
+            shadowClass,
+            !canAfford && "opacity-50 cursor-not-allowed grayscale"
         )}
-        title={`${label} (1 PT)`}
+        title={`${label} (${OPS_COST} PTS)`}
     >
         {/* Hazard Stripes Background */}
         <div 
@@ -2540,7 +2546,8 @@ export const IdentityHUD = () => {
       <div className="flex-none flex items-center justify-between px-6 h-10 border-b border-primary-green/10 bg-black/20">
           <div className="flex items-center gap-2">
               <ArrowUpCircle size={14} className={upgradePoints > 0 ? "text-primary-green animate-bounce" : "text-gray-600"} />
-              <span className="text-xl font-bold tracking-widest text-white">
+              {/* UPDATED: text-xl -> text-sm (approx 20-30% reduction depending on font metric) */}
+              <span className="text-sm font-bold tracking-widest text-white">
                   AVAILABLE_POINTS
               </span>
           </div>
@@ -10796,7 +10803,9 @@ export const registerAllAssets = () => {
 
   Object.values(WEAPONS).forEach(def => {
       const key = `GEO_${def.id}`;
-      AssetService.registerGenerator(key, () => sharedProjectileGeo); 
+      // CRITICAL FIX: Return a CLONE so that InstancedActor can attach unique attributes 
+      // (like spawnProgress) to each weapon type without conflicts.
+      AssetService.registerGenerator(key, () => sharedProjectileGeo.clone()); 
   });
 };
 
@@ -12066,14 +12075,6 @@ export const GEOMETRY_IDS = {
   KAMIKAZE: 'GEO_KAMIKAZE',
   HUNTER: 'GEO_HUNTER',
   DAEMON: 'GEO_DAEMON',
-
-  // Projectiles (Now unified or dynamic)
-  // We keep these descriptive keys for reference if needed, but the code uses dynamic IDs
-  SPHERE_RAILGUN: 'GEO_PLAYER_RAILGUN',
-  SPHERE_SNIFFER: 'GEO_PLAYER_SNIFFER',
-  SPHERE_PURGE: 'GEO_PLAYER_PURGE',
-  SPHERE_HUNTER: 'GEO_ENEMY_HUNTER',
-  SPHERE_DAEMON: 'GEO_DAEMON_ORB'
 } as const;
 
 export type GeometryKey = typeof GEOMETRY_IDS[keyof typeof GEOMETRY_IDS];
@@ -12668,7 +12669,6 @@ export type FXVariant =
   | 'EXPLOSION_RED'
   | 'IMPACT_WHITE'
   | 'IMPACT_RED'
-  | 'IMPACT_YELLOW'
   | 'DRILL_SPARKS'
   | 'HUNTER_RECOIL'
   | 'CLASH_YELLOW'
@@ -14107,14 +14107,20 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
   }),
 
   selectUpgrade: (path: UpgradePath) => {
-    // 1 Point = 1 Notch Logic
-    // Validation handled here to ensure we don't overspend or over-level
     const state = get();
-    if (state.upgradePoints <= 0) return;
+    
+    // 1. Determine Cost
+    let cost = 1;
+    if (path === 'RESTORE' || path === 'PURGE') {
+        cost = 2;
+    }
+
+    // 2. Validate Affordability
+    if (state.upgradePoints < cost) return;
 
     let success = false;
 
-    // Apply Logic
+    // 3. Weapon Upgrade Logic
     if (path === 'RAILGUN_WIDTH' && state.railgun.widthLevel < 10) {
         set(s => ({ railgun: { ...s.railgun, widthLevel: s.railgun.widthLevel + 1 } }));
         success = true;
@@ -14140,12 +14146,17 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         success = true;
     }
     
-    if (success) {
-        set(s => ({ upgradePoints: s.upgradePoints - 1 }));
+    // 4. Operations Logic (Always successful if affordable)
+    if (path === 'RESTORE' || path === 'PURGE') {
+        success = true;
     }
-
-    // Always emit for systems (Audio, VFX, One-offs like PURGE/NOVA)
-    GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
+    
+    // 5. Deduct Points & Emit
+    if (success) {
+        set(s => ({ upgradePoints: s.upgradePoints - cost }));
+        // Only emit if state actually changed/operation was valid
+        GameEventBus.emit(GameEvents.UPGRADE_SELECTED, { option: path });
+    }
   },
 
   resetProgressionState: () => set({

@@ -1,9 +1,8 @@
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
-import { Zap, Swords, Maximize } from 'lucide-react';
+import { Zap, Swords, Maximize, Crosshair } from 'lucide-react';
 import { clsx } from 'clsx';
-import { PALETTE } from '@/engine/config/Palette';
 import { memo, useCallback } from 'react';
 import { UpgradeButton } from '@/ui/kit/atoms/UpgradeButton';
 
@@ -11,6 +10,47 @@ interface RailgunBadgeProps {
   isPanelDead: boolean;
   onHoverCost: (cost: number | null) => void;
 }
+
+const StatRow = ({ label, icon: Icon, level, max, path, canAfford, onUpgrade, onHoverCost, color = "bg-primary-green", text = "text-primary-green" }: any) => (
+    <div className="flex h-10 w-full bg-black/40 border border-white/5 relative group overflow-hidden">
+        {/* Left: Injector Button */}
+        <UpgradeButton 
+            path={path}
+            disabled={level >= max}
+            canAfford={canAfford}
+            onUpgrade={onUpgrade}
+            onHoverCost={onHoverCost}
+            colorClass={color}
+            heightClass="h-full"
+        />
+        
+        {/* Right: Data Display */}
+        <div className="flex-1 flex items-center justify-between px-3 relative">
+            {/* Label */}
+            <div className="flex items-center gap-2 z-10">
+                <Icon size={12} className={clsx(text, "opacity-70")} />
+                <span className={clsx("text-[9px] font-mono font-bold tracking-widest", text)}>
+                    {label}
+                </span>
+            </div>
+
+            {/* Diagonal Bar Graph */}
+            <div className="flex gap-1 h-3 ml-4 flex-1 justify-end max-w-[120px]">
+                {Array.from({ length: max }).map((_, i) => (
+                    <div 
+                        key={i} 
+                        className={clsx(
+                            "flex-1 h-full skew-x-[-20deg] transition-all duration-300", 
+                            i < level 
+                                ? clsx(color, "shadow-[0_0_8px_currentColor] opacity-100") 
+                                : "bg-white/10 opacity-30"
+                        )} 
+                    />
+                ))}
+            </div>
+        </div>
+    </div>
+);
 
 export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProps) => {
   const { railgun, upgradePoints, selectUpgrade } = useGameStore(state => ({
@@ -28,66 +68,52 @@ export const RailgunBadge = memo(({ isPanelDead, onHoverCost }: RailgunBadgeProp
   const canAfford = upgradePoints > 0;
 
   return (
-    <div className={clsx("p-5 border border-primary-green/30 bg-black/40 relative overflow-hidden transition-all flex flex-col gap-6", isPanelDead ? "opacity-50 grayscale pointer-events-none" : "")}>
-        <div className="flex justify-between items-center border-b border-primary-green/20 pb-3">
-            <div>
-                <h3 className="text-xl font-header font-black text-primary-green tracking-widest">RAILGUN</h3>
-                <span className="text-[9px] font-mono text-primary-green-dim block mt-0.5">CLASS: KINETIC_BEAM</span>
-            </div>
+    <div className={clsx("flex flex-col gap-3 transition-all duration-500", isPanelDead ? "opacity-30 grayscale pointer-events-none" : "opacity-100")}>
+        
+        {/* Header */}
+        <div className="flex items-center justify-between pl-1 border-l-2 border-primary-green">
+            <h3 className="text-sm font-header font-black text-primary-green tracking-widest uppercase ml-2">
+                RAILGUN_ARRAY
+            </h3>
+            <Crosshair size={14} className="text-primary-green opacity-50" />
         </div>
 
-        <div className="flex flex-col gap-2 w-full">
-            <div className="flex justify-between items-end">
-                <div className="flex items-center gap-1 text-[10px] text-primary-green font-mono tracking-widest font-bold">
-                    <Maximize size={12} /> BEAM_WIDTH
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-[9px] font-mono text-primary-green-dim">{railgun.widthLevel}/10</span>
-                    <UpgradeButton 
-                        path="RAILGUN_WIDTH" 
-                        disabled={railgun.widthLevel >= 10} 
-                        canAfford={canAfford} 
-                        onUpgrade={handleUpgrade} 
-                        onHoverCost={onHoverCost} 
-                    />
-                </div>
-            </div>
-            <div className="flex h-6 gap-0.5 w-full bg-black/60 p-1 border border-primary-green/20">
-                {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className={clsx("flex-1 h-full transition-all duration-300 relative overflow-hidden", i < railgun.widthLevel ? "bg-primary-green shadow-[0_0_5px_#78F654]" : "bg-primary-green/5")} >
-                        {i < railgun.widthLevel && <div className="absolute inset-0 bg-white/20" />}
-                    </div>
-                ))}
+        {/* Stats Grid */}
+        <div className="flex flex-col gap-2">
+            <StatRow 
+                label="BEAM_WIDTH" 
+                icon={Maximize} 
+                level={railgun.widthLevel} 
+                max={10} 
+                path="RAILGUN_WIDTH" 
+                canAfford={canAfford} 
+                onUpgrade={handleUpgrade} 
+                onHoverCost={onHoverCost}
+            />
+            
+            <div className="grid grid-cols-2 gap-2">
+                <StatRow 
+                    label="DAMAGE" 
+                    icon={Swords} 
+                    level={railgun.damageLevel} 
+                    max={3} 
+                    path="RAILGUN_DAMAGE" 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost}
+                />
+                <StatRow 
+                    label="RATE" 
+                    icon={Zap} 
+                    level={railgun.rateLevel} 
+                    max={3} 
+                    path="RAILGUN_RATE" 
+                    canAfford={canAfford} 
+                    onUpgrade={handleUpgrade} 
+                    onHoverCost={onHoverCost}
+                />
             </div>
         </div>
-        
-        <div className="flex flex-col md:flex-row gap-4 w-full">
-            {[
-                { label: "DAMAGE", level: railgun.damageLevel, max: 3, icon: Swords, path: "RAILGUN_DAMAGE" },
-                { label: "RATE", level: railgun.rateLevel, max: 3, icon: Zap, path: "RAILGUN_RATE" }
-            ].map(stat => (
-                <div key={stat.path} className="flex flex-col gap-2 flex-1 p-3 bg-black/20 border border-primary-green/10">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-1.5 text-[10px] text-primary-green font-mono tracking-widest font-bold">
-                            <stat.icon size={12} /> {stat.label}
-                        </div>
-                        <UpgradeButton 
-                            path={stat.path} 
-                            disabled={stat.level >= stat.max} 
-                            canAfford={canAfford} 
-                            onUpgrade={handleUpgrade} 
-                            onHoverCost={onHoverCost} 
-                        />
-                    </div>
-                    <div className="flex gap-1 h-4 mt-1">
-                        {Array.from({ length: stat.max }).map((_, i) => (
-                            <div key={i} className={clsx("flex-1 h-full skew-x-[-15deg] border transition-colors", i < stat.level ? "bg-primary-green border-primary-green shadow-[0_0_5px_#78F654]" : "bg-transparent border-primary-green/20")} />
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-        <div className="absolute top-0 right-0 w-24 h-24 opacity-5 pointer-events-none" style={{ backgroundImage: `linear-gradient(135deg, transparent 50%, ${PALETTE.GREEN.PRIMARY} 50%)` }} />
     </div>
   );
 });

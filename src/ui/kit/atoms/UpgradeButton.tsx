@@ -1,44 +1,84 @@
 import { clsx } from 'clsx';
-import { ArrowUpCircle } from 'lucide-react';
+import { ChevronUp, Lock, Check } from 'lucide-react';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { getPan } from '@/engine/audio/AudioUtils';
 import { memo } from 'react';
+import { motion } from 'framer-motion';
 
 interface Props {
-  path: any; // Using any to avoid circular type deps with game.types easily, or strict if preferred
+  path: any; 
   disabled: boolean;
   canAfford: boolean;
   onUpgrade: (path: any, e: React.MouseEvent) => void;
   onHoverCost: (cost: number | null) => void;
-  width?: string;
+  colorClass?: string; // e.g. "bg-primary-green"
+  heightClass?: string;
 }
 
-export const UpgradeButton = memo(({ path, disabled, canAfford, onUpgrade, onHoverCost, width = "w-24" }: Props) => {
-  const isDisabled = disabled || !canAfford;
+export const UpgradeButton = memo(({ 
+  path, 
+  disabled, 
+  canAfford, 
+  onUpgrade, 
+  onHoverCost, 
+  colorClass = "bg-primary-green",
+  heightClass = "h-12"
+}: Props) => {
+  
+  // Extract just the color name for text classes (e.g. "text-primary-green")
+  const textClass = colorClass.replace('bg-', 'text-');
+  const borderClass = colorClass.replace('bg-', 'border-');
 
   return (
       <button 
           onClick={(e) => {
-              if (!isDisabled) onUpgrade(path, e);
+              if (!disabled && canAfford) onUpgrade(path, e);
+              else if (!canAfford && !disabled) AudioSystem.playSound('ui_error');
           }}
           onMouseEnter={() => {
-              if (!isDisabled) {
+              if (!disabled) {
                   onHoverCost(1);
-                  AudioSystem.playHover();
+                  if (canAfford) AudioSystem.playHover();
               }
           }}
           onMouseLeave={() => onHoverCost(null)}
-          disabled={isDisabled}
+          disabled={disabled}
           className={clsx(
-              "flex items-center justify-center gap-1.5 px-4 h-6 text-[9px] font-bold tracking-widest border transition-all shrink-0",
-              width,
-              isDisabled 
-                  ? "border-gray-800 text-gray-700 bg-transparent cursor-default" 
-                  : "border-primary-green bg-primary-green/10 text-primary-green hover:bg-primary-green hover:text-black cursor-pointer shadow-[0_0_10px_rgba(120,246,84,0.1)]"
+              "group/btn relative w-8 flex flex-col items-center justify-center border-r transition-all duration-300 overflow-hidden shrink-0",
+              heightClass,
+              disabled 
+                  ? "border-white/5 cursor-default bg-white/5" 
+                  : canAfford 
+                      ? clsx("cursor-pointer border-white/10 hover:text-black", `hover:${colorClass}`) 
+                      : "cursor-not-allowed border-critical-red/30 bg-critical-red/5 text-critical-red/50"
           )}
       >
-          {!isDisabled && <ArrowUpCircle size={10} className="mb-0.5" />}
-          <span className="leading-none mt-0.5">{isDisabled ? "MAXED" : "UPGRADE"}</span>
+          {/* Background Slide Effect */}
+          {!disabled && canAfford && (
+              <div className={clsx(
+                  "absolute inset-0 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-200 ease-out",
+                  colorClass
+              )} />
+          )}
+
+          {/* Icon Layer */}
+          <div className="relative z-10">
+              {disabled ? (
+                  <Check size={14} className={textClass} />
+              ) : !canAfford ? (
+                  <Lock size={12} />
+              ) : (
+                  <motion.div
+                      whileHover={{ y: -2 }}
+                      transition={{ repeat: Infinity, duration: 0.5, repeatType: "reverse" }}
+                  >
+                      <ChevronUp size={18} strokeWidth={3} className={clsx("transition-colors duration-200", `group-hover/btn:text-black`, textClass)} />
+                  </motion.div>
+              )}
+          </div>
+
+          {/* Scanline Overlay (Aesthetic) */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0)_50%,rgba(0,0,0,0.2)_50%)] bg-[length:100%_4px] pointer-events-none opacity-50" />
       </button>
   );
 });
