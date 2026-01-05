@@ -26,7 +26,10 @@ interface AudioSettings {
 }
 
 const DEFAULT_AUDIO: AudioSettings = {
-  master: true, music: false, sfx: true, ambience: true,
+  master: true, 
+  music: true, // ENABLED BY DEFAULT
+  sfx: true, 
+  ambience: true,
   volumeMaster: 1.0, 
   volumeMusic: 0.75,
   volumeSfx: 1.0, 
@@ -59,7 +62,7 @@ interface AppState {
   isSimulationPaused: boolean;
   sandboxView: SandboxView;
   labExperiment: LabExperiment;
-  labDetail: number; // NEW
+  labDetail: number; 
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
   audioSettings: AudioSettings;
@@ -73,7 +76,7 @@ interface AppState {
   startBreach: () => void;
   setSandboxView: (view: SandboxView) => void;
   setLabExperiment: (exp: LabExperiment) => void;
-  setLabDetail: (val: number) => void; // NEW
+  setLabDetail: (val: number) => void;
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
   openModal: (modal: ModalType) => void;
@@ -107,7 +110,7 @@ export const useStore = create<AppState>()(
       isSimulationPaused: false,
       sandboxView: 'lab',
       labExperiment: 'NONE',
-      labDetail: 1, // Default Low Poly
+      labDetail: 1, 
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
       audioSettings: { ...DEFAULT_AUDIO },
