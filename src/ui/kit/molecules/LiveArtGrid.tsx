@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import { useStore } from '@/engine/state/global/useStore';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
@@ -11,12 +11,79 @@ import galleryRaw from '@/engine/config/static/gallery.json';
 const GRID_SIZE = 12; // 3 Cols * 4 Rows
 
 // THE THREE SPEED TIERS (Milliseconds)
-// 4s, 5s, 6s ranges with slight variance to prevent robotic synchronization
 const SPEEDS = [
     { min: 4000, max: 4500 }, 
     { min: 5000, max: 5500 }, 
     { min: 6000, max: 6500 }
 ];
+
+// --- SUB-COMPONENT: STATIC GRID CELL ---
+// This container stays in the DOM permanently to hold the grid structure.
+// The content inside swaps out via absolute positioning.
+const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: boolean, onClick: (id: string, e: React.MouseEvent) => void }) => {
+    // We use the item's uniqueId as the key for AnimatePresence to know when to swap
+    const key = item ? item.uniqueId : 'empty';
+
+    // Randomized fade durations for organic feel (slightly slower now for smoothness)
+    // Range: 1.2s to 1.8s
+    const seed = item ? (item.uniqueId.charCodeAt(0) + item.uniqueId.charCodeAt(item.uniqueId.length - 1)) : 0;
+    const duration = 1.2 + (seed % 6) * 0.1;
+
+    return (
+        <div className="relative w-full aspect-square bg-black/20 border-transparent overflow-hidden rounded-[1px]">
+            <AnimatePresence mode="popLayout" initial={false}>
+                {item ? (
+                    <motion.button
+                        key={key}
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }} 
+                        transition={{ duration: duration, ease: "easeInOut" }} // Smoother ease
+                        onClick={(e) => onClick(item.uniqueId, e)}
+                        onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
+                        // ABSOLUTE POSITIONING IS CRITICAL HERE
+                        // It ensures the entering image sits exactly on top of the exiting one
+                        className={clsx(
+                            "absolute inset-0 w-full h-full group/tile border flex items-center justify-center transition-colors bg-black",
+                            isDestroyed 
+                                ? "border-critical-red/20 cursor-default" 
+                                : "border-primary-green-dim/30 hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.2)] cursor-pointer"
+                        )}
+                    >
+                        <div className={clsx("absolute inset-0 transition-colors z-0", isDestroyed ? "bg-critical-red/5" : "bg-primary-green/5 group-hover/tile:bg-primary-green/10")} />
+                        
+                        {!isDestroyed && (
+                            <img 
+                                src={item.thumb} 
+                                alt={item.title}
+                                className="relative z-10 w-[95%] h-[95%] object-contain pointer-events-none drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] scale-110 group-hover/tile:scale-100 opacity-90 group-hover/tile:opacity-100 transition-all duration-300 ease-out"
+                                loading="lazy"
+                            />
+                        )}
+
+                        <div className="absolute top-0 left-0 z-20">
+                            <div className={clsx("text-[8px] font-mono leading-none px-1.5 py-1 backdrop-blur-[2px] border-b border-r border-transparent transition-colors", isDestroyed ? "bg-critical-red/20 text-critical-red animate-pulse" : "bg-black/60 text-primary-green-dim group-hover/tile:text-alert-yellow")}>
+                                {isDestroyed ? "ERR" : item.id}
+                            </div>
+                        </div>
+
+                        {!isDestroyed && <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-primary-green-dim/50 group-hover/tile:border-alert-yellow z-20" />}
+                    </motion.button>
+                ) : (
+                    <motion.div 
+                        key="empty"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 w-full h-full bg-black/20"
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+});
+
+ArtCell.displayName = "ArtCell";
 
 export const LiveArtGrid = () => {
   const { openModal, setSelectedArtId } = useStore();
@@ -27,9 +94,7 @@ export const LiveArtGrid = () => {
   
   // -- STATE REFS --
   const deckRef = useRef<any[]>([]);
-  // Use a ref to track currently displayed items synchronously to prevent duplicates
-  // during batch updates or reshuffles within a single tick.
-  const displayItemsRef = useRef<any[]>([]);
+  const displayItemsRef = useRef<any[]>([]); // Synchronous tracking
   const nextUpdateTimesRef = useRef<number[]>([]);
 
   // Helper: Shuffle
@@ -70,15 +135,12 @@ export const LiveArtGrid = () => {
       const tick = setInterval(() => {
           const now = Date.now();
           const updates: { index: number, newItem: any }[] = [];
-          
-          // Work with the synchronous ref to ensure uniqueness during this tick
           const currentGrid = displayItemsRef.current;
 
           for (let i = 0; i < GRID_SIZE; i++) {
               if (now >= nextUpdateTimesRef.current[i]) {
                   
                   if (deckRef.current.length === 0) {
-                      // Filter against what is CURRENTLY in the grid (including items just swapped in this loop)
                       const activeIds = new Set(currentGrid.map(item => item?.uniqueId).filter(Boolean));
                       const newDeck = galleryRaw.filter(item => !activeIds.has(item.uniqueId));
                       deckRef.current = shuffle(newDeck);
@@ -87,9 +149,7 @@ export const LiveArtGrid = () => {
                   const nextCard = deckRef.current.pop();
                   
                   if (nextCard) {
-                      // Update ref immediately so next iteration sees it
                       currentGrid[i] = nextCard;
-                      
                       updates.push({ index: i, newItem: nextCard });
                       nextUpdateTimesRef.current[i] = getNextTime();
                   }
@@ -97,7 +157,6 @@ export const LiveArtGrid = () => {
           }
 
           if (updates.length > 0) {
-              // Push final state to React
               setDisplayItems([...currentGrid]);
           }
 
@@ -115,54 +174,15 @@ export const LiveArtGrid = () => {
 
   return (
     <div className={clsx("grid grid-cols-3 gap-1 w-full p-2 content-start transition-opacity duration-500", isDestroyed ? "pointer-events-none opacity-50 grayscale" : "")}>
-      <AnimatePresence mode='popLayout'>
-        {displayItems.map((item, index) => {
-            if (!item) return <div key={`empty-${index}`} className="w-full aspect-square bg-black/20" />;
-            const isCorrupt = isDestroyed;
-            
-            // Key must be uniqueId to prevent React reconciliation errors
-            const key = `${item.uniqueId}`; 
-            
-            // Randomized fade durations for organic feel
-            const seed = item.uniqueId.charCodeAt(0) + item.uniqueId.charCodeAt(item.uniqueId.length - 1);
-            const duration = 0.8 + (seed % 8) * 0.1;
-
-            return (
-              <motion.button
-                key={key}
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                exit={{ opacity: 0 }} 
-                transition={{ duration: duration, ease: "circOut" }}
-                onClick={(e) => handleClick(item.uniqueId, e)}
-                onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
-                className={clsx(
-                    "group/tile w-full aspect-square relative border overflow-hidden flex items-center justify-center rounded-[1px] transition-colors bg-black",
-                    isCorrupt ? "border-critical-red/20" : "border-primary-green-dim/30 hover:border-alert-yellow hover:shadow-[0_0_15px_rgba(234,231,71,0.2)]"
-                )}
-              >
-                <div className={clsx("absolute inset-0 transition-colors z-0", isCorrupt ? "bg-critical-red/5" : "bg-primary-green/5 group-hover/tile:bg-primary-green/10")} />
-                
-                {!isCorrupt && (
-                    <img 
-                        src={item.thumb} 
-                        alt={item.title}
-                        className="relative z-10 w-[95%] h-[95%] object-contain pointer-events-none drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] scale-110 group-hover/tile:scale-100 opacity-90 group-hover/tile:opacity-100 transition-all duration-300 ease-out"
-                        loading="lazy"
-                    />
-                )}
-
-                <div className="absolute top-0 left-0 z-20">
-                    <div className={clsx("text-[8px] font-mono leading-none px-1.5 py-1 backdrop-blur-[2px] border-b border-r border-transparent transition-colors", isCorrupt ? "bg-critical-red/20 text-critical-red animate-pulse" : "bg-black/60 text-primary-green-dim group-hover/tile:text-alert-yellow")}>
-                        {isCorrupt ? "ERR" : item.id}
-                    </div>
-                </div>
-
-                {!isCorrupt && <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-primary-green-dim/50 group-hover/tile:border-alert-yellow z-20" />}
-              </motion.button>
-            );
-        })}
-      </AnimatePresence>
+        {/* We map indices 0-11 to create permanent slots */}
+        {Array.from({ length: GRID_SIZE }).map((_, i) => (
+            <ArtCell 
+                key={i} 
+                item={displayItems[i]} 
+                isDestroyed={isDestroyed} 
+                onClick={handleClick} 
+            />
+        ))}
     </div>
   );
 };
