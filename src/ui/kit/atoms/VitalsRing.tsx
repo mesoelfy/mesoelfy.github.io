@@ -14,9 +14,7 @@ interface VitalsRingProps {
 }
 
 export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps) => {
-  // NEW: Hook replaces manual ref
   const containerRef = useInteractionZone('crystal');
-  
   const levelRef = useRef<SVGTSpanElement>(null);
   
   const [deadState, setDeadState] = useState(isDead);
@@ -27,7 +25,6 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   const xpRef = useRef(0);
   const xpMaxRef = useRef(100);
 
-  // --- HEALTH LOGIC ---
   const updateHPUI = () => {
     if (!containerRef.current) return;
     const ratio = Math.max(0, Math.min(1, hpRef.current / maxHpRef.current));
@@ -40,47 +37,24 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
     containerRef.current.style.setProperty('--hp-color', color);
   };
 
-  // --- XP LOGIC (Now Local) ---
   const updateXPUI = () => {
     if (!containerRef.current) return;
     const ratio = xpMaxRef.current > 0 ? (xpRef.current / xpMaxRef.current) : 0;
-    // Clamp to 0-1 for display
     const safeRatio = Math.max(0, Math.min(1, ratio));
     containerRef.current.style.setProperty('--xp-progress', safeRatio.toString());
   };
 
-  // --- STREAMS ---
-  useGameStream('PLAYER_MAX_HEALTH', (val) => {
-    maxHpRef.current = val;
-    updateHPUI();
-  });
-
+  useGameStream('PLAYER_MAX_HEALTH', (val) => { maxHpRef.current = val; updateHPUI(); });
   useGameStream('PLAYER_HEALTH', (hp) => {
       hpRef.current = hp;
       if (hp <= 0 && !deadState) setDeadState(true);
       if (hp > 0 && deadState) setDeadState(false);
       updateHPUI();
   });
-
-  useGameStream('XP_NEXT', (v) => { 
-      xpMaxRef.current = v;
-      updateXPUI(); 
-  });
-  
-  useGameStream('XP', (v) => {
-      xpRef.current = v;
-      updateXPUI();
-  });
-
-  useGameStream('LEVEL', (lvl) => {
-      if (levelRef.current) {
-          levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`;
-      }
-  });
-
-  useGameStream('PLAYER_REBOOT', (val) => {
-      setRebootState(val);
-  });
+  useGameStream('XP_NEXT', (v) => { xpMaxRef.current = v; updateXPUI(); });
+  useGameStream('XP', (v) => { xpRef.current = v; updateXPUI(); });
+  useGameStream('LEVEL', (lvl) => { if (levelRef.current) levelRef.current.textContent = `LVL_${lvl.toString().padStart(2, '0')}`; });
+  useGameStream('PLAYER_REBOOT', (val) => { setRebootState(val); });
 
   const size = UI_METRICS.VITALS.SIZE; 
   const center = size / 2;
@@ -93,7 +67,10 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
   return (
     <div 
         ref={containerRef}
-        className="relative w-40 h-40 shrink-0 group mb-1"
+        // HYBRID SCALING:
+        // 1. Base: w-40 h-40 (Original Huge Size)
+        // 2. Safety: max-w-[48%] (Shrinks proportionally if container is tiny)
+        className="relative w-40 h-auto aspect-square max-w-[48%] shrink-0 group mb-1"
         style={{
             '--hp-max': circHp,
             '--xp-max': circXp,
@@ -111,7 +88,7 @@ export const VitalsRing = ({ health, maxHealth, isDead, level }: VitalsRingProps
                 {rebootState > 0 ? (
                     <div className="flex flex-col items-center">
                         <span className="text-2xl font-header font-black text-alert-yellow drop-shadow-md animate-pulse">{Math.floor(rebootState)}%</span>
-                        <span className="text-[8px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
+                        <span className="text-[10px] text-alert-yellow font-mono tracking-widest bg-black/80 px-2 mt-1">REBOOTING</span>
                     </div>
                 ) : (
                     <div className="animate-pulse flex flex-col items-center">

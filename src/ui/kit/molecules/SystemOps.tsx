@@ -65,16 +65,19 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
-        disabled={false} // Always clickable to play error sound
+        disabled={false}
         className={clsx(
-            "group/opbtn relative w-24 h-24 p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-all duration-300 rounded-sm",
+            "group/opbtn relative p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-all duration-300 rounded-sm shrink-0",
+            // HYBRID SCALING: 
+            // 1. Base: w-24 h-24 (Original Size)
+            // 2. Safety: max-w-[22%] (Shrinks only if container is tiny)
+            "w-24 h-auto aspect-square max-w-[22%]", 
             borderColor,
             shadowClass,
             !canAfford && "cursor-not-allowed opacity-50 grayscale"
         )}
         title={`${label} (${OPS_COST} PTS)`}
     >
-        {/* Hazard Stripes Background */}
         {canAfford && (
             <div 
                 className="absolute inset-0 opacity-20 pointer-events-none" 
@@ -82,7 +85,6 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
             />
         )}
         
-        {/* Inner Box */}
         <div className={clsx(
             "relative w-full h-full border flex flex-col items-center justify-center gap-1 bg-black transition-colors duration-300",
             canAfford ? (isPurge ? "border-critical-red/50" : "border-alert-yellow/50") : "border-white/5",
@@ -97,11 +99,13 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
                 } 
                 transition={{ repeat: Infinity, duration: isPurge ? 0.3 : 2.0, repeatDelay: isPurge ? 2 : 0.5, ease: "easeInOut" }} 
             >
-                <Icon size={32} strokeWidth={2} />
+                {/* Icon size also set to resize with em/percent if container shrinks, but defaults to nice size */}
+                <Icon className="w-8 h-8" strokeWidth={2} />
             </motion.div>
             
-            <div className="flex flex-col leading-none items-center">
-                <span className="text-[10px] font-bold font-header tracking-wider">
+            <div className="flex flex-col leading-none items-center w-full">
+                {/* Font scales down on crash */}
+                <span className="text-[10px] font-bold font-header tracking-wider truncate max-w-full text-center">
                     {label}
                 </span>
             </div>

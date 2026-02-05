@@ -72,7 +72,7 @@ export const IdentityHUD = () => {
   return (
     <div className={clsx("flex flex-col h-full w-full relative overflow-hidden", isPanelDead ? 'grayscale opacity-50 pointer-events-none' : '')}>
       
-      {/* HEADER: Points Display (Redesigned to match Badges) */}
+      {/* HEADER: Points Display */}
       <div className="flex-none px-6 py-4 border-b border-primary-green/10 bg-black/20">
           <div className="flex flex-col gap-2 w-full">
                 {/* Badge Header */}
@@ -126,12 +126,11 @@ export const IdentityHUD = () => {
       </div>
 
       {/* TOP SECTION: Vitals & Ops */}
-      <div className="flex-none flex items-center justify-center gap-8 p-6 pb-2 border-b border-primary-green/10">
-          <div className="flex items-center"><RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} /></div>
-          <div className="flex items-center justify-center">
-              <VitalsRing health={hp} maxHealth={maxHp} xp={xp} xpToNext={nextXp} level={level} isDead={isPlayerDead} rebootProgress={rebootProgress} />
-          </div>
-          <div className="flex items-center"><PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} /></div>
+      {/* RESTORED: justify-center and gap-8 for original layout feel, adapting only when space runs out */}
+      <div className="flex-none flex items-center justify-center gap-2 md:gap-8 px-4 md:px-6 py-4 border-b border-primary-green/10 w-full overflow-visible">
+          <RepairButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
+          <VitalsRing health={hp} maxHealth={maxHp} xp={xp} xpToNext={nextXp} level={level} isDead={isPlayerDead} rebootProgress={rebootProgress} />
+          <PurgeButton isPanelDead={isPanelDead} onHoverCost={handleCostHover} />
       </div>
 
       {/* BOTTOM SECTION: Upgrade Badges */}
