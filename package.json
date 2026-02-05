@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "electron": "electron .",
-    "package": "npm run build && electron-builder"
+    "package": "npm run build && electron-builder",
+    "gen-gallery": "node scripts/generate_gallery.js"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

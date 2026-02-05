@@ -1,44 +1,2902 @@
 [
   {
-    "id": "art_001",
-    "title": "ELFY_GENESIS",
-    "url": "https://x.com/mesoelfy",
-    "category": "ELFY_MAIN",
+    "uniqueId": "257_reptilian_draco.png",
+    "id": "257",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/257_reptilian_draco.png",
+    "src": "/assets/art/specs/257_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
     "color": "#78F654"
   },
   {
-    "id": "art_002",
-    "title": "NEON_HEIST",
-    "url": "https://x.com/mesoelfy",
-    "category": "ELFY_MAIN",
+    "uniqueId": "256_fae.png",
+    "id": "256",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/256_fae.png",
+    "src": "/assets/art/specs/256_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
     "color": "#9E4EA5"
   },
   {
-    "id": "art_003",
-    "title": "VOID_WALKER",
-    "url": "https://x.com/mesoelfy",
-    "category": "ROGUES",
-    "color": "#FF003C"
-  },
-  {
-    "id": "art_004",
-    "title": "LATENT_GHOST",
-    "url": "https://x.com/mesoelfy",
-    "category": "COLLEAGUES",
-    "color": "#F7D277"
-  },
-  {
-    "id": "art_005",
-    "title": "ZERO_DAY",
-    "url": "https://x.com/mesoelfy",
-    "category": "ELFY_MAIN",
+    "uniqueId": "255_kaiju_reptile_insectoid_arachnid.png",
+    "id": "255",
+    "title": "KAIJU REPTILE INSECTOID ARACHNID",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/255_kaiju_reptile_insectoid_arachnid.png",
+    "src": "/assets/art/specs/255_kaiju_reptile_insectoid_arachnid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
     "color": "#78F654"
   },
   {
-    "id": "art_006",
-    "title": "SYSTEM_CRASH",
-    "url": "https://x.com/mesoelfy",
-    "category": "ROGUES",
+    "uniqueId": "254_kaiju.png",
+    "id": "254",
+    "title": "KAIJU",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/254_kaiju.png",
+    "src": "/assets/art/specs/254_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "253_kaiju.png",
+    "id": "253",
+    "title": "KAIJU",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/253_kaiju.png",
+    "src": "/assets/art/specs/253_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "252_kaiju.png",
+    "id": "252",
+    "title": "KAIJU",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/252_kaiju.png",
+    "src": "/assets/art/specs/252_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "251_kaiju.png",
+    "id": "251",
+    "title": "KAIJU",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/251_kaiju.png",
+    "src": "/assets/art/specs/251_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "250_kaiju_reptilian.png",
+    "id": "250",
+    "title": "KAIJU REPTILIAN",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/250_kaiju_reptilian.png",
+    "src": "/assets/art/specs/250_kaiju_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "249_kaiju_cronen_arachnid_a.png",
+    "id": "249",
+    "title": "KAIJU CRONEN ARACHNID A",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/249_kaiju_cronen_arachnid_a.png",
+    "src": "/assets/art/specs/249_kaiju_cronen_arachnid_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "248_kaiju_reptilian.png",
+    "id": "248",
+    "title": "KAIJU REPTILIAN",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/248_kaiju_reptilian.png",
+    "src": "/assets/art/specs/248_kaiju_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "247_kaiju_yokai_canine.png",
+    "id": "247",
+    "title": "KAIJU YOKAI CANINE",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/247_kaiju_yokai_canine.png",
+    "src": "/assets/art/specs/247_kaiju_yokai_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "246_kaiju_aquatic_lotl_canine.png",
+    "id": "246",
+    "title": "KAIJU AQUATIC LOTL CANINE",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/246_kaiju_aquatic_lotl_canine.png",
+    "src": "/assets/art/specs/246_kaiju_aquatic_lotl_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "245_kaiju_canine.png",
+    "id": "245",
+    "title": "KAIJU CANINE",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/245_kaiju_canine.png",
+    "src": "/assets/art/specs/245_kaiju_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "244_kaiju_aquatic.png",
+    "id": "244",
+    "title": "KAIJU AQUATIC",
+    "category": "KAIJU",
+    "thumb": "/assets/art/thumbs/244_kaiju_aquatic.png",
+    "src": "/assets/art/specs/244_kaiju_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "243_plantoid_demon.png",
+    "id": "243",
+    "title": "PLANTOID DEMON",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/243_plantoid_demon.png",
+    "src": "/assets/art/specs/243_plantoid_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "242_plantoid_demon.png",
+    "id": "242",
+    "title": "PLANTOID DEMON",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/242_plantoid_demon.png",
+    "src": "/assets/art/specs/242_plantoid_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "241_plantoid_a.png",
+    "id": "241",
+    "title": "PLANTOID A",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/241_plantoid_a.png",
+    "src": "/assets/art/specs/241_plantoid_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "241_plantoid_b.png",
+    "id": "241",
+    "title": "PLANTOID B",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/241_plantoid_b.png",
+    "src": "/assets/art/specs/241_plantoid_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "240_plantoid_demon_a.png",
+    "id": "240",
+    "title": "PLANTOID DEMON A",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/240_plantoid_demon_a.png",
+    "src": "/assets/art/specs/240_plantoid_demon_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "239_plantoid.png",
+    "id": "239",
+    "title": "PLANTOID",
+    "category": "PLANTOID",
+    "thumb": "/assets/art/thumbs/239_plantoid.png",
+    "src": "/assets/art/specs/239_plantoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "238_insectoid_sentai.png",
+    "id": "238",
+    "title": "INSECTOID SENTAI",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/238_insectoid_sentai.png",
+    "src": "/assets/art/specs/238_insectoid_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "237_insectoid_akuma.png",
+    "id": "237",
+    "title": "INSECTOID AKUMA",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/237_insectoid_akuma.png",
+    "src": "/assets/art/specs/237_insectoid_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "236_insectoid_sentai.png",
+    "id": "236",
+    "title": "INSECTOID SENTAI",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/236_insectoid_sentai.png",
+    "src": "/assets/art/specs/236_insectoid_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "235_insectoid_sentai.png",
+    "id": "235",
+    "title": "INSECTOID SENTAI",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/235_insectoid_sentai.png",
+    "src": "/assets/art/specs/235_insectoid_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "234_insectoid_a.png",
+    "id": "234",
+    "title": "INSECTOID A",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/234_insectoid_a.png",
+    "src": "/assets/art/specs/234_insectoid_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "233_insectoid.png",
+    "id": "233",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/233_insectoid.png",
+    "src": "/assets/art/specs/233_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "232_insectoid.png",
+    "id": "232",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/232_insectoid.png",
+    "src": "/assets/art/specs/232_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "231_insectoid.png",
+    "id": "231",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/231_insectoid.png",
+    "src": "/assets/art/specs/231_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "230_insectoid.png",
+    "id": "230",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/230_insectoid.png",
+    "src": "/assets/art/specs/230_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "229_insectoid.png",
+    "id": "229",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/229_insectoid.png",
+    "src": "/assets/art/specs/229_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "228_insectoid.png",
+    "id": "228",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/228_insectoid.png",
+    "src": "/assets/art/specs/228_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "227_insectoid_a.png",
+    "id": "227",
+    "title": "INSECTOID A",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/227_insectoid_a.png",
+    "src": "/assets/art/specs/227_insectoid_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "226_insectoid.png",
+    "id": "226",
+    "title": "INSECTOID",
+    "category": "INSECTOID",
+    "thumb": "/assets/art/thumbs/226_insectoid.png",
+    "src": "/assets/art/specs/226_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "225_avian_cronen.png",
+    "id": "225",
+    "title": "AVIAN CRONEN",
+    "category": "AVIAN",
+    "thumb": "/assets/art/thumbs/225_avian_cronen.png",
+    "src": "/assets/art/specs/225_avian_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "224_avian.png",
+    "id": "224",
+    "title": "AVIAN",
+    "category": "AVIAN",
+    "thumb": "/assets/art/thumbs/224_avian.png",
+    "src": "/assets/art/specs/224_avian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "223_avian.png",
+    "id": "223",
+    "title": "AVIAN",
+    "category": "AVIAN",
+    "thumb": "/assets/art/thumbs/223_avian.png",
+    "src": "/assets/art/specs/223_avian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "222_avian_wrought.png",
+    "id": "222",
+    "title": "AVIAN WROUGHT",
+    "category": "AVIAN",
+    "thumb": "/assets/art/thumbs/222_avian_wrought.png",
+    "src": "/assets/art/specs/222_avian_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "221_aquatic_lotl_a.png",
+    "id": "221",
+    "title": "AQUATIC LOTL A",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/221_aquatic_lotl_a.png",
+    "src": "/assets/art/specs/221_aquatic_lotl_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "221_aquatic_lotl_b.png",
+    "id": "221",
+    "title": "AQUATIC LOTL B",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/221_aquatic_lotl_b.png",
+    "src": "/assets/art/specs/221_aquatic_lotl_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "221_aquatic_lotl_c.png",
+    "id": "221",
+    "title": "AQUATIC LOTL C",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/221_aquatic_lotl_c.png",
+    "src": "/assets/art/specs/221_aquatic_lotl_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "220_aquatic_lotl.png",
+    "id": "220",
+    "title": "AQUATIC LOTL",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/220_aquatic_lotl.png",
+    "src": "/assets/art/specs/220_aquatic_lotl.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "219_aquatic_cryptid.png",
+    "id": "219",
+    "title": "AQUATIC CRYPTID",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/219_aquatic_cryptid.png",
+    "src": "/assets/art/specs/219_aquatic_cryptid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "218_aquatic.png",
+    "id": "218",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/218_aquatic.png",
+    "src": "/assets/art/specs/218_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "217_aquatic_kaiju.png",
+    "id": "217",
+    "title": "AQUATIC KAIJU",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/217_aquatic_kaiju.png",
+    "src": "/assets/art/specs/217_aquatic_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "216_aquatic_amphibian.png",
+    "id": "216",
+    "title": "AQUATIC AMPHIBIAN",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/216_aquatic_amphibian.png",
+    "src": "/assets/art/specs/216_aquatic_amphibian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "215_aquatic_cronen_kaiju.png",
+    "id": "215",
+    "title": "AQUATIC CRONEN KAIJU",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/215_aquatic_cronen_kaiju.png",
+    "src": "/assets/art/specs/215_aquatic_cronen_kaiju.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "214_aquatic_demon.png",
+    "id": "214",
+    "title": "AQUATIC DEMON",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/214_aquatic_demon.png",
+    "src": "/assets/art/specs/214_aquatic_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "213_aquatic_cephalon.png",
+    "id": "213",
+    "title": "AQUATIC CEPHALON",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/213_aquatic_cephalon.png",
+    "src": "/assets/art/specs/213_aquatic_cephalon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "212_aquatic.png",
+    "id": "212",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/212_aquatic.png",
+    "src": "/assets/art/specs/212_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "211_aquatic.png",
+    "id": "211",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/211_aquatic.png",
+    "src": "/assets/art/specs/211_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "210_aquatic.png",
+    "id": "210",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/210_aquatic.png",
+    "src": "/assets/art/specs/210_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "209_aquatic_cephalon.png",
+    "id": "209",
+    "title": "AQUATIC CEPHALON",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/209_aquatic_cephalon.png",
+    "src": "/assets/art/specs/209_aquatic_cephalon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "208_aquatic_cephalon.png",
+    "id": "208",
+    "title": "AQUATIC CEPHALON",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/208_aquatic_cephalon.png",
+    "src": "/assets/art/specs/208_aquatic_cephalon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "207_aquatic_reptilian_draco.png",
+    "id": "207",
+    "title": "AQUATIC REPTILIAN DRACO",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/207_aquatic_reptilian_draco.png",
+    "src": "/assets/art/specs/207_aquatic_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "206_amphibian_aquatic_a.png",
+    "id": "206",
+    "title": "AMPHIBIAN AQUATIC A",
+    "category": "AMPHIBIAN",
+    "thumb": "/assets/art/thumbs/206_amphibian_aquatic_a.png",
+    "src": "/assets/art/specs/206_amphibian_aquatic_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "206_amphibian_aquatic_b.png",
+    "id": "206",
+    "title": "AMPHIBIAN AQUATIC B",
+    "category": "AMPHIBIAN",
+    "thumb": "/assets/art/thumbs/206_amphibian_aquatic_b.png",
+    "src": "/assets/art/specs/206_amphibian_aquatic_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "205_aquatic_a.png",
+    "id": "205",
+    "title": "AQUATIC A",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/205_aquatic_a.png",
+    "src": "/assets/art/specs/205_aquatic_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "205_aquatic_b.png",
+    "id": "205",
+    "title": "AQUATIC B",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/205_aquatic_b.png",
+    "src": "/assets/art/specs/205_aquatic_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "204_aquatic.png",
+    "id": "204",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/204_aquatic.png",
+    "src": "/assets/art/specs/204_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "203_aquatic.png",
+    "id": "203",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/203_aquatic.png",
+    "src": "/assets/art/specs/203_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "202_aquatic.png",
+    "id": "202",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/202_aquatic.png",
+    "src": "/assets/art/specs/202_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "201_aquatic.png",
+    "id": "201",
+    "title": "AQUATIC",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/201_aquatic.png",
+    "src": "/assets/art/specs/201_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "200_aquatic_a.png",
+    "id": "200",
+    "title": "AQUATIC A",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/200_aquatic_a.png",
+    "src": "/assets/art/specs/200_aquatic_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "200_aquatic_b.png",
+    "id": "200",
+    "title": "AQUATIC B",
+    "category": "AQUATIC",
+    "thumb": "/assets/art/thumbs/200_aquatic_b.png",
+    "src": "/assets/art/specs/200_aquatic_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "199_mycel.png",
+    "id": "199",
+    "title": "MYCEL",
+    "category": "MYCEL",
+    "thumb": "/assets/art/thumbs/199_mycel.png",
+    "src": "/assets/art/specs/199_mycel.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "198_gremlin.png",
+    "id": "198",
+    "title": "GREMLIN",
+    "category": "GREMLIN",
+    "thumb": "/assets/art/thumbs/198_gremlin.png",
+    "src": "/assets/art/specs/198_gremlin.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "197_zyraen.png",
+    "id": "197",
+    "title": "ZYRAEN",
+    "category": "ZYRAEN",
+    "thumb": "/assets/art/thumbs/197_zyraen.png",
+    "src": "/assets/art/specs/197_zyraen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "196_zyraen_yokai_a.png",
+    "id": "196",
+    "title": "ZYRAEN YOKAI A",
+    "category": "ZYRAEN",
+    "thumb": "/assets/art/thumbs/196_zyraen_yokai_a.png",
+    "src": "/assets/art/specs/196_zyraen_yokai_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "195_zyraen_a.png",
+    "id": "195",
+    "title": "ZYRAEN A",
+    "category": "ZYRAEN",
+    "thumb": "/assets/art/thumbs/195_zyraen_a.png",
+    "src": "/assets/art/specs/195_zyraen_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "194_zyraen_a.png",
+    "id": "194",
+    "title": "ZYRAEN A",
+    "category": "ZYRAEN",
+    "thumb": "/assets/art/thumbs/194_zyraen_a.png",
+    "src": "/assets/art/specs/194_zyraen_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "193_zyraen_a.png",
+    "id": "193",
+    "title": "ZYRAEN A",
+    "category": "ZYRAEN",
+    "thumb": "/assets/art/thumbs/193_zyraen_a.png",
+    "src": "/assets/art/specs/193_zyraen_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "192_bat_a.png",
+    "id": "192",
+    "title": "BAT A",
+    "category": "BAT",
+    "thumb": "/assets/art/thumbs/192_bat_a.png",
+    "src": "/assets/art/specs/192_bat_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "192_bat_b.png",
+    "id": "192",
+    "title": "BAT B",
+    "category": "BAT",
+    "thumb": "/assets/art/thumbs/192_bat_b.png",
+    "src": "/assets/art/specs/192_bat_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "192_bat_c.png",
+    "id": "192",
+    "title": "BAT C",
+    "category": "BAT",
+    "thumb": "/assets/art/thumbs/192_bat_c.png",
+    "src": "/assets/art/specs/192_bat_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "192_bat_d.png",
+    "id": "192",
+    "title": "BAT D",
+    "category": "BAT",
+    "thumb": "/assets/art/thumbs/192_bat_d.png",
+    "src": "/assets/art/specs/192_bat_d.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "191_feline.png",
+    "id": "191",
+    "title": "FELINE",
+    "category": "FELINE",
+    "thumb": "/assets/art/thumbs/191_feline.png",
+    "src": "/assets/art/specs/191_feline.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "190_feline.png",
+    "id": "190",
+    "title": "FELINE",
+    "category": "FELINE",
+    "thumb": "/assets/art/thumbs/190_feline.png",
+    "src": "/assets/art/specs/190_feline.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "189_feline.png",
+    "id": "189",
+    "title": "FELINE",
+    "category": "FELINE",
+    "thumb": "/assets/art/thumbs/189_feline.png",
+    "src": "/assets/art/specs/189_feline.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "188_feline.png",
+    "id": "188",
+    "title": "FELINE",
+    "category": "FELINE",
+    "thumb": "/assets/art/thumbs/188_feline.png",
+    "src": "/assets/art/specs/188_feline.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "187_canine_wrought_demon.png",
+    "id": "187",
+    "title": "CANINE WROUGHT DEMON",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/187_canine_wrought_demon.png",
+    "src": "/assets/art/specs/187_canine_wrought_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "186_canine.png",
+    "id": "186",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/186_canine.png",
+    "src": "/assets/art/specs/186_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "185_canine_demon.png",
+    "id": "185",
+    "title": "CANINE DEMON",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/185_canine_demon.png",
+    "src": "/assets/art/specs/185_canine_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "184_canine.png",
+    "id": "184",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/184_canine.png",
+    "src": "/assets/art/specs/184_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "183_canine.png",
+    "id": "183",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/183_canine.png",
+    "src": "/assets/art/specs/183_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "182_canine.png",
+    "id": "182",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/182_canine.png",
+    "src": "/assets/art/specs/182_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "181_canine.png",
+    "id": "181",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/181_canine.png",
+    "src": "/assets/art/specs/181_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "180_canine.png",
+    "id": "180",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/180_canine.png",
+    "src": "/assets/art/specs/180_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "179_canine.png",
+    "id": "179",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/179_canine.png",
+    "src": "/assets/art/specs/179_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "178_canine.png",
+    "id": "178",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/178_canine.png",
+    "src": "/assets/art/specs/178_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "177_canine.png",
+    "id": "177",
+    "title": "CANINE",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/177_canine.png",
+    "src": "/assets/art/specs/177_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "176_canine_wendigo.png",
+    "id": "176",
+    "title": "CANINE WENDIGO",
+    "category": "CANINE",
+    "thumb": "/assets/art/thumbs/176_canine_wendigo.png",
+    "src": "/assets/art/specs/176_canine_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#CF7233"
+  },
+  {
+    "uniqueId": "175_lithoid_reptilian_draco.png",
+    "id": "175",
+    "title": "LITHOID REPTILIAN DRACO",
+    "category": "LITHOID",
+    "thumb": "/assets/art/thumbs/175_lithoid_reptilian_draco.png",
+    "src": "/assets/art/specs/175_lithoid_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "174_lithoid.png",
+    "id": "174",
+    "title": "LITHOID",
+    "category": "LITHOID",
+    "thumb": "/assets/art/thumbs/174_lithoid.png",
+    "src": "/assets/art/specs/174_lithoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "173_lithoid.png",
+    "id": "173",
+    "title": "LITHOID",
+    "category": "LITHOID",
+    "thumb": "/assets/art/thumbs/173_lithoid.png",
+    "src": "/assets/art/specs/173_lithoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "172_lithoid.png",
+    "id": "172",
+    "title": "LITHOID",
+    "category": "LITHOID",
+    "thumb": "/assets/art/thumbs/172_lithoid.png",
+    "src": "/assets/art/specs/172_lithoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "171_karn.png",
+    "id": "171",
+    "title": "KARN",
+    "category": "KARN",
+    "thumb": "/assets/art/thumbs/171_karn.png",
+    "src": "/assets/art/specs/171_karn.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "170_yulth.png",
+    "id": "170",
+    "title": "YULTH",
+    "category": "YULTH",
+    "thumb": "/assets/art/thumbs/170_yulth.png",
+    "src": "/assets/art/specs/170_yulth.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "169_yulth_a.png",
+    "id": "169",
+    "title": "YULTH A",
+    "category": "YULTH",
+    "thumb": "/assets/art/thumbs/169_yulth_a.png",
+    "src": "/assets/art/specs/169_yulth_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "168_wrought.png",
+    "id": "168",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/168_wrought.png",
+    "src": "/assets/art/specs/168_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "167_wrought.png",
+    "id": "167",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/167_wrought.png",
+    "src": "/assets/art/specs/167_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "166_wrought_fae_a.png",
+    "id": "166",
+    "title": "WROUGHT FAE A",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/166_wrought_fae_a.png",
+    "src": "/assets/art/specs/166_wrought_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "166_wrought_fae_b.png",
+    "id": "166",
+    "title": "WROUGHT FAE B",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/166_wrought_fae_b.png",
+    "src": "/assets/art/specs/166_wrought_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "165_wrought_sentai.png",
+    "id": "165",
+    "title": "WROUGHT SENTAI",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/165_wrought_sentai.png",
+    "src": "/assets/art/specs/165_wrought_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "164_wrought.png",
+    "id": "164",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/164_wrought.png",
+    "src": "/assets/art/specs/164_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "163_wrought_sentai.png",
+    "id": "163",
+    "title": "WROUGHT SENTAI",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/163_wrought_sentai.png",
+    "src": "/assets/art/specs/163_wrought_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "162_vanta_a.png",
+    "id": "162",
+    "title": "VANTA A",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/162_vanta_a.png",
+    "src": "/assets/art/specs/162_vanta_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "162_vanta_b.png",
+    "id": "162",
+    "title": "VANTA B",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/162_vanta_b.png",
+    "src": "/assets/art/specs/162_vanta_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "161_wrought_a.png",
+    "id": "161",
+    "title": "WROUGHT A",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/161_wrought_a.png",
+    "src": "/assets/art/specs/161_wrought_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "160_wrought_reptilian_draco_demon.png",
+    "id": "160",
+    "title": "WROUGHT REPTILIAN DRACO DEMON",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/160_wrought_reptilian_draco_demon.png",
+    "src": "/assets/art/specs/160_wrought_reptilian_draco_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "159_wrought_demon_a.png",
+    "id": "159",
+    "title": "WROUGHT DEMON A",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/159_wrought_demon_a.png",
+    "src": "/assets/art/specs/159_wrought_demon_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "158_wrought.png",
+    "id": "158",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/158_wrought.png",
+    "src": "/assets/art/specs/158_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "157_wrought.png",
+    "id": "157",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/157_wrought.png",
+    "src": "/assets/art/specs/157_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "156_wrought.png",
+    "id": "156",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/156_wrought.png",
+    "src": "/assets/art/specs/156_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "155_wrought.png",
+    "id": "155",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/155_wrought.png",
+    "src": "/assets/art/specs/155_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "154_wrought.png",
+    "id": "154",
+    "title": "WROUGHT",
+    "category": "WROUGHT",
+    "thumb": "/assets/art/thumbs/154_wrought.png",
+    "src": "/assets/art/specs/154_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "153_vanta.png",
+    "id": "153",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/153_vanta.png",
+    "src": "/assets/art/specs/153_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "152_vanta.png",
+    "id": "152",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/152_vanta.png",
+    "src": "/assets/art/specs/152_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "151_vanta.png",
+    "id": "151",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/151_vanta.png",
+    "src": "/assets/art/specs/151_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "150_vanta.png",
+    "id": "150",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/150_vanta.png",
+    "src": "/assets/art/specs/150_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "149_vanta_sentai.png",
+    "id": "149",
+    "title": "VANTA SENTAI",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/149_vanta_sentai.png",
+    "src": "/assets/art/specs/149_vanta_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "148_vanta.png",
+    "id": "148",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/148_vanta.png",
+    "src": "/assets/art/specs/148_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "147_vanta_reptilian.png",
+    "id": "147",
+    "title": "VANTA REPTILIAN",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/147_vanta_reptilian.png",
+    "src": "/assets/art/specs/147_vanta_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "146_vanta_a.png",
+    "id": "146",
+    "title": "VANTA A",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/146_vanta_a.png",
+    "src": "/assets/art/specs/146_vanta_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "145_vanta.png",
+    "id": "145",
+    "title": "VANTA",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/145_vanta.png",
+    "src": "/assets/art/specs/145_vanta.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "144_vanta_sentai.png",
+    "id": "144",
+    "title": "VANTA SENTAI",
+    "category": "VANTA",
+    "thumb": "/assets/art/thumbs/144_vanta_sentai.png",
+    "src": "/assets/art/specs/144_vanta_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "143_umbra.png",
+    "id": "143",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/143_umbra.png",
+    "src": "/assets/art/specs/143_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "142_umbra_a.png",
+    "id": "142",
+    "title": "UMBRA A",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/142_umbra_a.png",
+    "src": "/assets/art/specs/142_umbra_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "141_umbra.png",
+    "id": "141",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/141_umbra.png",
+    "src": "/assets/art/specs/141_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "140_umbra_reptilian_a.png",
+    "id": "140",
+    "title": "UMBRA REPTILIAN A",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/140_umbra_reptilian_a.png",
+    "src": "/assets/art/specs/140_umbra_reptilian_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "139_umbra.png",
+    "id": "139",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/139_umbra.png",
+    "src": "/assets/art/specs/139_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "138_umbra.png",
+    "id": "138",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/138_umbra.png",
+    "src": "/assets/art/specs/138_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "137_umbra.png",
+    "id": "137",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/137_umbra.png",
+    "src": "/assets/art/specs/137_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "136_umbra.png",
+    "id": "136",
+    "title": "UMBRA",
+    "category": "UMBRA",
+    "thumb": "/assets/art/thumbs/136_umbra.png",
+    "src": "/assets/art/specs/136_umbra.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "135_wendigo_human.png",
+    "id": "135",
+    "title": "WENDIGO HUMAN",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/135_wendigo_human.png",
+    "src": "/assets/art/specs/135_wendigo_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "134_wendigo.png",
+    "id": "134",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/134_wendigo.png",
+    "src": "/assets/art/specs/134_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "133_wendigo.png",
+    "id": "133",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/133_wendigo.png",
+    "src": "/assets/art/specs/133_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "132_wendigo.png",
+    "id": "132",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/132_wendigo.png",
+    "src": "/assets/art/specs/132_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "131_wendigo.png",
+    "id": "131",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/131_wendigo.png",
+    "src": "/assets/art/specs/131_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "130_wendigo.png",
+    "id": "130",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/130_wendigo.png",
+    "src": "/assets/art/specs/130_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "129_wendigo.png",
+    "id": "129",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/129_wendigo.png",
+    "src": "/assets/art/specs/129_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "128_wendigo.png",
+    "id": "128",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/128_wendigo.png",
+    "src": "/assets/art/specs/128_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "127_wendigo_akuma.png",
+    "id": "127",
+    "title": "WENDIGO AKUMA",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/127_wendigo_akuma.png",
+    "src": "/assets/art/specs/127_wendigo_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "126_wendigo.png",
+    "id": "126",
+    "title": "WENDIGO",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/126_wendigo.png",
+    "src": "/assets/art/specs/126_wendigo.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "125_wendigo_reptilian_serpent.png",
+    "id": "125",
+    "title": "WENDIGO REPTILIAN SERPENT",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/125_wendigo_reptilian_serpent.png",
+    "src": "/assets/art/specs/125_wendigo_reptilian_serpent.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "124_wendigo_a.png",
+    "id": "124",
+    "title": "WENDIGO A",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/124_wendigo_a.png",
+    "src": "/assets/art/specs/124_wendigo_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "123_wendigo_reptilian_dino_wrought.png",
+    "id": "123",
+    "title": "WENDIGO REPTILIAN DINO WROUGHT",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/123_wendigo_reptilian_dino_wrought.png",
+    "src": "/assets/art/specs/123_wendigo_reptilian_dino_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "122_wendigo_a.png",
+    "id": "122",
+    "title": "WENDIGO A",
+    "category": "WENDIGO",
+    "thumb": "/assets/art/thumbs/122_wendigo_a.png",
+    "src": "/assets/art/specs/122_wendigo_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#F7D277"
+  },
+  {
+    "uniqueId": "121_marrow.png",
+    "id": "121",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/121_marrow.png",
+    "src": "/assets/art/specs/121_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
     "color": "#FF003C"
+  },
+  {
+    "uniqueId": "120_marrow.png",
+    "id": "120",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/120_marrow.png",
+    "src": "/assets/art/specs/120_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "119_marrow.png",
+    "id": "119",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/119_marrow.png",
+    "src": "/assets/art/specs/119_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "118_marrow.png",
+    "id": "118",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/118_marrow.png",
+    "src": "/assets/art/specs/118_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "117_marrow.png",
+    "id": "117",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/117_marrow.png",
+    "src": "/assets/art/specs/117_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "116_marrow.png",
+    "id": "116",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/116_marrow.png",
+    "src": "/assets/art/specs/116_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "115_marrow_reptilian_serpent.png",
+    "id": "115",
+    "title": "MARROW REPTILIAN SERPENT",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/115_marrow_reptilian_serpent.png",
+    "src": "/assets/art/specs/115_marrow_reptilian_serpent.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "114_marrow_reptilian.png",
+    "id": "114",
+    "title": "MARROW REPTILIAN",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/114_marrow_reptilian.png",
+    "src": "/assets/art/specs/114_marrow_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "113_marrow_insectoid.png",
+    "id": "113",
+    "title": "MARROW INSECTOID",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/113_marrow_insectoid.png",
+    "src": "/assets/art/specs/113_marrow_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "112_marrow.png",
+    "id": "112",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/112_marrow.png",
+    "src": "/assets/art/specs/112_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "111_marrow.png",
+    "id": "111",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/111_marrow.png",
+    "src": "/assets/art/specs/111_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "110_marrow.png",
+    "id": "110",
+    "title": "MARROW",
+    "category": "MARROW",
+    "thumb": "/assets/art/thumbs/110_marrow.png",
+    "src": "/assets/art/specs/110_marrow.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "109_demon_akuma.png",
+    "id": "109",
+    "title": "DEMON AKUMA",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/109_demon_akuma.png",
+    "src": "/assets/art/specs/109_demon_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "108_demon_reptilian.png",
+    "id": "108",
+    "title": "DEMON REPTILIAN",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/108_demon_reptilian.png",
+    "src": "/assets/art/specs/108_demon_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "107_demon_imp.png",
+    "id": "107",
+    "title": "DEMON IMP",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/107_demon_imp.png",
+    "src": "/assets/art/specs/107_demon_imp.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "106_demon.png",
+    "id": "106",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/106_demon.png",
+    "src": "/assets/art/specs/106_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "105_demon.png",
+    "id": "105",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/105_demon.png",
+    "src": "/assets/art/specs/105_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "104_demon_insectoid.png",
+    "id": "104",
+    "title": "DEMON INSECTOID",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/104_demon_insectoid.png",
+    "src": "/assets/art/specs/104_demon_insectoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "103_demon.png",
+    "id": "103",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/103_demon.png",
+    "src": "/assets/art/specs/103_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "102_demon.png",
+    "id": "102",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/102_demon.png",
+    "src": "/assets/art/specs/102_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "101_demon.png",
+    "id": "101",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/101_demon.png",
+    "src": "/assets/art/specs/101_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "100_demon_a.png",
+    "id": "100",
+    "title": "DEMON A",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/100_demon_a.png",
+    "src": "/assets/art/specs/100_demon_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "099_demon_a.png",
+    "id": "099",
+    "title": "DEMON A",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/099_demon_a.png",
+    "src": "/assets/art/specs/099_demon_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "098_demon.png",
+    "id": "098",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/098_demon.png",
+    "src": "/assets/art/specs/098_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "097_demon.png",
+    "id": "097",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/097_demon.png",
+    "src": "/assets/art/specs/097_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "096_demon.png",
+    "id": "096",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/096_demon.png",
+    "src": "/assets/art/specs/096_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "095_demon.png",
+    "id": "095",
+    "title": "DEMON",
+    "category": "DEMON",
+    "thumb": "/assets/art/thumbs/095_demon.png",
+    "src": "/assets/art/specs/095_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "094_cronen.png",
+    "id": "094",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/094_cronen.png",
+    "src": "/assets/art/specs/094_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "093_cronen.png",
+    "id": "093",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/093_cronen.png",
+    "src": "/assets/art/specs/093_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "092_cronen_costume.png",
+    "id": "092",
+    "title": "CRONEN COSTUME",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/092_cronen_costume.png",
+    "src": "/assets/art/specs/092_cronen_costume.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "091_cronen_costume.png",
+    "id": "091",
+    "title": "CRONEN COSTUME",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/091_cronen_costume.png",
+    "src": "/assets/art/specs/091_cronen_costume.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "090_cronen_aquatic.png",
+    "id": "090",
+    "title": "CRONEN AQUATIC",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/090_cronen_aquatic.png",
+    "src": "/assets/art/specs/090_cronen_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "089_cronen_canine.png",
+    "id": "089",
+    "title": "CRONEN CANINE",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/089_cronen_canine.png",
+    "src": "/assets/art/specs/089_cronen_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "088_cronen_canine.png",
+    "id": "088",
+    "title": "CRONEN CANINE",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/088_cronen_canine.png",
+    "src": "/assets/art/specs/088_cronen_canine.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "087_cronen_demon.png",
+    "id": "087",
+    "title": "CRONEN DEMON",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/087_cronen_demon.png",
+    "src": "/assets/art/specs/087_cronen_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "086_cronen.png",
+    "id": "086",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/086_cronen.png",
+    "src": "/assets/art/specs/086_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "085_cronen.png",
+    "id": "085",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/085_cronen.png",
+    "src": "/assets/art/specs/085_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "084_cronen.png",
+    "id": "084",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/084_cronen.png",
+    "src": "/assets/art/specs/084_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "083_cronen.png",
+    "id": "083",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/083_cronen.png",
+    "src": "/assets/art/specs/083_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "082_cronen.png",
+    "id": "082",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/082_cronen.png",
+    "src": "/assets/art/specs/082_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "081_cronen.png",
+    "id": "081",
+    "title": "CRONEN",
+    "category": "CRONEN",
+    "thumb": "/assets/art/thumbs/081_cronen.png",
+    "src": "/assets/art/specs/081_cronen.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#FF003C"
+  },
+  {
+    "uniqueId": "080_reptilian_draco.png",
+    "id": "080",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/080_reptilian_draco.png",
+    "src": "/assets/art/specs/080_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "079_reptilian_draco.png",
+    "id": "079",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/079_reptilian_draco.png",
+    "src": "/assets/art/specs/079_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "078_reptilian_draco.png",
+    "id": "078",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/078_reptilian_draco.png",
+    "src": "/assets/art/specs/078_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "077_reptilian_draco.png",
+    "id": "077",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/077_reptilian_draco.png",
+    "src": "/assets/art/specs/077_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "076_reptilian_dino.png",
+    "id": "076",
+    "title": "REPTILIAN DINO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/076_reptilian_dino.png",
+    "src": "/assets/art/specs/076_reptilian_dino.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "075_reptilian_draco_demon.png",
+    "id": "075",
+    "title": "REPTILIAN DRACO DEMON",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/075_reptilian_draco_demon.png",
+    "src": "/assets/art/specs/075_reptilian_draco_demon.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "074_reptilian_draco_a.png",
+    "id": "074",
+    "title": "REPTILIAN DRACO A",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/074_reptilian_draco_a.png",
+    "src": "/assets/art/specs/074_reptilian_draco_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "074_reptilian_draco_b.png",
+    "id": "074",
+    "title": "REPTILIAN DRACO B",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/074_reptilian_draco_b.png",
+    "src": "/assets/art/specs/074_reptilian_draco_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "073_reptilian_draco_aquatic.png",
+    "id": "073",
+    "title": "REPTILIAN DRACO AQUATIC",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/073_reptilian_draco_aquatic.png",
+    "src": "/assets/art/specs/073_reptilian_draco_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "072_reptilian_serpent_wrought.png",
+    "id": "072",
+    "title": "REPTILIAN SERPENT WROUGHT",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/072_reptilian_serpent_wrought.png",
+    "src": "/assets/art/specs/072_reptilian_serpent_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "071_reptilian_serpent_wrought_a.png",
+    "id": "071",
+    "title": "REPTILIAN SERPENT WROUGHT A",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/071_reptilian_serpent_wrought_a.png",
+    "src": "/assets/art/specs/071_reptilian_serpent_wrought_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "071_reptilian_serpent_wrought_b.png",
+    "id": "071",
+    "title": "REPTILIAN SERPENT WROUGHT B",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/071_reptilian_serpent_wrought_b.png",
+    "src": "/assets/art/specs/071_reptilian_serpent_wrought_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "070_reptilian_serpent_wrought.png",
+    "id": "070",
+    "title": "REPTILIAN SERPENT WROUGHT",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/070_reptilian_serpent_wrought.png",
+    "src": "/assets/art/specs/070_reptilian_serpent_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "069_reptilian_serpent_wrought_sentai.png",
+    "id": "069",
+    "title": "REPTILIAN SERPENT WROUGHT SENTAI",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/069_reptilian_serpent_wrought_sentai.png",
+    "src": "/assets/art/specs/069_reptilian_serpent_wrought_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "068_reptilian_serpent_sentai.png",
+    "id": "068",
+    "title": "REPTILIAN SERPENT SENTAI",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/068_reptilian_serpent_sentai.png",
+    "src": "/assets/art/specs/068_reptilian_serpent_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "067_reptilian_serpent.png",
+    "id": "067",
+    "title": "REPTILIAN SERPENT",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/067_reptilian_serpent.png",
+    "src": "/assets/art/specs/067_reptilian_serpent.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "066_reptilian.png",
+    "id": "066",
+    "title": "REPTILIAN",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/066_reptilian.png",
+    "src": "/assets/art/specs/066_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "065_reptilian.png",
+    "id": "065",
+    "title": "REPTILIAN",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/065_reptilian.png",
+    "src": "/assets/art/specs/065_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "064_reptilian_sentai.png",
+    "id": "064",
+    "title": "REPTILIAN SENTAI",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/064_reptilian_sentai.png",
+    "src": "/assets/art/specs/064_reptilian_sentai.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "063_reptilian.png",
+    "id": "063",
+    "title": "REPTILIAN",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/063_reptilian.png",
+    "src": "/assets/art/specs/063_reptilian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "062_reptilian_draco.png",
+    "id": "062",
+    "title": "REPTILIAN DRACO",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/062_reptilian_draco.png",
+    "src": "/assets/art/specs/062_reptilian_draco.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "061_reptilian_gator.png",
+    "id": "061",
+    "title": "REPTILIAN GATOR",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/061_reptilian_gator.png",
+    "src": "/assets/art/specs/061_reptilian_gator.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "060_amphibian.png",
+    "id": "060",
+    "title": "AMPHIBIAN",
+    "category": "AMPHIBIAN",
+    "thumb": "/assets/art/thumbs/060_amphibian.png",
+    "src": "/assets/art/specs/060_amphibian.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#00F0FF"
+  },
+  {
+    "uniqueId": "059_reptilian_gator.png",
+    "id": "059",
+    "title": "REPTILIAN GATOR",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/059_reptilian_gator.png",
+    "src": "/assets/art/specs/059_reptilian_gator.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "058_reptilian_gator.png",
+    "id": "058",
+    "title": "REPTILIAN GATOR",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/058_reptilian_gator.png",
+    "src": "/assets/art/specs/058_reptilian_gator.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "057_reptilian_gator_a.png",
+    "id": "057",
+    "title": "REPTILIAN GATOR A",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/057_reptilian_gator_a.png",
+    "src": "/assets/art/specs/057_reptilian_gator_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "057_reptilian_gator_b.png",
+    "id": "057",
+    "title": "REPTILIAN GATOR B",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/057_reptilian_gator_b.png",
+    "src": "/assets/art/specs/057_reptilian_gator_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "057_reptilian_gator_c.png",
+    "id": "057",
+    "title": "REPTILIAN GATOR C",
+    "category": "REPTILIAN",
+    "thumb": "/assets/art/thumbs/057_reptilian_gator_c.png",
+    "src": "/assets/art/specs/057_reptilian_gator_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "056_akuma.png",
+    "id": "056",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/056_akuma.png",
+    "src": "/assets/art/specs/056_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "055_akuma_a.png",
+    "id": "055",
+    "title": "AKUMA A",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/055_akuma_a.png",
+    "src": "/assets/art/specs/055_akuma_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "055_akuma_b.png",
+    "id": "055",
+    "title": "AKUMA B",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/055_akuma_b.png",
+    "src": "/assets/art/specs/055_akuma_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "055_akuma_c.png",
+    "id": "055",
+    "title": "AKUMA C",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/055_akuma_c.png",
+    "src": "/assets/art/specs/055_akuma_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "055_akuma_d.png",
+    "id": "055",
+    "title": "AKUMA D",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/055_akuma_d.png",
+    "src": "/assets/art/specs/055_akuma_d.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "054_akuma.png",
+    "id": "054",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/054_akuma.png",
+    "src": "/assets/art/specs/054_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "053_akuma.png",
+    "id": "053",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/053_akuma.png",
+    "src": "/assets/art/specs/053_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "052_akuma.png",
+    "id": "052",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/052_akuma.png",
+    "src": "/assets/art/specs/052_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "051_akuma.png",
+    "id": "051",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/051_akuma.png",
+    "src": "/assets/art/specs/051_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "050_akuma.png",
+    "id": "050",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/050_akuma.png",
+    "src": "/assets/art/specs/050_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "049_akuma.png",
+    "id": "049",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/049_akuma.png",
+    "src": "/assets/art/specs/049_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "048_akuma.png",
+    "id": "048",
+    "title": "AKUMA",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/048_akuma.png",
+    "src": "/assets/art/specs/048_akuma.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "047_akuma_aquatic.png",
+    "id": "047",
+    "title": "AKUMA AQUATIC",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/047_akuma_aquatic.png",
+    "src": "/assets/art/specs/047_akuma_aquatic.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "046_akuma_a.png",
+    "id": "046",
+    "title": "AKUMA A",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/046_akuma_a.png",
+    "src": "/assets/art/specs/046_akuma_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "046_akuma_b.png",
+    "id": "046",
+    "title": "AKUMA B",
+    "category": "AKUMA",
+    "thumb": "/assets/art/thumbs/046_akuma_b.png",
+    "src": "/assets/art/specs/046_akuma_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "045_fae.png",
+    "id": "045",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/045_fae.png",
+    "src": "/assets/art/specs/045_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "044_fae.png",
+    "id": "044",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/044_fae.png",
+    "src": "/assets/art/specs/044_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "043_fae.png",
+    "id": "043",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/043_fae.png",
+    "src": "/assets/art/specs/043_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "042_fae_a.png",
+    "id": "042",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/042_fae_a.png",
+    "src": "/assets/art/specs/042_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "042_fae_b.png",
+    "id": "042",
+    "title": "FAE B",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/042_fae_b.png",
+    "src": "/assets/art/specs/042_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "042_fae_c.png",
+    "id": "042",
+    "title": "FAE C",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/042_fae_c.png",
+    "src": "/assets/art/specs/042_fae_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "042_fae_d.png",
+    "id": "042",
+    "title": "FAE D",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/042_fae_d.png",
+    "src": "/assets/art/specs/042_fae_d.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "041_fae.png",
+    "id": "041",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/041_fae.png",
+    "src": "/assets/art/specs/041_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "040_fae_a.png",
+    "id": "040",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/040_fae_a.png",
+    "src": "/assets/art/specs/040_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "039_fae.png",
+    "id": "039",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/039_fae.png",
+    "src": "/assets/art/specs/039_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "038_fae.png",
+    "id": "038",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/038_fae.png",
+    "src": "/assets/art/specs/038_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "037_fae.png",
+    "id": "037",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/037_fae.png",
+    "src": "/assets/art/specs/037_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "036_fae.png",
+    "id": "036",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/036_fae.png",
+    "src": "/assets/art/specs/036_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "035_fae.png",
+    "id": "035",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/035_fae.png",
+    "src": "/assets/art/specs/035_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "034_fae.png",
+    "id": "034",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/034_fae.png",
+    "src": "/assets/art/specs/034_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "033_fae.png",
+    "id": "033",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/033_fae.png",
+    "src": "/assets/art/specs/033_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "032_fae.png",
+    "id": "032",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/032_fae.png",
+    "src": "/assets/art/specs/032_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "031_fae.png",
+    "id": "031",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/031_fae.png",
+    "src": "/assets/art/specs/031_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "030_fae_a.png",
+    "id": "030",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/030_fae_a.png",
+    "src": "/assets/art/specs/030_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "029_fae.png",
+    "id": "029",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/029_fae.png",
+    "src": "/assets/art/specs/029_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "028_fae_a.png",
+    "id": "028",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/028_fae_a.png",
+    "src": "/assets/art/specs/028_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "028_fae_b.png",
+    "id": "028",
+    "title": "FAE B",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/028_fae_b.png",
+    "src": "/assets/art/specs/028_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "027_fae_wrought.png",
+    "id": "027",
+    "title": "FAE WROUGHT",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/027_fae_wrought.png",
+    "src": "/assets/art/specs/027_fae_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "026_fae_a.png",
+    "id": "026",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/026_fae_a.png",
+    "src": "/assets/art/specs/026_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "026_fae_b.png",
+    "id": "026",
+    "title": "FAE B",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/026_fae_b.png",
+    "src": "/assets/art/specs/026_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "025_fae.png",
+    "id": "025",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/025_fae.png",
+    "src": "/assets/art/specs/025_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "024_fae_a.png",
+    "id": "024",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/024_fae_a.png",
+    "src": "/assets/art/specs/024_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "024_fae_b.png",
+    "id": "024",
+    "title": "FAE B",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/024_fae_b.png",
+    "src": "/assets/art/specs/024_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "024_fae_c.png",
+    "id": "024",
+    "title": "FAE C",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/024_fae_c.png",
+    "src": "/assets/art/specs/024_fae_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "024_fae_d.png",
+    "id": "024",
+    "title": "FAE D",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/024_fae_d.png",
+    "src": "/assets/art/specs/024_fae_d.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "023_fae.png",
+    "id": "023",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/023_fae.png",
+    "src": "/assets/art/specs/023_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "022_fae.png",
+    "id": "022",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/022_fae.png",
+    "src": "/assets/art/specs/022_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "021_fae.png",
+    "id": "021",
+    "title": "FAE",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/021_fae.png",
+    "src": "/assets/art/specs/021_fae.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "020_fae_wrought.png",
+    "id": "020",
+    "title": "FAE WROUGHT",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/020_fae_wrought.png",
+    "src": "/assets/art/specs/020_fae_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "019_human.png",
+    "id": "019",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/019_human.png",
+    "src": "/assets/art/specs/019_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "018_human.png",
+    "id": "018",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/018_human.png",
+    "src": "/assets/art/specs/018_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "017_human_plantoid.png",
+    "id": "017",
+    "title": "HUMAN PLANTOID",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/017_human_plantoid.png",
+    "src": "/assets/art/specs/017_human_plantoid.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "016_human.png",
+    "id": "016",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/016_human.png",
+    "src": "/assets/art/specs/016_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "015_human.png",
+    "id": "015",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/015_human.png",
+    "src": "/assets/art/specs/015_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "014_human.png",
+    "id": "014",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/014_human.png",
+    "src": "/assets/art/specs/014_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "013_human_a.png",
+    "id": "013",
+    "title": "HUMAN A",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/013_human_a.png",
+    "src": "/assets/art/specs/013_human_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "013_human_b.png",
+    "id": "013",
+    "title": "HUMAN B",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/013_human_b.png",
+    "src": "/assets/art/specs/013_human_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "012_human.png",
+    "id": "012",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/012_human.png",
+    "src": "/assets/art/specs/012_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "011_human.png",
+    "id": "011",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/011_human.png",
+    "src": "/assets/art/specs/011_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "010_human.png",
+    "id": "010",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/010_human.png",
+    "src": "/assets/art/specs/010_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "009_human.png",
+    "id": "009",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/009_human.png",
+    "src": "/assets/art/specs/009_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "008_human.png",
+    "id": "008",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/008_human.png",
+    "src": "/assets/art/specs/008_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "007_human.png",
+    "id": "007",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/007_human.png",
+    "src": "/assets/art/specs/007_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "006_human.png",
+    "id": "006",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/006_human.png",
+    "src": "/assets/art/specs/006_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "005_human.png",
+    "id": "005",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/005_human.png",
+    "src": "/assets/art/specs/005_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "004_human.png",
+    "id": "004",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/004_human.png",
+    "src": "/assets/art/specs/004_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "003_human.png",
+    "id": "003",
+    "title": "HUMAN",
+    "category": "HUMAN",
+    "thumb": "/assets/art/thumbs/003_human.png",
+    "src": "/assets/art/specs/003_human.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#78F654"
+  },
+  {
+    "uniqueId": "002_fae_wrought.png",
+    "id": "002",
+    "title": "FAE WROUGHT",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/002_fae_wrought.png",
+    "src": "/assets/art/specs/002_fae_wrought.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_a.png",
+    "id": "001",
+    "title": "FAE A",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_a.png",
+    "src": "/assets/art/specs/001_fae_a.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_b.png",
+    "id": "001",
+    "title": "FAE B",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_b.png",
+    "src": "/assets/art/specs/001_fae_b.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_c.png",
+    "id": "001",
+    "title": "FAE C",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_c.png",
+    "src": "/assets/art/specs/001_fae_c.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_d.png",
+    "id": "001",
+    "title": "FAE D",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_d.png",
+    "src": "/assets/art/specs/001_fae_d.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_e.png",
+    "id": "001",
+    "title": "FAE E",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_e.png",
+    "src": "/assets/art/specs/001_fae_e.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
+  },
+  {
+    "uniqueId": "001_fae_f.png",
+    "id": "001",
+    "title": "FAE F",
+    "category": "FAE",
+    "thumb": "/assets/art/thumbs/001_fae_f.png",
+    "src": "/assets/art/specs/001_fae_f.jpg",
+    "url": "https://www.deviantart.com/mesoelfy/art/Esper-Elfy-Title-Card-Logo-1290500894",
+    "color": "#9E4EA5"
   }
 ]

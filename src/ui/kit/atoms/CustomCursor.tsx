@@ -78,7 +78,6 @@ export const CustomCursor = () => {
 
   const cursorColor = isHit ? PALETTE.RED.CRITICAL : (isHovering ? PALETTE.YELLOW.ALERT : PALETTE.GREEN.PRIMARY);
   
-  // Dynamic shadows using Palette
   const cursorShadow = isHit 
     ? `drop-shadow(0 0 15px ${PALETTE.RED.CRITICAL})` 
     : (isHovering ? `drop-shadow(0 0 12px ${PALETTE.YELLOW.ALERT})` : `drop-shadow(0 0 8px ${PALETTE.GREEN.PRIMARY})`);

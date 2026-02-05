@@ -65,12 +65,17 @@ interface AppState {
   labDetail: number; 
   galleryTarget: string;
   galleryAction: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE';
+  
+  // NEW: Holds the ID of the image clicked on dashboard
+  selectedArtId: string | null; 
+  
   audioSettings: AudioSettings;
   graphicsMode: GraphicsMode;
   screenShakeStrength: number; 
   isDebugOpen: boolean;
   isDebugMinimized: boolean;
   debugFlags: DebugFlags;
+  
   setBootState: (state: BootState) => void;
   setIntroDone: (done: boolean) => void;
   startBreach: () => void;
@@ -79,6 +84,10 @@ interface AppState {
   setLabDetail: (val: number) => void;
   setGalleryTarget: (target: string) => void;
   setGalleryAction: (action: 'IDLE' | 'ATTACK' | 'SPAWN' | 'DIE') => void;
+  
+  // NEW: Action to select art
+  setSelectedArtId: (id: string | null) => void;
+
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
   toggleSettings: () => void;
@@ -113,6 +122,9 @@ export const useStore = create<AppState>()(
       labDetail: 1, 
       galleryTarget: EnemyTypes.DRILLER,
       galleryAction: 'IDLE',
+      
+      selectedArtId: null,
+
       audioSettings: { ...DEFAULT_AUDIO },
       graphicsMode: 'HIGH',
       screenShakeStrength: 1.0, 
@@ -128,6 +140,9 @@ export const useStore = create<AppState>()(
       setLabDetail: (val) => set({ labDetail: val }),
       setGalleryTarget: (target) => set({ galleryTarget: target }),
       setGalleryAction: (action) => set({ galleryAction: action }),
+      
+      setSelectedArtId: (id) => set({ selectedArtId: id }),
+
       openModal: (modal) => set({ activeModal: modal }),
       closeModal: () => set({ activeModal: 'none' }),
       toggleSettings: () => {

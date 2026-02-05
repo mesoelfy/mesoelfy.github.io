@@ -1,68 +1,152 @@
 import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import gallery from '@/engine/config/static/gallery.json';
-import { ExternalLink, Image as ImageIcon } from 'lucide-react';
-import { useState } from 'react';
+import { Filter, ZoomIn } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { useStore } from '@/engine/state/global/useStore';
+import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { clsx } from 'clsx';
 
 export const GalleryModal = () => {
-  const [filter, setFilter] = useState('ALL');
+  const { selectedArtId, setSelectedArtId } = useStore();
   
-  // Get unique categories
-  const categories = ['ALL', ...Array.from(new Set(gallery.map(item => item.category)))];
+  const initialFilter = useMemo(() => {
+      if (selectedArtId) {
+          const item = gallery.find(i => i.uniqueId === selectedArtId);
+          return item ? item.category : 'ALL';
+      }
+      return 'ALL';
+  }, [selectedArtId]);
 
-  const filteredGallery = filter === 'ALL' 
-    ? gallery 
-    : gallery.filter(item => item.category === filter);
+  const [filter, setFilter] = useState(initialFilter);
+  
+  useEffect(() => {
+      if (selectedArtId) {
+          const item = gallery.find(i => i.uniqueId === selectedArtId);
+          if (item) setFilter(item.category);
+      }
+  }, [selectedArtId]);
+
+  const categories = useMemo(() => {
+      const cats = new Set(gallery.map(i => i.category));
+      return ['ALL', ...Array.from(cats).sort()];
+  }, []);
+
+  const displayItems = useMemo(() => {
+      let items = filter === 'ALL' 
+          ? [...gallery] 
+          : gallery.filter(item => item.category === filter);
+      
+      items.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+      if (selectedArtId) {
+          const index = items.findIndex(i => i.uniqueId === selectedArtId);
+          if (index > -1) {
+              const selected = items[index];
+              items.splice(index, 1);
+              items.unshift(selected);
+          }
+      }
+      return items;
+  }, [filter, selectedArtId]);
+
+  const handleFilter = (cat: string) => {
+      setFilter(cat);
+      setSelectedArtId(null); 
+      AudioSystem.playClick();
+  };
 
   return (
-    <ModalContainer title="ART_DATABASE // VISUALS" type="gallery">
-      <div className="flex flex-col h-full gap-6">
+    <ModalContainer title="ARCHIVE_DB // VISUAL_SPECS" type="gallery" widthClass="max-w-[95vw]">
+      <div className="flex flex-col h-full bg-[#050505]">
         
-        {/* Category Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 border-b border-primary-green-dim/30">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`px-4 py-1 font-mono text-sm border transition-all ${
-                filter === cat 
-                  ? 'bg-primary-green text-black border-primary-green' 
-                  : 'text-primary-green-dim border-primary-green-dim/30 hover:text-primary-green hover:border-primary-green'
-              }`}
-            >
-              [{cat}]
-            </button>
-          ))}
+        {/* TOP BAR */}
+        <div className="flex flex-col gap-4 px-6 py-6 border-b border-white/10 bg-black/40 shrink-0 relative z-20">
+          <div className="flex items-center gap-2 text-primary-green opacity-50 mb-2">
+              <Filter size={16} />
+              <span className="text-[10px] font-bold tracking-widest">FILTER_MATRIX:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {categories.map(cat => (
+                <button
+                key={cat}
+                onClick={() => handleFilter(cat)}
+                className={clsx(
+                    "px-3 py-1.5 text-[10px] font-bold font-mono tracking-wider border transition-all uppercase whitespace-nowrap rounded-sm",
+                    filter === cat 
+                    ? "bg-primary-green text-black border-primary-green shadow-[0_0_10px_rgba(120,246,84,0.3)]" 
+                    : "text-gray-500 border-white/10 hover:text-white hover:border-white/30 hover:bg-white/5"
+                )}
+                >
+                {cat}
+                </button>
+            ))}
+          </div>
         </div>
 
-        {/* The Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredGallery.map((item) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative aspect-video bg-black border border-primary-green-dim/30 hover:border-primary-green transition-all overflow-hidden"
-            >
-              {/* Placeholder Graphic (Since we have no images yet) */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary-green-dark/10 group-hover:bg-primary-green-dark/20 transition-colors">
-                <ImageIcon className="w-12 h-12 text-primary-green-dim/20 group-hover:text-primary-green group-hover:scale-110 transition-all duration-500" />
-                <span className="mt-2 text-xs text-primary-green-dim/40 font-mono">ENCRYPTED_IMG</span>
-              </div>
+        {/* CONTENT: FLEX ROW LAYOUT (Left-to-Right, Fixed Height) */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-green/20 relative z-10 bg-[#020202]">
+          
+          <div className="flex flex-wrap gap-0">
+            {displayItems.map((item) => {
+                const isSelected = item.uniqueId === selectedArtId;
+                
+                return (
+                    // h-96 = 24rem = 384px height on desktop
+                    // flex-grow allows it to fill partial rows if needed, but primarily expanding based on image aspect
+                    <div key={item.uniqueId} className="relative group flex-grow-0 h-48 md:h-72 lg:h-96">
+                        <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block relative h-full w-auto cursor-zoom-in"
+                            onClick={() => AudioSystem.playClick()}
+                            onMouseEnter={() => AudioSystem.playHover()}
+                        >
+                            <img 
+                                src={item.src || item.thumb}
+                                alt={item.title}
+                                loading="lazy"
+                                className={clsx(
+                                    "h-full w-auto object-cover transition-all ease-out will-change-transform",
+                                    "duration-500 group-hover:duration-75",
+                                    "group-hover:blur-[2px] group-hover:invert group-hover:opacity-75"
+                                )}
+                            />
+                            
+                            {/* HOVER OVERLAY */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-75 ease-in z-10 pointer-events-none">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="p-3 border-2 border-primary-green rounded-full bg-black/80 text-primary-green shadow-[0_0_20px_#78F654]">
+                                        <ZoomIn size={24} />
+                                    </div>
+                                    <div className="bg-black/90 px-3 py-1 border-x-2 border-primary-green">
+                                        <span className="text-[10px] font-header font-black text-primary-green tracking-widest uppercase">
+                                            ACCESS_FULL_RES
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
 
-              {/* Overlay Info */}
-              <div className="absolute inset-x-0 bottom-0 p-3 bg-black/80 backdrop-blur-sm border-t border-primary-green-dim/30 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                <h4 className="text-primary-green font-bold text-sm">{item.title}</h4>
-                <div className="flex items-center gap-1 text-[10px] text-latent-purple-light mt-1">
-                  <span>OPEN_ON_X</span>
-                  <ExternalLink size={10} />
-                </div>
-              </div>
-              
-              {/* Corner accent */}
-              <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-primary-green/20 border-l-[20px] border-l-transparent" />
-            </a>
-          ))}
+                            {/* Selected Marker */}
+                            {isSelected && (
+                                <div className="absolute top-0 right-0 p-1 z-20">
+                                    <div className="w-2 h-2 bg-primary-green animate-pulse shadow-[0_0_10px_#78F654]" />
+                                </div>
+                            )}
+                        </a>
+                    </div>
+                );
+            })}
+            
+            {/* Spacer to push last row left if using flex-grow on items (optional) */}
+            <div className="flex-grow-[10]" />
+          </div>
+          
+          <div className="h-24 w-full flex items-center justify-center opacity-30 mt-8 bg-[#050505]">
+              <span className="text-[10px] font-mono">
+                  // DATABASE_END
+              </span>
+          </div>
         </div>
       </div>
     </ModalContainer>
