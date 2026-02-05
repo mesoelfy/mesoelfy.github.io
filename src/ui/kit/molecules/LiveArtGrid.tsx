@@ -27,7 +27,9 @@ export const LiveArtGrid = () => {
   
   // -- STATE REFS --
   const deckRef = useRef<any[]>([]);
-  const activeIdsRef = useRef<Set<string>>(new Set());
+  // Use a ref to track currently displayed items synchronously to prevent duplicates
+  // during batch updates or reshuffles within a single tick.
+  const displayItemsRef = useRef<any[]>([]);
   const nextUpdateTimesRef = useRef<number[]>([]);
 
   // Helper: Shuffle
@@ -51,7 +53,7 @@ export const LiveArtGrid = () => {
       const initialHand = fullDeck.splice(0, GRID_SIZE);
       
       deckRef.current = fullDeck;
-      activeIdsRef.current = new Set(initialHand.map(i => i.uniqueId));
+      displayItemsRef.current = initialHand;
       
       // Initialize timelines with a stagger
       nextUpdateTimesRef.current = Array.from({ length: GRID_SIZE }, () => {
@@ -68,18 +70,26 @@ export const LiveArtGrid = () => {
       const tick = setInterval(() => {
           const now = Date.now();
           const updates: { index: number, newItem: any }[] = [];
+          
+          // Work with the synchronous ref to ensure uniqueness during this tick
+          const currentGrid = displayItemsRef.current;
 
           for (let i = 0; i < GRID_SIZE; i++) {
               if (now >= nextUpdateTimesRef.current[i]) {
                   
                   if (deckRef.current.length === 0) {
-                      const newDeck = galleryRaw.filter(item => !activeIdsRef.current.has(item.uniqueId));
+                      // Filter against what is CURRENTLY in the grid (including items just swapped in this loop)
+                      const activeIds = new Set(currentGrid.map(item => item?.uniqueId).filter(Boolean));
+                      const newDeck = galleryRaw.filter(item => !activeIds.has(item.uniqueId));
                       deckRef.current = shuffle(newDeck);
                   }
 
                   const nextCard = deckRef.current.pop();
                   
                   if (nextCard) {
+                      // Update ref immediately so next iteration sees it
+                      currentGrid[i] = nextCard;
+                      
                       updates.push({ index: i, newItem: nextCard });
                       nextUpdateTimesRef.current[i] = getNextTime();
                   }
@@ -87,16 +97,8 @@ export const LiveArtGrid = () => {
           }
 
           if (updates.length > 0) {
-              setDisplayItems(prev => {
-                  const next = [...prev];
-                  updates.forEach(u => {
-                      const oldCard = next[u.index];
-                      if (oldCard) activeIdsRef.current.delete(oldCard.uniqueId);
-                      activeIdsRef.current.add(u.newItem.uniqueId);
-                      next[u.index] = u.newItem;
-                  });
-                  return next;
-              });
+              // Push final state to React
+              setDisplayItems([...currentGrid]);
           }
 
       }, 200); 
@@ -117,6 +119,8 @@ export const LiveArtGrid = () => {
         {displayItems.map((item, index) => {
             if (!item) return <div key={`empty-${index}`} className="w-full aspect-square bg-black/20" />;
             const isCorrupt = isDestroyed;
+            
+            // Key must be uniqueId to prevent React reconciliation errors
             const key = `${item.uniqueId}`; 
             
             // Randomized fade durations for organic feel

@@ -1,7 +1,30 @@
+// UPDATED VIDEO PLAYLIST
+// Source: User Instructions (Feb 2026)
 const VIDEO_POOL = [
-  "oLALHbB3iXU", "A1dnxXrpN-o", "elyXcwunIYA", 
-  "bHUcvHx9zlA", "Eq6EYcpWB_c", "sJyWgks1ZtA", 
-  "dFlDRhvM4L0", "Ku5fgOHy1JY", "8-91y7BJ8QA"
+  "9EpyGa_4D8g", // mesoelfy
+  "LHMcpQ5mfEw", // OP 001-017
+  "YwuhejTqLOg", // OP 001
+  "wMXT9fA2CJY", // OP 002
+  "9wocy3lGyLo", // OP 003
+  "mVODU3WU-7w", // OP 004
+  "-GcvxoUrI5I", // OP 005
+  "IUY-n3Q7Mh8", // OP 005A
+  "1kQ10t3cYa0", // OP 005B
+  "l_a3hWGvqWU", // OP 006
+  "6516ojvoYy0", // OP 007
+  "yPcTDlf8vSs", // OP 008
+  "nGyG250bQJE", // OP 009
+  "wk1yQuYNOUk", // OP 010
+  "9rYZMNdJHFQ", // OP 011
+  "uUn6Mj87FGw", // OP 012
+  "ESqTlXMvbJ0", // OP 013
+  "IhKZFvT3Nbc", // OP 014
+  "WdxFzG4UAjg", // OP 015
+  "Heyz2rGfxyM", // OP 016
+  "NTWiNhZ_PzY", // OP 016A
+  "CL7-F4oOemY", // OP 016B (corrected from pkwjTHB4RFfJGf8C which looked like a si param)
+  "dtsfby4ikHw", // OP 017
+  "48pUDBwPRxA"  // OP 017.X
 ];
 
 class VideoPlaylistController {
@@ -36,7 +59,7 @@ class VideoPlaylistController {
         }
     }
 
-    // If literally every video in the pool is active (unlikely with 3 slots / 9 videos), just take the top one
+    // If literally every video in the pool is active (unlikely with 3 slots / 20+ videos), just take the top one
     if (candidateIndex === -1) {
         candidateIndex = this.deck.length - 1;
     }
