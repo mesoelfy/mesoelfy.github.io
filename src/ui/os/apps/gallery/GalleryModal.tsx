@@ -126,7 +126,7 @@ export const GalleryModal = () => {
                             
                             {/* HOVER OVERLAY */}
                             <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-75 ease-in z-10 pointer-events-none p-4">
-                                <div className="flex flex-col items-center gap-3">
+                                <div className="flex flex-col items-center gap-3 pointer-events-auto transition-transform duration-300 ease-out hover:scale-110 origin-center">
                                     <div className="p-3 border-2 border-primary-green rounded-full bg-black/80 text-primary-green shadow-[0_0_20px_#78F654]">
                                         <ZoomIn size={24} />
                                     </div>
