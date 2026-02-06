@@ -557,12 +557,6 @@ Do batches of 30.
 
 HEADERS - include year EXPLORATION DATE RANGE
 
-When generating the tree or reading files, exclude these paths:
-public/assets/art/specs/*
-public/assets/art/thumbs/*
-src/engine/config/static/gallery.json 
-
-truncate the first two and last two items as a sample so that the AI gets an idea of what the contents are and also include a note informing it to ask the human user for the full information if it needs it to accomplish a task.
 
 60:30:10 color rule. One dominant color sets mood, secondary tones support it, accents guide your eye.
 

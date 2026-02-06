@@ -30,11 +30,13 @@ echo "=====================================" >> "$OUTPUT_FILE"
 echo "PROJECT DIRECTORY STRUCTURE:" >> "$OUTPUT_FILE"
 echo "=====================================" >> "$OUTPUT_FILE"
 
-# IGNORE: node_modules, .next (build), .git, out (export), .DS_Store (Deleted electron from ignore list)
+# IGNORE: node_modules, .next (build), .git, out (export), .DS_Store
+# --filelimit 12: Collapses folders with >12 files (Great for assets/thumbs)
 if command -v tree >/dev/null 2>&1; then
-    tree -I 'node_modules|.next|.git|out|.DS_Store|package-lock.json|yarn.lock' >> "$OUTPUT_FILE"
+    tree -I 'node_modules|.next|.git|out|.DS_Store|package-lock.json|yarn.lock|dist' --filelimit 12 >> "$OUTPUT_FILE"
 else
     # Fallback to find if 'tree' isn't installed
+    echo "// 'tree' command not found. Installing 'tree' via brew is recommended for better formatting." >> "$OUTPUT_FILE"
     find . -maxdepth 4 -not -path '*/.*' -not -path './node_modules*' -not -path './.next*' -not -path './out*' | sed 's|[^/]*/|  |g; s|  \([^/]*\)$|-- \1/|' >> "$OUTPUT_FILE"
 fi
 
@@ -43,6 +45,7 @@ echo "📦 Collecting source files..."
 
 # Step 3: Find files and append content
 # We look for: TS/TSX (Logic), CSS (Styles), JSON (Data), MD (Docs), JS/MJS (Config), YML (CI/CD)
+# EXCLUDES: Lockfiles, git, builds, node_modules
 find . -type f \( \
   -name "*.ts" -o \
   -name "*.tsx" -o \
@@ -58,6 +61,7 @@ find . -type f \( \
 -not -path "./.next/*" \
 -not -path "./out/*" \
 -not -path "./.git/*" \
+-not -path "./dist/*" \
 -not -path "./$OUTPUT_FILE" \
 -not -name "package-lock.json" \
 -not -name "yarn.lock" \
@@ -66,7 +70,20 @@ find . -type f \( \
   echo "====================================="
   echo "FILE: $1"
   echo "====================================="
-  cat "$1"
+  
+  # SMART TRUNCATION LOGIC
+  if echo "$1" | grep -q "gallery.json"; then
+    echo "// [SMART_TRUNCATE] File content condensed for AI context."
+    echo "// (Showing first 15 lines and last 3 lines to establish schema)"
+    head -n 15 "$1"
+    echo ""
+    echo "   ... [ BULK DATA TRUNCATED ] ..."
+    echo ""
+    tail -n 3 "$1"
+  else
+    cat "$1"
+  fi
+  
   echo ""
   echo ""
 ' _ {} \; >> "$OUTPUT_FILE"
