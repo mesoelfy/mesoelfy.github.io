@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { VideoPlaylistService } from '../molecules/VideoPlaylistService';
+import { VideoPlaylistService, VideoDef } from '../molecules/VideoPlaylistService';
 
 export const useHoloCycler = (slotIndex: number, isSystemActive: boolean) => {
-  const [videoId, setVideoId] = useState<string | null>(null);
+  const [currentVideo, setCurrentVideo] = useState<VideoDef | null>(null);
   const [isMasked, setIsMasked] = useState(true);
 
   // 1. Initial Load / Cleanup
@@ -11,74 +11,72 @@ export const useHoloCycler = (slotIndex: number, isSystemActive: boolean) => {
 
       if (isSystemActive) {
           // Acquire unique video from global service
-          setVideoId(prev => {
+          setCurrentVideo(prev => {
               if (prev) return prev; // Already have one
               return VideoPlaylistService.acquire();
           });
           
           setIsMasked(true);
 
-          // Staggered Reveal
+          // Staggered Reveal on boot
           t = setTimeout(() => {
               setIsMasked(false);
           }, 1500 + (slotIndex * 800));
       } else {
-          // System Shutdown: Release video back to pool availability logic
-          // Note: We don't put it back in the deck (it's "used"), but we remove it from "active" set
-          setVideoId(current => {
-              VideoPlaylistService.release(current);
+          // System Shutdown: Release video back to pool
+          setCurrentVideo(curr => {
+              if (curr) VideoPlaylistService.release(curr.id);
               return null;
           });
           setIsMasked(true);
       }
 
-      return () => {
-          clearTimeout(t);
-          // Safety: If component unmounts while holding a video, release it
-          // We can't access state here easily in cleanup without deps, 
-          // but the next effect handles swap release.
-          // For strict unmount, we rely on the state reset logic above or strict component lifecycle.
-      };
+      return () => clearTimeout(t);
   }, [isSystemActive, slotIndex]);
 
-  // 2. Cycling Logic (Periodic Swaps)
+  // 2. Cycling Logic (Exact Durations)
   useEffect(() => {
-    if (!isSystemActive) return;
+    if (!isSystemActive || !currentVideo) return;
 
-    const duration = 30000 + (Math.random() * 15000);
+    // Config Duration = Real Length + 2000ms buffer.
+    // Goal: Trigger mask 0.5s BEFORE Real Length ends.
+    // Formula: (Duration - 2000) - 500 = Duration - 2500.
+    const maskTriggerTime = Math.max(1000, currentVideo.duration - 2500);
     
     const cycleTimer = setTimeout(() => {
+      // 1. Trigger "Establishing Uplink" Overlay
+      // (CSS transition takes 500ms, so it will be fully opaque exactly when video ends)
       setIsMasked(true);
       
+      // 2. Swap Video Source (Behind the mask)
       const swapTimer = setTimeout(() => {
-        setVideoId(current => {
+        setCurrentVideo(curr => {
             // Release old
-            VideoPlaylistService.release(current);
+            if (curr) VideoPlaylistService.release(curr.id);
             // Get new
             return VideoPlaylistService.acquire();
         });
         
+        // 3. Reveal New Video
         const unmaskTimer = setTimeout(() => {
             setIsMasked(false);
-        }, 2000); 
+        }, 1500); // Wait 1.5s total for "connecting" effect
         
         return () => clearTimeout(unmaskTimer);
-      }, 1000); 
+      }, 1000); // Wait 1s after mask trigger to ensure opacity is 100%
       
       return () => clearTimeout(swapTimer);
-    }, duration);
+    }, maskTriggerTime);
 
     return () => clearTimeout(cycleTimer);
-  }, [isSystemActive, videoId]); 
+  }, [isSystemActive, currentVideo]); 
 
-  // 3. Final Safety Net: Release on Unmount
+  // 3. Final Safety Net
   useEffect(() => {
       return () => {
-          // When the hook is destroyed completely, ensure we release whatever ID we held
-          // This is tricky inside React hooks due to closures.
-          // We trust the logic above for now.
+          // Strict cleanup handled by logic above
       };
   }, []);
 
-  return { videoId, isMasked };
+  return { videoId: currentVideo?.id || null, isMasked };
 };
