@@ -22,7 +22,7 @@ export const AUDIO_MANIFEST: Record<string, SoundDef> = {
   'ui_hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50, label: 'Hover', category: 'UI' },
   'ui_menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Open', category: 'UI' },
   'ui_menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Close', category: 'UI' },
-  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01, label: 'Optimal', category: 'UI' },
+  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.35, pitchVariance: 0, attack: 0.01, label: 'Optimal', category: 'UI' }, // VOLUME BOOSTED
   'ui_error': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50, label: 'Error', category: 'UI' },
   'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0, label: 'Chirp', category: 'UI' },
   
@@ -38,9 +38,8 @@ export const AUDIO_MANIFEST: Record<string, SoundDef> = {
   'fx_exhaust_sizzle': { type: 'noise', frequency: [0, 0], filter: [4000, 2000], duration: 0.3, volume: 0.1, pitchVariance: 0, distortion: 10, tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' }, label: 'Sizzle', category: 'COMBAT' },
 
   // --- PRODUCTION AMBIENCE ---
-  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' },
-  'loop_heal_high': { type: 'oscillator', wave: 'sine', frequency: [600, 900], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop High', category: 'AMBIENCE' },
-  // NEW: Higher pitch for player revive
+  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.3, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' }, // VOLUME BOOSTED
+  'loop_heal_high': { type: 'oscillator', wave: 'sine', frequency: [600, 900], duration: 0.2, volume: 0.3, pitchVariance: 0, label: 'Repair Loop High', category: 'AMBIENCE' }, // VOLUME BOOSTED
   'loop_player_revive': { type: 'oscillator', wave: 'sine', frequency: [1000, 2000], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Player Revive', category: 'AMBIENCE' },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.6, pitchVariance: 0, label: 'Reboot Loop', category: 'AMBIENCE' },
   'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 }, label: 'Low Health', category: 'AMBIENCE' },

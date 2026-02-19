@@ -90,7 +90,8 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
     this._isMusicMuted = !settings.music;
-    this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
+    // VOLUME REDUCED: 0.4 -> 0.25 to blend better with SFX
+    this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.25);
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.value = this._targetMusicVol;
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
@@ -118,49 +119,32 @@ export class AudioMixer {
     this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
   }
 
-  /**
-   * Updates the global low-pass filter based on system integrity.
-   * @param integrity 0.0 (Destroyed) to 1.0 (Healthy)
-   * @param transitionTime How fast to reach target frequency (seconds)
-   */
   public updateMasterFilter(integrity: number, transitionTime: number = 0.05) {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
-      const YELLOW_START = 0.6; // 60% Health
-      const RED_START = 0.3;    // 30% Health
-      const FLOOR_FREQ = 700;   // Hz at 0% Health
-      
-      // Intensity at the boundary between Yellow and Red (30% Health)
-      // 0.0 = Open, 1.0 = Closed. 0.6 means 60% of the filter range is applied at 30% health.
+      const YELLOW_START = 0.6; 
+      const RED_START = 0.3;    
+      const FLOOR_FREQ = 700;   
       const RED_BOUNDARY_INTENSITY = 0.6; 
 
       let intensity = 0;
 
       if (!ctx || integrity >= 1.0) {
-          // Full Health / System Reset
           intensity = 0;
       } else if (integrity > YELLOW_START) {
-          // Safe Zone (>60%)
           intensity = 0;
       } else if (integrity > RED_START) {
-          // Yellow Zone (60% -> 30%)
-          // Quadratic Curve (Slow start, accelerates towards Red)
-          const range = YELLOW_START - RED_START; // 0.3
-          const t = (YELLOW_START - integrity) / range; // 0.0 at Yellow Start, 1.0 at Red Start
+          const range = YELLOW_START - RED_START; 
+          const t = (YELLOW_START - integrity) / range; 
           intensity = (t * t) * RED_BOUNDARY_INTENSITY;
       } else {
-          // Red Zone (30% -> 0%)
-          // Linear Curve (Steady decline to Floor)
           const range = RED_START - 0.0;
-          const t = (RED_START - integrity) / range; // 0.0 at Red Start, 1.0 at Death
+          const t = (RED_START - integrity) / range; 
           intensity = RED_BOUNDARY_INTENSITY + (t * (1.0 - RED_BOUNDARY_INTENSITY));
       }
 
-      // Map Intensity (0 to 1) to Frequency (MAX to FLOOR)
-      // Using logarithmic mapping for natural hearing response
       const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
-      
       this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx ? ctx.currentTime : 0, transitionTime);
   }
 
