@@ -15,6 +15,7 @@ export class SpatialGrid {
 
   public clear() {
     this.cellHead.fill(-1);
+    this.entityNext.fill(-1); // <-- CRITICAL FIX
   }
 
   private getHash(x: number, y: number): number {

@@ -12,6 +12,7 @@ import * as THREE from 'three';
 
 export class RenderStateSystem implements IGameSystem {
   private tempColor = new THREE.Color();
+  private targetColor = new THREE.Color(); // <-- ZERO ALLOCATION FIX
   
   // Cached Query for entities with visual components
   private renderQuery = new Query({ 
@@ -73,9 +74,10 @@ export class RenderStateSystem implements IGameSystem {
               }
           }
 
-          const c = new THREE.Color(targetHex);
+          // ZERO ALLOCATION UPDATE
+          this.targetColor.set(targetHex);
           this.tempColor.setRGB(model.r, model.g, model.b);
-          this.tempColor.lerp(c, delta * 3.0);
+          this.tempColor.lerp(this.targetColor, delta * 3.0);
           model.r = this.tempColor.r;
           model.g = this.tempColor.g;
           model.b = this.tempColor.b;

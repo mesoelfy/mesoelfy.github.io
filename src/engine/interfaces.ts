@@ -112,14 +112,6 @@ export interface IEntitySpawner {
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity;
-  spawnParticle(
-      x: number, y: number, 
-      color: string, 
-      vx: number, vy: number, 
-      life: number, 
-      size?: number, 
-      shape?: ParticleShape
-  ): void;
 }
 
 export interface IAudioService {
@@ -157,7 +149,7 @@ export interface IParticleSystem extends IGameSystem {
       shape?: ParticleShape
   ): void;
   getCount(): number;
-  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; color: Float32Array; };
+  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; r: Float32Array; g: Float32Array; b: Float32Array; };
 }
 
 export interface IPhysicsSystem extends IGameSystem {

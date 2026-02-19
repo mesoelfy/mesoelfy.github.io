@@ -31,11 +31,8 @@ export class ParticleSystem implements IParticleSystem {
   update(delta: number, time: number): void {
     if (this.count === 0) return;
 
-    // Normalize friction for variable timestep
-    // PhysicsConfig.PARTICLES.FRICTION (e.g. 0.95) is tuned for 60Hz (16ms)
-    // Formula: adjustedFriction = baseFriction ^ (delta / fixedDelta)
     const baseFriction = PhysicsConfig.PARTICLES.FRICTION;
-    const timeRatio = delta * 60; // ratio of current frame to 60fps frame
+    const timeRatio = delta * 60; 
     const friction = Math.pow(baseFriction, timeRatio);
 
     let i = 0;
@@ -110,7 +107,9 @@ export class ParticleSystem implements IParticleSystem {
         y: this.y,
         life: this.life,
         maxLife: this.maxLife,
-        color: this.r 
+        r: this.r, // EXPOSED CORRECTLY
+        g: this.g,
+        b: this.b
     };
   }
 

@@ -45,7 +45,6 @@ import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. PRESERVE CRITICAL SERVICES (Like Audio Context)
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -53,12 +52,10 @@ export class EngineFactory {
         audioService = new AudioServiceImpl();
     }
 
-    // 2. STRICT MODE RESET: Wipe singletons cleanly before remounting
     ServiceLocator.reset();
     SharedGameEventBus.clear(); 
     ServiceLocator.register('AudioService', audioService);
 
-    // 3. Core Services
     const registry = new EntityRegistry();
     const rawSlowBus = SharedGameEventBus; 
     const rawFastBus = new FastEventBusImpl();
@@ -73,12 +70,10 @@ export class EngineFactory {
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
 
-    // 4. Content Registration
     registerAllComponents();
     registerAllBehaviors();
     registerAllAssets();
 
-    // 5. Common Systems Instantiation
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
@@ -89,7 +84,8 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
+    // UPDATED: Injected particleSystem instead of spawner
+    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
     const worldSystem = new WorldSystem(panelSystem, registry);
@@ -103,7 +99,6 @@ export class EngineFactory {
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    // Visual Systems
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
@@ -120,12 +115,10 @@ export class EngineFactory {
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
-    // 6. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
     engine.injectFastEventBus(rawFastBus); 
 
-    // 7. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
@@ -156,14 +149,10 @@ export class EngineFactory {
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
 
-    // RENDER PHASE
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
-    
-    // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(warmupSystem, SystemPhase.RENDER);
-    
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');

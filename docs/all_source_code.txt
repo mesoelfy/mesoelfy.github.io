@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Wed Feb 18 17:41:32 CST 2026
+Generated on: Thu Feb 19 17:09:21 CST 2026
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -30,7 +30,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  reactStrictMode: false,
+  reactStrictMode: true, // <-- ENABLED: Exposes memory leaks
   transpilePackages: ['three'],
   devIndicators: false,
   env: {
@@ -10716,7 +10716,6 @@ export const DaemonActor = () => {
       const items: { root: THREE.Group, cage: THREE.Mesh, orb: THREE.Mesh }[] = [];
       const cageGeo = new THREE.OctahedronGeometry(0.7, 0); 
       const orbGeo = new THREE.IcosahedronGeometry(0.25, 1);
-      // Updated hardcoded hex to PINK
       const cageMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
       const orbMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, toneMapped: false });
 
@@ -10734,33 +10733,41 @@ export const DaemonActor = () => {
   useFrame((state, delta) => {
       if (!groupRef.current) return;
       
-      const entities = Array.from(registry.getByTag(Tag.PLAYER)).filter(e => {
-          const id = e.getComponent<IdentityData>(ComponentType.Identity);
-          return id?.variant === EnemyTypes.DAEMON && e.active;
-      });
-
-      for (let i = 0; i < MAX_DAEMONS; i++) {
-          const item = pool[i];
-          const entity = entities[i]; 
-
-          if (!entity) { item.root.visible = false; continue; }
-          item.root.visible = true;
+      let activeCount = 0;
+      
+      // ZERO-ALLOCATION ITERATION
+      for (const entity of registry.getByTag(Tag.PLAYER)) {
+          if (!entity.active) continue;
           
-          const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-          const ai = entity.getComponent<AIStateData>(ComponentType.State);
+          const id = entity.getComponent<IdentityData>(ComponentType.Identity);
+          if (id?.variant === EnemyTypes.DAEMON) {
+              const item = pool[activeCount];
+              item.root.visible = true;
+              
+              const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+              const ai = entity.getComponent<AIStateData>(ComponentType.State);
 
-          if (transform && ai) {
-              item.root.position.set(transform.x, transform.y, 0);
-              const charge = ai.data.chargeProgress || 0;
-              const currentScaleY = THREE.MathUtils.lerp(SQUISH_SCALE_Y, FULL_SCALE_Y, charge);
-              const currentScaleXZ = THREE.MathUtils.lerp(WIDTH_SCALE, 1.0, charge);
-              item.cage.scale.set(currentScaleXZ, currentScaleY, currentScaleXZ);
-              item.cage.rotation.y += delta * SPIN_SPEED;
-              item.cage.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
-              const orbScale = THREE.MathUtils.lerp(0, 1, charge);
-              item.orb.scale.setScalar(orbScale);
-              if (charge >= 1.0) item.orb.scale.multiplyScalar(1.0 + Math.sin(state.clock.elapsedTime * 10) * 0.1);
+              if (transform && ai) {
+                  item.root.position.set(transform.x, transform.y, 0);
+                  const charge = ai.data.chargeProgress || 0;
+                  const currentScaleY = THREE.MathUtils.lerp(SQUISH_SCALE_Y, FULL_SCALE_Y, charge);
+                  const currentScaleXZ = THREE.MathUtils.lerp(WIDTH_SCALE, 1.0, charge);
+                  item.cage.scale.set(currentScaleXZ, currentScaleY, currentScaleXZ);
+                  item.cage.rotation.y += delta * SPIN_SPEED;
+                  item.cage.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+                  const orbScale = THREE.MathUtils.lerp(0, 1, charge);
+                  item.orb.scale.setScalar(orbScale);
+                  if (charge >= 1.0) item.orb.scale.multiplyScalar(1.0 + Math.sin(state.clock.elapsedTime * 10) * 0.1);
+              }
+              
+              activeCount++;
+              if (activeCount >= MAX_DAEMONS) break;
           }
+      }
+
+      // Hide the rest of the pool
+      for (let i = activeCount; i < MAX_DAEMONS; i++) {
+          pool[i].root.visible = false;
       }
   });
 
@@ -10782,10 +10789,6 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { RenderBuffer } from '@/engine/graphics/RenderBuffer';
 import { RenderOffset, RENDER_STRIDE } from '@/engine/graphics/RenderSchema';
-import { useGameContext } from '@/engine/state/GameContext';
-
-const tempObj = new THREE.Object3D();
-const tempColor = new THREE.Color();
 
 interface InstancedActorProps {
   tag: string;
@@ -10814,13 +10817,12 @@ export const InstancedActor = ({
         }
         
         // Attach custom attributes to the CURRENT geometry
-        // We do this every time 'geometry' changes (e.g. Potato Mode toggle)
         meshRef.current.geometry.setAttribute(
             'spawnProgress', 
             new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1)
         );
     }
-  }, [maxCount, geometry]); // <--- FIX: Added geometry dependency
+  }, [maxCount, geometry]);
 
   useFrame(() => {
     if (!meshRef.current || !renderKey) return;
@@ -10835,50 +10837,71 @@ export const InstancedActor = ({
     }
 
     const spawnAttr = meshRef.current.geometry.getAttribute('spawnProgress') as THREE.InstancedBufferAttribute;
-    
-    // Safety check in case frame runs before effect (rare but possible during swap)
     if (!spawnAttr) return;
+
+    // Grab direct references to the Float32Arrays for maximum speed
+    const imArray = meshRef.current.instanceMatrix.array as Float32Array;
+    const icArray = meshRef.current.instanceColor?.array as Float32Array | undefined;
+    const spawnArray = spawnAttr.array as Float32Array;
 
     for (let i = 0; i < count; i++) {
         const offset = i * RENDER_STRIDE;
         
-        // POS
-        tempObj.position.set(
-            buffer[offset + RenderOffset.POSITION_X],
-            buffer[offset + RenderOffset.POSITION_Y],
-            buffer[offset + RenderOffset.POSITION_Z]
-        );
-
-        // QUAT
-        tempObj.quaternion.set(
-            buffer[offset + RenderOffset.ROTATION_X],
-            buffer[offset + RenderOffset.ROTATION_Y],
-            buffer[offset + RenderOffset.ROTATION_Z],
-            buffer[offset + RenderOffset.ROTATION_W]
-        );
-
-        // SCALE
-        tempObj.scale.set(
-            buffer[offset + RenderOffset.SCALE_X],
-            buffer[offset + RenderOffset.SCALE_Y],
-            buffer[offset + RenderOffset.SCALE_Z]
-        );
-
-        tempObj.updateMatrix();
-        meshRef.current.setMatrixAt(i, tempObj.matrix);
+        // --- 1. TRS MATRIX COMPOSITION ---
+        const px = buffer[offset + RenderOffset.POSITION_X];
+        const py = buffer[offset + RenderOffset.POSITION_Y];
+        const pz = buffer[offset + RenderOffset.POSITION_Z];
         
-        // COLOR
-        tempColor.setRGB(
-            buffer[offset + RenderOffset.COLOR_R],
-            buffer[offset + RenderOffset.COLOR_G],
-            buffer[offset + RenderOffset.COLOR_B]
-        );
-        if (meshRef.current.instanceColor) meshRef.current.setColorAt(i, tempColor);
+        const qx = buffer[offset + RenderOffset.ROTATION_X];
+        const qy = buffer[offset + RenderOffset.ROTATION_Y];
+        const qz = buffer[offset + RenderOffset.ROTATION_Z];
+        const qw = buffer[offset + RenderOffset.ROTATION_W];
         
-        // SPAWN
-        spawnAttr.setX(i, buffer[offset + RenderOffset.SPAWN_PROGRESS]);
+        const sx = buffer[offset + RenderOffset.SCALE_X];
+        const sy = buffer[offset + RenderOffset.SCALE_Y];
+        const sz = buffer[offset + RenderOffset.SCALE_Z];
+
+        // Raw Quaternion -> Rotation Matrix + Scale logic
+        const x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
+        const xx = qx * x2, xy = qx * y2, xz = qx * z2;
+        const yy = qy * y2, yz = qy * z2, zz = qz * z2;
+        const wx = qw * x2, wy = qw * y2, wz = qw * z2;
+
+        const mOffset = i * 16;
+        
+        imArray[mOffset + 0] = (1 - (yy + zz)) * sx;
+        imArray[mOffset + 1] = (xy + wz) * sx;
+        imArray[mOffset + 2] = (xz - wy) * sx;
+        imArray[mOffset + 3] = 0;
+
+        imArray[mOffset + 4] = (xy - wz) * sy;
+        imArray[mOffset + 5] = (1 - (xx + zz)) * sy;
+        imArray[mOffset + 6] = (yz + wx) * sy;
+        imArray[mOffset + 7] = 0;
+
+        imArray[mOffset + 8] = (xz + wy) * sz;
+        imArray[mOffset + 9] = (yz - wx) * sz;
+        imArray[mOffset + 10] = (1 - (xx + yy)) * sz;
+        imArray[mOffset + 11] = 0;
+
+        imArray[mOffset + 12] = px;
+        imArray[mOffset + 13] = py;
+        imArray[mOffset + 14] = pz;
+        imArray[mOffset + 15] = 1;
+
+        // --- 2. COLOR INJECTION ---
+        if (icArray) {
+            const cOffset = i * 3;
+            icArray[cOffset] = buffer[offset + RenderOffset.COLOR_R];
+            icArray[cOffset + 1] = buffer[offset + RenderOffset.COLOR_G];
+            icArray[cOffset + 2] = buffer[offset + RenderOffset.COLOR_B];
+        }
+        
+        // --- 3. CUSTOM ATTRIBUTE INJECTION ---
+        spawnArray[i] = buffer[offset + RenderOffset.SPAWN_PROGRESS];
     }
 
+    // Flag WebGL to upload the arrays to the GPU
     meshRef.current.count = count;
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
@@ -10958,7 +10981,7 @@ import { GameEngineCore } from '@/engine/services/GameEngine';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEventBus, SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -10972,9 +10995,7 @@ export const GameDirector = memo(() => {
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // 2. Pre-Warm Audio (Silent Generation)
-    // We call init() now so buffers generate during the intro.
-    // Audio won't play until user interacts and we call resume().
+    // 2. Pre-Warm Audio
     AudioSystem.init();
 
     // 3. Panel Sync Loop
@@ -11000,6 +11021,8 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
+      // 4. STRICT MODE FIX: Purge all listeners explicitly on React unmount
+      SharedGameEventBus.clear();
     };
   }, []); 
 
@@ -12705,7 +12728,7 @@ export const AUDIO_MANIFEST: Record<string, SoundDef> = {
   'ui_hover': { type: 'oscillator', wave: 'sine', frequency: [800, 800], duration: 0.03, volume: 0.05, pitchVariance: 50, label: 'Hover', category: 'UI' },
   'ui_menu_open': { type: 'oscillator', wave: 'sine', frequency: [440, 660], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Open', category: 'UI' },
   'ui_menu_close': { type: 'oscillator', wave: 'sine', frequency: [660, 440], duration: 0.15, volume: 0.1, pitchVariance: 0, attack: 0.02, label: 'Menu Close', category: 'UI' },
-  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.15, pitchVariance: 0, attack: 0.01, label: 'Optimal', category: 'UI' },
+  'ui_optimal': { type: 'oscillator', wave: 'sine', frequency: [1200, 1200], duration: 0.4, volume: 0.35, pitchVariance: 0, attack: 0.01, label: 'Optimal', category: 'UI' }, // VOLUME BOOSTED
   'ui_error': { type: 'oscillator', wave: 'sawtooth', frequency: [150, 50], duration: 0.2, volume: 0.2, pitchVariance: 0, distortion: 50, label: 'Error', category: 'UI' },
   'ui_chirp': { type: 'oscillator', wave: 'triangle', frequency: [400, 600], duration: 0.1, volume: 0.1, pitchVariance: 0, label: 'Chirp', category: 'UI' },
   
@@ -12721,9 +12744,8 @@ export const AUDIO_MANIFEST: Record<string, SoundDef> = {
   'fx_exhaust_sizzle': { type: 'noise', frequency: [0, 0], filter: [4000, 2000], duration: 0.3, volume: 0.1, pitchVariance: 0, distortion: 10, tremolo: { rate: 20, depth: 0.6, wave: 'sawtooth' }, label: 'Sizzle', category: 'COMBAT' },
 
   // --- PRODUCTION AMBIENCE ---
-  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' },
-  'loop_heal_high': { type: 'oscillator', wave: 'sine', frequency: [600, 900], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Repair Loop High', category: 'AMBIENCE' },
-  // NEW: Higher pitch for player revive
+  'loop_heal': { type: 'oscillator', wave: 'sine', frequency: [300, 600], duration: 0.2, volume: 0.3, pitchVariance: 0, label: 'Repair Loop', category: 'AMBIENCE' }, // VOLUME BOOSTED
+  'loop_heal_high': { type: 'oscillator', wave: 'sine', frequency: [600, 900], duration: 0.2, volume: 0.3, pitchVariance: 0, label: 'Repair Loop High', category: 'AMBIENCE' }, // VOLUME BOOSTED
   'loop_player_revive': { type: 'oscillator', wave: 'sine', frequency: [1000, 2000], duration: 0.2, volume: 0.1, pitchVariance: 0, label: 'Player Revive', category: 'AMBIENCE' },
   'loop_reboot': { type: 'oscillator', wave: 'sine', frequency: [100, 200], duration: 0.2, volume: 0.6, pitchVariance: 0, label: 'Reboot Loop', category: 'AMBIENCE' },
   'loop_warning': { type: 'oscillator', wave: 'sine', frequency: [55, 55], duration: 0.8, volume: 0.7, pitchVariance: 0, attack: 0.03, fm: { modType: 'sine', modFreq: 10, modIndex: 25 }, label: 'Low Health', category: 'AMBIENCE' },
@@ -15960,7 +15982,8 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
     this._isMusicMuted = !settings.music;
-    this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.4);
+    // VOLUME REDUCED: 0.4 -> 0.25 to blend better with SFX
+    this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.25);
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.value = this._targetMusicVol;
     this.sfxGain.gain.value = settings.sfx ? (settings.volumeSfx * 0.8) : 0;
@@ -15988,49 +16011,32 @@ export class AudioMixer {
     this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
   }
 
-  /**
-   * Updates the global low-pass filter based on system integrity.
-   * @param integrity 0.0 (Destroyed) to 1.0 (Healthy)
-   * @param transitionTime How fast to reach target frequency (seconds)
-   */
   public updateMasterFilter(integrity: number, transitionTime: number = 0.05) {
       if (!this.masterFilter) return;
       const ctx = this.ctxManager.ctx;
       
-      const YELLOW_START = 0.6; // 60% Health
-      const RED_START = 0.3;    // 30% Health
-      const FLOOR_FREQ = 700;   // Hz at 0% Health
-      
-      // Intensity at the boundary between Yellow and Red (30% Health)
-      // 0.0 = Open, 1.0 = Closed. 0.6 means 60% of the filter range is applied at 30% health.
+      const YELLOW_START = 0.6; 
+      const RED_START = 0.3;    
+      const FLOOR_FREQ = 700;   
       const RED_BOUNDARY_INTENSITY = 0.6; 
 
       let intensity = 0;
 
       if (!ctx || integrity >= 1.0) {
-          // Full Health / System Reset
           intensity = 0;
       } else if (integrity > YELLOW_START) {
-          // Safe Zone (>60%)
           intensity = 0;
       } else if (integrity > RED_START) {
-          // Yellow Zone (60% -> 30%)
-          // Quadratic Curve (Slow start, accelerates towards Red)
-          const range = YELLOW_START - RED_START; // 0.3
-          const t = (YELLOW_START - integrity) / range; // 0.0 at Yellow Start, 1.0 at Red Start
+          const range = YELLOW_START - RED_START; 
+          const t = (YELLOW_START - integrity) / range; 
           intensity = (t * t) * RED_BOUNDARY_INTENSITY;
       } else {
-          // Red Zone (30% -> 0%)
-          // Linear Curve (Steady decline to Floor)
           const range = RED_START - 0.0;
-          const t = (RED_START - integrity) / range; // 0.0 at Red Start, 1.0 at Death
+          const t = (RED_START - integrity) / range; 
           intensity = RED_BOUNDARY_INTENSITY + (t * (1.0 - RED_BOUNDARY_INTENSITY));
       }
 
-      // Map Intensity (0 to 1) to Frequency (MAX to FLOOR)
-      // Using logarithmic mapping for natural hearing response
       const targetFreq = this.MAX_FREQ * Math.pow(FLOOR_FREQ / this.MAX_FREQ, intensity);
-      
       this.masterFilter.frequency.setTargetAtTime(targetFreq, ctx ? ctx.currentTime : 0, transitionTime);
   }
 
@@ -16056,7 +16062,7 @@ export class AudioChannel {
     this.panner = ctx.createStereoPanner();
     this.gain = ctx.createGain();
 
-    // Wire them up: Panner -> Gain -> Destination (Mixer)
+    // Wire them up: Panner -> Gain -> Destination (Mixer Bus)
     this.panner.connect(this.gain);
     this.gain.connect(destination);
   }
@@ -16070,15 +16076,17 @@ export class AudioChannel {
     pan: number, 
     pitchVariance: number
   ) {
-    // 1. Reset State
     this._isBusy = true;
     
-    // 2. Configure Reusable Nodes
-    // Smooth transitions to prevent clicking if reusing rapidly
-    this.panner.pan.setValueAtTime(pan, ctx.currentTime);
-    this.gain.gain.setValueAtTime(volume, ctx.currentTime);
+    // Cancel any previous automation to prevent glitches on rapid reuse
+    const now = ctx.currentTime;
+    this.panner.pan.cancelScheduledValues(now);
+    this.panner.pan.setValueAtTime(pan, now);
+    
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(volume, now);
 
-    // 3. Create Ephemeral Source (Web Audio Requirement)
+    // Ephemeral Source (Web Audio API requires a new source node per playback)
     const source = ctx.createBufferSource();
     source.buffer = buffer;
 
@@ -16086,10 +16094,10 @@ export class AudioChannel {
         source.detune.value = (Math.random() * pitchVariance * 2) - pitchVariance;
     }
 
-    // 4. Connect to our persistent channel
+    // Connect to our persistent channel stack
     source.connect(this.panner);
 
-    // 5. Cleanup Logic
+    // Cleanup Logic
     source.onended = () => {
         source.disconnect();
         this._isBusy = false;
@@ -16098,7 +16106,7 @@ export class AudioChannel {
     };
 
     this.currentSource = source;
-    source.start();
+    source.start(now);
   }
 
   public stop() {
@@ -16107,11 +16115,12 @@ export class AudioChannel {
             this.currentSource.stop();
             this.currentSource.disconnect();
         } catch (e) {
-            // Ignore errors if already stopped
+            // Ignore if already stopped
         }
         this.currentSource = null;
     }
     this._isBusy = false;
+    this.onRelease(this);
   }
 }
 
@@ -16122,6 +16131,7 @@ FILE: ./src/engine/audio/modules/VoiceManager.ts
 import { AudioContextManager } from './AudioContextManager';
 import { SoundBank } from './SoundBank';
 import { AudioMixer } from './AudioMixer';
+import { AudioChannel } from './AudioChannel';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
@@ -16212,10 +16222,13 @@ class MusicDeck {
 }
 
 export class VoiceManager {
-  private activeCount = 0;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
+
+  // --- CHANNEL POOLING ---
+  private channelPool: AudioChannel[] = [];
+  private activeChannels: Set<AudioChannel> = new Set();
 
   // --- MUSIC SYSTEM ---
   private deckA = new MusicDeck();
@@ -16223,7 +16236,7 @@ export class VoiceManager {
   private activeDeck: 'A' | 'B' | null = null;
   
   private playlist: string[] = [...MUSIC_PLAYLIST];
-  private deck: number[] = []; // Indices of playlist
+  private deck: number[] = [];
   private currentIndex = 0;
   private isShuffled = false;
   private isMusicInit = false;
@@ -16233,30 +16246,43 @@ export class VoiceManager {
     private bank: SoundBank,
     private mixer: AudioMixer
   ) {
-    // Initialize deck linearly: [0, 1, 2, ... 24]
     this.deck = this.playlist.map((_, i) => i);
+  }
+
+  private getChannel(ctx: AudioContext): AudioChannel | null {
+      // 1. Try to recycle an idle channel
+      if (this.channelPool.length > 0) {
+          const channel = this.channelPool.pop()!;
+          this.activeChannels.add(channel);
+          return channel;
+      }
+      
+      // 2. Expand pool if under limit
+      if (this.activeChannels.size < SYS_LIMITS.MAX_POLYPHONY) {
+          const channel = new AudioChannel(ctx, this.mixer.sfxGain!, (c) => {
+              this.activeChannels.delete(c);
+              this.channelPool.push(c);
+          });
+          this.activeChannels.add(channel);
+          return channel;
+      }
+      
+      // 3. Max polyphony reached, drop sound
+      return null;
   }
 
   // --- SFX LOGIC ---
   public playSFX(key: AudioKey, pan: number = 0) {
-    if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
     const recipe = AUDIO_MANIFEST[key];
+    
     if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    if (recipe.pitchVariance > 0) {
-        source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
-    }
-    const panner = ctx.createStereoPanner();
-    panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
-    source.connect(panner);
-    panner.connect(this.mixer.sfxGain);
-    source.onended = () => { this.activeCount--; };
-    this.activeCount++;
-    source.start();
+    const channel = this.getChannel(ctx);
+    if (!channel) return; // Polyphony limit hit
+
+    channel.play(ctx, buffer, recipe.volume, pan, recipe.pitchVariance || 0);
   }
 
   // --- AMBIENCE LOGIC ---
@@ -16293,7 +16319,6 @@ export class VoiceManager {
   }
 
   // --- MUSIC SYSTEM ---
-  
   public startMusic() {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.musicGain) return;
@@ -16305,15 +16330,10 @@ export class VoiceManager {
         const attachListener = (deck: MusicDeck) => {
             if (deck.element) {
                 deck.element.addEventListener('ended', () => {
-                    console.log("[Music] Track Ended - Auto Advancing");
                     this.advanceTrack(true);
                 });
                 deck.element.addEventListener('error', (e) => {
-                    const src = deck.element?.src || 'unknown';
-                    console.warn(`[Music] Track Error on ${src.split('/').pop()}:`, e);
-                    setTimeout(() => {
-                        this.advanceTrack(true);
-                    }, 1000);
+                    setTimeout(() => this.advanceTrack(true), 1000);
                 });
             }
         };
@@ -16322,7 +16342,6 @@ export class VoiceManager {
         attachListener(this.deckB);
         
         this.isMusicInit = true;
-        // Start at index 0 (Linear)
         this.playTrack(0);
     }
   }
@@ -16334,31 +16353,21 @@ export class VoiceManager {
   private advanceTrack(auto: boolean) {
     this.currentIndex++;
 
-    // 1. Deck Exhausted? Reset & Full Shuffle
     if (this.currentIndex >= this.deck.length) {
-        console.log('[Music] Deck Exhausted. Reshuffling Full Deck.');
         this.shuffleDeckRange(0, this.deck.length);
         this.currentIndex = 0;
-        // Ensure we don't play the same song twice back-to-back on wrap
         if (this.deck[0] === this.deck[this.deck.length - 1]) {
-             // Swap first with second
              [this.deck[0], this.deck[1]] = [this.deck[1], this.deck[0]];
         }
     } 
-    // 2. Manual Shuffle Trigger? Shuffle Remaining Only
     else if (!auto && !this.isShuffled) {
-        console.log('[Music] Manual Intervention. Shuffling Remaining Tracks.');
         this.isShuffled = true;
-        // Shuffle everything from currentIndex to end
         this.shuffleDeckRange(this.currentIndex, this.deck.length);
     }
 
     this.playTrack(this.currentIndex);
   }
 
-  /**
-   * Fisher-Yates Shuffle on a slice of the deck in-place
-   */
   private shuffleDeckRange(start: number, end: number) {
     for (let i = end - 1; i > start; i--) {
         const j = Math.floor(Math.random() * (i - start + 1)) + start;
@@ -16368,24 +16377,17 @@ export class VoiceManager {
 
   private playTrack(deckIndex: number) {
     const ctx = this.ctxManager.ctx;
-    if (!ctx) return;
-
-    if (this.deck.length === 0 || deckIndex >= this.deck.length) return;
+    if (!ctx || this.deck.length === 0 || deckIndex >= this.deck.length) return;
     
-    // Map Deck Index -> Playlist URL
     const realIndex = this.deck[deckIndex];
     const nextUrl = this.playlist[realIndex];
 
     const nextDeck = this.activeDeck === 'A' ? this.deckB : this.deckA;
     const currentDeck = this.activeDeck === 'A' ? this.deckA : this.deckB;
 
-    console.log(`[Music] Playing Deck[${deckIndex}] -> Track[${realIndex}]: ${nextUrl.split('/').pop()}`);
-
-    // Load & Play Next
     nextDeck.load(nextUrl);
     nextDeck.play();
     
-    // Crossfade
     const FADE_TIME = 2.0; 
     nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
@@ -16403,13 +16405,19 @@ export class VoiceManager {
   public stopAll() {
     this.deckA.stop();
     this.deckB.stop();
+    
     if (this.currentAmbienceNode) { 
         try { this.currentAmbienceNode.stop(); } catch {} 
         this.currentAmbienceNode = null; 
         this.currentAmbienceGain = null;
         this.currentAmbienceKey = null; 
     }
-    this.activeCount = 0;
+    
+    // Stop and release all active channels
+    const channelsToStop = Array.from(this.activeChannels);
+    for (const channel of channelsToStop) {
+        channel.stop();
+    }
   }
 }
 
@@ -19621,16 +19629,16 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculateSpitterShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculateSpitterShot, calculateSnifferShots, ShotDef } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameStream } from '@/engine/state/GameStream';
 import { Query } from '@/engine/ecs/Query';
+import { Entity } from '@/engine/ecs/Entity';
 import * as THREE from 'three';
 
-// Same offset as VFXManifest for visual alignment
 const PURGE_OFFSET = 1.2;
 
 interface PurgeState {
@@ -19649,6 +19657,12 @@ export class WeaponSystem implements IGameSystem {
   
   private purgeState: PurgeState = { active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0 };
   private projectileQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform, ComponentType.Motion] });
+
+  // POOLS & CACHES
+  private targetCache = { x: 0, y: 0, valid: false };
+  private originCache = { x: 0, y: 0 };
+  private spitterOut: ShotDef = { x: 0, y: 0, vx: 0, vy: 0, damage: 0, life: 0, configId: WeaponIDs.PLAYER_SPITTER, isHoming: false };
+  private snifferOut: ShotDef[] = Array.from({ length: 8 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, damage: 0, life: 0, configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true }));
 
   constructor(
     private spawner: IEntitySpawner,
@@ -19760,33 +19774,31 @@ export class WeaponSystem implements IGameSystem {
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     if (!transform) return;
 
-    const target = this.acquireTarget(transform);
-    if (!target) return;
+    this.acquireTarget(transform);
+    if (!this.targetCache.valid) return;
 
     const spitterState = useGameStore.getState().spitter;
     const snifferState = useGameStore.getState().sniffer;
     const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
+    this.originCache.x = transform.x;
+    this.originCache.y = transform.y;
+
     // SPITTER
     const spitterInterval = this.getSpitterInterval(spitterState.rateLevel);
     if (time > this.lastSpitterTime + spitterInterval) {
-        const shot = calculateSpitterShot(
-            { x: transform.x, y: transform.y },
-            { x: target.x, y: target.y },
-            spitterState
-        );
+        calculateSpitterShot(this.originCache, this.targetCache, spitterState, this.spitterOut);
         
-        // --- SCALE CALCULATION ---
         const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
-            shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId,
+            this.spitterOut.x, this.spitterOut.y, this.spitterOut.vx, this.spitterOut.vy, 
+            Faction.FRIENDLY, this.spitterOut.life, this.spitterOut.damage, this.spitterOut.configId,
             undefined, 
-            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult } // Override base 0.4
+            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult }
         );
 
-        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
+        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(this.spitterOut.vy, this.spitterOut.vx) });
         this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
         this.lastSpitterTime = time;
     }
@@ -19796,28 +19808,24 @@ export class WeaponSystem implements IGameSystem {
         const snifferInterval = this.getSnifferInterval(snifferState.rateLevel);
         if (time > this.lastSnifferTime + snifferInterval) {
             const reticleRot = pVisual ? -pVisual.rotation : 0;
-            const shots = calculateSnifferShots(
-                { x: transform.x, y: transform.y },
-                snifferState,
-                reticleRot
-            );
+            const count = calculateSnifferShots(this.originCache, snifferState, reticleRot, this.snifferOut);
 
-            shots.forEach(s => {
+            for (let i = 0; i < count; i++) {
+                const s = this.snifferOut[i];
                 const b = this.spawner.spawnProjectile(
                     s.x, s.y, s.vx, s.vy, 
                     Faction.FRIENDLY, s.life, s.damage, s.configId
                 );
                 b.addComponent(new TargetData(null, 'ENEMY'));
                 this.registry.updateCache(b);
-            });
+            }
             this.lastSnifferTime = time;
         }
     }
   }
 
   private getSpitterInterval(level: number): number {
-      const base = 0.15;
-      return base / Math.pow(1.1, level);
+      return 0.15 / Math.pow(1.1, level);
   }
 
   private getSnifferInterval(level: number): number {
@@ -19825,13 +19833,12 @@ export class WeaponSystem implements IGameSystem {
       if (level === 0) return base * 3.0;
       if (level === 1) return base * 1.5;
       if (level === 2) return base;
-      if (level >= 3) return base * 0.75;
-      return base * 3.0;
+      return base * 0.75;
   }
 
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
-      GameStream.set('PLAYER_PURGE_ACTIVE', 1); // <--- SYNC ON
+      GameStream.set('PLAYER_PURGE_ACTIVE', 1);
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
@@ -19853,7 +19860,6 @@ export class WeaponSystem implements IGameSystem {
               for(let i=0; i<BURST_COUNT; i++) {
                   const angle = (i / BURST_COUNT) * Math.PI * 2;
                   
-                  // OFFSET ORIGIN
                   const startX = t.x + Math.cos(angle) * PURGE_OFFSET;
                   const startY = t.y + Math.sin(angle) * PURGE_OFFSET;
                   
@@ -19868,8 +19874,7 @@ export class WeaponSystem implements IGameSystem {
                       { scaleX: 1.5, scaleY: 1.5 }
                   );
 
-                  const hue = i / BURST_COUNT;
-                  this.tempColor.setHSL(hue, 1.0, 0.5);
+                  this.tempColor.setHSL(i / BURST_COUNT, 1.0, 0.5);
                   
                   const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
                   if (model) { 
@@ -19890,21 +19895,19 @@ export class WeaponSystem implements IGameSystem {
           this.purgeState.accumulator -= 1.0;
           if (this.purgeState.shotsRemaining <= 0) { 
               this.purgeState.active = false; 
-              GameStream.set('PLAYER_PURGE_ACTIVE', 0); // <--- SYNC OFF
+              GameStream.set('PLAYER_PURGE_ACTIVE', 0); 
               this.events.emit(GameEvents.PURGE_COMPLETE, null); 
               break; 
           }
           const angle = this.purgeState.currentAngle;
           
-          // OFFSET ORIGIN
           const startX = originX + Math.cos(angle) * PURGE_OFFSET;
           const startY = originY + Math.sin(angle) * PURGE_OFFSET;
           
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnProjectile(startX, startY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
-          const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
-          this.tempColor.setHSL(hue, 1.0, 0.5); 
+          this.tempColor.setHSL((this.purgeState.currentAngle * 0.15) % 1.0, 1.0, 0.5); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
 
@@ -19917,7 +19920,8 @@ export class WeaponSystem implements IGameSystem {
   private acquireTarget(pPos: TransformData) {
     const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
-    let nearestDist = Infinity; let targetEnemy = null;
+    let nearestDist = Infinity; 
+    this.targetCache.valid = false;
 
     for (let i = 0; i < count; i++) {
       const id = this.queryBuffer[i];
@@ -19927,12 +19931,15 @@ export class WeaponSystem implements IGameSystem {
       if (state && state.current === AI_STATE.SPAWN) continue;
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
+      
+      const distSq = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
+      if (distSq < 196 && distSq < nearestDist) { 
+          nearestDist = distSq; 
+          this.targetCache.x = t.x;
+          this.targetCache.y = t.y;
+          this.targetCache.valid = true;
+      }
     }
-    if (!targetEnemy) return null;
-    const t = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-    return { x: t.x, y: t.y };
   }
 
   private getPlayerEntity() {
@@ -20923,7 +20930,9 @@ import { PanelId } from '@/engine/config/PanelConfig';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class TargetingSystem implements IGameSystem {
-  private playerCache: { x: number, y: number } | null = null;
+  // ZERO-ALLOCATION CACHES
+  private playerCache = { x: 0, y: 0, valid: false };
+  private enemyCache = { x: 0, y: 0, valid: false };
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
 
   constructor(
@@ -20962,7 +20971,7 @@ export class TargetingSystem implements IGameSystem {
             else if (target.type === 'ENEMY') {
                 target.locked = false; 
             }
-            else if (target.type === 'PLAYER' && this.playerCache) {
+            else if (target.type === 'PLAYER' && this.playerCache.valid) {
                 target.x = this.playerCache.x;
                 target.y = this.playerCache.y;
             }
@@ -20971,7 +20980,7 @@ export class TargetingSystem implements IGameSystem {
         }
 
         if (target.type === 'PLAYER') {
-            if (this.playerCache) {
+            if (this.playerCache.valid) {
                 target.x = this.playerCache.x;
                 target.y = this.playerCache.y;
                 target.id = 'PLAYER';
@@ -20985,7 +20994,7 @@ export class TargetingSystem implements IGameSystem {
                 target.y = Math.max(bestPanel.bottom, Math.min(transform.y, bestPanel.top));
                 target.locked = true; 
             } else {
-                if (this.playerCache) {
+                if (this.playerCache.valid) {
                     target.x = this.playerCache.x;
                     target.y = this.playerCache.y;
                     target.id = 'PLAYER';
@@ -20993,10 +21002,10 @@ export class TargetingSystem implements IGameSystem {
             }
         }
         else if (target.type === 'ENEMY') {
-            const bestEnemy = this.findNearestEnemy(transform.x, transform.y);
-            if (bestEnemy) {
-                target.x = bestEnemy.x;
-                target.y = bestEnemy.y;
+            this.findNearestEnemy(transform.x, transform.y);
+            if (this.enemyCache.valid) {
+                target.x = this.enemyCache.x;
+                target.y = this.enemyCache.y;
                 target.id = 'ENEMY_LOCKED';
             } else {
                 target.id = null; 
@@ -21006,15 +21015,17 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private updatePlayerCache() {
+      this.playerCache.valid = false;
       const players = this.registry.getByTag(Tag.PLAYER);
       for (const p of players) {
           const t = p.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              this.playerCache = { x: t.x, y: t.y };
+              this.playerCache.x = t.x;
+              this.playerCache.y = t.y;
+              this.playerCache.valid = true;
               return;
           }
       }
-      this.playerCache = null;
   }
 
   private findNearestPanel(x: number, y: number) {
@@ -21043,17 +21054,15 @@ export class TargetingSystem implements IGameSystem {
   private findNearestEnemy(x: number, y: number) {
       const SEARCH_RADIUS = 15;
       const MAX_RANGE_SQ = SEARCH_RADIUS * SEARCH_RADIUS;
-      
       const count = this.physics.spatialGrid.query(x, y, SEARCH_RADIUS, this.queryBuffer);
       
-      let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
+      this.enemyCache.valid = false;
 
       for (let i = 0; i < count; i++) {
           const id = this.queryBuffer[i];
           const e = this.registry.getEntity(id);
           
-          // Updated: Exclude PROJECTILE
           if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
@@ -21065,10 +21074,11 @@ export class TargetingSystem implements IGameSystem {
           
           if (distSq < minDist && distSq < MAX_RANGE_SQ) {
               minDist = distSq;
-              nearest = { x: t.x, y: t.y };
+              this.enemyCache.x = t.x;
+              this.enemyCache.y = t.y;
+              this.enemyCache.valid = true;
           }
       }
-      return nearest;
   }
 
   teardown(): void {}
@@ -21949,14 +21959,10 @@ export interface ShotDef {
   scaleY?: number;
 }
 
-// Geometry Constants derived from PlayerActor.tsx
 const RETICLE_EXTENT_RADIUS = 0.65; 
-// Geometry Constants derived from AssetCatalog (Sphere Radius 0.5 * Base Scale 0.4)
 const PROJ_BASE_RADIUS = 0.2; 
-// Increased margin for better visual clearance (was 0.15)
 const SPAWN_MARGIN = 0.3; 
 
-// Sniffer Reticle config
 const SNIFFER_OFFSET_RADIUS = 1.65; 
 const TWIST_OFFSET = -0.55;  
 
@@ -21967,11 +21973,13 @@ const SNIFFER_TIPS = [
     Math.PI / 2 + TWIST_OFFSET        
 ];
 
+// ZERO-ALLOCATION: Writes directly to 'out' object
 export const calculateSpitterShot = (
   origin: { x: number, y: number },
   target: { x: number, y: number },
-  state: SpitterState
-): ShotDef => {
+  state: SpitterState,
+  out: ShotDef
+): void => {
   const config = ConfigService.player;
   const damage = 1 + state.damageLevel;
   const speed = config.bulletSpeed; 
@@ -21981,37 +21989,29 @@ export const calculateSpitterShot = (
   const dy = target.y - origin.y;
   const angle = Math.atan2(dy, dx);
 
-  // --- DYNAMIC OFFSET CALCULATION ---
-  // Matches WeaponSystem.ts scaling logic: 1.0 + (level * 0.75)
   const sizeMultiplier = 1.0 + (state.girthLevel * 0.75);
   const currentProjRadius = PROJ_BASE_RADIUS * sizeMultiplier;
-  
-  // Place center of projectile so its edge touches reticle edge + margin
   const dynamicOffset = RETICLE_EXTENT_RADIUS + currentProjRadius + SPAWN_MARGIN;
 
-  const spawnX = origin.x + Math.cos(angle) * dynamicOffset;
-  const spawnY = origin.y + Math.sin(angle) * dynamicOffset;
-
-  return {
-      x: spawnX,
-      y: spawnY,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      damage,
-      life,
-      configId: WeaponIDs.PLAYER_SPITTER,
-      isHoming: false
-  };
+  out.x = origin.x + Math.cos(angle) * dynamicOffset;
+  out.y = origin.y + Math.sin(angle) * dynamicOffset;
+  out.vx = Math.cos(angle) * speed;
+  out.vy = Math.sin(angle) * speed;
+  out.damage = damage;
+  out.life = life;
+  out.configId = WeaponIDs.PLAYER_SPITTER;
+  out.isHoming = false;
 };
 
+// ZERO-ALLOCATION: Writes to pre-allocated array, returns active count
 export const calculateSnifferShots = (
   origin: { x: number, y: number },
   state: SnifferState,
-  reticleRotation: number
-): ShotDef[] => {
-  const shots: ShotDef[] = [];
+  reticleRotation: number,
+  outArr: ShotDef[]
+): number => {
   const activeCount = state.capacityLevel; 
-  if (activeCount <= 0) return [];
+  if (activeCount <= 0) return 0;
 
   const damage = 1 + state.damageLevel;
   const speed = 22;
@@ -22020,17 +22020,18 @@ export const calculateSnifferShots = (
   for (let i = 0; i < activeCount; i++) {
       const localAngle = SNIFFER_TIPS[i % 4];
       const globalAngle = reticleRotation + localAngle;
-      const tipX = origin.x + Math.cos(globalAngle) * SNIFFER_OFFSET_RADIUS;
-      const tipY = origin.y + Math.sin(globalAngle) * SNIFFER_OFFSET_RADIUS;
-      const vx = Math.cos(globalAngle) * speed * 0.5;
-      const vy = Math.sin(globalAngle) * speed * 0.5;
       
-      shots.push({
-          x: tipX, y: tipY, vx, vy,
-          damage, life, configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true
-      });
+      const shot = outArr[i];
+      shot.x = origin.x + Math.cos(globalAngle) * SNIFFER_OFFSET_RADIUS;
+      shot.y = origin.y + Math.sin(globalAngle) * SNIFFER_OFFSET_RADIUS;
+      shot.vx = Math.cos(globalAngle) * speed * 0.5;
+      shot.vy = Math.sin(globalAngle) * speed * 0.5;
+      shot.damage = damage;
+      shot.life = life;
+      shot.configId = WeaponIDs.PLAYER_SNIFFER;
+      shot.isHoming = true;
   }
-  return shots;
+  return activeCount;
 };
 
 
@@ -22392,7 +22393,7 @@ import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. PRESERVE CRITICAL SERVICES
+    // 1. PRESERVE CRITICAL SERVICES (Like Audio Context)
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -22400,8 +22401,9 @@ export class EngineFactory {
         audioService = new AudioServiceImpl();
     }
 
-    // 2. RESET & REBIND
+    // 2. STRICT MODE RESET: Wipe singletons cleanly before remounting
     ServiceLocator.reset();
+    SharedGameEventBus.clear(); 
     ServiceLocator.register('AudioService', audioService);
 
     // 3. Core Services
@@ -22453,7 +22455,7 @@ export class EngineFactory {
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
-    const warmupSystem = new WarmupSystem(); // NEW
+    const warmupSystem = new WarmupSystem(); 
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
@@ -22508,7 +22510,7 @@ export class EngineFactory {
     
     // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
-    register(warmupSystem, SystemPhase.RENDER); // Warmup AFTER RenderSystem to inject dummy data
+    register(warmupSystem, SystemPhase.RENDER);
     
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);

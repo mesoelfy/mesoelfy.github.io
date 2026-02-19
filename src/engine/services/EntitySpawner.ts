@@ -1,12 +1,11 @@
 import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
-import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs, ArchetypeID, WeaponIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -51,7 +50,7 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER, // Updated default
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER,
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
@@ -78,16 +77,5 @@ export class EntitySpawner implements IEntitySpawner {
     const entity = this.spawn(id, overrides);
     
     return entity;
-  }
-
-  public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: ParticleShape = ParticleShape.CIRCLE): void {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.PARTICLE);
-    e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: color }));
-    e.addComponent(ComponentRegistry.create(ComponentType.RenderModel, { geometryId: GEOMETRY_IDS.PARTICLE, materialId: MATERIAL_IDS.PARTICLE }));
-    this.registry.updateCache(e);
   }
 }

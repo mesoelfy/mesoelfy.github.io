@@ -1,4 +1,4 @@
-import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
@@ -20,7 +20,7 @@ export class InteractionSystem implements IInteractionSystem {
 
   constructor(
     private input: IInputService,
-    private spawner: IEntitySpawner,
+    private particleSystem: IParticleSystem,
     private gameSystem: IGameStateSystem,
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
@@ -43,7 +43,6 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.input.getCursor();
     
-    // Calculate Stereo Pan based on cursor world position
     const halfWidth = ViewportHelper.viewport.width / 2;
     const pan = halfWidth > 0 ? Math.max(-1, Math.min(1, cursor.x / halfWidth)) : 0;
 
@@ -53,7 +52,6 @@ export class InteractionSystem implements IInteractionSystem {
         return; 
     }
     
-    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Dynamic) ---
     let handledByCrystal = false;
     const crystalZone = this.zones.get('crystal');
     
@@ -70,7 +68,6 @@ export class InteractionSystem implements IInteractionSystem {
             const isPanelDead = panelState?.isDestroyed ?? false;
 
             if (isPlayerDead) {
-                // REVIVE
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'REBOOTING';
                 interactionCode = 2; 
@@ -79,14 +76,11 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    // UPDATED: High pitch revive sound
                     AudioSystem.playSound('loop_player_revive', pan); 
-                    // Darker Yellow for Reboot/Revive
                     this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 
             else if (isPlayerHurt && !isPanelDead) {
-                // SELF HEAL
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'HEALING';
                 interactionCode = 1; 
@@ -102,7 +96,6 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // --- 2. GENERAL PANEL REPAIR ---
     if (!handledByCrystal) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
@@ -118,7 +111,7 @@ export class InteractionSystem implements IInteractionSystem {
                         this.lastRepairTime = time;
 
                         if (panelState.isDestroyed) {
-                            AudioSystem.playSound('loop_reboot', pan); // Standard reboot for panels
+                            AudioSystem.playSound('loop_reboot', pan);
                         } else {
                             this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
@@ -131,7 +124,6 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 3. Revive Decay
     if (this.gameSystem.playerHealth <= 0 && this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
         this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
     }
@@ -156,7 +148,7 @@ export class InteractionSystem implements IInteractionSystem {
       if (Math.random() > 0.3) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 2 + Math.random() * 2;
-          this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
+          this.particleSystem.spawn(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
       }
   }
 }
