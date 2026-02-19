@@ -36,8 +36,6 @@ export class BehaviorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const upgrades = useGameStore.getState().activeUpgrades || {};
-
     const aiContext: AIContext = {
       delta,
       time,
@@ -46,7 +44,11 @@ export class BehaviorSystem implements IGameSystem {
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
+              
+              // ECS BUG FIX: Add component AND update cache
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
+              this.registry.updateCache(bullet); 
+              
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
@@ -70,8 +72,18 @@ export class BehaviorSystem implements IGameSystem {
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
-      getUpgradeLevel: (key) => upgrades[key] || 0,
-      getEntity: (id) => this.registry.getEntity(id), // <--- IMPLEMENTATION ADDED HERE
+      // PHANTOM STATE FIX: Map keys to the correct new store slices
+      getUpgradeLevel: (key) => {
+          const state = useGameStore.getState();
+          if (key === 'SPITTER_GIRTH') return state.spitter.girthLevel;
+          if (key === 'SPITTER_DAMAGE') return state.spitter.damageLevel;
+          if (key === 'SPITTER_RATE') return state.spitter.rateLevel;
+          if (key === 'SNIFFER_CAPACITY') return state.sniffer.capacityLevel;
+          if (key === 'SNIFFER_DAMAGE') return state.sniffer.damageLevel;
+          if (key === 'SNIFFER_RATE') return state.sniffer.rateLevel;
+          return 0;
+      },
+      getEntity: (id) => this.registry.getEntity(id), 
       config: this.config
     };
 

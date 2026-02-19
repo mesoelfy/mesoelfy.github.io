@@ -24,4 +24,5 @@ export * from './WaveSystem';
 export * from './WeaponSystem';
 export * from './WorldSystem';
 export * from './RenderStateSystem';
+export * from './VisualStateSystem';
 export * from './AnimationSystem';

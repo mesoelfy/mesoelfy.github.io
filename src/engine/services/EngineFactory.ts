@@ -25,6 +25,7 @@ import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
 import { RenderStateSystem } from '@/engine/systems/RenderStateSystem';
+import { VisualStateSystem } from '@/engine/systems/VisualStateSystem';
 import { AnimationSystem } from '@/engine/systems/AnimationSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
@@ -84,7 +85,6 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    // UPDATED: Injected particleSystem instead of spawner
     const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
@@ -99,8 +99,9 @@ export class EngineFactory {
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
-    const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
+    const visualStateSystem = new VisualStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem);
+    const animationSystem = new AnimationSystem(registry);
     const renderSystem = new RenderSystem(registry);
     const warmupSystem = new WarmupSystem(); 
 
@@ -148,6 +149,7 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
+    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); // NEW
 
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
