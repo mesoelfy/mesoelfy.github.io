@@ -5,7 +5,7 @@ import { GameEngineCore } from '@/engine/services/GameEngine';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEventBus, SharedGameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -19,9 +19,7 @@ export const GameDirector = memo(() => {
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // 2. Pre-Warm Audio (Silent Generation)
-    // We call init() now so buffers generate during the intro.
-    // Audio won't play until user interacts and we call resume().
+    // 2. Pre-Warm Audio
     AudioSystem.init();
 
     // 3. Panel Sync Loop
@@ -47,6 +45,8 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
+      // 4. STRICT MODE FIX: Purge all listeners explicitly on React unmount
+      SharedGameEventBus.clear();
     };
   }, []); 
 

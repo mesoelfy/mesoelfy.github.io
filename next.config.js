@@ -14,7 +14,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  reactStrictMode: false,
+  reactStrictMode: true, // <-- ENABLED: Exposes memory leaks
   transpilePackages: ['three'],
   devIndicators: false,
   env: {

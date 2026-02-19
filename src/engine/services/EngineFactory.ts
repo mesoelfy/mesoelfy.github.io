@@ -45,7 +45,7 @@ import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. PRESERVE CRITICAL SERVICES
+    // 1. PRESERVE CRITICAL SERVICES (Like Audio Context)
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -53,8 +53,9 @@ export class EngineFactory {
         audioService = new AudioServiceImpl();
     }
 
-    // 2. RESET & REBIND
+    // 2. STRICT MODE RESET: Wipe singletons cleanly before remounting
     ServiceLocator.reset();
+    SharedGameEventBus.clear(); 
     ServiceLocator.register('AudioService', audioService);
 
     // 3. Core Services
@@ -106,7 +107,7 @@ export class EngineFactory {
     const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
     const renderSystem = new RenderSystem(registry);
-    const warmupSystem = new WarmupSystem(); // NEW
+    const warmupSystem = new WarmupSystem(); 
 
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
@@ -161,7 +162,7 @@ export class EngineFactory {
     
     // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
-    register(warmupSystem, SystemPhase.RENDER); // Warmup AFTER RenderSystem to inject dummy data
+    register(warmupSystem, SystemPhase.RENDER);
     
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
