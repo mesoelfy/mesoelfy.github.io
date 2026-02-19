@@ -23,10 +23,18 @@ interface IntelligentHeaderProps {
 export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
-  const isDamaged = !isDestroyed && health < maxHealth; // Use Slow prop for logic state
+  const isDamaged = !isDestroyed && health < maxHealth; 
   const [showOptimal, setShowOptimal] = useState(false);
   
   const barRef = useRef<HTMLDivElement>(null);
+
+  // Set initial width safely without binding it to React's render cycle
+  useEffect(() => {
+      if (barRef.current) {
+          barRef.current.style.width = `${(health / maxHealth) * 100}%`;
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // FAST PATH: Direct DOM Update for Width
   if (gameId) {
@@ -45,7 +53,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
       
-      // Calculate Stereo Pan based on Panel Position
       let pan = 0;
       if (gameId) {
           try {
@@ -54,13 +61,10 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
               if (rect) {
                   const halfWidth = ViewportHelper.viewport.width / 2;
                   if (halfWidth > 0) {
-                      // Normalize world X (-width/2 to width/2) to -1.0 to 1.0
                       pan = Math.max(-1, Math.min(1, rect.x / halfWidth));
                   }
               }
-          } catch (e) {
-              // Engine system not ready or available
-          }
+          } catch (e) {}
       }
 
       AudioSystem.playSound('ui_optimal', pan); 
@@ -136,11 +140,10 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
         </div>
         {!isGameOver && (
             <div className="w-full h-1 bg-black/50 relative overflow-hidden">
-                {/* FAST PATH DIV: Width controlled via GameStream ref + CSS Transition */}
                 <div 
                     ref={barRef}
                     className={clsx(
-                        "h-full transition-all duration-300 ease-out", // UPDATED: Changed from transition-colors to transition-all
+                        "h-full transition-all duration-300 ease-out",
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         (isDestroyed && health > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
@@ -148,8 +151,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}
-                    // Initialize with current value to avoid pop
-                    style={{ width: `${(health / maxHealth) * 100}%` }}
                 />
             </div>
         )}

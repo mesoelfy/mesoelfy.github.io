@@ -31,7 +31,6 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const label = isPurge ? 'PURGE' : 'REPAIR';
   const Icon = isPurge ? Bomb : Wrench;
   
-  // Dynamic Styling based on Affordability
   const borderColor = canAfford 
     ? (isPurge ? 'border-critical-red' : 'border-alert-yellow') 
     : 'border-white/10';
@@ -49,8 +48,6 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
     : '';
     
   const groupHoverText = canAfford ? 'group-hover/opbtn:text-black' : '';
-  
-  // Only show stripes if active
   const stripeColor = canAfford ? (isPurge ? '#FF003C' : '#eae747') : 'transparent';
 
   return (
@@ -65,12 +62,10 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
-        disabled={false}
+        disabled={!canAfford} // FIX: Proper A11y disabled attribute
+        aria-disabled={!canAfford}
         className={clsx(
             "group/opbtn relative p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-all duration-300 rounded-sm shrink-0",
-            // HYBRID SCALING: 
-            // 1. Base: w-24 h-24 (Original Size)
-            // 2. Safety: max-w-[22%] (Shrinks only if container is tiny)
             "w-24 h-auto aspect-square max-w-[22%]", 
             borderColor,
             shadowClass,
@@ -99,12 +94,10 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
                 } 
                 transition={{ repeat: Infinity, duration: isPurge ? 0.3 : 2.0, repeatDelay: isPurge ? 2 : 0.5, ease: "easeInOut" }} 
             >
-                {/* Icon size also set to resize with em/percent if container shrinks, but defaults to nice size */}
                 <Icon className="w-8 h-8" strokeWidth={2} />
             </motion.div>
             
             <div className="flex flex-col leading-none items-center w-full">
-                {/* Font scales down on crash */}
                 <span className="text-[10px] font-bold font-header tracking-wider truncate max-w-full text-center">
                     {label}
                 </span>

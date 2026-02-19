@@ -90,7 +90,6 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
     this._isMusicMuted = !settings.music;
-    // VOLUME REDUCED: 0.4 -> 0.25 to blend better with SFX
     this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.25);
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.value = this._targetMusicVol;
@@ -113,10 +112,11 @@ export class AudioMixer {
     if (!ctx) return;
     const now = ctx.currentTime;
     const targetFreq = this.MAX_FREQ * Math.pow(this.MIN_FREQ / this.MAX_FREQ, intensity);
+    
+    // FIX: Safely anchor the filter using setTargetAtTime to prevent overlapping ramp crashes
     this.musicFilter.frequency.cancelScheduledValues(now);
-    this.musicFilter.frequency.setValueAtTime(this.musicFilter.frequency.value, now);
-    this.musicFilter.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.04);
-    this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
+    this.musicFilter.frequency.setTargetAtTime(targetFreq, now, 0.05); // Fast drop
+    this.musicFilter.frequency.setTargetAtTime(this.MAX_FREQ, now + 0.1, duration * 0.3); // Smooth recovery
   }
 
   public updateMasterFilter(integrity: number, transitionTime: number = 0.05) {

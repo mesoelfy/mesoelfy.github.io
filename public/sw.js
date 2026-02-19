@@ -1,28 +1,22 @@
-const CACHE_NAME = 'mesoelfy-os-cache-v3';
+const CACHE_NAME = 'mesoelfy-os-cache-v4';
 
-// Assets to cache immediately
+// Critical assets only. (Large audio files removed to prevent atomic install failures)
 const PRECACHE_URLS = [
   '/',
   '/favicon.ico',
   '/manifest.json',
-  '/assets/images/social-card.jpg',
-  '/assets/audio/music/mesoelfy_os/01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3'
+  '/assets/images/social-card.jpg'
 ];
 
 self.addEventListener('install', (event) => {
-  // Force this SW to become the "waiting" worker immediately
   self.skipWaiting();
-  
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
 });
 
 self.addEventListener('activate', (event) => {
-  // Force this SW to become the "active" worker immediately
   event.waitUntil(self.clients.claim());
-  
-  // Clean up old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -40,7 +34,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
-  // STRATEGY: Network First for HTML
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -51,13 +44,13 @@ self.addEventListener('fetch', (event) => {
           });
         })
         .catch(() => {
-          return caches.match(event.request);
+          // FIX: explicit fallback to root if specific offline route is missed
+          return caches.match(event.request).then(res => res || caches.match('/'));
         })
     );
     return;
   }
 
-  // STRATEGY: Cache First for Assets
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) return response;

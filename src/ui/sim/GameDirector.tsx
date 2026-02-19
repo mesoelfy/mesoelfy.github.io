@@ -5,7 +5,7 @@ import { GameEngineCore } from '@/engine/services/GameEngine';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus, SharedGameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -45,8 +45,7 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      // 4. STRICT MODE FIX: Purge all listeners explicitly on React unmount
-      SharedGameEventBus.clear();
+      // FIX: Removed SharedGameEventBus.clear() to prevent destroying UI listeners on hot-reloads
     };
   }, []); 
 

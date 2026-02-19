@@ -8,24 +8,31 @@ import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import galleryRaw from '@/engine/config/static/gallery.json';
 
-const GRID_SIZE = 12; // 3 Cols * 4 Rows
+const GRID_SIZE = 12;
 
-// THE THREE SPEED TIERS (Milliseconds)
 const SPEEDS = [
     { min: 4000, max: 4500 }, 
     { min: 5000, max: 5500 }, 
     { min: 6000, max: 6500 }
 ];
 
-// --- SUB-COMPONENT: STATIC GRID CELL ---
-// This container stays in the DOM permanently to hold the grid structure.
-// The content inside swaps out via absolute positioning.
-const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: boolean, onClick: (id: string, e: React.MouseEvent) => void }) => {
-    // We use the item's uniqueId as the key for AnimatePresence to know when to swap
-    const key = item ? item.uniqueId : 'empty';
+// HOISTED FUNCTIONS TO PREVENT RE-ALLOCATION ON RENDER
+const shuffle = (array: any[]) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
-    // Randomized fade durations for organic feel (slightly slower now for smoothness)
-    // Range: 1.2s to 1.8s
+const getNextTime = () => {
+    const tier = SPEEDS[Math.floor(Math.random() * SPEEDS.length)];
+    const duration = tier.min + Math.random() * (tier.max - tier.min);
+    return Date.now() + duration;
+};
+
+const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: boolean, onClick: (id: string, e: React.MouseEvent) => void }) => {
+    const key = item ? item.uniqueId : 'empty';
     const seed = item ? (item.uniqueId.charCodeAt(0) + item.uniqueId.charCodeAt(item.uniqueId.length - 1)) : 0;
     const duration = 1.2 + (seed % 6) * 0.1;
 
@@ -38,11 +45,9 @@ const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: 
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }} 
-                        transition={{ duration: duration, ease: "easeInOut" }} // Smoother ease
+                        transition={{ duration: duration, ease: "easeInOut" }}
                         onClick={(e) => onClick(item.uniqueId, e)}
                         onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
-                        // ABSOLUTE POSITIONING IS CRITICAL HERE
-                        // It ensures the entering image sits exactly on top of the exiting one
                         className={clsx(
                             "absolute inset-0 w-full h-full group/tile border flex items-center justify-center transition-colors bg-black",
                             isDestroyed 
@@ -51,32 +56,21 @@ const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: 
                         )}
                     >
                         <div className={clsx("absolute inset-0 transition-colors z-0", isDestroyed ? "bg-critical-red/5" : "bg-primary-green/5 group-hover/tile:bg-primary-green/10")} />
-                        
                         {!isDestroyed && (
                             <img 
-                                src={item.thumb} 
-                                alt={item.title}
+                                src={item.thumb} alt={item.title} loading="lazy"
                                 className="relative z-10 w-[95%] h-[95%] object-contain pointer-events-none drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] scale-110 group-hover/tile:scale-100 opacity-90 group-hover/tile:opacity-100 transition-all duration-300 ease-out"
-                                loading="lazy"
                             />
                         )}
-
                         <div className="absolute top-0 left-0 z-20">
                             <div className={clsx("text-[8px] font-mono leading-none px-1.5 py-1 backdrop-blur-[2px] border-b border-r border-transparent transition-colors", isDestroyed ? "bg-critical-red/20 text-critical-red animate-pulse" : "bg-black/60 text-primary-green-dim group-hover/tile:text-alert-yellow")}>
                                 {isDestroyed ? "ERR" : item.id}
                             </div>
                         </div>
-
                         {!isDestroyed && <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-primary-green-dim/50 group-hover/tile:border-alert-yellow z-20" />}
                     </motion.button>
                 ) : (
-                    <motion.div 
-                        key="empty"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 w-full h-full bg-black/20"
-                    />
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 w-full h-full bg-black/20" />
                 )}
             </AnimatePresence>
         </div>
@@ -92,27 +86,10 @@ export const LiveArtGrid = () => {
   
   const [displayItems, setDisplayItems] = useState<any[]>([]);
   
-  // -- STATE REFS --
   const deckRef = useRef<any[]>([]);
-  const displayItemsRef = useRef<any[]>([]); // Synchronous tracking
+  const displayItemsRef = useRef<any[]>([]); 
   const nextUpdateTimesRef = useRef<number[]>([]);
 
-  // Helper: Shuffle
-  const shuffle = (array: any[]) => {
-      for (let i = array.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-  };
-
-  const getNextTime = () => {
-      const tier = SPEEDS[Math.floor(Math.random() * SPEEDS.length)];
-      const duration = tier.min + Math.random() * (tier.max - tier.min);
-      return Date.now() + duration;
-  };
-
-  // 1. Initialize
   useEffect(() => {
       const fullDeck = shuffle([...galleryRaw]);
       const initialHand = fullDeck.splice(0, GRID_SIZE);
@@ -120,7 +97,6 @@ export const LiveArtGrid = () => {
       deckRef.current = fullDeck;
       displayItemsRef.current = initialHand;
       
-      // Initialize timelines with a stagger
       nextUpdateTimesRef.current = Array.from({ length: GRID_SIZE }, () => {
           return Date.now() + 2000 + (Math.random() * 8000); 
       });
@@ -128,7 +104,6 @@ export const LiveArtGrid = () => {
       setDisplayItems(initialHand);
   }, []);
 
-  // 2. Independent Clock Watcher
   useEffect(() => {
       if (isDestroyed) return;
 
@@ -139,7 +114,6 @@ export const LiveArtGrid = () => {
 
           for (let i = 0; i < GRID_SIZE; i++) {
               if (now >= nextUpdateTimesRef.current[i]) {
-                  
                   if (deckRef.current.length === 0) {
                       const activeIds = new Set(currentGrid.map(item => item?.uniqueId).filter(Boolean));
                       const newDeck = galleryRaw.filter(item => !activeIds.has(item.uniqueId));
@@ -174,14 +148,8 @@ export const LiveArtGrid = () => {
 
   return (
     <div className={clsx("grid grid-cols-3 gap-1 w-full p-2 content-start transition-opacity duration-500", isDestroyed ? "pointer-events-none opacity-50 grayscale" : "")}>
-        {/* We map indices 0-11 to create permanent slots */}
         {Array.from({ length: GRID_SIZE }).map((_, i) => (
-            <ArtCell 
-                key={i} 
-                item={displayItems[i]} 
-                isDestroyed={isDestroyed} 
-                onClick={handleClick} 
-            />
+            <ArtCell key={i} item={displayItems[i]} isDestroyed={isDestroyed} onClick={handleClick} />
         ))}
     </div>
   );
