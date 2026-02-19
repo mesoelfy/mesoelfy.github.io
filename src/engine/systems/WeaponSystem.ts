@@ -10,16 +10,16 @@ import { TargetData } from '@/engine/ecs/components/TargetData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { calculateSpitterShot, calculateSnifferShots } from '@/engine/handlers/weapons/WeaponLogic';
+import { calculateSpitterShot, calculateSnifferShots, ShotDef } from '@/engine/handlers/weapons/WeaponLogic';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import { WeaponIDs } from '@/engine/config/Identifiers';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GameStream } from '@/engine/state/GameStream';
 import { Query } from '@/engine/ecs/Query';
+import { Entity } from '@/engine/ecs/Entity';
 import * as THREE from 'three';
 
-// Same offset as VFXManifest for visual alignment
 const PURGE_OFFSET = 1.2;
 
 interface PurgeState {
@@ -38,6 +38,12 @@ export class WeaponSystem implements IGameSystem {
   
   private purgeState: PurgeState = { active: false, shotsRemaining: 0, currentAngle: 0, accumulator: 0 };
   private projectileQuery = new Query({ all: [ComponentType.Projectile, ComponentType.Transform, ComponentType.Motion] });
+
+  // POOLS & CACHES
+  private targetCache = { x: 0, y: 0, valid: false };
+  private originCache = { x: 0, y: 0 };
+  private spitterOut: ShotDef = { x: 0, y: 0, vx: 0, vy: 0, damage: 0, life: 0, configId: WeaponIDs.PLAYER_SPITTER, isHoming: false };
+  private snifferOut: ShotDef[] = Array.from({ length: 8 }, () => ({ x: 0, y: 0, vx: 0, vy: 0, damage: 0, life: 0, configId: WeaponIDs.PLAYER_SNIFFER, isHoming: true }));
 
   constructor(
     private spawner: IEntitySpawner,
@@ -149,33 +155,31 @@ export class WeaponSystem implements IGameSystem {
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     if (!transform) return;
 
-    const target = this.acquireTarget(transform);
-    if (!target) return;
+    this.acquireTarget(transform);
+    if (!this.targetCache.valid) return;
 
     const spitterState = useGameStore.getState().spitter;
     const snifferState = useGameStore.getState().sniffer;
     const pVisual = playerEntity.getComponent<RenderTransform>(ComponentType.RenderTransform);
 
+    this.originCache.x = transform.x;
+    this.originCache.y = transform.y;
+
     // SPITTER
     const spitterInterval = this.getSpitterInterval(spitterState.rateLevel);
     if (time > this.lastSpitterTime + spitterInterval) {
-        const shot = calculateSpitterShot(
-            { x: transform.x, y: transform.y },
-            { x: target.x, y: target.y },
-            spitterState
-        );
+        calculateSpitterShot(this.originCache, this.targetCache, spitterState, this.spitterOut);
         
-        // --- SCALE CALCULATION ---
         const girthMult = 1.0 + (spitterState.girthLevel * 0.75);
         
         this.spawner.spawnProjectile(
-            shot.x, shot.y, shot.vx, shot.vy, 
-            Faction.FRIENDLY, shot.life, shot.damage, shot.configId,
+            this.spitterOut.x, this.spitterOut.y, this.spitterOut.vx, this.spitterOut.vy, 
+            Faction.FRIENDLY, this.spitterOut.life, this.spitterOut.damage, this.spitterOut.configId,
             undefined, 
-            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult } // Override base 0.4
+            { scaleX: 0.4 * girthMult, scaleY: 0.4 * girthMult }
         );
 
-        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(shot.vy, shot.vx) });
+        this.events.emit(GameEvents.PLAYER_FIRED, { x: transform.x, y: transform.y, angle: Math.atan2(this.spitterOut.vy, this.spitterOut.vx) });
         this.events.emit(GameEvents.PLAY_SOUND, { key: 'fx_player_fire', x: transform.x });
         this.lastSpitterTime = time;
     }
@@ -185,28 +189,24 @@ export class WeaponSystem implements IGameSystem {
         const snifferInterval = this.getSnifferInterval(snifferState.rateLevel);
         if (time > this.lastSnifferTime + snifferInterval) {
             const reticleRot = pVisual ? -pVisual.rotation : 0;
-            const shots = calculateSnifferShots(
-                { x: transform.x, y: transform.y },
-                snifferState,
-                reticleRot
-            );
+            const count = calculateSnifferShots(this.originCache, snifferState, reticleRot, this.snifferOut);
 
-            shots.forEach(s => {
+            for (let i = 0; i < count; i++) {
+                const s = this.snifferOut[i];
                 const b = this.spawner.spawnProjectile(
                     s.x, s.y, s.vx, s.vy, 
                     Faction.FRIENDLY, s.life, s.damage, s.configId
                 );
                 b.addComponent(new TargetData(null, 'ENEMY'));
                 this.registry.updateCache(b);
-            });
+            }
             this.lastSnifferTime = time;
         }
     }
   }
 
   private getSpitterInterval(level: number): number {
-      const base = 0.15;
-      return base / Math.pow(1.1, level);
+      return 0.15 / Math.pow(1.1, level);
   }
 
   private getSnifferInterval(level: number): number {
@@ -214,13 +214,12 @@ export class WeaponSystem implements IGameSystem {
       if (level === 0) return base * 3.0;
       if (level === 1) return base * 1.5;
       if (level === 2) return base;
-      if (level >= 3) return base * 0.75;
-      return base * 3.0;
+      return base * 0.75;
   }
 
   private triggerPurge() {
       this.purgeState = { active: true, shotsRemaining: 180, currentAngle: 0, accumulator: 0 };
-      GameStream.set('PLAYER_PURGE_ACTIVE', 1); // <--- SYNC ON
+      GameStream.set('PLAYER_PURGE_ACTIVE', 1);
       const player = this.getPlayerEntity();
       if (player) {
           const t = player.getComponent<TransformData>(ComponentType.Transform);
@@ -242,7 +241,6 @@ export class WeaponSystem implements IGameSystem {
               for(let i=0; i<BURST_COUNT; i++) {
                   const angle = (i / BURST_COUNT) * Math.PI * 2;
                   
-                  // OFFSET ORIGIN
                   const startX = t.x + Math.cos(angle) * PURGE_OFFSET;
                   const startY = t.y + Math.sin(angle) * PURGE_OFFSET;
                   
@@ -257,8 +255,7 @@ export class WeaponSystem implements IGameSystem {
                       { scaleX: 1.5, scaleY: 1.5 }
                   );
 
-                  const hue = i / BURST_COUNT;
-                  this.tempColor.setHSL(hue, 1.0, 0.5);
+                  this.tempColor.setHSL(i / BURST_COUNT, 1.0, 0.5);
                   
                   const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
                   if (model) { 
@@ -279,21 +276,19 @@ export class WeaponSystem implements IGameSystem {
           this.purgeState.accumulator -= 1.0;
           if (this.purgeState.shotsRemaining <= 0) { 
               this.purgeState.active = false; 
-              GameStream.set('PLAYER_PURGE_ACTIVE', 0); // <--- SYNC OFF
+              GameStream.set('PLAYER_PURGE_ACTIVE', 0); 
               this.events.emit(GameEvents.PURGE_COMPLETE, null); 
               break; 
           }
           const angle = this.purgeState.currentAngle;
           
-          // OFFSET ORIGIN
           const startX = originX + Math.cos(angle) * PURGE_OFFSET;
           const startY = originY + Math.sin(angle) * PURGE_OFFSET;
           
           const vx = Math.cos(angle) * SPEED; const vy = Math.sin(angle) * SPEED;
           const bullet = this.spawner.spawnProjectile(startX, startY, vx, vy, Faction.FRIENDLY, LIFE, DAMAGE, WeaponIDs.PLAYER_PURGE);
           
-          const hue = (this.purgeState.currentAngle * 0.15) % 1.0; 
-          this.tempColor.setHSL(hue, 1.0, 0.5); 
+          this.tempColor.setHSL((this.purgeState.currentAngle * 0.15) % 1.0, 1.0, 0.5); 
           const model = bullet.getComponent<RenderModel>(ComponentType.RenderModel);
           if (model) { model.r = this.tempColor.r; model.g = this.tempColor.g; model.b = this.tempColor.b; }
 
@@ -306,7 +301,8 @@ export class WeaponSystem implements IGameSystem {
   private acquireTarget(pPos: TransformData) {
     const RANGE = 14; 
     const count = this.physics.spatialGrid.query(pPos.x, pPos.y, RANGE, this.queryBuffer);
-    let nearestDist = Infinity; let targetEnemy = null;
+    let nearestDist = Infinity; 
+    this.targetCache.valid = false;
 
     for (let i = 0; i < count; i++) {
       const id = this.queryBuffer[i];
@@ -316,12 +312,15 @@ export class WeaponSystem implements IGameSystem {
       if (state && state.current === AI_STATE.SPAWN) continue;
       const t = e.getComponent<TransformData>(ComponentType.Transform);
       if (!t) continue;
-      const dist = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
-      if (dist < 196 && dist < nearestDist) { nearestDist = dist; targetEnemy = e; }
+      
+      const distSq = (t.x - pPos.x)**2 + (t.y - pPos.y)**2; 
+      if (distSq < 196 && distSq < nearestDist) { 
+          nearestDist = distSq; 
+          this.targetCache.x = t.x;
+          this.targetCache.y = t.y;
+          this.targetCache.valid = true;
+      }
     }
-    if (!targetEnemy) return null;
-    const t = targetEnemy.getComponent<TransformData>(ComponentType.Transform)!;
-    return { x: t.x, y: t.y };
   }
 
   private getPlayerEntity() {

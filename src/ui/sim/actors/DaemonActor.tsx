@@ -23,7 +23,6 @@ export const DaemonActor = () => {
       const items: { root: THREE.Group, cage: THREE.Mesh, orb: THREE.Mesh }[] = [];
       const cageGeo = new THREE.OctahedronGeometry(0.7, 0); 
       const orbGeo = new THREE.IcosahedronGeometry(0.25, 1);
-      // Updated hardcoded hex to PINK
       const cageMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, wireframe: true, transparent: true, opacity: 0.5, toneMapped: false });
       const orbMat = new THREE.MeshBasicMaterial({ color: PALETTE.PINK.PRIMARY, toneMapped: false });
 
@@ -41,33 +40,41 @@ export const DaemonActor = () => {
   useFrame((state, delta) => {
       if (!groupRef.current) return;
       
-      const entities = Array.from(registry.getByTag(Tag.PLAYER)).filter(e => {
-          const id = e.getComponent<IdentityData>(ComponentType.Identity);
-          return id?.variant === EnemyTypes.DAEMON && e.active;
-      });
-
-      for (let i = 0; i < MAX_DAEMONS; i++) {
-          const item = pool[i];
-          const entity = entities[i]; 
-
-          if (!entity) { item.root.visible = false; continue; }
-          item.root.visible = true;
+      let activeCount = 0;
+      
+      // ZERO-ALLOCATION ITERATION
+      for (const entity of registry.getByTag(Tag.PLAYER)) {
+          if (!entity.active) continue;
           
-          const transform = entity.getComponent<TransformData>(ComponentType.Transform);
-          const ai = entity.getComponent<AIStateData>(ComponentType.State);
+          const id = entity.getComponent<IdentityData>(ComponentType.Identity);
+          if (id?.variant === EnemyTypes.DAEMON) {
+              const item = pool[activeCount];
+              item.root.visible = true;
+              
+              const transform = entity.getComponent<TransformData>(ComponentType.Transform);
+              const ai = entity.getComponent<AIStateData>(ComponentType.State);
 
-          if (transform && ai) {
-              item.root.position.set(transform.x, transform.y, 0);
-              const charge = ai.data.chargeProgress || 0;
-              const currentScaleY = THREE.MathUtils.lerp(SQUISH_SCALE_Y, FULL_SCALE_Y, charge);
-              const currentScaleXZ = THREE.MathUtils.lerp(WIDTH_SCALE, 1.0, charge);
-              item.cage.scale.set(currentScaleXZ, currentScaleY, currentScaleXZ);
-              item.cage.rotation.y += delta * SPIN_SPEED;
-              item.cage.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
-              const orbScale = THREE.MathUtils.lerp(0, 1, charge);
-              item.orb.scale.setScalar(orbScale);
-              if (charge >= 1.0) item.orb.scale.multiplyScalar(1.0 + Math.sin(state.clock.elapsedTime * 10) * 0.1);
+              if (transform && ai) {
+                  item.root.position.set(transform.x, transform.y, 0);
+                  const charge = ai.data.chargeProgress || 0;
+                  const currentScaleY = THREE.MathUtils.lerp(SQUISH_SCALE_Y, FULL_SCALE_Y, charge);
+                  const currentScaleXZ = THREE.MathUtils.lerp(WIDTH_SCALE, 1.0, charge);
+                  item.cage.scale.set(currentScaleXZ, currentScaleY, currentScaleXZ);
+                  item.cage.rotation.y += delta * SPIN_SPEED;
+                  item.cage.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
+                  const orbScale = THREE.MathUtils.lerp(0, 1, charge);
+                  item.orb.scale.setScalar(orbScale);
+                  if (charge >= 1.0) item.orb.scale.multiplyScalar(1.0 + Math.sin(state.clock.elapsedTime * 10) * 0.1);
+              }
+              
+              activeCount++;
+              if (activeCount >= MAX_DAEMONS) break;
           }
+      }
+
+      // Hide the rest of the pool
+      for (let i = activeCount; i < MAX_DAEMONS; i++) {
+          pool[i].root.visible = false;
       }
   });
 

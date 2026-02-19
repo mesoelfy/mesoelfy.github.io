@@ -7,7 +7,9 @@ import { PanelId } from '@/engine/config/PanelConfig';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class TargetingSystem implements IGameSystem {
-  private playerCache: { x: number, y: number } | null = null;
+  // ZERO-ALLOCATION CACHES
+  private playerCache = { x: 0, y: 0, valid: false };
+  private enemyCache = { x: 0, y: 0, valid: false };
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
 
   constructor(
@@ -46,7 +48,7 @@ export class TargetingSystem implements IGameSystem {
             else if (target.type === 'ENEMY') {
                 target.locked = false; 
             }
-            else if (target.type === 'PLAYER' && this.playerCache) {
+            else if (target.type === 'PLAYER' && this.playerCache.valid) {
                 target.x = this.playerCache.x;
                 target.y = this.playerCache.y;
             }
@@ -55,7 +57,7 @@ export class TargetingSystem implements IGameSystem {
         }
 
         if (target.type === 'PLAYER') {
-            if (this.playerCache) {
+            if (this.playerCache.valid) {
                 target.x = this.playerCache.x;
                 target.y = this.playerCache.y;
                 target.id = 'PLAYER';
@@ -69,7 +71,7 @@ export class TargetingSystem implements IGameSystem {
                 target.y = Math.max(bestPanel.bottom, Math.min(transform.y, bestPanel.top));
                 target.locked = true; 
             } else {
-                if (this.playerCache) {
+                if (this.playerCache.valid) {
                     target.x = this.playerCache.x;
                     target.y = this.playerCache.y;
                     target.id = 'PLAYER';
@@ -77,10 +79,10 @@ export class TargetingSystem implements IGameSystem {
             }
         }
         else if (target.type === 'ENEMY') {
-            const bestEnemy = this.findNearestEnemy(transform.x, transform.y);
-            if (bestEnemy) {
-                target.x = bestEnemy.x;
-                target.y = bestEnemy.y;
+            this.findNearestEnemy(transform.x, transform.y);
+            if (this.enemyCache.valid) {
+                target.x = this.enemyCache.x;
+                target.y = this.enemyCache.y;
                 target.id = 'ENEMY_LOCKED';
             } else {
                 target.id = null; 
@@ -90,15 +92,17 @@ export class TargetingSystem implements IGameSystem {
   }
 
   private updatePlayerCache() {
+      this.playerCache.valid = false;
       const players = this.registry.getByTag(Tag.PLAYER);
       for (const p of players) {
           const t = p.getComponent<TransformData>(ComponentType.Transform);
           if (t) {
-              this.playerCache = { x: t.x, y: t.y };
+              this.playerCache.x = t.x;
+              this.playerCache.y = t.y;
+              this.playerCache.valid = true;
               return;
           }
       }
-      this.playerCache = null;
   }
 
   private findNearestPanel(x: number, y: number) {
@@ -127,17 +131,15 @@ export class TargetingSystem implements IGameSystem {
   private findNearestEnemy(x: number, y: number) {
       const SEARCH_RADIUS = 15;
       const MAX_RANGE_SQ = SEARCH_RADIUS * SEARCH_RADIUS;
-      
       const count = this.physics.spatialGrid.query(x, y, SEARCH_RADIUS, this.queryBuffer);
       
-      let nearest: { x: number, y: number } | null = null;
       let minDist = Infinity;
+      this.enemyCache.valid = false;
 
       for (let i = 0; i < count; i++) {
           const id = this.queryBuffer[i];
           const e = this.registry.getEntity(id);
           
-          // Updated: Exclude PROJECTILE
           if (!e || !e.active || !e.hasTag(Tag.ENEMY) || e.hasTag(Tag.PROJECTILE)) continue;
 
           const t = e.getComponent<TransformData>(ComponentType.Transform);
@@ -149,10 +151,11 @@ export class TargetingSystem implements IGameSystem {
           
           if (distSq < minDist && distSq < MAX_RANGE_SQ) {
               minDist = distSq;
-              nearest = { x: t.x, y: t.y };
+              this.enemyCache.x = t.x;
+              this.enemyCache.y = t.y;
+              this.enemyCache.valid = true;
           }
       }
-      return nearest;
   }
 
   teardown(): void {}
