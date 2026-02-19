@@ -1,0 +1,68 @@
+CURRENTLY IN PROGRESS / NOT FINISHED YET
+
+
+
+Mac Setup:
+
+Install Homebrew, the unofficial (but universally used) package manager for Mac
+>> in Terminal
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+
+>> then in Terminal
+brew install node
+brew install python
+brew install git
+brew install vscode
+brew install tree
+
+PC Setup:
+
+Install Chocolatey (Most Similar to Homebrew)
+>> then in PowerShell as Admin
+choco install nodejs
+choco install python
+choco install git
+choco install vscode
+
+
+
+PowerShell (pre-installed): Windows' native command-line tool that speaks "Windows language"
+
+    - Use this once to install the software / libraries you need for your website.
+    - Chocolatey?
+
+Git Bash (must install): A terminal for Windows that speaks "Mac/Linux language" so developers can use the same commands across all platforms
+
+    - Use this to work on your website
+    - Where you paste AI code
+    - Where you run your website locally before pushing it live to the internet
+    - Where you do git commits
+
+Install Git for Windows: https://git-scm.com/download/win
+During install, make sure "Git Bash Here" context menu is enabled
+
+
+When you first open the project, run "npm install" in Git Bash. This downloads all the code libraries the site needs. You only do this once (or when dependencies change). After that, paste "npm run dev" in your Git Bash terminal to make your personal site load locally on your computer in your web browser at http://localhost:3000/. You can minimize this window until you're ready to close it. Just leave it running.
+
+You will open a new Git Bash terminal in your project folder for your AI copy-paste coding and git hub commit pushes.
+
+# 1. Navigate to project folder (RIGHT CLICK AND CLICK WHAT?)
+cd path/to/project
+
+# 2. Install dependencies (ONE TIME)
+npm install
+
+# 3. Run dev server (EVERY TIME)
+npm run dev
+
+
+AI Instructions should inform the AI that their site was built for them by a freelancer, and that the user they are interacting with may have very little tech literacy and need hand-holding and help troubleshooting if something isn't working correctly in their workflow. Explain workflow steps in plain succinct terms that define many aspects to a noobie.
+
+
+
+
+COLOR INSTRUCTIONS:
+60:30:10 color rule. One dominant color sets mood, secondary tones support it, accents guide your eye.
+

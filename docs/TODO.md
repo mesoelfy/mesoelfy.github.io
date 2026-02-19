@@ -396,97 +396,6 @@ All the images will be placed in a single folder, so their naming structure need
 
 
 
-# Fantasy/Sci-Fi Character and Creature Names Organized by Category
-
-## Reptilian/Dragon
-
-Saurian, Drakon, Saur, Ignisaur, Cinder-Scale, Slyth, Skale, Sobek, Skaal, Krokdar, Krokos, Skarath, Ophis, Ophiuchus, Cobrus, Amphisbaena, Cervidrake, Verdrox
-
-## Insect/Arthropod
-
-Chitinous, Araneae, Mantik, Scythera, Lepidoptera, Lepida, Carcinos, Scolopeo, Scorpia, Serket, Venoma
-
-## Avian/Bird
-
-Avis, Corvax, Corvus, Corvina, Blue Jay, Pavus
-
-## Mammalian
-
-Mammalian, Chiropteran, Varg, Fenris, Murid, Barkley, Barkmaw
-
-## Aquatic/Marine
-
-Thalassos, Thalassa, Hydria, Reef-Reaver, Cuda, Polyp, Mollusoid
-
-## Skeletal/Bone
-
-Ossis, Ossificus, Ossion, Ossia, Skall
-
-## Death/Undead/Decay
-
-Mortis, Mortivore, Kharon, Rotvale, Suture, Gore-Sovereign, Flesh-Stitcher
-
-## Elemental/Fire
-
-Volcanus, Magmarok, Magmaw, Pyr, Ignisaur, Cinder-Scale, Zharr
-
-## Elemental/Ice
-
-Glacius, Rime, Krysto, Krystalin
-
-## Fungal/Spore
-
-Mycel, Spore-Host, Taroit, Taroite, Taroited
-
-## Cosmic/Ethereal
-
-Eldritch, Aetheris, Mnemosyne, Zyraen, Xandris
-
-## Dark/Shadow
-
-Umbral, Vanta, Veth-zul
-
-## Armor/Equipment
-
-Praetorian, Pauldrons, Greaves, Glaive
-
-## Titles/Ranks
-
-Exarch, Gore-Sovereign, Reef-Reaver, Dr. Chrysalis
-
-## Metallic/Mineral
-
-Aurum, Lithoid, Brassgut, Karn
-
-## Biological/Organic
-
-Carnis, Pustules, Marrow, Biolum, Yulth, Fel-whip
-
-## Vision/Eyes
-
-Cyclopean, Oculon, Panoptes
-
-## Vermiform/Worm
-
-Vermis, Vermyn
-
-## Shell/Carapace
-
-Testudo, Krell
-
-## Toxin/Venom
-
-Vipera, Vez, Venoma
-
-## Generic/Ambiguous Names
-
-Vorag, Ryl, Lotl, Voss, Vane, Cephaloid, Scovox, Krellis, Silas, Kyro, Vela, Kross, Kraz, Vortn, Varkas, Xeron, Thall, Rask, Surok, Thrax, Vora, Xylia, Kaelen, Cyra, Ryla, Krux, Kyrishe, Aurelia, Vorn, Krag, Grogmar, Rhulk, Kyra, Kael, Vannic, Trixie, Vyloth, Xal, Ommix, Zali, Rixie, Vina, Veridia, Sainya, Kaelith, Vrak, Xyloth, Voros, Krixis, Venthos, Krayden, Korda, Sela, Zarek, Voran, Vahn, Gnasher, Korgath, Vrok, Rhogar, Vexis, Vekar, Kros, Zaliss, Vorgon, Krovax, Zarik, Vrakkas, Karys, Korthos, Vira, Krizalid, Zz'rit, Cornetis, Xul, Grak, Grendel, Alir, Lypee, Ronk, Zinx, Raksha, Zareth, Lirien, Ciela, Kaelie, Valdor, Sethos
-
-## More Names
-Aris
-Lumina_Kaelis
-
-
 
 Should include CCO in header of panel with text telling people all character are CC0, available for anyone to use without restriction
 
@@ -546,8 +455,9 @@ The only way to get 4K output from Nano Banana Pro is via the API at AI Studio.
 
 HOW TO TWITTER THREAD
 
+✦ [Esper Elfy]{001} Fae (ELFY) B ✦ https://mesoelfy.github.io 𖭅𖭅𖭅
 
-001_Human | ESPER ELFY | https://mesoelfy.github.io
+
 post framed image, then thumbnail for that batch. then rest of frames for that batch. Rest of thumbnails shared within each frame branch at very end, except for first image of each branch
 First image in thread has link to next previous batch.
 Last image in thread has link to next batch.
@@ -558,33 +468,17 @@ Do batches of 30.
 HEADERS - include year EXPLORATION DATE RANGE
 
 
-60:30:10 color rule. One dominant color sets mood, secondary tones support it, accents guide your eye.
+This is your opportunity to learn vibe coding for your own live project.
 
 
-The game needs to stay paused.
 
 
-mesoelfy - https://youtu.be/9EpyGa_4D8g
-OP 001-017 - https://youtu.be/LHMcpQ5mfEw
-OP 001 - https://youtu.be/YwuhejTqLOg
-OP 002 - https://youtu.be/wMXT9fA2CJY
-OP 003 - https://youtu.be/9wocy3lGyLo
-OP 004 - https://youtu.be/mVODU3WU-7w
-OP 005 - https://youtu.be/-GcvxoUrI5I
-OP 005A - https://youtu.be/IUY-n3Q7Mh8
-OP 005B - https://youtu.be/1kQ10t3cYa0
-OP 006 - https://youtu.be/l_a3hWGvqWU
-OP 007 - https://youtu.be/6516ojvoYy0
-OP 008 - https://youtu.be/yPcTDlf8vSs
-OP 009 - https://youtu.be/nGyG250bQJE
-OP 010 - https://youtu.be/wk1yQuYNOUk
-OP 011 - https://youtu.be/9rYZMNdJHFQ
-OP 012 - https://youtu.be/uUn6Mj87FGw
-OP 013 - https://youtu.be/ESqTlXMvbJ0
-OP 014 - https://youtu.be/IhKZFvT3Nbc
-OP 015 - https://youtu.be/WdxFzG4UAjg
-OP 016 - https://youtu.be/Heyz2rGfxyM
-OP 016A - https://youtu.be/NTWiNhZ_PzY
-OP 016B - https://youtu.be/CL7-F4oOemY
-OP 017 - https://youtu.be/dtsfby4ikHw
-OP 017.X - https://youtu.be/48pUDBwPRxA
+
+
+
+
+
+
+
+
+mouse needs to be past 50% threshold of image for the other images to fade to black.
