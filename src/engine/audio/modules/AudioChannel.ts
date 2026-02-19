@@ -13,7 +13,7 @@ export class AudioChannel {
     this.panner = ctx.createStereoPanner();
     this.gain = ctx.createGain();
 
-    // Wire them up: Panner -> Gain -> Destination (Mixer)
+    // Wire them up: Panner -> Gain -> Destination (Mixer Bus)
     this.panner.connect(this.gain);
     this.gain.connect(destination);
   }
@@ -27,15 +27,17 @@ export class AudioChannel {
     pan: number, 
     pitchVariance: number
   ) {
-    // 1. Reset State
     this._isBusy = true;
     
-    // 2. Configure Reusable Nodes
-    // Smooth transitions to prevent clicking if reusing rapidly
-    this.panner.pan.setValueAtTime(pan, ctx.currentTime);
-    this.gain.gain.setValueAtTime(volume, ctx.currentTime);
+    // Cancel any previous automation to prevent glitches on rapid reuse
+    const now = ctx.currentTime;
+    this.panner.pan.cancelScheduledValues(now);
+    this.panner.pan.setValueAtTime(pan, now);
+    
+    this.gain.gain.cancelScheduledValues(now);
+    this.gain.gain.setValueAtTime(volume, now);
 
-    // 3. Create Ephemeral Source (Web Audio Requirement)
+    // Ephemeral Source (Web Audio API requires a new source node per playback)
     const source = ctx.createBufferSource();
     source.buffer = buffer;
 
@@ -43,10 +45,10 @@ export class AudioChannel {
         source.detune.value = (Math.random() * pitchVariance * 2) - pitchVariance;
     }
 
-    // 4. Connect to our persistent channel
+    // Connect to our persistent channel stack
     source.connect(this.panner);
 
-    // 5. Cleanup Logic
+    // Cleanup Logic
     source.onended = () => {
         source.disconnect();
         this._isBusy = false;
@@ -55,7 +57,7 @@ export class AudioChannel {
     };
 
     this.currentSource = source;
-    source.start();
+    source.start(now);
   }
 
   public stop() {
@@ -64,10 +66,11 @@ export class AudioChannel {
             this.currentSource.stop();
             this.currentSource.disconnect();
         } catch (e) {
-            // Ignore errors if already stopped
+            // Ignore if already stopped
         }
         this.currentSource = null;
     }
     this._isBusy = false;
+    this.onRelease(this);
   }
 }

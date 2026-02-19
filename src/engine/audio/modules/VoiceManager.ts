@@ -1,6 +1,7 @@
 import { AudioContextManager } from './AudioContextManager';
 import { SoundBank } from './SoundBank';
 import { AudioMixer } from './AudioMixer';
+import { AudioChannel } from './AudioChannel';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { AUDIO_MANIFEST } from '@/engine/config/assets/AudioManifest';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
@@ -91,10 +92,13 @@ class MusicDeck {
 }
 
 export class VoiceManager {
-  private activeCount = 0;
   private currentAmbienceNode: AudioBufferSourceNode | null = null;
   private currentAmbienceGain: GainNode | null = null; 
   private currentAmbienceKey: string | null = null;
+
+  // --- CHANNEL POOLING ---
+  private channelPool: AudioChannel[] = [];
+  private activeChannels: Set<AudioChannel> = new Set();
 
   // --- MUSIC SYSTEM ---
   private deckA = new MusicDeck();
@@ -102,7 +106,7 @@ export class VoiceManager {
   private activeDeck: 'A' | 'B' | null = null;
   
   private playlist: string[] = [...MUSIC_PLAYLIST];
-  private deck: number[] = []; // Indices of playlist
+  private deck: number[] = [];
   private currentIndex = 0;
   private isShuffled = false;
   private isMusicInit = false;
@@ -112,30 +116,43 @@ export class VoiceManager {
     private bank: SoundBank,
     private mixer: AudioMixer
   ) {
-    // Initialize deck linearly: [0, 1, 2, ... 24]
     this.deck = this.playlist.map((_, i) => i);
+  }
+
+  private getChannel(ctx: AudioContext): AudioChannel | null {
+      // 1. Try to recycle an idle channel
+      if (this.channelPool.length > 0) {
+          const channel = this.channelPool.pop()!;
+          this.activeChannels.add(channel);
+          return channel;
+      }
+      
+      // 2. Expand pool if under limit
+      if (this.activeChannels.size < SYS_LIMITS.MAX_POLYPHONY) {
+          const channel = new AudioChannel(ctx, this.mixer.sfxGain!, (c) => {
+              this.activeChannels.delete(c);
+              this.channelPool.push(c);
+          });
+          this.activeChannels.add(channel);
+          return channel;
+      }
+      
+      // 3. Max polyphony reached, drop sound
+      return null;
   }
 
   // --- SFX LOGIC ---
   public playSFX(key: AudioKey, pan: number = 0) {
-    if (this.activeCount >= SYS_LIMITS.MAX_POLYPHONY) return;
     const ctx = this.ctxManager.ctx;
     const buffer = this.bank.get(key);
     const recipe = AUDIO_MANIFEST[key];
+    
     if (!ctx || !this.mixer.sfxGain || !buffer || !recipe) return;
 
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    if (recipe.pitchVariance > 0) {
-        source.detune.value = (Math.random() * recipe.pitchVariance * 2) - recipe.pitchVariance;
-    }
-    const panner = ctx.createStereoPanner();
-    panner.pan.value = Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0));
-    source.connect(panner);
-    panner.connect(this.mixer.sfxGain);
-    source.onended = () => { this.activeCount--; };
-    this.activeCount++;
-    source.start();
+    const channel = this.getChannel(ctx);
+    if (!channel) return; // Polyphony limit hit
+
+    channel.play(ctx, buffer, recipe.volume, pan, recipe.pitchVariance || 0);
   }
 
   // --- AMBIENCE LOGIC ---
@@ -172,7 +189,6 @@ export class VoiceManager {
   }
 
   // --- MUSIC SYSTEM ---
-  
   public startMusic() {
     const ctx = this.ctxManager.ctx;
     if (!ctx || !this.mixer.musicGain) return;
@@ -184,15 +200,10 @@ export class VoiceManager {
         const attachListener = (deck: MusicDeck) => {
             if (deck.element) {
                 deck.element.addEventListener('ended', () => {
-                    console.log("[Music] Track Ended - Auto Advancing");
                     this.advanceTrack(true);
                 });
                 deck.element.addEventListener('error', (e) => {
-                    const src = deck.element?.src || 'unknown';
-                    console.warn(`[Music] Track Error on ${src.split('/').pop()}:`, e);
-                    setTimeout(() => {
-                        this.advanceTrack(true);
-                    }, 1000);
+                    setTimeout(() => this.advanceTrack(true), 1000);
                 });
             }
         };
@@ -201,7 +212,6 @@ export class VoiceManager {
         attachListener(this.deckB);
         
         this.isMusicInit = true;
-        // Start at index 0 (Linear)
         this.playTrack(0);
     }
   }
@@ -213,31 +223,21 @@ export class VoiceManager {
   private advanceTrack(auto: boolean) {
     this.currentIndex++;
 
-    // 1. Deck Exhausted? Reset & Full Shuffle
     if (this.currentIndex >= this.deck.length) {
-        console.log('[Music] Deck Exhausted. Reshuffling Full Deck.');
         this.shuffleDeckRange(0, this.deck.length);
         this.currentIndex = 0;
-        // Ensure we don't play the same song twice back-to-back on wrap
         if (this.deck[0] === this.deck[this.deck.length - 1]) {
-             // Swap first with second
              [this.deck[0], this.deck[1]] = [this.deck[1], this.deck[0]];
         }
     } 
-    // 2. Manual Shuffle Trigger? Shuffle Remaining Only
     else if (!auto && !this.isShuffled) {
-        console.log('[Music] Manual Intervention. Shuffling Remaining Tracks.');
         this.isShuffled = true;
-        // Shuffle everything from currentIndex to end
         this.shuffleDeckRange(this.currentIndex, this.deck.length);
     }
 
     this.playTrack(this.currentIndex);
   }
 
-  /**
-   * Fisher-Yates Shuffle on a slice of the deck in-place
-   */
   private shuffleDeckRange(start: number, end: number) {
     for (let i = end - 1; i > start; i--) {
         const j = Math.floor(Math.random() * (i - start + 1)) + start;
@@ -247,24 +247,17 @@ export class VoiceManager {
 
   private playTrack(deckIndex: number) {
     const ctx = this.ctxManager.ctx;
-    if (!ctx) return;
-
-    if (this.deck.length === 0 || deckIndex >= this.deck.length) return;
+    if (!ctx || this.deck.length === 0 || deckIndex >= this.deck.length) return;
     
-    // Map Deck Index -> Playlist URL
     const realIndex = this.deck[deckIndex];
     const nextUrl = this.playlist[realIndex];
 
     const nextDeck = this.activeDeck === 'A' ? this.deckB : this.deckA;
     const currentDeck = this.activeDeck === 'A' ? this.deckA : this.deckB;
 
-    console.log(`[Music] Playing Deck[${deckIndex}] -> Track[${realIndex}]: ${nextUrl.split('/').pop()}`);
-
-    // Load & Play Next
     nextDeck.load(nextUrl);
     nextDeck.play();
     
-    // Crossfade
     const FADE_TIME = 2.0; 
     nextDeck.fadeTo(1.0, FADE_TIME, ctx);
     
@@ -282,12 +275,18 @@ export class VoiceManager {
   public stopAll() {
     this.deckA.stop();
     this.deckB.stop();
+    
     if (this.currentAmbienceNode) { 
         try { this.currentAmbienceNode.stop(); } catch {} 
         this.currentAmbienceNode = null; 
         this.currentAmbienceGain = null;
         this.currentAmbienceKey = null; 
     }
-    this.activeCount = 0;
+    
+    // Stop and release all active channels
+    const channelsToStop = Array.from(this.activeChannels);
+    for (const channel of channelsToStop) {
+        channel.stop();
+    }
   }
 }
