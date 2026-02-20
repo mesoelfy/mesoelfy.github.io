@@ -2,11 +2,14 @@ import { IGameSystem, IGameStateSystem, IPanelSystem, IGameEventService, IAudioS
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class GameStateSystem implements IGameStateSystem {
   private heartbeatTimer: number = 0;
   private unsubs: (() => void)[] = [];
+  private weaponState = {
+      spitter: { girthLevel: 0, damageLevel: 0, rateLevel: 0 },
+      sniffer: { capacityLevel: 0, damageLevel: 0, rateLevel: 0 }
+  };
 
   constructor(
     private healthSys: HealthSystem,
@@ -14,13 +17,15 @@ export class GameStateSystem implements IGameStateSystem {
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
     private audio: IAudioService
-  ) {}
+  ) {
+      this.unsubs.push(this.events.subscribe(GameEvents.GLOBAL_STATE_SYNC, (p) => {
+          this.weaponState = p.weaponState;
+      }));
+  }
 
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
-
       const integrity = this.panelSystem.systemIntegrity;
-      
       if (integrity < 30 && integrity > 0) {
           this.heartbeatTimer -= delta;
           if (this.heartbeatTimer <= 0) {
@@ -51,9 +56,8 @@ export class GameStateSystem implements IGameStateSystem {
   get xp() { return this.progSys.xp; }
   get level() { return this.progSys.level; }
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
-  
-  get spitter() { return useGameStore.getState().spitter; } 
-  get sniffer() { return useGameStore.getState().sniffer; }
+
+  public getWeaponState() { return this.weaponState; }
 
   damagePlayer(amount: number) { this.healthSys.damagePlayer(amount); }
   healPlayer(amount: number) { this.healthSys.healPlayer(amount); }

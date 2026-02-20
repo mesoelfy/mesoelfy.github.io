@@ -9,7 +9,7 @@ import { AudioKey, VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { SoundCode, FXCode } from '@/engine/signals/FastEventBus';
 import { ArchetypeID } from '@/engine/config/Identifiers';
-import { RailgunState, SnifferState } from '@/engine/types/game.types';
+import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
 export enum SystemPhase {
   INPUT = 0,
@@ -72,7 +72,6 @@ export interface IProgressionRead {
   xp: number;
   level: number;
   xpToNextLevel: number;
-  // Removed upgradePoints to fix desync loop
 }
 
 export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
@@ -82,8 +81,7 @@ export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgression
   addXp(amount: number): void;
   tickReboot(amount: number): void;
   decayReboot(amount: number): void;
-  railgun?: RailgunState;
-  sniffer?: SnifferState;
+  getWeaponState(): { spitter: SpitterState, sniffer: SnifferState };
 }
 
 export interface IEntityRegistry {
@@ -141,14 +139,7 @@ export interface IInputService {
 }
 
 export interface IParticleSystem extends IGameSystem {
-  spawn(
-      x: number, y: number, 
-      colorHex: string, 
-      vx: number, vy: number, 
-      life: number, 
-      size?: number, 
-      shape?: ParticleShape
-  ): void;
+  spawn(x: number, y: number, colorHex: string, vx: number, vy: number, life: number, size?: number, shape?: ParticleShape): void;
   getCount(): number;
   getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; r: Float32Array; g: Float32Array; b: Float32Array; };
 }

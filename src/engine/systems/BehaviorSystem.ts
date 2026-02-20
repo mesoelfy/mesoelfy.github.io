@@ -1,10 +1,9 @@
-import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService, IGameStateSystem } from '@/engine/interfaces';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
 import { EnemyTypes, WeaponIDs, ArchetypeID } from '@/engine/config/Identifiers';
 import { GameEvents } from '@/engine/signals/GameEvents'; 
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import { ConfigService } from '@/engine/services/ConfigService';
 import { AIRegistry } from '@/engine/handlers/ai/AIRegistry';
 import { AIContext } from '@/engine/handlers/ai/types';
@@ -22,7 +21,8 @@ export class BehaviorSystem implements IGameSystem {
     private panelSystem: IPanelSystem,
     private particleSystem: IParticleSystem,
     private audio: IAudioService,
-    private events: IGameEventService
+    private events: IGameEventService,
+    private gameSystem: IGameStateSystem
   ) {
     this.unsubs.push(events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -44,11 +44,8 @@ export class BehaviorSystem implements IGameSystem {
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
-              
-              // ECS BUG FIX: Add component AND update cache
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
               this.registry.updateCache(bullet); 
-              
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
@@ -72,15 +69,14 @@ export class BehaviorSystem implements IGameSystem {
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
-      // PHANTOM STATE FIX: Map keys to the correct new store slices
       getUpgradeLevel: (key) => {
-          const state = useGameStore.getState();
-          if (key === 'SPITTER_GIRTH') return state.spitter.girthLevel;
-          if (key === 'SPITTER_DAMAGE') return state.spitter.damageLevel;
-          if (key === 'SPITTER_RATE') return state.spitter.rateLevel;
-          if (key === 'SNIFFER_CAPACITY') return state.sniffer.capacityLevel;
-          if (key === 'SNIFFER_DAMAGE') return state.sniffer.damageLevel;
-          if (key === 'SNIFFER_RATE') return state.sniffer.rateLevel;
+          const ws = this.gameSystem.getWeaponState();
+          if (key === 'SPITTER_GIRTH') return ws.spitter.girthLevel;
+          if (key === 'SPITTER_DAMAGE') return ws.spitter.damageLevel;
+          if (key === 'SPITTER_RATE') return ws.spitter.rateLevel;
+          if (key === 'SNIFFER_CAPACITY') return ws.sniffer.capacityLevel;
+          if (key === 'SNIFFER_DAMAGE') return ws.sniffer.damageLevel;
+          if (key === 'SNIFFER_RATE') return ws.sniffer.rateLevel;
           return 0;
       },
       getEntity: (id) => this.registry.getEntity(id), 

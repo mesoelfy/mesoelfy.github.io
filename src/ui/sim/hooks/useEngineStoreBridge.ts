@@ -7,7 +7,6 @@ import { GameEngineCore } from '@/engine/services/GameEngine';
 
 export const useEngineStoreBridge = (engineRef: React.MutableRefObject<GameEngineCore | null>) => {
     
-    // Sync React State down to Engine (Fast Lane)
     const forceSync = useCallback(() => {
         const store = useStore.getState();
         const gameStore = useGameStore.getState();
@@ -16,7 +15,11 @@ export const useEngineStoreBridge = (engineRef: React.MutableRefObject<GameEngin
             bootState: store.bootState,
             isZenMode: gameStore.isZenMode,
             graphicsMode: store.graphicsMode,
-            debugFlags: store.debugFlags
+            debugFlags: store.debugFlags,
+            weaponState: {
+                spitter: gameStore.spitter,
+                sniffer: gameStore.sniffer
+            }
         });
 
         if (engineRef.current) {
@@ -38,7 +41,6 @@ export const useEngineStoreBridge = (engineRef: React.MutableRefObject<GameEngin
         return () => { unsub1(); unsub2(); };
     }, [forceSync]);
 
-    // Sync Engine Intents up to Zustand (Slow Lane)
     useEffect(() => {
         const subs = [
             GameEventBus.subscribe(GameEvents.CMD_REGISTER_PANEL, p => useGameStore.getState().registerPanel(p.id, p.element)),
@@ -49,7 +51,6 @@ export const useEngineStoreBridge = (engineRef: React.MutableRefObject<GameEngin
             GameEventBus.subscribe(GameEvents.CMD_DESTROY_ALL_PANELS, () => useGameStore.getState().destroyAllPanels()),
             GameEventBus.subscribe(GameEvents.CMD_SET_INTERACTION_TARGET, p => useGameStore.getState().setInteractionTarget(p.id)),
             GameEventBus.subscribe(GameEvents.CMD_SET_SCORE, p => useGameStore.getState().setScore(p.score)),
-            // Give player 1 Upgrade Point per Threat Level
             GameEventBus.subscribe(GameEvents.THREAT_LEVEL_UP, () => useGameStore.setState(s => ({ upgradePoints: s.upgradePoints + 1 })))
         ];
         return () => subs.forEach(unsub => unsub());

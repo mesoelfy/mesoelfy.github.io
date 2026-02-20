@@ -38,6 +38,8 @@ import { VFXSystem } from '@/engine/systems/VFXSystem';
 import { StateSyncSystem } from '@/engine/systems/StateSyncSystem';
 import { PlayerMovementSystem } from '@/engine/systems/PlayerMovementSystem';
 import { WeaponSystem } from '@/engine/systems/WeaponSystem';
+import { HomingSystem } from '@/engine/systems/HomingSystem';
+import { PlayerAbilitySystem } from '@/engine/systems/PlayerAbilitySystem';
 import { CollisionSystem } from '@/engine/systems/CollisionSystem';
 import { CombatSystem } from '@/engine/systems/CombatSystem';
 import { StructureSystem } from '@/engine/systems/StructureSystem';
@@ -47,16 +49,10 @@ import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 export class EngineFactory {
   public static create(): GameEngineCore {
     let audioService: IAudioService;
-    try {
-        audioService = ServiceLocator.getAudioService();
-    } catch {
-        audioService = new AudioServiceImpl();
-    }
+    try { audioService = ServiceLocator.getAudioService(); } 
+    catch { audioService = new AudioServiceImpl(); }
 
     ServiceLocator.reset();
-    
-    // CRITICAL FIX: Removed SharedGameEventBus.clear() so the UI Bridge listeners aren't destroyed!
-    
     ServiceLocator.register('AudioService', audioService);
 
     const registry = new EntityRegistry();
@@ -96,7 +92,12 @@ export class EngineFactory {
     const targetingSystem = new TargetingSystem(registry, panelSystem, physicsSystem);
     const orbitalSystem = new OrbitalSystem(registry);
     
-    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus);
+    // NEW: Extracted Weapon Systems
+    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, physicsSystem);
+    const homingSystem = new HomingSystem(registry, physicsSystem);
+    const abilitySystem = new PlayerAbilitySystem(registry, spawner, eventBus);
+    
+    const behaviorSystem = new BehaviorSystem(registry, spawner, ConfigService, panelSystem, particleSystem, audioService, eventBus, gameStateSystem);
     
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
@@ -110,8 +111,6 @@ export class EngineFactory {
     const movementSystem = new PlayerMovementSystem(inputSystem, registry, interactionSystem, gameStateSystem);
     const waveSystem = new WaveSystem(spawner, panelSystem, eventBus);
     const structureSystem = new StructureSystem(panelSystem);
-    
-    const weaponSystem = new WeaponSystem(spawner, registry, gameStateSystem, eventBus, ConfigService, physicsSystem, particleSystem);
     
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
@@ -139,10 +138,12 @@ export class EngineFactory {
     register(structureSystem, SystemPhase.LOGIC);
     register(behaviorSystem, SystemPhase.LOGIC); 
     register(weaponSystem, SystemPhase.LOGIC);   
+    register(abilitySystem, SystemPhase.LOGIC); // NEW
 
     register(physicsSystem, SystemPhase.PHYSICS, 'PhysicsSystem');
     register(orbitalSystem, SystemPhase.PHYSICS);
     register(projectileSystem, SystemPhase.PHYSICS);
+    register(homingSystem, SystemPhase.PHYSICS); // NEW
 
     register(collisionSystem, SystemPhase.COLLISION);
     register(combatSystem, SystemPhase.COLLISION, 'CombatSystem');
