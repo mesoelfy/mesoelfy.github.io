@@ -12,12 +12,8 @@ import { ArchetypeID } from '@/engine/config/Identifiers';
 import { SpitterState, SnifferState } from '@/engine/types/game.types';
 
 export enum SystemPhase {
-  INPUT = 0,
-  LOGIC = 1,
-  PHYSICS = 2,
-  COLLISION = 3,
-  STATE = 4,
-  RENDER = 5
+  INPUT = 0, LOGIC = 1, PHYSICS = 2,
+  COLLISION = 3, STATE = 4, RENDER = 5
 }
 
 export interface IGameSystem {
@@ -36,7 +32,6 @@ export interface IServiceLocator {
   getSpawner(): IEntitySpawner;
   getConfigService(): typeof ConfigService;
   getParticleSystem(): IParticleSystem;
-
   getSystem<T extends IGameSystem>(id: string): T;
   registerSystem(id: string, system: IGameSystem): void;
 }
@@ -60,6 +55,8 @@ export interface IGameEventService {
   clear(): void;
 }
 
+// --- SEGREGATED STATE INTERFACES ---
+
 export interface IVitalsRead {
   playerHealth: number;
   maxPlayerHealth: number;
@@ -74,15 +71,22 @@ export interface IProgressionRead {
   xpToNextLevel: number;
 }
 
-export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {
+export interface IWeaponStateRead {
+  getWeaponState(): { spitter: SpitterState, sniffer: SnifferState };
+}
+
+export interface IPlayerMutator {
   damagePlayer(amount: number): void;
   healPlayer(amount: number): void;
   addScore(amount: number): void;
   addXp(amount: number): void;
   tickReboot(amount: number): void;
   decayReboot(amount: number): void;
-  getWeaponState(): { spitter: SpitterState, sniffer: SnifferState };
 }
+
+export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead, IWeaponStateRead, IPlayerMutator {}
+
+// --- ENGINE INTERFACES ---
 
 export interface IEntityRegistry {
   createEntity(): Entity;
@@ -101,13 +105,9 @@ export interface IEntitySpawner {
   spawnPlayer(): Entity;
   spawnEnemy(type: ArchetypeID, x: number, y: number): Entity;
   spawnProjectile(
-      x: number, y: number, 
-      vx: number, vy: number, 
-      faction: Faction, 
-      life: number, 
-      damage?: number, 
-      projectileId?: ArchetypeID, 
-      ownerId?: number,
+      x: number, y: number, vx: number, vy: number, 
+      faction: Faction, life: number, damage?: number, 
+      projectileId?: ArchetypeID, ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity;
 }

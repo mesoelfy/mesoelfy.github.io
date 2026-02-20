@@ -1,4 +1,4 @@
-import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IPanelSystem, IParticleSystem, IEntityRegistry, IAudioService, IGameEventService, IWeaponStateRead } from '@/engine/interfaces';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { ProjectileData } from '@/engine/ecs/components/ProjectileData';
 import { OrbitalData } from '@/engine/ecs/components/OrbitalData';
@@ -22,7 +22,7 @@ export class BehaviorSystem implements IGameSystem {
     private particleSystem: IParticleSystem,
     private audio: IAudioService,
     private events: IGameEventService,
-    private gameSystem: IGameStateSystem
+    private weaponState: IWeaponStateRead
   ) {
     this.unsubs.push(events.subscribe(GameEvents.SPAWN_DAEMON, () => {
         const e = this.spawner.spawnEnemy(EnemyTypes.DAEMON, 0, 0);
@@ -70,7 +70,7 @@ export class BehaviorSystem implements IGameSystem {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
       getUpgradeLevel: (key) => {
-          const ws = this.gameSystem.getWeaponState();
+          const ws = this.weaponState.getWeaponState();
           if (key === 'SPITTER_GIRTH') return ws.spitter.girthLevel;
           if (key === 'SPITTER_DAMAGE') return ws.spitter.damageLevel;
           if (key === 'SPITTER_RATE') return ws.spitter.rateLevel;

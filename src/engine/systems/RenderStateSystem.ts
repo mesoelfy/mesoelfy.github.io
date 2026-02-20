@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IVitalsRead, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { StateColor } from '@/engine/ecs/components/StateColor';
@@ -16,7 +16,7 @@ export class RenderStateSystem implements IGameSystem {
 
   constructor(
     private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
+    private vitals: IVitalsRead,
     private interactionSystem: IInteractionSystem,
     private events: IGameEventService
   ) {
@@ -26,7 +26,7 @@ export class RenderStateSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const isDead = this.gameSystem.playerHealth <= 0;
+    const isDead = this.vitals.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
     const entities = this.registry.query(this.renderQuery);
 

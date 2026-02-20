@@ -1,4 +1,4 @@
-import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IVitalsRead, IGameEventService } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
@@ -23,7 +23,7 @@ export class VisualStateSystem implements IGameSystem {
 
   constructor(
     private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
+    private vitals: IVitalsRead,
     private interactionSystem: IInteractionSystem,
     private events: IGameEventService
   ) {
@@ -49,7 +49,7 @@ export class VisualStateSystem implements IGameSystem {
         });
     }
 
-    const isDead = this.gameSystem.playerHealth <= 0;
+    const isDead = this.vitals.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
     const hoverId = this.interactionSystem.hoveringPanelId;
 

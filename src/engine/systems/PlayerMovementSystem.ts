@@ -1,4 +1,4 @@
-import { IGameSystem, IInputService, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IInputService, IEntityRegistry, IInteractionSystem, IVitalsRead } from '@/engine/interfaces';
 import { Tag } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { AIStateData } from '@/engine/ecs/components/AIStateData';
@@ -9,7 +9,7 @@ export class PlayerMovementSystem implements IGameSystem {
     private input: IInputService,
     private registry: IEntityRegistry,
     private interaction: IInteractionSystem,
-    private gameSystem: IGameStateSystem
+    private vitals: IVitalsRead
   ) {}
 
   update(delta: number, time: number): void {
@@ -20,15 +20,13 @@ export class PlayerMovementSystem implements IGameSystem {
     const transform = playerEntity.getComponent<TransformData>(ComponentType.Transform);
     const cursor = this.input.getCursor();
     
-    // 1. Position Sync
     if (transform) { 
         transform.x = cursor.x; 
         transform.y = cursor.y; 
     }
 
-    if (this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0) return;
+    if (this.vitals.isGameOver || this.vitals.playerHealth <= 0) return;
 
-    // 2. Logic State Sync
     const stateComp = playerEntity.getComponent<AIStateData>(ComponentType.State);
     if (stateComp) {
         stateComp.current = this.interaction.repairState !== 'IDLE' ? 'REBOOTING' : 'ACTIVE';

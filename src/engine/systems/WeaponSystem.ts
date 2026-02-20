@@ -1,4 +1,4 @@
-import { IGameSystem, IEntitySpawner, IGameStateSystem, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntitySpawner, IVitalsRead, IWeaponStateRead, IEntityRegistry, IGameEventService, IPhysicsSystem } from '@/engine/interfaces';
 import { Tag, Faction } from '@/engine/ecs/types';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { MotionData } from '@/engine/ecs/components/MotionData';
@@ -30,7 +30,7 @@ export class WeaponSystem implements IGameSystem {
   constructor(
     private spawner: IEntitySpawner,
     private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
+    private playerState: IVitalsRead & IWeaponStateRead,
     private events: IGameEventService,
     private physics: IPhysicsSystem
   ) {}
@@ -38,7 +38,7 @@ export class WeaponSystem implements IGameSystem {
   update(delta: number, time: number): void {
     this.updateProjectiles(delta);
 
-    const isDead = this.gameSystem.isGameOver || this.gameSystem.playerHealth <= 0;
+    const isDead = this.playerState.isGameOver || this.playerState.playerHealth <= 0;
     if (isDead) return;
     
     this.handleAutoFire(time);
@@ -73,7 +73,7 @@ export class WeaponSystem implements IGameSystem {
     this.acquireTarget(transform);
     if (!this.targetCache.valid) return;
 
-    const weapons = this.gameSystem.getWeaponState();
+    const weapons = this.playerState.getWeaponState();
     const spitterState = weapons.spitter;
     const snifferState = weapons.sniffer;
 
