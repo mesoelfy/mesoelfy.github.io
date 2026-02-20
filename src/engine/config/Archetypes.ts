@@ -118,15 +118,11 @@ Object.values(WEAPONS).forEach(def => {
       }}
     ];
 
-    // INJECT SPIN COMPONENT
     if (def.behavior?.spinSpeed) {
         comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
     }
 
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
-
-if (BLUEPRINTS[WeaponIDs.PLAYER_SPITTER]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_SPITTER];
-if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;

@@ -1,0 +1,9 @@
+{
+  "panels": [
+    { "id": "art", "damage": 9999, "enemiesMin": 0, "enemiesMax": 0 },
+    { "id": "video", "damage": 85, "enemiesMin": 3, "enemiesMax": 3 },
+    { "id": "identity", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 },
+    { "id": "social", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 },
+    { "id": "feed", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 }
+  ]
+}

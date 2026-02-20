@@ -8,8 +8,8 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { AITimerID } from '@/engine/ai/AITimerID';
 import waves from '@/engine/config/static/waves.json';
+import scenario from '@/engine/config/static/scenario.json';
 
 interface WaveDef {
     at: number;
@@ -100,22 +100,28 @@ export class WaveSystem implements IGameSystem {
   }
 
   private runScenario(panels: any[]) {
-      this.panelSystem.damagePanel(PanelId.ART, 9999, { silent: true }); 
-      this.panelSystem.damagePanel(PanelId.VIDEO, 85, { silent: true }); 
-      
-      const videoPanel = panels.find(p => p.id === PanelId.VIDEO);
-      if (videoPanel) {
-          this.spawnDrillerOn(videoPanel, 3);
-      }
+      for (const panelConfig of scenario.panels) {
+          const targetPanel = panels.find(p => p.id === panelConfig.id);
+          if (!targetPanel) continue;
 
-      const targets = panels.filter(p => p.id !== PanelId.ART && p.id !== PanelId.VIDEO);
-      
-      targets.forEach(p => {
-          const dmg = 20 + Math.floor(Math.random() * 30);
-          this.panelSystem.damagePanel(p.id, dmg, { silent: true }); 
-          const count = 1 + Math.floor(Math.random() * 3);
-          this.spawnDrillerOn(p, count);
-      });
+          // Process Damage
+          let dmg = panelConfig.damage || 0;
+          if (panelConfig.damageMin !== undefined && panelConfig.damageMax !== undefined) {
+              dmg = panelConfig.damageMin + Math.floor(Math.random() * (panelConfig.damageMax - panelConfig.damageMin));
+          }
+          if (dmg > 0) {
+              this.panelSystem.damagePanel(targetPanel.id, dmg, { silent: true });
+          }
+
+          // Process Enemies
+          let enemyCount = panelConfig.enemies || 0;
+          if (panelConfig.enemiesMin !== undefined && panelConfig.enemiesMax !== undefined) {
+              enemyCount = panelConfig.enemiesMin + Math.floor(Math.random() * (panelConfig.enemiesMax - panelConfig.enemiesMin + 1));
+          }
+          if (enemyCount > 0) {
+              this.spawnDrillerOn(targetPanel, enemyCount);
+          }
+      }
   }
 
   private spawnDrillerOn(panel: any, count: number) {

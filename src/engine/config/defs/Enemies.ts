@@ -9,19 +9,11 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
-      model: 'CONE', 
-      color: PALETTE.PURPLE.INDIGO, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE',
+      model: 'CONE', color: PALETTE.PURPLE.INDIGO, scale: [1, 1, 1], material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
     },
-    params: { 
-        spawnOffset: 0.32,
-        spawnDuration: 1.5,
-        approachSpeed: 8.0,
-        approachStopDist: 1.2,
-        drillInterval: 0.08
-    }
+    params: { spawnOffset: 0.32, spawnDuration: 1.5, approachSpeed: 8.0, approachStopDist: 1.2, drillInterval: 0.08 },
+    deathFX: 'EXPLOSION_PURPLE', deathFXDir: 'EXPLOSION_PURPLE_DIR'
   },
   [EnemyTypes.KAMIKAZE]: {
     id: EnemyTypes.KAMIKAZE,
@@ -29,17 +21,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
     visual: { 
-      model: 'ICOSA', 
-      color: PALETTE.RED.CRITICAL, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE', 
-      radius: 0.69, detail: 0 
+      model: 'ICOSA', color: PALETTE.RED.CRITICAL, scale: [1, 1, 1], material: 'ENEMY_BASE', radius: 0.69, detail: 0 
     },
-    params: {
-        spawnDuration: 1.5,
-        spinSpeed: 10.0,
-        moveSpeed: 9.6 // REDUCED: 12.0 -> 9.6 (-20%)
-    }
+    params: { spawnDuration: 1.5, spinSpeed: 10.0, moveSpeed: 9.6 },
+    deathFX: 'EXPLOSION_RED', deathFXDir: 'EXPLOSION_RED_DIR'
   },
   [EnemyTypes.HUNTER]: {
     id: EnemyTypes.HUNTER,
@@ -47,20 +32,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'hunter',
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
-      model: 'CUSTOM_HUNTER', 
-      color: PALETTE.ORANGE.PRIMARY, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE'
+      model: 'CUSTOM_HUNTER', color: PALETTE.ORANGE.PRIMARY, scale: [1, 1, 1], material: 'ENEMY_BASE'
     },
-    params: {
-        spawnDuration: 1.5,
-        roamSpeed: 12.0,
-        roamPadding: 1.0,
-        aimDuration: 1.2,
-        projectileSpeed: 16.0, 
-        cooldownMin: 0.3,
-        cooldownMax: 0.6
-    }
+    params: { spawnDuration: 1.5, roamSpeed: 12.0, roamPadding: 1.0, aimDuration: 1.2, projectileSpeed: 16.0, cooldownMin: 0.3, cooldownMax: 0.6 },
+    deathFX: 'EXPLOSION_YELLOW', deathFXDir: 'EXPLOSION_YELLOW_DIR'
   },
   [EnemyTypes.DAEMON]: {
     id: EnemyTypes.DAEMON,
@@ -68,17 +43,9 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'daemon',
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
     visual: { 
-      model: 'OCTA', 
-      color: PALETTE.PINK.PRIMARY, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE'
+      model: 'OCTA', color: PALETTE.PINK.PRIMARY, scale: [1, 1, 1], material: 'ENEMY_BASE'
     },
-    params: {
-        spawnDuration: 1.0,
-        chargeDuration: 2.0,
-        fireSpeed: 35.0,
-        fireDamage: 20,
-        waitDuration: 0.5
-    }
+    params: { spawnDuration: 1.0, chargeDuration: 2.0, fireSpeed: 35.0, fireDamage: 20, waitDuration: 0.5 },
+    deathFX: 'IMPACT_WHITE', deathFXDir: 'IMPACT_WHITE'
   }
 };

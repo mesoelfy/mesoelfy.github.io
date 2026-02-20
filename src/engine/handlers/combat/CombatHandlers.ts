@@ -8,7 +8,7 @@ import { CombatData } from '@/engine/ecs/components/CombatData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -23,24 +23,11 @@ const getEffect = (e: Entity) => e.getComponent<RenderEffect>(ComponentType.Rend
 const getMotion = (e: Entity) => e.getComponent<MotionData>(ComponentType.Motion);
 const getAI = (e: Entity) => e.getComponent<AIStateData>(ComponentType.State);
 
-const THEME_MAP: Record<string, string> = {
-    [EnemyTypes.KAMIKAZE]: 'RED',
-    [EnemyTypes.HUNTER]: 'YELLOW',
-    [EnemyTypes.DRILLER]: 'PURPLE',
-    [EnemyTypes.DAEMON]: 'PURPLE',
-};
-
-const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
-    const theme = THEME_MAP[variant] || 'PURPLE';
-    return (directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`) as VFXKey;
-};
-
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) { ctx.spawnFX(overrideFX as VFXKey, x, y); return; }
     
     const model = getModel(source);
     if (model) {
-        // Normalize brightness to 1.0 (Neon)
         const maxC = Math.max(model.r, model.g, model.b, 0.01); 
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
     } else { 
@@ -69,8 +56,9 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   let sprayAngle = 0;
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
   ctx.damagePlayer(damage); ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
-  const variant = getId(enemy)?.variant || 'UNKNOWN';
-  ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
+  
+  // By passing undefined for FX, CombatSystem will resolve the enemy's specific deathFX
+  ctx.destroyEntity(enemy, undefined, sprayAngle);
   ctx.playSpatialAudio(damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light', pos ? pos.x : 0);
 };
 
@@ -99,7 +87,7 @@ export const handleEnemyPanelHit = (enemy: Entity, panel: Entity, ctx: CombatCon
         const combat = getCombat(enemy); const dmg = combat ? combat.damage : 1;
         const pos = getPos(enemy);
         ctx.damagePanel(pId.variant as PanelId, dmg * 5, { source: pos ? { x: pos.x, y: pos.y } : undefined }); 
-        ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+        ctx.destroyEntity(enemy, undefined);
         ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
         ctx.addTrauma(0.3);
     }
@@ -115,13 +103,13 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       if (shield > 0) {
           state.data.shieldHP = Math.max(0, shield - incomingDamage);
           state.data.wasHit = true; 
-          const isEnemy = attacker.hasTag('ENEMY');
+          const isEnemy = attacker.hasTag(Tag.ENEMY);
           ctx.destroyEntity(attacker, isEnemy ? 'CLASH_YELLOW' : 'IMPACT_WHITE');
           ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
           return;
       }
   }
-  const isEnemy = attacker.hasTag('ENEMY');
+  const isEnemy = attacker.hasTag(Tag.ENEMY);
   ctx.destroyEntity(attacker, isEnemy ? 'EXPLOSION_RED' : 'IMPACT_RED');
   ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
 }
@@ -139,16 +127,14 @@ function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: 
   let soundKey = '';
   
   if (hpA && hpA.current <= 0) { 
-      // If Enemy Dies: Spawn Explosion (mapped via 'IMPACT_WHITE' override in CombatSystem)
-      // If Bullet Dies (Clash): Only spawn if not bullet (to avoid double splash)
-      const fxA = a.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      // If Projectile: IMPACT_WHITE. If Enemy: undefined (resolves to deathFX)
+      const fxA = a.hasTag(Tag.PROJECTILE) ? 'IMPACT_WHITE' : undefined;
       ctx.destroyEntity(a, fxA, sprayAngle); 
       soundKey = 'fx_impact_light'; 
   }
   
   if (hpB && hpB.current <= 0) { 
-      // If Bullet Dies: Suppress extra white splash (visuals handled above in resolveImpactVisuals)
-      const fxB = b.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      const fxB = b.hasTag(Tag.PROJECTILE) ? 'IMPACT_WHITE' : undefined;
       ctx.destroyEntity(b, fxB, sprayAngle); 
       soundKey = 'fx_impact_light'; 
   }

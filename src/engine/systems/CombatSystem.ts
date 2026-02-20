@@ -1,7 +1,7 @@
 import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService, IFastEventService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { CollisionMatrix } from '@/engine/handlers/combat/CollisionMatrix';
 import { CombatContext } from '@/engine/handlers/combat/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -10,7 +10,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { getFXCode, getSoundCode, FXCode, SoundCode } from '@/engine/signals/FastEventBus';
-import { Tag } from '@/engine/ecs/types';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class CombatSystem implements IGameSystem {
   constructor(
@@ -85,23 +85,23 @@ export class CombatSystem implements IGameSystem {
 
       this.registry.destroyEntity(entity.id);
       
-      if (fx && transform) {
+      if (transform) {
           let finalFX = fx;
           const angleToUse = impactAngle || 0;
           
-          if (identity?.variant === EnemyTypes.HUNTER) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
-          }
-          else if (identity?.variant === EnemyTypes.KAMIKAZE) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
-          }
-          else if (identity?.variant === EnemyTypes.DRILLER) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+          if (identity) {
+              const def = ENEMIES[identity.variant as EnemyType];
+              if (def) {
+                  // If it's a defined enemy, ALWAYS use its death effect over the generic fallback
+                  finalFX = (impactAngle !== undefined && def.deathFXDir) ? def.deathFXDir : (def.deathFX || fx);
+              }
           }
           
-          const code = getFXCode(finalFX);
-          if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
-          else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
+          if (finalFX) {
+              const code = getFXCode(finalFX);
+              if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
+              else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
+          }
       }
   }
 

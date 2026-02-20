@@ -54,17 +54,13 @@ export class EntitySpawner implements IEntitySpawner {
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
-    let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_SPITTER;
-    if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    
     const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
         [ComponentType.Motion]: { vx, vy, friction: 0 }, 
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
 
     if (visualOverrides) {
@@ -74,7 +70,7 @@ export class EntitySpawner implements IEntitySpawner {
         overrides[ComponentType.RenderTransform] = transformData;
     }
 
-    const entity = this.spawn(id, overrides);
+    const entity = this.spawn(projectileId, overrides);
     
     return entity;
   }

@@ -4,10 +4,11 @@ import { HealthData } from '@/engine/ecs/components/HealthData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
 import { Query } from '@/engine/ecs/Query';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class LifeCycleSystem implements IGameSystem {
   private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
@@ -28,7 +29,6 @@ export class LifeCycleSystem implements IGameSystem {
     for (const entity of mortals) {
       if (!entity.active) continue;
       
-      // 1. LIFETIME CHECK
       const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -38,12 +38,8 @@ export class LifeCycleSystem implements IGameSystem {
         }
       }
 
-      // 2. HEALTH CHECK
       const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
-          // CRITICAL FIX: Do not destroy the Player entity on 0 HP.
-          // The HealthSystem handles the "Game Over" logic state.
-          // The PlayerActor handles the "Wireframe/Red" visual state.
           if (entity.hasTag(Tag.PLAYER)) continue;
 
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
@@ -55,10 +51,8 @@ export class LifeCycleSystem implements IGameSystem {
                  this.events.emit(GameEvents.ENEMY_DESTROYED, { id: entity.id as number, type: identity.variant, x: transform.x, y: transform.y });
              }
              
-             let fx: FXVariant = 'EXPLOSION_PURPLE';
-             if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
-             else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
-             else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
+             const def = ENEMIES[identity.variant as EnemyType];
+             const fx: FXVariant = (def?.deathFX || 'EXPLOSION_PURPLE') as FXVariant;
              
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
@@ -73,7 +67,6 @@ export class LifeCycleSystem implements IGameSystem {
       for (const entity of allies) {
           if (!entity.active) continue;
           
-          // Only destroy summons (Daemon), not the player itself
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity && identity.variant === EnemyTypes.DAEMON) {
               const transform = entity.getComponent<TransformData>(ComponentType.Transform);

@@ -3,11 +3,9 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export interface VisualDef {
   model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON' | 'CRESCENT';
-  color: string; // Hex
+  color: string; 
   scale: [number, number, number];
-  // Updated to include specific projectile materials
   material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY' | 'PROJECTILE_HUNTER';
-  // Procedural Params
   height?: number;
   radius?: number;
   segments?: number;
@@ -46,4 +44,6 @@ export interface EnemyDef {
   visual: VisualDef;
   physics: PhysicsDef;
   params?: Record<string, any>;
+  deathFX?: string;    // ADDED
+  deathFXDir?: string; // ADDED
 }
