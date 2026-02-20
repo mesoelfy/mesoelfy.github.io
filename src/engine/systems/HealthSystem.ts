@@ -1,7 +1,6 @@
 import { IGameSystem, IGameEventService, IAudioService, IPanelSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { PLAYER_CONFIG } from '@/engine/config/PlayerConfig';
-import { useStore } from '@/engine/state/global/useStore';
 
 export class HealthSystem implements IGameSystem {
   public playerHealth: number = PLAYER_CONFIG.maxHealth;
@@ -9,6 +8,7 @@ export class HealthSystem implements IGameSystem {
   public playerRebootProgress: number = 0;
   public isGameOver: boolean = false;
   private unsubs: (() => void)[] = [];
+  private godMode: boolean = false;
   
   constructor(
     private events: IGameEventService,
@@ -21,6 +21,9 @@ export class HealthSystem implements IGameSystem {
     this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_REBOOT_DECAY, (p) => this.decayReboot(p.amount)));
     this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         this.damagePlayer(p.damage);
+    }));
+    this.unsubs.push(this.events.subscribe(GameEvents.GLOBAL_STATE_SYNC, (p) => {
+        this.godMode = p.debugFlags.godMode;
     }));
   }
 
@@ -36,8 +39,7 @@ export class HealthSystem implements IGameSystem {
 
   public damagePlayer(amount: number) {
     if (this.isGameOver) return;
-    const { godMode } = useStore.getState().debugFlags;
-    if (godMode) return;
+    if (this.godMode) return;
     
     if (this.playerHealth > 0) {
         this.playerHealth = Math.max(0, this.playerHealth - amount);

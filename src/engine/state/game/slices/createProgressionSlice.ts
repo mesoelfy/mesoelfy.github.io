@@ -8,7 +8,7 @@ export interface ProgressionSlice {
   highScore: number;
   upgradePoints: number;
   
-  spitter: SpitterState; // Renamed
+  spitter: SpitterState;
   sniffer: SnifferState;
   
   setScore: (val: number) => void;
@@ -42,7 +42,6 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
 
     let success = false;
 
-    // 3. Weapon Upgrade Logic
     if (path === 'SPITTER_GIRTH' && state.spitter.girthLevel < 10) {
         set(s => ({ spitter: { ...s.spitter, girthLevel: s.spitter.girthLevel + 1 } }));
         success = true;
@@ -67,8 +66,11 @@ export const createProgressionSlice: StateCreator<GameState, [], [], Progression
         set(s => ({ sniffer: { ...s.sniffer, rateLevel: s.sniffer.rateLevel + 1 } }));
         success = true;
     }
-    
-    if (path === 'RESTORE' || path === 'PURGE') {
+    else if (path === 'RESTORE') {
+        get().restoreAllPanels(); // FIX: Explicitly heal panels here
+        success = true;
+    }
+    else if (path === 'PURGE') {
         success = true;
     }
     

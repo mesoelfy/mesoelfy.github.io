@@ -34,7 +34,20 @@ export enum GameEvents {
   HEARTBEAT = 'HEARTBEAT',
   
   PLAYER_REBOOT_TICK = 'PLAYER_REBOOT_TICK',
-  PLAYER_REBOOT_DECAY = 'PLAYER_REBOOT_DECAY'
+  PLAYER_REBOOT_DECAY = 'PLAYER_REBOOT_DECAY',
+
+  // --- UI BRIDGE COMMANDS ---
+  CMD_REGISTER_PANEL = 'CMD_REGISTER_PANEL',
+  CMD_UNREGISTER_PANEL = 'CMD_UNREGISTER_PANEL',
+  CMD_DAMAGE_PANEL = 'CMD_DAMAGE_PANEL',
+  CMD_HEAL_PANEL = 'CMD_HEAL_PANEL',
+  CMD_DECAY_PANEL = 'CMD_DECAY_PANEL',
+  CMD_DESTROY_ALL_PANELS = 'CMD_DESTROY_ALL_PANELS',
+  CMD_SET_INTERACTION_TARGET = 'CMD_SET_INTERACTION_TARGET',
+  CMD_SET_SCORE = 'CMD_SET_SCORE',
+
+  // --- STATE SYNC ---
+  GLOBAL_STATE_SYNC = 'GLOBAL_STATE_SYNC'
 }
 
 export type FXVariant = 
@@ -54,7 +67,7 @@ export type FXVariant =
   | 'EXPLOSION_RED_DIR';
 
 export interface GameEventPayloads {
-  [GameEvents.PLAYER_FIRED]: { x: number; y: number; angle: number }; // ANGLE ADDED
+  [GameEvents.PLAYER_FIRED]: { x: number; y: number; angle: number };
   [GameEvents.PLAYER_HIT]: { damage: number };
   [GameEvents.ENEMY_SPAWNED]: { type: string; id: number };
   [GameEvents.ENEMY_DAMAGED]: { id: number; damage?: number; type?: string };
@@ -88,4 +101,27 @@ export interface GameEventPayloads {
   
   [GameEvents.PLAYER_REBOOT_TICK]: { amount: number };
   [GameEvents.PLAYER_REBOOT_DECAY]: { amount: number };
+
+  // --- UI BRIDGE COMMANDS ---
+  [GameEvents.CMD_REGISTER_PANEL]: { id: PanelId; element: HTMLElement };
+  [GameEvents.CMD_UNREGISTER_PANEL]: { id: PanelId };
+  [GameEvents.CMD_DAMAGE_PANEL]: { id: PanelId; amount: number; options?: any };
+  [GameEvents.CMD_HEAL_PANEL]: { id: PanelId; amount: number; sourceX?: number };
+  [GameEvents.CMD_DECAY_PANEL]: { id: PanelId; amount: number };
+  [GameEvents.CMD_DESTROY_ALL_PANELS]: null;
+  [GameEvents.CMD_SET_INTERACTION_TARGET]: { id: PanelId | null };
+  [GameEvents.CMD_SET_SCORE]: { score: number };
+
+  // --- STATE SYNC ---
+  [GameEvents.GLOBAL_STATE_SYNC]: {
+    bootState: string;
+    isZenMode: boolean;
+    graphicsMode: string;
+    debugFlags: {
+      godMode: boolean;
+      panelGodMode: boolean;
+      peaceMode: boolean;
+      timeScale: number;
+    };
+  };
 }

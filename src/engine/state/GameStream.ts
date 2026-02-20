@@ -9,14 +9,19 @@ export type StreamKey =
   | 'XP' 
   | 'XP_NEXT' 
   | 'LEVEL'
-  | 'PLAYER_INTERACTION_STATE' // 0: Idle, 1: Healing Self, 2: Reviving Self
-  | 'PLAYER_PURGE_ACTIVE'      // 0: Inactive, 1: Active
-  // Panel Health Keys
+  | 'PLAYER_INTERACTION_STATE'
+  | 'PLAYER_PURGE_ACTIVE'
   | 'PANEL_HEALTH_IDENTITY'
   | 'PANEL_HEALTH_SOCIAL'
   | 'PANEL_HEALTH_FEED'
   | 'PANEL_HEALTH_ART'
-  | 'PANEL_HEALTH_VIDEO';
+  | 'PANEL_HEALTH_VIDEO'
+  // NEW: Fast path boolean tracking for destroyed state (0 = Alive, 1 = Destroyed)
+  | 'PANEL_DEAD_IDENTITY'
+  | 'PANEL_DEAD_SOCIAL'
+  | 'PANEL_DEAD_FEED'
+  | 'PANEL_DEAD_ART'
+  | 'PANEL_DEAD_VIDEO';
 
 type Listener = (val: number) => void;
 
@@ -25,7 +30,6 @@ class GameStreamService {
   private listeners = new Map<StreamKey, Set<Listener>>();
 
   constructor() {
-    // Initialize defaults to avoid NaNs on UI mount
     this.values.set('PLAYER_HEALTH', 100);
     this.values.set('PLAYER_MAX_HEALTH', 100);
     this.values.set('SYSTEM_INTEGRITY', 100);
@@ -37,12 +41,17 @@ class GameStreamService {
     this.values.set('PLAYER_INTERACTION_STATE', 0);
     this.values.set('PLAYER_PURGE_ACTIVE', 0);
     
-    // Panel Defaults
     this.values.set('PANEL_HEALTH_IDENTITY', 100);
     this.values.set('PANEL_HEALTH_SOCIAL', 100);
     this.values.set('PANEL_HEALTH_FEED', 100);
     this.values.set('PANEL_HEALTH_ART', 100);
     this.values.set('PANEL_HEALTH_VIDEO', 100);
+
+    this.values.set('PANEL_DEAD_IDENTITY', 0);
+    this.values.set('PANEL_DEAD_SOCIAL', 0);
+    this.values.set('PANEL_DEAD_FEED', 0);
+    this.values.set('PANEL_DEAD_ART', 0);
+    this.values.set('PANEL_DEAD_VIDEO', 0);
   }
 
   public set(key: StreamKey, value: number) {

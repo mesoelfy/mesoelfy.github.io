@@ -7,7 +7,6 @@ export class ProgressionSystem implements IGameSystem {
   public xp: number = 0;
   public level: number = 1;
   public xpToNextLevel: number = PLAYER_CONFIG.baseXpRequirement;
-  public upgradePoints: number = 0;
   
   private unsubs: (() => void)[] = [];
 
@@ -31,9 +30,9 @@ export class ProgressionSystem implements IGameSystem {
     while (this.xp >= this.xpToNextLevel) {
         this.xp -= this.xpToNextLevel;
         this.level++;
-        this.upgradePoints++;
         this.xpToNextLevel = Math.floor(this.xpToNextLevel * PLAYER_CONFIG.xpScalingFactor);
         
+        // Emitting this allows the UI to safely increment points without desync
         this.events.emit(GameEvents.THREAT_LEVEL_UP, { level: this.level });
     }
   }
@@ -43,7 +42,6 @@ export class ProgressionSystem implements IGameSystem {
       this.xp = 0;
       this.level = 1;
       this.xpToNextLevel = PLAYER_CONFIG.baseXpRequirement;
-      this.upgradePoints = 0;
   }
 
   teardown(): void {

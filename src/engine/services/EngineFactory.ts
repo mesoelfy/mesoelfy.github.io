@@ -54,7 +54,9 @@ export class EngineFactory {
     }
 
     ServiceLocator.reset();
-    SharedGameEventBus.clear(); 
+    
+    // CRITICAL FIX: Removed SharedGameEventBus.clear() so the UI Bridge listeners aren't destroyed!
+    
     ServiceLocator.register('AudioService', audioService);
 
     const registry = new EntityRegistry();
@@ -80,7 +82,7 @@ export class EngineFactory {
     const particleSystem = new ParticleSystem();
     const shakeSystem = new ShakeSystem(eventBus); 
     
-    const panelSystem = new PanelRegistrySystem(eventBus, audioService);
+    const panelSystem = new PanelRegistrySystem(eventBus, audioService, registry);
     const healthSystem = new HealthSystem(eventBus, audioService, panelSystem);
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
@@ -100,7 +102,7 @@ export class EngineFactory {
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
     const visualStateSystem = new VisualStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
-    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem);
+    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
     const animationSystem = new AnimationSystem(registry);
     const renderSystem = new RenderSystem(registry);
     const warmupSystem = new WarmupSystem(); 
@@ -114,7 +116,7 @@ export class EngineFactory {
     const combatSystem = new CombatSystem(registry, eventBus, rawFastBus, audioService);
     const collisionSystem = new CollisionSystem(physicsSystem, combatSystem, registry);
 
-    const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
+    const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem, eventBus);
 
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);

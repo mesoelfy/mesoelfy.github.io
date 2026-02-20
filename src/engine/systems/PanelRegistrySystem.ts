@@ -1,9 +1,6 @@
-import { IPanelSystem, IGameEventService, IAudioService, DamageOptions } from '@/engine/interfaces';
+import { IPanelSystem, IGameEventService, IAudioService, IEntityRegistry, DamageOptions } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { WorldRect, ViewportHelper } from '@/engine/math/ViewportHelper';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useStore } from '@/engine/state/global/useStore';
-import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { Entity } from '@/engine/ecs/Entity';
 import { Tag } from '@/engine/ecs/types';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
@@ -12,6 +9,7 @@ import { CollisionLayers } from '@/engine/config/PhysicsConfig';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
 import { PanelId } from '@/engine/config/PanelConfig';
+import { GameStream, StreamKey } from '@/engine/state/GameStream';
 
 export class PanelRegistrySystem implements IPanelSystem {
   private entityMap = new Map<string, Entity>();
@@ -19,15 +17,18 @@ export class PanelRegistrySystem implements IPanelSystem {
   private elements = new Map<string, HTMLElement>();
   private rectCache = new Map<PanelId, WorldRect>();
   private stressMap = new Map<PanelId, number>();
+  
   private unsubs: (() => void)[] = [];
+  private panelGodMode = false;
 
   public get systemIntegrity() {
-      return useGameStore.getState().systemIntegrity;
+      return GameStream.get('SYSTEM_INTEGRITY');
   }
 
   constructor(
     private events: IGameEventService,
-    private audio: IAudioService
+    private audio: IAudioService,
+    private registry: IEntityRegistry
   ) {
     if (typeof window !== 'undefined') {
         this.observer = new ResizeObserver((entries) => {
@@ -42,21 +43,14 @@ export class PanelRegistrySystem implements IPanelSystem {
         });
     }
 
-    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
-        const current = this.stressMap.get(p.id) || 0;
-        // Cap max stress to prevent panels flying off screen
-        // UPDATED: Reduced per-hit stress from 0.8 to 0.4 to reduce Driller jitter
-        this.stressMap.set(p.id, Math.min(4.0, current + 0.4));
+    this.unsubs.push(this.events.subscribe(GameEvents.GLOBAL_STATE_SYNC, (p) => {
+        this.panelGodMode = p.debugFlags.panelGodMode;
     }));
 
-    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        if (p.option === 'RESTORE') {
-            const restoredCount = useGameStore.getState().restoreAllPanels();
-            if (restoredCount > 0) {
-                this.events.emit(GameEvents.TRAUMA_ADDED, { amount: 0.3 }); 
-                this.audio.playSound('fx_reboot_success'); 
-            }
-        }
+    // Only apply physical shake stress on damage. Health state is now handled by GameStream!
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DAMAGED, (p) => {
+        const current = this.stressMap.get(p.id) || 0;
+        this.stressMap.set(p.id, Math.min(4.0, current + 0.4));
     }));
 
     this.unsubs.push(this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
@@ -65,38 +59,27 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   update(delta: number, time: number): void {
-      // Iterate through stress map to apply physics
       for (const [id, stress] of this.stressMap.entries()) {
           const el = this.elements.get(id as string);
-          
           if (stress > 0.01) {
-              // 1. Decay
-              const decayFactor = Math.pow(0.9, delta * 60); // Frame-rate independent decay
+              const decayFactor = Math.pow(0.9, delta * 60);
               const newStress = stress * decayFactor;
               this.stressMap.set(id, newStress);
 
-              // 2. Apply Visual Shake
               if (el) {
                   const shake = newStress * 2.0; 
                   const jx = (Math.random() - 0.5) * shake;
                   const jy = (Math.random() - 0.5) * shake;
-                  
-                  // Use translate3d for GPU acceleration
                   el.style.transform = `translate3d(${jx.toFixed(1)}px, ${jy.toFixed(1)}px, 0)`;
               }
           } else {
-              // 3. Reset / Cleanup
               if (stress !== 0) this.stressMap.set(id, 0);
-              if (el && el.style.transform !== '') {
-                  el.style.transform = '';
-              }
+              if (el && el.style.transform !== '') el.style.transform = '';
           }
       }
   }
 
-  public getPanelStress(id: PanelId): number {
-      return this.stressMap.get(id) || 0;
-  }
+  public getPanelStress(id: PanelId): number { return this.stressMap.get(id) || 0; }
 
   teardown(): void {
       this.unsubs.forEach(u => u());
@@ -110,24 +93,17 @@ export class PanelRegistrySystem implements IPanelSystem {
 
   public register(id: PanelId, element: HTMLElement) {
       this.elements.set(id, element);
-      useGameStore.getState().registerPanel(id, element);
+      this.events.emit(GameEvents.CMD_REGISTER_PANEL, { id, element });
       this.observer?.observe(element);
       
-      const registry = ServiceLocator.getRegistry();
-      const entity = registry.createEntity();
+      const entity = this.registry.createEntity();
       entity.addTag(Tag.OBSTACLE); 
-      
       entity.addComponent(ComponentRegistry.create(ComponentType.Transform));
       entity.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: id })); 
-      
-      entity.addComponent(ComponentRegistry.create(ComponentType.Collider, {
-          shape: 'BOX',
-          layer: CollisionLayers.PANEL,
-          mask: 0 
-      }));
+      entity.addComponent(ComponentRegistry.create(ComponentType.Collider, { shape: 'BOX', layer: CollisionLayers.PANEL, mask: 0 }));
 
       this.entityMap.set(id, entity);
-      registry.updateCache(entity);
+      this.registry.updateCache(entity);
       this.syncEntity(id, element.getBoundingClientRect());
   }
 
@@ -138,11 +114,11 @@ export class PanelRegistrySystem implements IPanelSystem {
       this.rectCache.delete(id);
       this.stressMap.delete(id);
       
-      useGameStore.getState().unregisterPanel(id);
+      this.events.emit(GameEvents.CMD_UNREGISTER_PANEL, { id });
 
       const entity = this.entityMap.get(id);
       if (entity) {
-          ServiceLocator.getRegistry().destroyEntity(entity.id as number);
+          this.registry.destroyEntity(entity.id as number);
           this.entityMap.delete(id);
       }
   }
@@ -154,7 +130,6 @@ export class PanelRegistrySystem implements IPanelSystem {
 
       const fullRect = el.getBoundingClientRect();
       const worldRect = ViewportHelper.domToWorld(id, fullRect);
-      
       this.rectCache.set(id, worldRect);
 
       if (entity) {
@@ -171,9 +146,7 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   public refreshAll() { 
-      for (const [id, el] of this.elements) {
-          this.syncEntity(id as PanelId, el.getBoundingClientRect());
-      }
+      for (const [id, el] of this.elements) this.syncEntity(id as PanelId, el.getBoundingClientRect());
   }
   
   public refreshSingle(id: PanelId) { 
@@ -182,51 +155,44 @@ export class PanelRegistrySystem implements IPanelSystem {
   }
 
   public damagePanel(id: PanelId, amount: number, options?: DamageOptions) {
-      if (useStore.getState().debugFlags.panelGodMode) return;
-      useGameStore.getState().damagePanel(id, amount, options);
+      if (this.panelGodMode) return;
+      this.events.emit(GameEvents.CMD_DAMAGE_PANEL, { id, amount, options });
   }
 
   public healPanel(id: PanelId, amount: number, sourceX?: number) {
-      useGameStore.getState().healPanel(id, amount, sourceX);
+      this.events.emit(GameEvents.CMD_HEAL_PANEL, { id, amount, sourceX });
   }
   
   public decayPanel(id: PanelId, amount: number) {
-      useGameStore.getState().decayPanel(id, amount);
+      this.events.emit(GameEvents.CMD_DECAY_PANEL, { id, amount });
   }
 
   public destroyAll() { 
-      useGameStore.getState().destroyAllPanels();
+      this.events.emit(GameEvents.CMD_DESTROY_ALL_PANELS, null);
   }
 
-  public getPanelRect(id: PanelId): WorldRect | undefined {
-      return this.rectCache.get(id);
-  }
+  public getPanelRect(id: PanelId): WorldRect | undefined { return this.rectCache.get(id); }
 
-  public getPanelState(id: PanelId) {
-      const panel = useGameStore.getState().panels[id];
-      if (!panel) return undefined;
-      return { health: panel.health, isDestroyed: panel.isDestroyed };
+  public getPanelState(id: PanelId) { 
+      const health = GameStream.get(`PANEL_HEALTH_${id.toUpperCase()}` as StreamKey);
+      const isDead = GameStream.get(`PANEL_DEAD_${id.toUpperCase()}` as StreamKey) === 1;
+      return { health, isDestroyed: isDead };
   }
   
   public getAllPanels() {
       const results = [];
-      const state = useGameStore.getState();
-      
       for(const [id, rect] of this.rectCache) {
           const pid = id as PanelId;
-          const panel = state.panels[pid];
-          if (panel) {
-              results.push({ ...rect, health: panel.health, isDestroyed: panel.isDestroyed });
-          }
+          const health = GameStream.get(`PANEL_HEALTH_${pid.toUpperCase()}` as StreamKey);
+          const isDead = GameStream.get(`PANEL_DEAD_${pid.toUpperCase()}` as StreamKey) === 1;
+          results.push({ ...rect, id: pid, health: health, isDestroyed: isDead });
       }
       return results;
   }
 
   public getPanelAt(x: number, y: number): PanelId | null {
       for (const [id, rect] of this.rectCache) {
-          if (x >= rect.left && x <= rect.right && y >= rect.bottom && y <= rect.top) {
-              return id;
-          }
+          if (x >= rect.left && x <= rect.right && y >= rect.bottom && y <= rect.top) return id;
       }
       return null;
   }

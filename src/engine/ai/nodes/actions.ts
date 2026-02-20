@@ -13,7 +13,6 @@ import { AITimerID } from '@/engine/ai/AITimerID';
 import { EnemyType } from '@/engine/config/Identifiers';
 
 export class MoveToTarget extends BTNode {
-  // Optional override keys for specific param names
   constructor(private speedKey: string = 'moveSpeed', private stopKey: string = 'approachStopDist') { super(); }
   
   tick(entity: Entity, context: AIContext): NodeState {
@@ -34,24 +33,36 @@ export class MoveToTarget extends BTNode {
     const speed = params[this.speedKey] ?? 10;
     const stopDistance = params[this.stopKey] ?? 0;
 
-    let tx = target.x, ty = target.y;
+    // FIX: Steer towards the raw target.x/y (which is now the center of the panel)
+    const dxCenter = target.x - transform.x;
+    const dyCenter = target.y - transform.y;
+    
+    // Default distance is to the center
+    let distForStop = Math.sqrt(dxCenter*dxCenter + dyCenter*dyCenter);
+
+    // If it's a panel, calculate the distance to the edge for stopping, 
+    // but KEEP steering towards the center!
     if (target.type === 'PANEL' && target.id) {
         const rect = context.getPanelRect(target.id as PanelId);
         if (rect) {
-            tx = Math.max(rect.left, Math.min(transform.x, rect.right));
-            ty = Math.max(rect.bottom, Math.min(transform.y, rect.top));
+            const cx = Math.max(rect.left, Math.min(transform.x, rect.right));
+            const cy = Math.max(rect.bottom, Math.min(transform.y, rect.top));
+            distForStop = Math.sqrt((cx - transform.x)**2 + (cy - transform.y)**2);
         }
     }
-    const dx = tx - transform.x, dy = ty - transform.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    
-    if (dist <= stopDistance) {
+
+    // Stop if we hit the edge of the panel (or the target center for non-panels)
+    if (distForStop <= stopDistance) {
         motion.vx = 0; motion.vy = 0;
         return NodeState.SUCCESS;
     }
-    motion.vx = (dx / dist) * speed;
-    motion.vy = (dy / dist) * speed;
-    transform.rotation = Math.atan2(dy, dx);
+
+    // Move along the vector pointing at the CENTER
+    const distCenter = Math.sqrt(dxCenter*dxCenter + dyCenter*dyCenter);
+    motion.vx = (dxCenter / distCenter) * speed;
+    motion.vy = (dyCenter / distCenter) * speed;
+    transform.rotation = Math.atan2(dyCenter, dxCenter);
+    
     return NodeState.RUNNING;
   }
 }

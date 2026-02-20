@@ -1,6 +1,5 @@
 import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { PALETTE } from '@/engine/config/Palette';
@@ -25,16 +24,11 @@ export class InteractionSystem implements IInteractionSystem {
     private events: IGameEventService,
     private physics: IPhysicsSystem,
     private registry: IEntityRegistry,
-    private audio: IAudioService // INJECTED ABSTRACTION
+    private audio: IAudioService
   ) {}
 
-  public registerZone(id: string, rect: WorldRect) {
-      this.zones.set(id, rect);
-  }
-
-  public unregisterZone(id: string) {
-      this.zones.delete(id);
-  }
+  public registerZone(id: string, rect: WorldRect) { this.zones.set(id, rect); }
+  public unregisterZone(id: string) { this.zones.delete(id); }
 
   update(delta: number, time: number): void {
     this.repairState = 'IDLE';
@@ -42,7 +36,6 @@ export class InteractionSystem implements IInteractionSystem {
     let interactionCode = 0; 
     
     const cursor = this.input.getCursor();
-    
     const halfWidth = ViewportHelper.viewport.width / 2;
     const pan = halfWidth > 0 ? Math.max(-1, Math.min(1, cursor.x / halfWidth)) : 0;
 
@@ -55,6 +48,7 @@ export class InteractionSystem implements IInteractionSystem {
     let handledByCrystal = false;
     const crystalZone = this.zones.get('crystal');
     
+    // 1. CRYSTAL HUD INTERACTION (Self Heal / Revive)
     if (crystalZone) {
         const zoneRadius = crystalZone.width / 2; 
         const distSq = (cursor.x - crystalZone.x)**2 + (cursor.y - crystalZone.y)**2;
@@ -63,7 +57,6 @@ export class InteractionSystem implements IInteractionSystem {
         if (isHoveringCrystal) {
             const isPlayerDead = this.gameSystem.playerHealth <= 0;
             const isPlayerHurt = this.gameSystem.playerHealth < this.gameSystem.maxPlayerHealth;
-            
             const panelState = this.panelSystem.getPanelState(PanelId.IDENTITY);
             const isPanelDead = panelState?.isDestroyed ?? false;
 
@@ -96,7 +89,8 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    if (!handledByCrystal) {
+    // 2. PANEL INTERACTION (Only if player is alive!)
+    if (!handledByCrystal && this.gameSystem.playerHealth > 0) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
         if (panelId) {
@@ -112,10 +106,8 @@ export class InteractionSystem implements IInteractionSystem {
 
                         if (panelState.isDestroyed) {
                             this.audio.playSound('loop_reboot', pan);
-                        } else {
-                            this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
-
+                        
                         const color = panelState.isDestroyed ? PALETTE.PURPLE.PRIMARY : PALETTE.PINK.PRIMARY;
                         this.spawnRepairParticles(cursor, color);
                     }
@@ -134,13 +126,13 @@ export class InteractionSystem implements IInteractionSystem {
 
   private syncInteractionState() {
       if (this.hoveringPanelId !== this.previousHoverId) {
-          useGameStore.getState().setInteractionTarget(this.hoveringPanelId);
+          this.events.emit(GameEvents.CMD_SET_INTERACTION_TARGET, { id: this.hoveringPanelId });
           this.previousHoverId = this.hoveringPanelId;
       }
   }
 
   teardown(): void {
-      useGameStore.getState().setInteractionTarget(null);
+      this.events.emit(GameEvents.CMD_SET_INTERACTION_TARGET, { id: null });
       this.zones.clear();
   }
 

@@ -1,6 +1,4 @@
 import { IGameSystem, IServiceLocator, IEntityRegistry, IPanelSystem, IGameStateSystem, IFastEventService, SystemPhase } from '@/engine/interfaces';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useStore } from '@/engine/state/global/useStore';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { WorldConfig } from '@/engine/config/WorldConfig';
 import { TimeSystem } from '@/engine/systems/TimeSystem';
@@ -15,8 +13,19 @@ export class GameEngineCore implements IGameSystem {
   private timeSystem: TimeSystem | null = null;
   private fastEventBus: IFastEventService | null = null;
 
+  // Internal State (Pushed from React via Bridge)
+  private isPaused = false;
+  private isWarmingUp = true;
+  private timeScale = 1.0;
+
   constructor(registry: IEntityRegistry) {
       this.registry = registry;
+  }
+
+  public setEngineState(state: { isPaused: boolean; isWarmingUp: boolean; timeScale: number }) {
+      this.isPaused = state.isPaused;
+      this.isWarmingUp = state.isWarmingUp;
+      this.timeScale = state.timeScale;
   }
 
   public injectCoreSystems(panel: IPanelSystem, game: IGameStateSystem, time: TimeSystem) {
@@ -36,35 +45,21 @@ export class GameEngineCore implements IGameSystem {
   }
 
   update(renderDelta: number, renderTime: number): void {
-    const store = useStore.getState();
-    const gameStore = useGameStore.getState();
-    
-    // --- STOP CONDITIONS ---
-    if (store.activeModal === 'settings' || store.isDebugOpen) return;
-    if (store.isSimulationPaused) return;
+    if (this.isPaused) return;
 
-    // --- PIPELINE WARMING LOGIC ---
-    // If in standby, skip Game Logic/Physics, but run Render Phase (for WarmupSystem)
-    const isWarmingUp = store.bootState === 'standby';
-
-    if (!isWarmingUp) {
-        // --- 0. SWAP EVENT BUFFERS ---
+    if (!this.isWarmingUp) {
         if (this.fastEventBus) {
             this.fastEventBus.swap();
         }
 
-        if (gameStore.isPlaying && this.panelSystem && this.panelSystem.systemIntegrity <= 0) {
-            gameStore.stopGame();
-        }
-
-        let timeScale = 1.0;
+        let localTimeScale = 1.0;
         if (this.timeSystem) {
             this.timeSystem.tickRealTime(renderDelta);
-            if (this.timeSystem.isFrozen()) timeScale = 0.0;
-            else timeScale = this.timeSystem.timeScale;
+            if (this.timeSystem.isFrozen()) localTimeScale = 0.0;
+            else localTimeScale = this.timeSystem.timeScale;
         }
 
-        const effectiveDelta = renderDelta * timeScale * store.debugFlags.timeScale;
+        const effectiveDelta = renderDelta * localTimeScale * this.timeScale;
         this.accumulator += effectiveDelta;
 
         if (this.accumulator > WorldConfig.time.maxAccumulator) {
@@ -73,7 +68,6 @@ export class GameEngineCore implements IGameSystem {
 
         const fixedStep = WorldConfig.time.fixedDelta;
         
-        // --- 1. FIXED UPDATE LOOP (Logic, Physics, Collision) ---
         while (this.accumulator >= fixedStep) {
             for (let phase = 0; phase <= SystemPhase.STATE; phase++) {
                 const phaseSystems = this.systems[phase];
@@ -90,9 +84,7 @@ export class GameEngineCore implements IGameSystem {
         }
     }
     
-    // --- 2. RENDER UPDATE LOOP (Variable Timestep) ---
-    // Runs even during Warmup to compile shaders
-    const alpha = isWarmingUp ? 1.0 : (this.accumulator / WorldConfig.time.fixedDelta);
+    const alpha = this.isWarmingUp ? 1.0 : (this.accumulator / WorldConfig.time.fixedDelta);
     
     const renderSystems = this.systems[SystemPhase.RENDER];
     for (let i = 0; i < renderSystems.length; i++) {

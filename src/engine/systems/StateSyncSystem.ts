@@ -1,8 +1,8 @@
-import { IGameSystem, IPanelSystem } from '@/engine/interfaces';
+import { IGameSystem, IPanelSystem, IGameEventService } from '@/engine/interfaces';
+import { GameEvents } from '@/engine/signals/GameEvents';
 import { HealthSystem } from './HealthSystem';
 import { ProgressionSystem } from './ProgressionSystem';
 import { GameStream } from '@/engine/state/GameStream';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 
 export class StateSyncSystem implements IGameSystem {
   private cache = {
@@ -13,14 +13,14 @@ export class StateSyncSystem implements IGameSystem {
     score: -1,
     xp: -1,
     xpNext: -1,
-    level: -1,
-    points: -1
+    level: -1
   };
 
   constructor(
     private healthSys: HealthSystem,
     private progSys: ProgressionSystem,
-    private panelSys: IPanelSystem
+    private panelSys: IPanelSystem,
+    private events: IGameEventService
   ) {}
 
   update(delta: number, time: number): void {
@@ -55,12 +55,10 @@ export class StateSyncSystem implements IGameSystem {
     const xp = this.progSys.xp;
     const level = this.progSys.level;
     const next = this.progSys.xpToNextLevel;
-    const points = this.progSys.upgradePoints;
 
     if (score !== this.cache.score) {
       GameStream.set('SCORE', score);
-      // We still call this ONLY to update High Score, but the store no longer holds 'current score' for UI
-      useGameStore.getState().setScore(score);
+      this.events.emit(GameEvents.CMD_SET_SCORE, { score });
       this.cache.score = score;
     }
 
@@ -72,12 +70,6 @@ export class StateSyncSystem implements IGameSystem {
       this.cache.xp = xp;
       this.cache.level = level;
       this.cache.xpNext = next;
-    }
-    
-    // Sync Points (Still needed in Store for UpgradeTerminal Logic)
-    if (points !== this.cache.points) {
-        useGameStore.setState({ upgradePoints: points });
-        this.cache.points = points;
     }
   }
 

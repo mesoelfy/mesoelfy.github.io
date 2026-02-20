@@ -8,21 +8,28 @@ import { IPanelSystem } from '@/engine/interfaces';
 import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useEngineStoreBridge } from './hooks/useEngineStoreBridge';
 
 export const GameDirector = memo(() => {
   const { viewport, size } = useThree();
   const engineRef = useRef<GameEngineCore | null>(null);
+  
+  // 1. Mount the bridge
+  const syncBridge = useEngineStoreBridge(engineRef);
 
   useEffect(() => {
-    // 1. Boot Engine
+    // 2. Boot Engine
     const engine = GameBootstrapper();
     engineRef.current = engine;
     engine.updateViewport(viewport.width, viewport.height, size.width, size.height);
     
-    // 2. Pre-Warm Audio
+    // Push initial Zustand state into the engine immediately
+    syncBridge();
+    
+    // 3. Pre-Warm Audio
     AudioSystem.init();
 
-    // 3. Panel Sync Loop
+    // 4. Panel Sync Loop
     const refreshInterval = setInterval(() => {
         try {
             const panelSys = ServiceLocator.getSystem<IPanelSystem>('PanelRegistrySystem');
@@ -45,9 +52,8 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      // FIX: Removed SharedGameEventBus.clear() to prevent destroying UI listeners on hot-reloads
     };
-  }, []); 
+  }, [syncBridge]); 
 
   useEffect(() => {
     if (engineRef.current) {

@@ -14,11 +14,7 @@ export class GameStateSystem implements IGameStateSystem {
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
     private audio: IAudioService
-  ) {
-    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        // DAEMON logic check if needed
-    }));
-  }
+  ) {}
 
   update(delta: number, time: number): void {
       if (this.isGameOver) return;
@@ -55,9 +51,7 @@ export class GameStateSystem implements IGameStateSystem {
   get xp() { return this.progSys.xp; }
   get level() { return this.progSys.level; }
   get xpToNextLevel() { return this.progSys.xpToNextLevel; }
-  get upgradePoints() { return this.progSys.upgradePoints; }
   
-  // Update Getters
   get spitter() { return useGameStore.getState().spitter; } 
   get sniffer() { return useGameStore.getState().sniffer; }
 

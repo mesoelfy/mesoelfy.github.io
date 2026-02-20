@@ -72,7 +72,7 @@ export interface IProgressionRead {
   xp: number;
   level: number;
   xpToNextLevel: number;
-  upgradePoints: number;
+  // Removed upgradePoints to fix desync loop
 }
 
 export interface IGameStateSystem extends IGameSystem, IVitalsRead, IProgressionRead {

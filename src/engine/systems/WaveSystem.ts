@@ -1,12 +1,9 @@
 import { IGameSystem, IEntitySpawner, IPanelSystem, IGameEventService } from '@/engine/interfaces';
-import { useGameStore } from '@/engine/state/game/useGameStore';
-import { useStore } from '@/engine/state/global/useStore';
 import { EnemyTypes, ArchetypeID } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { ENEMIES } from '@/engine/config/defs/Enemies';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { PanelId } from '@/engine/config/PanelConfig';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
 import waves from '@/engine/config/static/waves.json';
 import scenario from '@/engine/config/static/scenario.json';
@@ -26,6 +23,10 @@ export class WaveSystem implements IGameSystem {
   private timeline: WaveDef[] = waves as WaveDef[];
   private scenarioInit = false;
   private hasStressTested = false;
+  
+  private isZenMode = false;
+  private isSandbox = false;
+  private peaceMode = false;
   private unsubs: (() => void)[] = [];
 
   constructor(
@@ -35,6 +36,11 @@ export class WaveSystem implements IGameSystem {
   ) {
     this.reset();
     this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => this.triggerStressTest()));
+    this.unsubs.push(this.events.subscribe(GameEvents.GLOBAL_STATE_SYNC, (p) => {
+        this.isZenMode = p.isZenMode;
+        this.isSandbox = p.bootState === 'sandbox';
+        this.peaceMode = p.debugFlags.peaceMode;
+    }));
   }
 
   private reset() {
@@ -47,8 +53,7 @@ export class WaveSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    if (useGameStore.getState().isZenMode) return;
-    if (useStore.getState().bootState === 'sandbox') return;
+    if (this.isZenMode || this.isSandbox) return;
     
     if (this.panelSystem.systemIntegrity > 0) {
         if (!this.scenarioInit) {
@@ -63,7 +68,7 @@ export class WaveSystem implements IGameSystem {
 
         this.waveTime += delta;
         
-        if (!useStore.getState().debugFlags.peaceMode) {
+        if (!this.peaceMode) {
             this.checkTimeline();
             this.processQueue(time);
         }
@@ -77,7 +82,6 @@ export class WaveSystem implements IGameSystem {
       this.hasStressTested = true;
 
       const { width, height } = ViewportHelper.viewport;
-      
       const types = [EnemyTypes.DRILLER, EnemyTypes.HUNTER, EnemyTypes.KAMIKAZE];
       const countPerType = 100;
 
@@ -88,10 +92,7 @@ export class WaveSystem implements IGameSystem {
               
               this.spawner.spawn(type, {
                   [ComponentType.Transform]: { x, y },
-                  [ComponentType.State]: { 
-                      current: AI_STATE.SPAWN,
-                      timers: {} 
-                  },
+                  [ComponentType.State]: { current: AI_STATE.SPAWN, timers: {} },
                   [ComponentType.RenderTransform]: { scale: 1.0 },
                   [ComponentType.RenderEffect]: { spawnProgress: 0.0, spawnVelocity: 0.0 }
               });
@@ -104,7 +105,6 @@ export class WaveSystem implements IGameSystem {
           const targetPanel = panels.find(p => p.id === panelConfig.id);
           if (!targetPanel) continue;
 
-          // Process Damage
           let dmg = panelConfig.damage || 0;
           if (panelConfig.damageMin !== undefined && panelConfig.damageMax !== undefined) {
               dmg = panelConfig.damageMin + Math.floor(Math.random() * (panelConfig.damageMax - panelConfig.damageMin));
@@ -113,7 +113,6 @@ export class WaveSystem implements IGameSystem {
               this.panelSystem.damagePanel(targetPanel.id, dmg, { silent: true });
           }
 
-          // Process Enemies
           let enemyCount = panelConfig.enemies || 0;
           if (panelConfig.enemiesMin !== undefined && panelConfig.enemiesMax !== undefined) {
               enemyCount = panelConfig.enemiesMin + Math.floor(Math.random() * (panelConfig.enemiesMax - panelConfig.enemiesMin + 1));
@@ -137,25 +136,13 @@ export class WaveSystem implements IGameSystem {
           
           switch(side) {
               case 0:
-                  edgeX = (Math.random() - 0.5) * panel.width;
-                  edgeY = halfH;
-                  normalX = 0; normalY = 1;
-                  break;
+                  edgeX = (Math.random() - 0.5) * panel.width; edgeY = halfH; normalX = 0; normalY = 1; break;
               case 1:
-                  edgeX = (Math.random() - 0.5) * panel.width;
-                  edgeY = -halfH;
-                  normalX = 0; normalY = -1;
-                  break;
+                  edgeX = (Math.random() - 0.5) * panel.width; edgeY = -halfH; normalX = 0; normalY = -1; break;
               case 2:
-                  edgeX = -halfW;
-                  edgeY = (Math.random() - 0.5) * panel.height;
-                  normalX = -1; normalY = 0;
-                  break;
+                  edgeX = -halfW; edgeY = (Math.random() - 0.5) * panel.height; normalX = -1; normalY = 0; break;
               case 3:
-                  edgeX = halfW;
-                  edgeY = (Math.random() - 0.5) * panel.height;
-                  normalX = 1; normalY = 0;
-                  break;
+                  edgeX = halfW; edgeY = (Math.random() - 0.5) * panel.height; normalX = 1; normalY = 0; break;
           }
 
           const spawnX = panel.x + edgeX + (normalX * offset);
@@ -163,29 +150,15 @@ export class WaveSystem implements IGameSystem {
           const angle = Math.atan2(-normalY, -normalX);
 
           this.spawner.spawn(EnemyTypes.DRILLER, {
-              [ComponentType.Transform]: { 
-                  x: spawnX, 
-                  y: spawnY, 
-                  scale: 1.0, 
-                  rotation: angle 
-              },
-              [ComponentType.State]: { 
-                  current: 'ACTIVE',
-                  timers: { 
-                      spawn: 0,
-                      drillAudio: Math.random() * 0.2 
-                  } 
-              },
-              [ComponentType.RenderTransform]: { 
-                  scale: 1.0 
-              }
+              [ComponentType.Transform]: { x: spawnX, y: spawnY, scale: 1.0, rotation: angle },
+              [ComponentType.State]: { current: 'ACTIVE', timers: { spawn: 0, drillAudio: Math.random() * 0.2 } },
+              [ComponentType.RenderTransform]: { scale: 1.0 }
           });
       }
   }
 
   private handleBreaches(delta: number) {
-      const flags = useStore.getState().debugFlags;
-      if (flags.panelGodMode || flags.peaceMode) return;
+      if (this.peaceMode) return;
 
       const allPanels = this.panelSystem.getAllPanels();
       const deadPanels = allPanels.filter(p => p.isDestroyed && p.width > 0);

@@ -5,13 +5,13 @@ import { FastEventType, FX_LOOKUP, FXCode, FLOAT_SCALAR } from '@/engine/signals
 import { ShakeSystem } from './ShakeSystem';
 import { TimeSystem } from './TimeSystem';
 import { VFX_MANIFEST } from '@/engine/config/assets/VFXManifest';
-import { useStore } from '@/engine/state/global/useStore';
 import { ParticleShape } from '@/engine/ecs/types';
 import { PanelId } from '@/engine/config/PanelConfig';
 import * as THREE from 'three';
 
 export class VFXSystem implements IGameSystem {
   private unsubs: (() => void)[] = [];
+  private isPotato = false;
   
   private tempColor = new THREE.Color();
   private white = new THREE.Color(0xffffff);
@@ -27,6 +27,10 @@ export class VFXSystem implements IGameSystem {
   }
 
   private setupSubscriptions() {
+    this.unsubs.push(this.events.subscribe(GameEvents.GLOBAL_STATE_SYNC, (p) => {
+        this.isPotato = p.graphicsMode === 'POTATO';
+    }));
+
     this.unsubs.push(this.events.subscribe(GameEvents.SPAWN_IMPACT, (p) => {
         this.spawnDynamicImpact(p.x, p.y, p.hexColor, p.angle);
     }));
@@ -48,6 +52,13 @@ export class VFXSystem implements IGameSystem {
     this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.shakeSystem.addTrauma(1.0);
         this.timeSystem.freeze(0.5);
+    }));
+    
+    // FIX: Add global shake on manual restore
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
+        if (p.option === 'RESTORE') {
+            this.shakeSystem.addTrauma(0.3);
+        }
     }));
   }
 
@@ -87,9 +98,8 @@ export class VFXSystem implements IGameSystem {
   }
 
   private spawnDynamicImpact(x: number, y: number, hexColor: string, impactAngle: number) {
-      // 1. Prepare Palette
       this.tempColor.set(hexColor);
-      this.tempColor.lerp(this.white, 0.6); // Lighter "hot" version
+      this.tempColor.lerp(this.white, 0.6); 
       const lightHex = '#' + this.tempColor.getHexString();
       
       const count = this.randomRange(2, 3); 
@@ -104,7 +114,6 @@ export class VFXSystem implements IGameSystem {
           const vy = Math.sin(angle) * speed;
           const life = this.randomRange(0.1, 0.3);
           
-          // 2. Color Variant Logic
           const randC = Math.random();
           let finalColor = hexColor;
           let size = 1.0;
@@ -125,15 +134,12 @@ export class VFXSystem implements IGameSystem {
       const recipe = VFX_MANIFEST[key];
       if (!recipe) return;
 
-      const graphicsMode = useStore.getState().graphicsMode;
-      const isPotato = graphicsMode === 'POTATO';
-      const multiplier = isPotato ? 0.3 : 1.0;
+      const multiplier = this.isPotato ? 0.3 : 1.0;
 
       const rawCount = this.randomRange(recipe.count[0], recipe.count[1]);
       let count = Math.floor(rawCount * multiplier);
       if (rawCount > 0 && count === 0) count = 1;
 
-      // Check for offset (Ring spawning)
       const offsetRadius = recipe.offsetRadius || 0;
 
       for (let i = 0; i < count; i++) {
@@ -149,7 +155,6 @@ export class VFXSystem implements IGameSystem {
           let vx = 0;
           let vy = 0;
           
-          // Calculate Spawn Position (Offset from Center)
           let spawnX = x;
           let spawnY = y;
 
@@ -182,7 +187,6 @@ export class VFXSystem implements IGameSystem {
               vx = Math.cos(a) * finalSpeed;
               vy = Math.sin(a) * finalSpeed;
               
-              // Directional usually spawns at origin, but if offset is needed:
               if (offsetRadius > 0) {
                   spawnX += Math.cos(a) * offsetRadius;
                   spawnY += Math.sin(a) * offsetRadius;

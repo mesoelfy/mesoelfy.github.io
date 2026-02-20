@@ -7,7 +7,6 @@ import { PanelId } from '@/engine/config/PanelConfig';
 import { SYS_LIMITS } from '@/engine/config/constants/SystemConstants';
 
 export class TargetingSystem implements IGameSystem {
-  // ZERO-ALLOCATION CACHES
   private playerCache = { x: 0, y: 0, valid: false };
   private enemyCache = { x: 0, y: 0, valid: false };
   private queryBuffer = new Int32Array(SYS_LIMITS.MAX_COLLISION_RESULTS);
@@ -40,8 +39,9 @@ export class TargetingSystem implements IGameSystem {
                 } else {
                     const rect = this.panelSystem.getPanelRect(target.id as PanelId);
                     if (rect) {
-                        target.x = Math.max(rect.left, Math.min(transform.x, rect.right));
-                        target.y = Math.max(rect.bottom, Math.min(transform.y, rect.top));
+                        // FIX: Target the center of the panel, NOT the closest clamped edge
+                        target.x = rect.x; 
+                        target.y = rect.y; 
                     }
                 }
             }
@@ -67,8 +67,9 @@ export class TargetingSystem implements IGameSystem {
             const bestPanel = this.findNearestPanel(transform.x, transform.y);
             if (bestPanel) {
                 target.id = bestPanel.id;
-                target.x = Math.max(bestPanel.left, Math.min(transform.x, bestPanel.right));
-                target.y = Math.max(bestPanel.bottom, Math.min(transform.y, bestPanel.top));
+                // FIX: Target the center of the panel
+                target.x = bestPanel.x; 
+                target.y = bestPanel.y; 
                 target.locked = true; 
             } else {
                 if (this.playerCache.valid) {
