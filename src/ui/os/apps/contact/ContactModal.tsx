@@ -2,24 +2,25 @@ import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import { Send, Terminal, Signal, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export const ContactModal = () => {
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT' | 'ERROR'>('IDLE');
   const [signalStrength, setSignalStrength] = useState(0);
+  const audio = useAudio();
 
   const handleInput = () => {
       setSignalStrength(Math.floor(Math.random() * 40) + 60);
-      AudioSystem.playSound('ui_hover');
+      audio.playHover();
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setStatus('SENDING');
-      AudioSystem.playSound('ui_click');
-      AudioSystem.playRebootZap();
+      audio.playClick();
+      audio.playRebootZap();
 
       const form = e.currentTarget;
       const data = new FormData(form);
@@ -33,14 +34,14 @@ export const ContactModal = () => {
           
           if (res.ok) {
               setStatus('SENT');
-              AudioSystem.playSound('fx_reboot_success');
+              audio.playSound('fx_reboot_success');
           } else {
               setStatus('ERROR');
-              AudioSystem.playSound('ui_error');
+              audio.playSound('ui_error');
           }
       } catch (err) {
           setStatus('ERROR');
-          AudioSystem.playSound('ui_error');
+          audio.playSound('ui_error');
       }
   };
 
@@ -50,7 +51,6 @@ export const ContactModal = () => {
         
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
-            {/* REPLACED: service-cyan -> service-pink */}
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-pink rounded-full blur-[100px]" />
         </div>
 

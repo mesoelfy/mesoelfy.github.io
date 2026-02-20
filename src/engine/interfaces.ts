@@ -129,6 +129,7 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
+  updateMasterFilter(integrity: number, timeConstant: number): void;
 }
 
 export interface IInputService {

@@ -118,6 +118,7 @@ export class AudioServiceImpl implements IAudioService {
 
   public nextTrack() { this.voices.nextTrack(); }
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
+  public updateMasterFilter(integrity: number, timeConstant: number) { this.mixer.updateMasterFilter(integrity, timeConstant); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
   
   public stopAll() {

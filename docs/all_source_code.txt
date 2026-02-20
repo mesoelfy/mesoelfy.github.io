@@ -2,7 +2,7 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Thu Feb 19 17:09:21 CST 2026
+Generated on: Thu Feb 19 17:39:53 CST 2026
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
@@ -380,31 +380,25 @@ FILE: ./public/manifest.json
 =====================================
 FILE: ./public/sw.js
 =====================================
-const CACHE_NAME = 'mesoelfy-os-cache-v3';
+const CACHE_NAME = 'mesoelfy-os-cache-v4';
 
-// Assets to cache immediately
+// Critical assets only. (Large audio files removed to prevent atomic install failures)
 const PRECACHE_URLS = [
   '/',
   '/favicon.ico',
   '/manifest.json',
-  '/assets/images/social-card.jpg',
-  '/assets/audio/music/mesoelfy_os/01 - 004_16 - Aerlind (Cover) - Acid Techno, DnB, atmospheric pads.mp3'
+  '/assets/images/social-card.jpg'
 ];
 
 self.addEventListener('install', (event) => {
-  // Force this SW to become the "waiting" worker immediately
   self.skipWaiting();
-  
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
 });
 
 self.addEventListener('activate', (event) => {
-  // Force this SW to become the "active" worker immediately
   event.waitUntil(self.clients.claim());
-  
-  // Clean up old caches
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -422,7 +416,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
-  // STRATEGY: Network First for HTML
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -433,13 +426,13 @@ self.addEventListener('fetch', (event) => {
           });
         })
         .catch(() => {
-          return caches.match(event.request);
+          // FIX: explicit fallback to root if specific offline route is missed
+          return caches.match(event.request).then(res => res || caches.match('/'));
         })
     );
     return;
   }
 
-  // STRATEGY: Cache First for Assets
   event.respondWith(
     caches.match(event.request).then((response) => {
       if (response) return response;
@@ -1363,10 +1356,18 @@ interface IntelligentHeaderProps {
 export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed, isGameOver, gameId }: IntelligentHeaderProps) => {
   const interactionTarget = useGameStore(state => state.interactionTarget);
   const isInteracting = gameId && interactionTarget === gameId;
-  const isDamaged = !isDestroyed && health < maxHealth; // Use Slow prop for logic state
+  const isDamaged = !isDestroyed && health < maxHealth; 
   const [showOptimal, setShowOptimal] = useState(false);
   
   const barRef = useRef<HTMLDivElement>(null);
+
+  // Set initial width safely without binding it to React's render cycle
+  useEffect(() => {
+      if (barRef.current) {
+          barRef.current.style.width = `${(health / maxHealth) * 100}%`;
+      }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // FAST PATH: Direct DOM Update for Width
   if (gameId) {
@@ -1385,7 +1386,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
     if (health < maxHealth) setShowOptimal(true);
     if (health >= maxHealth && showOptimal) {
       
-      // Calculate Stereo Pan based on Panel Position
       let pan = 0;
       if (gameId) {
           try {
@@ -1394,13 +1394,10 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
               if (rect) {
                   const halfWidth = ViewportHelper.viewport.width / 2;
                   if (halfWidth > 0) {
-                      // Normalize world X (-width/2 to width/2) to -1.0 to 1.0
                       pan = Math.max(-1, Math.min(1, rect.x / halfWidth));
                   }
               }
-          } catch (e) {
-              // Engine system not ready or available
-          }
+          } catch (e) {}
       }
 
       AudioSystem.playSound('ui_optimal', pan); 
@@ -1476,11 +1473,10 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
         </div>
         {!isGameOver && (
             <div className="w-full h-1 bg-black/50 relative overflow-hidden">
-                {/* FAST PATH DIV: Width controlled via GameStream ref + CSS Transition */}
                 <div 
                     ref={barRef}
                     className={clsx(
-                        "h-full transition-all duration-300 ease-out", // UPDATED: Changed from transition-colors to transition-all
+                        "h-full transition-all duration-300 ease-out",
                         (isDestroyed && isInteracting) ? "bg-latent-purple shadow-[0_0_10px_#9E4EA5]" :
                         (isDestroyed && health > 0) ? "bg-latent-purple opacity-60" : 
                         isDestroyed ? "bg-transparent" : 
@@ -1488,8 +1484,6 @@ export const IntelligentHeader = ({ title, health, maxHealth = 100, isDestroyed,
                         isDamaged ? "bg-alert-yellow" : 
                         "bg-primary-green"
                     )}
-                    // Initialize with current value to avoid pop
-                    style={{ width: `${(health / maxHealth) * 100}%` }}
                 />
             </div>
         )}
@@ -1624,7 +1618,6 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
   const label = isPurge ? 'PURGE' : 'REPAIR';
   const Icon = isPurge ? Bomb : Wrench;
   
-  // Dynamic Styling based on Affordability
   const borderColor = canAfford 
     ? (isPurge ? 'border-critical-red' : 'border-alert-yellow') 
     : 'border-white/10';
@@ -1642,8 +1635,6 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
     : '';
     
   const groupHoverText = canAfford ? 'group-hover/opbtn:text-black' : '';
-  
-  // Only show stripes if active
   const stripeColor = canAfford ? (isPurge ? '#FF003C' : '#eae747') : 'transparent';
 
   return (
@@ -1658,12 +1649,10 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
             }
         }}
         onMouseLeave={() => onHoverCost(null)}
-        disabled={false}
+        disabled={!canAfford} // FIX: Proper A11y disabled attribute
+        aria-disabled={!canAfford}
         className={clsx(
             "group/opbtn relative p-1 border bg-black/90 backdrop-blur-md overflow-hidden transition-all duration-300 rounded-sm shrink-0",
-            // HYBRID SCALING: 
-            // 1. Base: w-24 h-24 (Original Size)
-            // 2. Safety: max-w-[22%] (Shrinks only if container is tiny)
             "w-24 h-auto aspect-square max-w-[22%]", 
             borderColor,
             shadowClass,
@@ -1692,12 +1681,10 @@ const OpButton = ({ isPanelDead, type, onHoverCost }: { isPanelDead: boolean, ty
                 } 
                 transition={{ repeat: Infinity, duration: isPurge ? 0.3 : 2.0, repeatDelay: isPurge ? 2 : 0.5, ease: "easeInOut" }} 
             >
-                {/* Icon size also set to resize with em/percent if container shrinks, but defaults to nice size */}
                 <Icon className="w-8 h-8" strokeWidth={2} />
             </motion.div>
             
             <div className="flex flex-col leading-none items-center w-full">
-                {/* Font scales down on crash */}
                 <span className="text-[10px] font-bold font-header tracking-wider truncate max-w-full text-center">
                     {label}
                 </span>
@@ -1845,24 +1832,31 @@ import { clsx } from 'clsx';
 import { PanelId } from '@/engine/config/PanelConfig';
 import galleryRaw from '@/engine/config/static/gallery.json';
 
-const GRID_SIZE = 12; // 3 Cols * 4 Rows
+const GRID_SIZE = 12;
 
-// THE THREE SPEED TIERS (Milliseconds)
 const SPEEDS = [
     { min: 4000, max: 4500 }, 
     { min: 5000, max: 5500 }, 
     { min: 6000, max: 6500 }
 ];
 
-// --- SUB-COMPONENT: STATIC GRID CELL ---
-// This container stays in the DOM permanently to hold the grid structure.
-// The content inside swaps out via absolute positioning.
-const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: boolean, onClick: (id: string, e: React.MouseEvent) => void }) => {
-    // We use the item's uniqueId as the key for AnimatePresence to know when to swap
-    const key = item ? item.uniqueId : 'empty';
+// HOISTED FUNCTIONS TO PREVENT RE-ALLOCATION ON RENDER
+const shuffle = (array: any[]) => {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+};
 
-    // Randomized fade durations for organic feel (slightly slower now for smoothness)
-    // Range: 1.2s to 1.8s
+const getNextTime = () => {
+    const tier = SPEEDS[Math.floor(Math.random() * SPEEDS.length)];
+    const duration = tier.min + Math.random() * (tier.max - tier.min);
+    return Date.now() + duration;
+};
+
+const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: boolean, onClick: (id: string, e: React.MouseEvent) => void }) => {
+    const key = item ? item.uniqueId : 'empty';
     const seed = item ? (item.uniqueId.charCodeAt(0) + item.uniqueId.charCodeAt(item.uniqueId.length - 1)) : 0;
     const duration = 1.2 + (seed % 6) * 0.1;
 
@@ -1875,11 +1869,9 @@ const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: 
                         initial={{ opacity: 0 }} 
                         animate={{ opacity: 1 }} 
                         exit={{ opacity: 0 }} 
-                        transition={{ duration: duration, ease: "easeInOut" }} // Smoother ease
+                        transition={{ duration: duration, ease: "easeInOut" }}
                         onClick={(e) => onClick(item.uniqueId, e)}
                         onMouseEnter={(e) => !isDestroyed && AudioSystem.playHover(getPan(e))}
-                        // ABSOLUTE POSITIONING IS CRITICAL HERE
-                        // It ensures the entering image sits exactly on top of the exiting one
                         className={clsx(
                             "absolute inset-0 w-full h-full group/tile border flex items-center justify-center transition-colors bg-black",
                             isDestroyed 
@@ -1888,32 +1880,21 @@ const ArtCell = memo(({ item, isDestroyed, onClick }: { item: any, isDestroyed: 
                         )}
                     >
                         <div className={clsx("absolute inset-0 transition-colors z-0", isDestroyed ? "bg-critical-red/5" : "bg-primary-green/5 group-hover/tile:bg-primary-green/10")} />
-                        
                         {!isDestroyed && (
                             <img 
-                                src={item.thumb} 
-                                alt={item.title}
+                                src={item.thumb} alt={item.title} loading="lazy"
                                 className="relative z-10 w-[95%] h-[95%] object-contain pointer-events-none drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] scale-110 group-hover/tile:scale-100 opacity-90 group-hover/tile:opacity-100 transition-all duration-300 ease-out"
-                                loading="lazy"
                             />
                         )}
-
                         <div className="absolute top-0 left-0 z-20">
                             <div className={clsx("text-[8px] font-mono leading-none px-1.5 py-1 backdrop-blur-[2px] border-b border-r border-transparent transition-colors", isDestroyed ? "bg-critical-red/20 text-critical-red animate-pulse" : "bg-black/60 text-primary-green-dim group-hover/tile:text-alert-yellow")}>
                                 {isDestroyed ? "ERR" : item.id}
                             </div>
                         </div>
-
                         {!isDestroyed && <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-primary-green-dim/50 group-hover/tile:border-alert-yellow z-20" />}
                     </motion.button>
                 ) : (
-                    <motion.div 
-                        key="empty"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 w-full h-full bg-black/20"
-                    />
+                    <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 w-full h-full bg-black/20" />
                 )}
             </AnimatePresence>
         </div>
@@ -1929,27 +1910,10 @@ export const LiveArtGrid = () => {
   
   const [displayItems, setDisplayItems] = useState<any[]>([]);
   
-  // -- STATE REFS --
   const deckRef = useRef<any[]>([]);
-  const displayItemsRef = useRef<any[]>([]); // Synchronous tracking
+  const displayItemsRef = useRef<any[]>([]); 
   const nextUpdateTimesRef = useRef<number[]>([]);
 
-  // Helper: Shuffle
-  const shuffle = (array: any[]) => {
-      for (let i = array.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
-  };
-
-  const getNextTime = () => {
-      const tier = SPEEDS[Math.floor(Math.random() * SPEEDS.length)];
-      const duration = tier.min + Math.random() * (tier.max - tier.min);
-      return Date.now() + duration;
-  };
-
-  // 1. Initialize
   useEffect(() => {
       const fullDeck = shuffle([...galleryRaw]);
       const initialHand = fullDeck.splice(0, GRID_SIZE);
@@ -1957,7 +1921,6 @@ export const LiveArtGrid = () => {
       deckRef.current = fullDeck;
       displayItemsRef.current = initialHand;
       
-      // Initialize timelines with a stagger
       nextUpdateTimesRef.current = Array.from({ length: GRID_SIZE }, () => {
           return Date.now() + 2000 + (Math.random() * 8000); 
       });
@@ -1965,7 +1928,6 @@ export const LiveArtGrid = () => {
       setDisplayItems(initialHand);
   }, []);
 
-  // 2. Independent Clock Watcher
   useEffect(() => {
       if (isDestroyed) return;
 
@@ -1976,7 +1938,6 @@ export const LiveArtGrid = () => {
 
           for (let i = 0; i < GRID_SIZE; i++) {
               if (now >= nextUpdateTimesRef.current[i]) {
-                  
                   if (deckRef.current.length === 0) {
                       const activeIds = new Set(currentGrid.map(item => item?.uniqueId).filter(Boolean));
                       const newDeck = galleryRaw.filter(item => !activeIds.has(item.uniqueId));
@@ -2011,14 +1972,8 @@ export const LiveArtGrid = () => {
 
   return (
     <div className={clsx("grid grid-cols-3 gap-1 w-full p-2 content-start transition-opacity duration-500", isDestroyed ? "pointer-events-none opacity-50 grayscale" : "")}>
-        {/* We map indices 0-11 to create permanent slots */}
         {Array.from({ length: GRID_SIZE }).map((_, i) => (
-            <ArtCell 
-                key={i} 
-                item={displayItems[i]} 
-                isDestroyed={isDestroyed} 
-                onClick={handleClick} 
-            />
+            <ArtCell key={i} item={displayItems[i]} isDestroyed={isDestroyed} onClick={handleClick} />
         ))}
     </div>
   );
@@ -10981,7 +10936,7 @@ import { GameEngineCore } from '@/engine/services/GameEngine';
 import { ServiceLocator } from '@/engine/services/ServiceLocator';
 import { InputSystem } from '@/engine/systems/InputSystem';
 import { IPanelSystem } from '@/engine/interfaces';
-import { GameEventBus, SharedGameEventBus } from '@/engine/signals/GameEventBus';
+import { GameEventBus } from '@/engine/signals/GameEventBus';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 
@@ -11021,8 +10976,7 @@ export const GameDirector = memo(() => {
       clearInterval(fastPoll);
       engine.teardown();
       engineRef.current = null;
-      // 4. STRICT MODE FIX: Purge all listeners explicitly on React unmount
-      SharedGameEventBus.clear();
+      // FIX: Removed SharedGameEventBus.clear() to prevent destroying UI listeners on hot-reloads
     };
   }, []); 
 
@@ -14229,6 +14183,7 @@ export class SpatialGrid {
 
   public clear() {
     this.cellHead.fill(-1);
+    this.entityNext.fill(-1); // <-- CRITICAL FIX
   }
 
   private getHash(x: number, y: number): number {
@@ -15982,7 +15937,6 @@ export class AudioMixer {
   public updateVolumes(settings: any) {
     if (!this.masterGain) return;
     this._isMusicMuted = !settings.music;
-    // VOLUME REDUCED: 0.4 -> 0.25 to blend better with SFX
     this._targetMusicVol = this._isMusicMuted ? 0 : (settings.volumeMusic * 0.25);
     this.masterGain.gain.value = settings.master ? (settings.volumeMaster * 0.5) : 0;
     this.musicGain.gain.value = this._targetMusicVol;
@@ -16005,10 +15959,11 @@ export class AudioMixer {
     if (!ctx) return;
     const now = ctx.currentTime;
     const targetFreq = this.MAX_FREQ * Math.pow(this.MIN_FREQ / this.MAX_FREQ, intensity);
+    
+    // FIX: Safely anchor the filter using setTargetAtTime to prevent overlapping ramp crashes
     this.musicFilter.frequency.cancelScheduledValues(now);
-    this.musicFilter.frequency.setValueAtTime(this.musicFilter.frequency.value, now);
-    this.musicFilter.frequency.exponentialRampToValueAtTime(targetFreq, now + 0.04);
-    this.musicFilter.frequency.exponentialRampToValueAtTime(this.MAX_FREQ, now + duration);
+    this.musicFilter.frequency.setTargetAtTime(targetFreq, now, 0.05); // Fast drop
+    this.musicFilter.frequency.setTargetAtTime(this.MAX_FREQ, now + 0.1, duration * 0.3); // Smooth recovery
   }
 
   public updateMasterFilter(integrity: number, transitionTime: number = 0.05) {
@@ -18105,18 +18060,12 @@ export const MaterialFactory = new MaterialFactoryController();
 =====================================
 FILE: ./src/engine/systems/AnimationSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
-import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
 import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
-import { useGameStore } from '@/engine/state/game/useGameStore';
 import { Query } from '@/engine/ecs/Query';
-import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { PanelId } from '@/engine/config/PanelConfig';
-import { Tag } from '@/engine/ecs/types';
-import * as THREE from 'three';
 
 function easeOutElastic(t: number): number {
   const c4 = (2 * Math.PI) / 3;
@@ -18130,70 +18079,33 @@ export class AnimationSystem implements IGameSystem {
       all: [ComponentType.RenderTransform] 
   });
 
-  constructor(
-    private registry: IEntityRegistry,
-    private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem
-  ) {}
+  constructor(private registry: IEntityRegistry) {}
 
   update(delta: number, time: number): void {
-    const CFG = VISUAL_CONFIG.DEFORMATION;
     const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
-    
-    const isZenMode = useGameStore.getState().isZenMode;
-    const isDead = this.gameSystem.playerHealth <= 0;
-    const interactState = this.interactionSystem.repairState;
-    const hoverId = this.interactionSystem.hoveringPanelId;
-
     const entities = this.registry.query(this.animationQuery);
 
     for (const entity of entities) {
       if (!entity.active) continue;
 
       const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
-      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect); // Will be undefined for Projectiles
-      const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
-      const aiState = entity.getComponent<any>(ComponentType.State); // Typed as any to access current
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect); 
 
       if (!render) continue;
 
-      // 1. ROTATION LOGIC
-      if (rotate) {
-          render.rotation += rotate.speed * delta;
-      }
-
-      // FIX: Ensure we don't rotate projectiles that happen to have the PLAYER tag (friendly fire)
-      if (entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.PROJECTILE)) {
-          let spinSpeed = 0.02; 
-          if (isZenMode) spinSpeed = -0.03;
-          else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
-          else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
-              const isSelf = hoverId === PanelId.IDENTITY;
-              spinSpeed = isSelf ? -0.4 : -0.24;
-          }
-          render.rotation += spinSpeed;
-      }
-
-      // 2. SCALE & DEFORMATION (Only applies if RenderEffect exists)
       let dX = 1.0, dY = 1.0, dZ = 1.0;
 
       if (effect) {
-          // Spawn Animation
           if (effect.spawnProgress < 1.0) {
-              if (effect.spawnVelocity > 0) {
-                  effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
-              }
               const t = effect.spawnProgress;
               const scaleCurve = easeOutElastic(t);
               dX *= scaleCurve; dY *= scaleCurve; dZ *= scaleCurve;
-              render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
               const riseT = t * (2 - t); 
               render.offsetY = SPAWN_CFG.Y_OFFSET * (1.0 - riseT);
           } else {
               render.offsetY = 0;
           }
 
-          // Damage Flash / Pulse
           if (effect.flash > 0) {
               const bump = effect.flash * 0.25;
               dX += bump; dY += bump; dZ += bump;
@@ -18203,21 +18115,12 @@ export class AnimationSystem implements IGameSystem {
               dX += pulse; dY += pulse; dZ += pulse;
           }
 
-          // Squash & Stretch (ONLY runs if effect exists)
-          if (effect.spawnProgress >= 1.0) {
-              let targetSquash = 0.0;
-              if (aiState && aiState.current === AI_STATE.CHARGING) {
-                  targetSquash = 1.0;
-              }
-              effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
-
-              if (effect.squashFactor > 0.01) {
-                  const compression = 0.4 * effect.squashFactor; 
-                  const expansion = 0.8 * effect.squashFactor;   
-                  dY *= (1.0 - compression); 
-                  dX *= (1.0 + expansion);   
-                  dZ *= (1.0 + expansion);   
-              } 
+          if (effect.spawnProgress >= 1.0 && effect.squashFactor > 0.01) {
+              const compression = 0.4 * effect.squashFactor; 
+              const expansion = 0.8 * effect.squashFactor;   
+              dY *= (1.0 - compression); 
+              dX *= (1.0 + expansion);   
+              dZ *= (1.0 + expansion);   
           }
       }
 
@@ -18519,7 +18422,7 @@ export class WarmupSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/InteractionSystem.ts
 =====================================
-import { IInteractionSystem, IEntitySpawner, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
@@ -18541,7 +18444,7 @@ export class InteractionSystem implements IInteractionSystem {
 
   constructor(
     private input: IInputService,
-    private spawner: IEntitySpawner,
+    private particleSystem: IParticleSystem,
     private gameSystem: IGameStateSystem,
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
@@ -18564,7 +18467,6 @@ export class InteractionSystem implements IInteractionSystem {
     
     const cursor = this.input.getCursor();
     
-    // Calculate Stereo Pan based on cursor world position
     const halfWidth = ViewportHelper.viewport.width / 2;
     const pan = halfWidth > 0 ? Math.max(-1, Math.min(1, cursor.x / halfWidth)) : 0;
 
@@ -18574,7 +18476,6 @@ export class InteractionSystem implements IInteractionSystem {
         return; 
     }
     
-    // --- 1. PRIORITY CHECK: CRYSTAL ZONE (Dynamic) ---
     let handledByCrystal = false;
     const crystalZone = this.zones.get('crystal');
     
@@ -18591,7 +18492,6 @@ export class InteractionSystem implements IInteractionSystem {
             const isPanelDead = panelState?.isDestroyed ?? false;
 
             if (isPlayerDead) {
-                // REVIVE
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'REBOOTING';
                 interactionCode = 2; 
@@ -18600,14 +18500,11 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    // UPDATED: High pitch revive sound
                     AudioSystem.playSound('loop_player_revive', pan); 
-                    // Darker Yellow for Reboot/Revive
                     this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 
             else if (isPlayerHurt && !isPanelDead) {
-                // SELF HEAL
                 this.hoveringPanelId = PanelId.IDENTITY;
                 this.repairState = 'HEALING';
                 interactionCode = 1; 
@@ -18623,7 +18520,6 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // --- 2. GENERAL PANEL REPAIR ---
     if (!handledByCrystal) {
         const panelId = this.panelSystem.getPanelAt(cursor.x, cursor.y);
         
@@ -18639,7 +18535,7 @@ export class InteractionSystem implements IInteractionSystem {
                         this.lastRepairTime = time;
 
                         if (panelState.isDestroyed) {
-                            AudioSystem.playSound('loop_reboot', pan); // Standard reboot for panels
+                            AudioSystem.playSound('loop_reboot', pan);
                         } else {
                             this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
@@ -18652,7 +18548,6 @@ export class InteractionSystem implements IInteractionSystem {
         }
     }
 
-    // 3. Revive Decay
     if (this.gameSystem.playerHealth <= 0 && this.repairState !== 'REBOOTING' && this.gameSystem.playerRebootProgress > 0) {
         this.events.emit(GameEvents.PLAYER_REBOOT_DECAY, { amount: delta * 15 });
     }
@@ -18677,7 +18572,7 @@ export class InteractionSystem implements IInteractionSystem {
       if (Math.random() > 0.3) {
           const angle = Math.random() * Math.PI * 2;
           const speed = 2 + Math.random() * 2;
-          this.spawner.spawnParticle(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
+          this.particleSystem.spawn(cursor.x, cursor.y, color, Math.cos(angle)*speed, Math.sin(angle)*speed, 0.5);
       }
   }
 }
@@ -19075,11 +18970,8 @@ export class ParticleSystem implements IParticleSystem {
   update(delta: number, time: number): void {
     if (this.count === 0) return;
 
-    // Normalize friction for variable timestep
-    // PhysicsConfig.PARTICLES.FRICTION (e.g. 0.95) is tuned for 60Hz (16ms)
-    // Formula: adjustedFriction = baseFriction ^ (delta / fixedDelta)
     const baseFriction = PhysicsConfig.PARTICLES.FRICTION;
-    const timeRatio = delta * 60; // ratio of current frame to 60fps frame
+    const timeRatio = delta * 60; 
     const friction = Math.pow(baseFriction, timeRatio);
 
     let i = 0;
@@ -19154,7 +19046,9 @@ export class ParticleSystem implements IParticleSystem {
         y: this.y,
         life: this.life,
         maxLife: this.maxLife,
-        color: this.r 
+        r: this.r, // EXPOSED CORRECTLY
+        g: this.g,
+        b: this.b
     };
   }
 
@@ -19391,22 +19285,18 @@ export class PanelSystem implements IPanelSystem {
 =====================================
 FILE: ./src/engine/systems/RenderStateSystem.ts
 =====================================
-import { IGameSystem, IEntityRegistry, IGameEventService, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem } from '@/engine/interfaces';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
-import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { StateColor } from '@/engine/ecs/components/StateColor';
 import { Query } from '@/engine/ecs/Query';
-import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
-import { FastEventType } from '@/engine/signals/FastEventBus';
 import { useGameStore } from '@/engine/state/game/useGameStore';
-import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
 import * as THREE from 'three';
 
 export class RenderStateSystem implements IGameSystem {
   private tempColor = new THREE.Color();
+  private targetColor = new THREE.Color(); 
   
-  // Cached Query for entities with visual components
   private renderQuery = new Query({ 
       all: [ComponentType.RenderModel] 
   });
@@ -19414,27 +19304,10 @@ export class RenderStateSystem implements IGameSystem {
   constructor(
     private registry: IEntityRegistry,
     private gameSystem: IGameStateSystem,
-    private interactionSystem: IInteractionSystem,
-    private events: IGameEventService
+    private interactionSystem: IInteractionSystem
   ) {}
 
   update(delta: number, time: number): void {
-    // 1. POLL FAST BUS FOR FLASH EVENTS (Damage Feedback)
-    const unified = this.events as UnifiedEventService;
-    if (unified && typeof unified.processFastEvents === 'function') {
-        unified.processFastEvents((id, a1) => {
-            if (id === FastEventType.ENTITY_FLASH) {
-                const entityId = a1;
-                const entity = this.registry.getEntity(entityId);
-                if (entity) {
-                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
-                    if (effect) effect.flash = 1.0; 
-                }
-            }
-        });
-    }
-
-    const RENDER_CFG = VISUAL_CONFIG.RENDER;
     const isZenMode = useGameStore.getState().isZenMode;
     const isDead = this.gameSystem.playerHealth <= 0;
     const interactState = this.interactionSystem.repairState;
@@ -19446,11 +19319,10 @@ export class RenderStateSystem implements IGameSystem {
 
       const model = entity.getComponent<RenderModel>(ComponentType.RenderModel);
       const stateColor = entity.getComponent<StateColor>(ComponentType.StateColor);
-      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
 
       if (!model) continue;
 
-      // --- STATE COLORING ---
+      // --- SMOOTH COLOR LERP (Visual Only) ---
       if (stateColor) {
           let targetHex = stateColor.base;
 
@@ -19458,31 +19330,16 @@ export class RenderStateSystem implements IGameSystem {
               targetHex = stateColor.dead;
               if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
           } else {
-              // Standard Gameplay Interactions
-              if (interactState === 'HEALING') {
-                  targetHex = stateColor.reboot; 
-              } else if (interactState === 'REBOOTING') {
-                  targetHex = stateColor.reboot;
-              }
+              if (interactState === 'HEALING') targetHex = stateColor.reboot; 
+              else if (interactState === 'REBOOTING') targetHex = stateColor.reboot;
           }
 
-          const c = new THREE.Color(targetHex);
+          this.targetColor.set(targetHex);
           this.tempColor.setRGB(model.r, model.g, model.b);
-          this.tempColor.lerp(c, delta * 3.0);
+          this.tempColor.lerp(this.targetColor, delta * 3.0);
           model.r = this.tempColor.r;
           model.g = this.tempColor.g;
           model.b = this.tempColor.b;
-      }
-
-      // --- FLASH EFFECT DECAY ---
-      if (effect) {
-          if (effect.flash > 0) {
-              // Decay the flash value
-              effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
-          }
-          if (effect.shudder > 0) {
-              effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
-          }
       }
     }
   }
@@ -20697,6 +20554,7 @@ export * from './WaveSystem';
 export * from './WeaponSystem';
 export * from './WorldSystem';
 export * from './RenderStateSystem';
+export * from './VisualStateSystem';
 export * from './AnimationSystem';
 
 
@@ -21126,8 +20984,6 @@ export class BehaviorSystem implements IGameSystem {
   }
 
   update(delta: number, time: number): void {
-    const upgrades = useGameStore.getState().activeUpgrades || {};
-
     const aiContext: AIContext = {
       delta,
       time,
@@ -21136,7 +20992,11 @@ export class BehaviorSystem implements IGameSystem {
           if (damage) {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.DAEMON_ORB;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.FRIENDLY, 2.0, damage, finalConfig);
+              
+              // ECS BUG FIX: Add component AND update cache
               bullet.addComponent(new IdentityData('DAEMON_SHOT'));
+              this.registry.updateCache(bullet); 
+              
           } else {
               const finalConfig = (configId as ArchetypeID) || WeaponIDs.ENEMY_HUNTER;
               bullet = this.spawner.spawnProjectile(x, y, vx, vy, Faction.HOSTILE, 3.0, 4, finalConfig);
@@ -21160,8 +21020,18 @@ export class BehaviorSystem implements IGameSystem {
       playSound: (key, x) => {
           this.events.emit(GameEvents.PLAY_SOUND, { key, x });
       },
-      getUpgradeLevel: (key) => upgrades[key] || 0,
-      getEntity: (id) => this.registry.getEntity(id), // <--- IMPLEMENTATION ADDED HERE
+      // PHANTOM STATE FIX: Map keys to the correct new store slices
+      getUpgradeLevel: (key) => {
+          const state = useGameStore.getState();
+          if (key === 'SPITTER_GIRTH') return state.spitter.girthLevel;
+          if (key === 'SPITTER_DAMAGE') return state.spitter.damageLevel;
+          if (key === 'SPITTER_RATE') return state.spitter.rateLevel;
+          if (key === 'SNIFFER_CAPACITY') return state.sniffer.capacityLevel;
+          if (key === 'SNIFFER_DAMAGE') return state.sniffer.damageLevel;
+          if (key === 'SNIFFER_RATE') return state.sniffer.rateLevel;
+          return 0;
+      },
+      getEntity: (id) => this.registry.getEntity(id), 
       config: this.config
     };
 
@@ -21181,6 +21051,115 @@ export class BehaviorSystem implements IGameSystem {
       this.unsubs.forEach(u => u());
       this.unsubs = [];
   }
+}
+
+
+=====================================
+FILE: ./src/engine/systems/VisualStateSystem.ts
+=====================================
+import { IGameSystem, IEntityRegistry, IInteractionSystem, IGameStateSystem, IGameEventService } from '@/engine/interfaces';
+import { ComponentType } from '@/engine/ecs/ComponentType';
+import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
+import { RenderTransform } from '@/engine/ecs/components/RenderTransform';
+import { AutoRotate } from '@/engine/ecs/components/AutoRotate';
+import { AIStateData } from '@/engine/ecs/components/AIStateData';
+import { VISUAL_CONFIG } from '@/engine/config/VisualConfig';
+import { useGameStore } from '@/engine/state/game/useGameStore';
+import { Query } from '@/engine/ecs/Query';
+import { Tag } from '@/engine/ecs/types';
+import { AI_STATE } from '@/engine/ai/AIStateTypes';
+import { PanelId } from '@/engine/config/PanelConfig';
+import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
+import { FastEventType } from '@/engine/signals/FastEventBus';
+import * as THREE from 'three';
+
+export class VisualStateSystem implements IGameSystem {
+  private effectQuery = new Query({ all: [ComponentType.RenderEffect] });
+  private rotateQuery = new Query({ all: [ComponentType.RenderTransform] });
+
+  constructor(
+    private registry: IEntityRegistry,
+    private gameSystem: IGameStateSystem,
+    private interactionSystem: IInteractionSystem,
+    private events: IGameEventService
+  ) {}
+
+  update(delta: number, time: number): void {
+    const RENDER_CFG = VISUAL_CONFIG.RENDER;
+    const SPAWN_CFG = VISUAL_CONFIG.SPAWN;
+
+    // 1. Process Fast Events (Damage Flashes)
+    const unified = this.events as UnifiedEventService;
+    if (unified && typeof unified.processFastEvents === 'function') {
+        unified.processFastEvents((id, a1) => {
+            if (id === FastEventType.ENTITY_FLASH) {
+                const entity = this.registry.getEntity(a1);
+                if (entity) {
+                    const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect);
+                    if (effect) effect.flash = 1.0; 
+                }
+            }
+        });
+    }
+
+    const isZenMode = useGameStore.getState().isZenMode;
+    const isDead = this.gameSystem.playerHealth <= 0;
+    const interactState = this.interactionSystem.repairState;
+    const hoverId = this.interactionSystem.hoveringPanelId;
+
+    // 2. Decay RenderEffects
+    const effectEntities = this.registry.query(this.effectQuery);
+    for (const entity of effectEntities) {
+      if (!entity.active) continue;
+      const effect = entity.getComponent<RenderEffect>(ComponentType.RenderEffect)!;
+      const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform);
+      
+      if (effect.flash > 0) {
+        effect.flash = Math.max(0, effect.flash - (delta * RENDER_CFG.FLASH_DECAY));
+      }
+      if (effect.shudder > 0) {
+        effect.shudder = Math.max(0, effect.shudder - (delta * RENDER_CFG.SHUDDER_DECAY));
+      }
+      if (effect.spawnProgress < 1.0 && effect.spawnVelocity > 0) {
+        effect.spawnProgress = Math.min(1.0, effect.spawnProgress + (effect.spawnVelocity * delta));
+        
+        if (render) {
+            const scaleCurve = effect.spawnProgress; 
+            render.rotation += (1.0 - scaleCurve) * SPAWN_CFG.ROTATION_SPEED * delta;
+        }
+      }
+      if (effect.spawnProgress >= 1.0) {
+        const aiState = entity.getComponent<AIStateData>(ComponentType.State);
+        const targetSquash = (aiState && aiState.current === AI_STATE.CHARGING) ? 1.0 : 0.0;
+        effect.squashFactor = THREE.MathUtils.lerp(effect.squashFactor, targetSquash, delta * 8.0);
+      }
+    }
+
+    // 3. Fixed Rotation Updates
+    const rotateEntities = this.registry.query(this.rotateQuery);
+    for (const entity of rotateEntities) {
+      if (!entity.active) continue;
+      const render = entity.getComponent<RenderTransform>(ComponentType.RenderTransform)!;
+      const rotate = entity.getComponent<AutoRotate>(ComponentType.AutoRotate);
+      
+      if (rotate) {
+        render.rotation += rotate.speed * delta;
+      }
+
+      if (entity.hasTag(Tag.PLAYER) && !entity.hasTag(Tag.PROJECTILE)) {
+        let spinSpeed = 0.02; 
+        if (isZenMode) spinSpeed = -0.03;
+        else if (isDead) spinSpeed = interactState === 'REBOOTING' ? -0.3 : 1.5;
+        else if (interactState === 'HEALING' || interactState === 'REBOOTING') {
+          const isSelf = hoverId === PanelId.IDENTITY;
+          spinSpeed = isSelf ? -0.4 : -0.24;
+        }
+        render.rotation += spinSpeed * (delta * 60); 
+      }
+    }
+  }
+
+  teardown(): void {}
 }
 
 
@@ -22373,6 +22352,7 @@ import { ParticleSystem } from '@/engine/systems/ParticleSystem';
 import { ShakeSystem } from '@/engine/systems/ShakeSystem';
 import { RenderSystem } from '@/engine/systems/RenderSystem';
 import { RenderStateSystem } from '@/engine/systems/RenderStateSystem';
+import { VisualStateSystem } from '@/engine/systems/VisualStateSystem';
 import { AnimationSystem } from '@/engine/systems/AnimationSystem';
 import { AudioDirector } from '@/engine/audio/AudioDirector';
 import { LifeCycleSystem } from '@/engine/systems/LifeCycleSystem';
@@ -22393,7 +22373,6 @@ import { WarmupSystem } from '@/engine/systems/WarmupSystem';
 
 export class EngineFactory {
   public static create(): GameEngineCore {
-    // 1. PRESERVE CRITICAL SERVICES (Like Audio Context)
     let audioService: IAudioService;
     try {
         audioService = ServiceLocator.getAudioService();
@@ -22401,12 +22380,10 @@ export class EngineFactory {
         audioService = new AudioServiceImpl();
     }
 
-    // 2. STRICT MODE RESET: Wipe singletons cleanly before remounting
     ServiceLocator.reset();
     SharedGameEventBus.clear(); 
     ServiceLocator.register('AudioService', audioService);
 
-    // 3. Core Services
     const registry = new EntityRegistry();
     const rawSlowBus = SharedGameEventBus; 
     const rawFastBus = new FastEventBusImpl();
@@ -22421,12 +22398,10 @@ export class EngineFactory {
     ServiceLocator.register('InputSystem', inputSystem);
     ServiceLocator.register('EntitySpawner', spawner);
 
-    // 4. Content Registration
     registerAllComponents();
     registerAllBehaviors();
     registerAllAssets();
 
-    // 5. Common Systems Instantiation
     const timeSystem = new TimeSystem();
     const physicsSystem = new PhysicsSystem(registry);
     const particleSystem = new ParticleSystem();
@@ -22437,7 +22412,7 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    const interactionSystem = new InteractionSystem(inputSystem, spawner, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
+    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
     const worldSystem = new WorldSystem(panelSystem, registry);
@@ -22451,9 +22426,9 @@ export class EngineFactory {
     const audioDirector = new AudioDirector(panelSystem, eventBus, audioService);
     const vfxSystem = new VFXSystem(particleSystem, shakeSystem, eventBus, panelSystem, timeSystem);
     
-    // Visual Systems
-    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
-    const animationSystem = new AnimationSystem(registry, gameStateSystem, interactionSystem);
+    const visualStateSystem = new VisualStateSystem(registry, gameStateSystem, interactionSystem, eventBus);
+    const renderStateSystem = new RenderStateSystem(registry, gameStateSystem, interactionSystem);
+    const animationSystem = new AnimationSystem(registry);
     const renderSystem = new RenderSystem(registry);
     const warmupSystem = new WarmupSystem(); 
 
@@ -22468,12 +22443,10 @@ export class EngineFactory {
 
     const stateSyncSystem = new StateSyncSystem(healthSystem, progressionSystem, panelSystem);
 
-    // 6. Engine Injection
     const engine = new GameEngineCore(registry);
     engine.injectCoreSystems(panelSystem, gameStateSystem, timeSystem);
     engine.injectFastEventBus(rawFastBus); 
 
-    // 7. Registration
     const register = (sys: any, phase: SystemPhase, name?: string) => {
         engine.registerSystem(sys, phase);
         if (name) ServiceLocator.registerSystem(name, sys);
@@ -22503,15 +22476,12 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
+    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); // NEW
 
-    // RENDER PHASE
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
-    
-    // Core Rendering
     register(renderSystem, SystemPhase.RENDER, 'RenderSystem');
     register(warmupSystem, SystemPhase.RENDER);
-    
     register(particleSystem, SystemPhase.RENDER, 'ParticleSystem');
     register(vfxSystem, SystemPhase.RENDER);
     register(shakeSystem, SystemPhase.RENDER, 'ShakeSystem');
@@ -22577,13 +22547,12 @@ FILE: ./src/engine/services/EntitySpawner.ts
 =====================================
 import { IEntitySpawner, IEntityRegistry } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
-import { Tag, Faction, ParticleShape } from '@/engine/ecs/types';
+import { Tag, Faction } from '@/engine/ecs/types';
 import { EntityRegistry } from '@/engine/ecs/EntityRegistry';
 import { ARCHETYPES } from '@/engine/config/Archetypes';
 import { ComponentRegistry } from '@/engine/ecs/ComponentRegistry';
 import { ArchetypeIDs, ArchetypeID, WeaponIDs } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
-import { GEOMETRY_IDS, MATERIAL_IDS } from '@/engine/config/AssetKeys';
 
 export class EntitySpawner implements IEntitySpawner {
   private registry: EntityRegistry;
@@ -22628,7 +22597,7 @@ export class EntitySpawner implements IEntitySpawner {
       faction: Faction, 
       life: number, 
       damage: number = 1, 
-      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER, // Updated default
+      projectileId: ArchetypeID = WeaponIDs.PLAYER_SPITTER,
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
@@ -22655,17 +22624,6 @@ export class EntitySpawner implements IEntitySpawner {
     const entity = this.spawn(id, overrides);
     
     return entity;
-  }
-
-  public spawnParticle(x: number, y: number, color: string, vx: number, vy: number, life: number, size: number = 1.0, shape: ParticleShape = ParticleShape.CIRCLE): void {
-    const e = this.registry.createEntity();
-    e.addTag(Tag.PARTICLE);
-    e.addComponent(ComponentRegistry.create(ComponentType.Transform, { x, y, scale: size }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Motion, { vx, vy, friction: 0.05 }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Lifetime, { remaining: life, total: life }));
-    e.addComponent(ComponentRegistry.create(ComponentType.Identity, { variant: color }));
-    e.addComponent(ComponentRegistry.create(ComponentType.RenderModel, { geometryId: GEOMETRY_IDS.PARTICLE, materialId: MATERIAL_IDS.PARTICLE }));
-    this.registry.updateCache(e);
   }
 }
 
@@ -22968,14 +22926,6 @@ export interface IEntitySpawner {
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity;
-  spawnParticle(
-      x: number, y: number, 
-      color: string, 
-      vx: number, vy: number, 
-      life: number, 
-      size?: number, 
-      shape?: ParticleShape
-  ): void;
 }
 
 export interface IAudioService {
@@ -23013,7 +22963,7 @@ export interface IParticleSystem extends IGameSystem {
       shape?: ParticleShape
   ): void;
   getCount(): number;
-  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; color: Float32Array; };
+  getData(): { x: Float32Array; y: Float32Array; life: Float32Array; maxLife: Float32Array; r: Float32Array; g: Float32Array; b: Float32Array; };
 }
 
 export interface IPhysicsSystem extends IGameSystem {

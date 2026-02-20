@@ -1,4 +1,3 @@
-export * from './AudioDirector';
 export * from './BehaviorSystem';
 export * from './CollisionSystem';
 export * from './CombatSystem';

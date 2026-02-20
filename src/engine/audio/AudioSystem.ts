@@ -20,9 +20,10 @@ class AudioSystemFacade implements IAudioService {
   public stopAll() { this.service.stopAll(); }
   public updateVolumes() { this.service.updateVolumes(); }
   
-  public playSound(key: string, pan?: number) { this.service.playSound(key, pan); }
-  public playAmbience(key: string) { this.service.playAmbience(key); }
+  public playSound(key: string, pan?: number) { this.service.playSound(key as any, pan); }
+  public playAmbience(key: string) { this.service.playAmbience(key as any); }
   public duckMusic(intensity: number, duration: number) { this.service.duckMusic(intensity, duration); }
+  public updateMasterFilter(integrity: number, timeConstant: number) { this.service.updateMasterFilter(integrity, timeConstant); }
   public getFrequencyData(array: Uint8Array) { this.service.getFrequencyData(array); }
   
   public playClick(pan?: number) { this.service.playClick(pan); }

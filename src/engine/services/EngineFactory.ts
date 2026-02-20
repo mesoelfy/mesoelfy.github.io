@@ -85,7 +85,7 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
+    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry, audioService);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
     const worldSystem = new WorldSystem(panelSystem, registry);
@@ -149,7 +149,7 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
-    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); // NEW
+    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); 
 
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');

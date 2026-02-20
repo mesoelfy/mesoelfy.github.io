@@ -5,89 +5,84 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
-import { AudioMixer } from './modules/AudioMixer';
 
 export class AudioDirector implements IGameSystem {
   private _isPurging: boolean = false;
   private _isZen: boolean = false;
+  private unsubs: (() => void)[] = [];
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService, // Unified
+    private events: IGameEventService, 
     private audio: IAudioService
   ) {
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
         else this.playSpatial(p.id, 'fx_reboot_success');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
         this.audio.duckMusic(0.8, 1.5); 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const intensity = p.damage > 5 ? 0.8 : 0.6;
         const duration = p.damage > 5 ? 1.0 : 0.5;
         this.audio.duckMusic(intensity, duration);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
         this._isPurging = false;
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        // FIX: Only trigger the cinematic filter riser if we are in Game Over state (Zen Bomb)
-        // Standard gameplay purges should NOT clear the low-pass filter.
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         const isGameOver = this.panelSystem.systemIntegrity <= 0;
-        
         if (p.option === 'PURGE' && isGameOver) {
             this._isPurging = true;
         }
-        
         this.audio.playSound('fx_level_up');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this._isPurging = false;
         this._isZen = true; 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_START, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_START, () => {
         this._isPurging = false;
         this._isZen = false;
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-    // Determine Target Integrity for Filter
     let integrity = this.panelSystem.systemIntegrity / 100;
-    let timeConstant = 0.05; // Default fast transition
+    let timeConstant = 0.05; 
 
     if (this._isPurging) {
         integrity = 1.0;
-        timeConstant = 2.0; // Slow cinematic riser during Zen purge
+        timeConstant = 2.0; 
     } else if (this._isZen) {
         integrity = 1.0;
     }
 
-    const mixer = (this.audio as any).mixer as AudioMixer;
-    if (mixer) mixer.updateMasterFilter(integrity, timeConstant);
+    // Call abstraction instead of casting to implementation
+    this.audio.updateMasterFilter(integrity, timeConstant);
 
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
@@ -118,5 +113,8 @@ export class AudioDirector implements IGameSystem {
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }

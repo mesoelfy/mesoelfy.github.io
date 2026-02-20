@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Copy, Check, Info, ExternalLink, Hash, MousePointerClick } from 'lucide-react';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import identity from '@/engine/config/static/identity.json';
 import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
@@ -8,6 +8,7 @@ import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 export const CryptoTipJar = () => {
   const [copiedEns, setCopiedEns] = useState(false);
   const [copiedRaw, setCopiedRaw] = useState(false);
+  const audio = useAudio();
   
   const ethAddress = identity.crypto.eth_address;
   const ensName = identity.crypto.ens;
@@ -15,7 +16,7 @@ export const CryptoTipJar = () => {
 
   const copyToClipboard = (text: string, isEns: boolean) => {
     navigator.clipboard.writeText(text);
-    AudioSystem.playSound('syn_data_burst');
+    audio.playSound('syn_data_burst');
     
     if (isEns) {
         setCopiedEns(true);
@@ -40,7 +41,7 @@ export const CryptoTipJar = () => {
 
       <div className="flex items-center gap-12">
         
-        {/* The Crystal Icon - Bigger and Centered Vertically */}
+        {/* The Crystal Icon */}
         <div className="w-32 h-32 shrink-0 border-2 border-primary-green/50 rounded-full bg-black/50 relative overflow-hidden shadow-[0_0_40px_rgba(120,246,84,0.15)] self-center">
             <div className="absolute inset-0 opacity-100">
                 <MiniCrystalCanvas />

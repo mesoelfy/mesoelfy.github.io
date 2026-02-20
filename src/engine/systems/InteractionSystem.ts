@@ -1,6 +1,5 @@
-import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -25,7 +24,8 @@ export class InteractionSystem implements IInteractionSystem {
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
     private physics: IPhysicsSystem,
-    private registry: IEntityRegistry
+    private registry: IEntityRegistry,
+    private audio: IAudioService // INJECTED ABSTRACTION
   ) {}
 
   public registerZone(id: string, rect: WorldRect) {
@@ -76,7 +76,7 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    AudioSystem.playSound('loop_player_revive', pan); 
+                    this.audio.playSound('loop_player_revive', pan); 
                     this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 
@@ -90,7 +90,7 @@ export class InteractionSystem implements IInteractionSystem {
                     this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
                     this.lastRepairTime = time;
                     this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
-                    AudioSystem.playSound('loop_heal_high', pan); 
+                    this.audio.playSound('loop_heal_high', pan); 
                 }
             }
         }
@@ -111,7 +111,7 @@ export class InteractionSystem implements IInteractionSystem {
                         this.lastRepairTime = time;
 
                         if (panelState.isDestroyed) {
-                            AudioSystem.playSound('loop_reboot', pan);
+                            this.audio.playSound('loop_reboot', pan);
                         } else {
                             this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
