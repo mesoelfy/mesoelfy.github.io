@@ -68,7 +68,8 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    this.audio.playSound('loop_player_revive', pan); 
+                    // FIX: Replaced 'loop_player_revive' with 'loop_heal_high' to match normal healing audio/volume
+                    this.audio.playSound('loop_heal_high', pan); 
                     this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 

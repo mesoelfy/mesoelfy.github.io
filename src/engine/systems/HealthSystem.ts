@@ -61,7 +61,8 @@ export class HealthSystem implements IGameSystem {
     this.playerRebootProgress = Math.max(0, Math.min(100, this.playerRebootProgress + amount));
     
     if (this.playerRebootProgress >= 100) {
-        this.playerHealth = this.maxPlayerHealth; 
+        // FIX: Player revives at 40% health to maintain tension
+        this.playerHealth = this.maxPlayerHealth * 0.4; 
         this.playerRebootProgress = 0;
         this.audio.playSound('fx_reboot_success');
     }
