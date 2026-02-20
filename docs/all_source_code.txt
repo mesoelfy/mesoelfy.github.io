@@ -2,12 +2,12 @@
 |      M E S O E L F Y _ O S      |
 |   Next.js / R3F Source Context  |
 +---------------------------------+
-Generated on: Thu Feb 19 17:39:53 CST 2026
+Generated on: Fri Feb 20 11:00:20 CST 2026
 
 =====================================
 PROJECT DIRECTORY STRUCTURE:
 =====================================
-.  [17 entries exceeds filelimit, not opening dir]
+.  [16 entries exceeds filelimit, not opening dir]
 
 1 directory, 0 files
 
@@ -6778,24 +6778,25 @@ import { ModalContainer } from '@/ui/os/overlays/ModalContainer';
 import { Send, Terminal, Signal, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import { EXTERNAL_CONFIG } from '@/engine/config/ExternalConfig';
 
 export const ContactModal = () => {
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT' | 'ERROR'>('IDLE');
   const [signalStrength, setSignalStrength] = useState(0);
+  const audio = useAudio();
 
   const handleInput = () => {
       setSignalStrength(Math.floor(Math.random() * 40) + 60);
-      AudioSystem.playSound('ui_hover');
+      audio.playHover();
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setStatus('SENDING');
-      AudioSystem.playSound('ui_click');
-      AudioSystem.playRebootZap();
+      audio.playClick();
+      audio.playRebootZap();
 
       const form = e.currentTarget;
       const data = new FormData(form);
@@ -6809,14 +6810,14 @@ export const ContactModal = () => {
           
           if (res.ok) {
               setStatus('SENT');
-              AudioSystem.playSound('fx_reboot_success');
+              audio.playSound('fx_reboot_success');
           } else {
               setStatus('ERROR');
-              AudioSystem.playSound('ui_error');
+              audio.playSound('ui_error');
           }
       } catch (err) {
           setStatus('ERROR');
-          AudioSystem.playSound('ui_error');
+          audio.playSound('ui_error');
       }
   };
 
@@ -6826,7 +6827,6 @@ export const ContactModal = () => {
         
         <div className="absolute inset-0 opacity-10 pointer-events-none">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary-green rounded-full blur-[100px]" />
-            {/* REPLACED: service-cyan -> service-pink */}
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-service-pink rounded-full blur-[100px]" />
         </div>
 
@@ -6932,7 +6932,7 @@ FILE: ./src/ui/os/apps/donate/CryptoTipJar.tsx
 =====================================
 import { useState } from 'react';
 import { Copy, Check, Info, ExternalLink, Hash, MousePointerClick } from 'lucide-react';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
+import { useAudio } from '@/ui/hooks/useAudio';
 import { clsx } from 'clsx';
 import identity from '@/engine/config/static/identity.json';
 import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
@@ -6940,6 +6940,7 @@ import { MiniCrystalCanvas } from '@/ui/sim/props/MiniCrystalCanvas';
 export const CryptoTipJar = () => {
   const [copiedEns, setCopiedEns] = useState(false);
   const [copiedRaw, setCopiedRaw] = useState(false);
+  const audio = useAudio();
   
   const ethAddress = identity.crypto.eth_address;
   const ensName = identity.crypto.ens;
@@ -6947,7 +6948,7 @@ export const CryptoTipJar = () => {
 
   const copyToClipboard = (text: string, isEns: boolean) => {
     navigator.clipboard.writeText(text);
-    AudioSystem.playSound('syn_data_burst');
+    audio.playSound('syn_data_burst');
     
     if (isEns) {
         setCopiedEns(true);
@@ -6972,7 +6973,7 @@ export const CryptoTipJar = () => {
 
       <div className="flex items-center gap-12">
         
-        {/* The Crystal Icon - Bigger and Centered Vertically */}
+        {/* The Crystal Icon */}
         <div className="w-32 h-32 shrink-0 border-2 border-primary-green/50 rounded-full bg-black/50 relative overflow-hidden shadow-[0_0_40px_rgba(120,246,84,0.15)] self-center">
             <div className="absolute inset-0 opacity-100">
                 <MiniCrystalCanvas />
@@ -12122,6 +12123,20 @@ FILE: ./src/engine/config/static/identity.json
 
 
 =====================================
+FILE: ./src/engine/config/static/scenario.json
+=====================================
+{
+  "panels": [
+    { "id": "art", "damage": 9999, "enemiesMin": 0, "enemiesMax": 0 },
+    { "id": "video", "damage": 85, "enemiesMin": 3, "enemiesMax": 3 },
+    { "id": "identity", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 },
+    { "id": "social", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 },
+    { "id": "feed", "damageMin": 20, "damageMax": 50, "enemiesMin": 1, "enemiesMax": 3 }
+  ]
+}
+
+
+=====================================
 FILE: ./src/engine/config/static/socials.json
 =====================================
 [
@@ -12212,26 +12227,17 @@ export const EnemyTypes = {
 } as const;
 
 export const WeaponIDs = {
-  // --- CORE WEAPONS ---
-  PLAYER_SPITTER: 'PLAYER_SPITTER', // RENAMED FROM RAILGUN
+  PLAYER_SPITTER: 'PLAYER_SPITTER', 
   PLAYER_SNIFFER: 'PLAYER_SNIFFER',
   PLAYER_PURGE: 'PLAYER_PURGE', 
-  
-  // --- ENEMY WEAPONS ---
   ENEMY_HUNTER: 'ENEMY_HUNTER',
   DAEMON_ORB: 'DAEMON_ORB',
 } as const;
 
 export const ArchetypeIDs = {
   PLAYER: 'PLAYER',
-  
-  // Expand Flattened Types
   ...EnemyTypes,
-  ...WeaponIDs,
-
-  // Legacy/Generic Fallbacks
-  BULLET_PLAYER: 'BULLET_PLAYER',
-  BULLET_ENEMY: 'BULLET_ENEMY',
+  ...WeaponIDs
 } as const;
 
 export type EnemyType = typeof EnemyTypes[keyof typeof EnemyTypes];
@@ -12447,16 +12453,12 @@ Object.values(WEAPONS).forEach(def => {
       }}
     ];
 
-    // INJECT SPIN COMPONENT
     if (def.behavior?.spinSpeed) {
         comps.push({ type: ComponentType.AutoRotate, data: { speed: def.behavior.spinSpeed } });
     }
 
     BLUEPRINTS[def.id] = { id: def.id, tags: def.tags, components: comps };
 });
-
-if (BLUEPRINTS[WeaponIDs.PLAYER_SPITTER]) BLUEPRINTS[ArchetypeIDs.BULLET_PLAYER] = BLUEPRINTS[WeaponIDs.PLAYER_SPITTER];
-if (BLUEPRINTS[WeaponIDs.ENEMY_HUNTER]) BLUEPRINTS[ArchetypeIDs.BULLET_ENEMY] = BLUEPRINTS[WeaponIDs.ENEMY_HUNTER];
 
 export const ARCHETYPES = BLUEPRINTS;
 
@@ -12835,11 +12837,9 @@ import { ComponentType } from '@/engine/ecs/ComponentType';
 
 export interface VisualDef {
   model: 'CONE' | 'ICOSA' | 'OCTA' | 'TETRA' | 'SPHERE' | 'CAPSULE' | 'CYLINDER' | 'TORUS' | 'BOX' | 'CUSTOM_HUNTER' | 'CUSTOM_CHEVRON' | 'CRESCENT';
-  color: string; // Hex
+  color: string; 
   scale: [number, number, number];
-  // Updated to include specific projectile materials
   material: 'ENEMY_BASE' | 'PLAYER' | 'PROJECTILE_PLAYER' | 'PROJECTILE_ENEMY' | 'PROJECTILE_HUNTER';
-  // Procedural Params
   height?: number;
   radius?: number;
   segments?: number;
@@ -12878,6 +12878,8 @@ export interface EnemyDef {
   visual: VisualDef;
   physics: PhysicsDef;
   params?: Record<string, any>;
+  deathFX?: string;    // ADDED
+  deathFXDir?: string; // ADDED
 }
 
 
@@ -12895,19 +12897,11 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'driller',
     physics: { radius: 0.4, mass: 1.0, friction: 0.0 },
     visual: { 
-      model: 'CONE', 
-      color: PALETTE.PURPLE.INDIGO, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE',
+      model: 'CONE', color: PALETTE.PURPLE.INDIGO, scale: [1, 1, 1], material: 'ENEMY_BASE',
       height: 0.64, radius: 0.24, segments: 4
     },
-    params: { 
-        spawnOffset: 0.32,
-        spawnDuration: 1.5,
-        approachSpeed: 8.0,
-        approachStopDist: 1.2,
-        drillInterval: 0.08
-    }
+    params: { spawnOffset: 0.32, spawnDuration: 1.5, approachSpeed: 8.0, approachStopDist: 1.2, drillInterval: 0.08 },
+    deathFX: 'EXPLOSION_PURPLE', deathFXDir: 'EXPLOSION_PURPLE_DIR'
   },
   [EnemyTypes.KAMIKAZE]: {
     id: EnemyTypes.KAMIKAZE,
@@ -12915,17 +12909,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'kamikaze',
     physics: { radius: 0.7, mass: 0.8, friction: 0.0 },
     visual: { 
-      model: 'ICOSA', 
-      color: PALETTE.RED.CRITICAL, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE', 
-      radius: 0.69, detail: 0 
+      model: 'ICOSA', color: PALETTE.RED.CRITICAL, scale: [1, 1, 1], material: 'ENEMY_BASE', radius: 0.69, detail: 0 
     },
-    params: {
-        spawnDuration: 1.5,
-        spinSpeed: 10.0,
-        moveSpeed: 9.6 // REDUCED: 12.0 -> 9.6 (-20%)
-    }
+    params: { spawnDuration: 1.5, spinSpeed: 10.0, moveSpeed: 9.6 },
+    deathFX: 'EXPLOSION_RED', deathFXDir: 'EXPLOSION_RED_DIR'
   },
   [EnemyTypes.HUNTER]: {
     id: EnemyTypes.HUNTER,
@@ -12933,20 +12920,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'hunter',
     physics: { radius: 0.74, mass: 1.2, friction: 0.0 },
     visual: { 
-      model: 'CUSTOM_HUNTER', 
-      color: PALETTE.ORANGE.PRIMARY, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE'
+      model: 'CUSTOM_HUNTER', color: PALETTE.ORANGE.PRIMARY, scale: [1, 1, 1], material: 'ENEMY_BASE'
     },
-    params: {
-        spawnDuration: 1.5,
-        roamSpeed: 12.0,
-        roamPadding: 1.0,
-        aimDuration: 1.2,
-        projectileSpeed: 16.0, 
-        cooldownMin: 0.3,
-        cooldownMax: 0.6
-    }
+    params: { spawnDuration: 1.5, roamSpeed: 12.0, roamPadding: 1.0, aimDuration: 1.2, projectileSpeed: 16.0, cooldownMin: 0.3, cooldownMax: 0.6 },
+    deathFX: 'EXPLOSION_YELLOW', deathFXDir: 'EXPLOSION_YELLOW_DIR'
   },
   [EnemyTypes.DAEMON]: {
     id: EnemyTypes.DAEMON,
@@ -12954,18 +12931,10 @@ export const ENEMIES: Record<EnemyType, EnemyDef> = {
     ai: 'daemon',
     physics: { radius: 0.6, mass: 5.0, friction: 0.0 },
     visual: { 
-      model: 'OCTA', 
-      color: PALETTE.PINK.PRIMARY, 
-      scale: [1, 1, 1], 
-      material: 'ENEMY_BASE'
+      model: 'OCTA', color: PALETTE.PINK.PRIMARY, scale: [1, 1, 1], material: 'ENEMY_BASE'
     },
-    params: {
-        spawnDuration: 1.0,
-        chargeDuration: 2.0,
-        fireSpeed: 35.0,
-        fireDamage: 20,
-        waitDuration: 0.5
-    }
+    params: { spawnDuration: 1.0, chargeDuration: 2.0, fireSpeed: 35.0, fireDamage: 20, waitDuration: 0.5 },
+    deathFX: 'IMPACT_WHITE', deathFXDir: 'IMPACT_WHITE'
   }
 };
 
@@ -15525,6 +15494,7 @@ export class AudioServiceImpl implements IAudioService {
 
   public nextTrack() { this.voices.nextTrack(); }
   public duckMusic(intensity: number, duration: number) { this.mixer.duckMusic(intensity, duration); }
+  public updateMasterFilter(integrity: number, timeConstant: number) { this.mixer.updateMasterFilter(integrity, timeConstant); }
   public getFrequencyData(array: Uint8Array) { this.mixer.getByteFrequencyData(array); }
   
   public stopAll() {
@@ -15665,9 +15635,10 @@ class AudioSystemFacade implements IAudioService {
   public stopAll() { this.service.stopAll(); }
   public updateVolumes() { this.service.updateVolumes(); }
   
-  public playSound(key: string, pan?: number) { this.service.playSound(key, pan); }
-  public playAmbience(key: string) { this.service.playAmbience(key); }
+  public playSound(key: string, pan?: number) { this.service.playSound(key as any, pan); }
+  public playAmbience(key: string) { this.service.playAmbience(key as any); }
   public duckMusic(intensity: number, duration: number) { this.service.duckMusic(intensity, duration); }
+  public updateMasterFilter(integrity: number, timeConstant: number) { this.service.updateMasterFilter(integrity, timeConstant); }
   public getFrequencyData(array: Uint8Array) { this.service.getFrequencyData(array); }
   
   public playClick(pan?: number) { this.service.playClick(pan); }
@@ -15725,89 +15696,84 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { AudioKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
-import { AudioMixer } from './modules/AudioMixer';
 
 export class AudioDirector implements IGameSystem {
   private _isPurging: boolean = false;
   private _isZen: boolean = false;
+  private unsubs: (() => void)[] = [];
   
   constructor(
     private panelSystem: IPanelSystem,
-    private events: IGameEventService, // Unified
+    private events: IGameEventService, 
     private audio: IAudioService
   ) {
     this.setupSubscriptions();
   }
 
   private setupSubscriptions() {
-    this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
         this.playSpatial(p.id, 'loop_heal');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
         if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
         else this.playSpatial(p.id, 'fx_reboot_success');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
         this.playSpatial(p.id, 'fx_impact_heavy');
         this.audio.duckMusic(0.8, 1.5); 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAYER_HIT, (p) => {
         const intensity = p.damage > 5 ? 0.8 : 0.6;
         const duration = p.damage > 5 ? 1.0 : 0.5;
         this.audio.duckMusic(intensity, duration);
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_OVER, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
         this.audio.playSound('fx_player_death');
         this.audio.duckMusic(1.0, 3.0);
         this._isPurging = false;
-    });
+    }));
 
-    this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
-        // FIX: Only trigger the cinematic filter riser if we are in Game Over state (Zen Bomb)
-        // Standard gameplay purges should NOT clear the low-pass filter.
+    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, (p) => {
         const isGameOver = this.panelSystem.systemIntegrity <= 0;
-        
         if (p.option === 'PURGE' && isGameOver) {
             this._isPurging = true;
         }
-        
         this.audio.playSound('fx_level_up');
-    });
+    }));
 
-    this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.ZEN_MODE_ENABLED, () => {
         this._isPurging = false;
         this._isZen = true; 
-    });
+    }));
 
-    this.events.subscribe(GameEvents.GAME_START, () => {
+    this.unsubs.push(this.events.subscribe(GameEvents.GAME_START, () => {
         this._isPurging = false;
         this._isZen = false;
-    });
+    }));
 
-    this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
+    this.unsubs.push(this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
         const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
         this.audio.playSound(p.key as AudioKey, pan);
-    });
+    }));
   }
 
   update(delta: number, time: number): void {
-    // Determine Target Integrity for Filter
     let integrity = this.panelSystem.systemIntegrity / 100;
-    let timeConstant = 0.05; // Default fast transition
+    let timeConstant = 0.05; 
 
     if (this._isPurging) {
         integrity = 1.0;
-        timeConstant = 2.0; // Slow cinematic riser during Zen purge
+        timeConstant = 2.0; 
     } else if (this._isZen) {
         integrity = 1.0;
     }
 
-    const mixer = (this.audio as any).mixer as AudioMixer;
-    if (mixer) mixer.updateMasterFilter(integrity, timeConstant);
+    // Call abstraction instead of casting to implementation
+    this.audio.updateMasterFilter(integrity, timeConstant);
 
     const unified = this.events as UnifiedEventService;
     if (unified.processFastEvents) {
@@ -15838,7 +15804,10 @@ export class AudioDirector implements IGameSystem {
       return Math.max(-1, Math.min(1, worldX / halfWidth));
   }
 
-  teardown(): void {}
+  teardown(): void {
+      this.unsubs.forEach(u => u());
+      this.unsubs = [];
+  }
 }
 
 
@@ -18422,9 +18391,8 @@ export class WarmupSystem implements IGameSystem {
 =====================================
 FILE: ./src/engine/systems/InteractionSystem.ts
 =====================================
-import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem } from '@/engine/interfaces';
+import { IInteractionSystem, IParticleSystem, IGameStateSystem, IPanelSystem, IInputService, IGameEventService, IEntityRegistry, IPhysicsSystem, IAudioService } from '@/engine/interfaces';
 import { GameEvents } from '@/engine/signals/GameEvents';
-import { AudioSystem } from '@/engine/audio/AudioSystem';
 import { useGameStore } from '@/engine/state/game/useGameStore';
 import { GAMEPLAY_CONFIG } from '@/engine/config/GameplayConfig';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -18449,7 +18417,8 @@ export class InteractionSystem implements IInteractionSystem {
     private panelSystem: IPanelSystem,
     private events: IGameEventService,
     private physics: IPhysicsSystem,
-    private registry: IEntityRegistry
+    private registry: IEntityRegistry,
+    private audio: IAudioService // INJECTED ABSTRACTION
   ) {}
 
   public registerZone(id: string, rect: WorldRect) {
@@ -18500,7 +18469,7 @@ export class InteractionSystem implements IInteractionSystem {
                 if (time > this.lastRepairTime + GAMEPLAY_CONFIG.INTERACTION.REPAIR_RATE) {
                     this.events.emit(GameEvents.PLAYER_REBOOT_TICK, { amount: GAMEPLAY_CONFIG.INTERACTION.REBOOT_TICK_AMOUNT });
                     this.lastRepairTime = time;
-                    AudioSystem.playSound('loop_player_revive', pan); 
+                    this.audio.playSound('loop_player_revive', pan); 
                     this.spawnRepairParticles(cursor, '#8A7000'); 
                 }
             } 
@@ -18514,7 +18483,7 @@ export class InteractionSystem implements IInteractionSystem {
                     this.gameSystem.healPlayer(GAMEPLAY_CONFIG.INTERACTION.SELF_HEAL_AMOUNT);
                     this.lastRepairTime = time;
                     this.spawnRepairParticles(cursor, PALETTE.YELLOW.GOLD);
-                    AudioSystem.playSound('loop_heal_high', pan); 
+                    this.audio.playSound('loop_heal_high', pan); 
                 }
             }
         }
@@ -18535,7 +18504,7 @@ export class InteractionSystem implements IInteractionSystem {
                         this.lastRepairTime = time;
 
                         if (panelState.isDestroyed) {
-                            AudioSystem.playSound('loop_reboot', pan);
+                            this.audio.playSound('loop_reboot', pan);
                         } else {
                             this.events.emit(GameEvents.PANEL_HEALED, { id: panelId, amount: 4 });
                         }
@@ -20051,7 +20020,7 @@ FILE: ./src/engine/systems/CombatSystem.ts
 import { IGameSystem, IEntityRegistry, IGameEventService, IAudioService, IFastEventService } from '@/engine/interfaces';
 import { Entity } from '@/engine/ecs/Entity';
 import { ColliderData } from '@/engine/ecs/components/ColliderData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { CollisionMatrix } from '@/engine/handlers/combat/CollisionMatrix';
 import { CombatContext } from '@/engine/handlers/combat/types';
 import { ComponentType } from '@/engine/ecs/ComponentType';
@@ -20060,7 +20029,7 @@ import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { GameEvents } from '@/engine/signals/GameEvents';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { getFXCode, getSoundCode, FXCode, SoundCode } from '@/engine/signals/FastEventBus';
-import { Tag } from '@/engine/ecs/types';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class CombatSystem implements IGameSystem {
   constructor(
@@ -20135,116 +20104,27 @@ export class CombatSystem implements IGameSystem {
 
       this.registry.destroyEntity(entity.id);
       
-      if (fx && transform) {
+      if (transform) {
           let finalFX = fx;
           const angleToUse = impactAngle || 0;
           
-          if (identity?.variant === EnemyTypes.HUNTER) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_YELLOW_DIR' : 'EXPLOSION_YELLOW';
-          }
-          else if (identity?.variant === EnemyTypes.KAMIKAZE) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_RED_DIR' : 'EXPLOSION_RED';
-          }
-          else if (identity?.variant === EnemyTypes.DRILLER) {
-              finalFX = impactAngle !== undefined ? 'EXPLOSION_PURPLE_DIR' : 'EXPLOSION_PURPLE';
+          if (identity) {
+              const def = ENEMIES[identity.variant as EnemyType];
+              if (def) {
+                  // If it's a defined enemy, ALWAYS use its death effect over the generic fallback
+                  finalFX = (impactAngle !== undefined && def.deathFXDir) ? def.deathFXDir : (def.deathFX || fx);
+              }
           }
           
-          const code = getFXCode(finalFX);
-          if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
-          else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
+          if (finalFX) {
+              const code = getFXCode(finalFX);
+              if (code !== FXCode.NONE) this.fastBus.spawnFX(code, transform.x, transform.y, angleToUse);
+              else this.events.emit(GameEvents.SPAWN_FX, { type: finalFX as VFXKey, x: transform.x, y: transform.y, angle: angleToUse });
+          }
       }
   }
 
   teardown(): void {}
-}
-
-
-=====================================
-FILE: ./src/engine/systems/AudioDirector.ts
-=====================================
-import { IGameSystem, IPanelSystem, IGameEventService, IAudioService } from '@/engine/interfaces';
-import { UnifiedEventService } from '@/engine/signals/UnifiedEventService';
-import { FastEventType, SOUND_LOOKUP, SoundCode, FLOAT_SCALAR } from '@/engine/signals/FastEventBus';
-import { GameEvents } from '@/engine/signals/GameEvents';
-import { ViewportHelper } from '@/engine/math/ViewportHelper';
-import { AudioKey } from '@/engine/config/AssetKeys';
-import { PanelId } from '@/engine/config/PanelConfig';
-
-export class AudioDirector implements IGameSystem {
-  private unsubs: (() => void)[] = [];
-
-  constructor(
-    private panelSystem: IPanelSystem,
-    private events: IGameEventService, // Unified
-    private audio: IAudioService
-  ) {
-    this.setupSubscriptions();
-  }
-
-  private setupSubscriptions() {
-    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_HEALED, (p) => {
-        this.playSpatial(p.id, 'loop_heal');
-    }));
-
-    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_RESTORED, (p) => {
-        if (p.x !== undefined) this.audio.playSound('fx_reboot_success', this.calculatePan(p.x));
-        else this.playSpatial(p.id, 'fx_reboot_success');
-    }));
-
-    this.unsubs.push(this.events.subscribe(GameEvents.PANEL_DESTROYED, (p) => {
-        this.playSpatial(p.id, 'fx_impact_heavy');
-        this.audio.duckMusic(0.8, 1.5); 
-    }));
-
-    this.unsubs.push(this.events.subscribe(GameEvents.GAME_OVER, () => {
-        this.audio.playSound('fx_player_death');
-        this.audio.duckMusic(1.0, 3.0);
-    }));
-
-    this.unsubs.push(this.events.subscribe(GameEvents.UPGRADE_SELECTED, () => {
-        this.audio.playSound('fx_level_up');
-    }));
-
-    this.unsubs.push(this.events.subscribe(GameEvents.PLAY_SOUND, (p) => {
-        const pan = p.x !== undefined ? this.calculatePan(p.x) : 0;
-        this.audio.playSound(p.key as AudioKey, pan);
-    }));
-  }
-
-  update(delta: number, time: number): void {
-    const unified = this.events as UnifiedEventService;
-    if (unified.processFastEvents) {
-        unified.processFastEvents((id, a1, a2, a3, a4) => {
-            if (id === FastEventType.PLAY_SOUND) {
-                const key = SOUND_LOOKUP[a1 as SoundCode];
-                if (key) {
-                    const pan = this.calculatePan(a2 / FLOAT_SCALAR); 
-                    this.audio.playSound(key as AudioKey, pan);
-                }
-            }
-            else if (id === FastEventType.DUCK_MUSIC) {
-                this.audio.duckMusic(a1 / FLOAT_SCALAR, a2 / FLOAT_SCALAR);
-            }
-        });
-    }
-  }
-
-  private playSpatial(panelId: PanelId, key: AudioKey) {
-      const rect = this.panelSystem.getPanelRect(panelId);
-      const x = rect ? rect.x : 0;
-      this.audio.playSound(key, this.calculatePan(x));
-  }
-
-  private calculatePan(worldX: number): number {
-      const halfWidth = ViewportHelper.viewport.width / 2;
-      if (halfWidth === 0) return 0;
-      return Math.max(-1, Math.min(1, worldX / halfWidth));
-  }
-
-  teardown(): void {
-      this.unsubs.forEach(u => u());
-      this.unsubs = [];
-  }
 }
 
 
@@ -20528,7 +20408,6 @@ export class PanelRegistrySystem implements IPanelSystem {
 =====================================
 FILE: ./src/engine/systems/index.ts
 =====================================
-export * from './AudioDirector';
 export * from './BehaviorSystem';
 export * from './CollisionSystem';
 export * from './CombatSystem';
@@ -21274,8 +21153,8 @@ import { GameEvents } from '@/engine/signals/GameEvents';
 import { ViewportHelper } from '@/engine/math/ViewportHelper';
 import { PanelId } from '@/engine/config/PanelConfig';
 import { AI_STATE } from '@/engine/ai/AIStateTypes';
-import { AITimerID } from '@/engine/ai/AITimerID';
 import waves from '@/engine/config/static/waves.json';
+import scenario from '@/engine/config/static/scenario.json';
 
 interface WaveDef {
     at: number;
@@ -21366,22 +21245,28 @@ export class WaveSystem implements IGameSystem {
   }
 
   private runScenario(panels: any[]) {
-      this.panelSystem.damagePanel(PanelId.ART, 9999, { silent: true }); 
-      this.panelSystem.damagePanel(PanelId.VIDEO, 85, { silent: true }); 
-      
-      const videoPanel = panels.find(p => p.id === PanelId.VIDEO);
-      if (videoPanel) {
-          this.spawnDrillerOn(videoPanel, 3);
-      }
+      for (const panelConfig of scenario.panels) {
+          const targetPanel = panels.find(p => p.id === panelConfig.id);
+          if (!targetPanel) continue;
 
-      const targets = panels.filter(p => p.id !== PanelId.ART && p.id !== PanelId.VIDEO);
-      
-      targets.forEach(p => {
-          const dmg = 20 + Math.floor(Math.random() * 30);
-          this.panelSystem.damagePanel(p.id, dmg, { silent: true }); 
-          const count = 1 + Math.floor(Math.random() * 3);
-          this.spawnDrillerOn(p, count);
-      });
+          // Process Damage
+          let dmg = panelConfig.damage || 0;
+          if (panelConfig.damageMin !== undefined && panelConfig.damageMax !== undefined) {
+              dmg = panelConfig.damageMin + Math.floor(Math.random() * (panelConfig.damageMax - panelConfig.damageMin));
+          }
+          if (dmg > 0) {
+              this.panelSystem.damagePanel(targetPanel.id, dmg, { silent: true });
+          }
+
+          // Process Enemies
+          let enemyCount = panelConfig.enemies || 0;
+          if (panelConfig.enemiesMin !== undefined && panelConfig.enemiesMax !== undefined) {
+              enemyCount = panelConfig.enemiesMin + Math.floor(Math.random() * (panelConfig.enemiesMax - panelConfig.enemiesMin + 1));
+          }
+          if (enemyCount > 0) {
+              this.spawnDrillerOn(targetPanel, enemyCount);
+          }
+      }
   }
 
   private spawnDrillerOn(panel: any, count: number) {
@@ -21534,10 +21419,11 @@ import { HealthData } from '@/engine/ecs/components/HealthData';
 import { IdentityData } from '@/engine/ecs/components/IdentityData';
 import { TransformData } from '@/engine/ecs/components/TransformData';
 import { GameEvents, FXVariant } from '@/engine/signals/GameEvents';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { Tag } from '@/engine/ecs/types';
 import { Query } from '@/engine/ecs/Query';
+import { ENEMIES } from '@/engine/config/defs/Enemies';
 
 export class LifeCycleSystem implements IGameSystem {
   private mortalQuery = new Query({ any: [ComponentType.Lifetime, ComponentType.Health] });
@@ -21558,7 +21444,6 @@ export class LifeCycleSystem implements IGameSystem {
     for (const entity of mortals) {
       if (!entity.active) continue;
       
-      // 1. LIFETIME CHECK
       const lifetime = entity.getComponent<LifetimeData>(ComponentType.Lifetime);
       if (lifetime) {
         lifetime.remaining -= delta;
@@ -21568,12 +21453,8 @@ export class LifeCycleSystem implements IGameSystem {
         }
       }
 
-      // 2. HEALTH CHECK
       const health = entity.getComponent<HealthData>(ComponentType.Health);
       if (health && health.current <= 0) {
-          // CRITICAL FIX: Do not destroy the Player entity on 0 HP.
-          // The HealthSystem handles the "Game Over" logic state.
-          // The PlayerActor handles the "Wireframe/Red" visual state.
           if (entity.hasTag(Tag.PLAYER)) continue;
 
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
@@ -21585,10 +21466,8 @@ export class LifeCycleSystem implements IGameSystem {
                  this.events.emit(GameEvents.ENEMY_DESTROYED, { id: entity.id as number, type: identity.variant, x: transform.x, y: transform.y });
              }
              
-             let fx: FXVariant = 'EXPLOSION_PURPLE';
-             if (identity.variant === EnemyTypes.HUNTER) fx = 'EXPLOSION_YELLOW';
-             else if (identity.variant === EnemyTypes.KAMIKAZE) fx = 'EXPLOSION_RED';
-             else if (identity.variant === EnemyTypes.DAEMON) fx = 'IMPACT_WHITE'; 
+             const def = ENEMIES[identity.variant as EnemyType];
+             const fx: FXVariant = (def?.deathFX || 'EXPLOSION_PURPLE') as FXVariant;
              
              this.events.emit(GameEvents.SPAWN_FX, { type: fx, x: transform.x, y: transform.y });
           }
@@ -21603,7 +21482,6 @@ export class LifeCycleSystem implements IGameSystem {
       for (const entity of allies) {
           if (!entity.active) continue;
           
-          // Only destroy summons (Daemon), not the player itself
           const identity = entity.getComponent<IdentityData>(ComponentType.Identity);
           if (identity && identity.variant === EnemyTypes.DAEMON) {
               const transform = entity.getComponent<TransformData>(ComponentType.Transform);
@@ -21711,7 +21589,7 @@ import { CombatData } from '@/engine/ecs/components/CombatData';
 import { RenderModel } from '@/engine/ecs/components/RenderModel';
 import { RenderEffect } from '@/engine/ecs/components/RenderEffect';
 import { MotionData } from '@/engine/ecs/components/MotionData';
-import { EnemyTypes } from '@/engine/config/Identifiers';
+import { EnemyTypes, EnemyType } from '@/engine/config/Identifiers';
 import { ComponentType } from '@/engine/ecs/ComponentType';
 import { VFXKey } from '@/engine/config/AssetKeys';
 import { PanelId } from '@/engine/config/PanelConfig';
@@ -21726,24 +21604,11 @@ const getEffect = (e: Entity) => e.getComponent<RenderEffect>(ComponentType.Rend
 const getMotion = (e: Entity) => e.getComponent<MotionData>(ComponentType.Motion);
 const getAI = (e: Entity) => e.getComponent<AIStateData>(ComponentType.State);
 
-const THEME_MAP: Record<string, string> = {
-    [EnemyTypes.KAMIKAZE]: 'RED',
-    [EnemyTypes.HUNTER]: 'YELLOW',
-    [EnemyTypes.DRILLER]: 'PURPLE',
-    [EnemyTypes.DAEMON]: 'PURPLE',
-};
-
-const getExplosionKey = (variant: string, directional: boolean): VFXKey => {
-    const theme = THEME_MAP[variant] || 'PURPLE';
-    return (directional ? `EXPLOSION_${theme}_DIR` : `EXPLOSION_${theme}`) as VFXKey;
-};
-
 const resolveImpactVisuals = (source: Entity, x: number, y: number, angle: number, ctx: CombatContext, overrideFX?: string) => {
     if (overrideFX) { ctx.spawnFX(overrideFX as VFXKey, x, y); return; }
     
     const model = getModel(source);
     if (model) {
-        // Normalize brightness to 1.0 (Neon)
         const maxC = Math.max(model.r, model.g, model.b, 0.01); 
         ctx.spawnImpact(x, y, model.r / maxC, model.g / maxC, model.b / maxC, angle);
     } else { 
@@ -21772,8 +21637,9 @@ export const handlePlayerCrash = (player: Entity, enemy: Entity, ctx: CombatCont
   let sprayAngle = 0;
   if (pos && pPos) sprayAngle = Math.atan2(pos.y - pPos.y, pos.x - pPos.x) + Math.PI;
   ctx.damagePlayer(damage); ctx.addTrauma(damage >= 3 ? 0.5 : 0.3);
-  const variant = getId(enemy)?.variant || 'UNKNOWN';
-  ctx.destroyEntity(enemy, getExplosionKey(variant, true), sprayAngle);
+  
+  // By passing undefined for FX, CombatSystem will resolve the enemy's specific deathFX
+  ctx.destroyEntity(enemy, undefined, sprayAngle);
   ctx.playSpatialAudio(damage >= 3 ? 'fx_impact_heavy' : 'fx_impact_light', pos ? pos.x : 0);
 };
 
@@ -21802,7 +21668,7 @@ export const handleEnemyPanelHit = (enemy: Entity, panel: Entity, ctx: CombatCon
         const combat = getCombat(enemy); const dmg = combat ? combat.damage : 1;
         const pos = getPos(enemy);
         ctx.damagePanel(pId.variant as PanelId, dmg * 5, { source: pos ? { x: pos.x, y: pos.y } : undefined }); 
-        ctx.destroyEntity(enemy, 'EXPLOSION_RED');
+        ctx.destroyEntity(enemy, undefined);
         ctx.playSpatialAudio('fx_impact_heavy', pos ? pos.x : 0);
         ctx.addTrauma(0.3);
     }
@@ -21818,13 +21684,13 @@ function resolveDaemonCollision(daemon: Entity, attacker: Entity, ctx: CombatCon
       if (shield > 0) {
           state.data.shieldHP = Math.max(0, shield - incomingDamage);
           state.data.wasHit = true; 
-          const isEnemy = attacker.hasTag('ENEMY');
+          const isEnemy = attacker.hasTag(Tag.ENEMY);
           ctx.destroyEntity(attacker, isEnemy ? 'CLASH_YELLOW' : 'IMPACT_WHITE');
           ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
           return;
       }
   }
-  const isEnemy = attacker.hasTag('ENEMY');
+  const isEnemy = attacker.hasTag(Tag.ENEMY);
   ctx.destroyEntity(attacker, isEnemy ? 'EXPLOSION_RED' : 'IMPACT_RED');
   ctx.playSpatialAudio('fx_impact_light', pos ? pos.x : 0);
 }
@@ -21842,16 +21708,14 @@ function handleMassExchange(a: Entity, b: Entity, ctx: CombatContext, forceFX?: 
   let soundKey = '';
   
   if (hpA && hpA.current <= 0) { 
-      // If Enemy Dies: Spawn Explosion (mapped via 'IMPACT_WHITE' override in CombatSystem)
-      // If Bullet Dies (Clash): Only spawn if not bullet (to avoid double splash)
-      const fxA = a.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      // If Projectile: IMPACT_WHITE. If Enemy: undefined (resolves to deathFX)
+      const fxA = a.hasTag(Tag.PROJECTILE) ? 'IMPACT_WHITE' : undefined;
       ctx.destroyEntity(a, fxA, sprayAngle); 
       soundKey = 'fx_impact_light'; 
   }
   
   if (hpB && hpB.current <= 0) { 
-      // If Bullet Dies: Suppress extra white splash (visuals handled above in resolveImpactVisuals)
-      const fxB = b.hasTag(Tag.BULLET) ? undefined : 'IMPACT_WHITE';
+      const fxB = b.hasTag(Tag.PROJECTILE) ? 'IMPACT_WHITE' : undefined;
       ctx.destroyEntity(b, fxB, sprayAngle); 
       soundKey = 'fx_impact_light'; 
   }
@@ -22412,7 +22276,7 @@ export class EngineFactory {
     const progressionSystem = new ProgressionSystem(eventBus);
     const gameStateSystem = new GameStateSystem(healthSystem, progressionSystem, panelSystem, eventBus, audioService);
     
-    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry);
+    const interactionSystem = new InteractionSystem(inputSystem, particleSystem, gameStateSystem, panelSystem, eventBus, physicsSystem, registry, audioService);
     
     const lifeCycleSystem = new LifeCycleSystem(registry, eventBus);
     const worldSystem = new WorldSystem(panelSystem, registry);
@@ -22476,7 +22340,7 @@ export class EngineFactory {
     register(progressionSystem, SystemPhase.STATE, 'ProgressionSystem');
     register(lifeCycleSystem, SystemPhase.STATE);
     register(stateSyncSystem, SystemPhase.STATE);
-    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); // NEW
+    register(visualStateSystem, SystemPhase.STATE, 'VisualStateSystem'); 
 
     register(renderStateSystem, SystemPhase.RENDER, 'RenderStateSystem');
     register(animationSystem, SystemPhase.RENDER, 'AnimationSystem');
@@ -22601,17 +22465,13 @@ export class EntitySpawner implements IEntitySpawner {
       ownerId?: number,
       visualOverrides?: { scaleX?: number, scaleY?: number, color?: string }
   ): Entity {
-    let id = projectileId;
-    if (projectileId === 'BULLET_PLAYER' as any) id = WeaponIDs.PLAYER_SPITTER;
-    if (projectileId === 'BULLET_ENEMY' as any) id = WeaponIDs.ENEMY_HUNTER;
-    
     const overrides: any = {
         [ComponentType.Transform]: { x, y, rotation: Math.atan2(vy, vx) }, 
         [ComponentType.Motion]: { vx, vy, friction: 0 }, 
         [ComponentType.Lifetime]: { remaining: life, total: life },
         [ComponentType.Combat]: { damage },
         [ComponentType.Health]: { max: damage },
-        [ComponentType.Projectile]: { configId: id, state: 'FLIGHT', ownerId: ownerId ?? -1 }
+        [ComponentType.Projectile]: { configId: projectileId, state: 'FLIGHT', ownerId: ownerId ?? -1 }
     };
 
     if (visualOverrides) {
@@ -22621,7 +22481,7 @@ export class EntitySpawner implements IEntitySpawner {
         overrides[ComponentType.RenderTransform] = transformData;
     }
 
-    const entity = this.spawn(id, overrides);
+    const entity = this.spawn(projectileId, overrides);
     
     return entity;
   }
@@ -22943,6 +22803,7 @@ export interface IAudioService {
   playBootSequence(): void;
   playDrillSound(): void;
   playRebootZap(): void;
+  updateMasterFilter(integrity: number, timeConstant: number): void;
 }
 
 export interface IInputService {
